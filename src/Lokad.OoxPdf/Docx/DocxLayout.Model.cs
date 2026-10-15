@@ -47,6 +47,8 @@ internal sealed record DocxEquationLayout(DocxPreparedMathParagraph Math, double
     double Scale, int SourceBlockIndex, DocxParagraph SourceParagraph) : DocxLayoutItem;
 internal sealed record DocxInlineMathPlacement(DocxPreparedMathParagraph Math, double OffsetX);
 internal readonly record struct DocxInlineLineFrame(double BaselineInset, double Height);
+internal readonly record struct DocxInlineSourceExtent(int ItemIndex, double StartOffset, double EndOffset,
+    double AboveBaseline = 0d, double BelowBaseline = 0d, bool IsMath = false);
 
 internal sealed record DocxTextLineLayout(
     string Text,
@@ -85,6 +87,7 @@ internal sealed record DocxTextLineLayout(
     public double? BodyLineBoxHeightPoints { get; init; }
     public bool UsesUniformBodyTypographicBaseline { get; init; }
     public double? InlineObjectEndOffsetX { get; init; }
+    public IReadOnlyList<DocxInlineSourceExtent> InlineSourceExtents { get; init; } = [];
     public DocxPreparedMathParagraph? Math { get; init; }
     public double MathScale { get; init; } = 1d;
     public bool IsInlineMath { get; init; }
@@ -125,6 +128,7 @@ internal sealed record DocxTextSpan(
 {
     // Layout-only marker; never part of the source prose or emitted text.
     public bool IsInlineObjectMarker { get; init; }
+    public int SourceInlineItemIndex { get; init; } = -1;
 }
 
 internal sealed record DocxWrappedTextLine(

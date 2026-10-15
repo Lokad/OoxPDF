@@ -50,6 +50,31 @@ internal sealed partial class DocxRenderer
         out DocxTextLineLayout anchorLine,
         out double anchorX)
     {
+        // Ordered extents include formulas and pictures, so source annotations
+        // consume the final placed geometry instead of reconstructing it from prose.
+        if (range.StartInlineItemIndex is int start && range.EndInlineItemIndex is int end && end > start)
+        {
+            DocxTextLineLayout? last = null;
+            int lastItem = -1;
+            double lastEnd = 0d;
+            foreach (var candidate in EnumerateCommentAnchorSearchLines(line, anchorTextLines, paragraph))
+                foreach (var extent in candidate.InlineSourceExtents)
+                    if (extent.ItemIndex >= start && extent.ItemIndex < end &&
+                        (extent.ItemIndex > lastItem || extent.ItemIndex == lastItem &&
+                         (candidate.SourceLineIndex ?? -1) >= (last?.SourceLineIndex ?? -1)))
+                    {
+                        if (!ReferenceEquals(last, candidate) || lastItem != extent.ItemIndex) lastEnd = 0d;
+                        last = candidate;
+                        lastItem = extent.ItemIndex;
+                        lastEnd = Math.Max(lastEnd, extent.EndOffset);
+                    }
+            if (last is not null)
+            {
+                anchorLine = last;
+                anchorX = last.X + lastEnd;
+                return true;
+            }
+        }
         foreach (DocxTextLineLayout candidateLine in EnumerateCommentAnchorSearchLines(line, anchorTextLines, paragraph))
         {
             if (TryResolveSourceOffsetAnchorX(candidateLine, range.EndSourceRunIndex, range.EndTextOffset, out anchorX))

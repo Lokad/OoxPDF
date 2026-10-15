@@ -502,7 +502,10 @@ internal sealed partial class DocxReader
 
     private sealed record DocxRevisionScopedElement(XElement Element, DocxRevisionInfo? Revision);
 
-    private sealed record DocxCommentRangeStart(string? Id, int SourceRunIndex, int TextOffset);
+    private sealed record DocxCommentRangeStart(string? Id, int SourceRunIndex, int TextOffset)
+    {
+        public int? InlineItemIndex { get; init; }
+    }
 
     private sealed record DocxRevisionRangeStart(
         DocxRevisionKind Kind,

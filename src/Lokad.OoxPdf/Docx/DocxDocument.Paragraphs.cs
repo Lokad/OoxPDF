@@ -149,7 +149,11 @@ internal sealed record DocxCommentRange(
     int? EndSourceRunIndex,
     int? EndTextOffset,
     int? ReferenceSourceRunIndex,
-    int? ReferenceTextOffset);
+    int? ReferenceTextOffset)
+{
+    public int? StartInlineItemIndex { get; init; }
+    public int? EndInlineItemIndex { get; init; }
+}
 
 internal sealed record DocxRevisionRange(
     DocxRevisionKind Kind,

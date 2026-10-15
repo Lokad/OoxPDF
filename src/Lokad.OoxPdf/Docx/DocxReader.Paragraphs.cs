@@ -98,11 +98,13 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "commentRangeStart")
             {
-                AddCommentRangeStart(child, openCommentRanges, sourceRunIndex, runs);
+                EnsureInlineContent();
+                AddCommentRangeStart(child, openCommentRanges, sourceRunIndex, runs, inlineItems!.Count);
             }
             else if (child.Name == WordprocessingNamespace + "commentRangeEnd")
             {
-                AddCommentRangeEnd(child, openCommentRanges, commentRanges, sourceRunIndex, runs);
+                EnsureInlineContent();
+                AddCommentRangeEnd(child, openCommentRanges, commentRanges, sourceRunIndex, runs, inlineItems!.Count);
             }
             else if (IsRevisionMarkerElement(child))
             {
@@ -146,11 +148,13 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "commentRangeStart")
             {
-                AddCommentRangeStart(child, openCommentRanges, sourceRunIndex, runs);
+                EnsureInlineContent();
+                AddCommentRangeStart(child, openCommentRanges, sourceRunIndex, runs, inlineItems!.Count);
             }
             else if (child.Name == WordprocessingNamespace + "commentRangeEnd")
             {
-                AddCommentRangeEnd(child, openCommentRanges, commentRanges, sourceRunIndex, runs);
+                EnsureInlineContent();
+                AddCommentRangeEnd(child, openCommentRanges, commentRanges, sourceRunIndex, runs, inlineItems!.Count);
             }
             else if (IsRevisionMarkerElement(child))
             {
@@ -309,9 +313,9 @@ internal sealed partial class DocxReader
                 ? styles.ContextualSpacingDefaultStyleId : null,
             InlineTextBoxes = inlineTextBoxes,
             Equations = equations,
-            // Fields/references/textboxes and revisions retain their existing
+            // Fields/note references/textboxes and revisions retain their existing
             // source reconstruction until those owners migrate explicitly.
-            InlineContent = fieldReferences.Count == 0 && inlineReferences.Count == 0 &&
+            InlineContent = fieldReferences.Count == 0 && inlineReferences.All(reference => reference.Kind == DocxRelatedStoryKind.Comment) &&
                 inlineTextBoxes.Count == 0 && paragraphRevisions.Count == 0 ? inlineItems : null,
             InlineReferences = inlineReferences,
             CommentRanges = commentRanges,
@@ -326,7 +330,7 @@ internal sealed partial class DocxReader
             ParagraphMarkRun = retainedMark
         };
 
-        void AddEquation(XElement container, DocxRevisionInfo? revision)
+        void EnsureInlineContent()
         {
             if (inlineItems is null)
             {
@@ -341,6 +345,11 @@ internal sealed partial class DocxReader
                         bookmarkAnchors[index] = anchor with { InlineItemIndex = inlineItems.Count };
                 }
             }
+        }
+
+        void AddEquation(XElement container, DocxRevisionInfo? revision)
+        {
+            EnsureInlineContent();
             bool display = container.Name == MathNamespace + "oMathPara";
             XElement? properties = display ? container.Element(MathNamespace + "oMathParaPr") : null;
             foreach (XElement equation in display ? container.Elements(MathNamespace + "oMath") : new[] { container })
@@ -356,7 +365,7 @@ internal sealed partial class DocxReader
                         ?? DocxDefaults.UnstyledRunFontSizePoints,
                     LimitSettings = (documentSettings ?? DocxDocumentSettings.Empty).MathLimitSettings
                 });
-                inlineItems.Add(new DocxInlineEquation(equations[^1]));
+                inlineItems!.Add(new DocxInlineEquation(equations[^1]));
             }
 
             DocxTextRun ReadMathRun(XElement run, string text)
@@ -1025,12 +1034,13 @@ internal sealed partial class DocxReader
         XElement rangeStart,
         List<DocxCommentRangeStart> openCommentRanges,
         int sourceRunIndex,
-        List<DocxTextRun> runs)
+        List<DocxTextRun> runs,
+        int inlineItemIndex)
     {
         openCommentRanges.Add(new DocxCommentRangeStart(
             (string?)rangeStart.Attribute(WordprocessingNamespace + "id"),
             sourceRunIndex,
-            RelativeRunTextOffset(runs, sourceRunIndex)));
+            RelativeRunTextOffset(runs, sourceRunIndex)) { InlineItemIndex = inlineItemIndex });
     }
 
     private static void AddCommentRangeEnd(
@@ -1038,7 +1048,8 @@ internal sealed partial class DocxReader
         List<DocxCommentRangeStart> openCommentRanges,
         List<DocxCommentRange> commentRanges,
         int sourceRunIndex,
-        List<DocxTextRun> runs)
+        List<DocxTextRun> runs,
+        int inlineItemIndex)
     {
         string? id = (string?)rangeEnd.Attribute(WordprocessingNamespace + "id");
         int startIndex = openCommentRanges.FindLastIndex(start => string.Equals(start.Id, id, StringComparison.Ordinal));
@@ -1055,7 +1066,7 @@ internal sealed partial class DocxReader
             sourceRunIndex,
             RelativeRunTextOffset(runs, sourceRunIndex),
             ReferenceSourceRunIndex: null,
-            ReferenceTextOffset: null));
+            ReferenceTextOffset: null) { StartInlineItemIndex = start?.InlineItemIndex, EndInlineItemIndex = inlineItemIndex });
     }
 
     private static void AddRevisionMarker(
@@ -1292,7 +1303,7 @@ internal sealed partial class DocxReader
                     EndSourceRunIndex: null,
                     EndTextOffset: null,
                     currentSourceRunIndex,
-                    textOffset));
+                    textOffset) { StartInlineItemIndex = start.InlineItemIndex });
                 return;
             }
 

@@ -1,0 +1,61 @@
+{
+  "Source": "Independent Word 16 AllMarkup PDF exports; source selection fill bounds relative to Start text origin. Original visual thresholds remain unchanged.",
+  "Rows": [
+    {
+      "Id": "math-comment-between-body",
+      "InputSha256": "25499D0C27152042FFB40514AFF2E5DD979957E1A1E95373F527459FEC15E7C6",
+      "ReferencePdfSha256": "8765C9A01043DF8646751F69A9F7A4851A1DB55C3D3741C5554393B6B3F116C7",
+      "StartOffset": 32.04,
+      "EndOffset": 61.728
+    },
+    {
+      "Id": "math-comment-between-cell",
+      "InputSha256": "0026DD71A2B3BFE13D3EAB4135B799851334B6BB8DD56DABAA30E5EE85B9AB9D",
+      "ReferencePdfSha256": "562F8314A7B299780177B3CB07C4C584C0368D9066C2AA54D0C24D703CD29B6B",
+      "StartOffset": 32.03999999999999,
+      "EndOffset": 61.70399999999998
+    },
+    {
+      "Id": "math-comment-formula-body",
+      "InputSha256": "EAD461FFF82E248D06AB4F589E395FF9032758B4AFE75B536896DE63354544EA",
+      "ReferencePdfSha256": "CED896806A6AFD7488668193AB0281D7C5C6C866D046BCB4708A0E5EC1E36E05",
+      "StartOffset": 19.847999999999992,
+      "EndOffset": 32.04
+    },
+    {
+      "Id": "math-comment-formula-cell",
+      "InputSha256": "7B736CA278950BC54A9D1C9369B17D91728FC5E189EBF45159D10AC9D82E4501",
+      "ReferencePdfSha256": "18B12F153A6C7A0FBB1060971DF3B79EBBB98C208BC46F6241F839D7C1A69615",
+      "StartOffset": 19.829999999999984,
+      "EndOffset": 32.045999999999964
+    },
+    {
+      "Id": "math-comment-mixed-body",
+      "InputSha256": "F04BE208388FA8654F0CD4E74EF571CBB17464A24B721D845A8F99840D87A2D7",
+      "ReferencePdfSha256": "73623E020CB6CE81D4EC0EC7D0A1100726526C51A041EF39A1A797BABB793F9D",
+      "StartOffset": 0.0,
+      "EndOffset": 92.304
+    },
+    {
+      "Id": "math-comment-mixed-cell",
+      "InputSha256": "316A7B4AEF4B6ABA05A394A7FF68847E22FA3F69106FF0F6139E09ADEEC2634F",
+      "ReferencePdfSha256": "FFE8BAC594DED69D5BA1542E0E2D071C22E1EAC3500FA0BF9D6A41DCCBFC4055",
+      "StartOffset": 0.0,
+      "EndOffset": 92.28400000000002
+    },
+    {
+      "Id": "math-comment-prose-body",
+      "InputSha256": "09743B4637BE9789E192901A532627C978269118296E7EB881CAF4C9082145ED",
+      "ReferencePdfSha256": "410B8C4543FBBD5A1305D53A8F671F7DC1BBCD6A898388614C5EA944394D2BFE",
+      "StartOffset": 0.0,
+      "EndOffset": 19.847999999999992
+    },
+    {
+      "Id": "math-comment-prose-cell",
+      "InputSha256": "3C1CAD735CD66492012A911937BE0B3D3298565E99DE89CC8134673A2252C51C",
+      "ReferencePdfSha256": "60DFFD1978500EC8460FF4E275028703B0F78542C09BBF469ABFB11EB6450BDA",
+      "StartOffset": 0.0,
+      "EndOffset": 19.823999999999984
+    }
+  ]
+}

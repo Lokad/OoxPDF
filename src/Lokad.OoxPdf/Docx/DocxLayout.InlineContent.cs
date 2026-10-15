@@ -9,6 +9,8 @@ internal sealed record DocxMeasuredInlineFragment(DocxInlineItem Source, double 
     DocxPreparedMathParagraph? Math = null)
 {
     public double LeadingAdvance { get; init; }
+    public int SourceItemIndex { get; init; } = -1;
+    public DocxInlineSourceExtent? VisibleSourceExtent { get; init; }
     public double? MathContinuationAdvance { get; init; }
     public IReadOnlyList<DocxTextSegmentLayout> TextSegments { get; init; } = [];
 }
@@ -89,6 +91,7 @@ internal sealed partial class DocxLayoutEngine
         segments.AddRange(measured.ListLabelSegments.Select(segment => segment with { X = frameOriginX + segment.X }));
         var images = new List<DocxInlineImageLayout>();
         var equations = new List<DocxInlineMathPlacement>();
+        List<DocxInlineSourceExtent>? sourceExtents = paragraph.CommentRanges.Count == 0 ? null : new();
         var text = new System.Text.StringBuilder();
         if (measured.ListLabelSegments.Count != 0 && paragraph.ListLabel is { } label)
             text.Append(label.Text).Append(label.SuffixValue switch { "nothing" => string.Empty, "space" => " ", _ => "\t" });
@@ -107,6 +110,10 @@ internal sealed partial class DocxLayoutEngine
                 images.Add(new(picture.Image, x + offset, top - measured.BaselineInset, fragment.Advance,
                     fragment.OccupiedHeight, pageIndex, sourceBlock, sourceParagraph, story));
             else if (fragment.Source is DocxInlineTab) text.Append('\t');
+            if (sourceExtents is not null)
+                sourceExtents.Add(fragment.VisibleSourceExtent is { } visible
+                    ? visible with { StartOffset = offset + visible.StartOffset, EndOffset = offset + visible.EndOffset }
+                    : new(fragment.SourceItemIndex, offset, offset + fragment.Advance));
             offset += fragment.Advance;
         }
         var style = paragraph.Runs.FirstOrDefault() ?? paragraph.ParagraphMarkRun ??
@@ -120,7 +127,8 @@ internal sealed partial class DocxLayoutEngine
             ParagraphAfterSpacing: null, ContextualSpacingSuppressed: null, SourceParagraph: paragraph,
             LineHeightSource: null, EmitsTerminalParagraphMark: false)
         { FrameOriginOffsetX = frameOriginX - x, InlineMath = equations, MathScale = scale, InlineObjectEndOffsetX = measured.Advance,
-            InlineFrame = new(measured.BaselineInset, measured.OccupiedHeight) };
+            InlineFrame = new(measured.BaselineInset, measured.OccupiedHeight),
+            InlineSourceExtents = sourceExtents is null ? [] : sourceExtents };
         return (line, images);
     }
 
@@ -152,9 +160,11 @@ internal sealed partial class DocxLayoutEngine
             if (!runIndices.TryAdd(paragraph.Runs[index], index)) return false;
         }
         var measured = new List<DocxMeasuredInlineFragment>();
+        int sourceItemIndex = 0;
         foreach (DocxInlineItem item in items)
         {
             token.ThrowIfCancellationRequested();
+            int firstFragment = measured.Count;
             switch (item)
             {
                 case DocxInlineText text when text.Run.EffectiveProperties.Hidden:
@@ -179,7 +189,8 @@ internal sealed partial class DocxLayoutEngine
                         // including runs split or filtered during reading.
                         if (!runIndices.TryGetValue(text.Run, out int runIndex)) return false;
                         var span = CreateTextSpan(value, text.Run, runIndex);
-                        span = span with { SourceTextOffsetInRun = span.SourceTextOffsetInRun + start };
+                        span = span with { SourceTextOffsetInRun = span.SourceTextOffsetInRun + start,
+                            SourceInlineItemIndex = sourceItemIndex };
                         var segments = CreateTextSegments([span], 0d, fontSize, measurer, [], 36d);
                         double width = segments.Count == 0 ? 0d : segments[^1].X + segments[^1].Width;
                         if (!double.IsFinite(width) || width < 0d) return false;
@@ -203,6 +214,31 @@ internal sealed partial class DocxLayoutEngine
                     break;
                 default: return false;
             }
+            for (int fragmentIndex = firstFragment; paragraph.CommentRanges.Count != 0 && fragmentIndex < measured.Count; fragmentIndex++)
+            {
+                var fragment = measured[fragmentIndex] with { SourceItemIndex = sourceItemIndex };
+                if (fragment.Math is { } math)
+                {
+                    double left = double.PositiveInfinity, right = double.NegativeInfinity;
+                    foreach (var glyph in math.Box.Glyphs)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        left = Math.Min(left, glyph.X);
+                        right = Math.Max(right, glyph.X + glyph.Advance);
+                    }
+                    foreach (var rule in math.Box.Rules)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        left = Math.Min(left, rule.X);
+                        right = Math.Max(right, rule.X + rule.Width);
+                    }
+                    if (double.IsFinite(left) && double.IsFinite(right))
+                        fragment = fragment with { VisibleSourceExtent = new(sourceItemIndex, left * scale, right * scale,
+                            math.Box.AboveBaseline * scale, math.Box.BelowBaseline * scale, IsMath: true) };
+                }
+                measured[fragmentIndex] = fragment;
+            }
+            sourceItemIndex++;
         }
         if (measured.Any(fragment => !double.IsFinite(fragment.Advance) || fragment.Advance < 0d ||
             !double.IsFinite(fragment.BaselineInset) || fragment.BaselineInset < 0d ||
@@ -266,7 +302,7 @@ internal sealed partial class DocxLayoutEngine
                         double partWidth = segments.Count == 0 ? 0d : segments[^1].X + segments[^1].Width;
                         if (!double.IsFinite(partWidth) || partWidth < 0d) return false;
                         var part = new DocxMeasuredInlineFragment(source, partWidth, baselineInset, Math.Max(lineHeight, baselineInset), [span])
-                            { TextSegments = segments };
+                            { TextSegments = segments, SourceItemIndex = span.SourceInlineItemIndex };
                         part = part with { LeadingAdvance = current.Count == 0 ? 0d : InlineTextBoundaryAdvance(current[^1], part) };
                         current.Add(part);
                         advance += part.LeadingAdvance + partWidth;

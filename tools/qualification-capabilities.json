@@ -506,5 +506,23 @@
     "DocxStaticFrameMapping",
     "DocxTableCellTextLinesMemoSharesSplitCells",
     "DocxInlineCompositionAutofitMathRespectsAdditionalInlineContent"
+  ],
+  "docx-math-comment-composition": [
+    "DocxInlineComposition",
+    "PortableRenderingCommentsPreserveMixedMathematics",
+    "DocxReaderPreservesCommentMetadataAndThreading",
+    "DocxWordCompatibleAllMarkupRendersCommentRangeBrackets",
+    "DocxWordCompatibleAllMarkupRendersWrappedCommentRangeContinuationMarkers",
+    "DocxWordCompatibleAllMarkupAnchorsCommentConnectorsAtRangeEnd",
+    "DocxWordCompatibleAllMarkupRendersBareCommentReferenceMarker",
+    "DocxWordCompatibleAllMarkupOmitsInlineCommentMarkerLabels",
+    "DocxAllMarkupRendererDrawsCommentBalloons",
+    "DocxWordCompatibleMixedStoryCommentsRetainBodyAnchor",
+    "DocxWordCompatibleHiddenBodyCommentsKeepNominalTextPlacement",
+    "DocxCommentsPreserveAuthoredWhitespace",
+    "PortableRenderingCommentsPreserveAuthoredWhitespace",
+    "PortableRenderingLeftTabsPreserveMixedMathAcrossContainers",
+    "DocxTableCellTextLinesMemoSharesSplitCells",
+    "DocxRendererKeepsSplitTableCellHyperlinkAnnotationsOnVisibleFragment"
   ]
 }

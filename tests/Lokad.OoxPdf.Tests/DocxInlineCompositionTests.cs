@@ -10,6 +10,98 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionCommentsRetainOrderedRangeBoundaries()
+    {
+        foreach (string anchor in new[] { "prose", "between", "formula", "mixed" })
+        foreach (bool split in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation("CompositionProbes/math-comment-" + anchor + "-body", mode, false, split);
+            var paragraph = document.Paragraphs.Single(p => p.Equations.Count != 0);
+            var items = TestAssert.NotNull(paragraph.InlineContent);
+            var range = paragraph.CommentRanges.Single();
+            TestAssert.True(range.StartInlineItemIndex is >= 0 && range.EndInlineItemIndex > range.StartInlineItemIndex,
+                "Comment boundaries must retain ordered source identity, including unchanged-format run splits.");
+            int start = range.StartInlineItemIndex!.Value, end = range.EndInlineItemIndex!.Value;
+            TestAssert.Equal(anchor is "prose" or "between" ? 0 : anchor == "formula" ? 1 : 2,
+                items.Skip(start).Take(end - start).OfType<DocxInlineEquation>().Count());
+            TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
+            var note = new DocxInlineReference(DocxRelatedStoryKind.Footnote, "1", null, "1", 0, 0, 0);
+            TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with { InlineReferences = [note] }).Count);
+        }
+    }
+
+    public static void DocxInlineCompositionCommentsPreserveMathematicsAndCaptions()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the native comment composition controls.");
+        foreach (string anchor in new[] { "prose", "between", "formula", "mixed" })
+        foreach (string container in new[] { "body", "cell" })
+        foreach (bool split in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation("CompositionProbes/math-comment-" + anchor + "-" + container, mode, true, split);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(1, pages.Length);
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            foreach (string word in new[] { "Start", "middle", "End.", "Following prose." }) TestAssert.Contains(word, text);
+            if (mode == OoxPdfDocxMarkupMode.AllMarkup) TestAssert.Contains("Check composed calculation.", text);
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Comments and bookmarks cannot remove otherwise supported math.");
+        }
+    }
+
+    public static void DocxInlineCompositionCommentHighlightsMatchIndependentSelectionBounds()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the independent comment geometry controls.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-comments-office-bounds.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+            var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var page = renderer.RenderBlankPages(document, null, default).Single();
+            var fills = System.Text.RegularExpressions.Regex.Matches(page.Content,
+                @"0\.973 0\.863 0\.867 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re f")
+                .Cast<System.Text.RegularExpressions.Match>().Select(match => (
+                    X: double.Parse(match.Groups["x"].Value, System.Globalization.CultureInfo.InvariantCulture),
+                    Width: double.Parse(match.Groups["w"].Value, System.Globalization.CultureInfo.InvariantCulture)))
+                .Where(fill => fill.X < 400d).ToArray();
+            TestAssert.Equal(1, fills.Length);
+            var line = renderer.InspectTextEmission(document).Lines.Single(line =>
+                line.Segments.Count(segment => !segment.IsTerminalLineSpace && segment.TextLength == 5) == 1 &&
+                line.Segments.Count(segment => !segment.IsTerminalLineSpace && segment.TextLength == 6) == 1);
+            double start = line.Segments.Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == 5).X;
+            foreach (var (value, property) in new[] { (fills[0].X - start, "StartOffset"), (fills[0].X + fills[0].Width - start, "EndOffset") })
+                TestAssert.True(Math.Abs(value - row.GetProperty(property).GetDouble()) < .4d,
+                    $"Comment fill must follow the independent selected source range: {input}/{property}={value}.");
+        }
+    }
+
+    public static void DocxInlineCompositionCommentedSoleFormulaRetainsDisplayOwnership()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation("CompositionProbes/math-comment-formula-body", mode, false, false, (xml, w, m) =>
+            {
+                var equation = xml.Descendants(m + "oMath").First();
+                equation.Parent!.ReplaceNodes(new XElement(w + "commentRangeStart", new XAttribute(w + "id", "0")),
+                    new XElement(equation), new XElement(w + "commentRangeEnd", new XAttribute(w + "id", "0")),
+                    new XElement(w + "r", new XElement(w + "commentReference", new XAttribute(w + "id", "0"))));
+            });
+            var paragraph = document.Paragraphs.Single(p => p.Equations.Count != 0);
+            TestAssert.Equal(1, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
+            TestAssert.True(DocxMathParagraphPolicy.GetDisplaySourceEquations(paragraph, default).Contains(paragraph.Equations.Single()),
+                "Annotation metadata cannot turn a sole visible formula into inline mathematical styling.");
+        }
+    }
+
     public static void DocxInlineCompositionLeftTabsMatchIndependentFieldOffsets()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

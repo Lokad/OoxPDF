@@ -224,7 +224,11 @@ internal sealed partial class DocxRenderer
             {
                 double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
                 int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
-                RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics, CommentAuthorFillRgb(authorSlot), CommentAuthorStrokeRgb(authorSlot));
+                double above = 0d, below = 0d;
+                foreach (var extent in line.InlineSourceExtents)
+                    if (extent.IsMath && extent.ItemIndex >= range.StartInlineItemIndex && extent.ItemIndex < range.EndInlineItemIndex)
+                    { above = Math.Max(above, extent.AboveBaseline); below = Math.Max(below, extent.BelowBaseline); }
+                RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics, CommentAuthorFillRgb(authorSlot), CommentAuthorStrokeRgb(authorSlot), above, below);
             }
             else if ((range is null || !HasCommentRangeBounds(range)) &&
                 TryResolveWordCompatibleCommentReferenceMarkerBounds(line, reference, ResolveTextEmissionXOffset(markupContext), out startX, out endX))
@@ -274,6 +278,14 @@ internal sealed partial class DocxRenderer
     {
         startX = 0d;
         endX = 0d;
+        if (TryResolveInlineCommentRangeBounds(line, range, out double inlineStart, out double inlineEnd))
+        {
+            // Ordered source extents already delimit the selected content. The
+            // legacy prose reconstruction insets do not belong to this geometry.
+            startX = inlineStart + wordCompatibleXOffset + WordCompatibleAllMarkupCommentRangeFillXInsetPoints;
+            endX = inlineEnd + wordCompatibleXOffset + WordCompatibleAllMarkupCommentRangeFillXInsetPoints;
+            return endX > startX;
+        }
         DocxTextSegmentLayout[] rangeSegments = line.Segments
             .Where(segment => SegmentOverlapsCommentRange(segment, range))
             .ToArray();
@@ -303,6 +315,34 @@ internal sealed partial class DocxRenderer
         endX = layoutEndX + wordCompatibleXOffset -
             WordCompatibleAllMarkupCommentRangeEndInsetPoints;
         return endX > startX;
+    }
+
+    private static bool TryResolveInlineCommentRangeBounds(DocxTextLineLayout line, DocxCommentRange range,
+        out double startX, out double endX)
+    {
+        startX = double.PositiveInfinity;
+        endX = double.NegativeInfinity;
+        if (range.StartInlineItemIndex is not int start || range.EndInlineItemIndex is not int end || end <= start)
+            return false;
+        bool startsWithProse = false, endsWithProse = false;
+        foreach (var extent in line.InlineSourceExtents)
+            if (extent.ItemIndex >= start && extent.ItemIndex < end)
+            {
+                startX = Math.Min(startX, line.X + extent.StartOffset);
+                endX = Math.Max(endX, line.X + extent.EndOffset);
+                startsWithProse |= extent.ItemIndex == start && !extent.IsMath;
+                endsWithProse |= extent.ItemIndex == end - 1 && !extent.IsMath;
+            }
+        // Inter-object whitespace belongs to adjacent prose selections, while
+        // a selected formula owns its visible box rather than layout padding.
+        foreach (var extent in line.InlineSourceExtents)
+        {
+            if (startsWithProse && extent.ItemIndex == start - 1 && extent.IsMath)
+                startX = Math.Min(startX, line.X + extent.EndOffset);
+            if (endsWithProse && extent.ItemIndex == end && extent.IsMath)
+                endX = Math.Max(endX, line.X + extent.StartOffset);
+        }
+        return double.IsFinite(startX) && double.IsFinite(endX) && endX > startX;
     }
 
     private static bool SegmentOverlapsCommentRange(
@@ -345,18 +385,21 @@ internal sealed partial class DocxRenderer
         double baselineY,
         PdfGraphicsBuilder graphics,
         DocxMarkupBalloonRgb fillRgb,
-        DocxMarkupBalloonRgb strokeRgb)
+        DocxMarkupBalloonRgb strokeRgb,
+        double objectAbove = 0d, double objectBelow = 0d)
     {
-        double bottomTickY = baselineY + WordCompatibleAllMarkupCommentRangeBottomTickYOffsetPoints;
-        double verticalBottomY = baselineY + WordCompatibleAllMarkupCommentRangeVerticalBottomYOffsetPoints;
-        double verticalTopY = baselineY + WordCompatibleAllMarkupCommentRangeVerticalTopYOffsetPoints;
-        double topTickY = baselineY + WordCompatibleAllMarkupCommentRangeTopTickYOffsetPoints;
+        double bottomExtension = Math.Max(0d, objectBelow + WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints);
+        double topExtension = Math.Max(0d, objectAbove - WordCompatibleAllMarkupCommentRangeFillHeightPoints - WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints);
+        double bottomTickY = baselineY + WordCompatibleAllMarkupCommentRangeBottomTickYOffsetPoints - bottomExtension;
+        double verticalBottomY = baselineY + WordCompatibleAllMarkupCommentRangeVerticalBottomYOffsetPoints - bottomExtension;
+        double verticalTopY = baselineY + WordCompatibleAllMarkupCommentRangeVerticalTopYOffsetPoints + topExtension;
+        double topTickY = baselineY + WordCompatibleAllMarkupCommentRangeTopTickYOffsetPoints + topExtension;
         graphics.SetFillRgb(fillRgb.Red, fillRgb.Green, fillRgb.Blue);
         graphics.FillRectangle(
             Math.Max(0d, startX - WordCompatibleAllMarkupCommentRangeFillXInsetPoints),
-            baselineY + WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints,
+            baselineY + WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints - bottomExtension,
             Math.Max(0d, endX - startX),
-            WordCompatibleAllMarkupCommentRangeFillHeightPoints);
+            WordCompatibleAllMarkupCommentRangeFillHeightPoints + topExtension + bottomExtension);
         graphics.SetStrokeRgb(strokeRgb.Red, strokeRgb.Green, strokeRgb.Blue);
         graphics.SetFillRgb(strokeRgb.Red, strokeRgb.Green, strokeRgb.Blue);
         graphics.SetLineWidth(WordCompatibleAllMarkupCommentRangeStrokeWidthPoints);

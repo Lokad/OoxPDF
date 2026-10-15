@@ -16,6 +16,27 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingCommentsPreserveMixedMathematics()
+    {
+        foreach (string anchor in new[] { "prose", "between", "formula", "mixed" })
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/math-comment-" + anchor + "-" + container + ".docx"), mode);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(1, pages.Length);
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            foreach (string word in new[] { "Start", "middle", "End.", "Following prose." }) TestAssert.Contains(word, text);
+            if (mode == OoxPdfDocxMarkupMode.AllMarkup) TestAssert.Contains("Check composed calculation.", text);
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Source annotation metadata cannot discard the formulas.");
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingLeftTabsPreserveMixedMathAcrossContainers()
     {
         foreach (string stop in new[] { "default18", "left72" })

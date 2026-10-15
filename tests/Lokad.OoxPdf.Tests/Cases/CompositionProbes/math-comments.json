@@ -1,0 +1,106 @@
+[
+  {
+    "Id": "math-comment-prose-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-comment-prose-body.docx",
+    "Sha256": "09743B4637BE9789E192901A532627C978269118296E7EB881CAF4C9082145ED",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-comment-prose-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-comment-prose-cell.docx",
+    "Sha256": "3C1CAD735CD66492012A911937BE0B3D3298565E99DE89CC8134673A2252C51C",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-comment-between-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-comment-between-body.docx",
+    "Sha256": "25499D0C27152042FFB40514AFF2E5DD979957E1A1E95373F527459FEC15E7C6",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-comment-between-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-comment-between-cell.docx",
+    "Sha256": "0026DD71A2B3BFE13D3EAB4135B799851334B6BB8DD56DABAA30E5EE85B9AB9D",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-comment-formula-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-comment-formula-body.docx",
+    "Sha256": "EAD461FFF82E248D06AB4F589E395FF9032758B4AFE75B536896DE63354544EA",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-comment-formula-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-comment-formula-cell.docx",
+    "Sha256": "7B736CA278950BC54A9D1C9369B17D91728FC5E189EBF45159D10AC9D82E4501",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-comment-mixed-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-comment-mixed-body.docx",
+    "Sha256": "F04BE208388FA8654F0CD4E74EF571CBB17464A24B721D845A8F99840D87A2D7",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-comment-mixed-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-comment-mixed-cell.docx",
+    "Sha256": "316A7B4AEF4B6ABA05A394A7FF68847E22FA3F69106FF0F6139E09ADEEC2634F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "middle",
+      "End.",
+      "Following prose."
+    ]
+  }
+]
