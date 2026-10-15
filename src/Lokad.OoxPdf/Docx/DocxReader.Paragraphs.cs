@@ -331,7 +331,8 @@ internal sealed partial class DocxReader
                     properties?.ToString(SaveOptions.DisableFormatting), revision)
                 {
                     ParentFontSize = ResolveRunProperties(null, paragraphStyleId, null, styles, tableCellStyle?.Run).FontSize
-                        ?? DocxDefaults.UnstyledRunFontSizePoints
+                        ?? DocxDefaults.UnstyledRunFontSizePoints,
+                    LimitSettings = (documentSettings ?? DocxDocumentSettings.Empty).MathLimitSettings
                 });
             }
 

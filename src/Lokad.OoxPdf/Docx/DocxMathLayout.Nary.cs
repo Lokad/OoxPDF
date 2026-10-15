@@ -7,16 +7,20 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static partial class DocxMathLayout
 {
-    // Explicit locations are independent of document-level defaults. Inline
-    // equations place limits beside the operator, as Office does for undOvr.
+    // Node placement overrides the document owner. Inline equations place
+    // limits beside the operator, as Office does for undOvr.
     // Integral sizing retains its independently measured fallback.
     private static DocxMathNary? GetNary(DocxEquation equation, CancellationToken token) =>
         GetSingleSupportedChild(equation) is DocxMathNary
-        { HasUnsupportedProperties: false, CharacterValue: "\u2211" or "\u220F", LimitLocationValue: "undOvr" or "subSup",
+        { HasUnsupportedProperties: false, CharacterValue: "\u2211" or "\u220F", LimitLocationValue: null or "undOvr" or "subSup",
             GrowValue: not false } nary &&
+        NaryLimitLocation(equation, nary) is "undOvr" or "subSup" &&
         (nary.SubscriptHiddenValue != true || IsEmptyLiteralArgument(nary.Subscript, token)) &&
         (nary.SuperscriptHiddenValue != true || IsEmptyLiteralArgument(nary.Superscript, token)) &&
         (nary.ControlText is null || DocxMathRowLayout.HasSupportedTextFormatting(nary.ControlText, allowBold: false)) ? nary : null;
+
+    private static string? NaryLimitLocation(DocxEquation equation, DocxMathNary nary) =>
+        nary.LimitLocationValue ?? (equation.LimitSettings.UnsupportedNary ? null : equation.LimitSettings.NaryValue ?? "undOvr");
 
     // Word reassigns stored nonempty hidden arguments into visible roles.
     // Only a truly empty supported literal argument may be omitted here.
@@ -42,7 +46,7 @@ internal static partial class DocxMathLayout
             OpenTypeMathConstant.LowerLimitBaselineDropMin];
         foreach (var field in required)
             if (constants.GetValue(field) < 0) { fallback = "InvalidMathNaryConstants"; return false; }
-        if (!(equation.Display && nary.LimitLocationValue == "undOvr") && !HasValidScriptConstants(constants, equation.Cramped))
+        if (!(equation.Display && NaryLimitLocation(equation, nary) == "undOvr") && !HasValidScriptConstants(constants, equation.Cramped))
         { fallback = "InvalidMathNaryScriptConstants"; return false; }
         if (!DocxMathRowLayout.TryMeasure(nary.Body, resolveFont, token, out var body, out fallback,
                 exportFontSize: true, operatorSpacingFontSize: size) || body is null || body.Glyphs.Count == 0)
@@ -62,7 +66,7 @@ internal static partial class DocxMathLayout
         double Value(OpenTypeMathConstant field) => constants.GetValue(field) * size / font.UnitsPerEm;
         double baseline = Value(OpenTypeMathConstant.AxisHeight) - (bounds.YMax + bounds.YMin) / 2d * scale;
         double operatorAdvance = font.GetAdvanceWidth(variant.Glyph) * scale;
-        bool stacked = equation.Display && nary.LimitLocationValue == "undOvr";
+        bool stacked = equation.Display && NaryLimitLocation(equation, nary) == "undOvr";
         double groupAdvance, operatorX = 0d, upperX, lowerX, upperY, lowerY, bodyX;
         if (stacked)
         {

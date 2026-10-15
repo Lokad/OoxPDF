@@ -90,7 +90,7 @@ internal static partial class DocxMathParser
             children.Select(p => p.Name).Distinct().Count() == children.Length;
     }
 
-    private static bool HasKnownValueProperty(XElement property) => property.Name.Namespace == MathNamespace &&
+    internal static bool HasKnownValueProperty(XElement property) => property.Name.Namespace == MathNamespace &&
         !property.HasElements && string.IsNullOrWhiteSpace(property.Value) &&
         property.Attributes().All(a => a.IsNamespaceDeclaration || a.Name == MathNamespace + "val");
     private static bool HasCharacterValue(string? value) => value is null || value.Length <= 2 && value.EnumerateRunes().Count() <= 1;

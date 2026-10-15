@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
@@ -7,6 +8,59 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathNaryTests
 {
+    public static void MathFontNaryDocumentLimitSettingsRetainValuesMalformedSourceAndCancellation()
+    {
+        foreach (string? value in new string?[] { null, "", "subSup", "undOvr" })
+        {
+            string property = value is null ? "" : value.Length == 0 ? "<m:naryLim/><m:intLim/>" :
+                $"<m:naryLim m:val='{value}'/><m:intLim m:val='{value}'/>";
+            var settings = Settings(property);
+            TestAssert.Equal(string.IsNullOrEmpty(value) ? null : value, settings.NaryValue);
+            TestAssert.Equal(string.IsNullOrEmpty(value) ? null : value, settings.IntegralValue);
+            TestAssert.True(!settings.UnsupportedNary && !settings.UnsupportedIntegral && settings.PropertiesXml.Count == 1,
+                "Omitted versus present-default source remains retained without inventing authored values.");
+        }
+        foreach (string malformed in new[] { "<m:naryLim m:val='bad'/>", "<m:naryLim/><m:naryLim/>",
+            "<m:naryLim extra='1'/>", "<m:naryLim>text</m:naryLim>", "<m:naryLim><m:future/></m:naryLim>", "<w:naryLim/>" })
+        {
+            var settings = Settings(malformed + "<m:intLim m:val='subSup'/>");
+            TestAssert.True(settings.UnsupportedNary && !settings.UnsupportedIntegral && settings.PropertiesXml[0].Contains("naryLim", StringComparison.Ordinal),
+                "Malformed or duplicate n-ary defaults remain explicit without invalidating an independent integral setting.");
+        }
+        var duplicate = DocxMathLimitSettings.Read(XElement.Parse("<w:settings xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main' xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'><m:mathPr/><m:mathPr/></w:settings>"), CancellationToken.None);
+        TestAssert.True(duplicate.UnsupportedNary && duplicate.UnsupportedIntegral && duplicate.PropertiesXml.Count == 2,
+            "Duplicate property owners retain their source and cannot silently choose one document default.");
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLimitSettings.Read(null, cancelled.Token));
+    }
+
+    public static void MathFontNaryDocumentDefaultsSharePlacementAndKeepNodePrecedence()
+    {
+        var font = OpenTypeFont.Load(FontBytes(0x2211));
+        var resource = new PdfFontResource("Defaults", PdfEmbeddedFont.CreateForGlyphMappings(font,
+            new[] { ((ushort)128, 0x2211), ((ushort)130, 0x2211), (font.MapCodePoint('B'), (int)'B'), (font.MapCodePoint('C'), (int)'C') }, CancellationToken.None));
+        foreach (bool display in new[] { true, false })
+        foreach (string location in new[] { "undOvr", "subSup" })
+        {
+            var settings = Settings($"<m:naryLim m:val='{location}'/><m:intLim m:val='bad'/>");
+            var nary = Nary("\u2211") with { LimitLocationValue = null };
+            var equation = Equation(nary) with { Display = display, LimitSettings = settings };
+            TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var inherited, out var reason), reason ?? "Expected document-owned limits.");
+            TestAssert.True(DocxMathLayout.TryMeasure(equation with { Content = new([nary with { LimitLocationValue = location }]) },
+                _ => resource, CancellationToken.None, out var explicitBox, out _), "Expected equivalent explicit placement.");
+            TestAssert.True(TestAssert.NotNull(inherited).Glyphs.SequenceEqual(TestAssert.NotNull(explicitBox).Glyphs) && nary.LimitLocationValue is null,
+                "Resolution reuses placement without overwriting the authored node or consuming unrelated invalid integral defaults.");
+            var invalid = equation with { LimitSettings = Settings("<m:naryLim m:val='bad'/>") };
+            TestAssert.True(!DocxMathLayout.TryMeasure(invalid, _ => resource, CancellationToken.None, out var absent, out _) && absent is null,
+                "An unqualified document default cannot claim native placement.");
+            TestAssert.True(DocxMathLayout.TryMeasure(invalid with { Content = new([nary with { LimitLocationValue = location }]) },
+                _ => resource, CancellationToken.None, out _, out _), "Authored node placement takes precedence over unused malformed defaults.");
+        }
+    }
+
+    private static DocxMathLimitSettings Settings(string properties) => DocxMathLimitSettings.Read(XElement.Parse(
+        "<w:settings xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main' xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'><m:mathPr>" + properties + "</m:mathPr></w:settings>"), CancellationToken.None);
+
     public static void MathFontNaryStackedLimitsKeepIndependentResourcesAndCompleteFallback()
     {
         foreach (int point in new[] { 0x2211, 0x220F })
@@ -44,7 +98,7 @@ internal static class DocxMathNaryTests
     public static void MathFontNaryEligibilityBoundsAndCancellationRemainExplicit()
     {
         var nary = Nary("\u2211");
-        foreach (var invalid in new[] { nary with { CharacterValue = "\u222B" }, nary with { LimitLocationValue = null },
+        foreach (var invalid in new[] { nary with { CharacterValue = "\u222B" }, nary with { LimitLocationValue = "unknown" },
             nary with { GrowValue = false },
             nary with { SubscriptHiddenValue = true }, nary with { SuperscriptHiddenValue = true },
             nary with { Body = new([nary]) }, nary with { HasUnsupportedProperties = true } })

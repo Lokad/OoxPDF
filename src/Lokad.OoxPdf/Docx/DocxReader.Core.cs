@@ -46,7 +46,7 @@ internal sealed partial class DocxReader
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
         var warnedMustUnderstandParts = new HashSet<string>(StringComparer.Ordinal);
         XDocument? settings = LoadRelatedXmlPart(package, documentPart.Name, SettingsRelationshipType, SettingsContentType, out _, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
-        DocxDocumentSettings documentSettings = ReadDocumentSettings(settings);
+        DocxDocumentSettings documentSettings = ReadDocumentSettings(settings, cancellationToken);
         OoxPdfDocxMarkupMode revisionFilteringMarkupMode = ResolveRevisionFilteringMarkupMode(markupMode, documentSettings);
         DocxMarkupContext markupContext = DocxMarkupContext.FromMode(markupMode).ApplyDocumentSettings(documentSettings);
         DocxCommentAnchorInventory commentAnchorInventory = ReadCommentAnchorInventory(document, revisionFilteringMarkupMode);
@@ -198,7 +198,7 @@ internal sealed partial class DocxReader
     }
 
     // Single caller; kept static: entry-point stage, not a local candidate.
-    private static DocxDocumentSettings ReadDocumentSettings(XDocument? settings)
+    private static DocxDocumentSettings ReadDocumentSettings(XDocument? settings, CancellationToken cancellationToken)
     {
             DocxRevisionViewSettings ReadRevisionViewSettings(XElement? revisionView)
             {
@@ -260,7 +260,8 @@ internal sealed partial class DocxReader
             ReadOnOff(mirrorMargins),
             compatSettings)
         {
-            MathFontFamily = (string?)root.Element(MathNamespace + "mathPr")?.Element(MathNamespace + "mathFont")?.Attribute(MathNamespace + "val")
+            MathFontFamily = (string?)root.Element(MathNamespace + "mathPr")?.Element(MathNamespace + "mathFont")?.Attribute(MathNamespace + "val"),
+            MathLimitSettings = DocxMathLimitSettings.Read(root, cancellationToken)
         };
     }
 

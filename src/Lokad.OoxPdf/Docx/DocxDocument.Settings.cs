@@ -15,6 +15,7 @@ internal sealed record DocxDocumentSettings(
     IReadOnlyList<DocxCompatSetting> CompatSettings)
 {
     public string? MathFontFamily { get; init; }
+    public DocxMathLimitSettings MathLimitSettings { get; init; } = DocxMathLimitSettings.Empty;
     public static DocxDocumentSettings Empty { get; } = new(null, null, null, null, null, DocxRevisionViewSettings.Empty, DocxTrackChangesSettings.Empty, DocxNoteReferenceSettings.Empty, DocxNoteReferenceSettings.Empty, null, null, []);
 }
 

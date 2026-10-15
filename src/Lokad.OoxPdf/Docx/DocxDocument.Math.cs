@@ -13,6 +13,7 @@ internal sealed record DocxEquation(
 {
     public double? ParentFontSize { get; init; }
     public bool Cramped { get; init; }
+    public DocxMathLimitSettings LimitSettings { get; init; } = DocxMathLimitSettings.Empty;
 }
 
 internal abstract record DocxMathNode

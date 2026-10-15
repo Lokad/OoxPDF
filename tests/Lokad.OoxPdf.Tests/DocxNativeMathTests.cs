@@ -7,6 +7,28 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeNaryDocumentDefaultsKeepSharedOwnerAndExplicitPrecedence()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string character, string? location) in new[] {
+            ("display-sum-omitted", "\u2211", (string?)null), ("display-product-setting-side", "\u220F", null),
+            ("display-sum-setting-stacked", "\u2211", null), ("inline-product-setting-stacked", "\u220F", null),
+            ("display-sum-explicit-side", "\u2211", "subSup"), ("display-product-present-default", "\u220F", "undOvr"),
+            ("display-product-setting-default", "\u220F", null), ("inline-sum-setting-side", "\u2211", null) })
+        {
+            var source = NamedFixture("docx-omml-nary-default-" + suffix);
+            var equation = source.Paragraphs.SelectMany(p => p.Equations).Single();
+            var nary = (DocxMathNary)equation.Content.Children.Single();
+            TestAssert.True(ReferenceEquals(source.Settings.MathLimitSettings, equation.LimitSettings), "Equations share the document's immutable settings owner.");
+            TestAssert.Equal(location, nary.LimitLocationValue);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(source, diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(character + "xni=1", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Document defaults and authored node precedence retain native body and limit painting.");
+        }
+    }
+
     public static void DocxNativeEmptyHiddenNaryLimitsRetainRemainingBodyAndArguments()
     {
         RequireMathFont();
