@@ -9,8 +9,20 @@ internal static partial class DocxMathParser
         Func<XElement, string, DocxTextRun> readRun, CancellationToken token)
     {
         bool valid = ReadPropertyOwner(element, "mPr", out XElement? owner, out XElement[] properties);
+        IReadOnlyList<DocxMathMatrixColumn>? columnGroups = null;
         foreach (XElement property in properties)
-        { token.ThrowIfCancellationRequested(); valid &= property.Name == MathNamespace + "ctrlPr" && HasKnownControl(property); }
+        {
+            token.ThrowIfCancellationRequested();
+            if (property.Name == MathNamespace + "mcs")
+            {
+                valid &= property.Attributes().All(a => a.IsNamespaceDeclaration) && HasOnlyWhitespaceText(property) && property.HasElements;
+                var groups = new List<DocxMathMatrixColumn>();
+                foreach (XElement column in property.Elements())
+                { token.ThrowIfCancellationRequested(); var group = ReadMatrixColumn(column, token); groups.Add(group); valid &= !group.HasUnsupportedProperties; }
+                columnGroups = groups;
+            }
+            else { valid &= property.Name == MathNamespace + "ctrlPr" && HasKnownControl(property); }
+        }
         int columns = rows[0].Cells.Count;
         foreach (DocxMathMatrixRow row in rows)
         { token.ThrowIfCancellationRequested(); valid &= !row.HasUnsupportedProperties && row.Cells.Count == columns; }
@@ -24,6 +36,27 @@ internal static partial class DocxMathParser
         // Keep absent/authored controls distinct from painted cell formatting.
         DocxTextRun? text = control is null ? null : readRun(control, string.Empty);
         return new(rows)
-        { HasUnsupportedProperties = !valid, ControlText = text, ControlFontFamily = text is null ? null : ControlFontFamily(control, text) };
+        { ColumnGroups = columnGroups, HasUnsupportedProperties = !valid, ControlText = text, ControlFontFamily = text is null ? null : ControlFontFamily(control, text) };
+    }
+
+    private static DocxMathMatrixColumn ReadMatrixColumn(XElement element, CancellationToken token)
+    {
+        bool valid = ReadPropertyOwner(element, "mcPr", out XElement? owner, out XElement[] properties) &&
+            element.Name == MathNamespace + "mc" && !ContentChildren(element).Any();
+        foreach (XElement property in properties)
+        {
+            token.ThrowIfCancellationRequested();
+            valid &= HasKnownValueProperty(property) && property.Name.LocalName is "count" or "mcJc";
+        }
+        string? countText = (string?)owner?.Element(MathNamespace + "count")?.Attribute(MathNamespace + "val");
+        int? count = null;
+        if (countText is not null)
+        {
+            bool parsed = int.TryParse(countText, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int value);
+            count = value; valid &= parsed && value is >= 1 and <= 255;
+        }
+        string? justification = (string?)owner?.Element(MathNamespace + "mcJc")?.Attribute(MathNamespace + "val");
+        valid &= justification is null or "center" or "left" or "right";
+        return new(count, justification, !valid);
     }
 }

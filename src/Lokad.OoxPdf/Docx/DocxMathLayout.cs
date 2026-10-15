@@ -60,7 +60,7 @@ internal static partial class DocxMathLayout
         if (GetFunction(equation) is { } function) { return TryGetFunctionRuns(equation, function, token, out runs); }
         var rows = new List<(DocxMathRow Row, int Level, bool AllowArgumentSize)>();
         IDocxMathControl? controlOwner = null;
-        if (GetMatrix(equation) is { } matrix)
+        if (GetMatrix(equation, token) is { } matrix)
         {
             foreach (var row in matrix.Rows)
             foreach (var cell in row.Cells)
@@ -177,7 +177,7 @@ internal static partial class DocxMathLayout
         Func<IDocxMathControl, PdfFontResource?>? resolveControlFont = null,
         Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics = null)
     {
-        if (GetMatrix(equation) is { } matrix)
+        if (GetMatrix(equation, token) is { } matrix)
             return TryMeasureMatrix(equation, matrix, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics);
         if (GetFunction(equation) is { } function)
             return TryMeasureFunction(equation, function, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics);

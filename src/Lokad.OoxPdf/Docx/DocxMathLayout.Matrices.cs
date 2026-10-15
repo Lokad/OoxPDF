@@ -5,11 +5,38 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static partial class DocxMathLayout
 {
-    private static DocxMathMatrix? GetMatrix(DocxEquation equation) =>
-        GetSingleSupportedChild(equation) is DocxMathMatrix { HasUnsupportedProperties: false, Rows.Count: > 0 } matrix &&
-        matrix.Rows[0].Cells.Count > 0 && matrix.Rows.All(r => !r.HasUnsupportedProperties && r.PropertiesXml.Count == 0 &&
-            r.Cells.Count == matrix.Rows[0].Cells.Count) &&
-        (matrix.ControlText is null || DocxMathRowLayout.HasSupportedTextFormatting(matrix.ControlText, allowBold: false)) ? matrix : null;
+    private enum MatrixColumnAlignment { Center, Left, Right }
+
+    private static DocxMathMatrix? GetMatrix(DocxEquation equation, CancellationToken token)
+    {
+        if (GetSingleSupportedChild(equation) is not DocxMathMatrix { HasUnsupportedProperties: false, Rows.Count: > 0 } matrix ||
+            matrix.Rows[0].Cells.Count == 0 || matrix.ControlText is { } control && !DocxMathRowLayout.HasSupportedTextFormatting(control, allowBold: false)) { return null; }
+        foreach (var row in matrix.Rows)
+        {
+            token.ThrowIfCancellationRequested();
+            if (row.HasUnsupportedProperties || row.PropertiesXml.Count != 0 || row.Cells.Count != matrix.Rows[0].Cells.Count) { return null; }
+        }
+        return TryResolveMatrixColumns(matrix.ColumnGroups, matrix.Rows[0].Cells.Count, [], token) ? matrix : null;
+    }
+
+    private static bool TryResolveMatrixColumns(IReadOnlyList<DocxMathMatrixColumn>? groups, int columns, Span<MatrixColumnAlignment> destination, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (!destination.IsEmpty && destination.Length != columns) { return false; }
+        if (groups is null) { destination.Fill(MatrixColumnAlignment.Center); return true; }
+        int used = 0;
+        foreach (var group in groups)
+        {
+            token.ThrowIfCancellationRequested();
+            int count = group.CountValue ?? 1;
+            if (group.HasUnsupportedProperties || count <= 0 || count > columns - used ||
+                group.JustificationValue is not (null or "center" or "left" or "right")) { return false; }
+            var alignment = group.JustificationValue switch { "left" => MatrixColumnAlignment.Left, "right" => MatrixColumnAlignment.Right, _ => MatrixColumnAlignment.Center };
+            if (!destination.IsEmpty) { destination.Slice(used, count).Fill(alignment); }
+            used += count;
+        }
+        return used == columns;
+    }
 
     private static bool TryMeasureMatrix(DocxEquation equation, DocxMathMatrix matrix,
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token,
@@ -30,6 +57,10 @@ internal static partial class DocxMathLayout
         double baselineFloor = DocxLineMetrics.MeasureTypographicBaselineInset(font, glyphSize);
         double descentFloor = DocxLineMetrics.MeasureTypographicLineHeight(font, glyphSize) - baselineFloor;
         int columns = matrix.Rows[0].Cells.Count;
+        // Resolve into the actual source width, never a declared group count.
+        var alignments = new MatrixColumnAlignment[columns];
+        if (!TryResolveMatrixColumns(matrix.ColumnGroups, columns, alignments, token))
+        { fallback = "UnsupportedMathMatrixColumns"; return false; }
         var widths = new double[columns]; var rowAbove = new double[matrix.Rows.Count]; var rowBelow = new double[matrix.Rows.Count];
         var cells = new List<DocxMathBox[]>(matrix.Rows.Count);
         double height = 0d;
@@ -64,7 +95,8 @@ internal static partial class DocxMathLayout
             for (int c = 0; c < columns; c++)
             {
                 token.ThrowIfCancellationRequested(); var child = cells[r][c];
-                double cellX = x + (widths[c] - child.AdvanceWidth) / 2d;
+                double spare = widths[c] - child.AdvanceWidth;
+                double cellX = x + (alignments[c] switch { MatrixColumnAlignment.Left => 0d, MatrixColumnAlignment.Right => spare, _ => spare / 2d });
                 width = Math.Max(width, cellX + child.Width); inkAbove = Math.Max(inkAbove, baseline + child.AboveBaseline);
                 inkBelow = Math.Max(inkBelow, child.BelowBaseline - baseline);
                 foreach (var glyph in child.Glyphs)

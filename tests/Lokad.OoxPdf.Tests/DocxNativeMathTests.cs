@@ -7,6 +7,20 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeMatrixColumnDeclarationsPreserveGroupedCellMeaning()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string meaning) in new[] { ("display-center", "abbcccd"), ("inline-left", "abbcccd"),
+            ("inline-right", "abbcccd"), ("display-grouped", "abbccccdeeee"), ("inline-defaults", "abbcccd"), ("inline-control20-center", "abbcccd") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-columns-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Known column declarations retain ordered native cells through the existing grid owner.");
+        }
+    }
+
     public static void DocxNativeLiteralMatricesKeepOrderedCellsAndIndependentFonts()
     {
         RequireMathFont();

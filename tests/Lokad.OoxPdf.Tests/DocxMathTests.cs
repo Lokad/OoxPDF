@@ -7,6 +7,35 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathTests
 {
+    public static void DocxMathMatrixColumnGroupsRetainTypedCountsDefaultsAndUnknownSource()
+    {
+        string cells = "<m:mr><m:e><m:r><m:t>a</m:t></m:r></m:e><m:e><m:r><m:t>b</m:t></m:r></m:e><m:e><m:r><m:t>c</m:t></m:r></m:e></m:mr>";
+        DocxMathMatrix Read(string columns) => (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mPr><m:mcs>{columns}</m:mcs></m:mPr>{cells}</m:m></m:oMath>")).Children.Single();
+        var matrix = Read("<m:mc><m:mcPr><m:count m:val='2'/><m:mcJc m:val='left'/></m:mcPr></m:mc><m:mc><m:mcPr><m:count m:val='1'/><m:mcJc m:val='right'/></m:mcPr></m:mc>");
+        TestAssert.True(!matrix.HasUnsupportedProperties && matrix.ColumnGroups is { Count: 2 } groups &&
+            groups[0] is { CountValue: 2, JustificationValue: "left", HasUnsupportedProperties: false } && groups[1] is { CountValue: 1, JustificationValue: "right" },
+            "Typed column groups retain source order, count and justification without expanding declared counts.");
+        TestAssert.Contains("mcs", matrix.PropertiesXml.Single());
+        var defaults = Read("<m:mc/><m:mc><m:mcPr><m:count/><m:mcJc/></m:mcPr></m:mc><m:mc><m:mcPr/></m:mc>");
+        TestAssert.True(!defaults.HasUnsupportedProperties && TestAssert.NotNull(defaults.ColumnGroups).All(g => g is { CountValue: null, JustificationValue: null, HasUnsupportedProperties: false }),
+            "Absent and val-less count/justification declarations preserve default-source roles.");
+        foreach (string bad in new[] { "", "<m:future/>", "<m:mc extra='1'/>", "<m:mc><m:e/></m:mc>", "<m:mc><m:mcPr/><m:mcPr/></m:mc>",
+            "<m:mc><m:mcPr><m:count m:val='0'/></m:mcPr></m:mc>", "<m:mc><m:mcPr><m:count m:val='256'/></m:mcPr></m:mc>",
+            "<m:mc><m:mcPr><m:count m:val='2147483648'/></m:mcPr></m:mc>", "<m:mc><m:mcPr><m:count m:val='bad'/></m:mcPr></m:mc>",
+            "<m:mc><m:mcPr><m:mcJc m:val='diagonal'/></m:mcPr></m:mc>", "<m:mc><m:mcPr><m:mcJc extra='1'/></m:mcPr></m:mc>",
+            "<m:mc><m:mcPr><m:count/><m:count/></m:mcPr></m:mc>" })
+        {
+            var rejected = Read(bad);
+            TestAssert.True(rejected.HasUnsupportedProperties && rejected.Rows.Single().Cells.Count == 3 && RowText(rejected.Rows[0].Cells[2]) == "c",
+                "Malformed/unqualified group properties preserve raw properties and every cell boundary.");
+        }
+        var large = Read("<m:mc><m:mcPr><m:count m:val='255'/></m:mcPr></m:mc>");
+        TestAssert.True(!large.HasUnsupportedProperties && large.ColumnGroups is [ { CountValue: 255 } ],
+            "A schema-valid count remains one scalar declaration; actual-grid resolution owns its admission.");
+        TestAssert.True(!DocxMathLayout.TryGetRuns(new(new([large]), 0, 0, true, null, null, null), CancellationToken.None, out _),
+            "An overdeclared group keeps complete fallback without allocating 255 column slots for three source cells.");
+    }
+
     public static void DocxMathMatrixPinnedControlsRetainRowsCellsAndAuthoredOwners()
     {
         foreach ((string suffix, int rows) in new[] { ("display-literal", 2), ("inline-literal", 2), ("display-three-rows", 3),
@@ -43,7 +72,7 @@ internal static class DocxMathTests
         foreach (string properties in new[] { "<m:mPr/><m:mPr/>", "<m:mPr extra='1'/>", "<m:mPr>stray</m:mPr>",
             "<m:mPr><m:future/></m:mPr>", "<m:mPr><m:ctrlPr/><m:ctrlPr/></m:mPr>", "<m:mPr><m:ctrlPr><w:ins/></m:ctrlPr></m:mPr>",
             "<m:mPr><m:ctrlPr><w:rPr><w:unknown/></w:rPr></m:ctrlPr></m:mPr>",
-            "<m:mPr><m:mcs><m:mc><m:mcPr><m:count m:val='1'/><m:mcJc m:val='left'/></m:mcPr></m:mc></m:mcs></m:mPr>" })
+            "<m:mPr><m:mcs><m:mc><m:mcPr><m:count m:val='1'/><m:mcJc m:val='diagonal'/></m:mcPr></m:mc></m:mcs></m:mPr>" })
         {
             var parsed = (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}' xmlns:w='{WordprocessingNamespace}'><m:m>{properties}{cell}</m:m></m:oMath>")).Children.Single();
             TestAssert.True(parsed.HasUnsupportedProperties && parsed.PropertiesXml.Count > 0 && RowText(parsed.Rows.Single().Cells.Single()) == "x",

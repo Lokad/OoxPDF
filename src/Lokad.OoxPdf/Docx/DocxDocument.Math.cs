@@ -83,8 +83,10 @@ internal sealed record DocxMathMatrixRow(IReadOnlyList<DocxMathRow> Cells) : Doc
 {
     public bool HasUnsupportedProperties { get; init; }
 }
+internal sealed record DocxMathMatrixColumn(int? CountValue, string? JustificationValue, bool HasUnsupportedProperties);
 internal sealed record DocxMathMatrix(IReadOnlyList<DocxMathMatrixRow> Rows) : DocxMathNode, IDocxMathControl
 {
+    public IReadOnlyList<DocxMathMatrixColumn>? ColumnGroups { get; init; }
     public bool HasUnsupportedProperties { get; init; }
     public DocxTextRun? ControlText { get; init; }
     public string? ControlFontFamily { get; init; }

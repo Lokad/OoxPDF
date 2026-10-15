@@ -7,6 +7,36 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathMatrixLayoutTests
 {
+    public static void MathFontMatrixColumnGroupsShareSlotsAndBoundDeclaredCounts()
+    {
+        var font = MathFont(); var resource = Resource("Columns", font, "BC");
+        var matrix = Matrix([Run("B"), Run("CC")], [Run("BBB"), Run("C")]);
+        double b = font.GetAdvanceWidth(font.MapCodePoint('B')) * 12d / font.UnitsPerEm;
+        double c = font.GetAdvanceWidth(font.MapCodePoint('C')) * 12d / font.UnitsPerEm;
+        foreach (string alignment in new[] { "left", "center", "right" })
+        {
+            var declared = matrix with { ColumnGroups = [new(2, alignment, false)] };
+            TestAssert.True(DocxMathLayout.TryMeasure(Equation(declared), _ => resource, CancellationToken.None, out var box, out var reason,
+                resolveControlMetrics: _ => font), reason ?? "Expected declared column group.");
+            var measured = TestAssert.NotNull(box); double factor = alignment == "left" ? 0d : alignment == "right" ? 1d : 0.5d;
+            TestAssert.True(Math.Abs(measured.Glyphs[0].X - 2d * b * factor) < 1e-9 &&
+                Math.Abs(measured.Glyphs[^1].X - 3d * b - 12d - c * factor) < 1e-9,
+                "One declared group applies the same alignment to each actual logical column slot.");
+        }
+        var grouped = matrix with { ColumnGroups = [new(null, "left", false), new(null, "right", false)] };
+        TestAssert.True(DocxMathLayout.TryMeasure(Equation(grouped), _ => resource, CancellationToken.None, out var mixed, out _, resolveControlMetrics: _ => font) &&
+            TestAssert.NotNull(mixed).Glyphs[0].X == 0d && Math.Abs(TestAssert.NotNull(mixed).Glyphs[^1].X - 3d * b - 12d - c) < 1e-9,
+            "Absent counts default to one while grouped columns retain independent alignment.");
+        foreach (IReadOnlyList<DocxMathMatrixColumn> invalid in new IReadOnlyList<DocxMathMatrixColumn>[] {
+            [], [new(1, "left", false)], [new(3, "left", false)], [new(int.MaxValue, "left", false)],
+            [new(0, "left", false)], [new(2, "future", false)], [new(2, "left", true)] })
+            TestAssert.True(!DocxMathLayout.TryMeasure(Equation(matrix with { ColumnGroups = invalid }), _ => resource, CancellationToken.None,
+                out var rejected, out _, resolveControlMetrics: _ => font) && rejected is null,
+                "Invalid/incomplete/overdeclared groups reject the complete grid before any count-driven expansion.");
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(Equation(grouped), cancelled.Token, out _));
+    }
+
     public static void MathFontMatrixLiteralCellsShareSlotsAxisAndMetricOnlyControl()
     {
         var metric = MathFont(); var plain = TestFontBuilder.LoadTestFont();
