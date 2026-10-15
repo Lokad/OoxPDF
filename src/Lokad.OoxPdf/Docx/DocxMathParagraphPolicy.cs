@@ -58,7 +58,7 @@ internal static class DocxMathParagraphPolicy
     // style only for measurement; mixed prose retains its inline ownership.
     public static DocxEquation? GetStandaloneRow(DocxParagraph paragraph)
     {
-        if (!HasSupportedOwner(paragraph) || paragraph.Hyperlinks.Count != 0 ||
+        if (!HasSupportedOwner(paragraph) || paragraph.ListLabel is not null || paragraph.Hyperlinks.Count != 0 ||
             HasVisibleProse(paragraph) ||
             !TryGetDisplayLineSpacingFactor(paragraph, out _))
         { return null; }
@@ -81,7 +81,7 @@ internal static class DocxMathParagraphPolicy
     }
 
     public static DocxEquation? GetInlineRow(DocxParagraph paragraph) =>
-        HasSupportedOwner(paragraph) && !paragraph.Equations[0].Display &&
+        HasSupportedOwner(paragraph) && paragraph.ListLabel is null && !paragraph.Equations[0].Display &&
         paragraph.Spacing.LineRuleValue is null or "auto" &&
         paragraph.Runs.All(run => !run.Text.Contains('\t') && !run.Text.Contains('\n')) &&
         HasVisibleProse(paragraph)
@@ -96,7 +96,7 @@ internal static class DocxMathParagraphPolicy
         CancellationToken token)
     {
         var display = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
-        if (!HasSupportedSourceOwner(paragraph) || paragraph.Hyperlinks.Count != 0 ||
+        if (!HasSupportedSourceOwner(paragraph) || paragraph.ListLabel is not null || paragraph.Hyperlinks.Count != 0 ||
             paragraph.InlineContent is not { } items || !TryGetDisplayLineSpacingFactor(paragraph, out _))
             return display;
         var row = new List<DocxEquation>();
@@ -166,5 +166,5 @@ internal static class DocxMathParagraphPolicy
         // Bookmarks are source metadata with no measured or painted extent.
         // Their presence cannot change ownership of an otherwise supported box.
         paragraph.FieldReferences.Count == 0 &&
-        paragraph.RevisionRanges.Count == 0 && paragraph.ListLabel is null;
+        paragraph.RevisionRanges.Count == 0;
 }

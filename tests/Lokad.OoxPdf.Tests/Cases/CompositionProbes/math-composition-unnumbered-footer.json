@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "math-composition-unnumbered-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-composition-unnumbered-footer.docx",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "Sha256": "F2AFC21E54295369F6111774E3FC72261D11B7327F845A7F640A94518A54391C",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Summary:",
+      "share the same input series.",
+      "The trend marker"
+    ]
+  }
+]

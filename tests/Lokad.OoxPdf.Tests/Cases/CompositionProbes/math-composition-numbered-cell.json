@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "math-composition-numbered-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-composition-numbered-cell.docx",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "Sha256": "8BFBC2CDA46A24B122E5A968F11C18C9DE2F76534A63828DAD74C8D04DCF2B62",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Summary:",
+      "share the same input series.",
+      "The trend marker"
+    ]
+  }
+]

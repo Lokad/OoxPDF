@@ -8,6 +8,31 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionNumberedMathPreservesFourStoryContent()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the numbered composition control.");
+        foreach (string story in new[] { "", "-cell", "-header", "-footer" })
+        foreach (bool numbered in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation("CompositionProbes/math-composition-" + (numbered ? "numbered" : "unnumbered") + story, mode, false, true);
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal(2, text.Split("x+2y", StringSplitOptions.None).Length - 1);
+            TestAssert.Equal(2, text.Split("a+b=c", StringSplitOptions.None).Length - 1);
+            foreach (string label in new[] { "1.", "2.", "3." })
+                TestAssert.Equal(numbered ? 1 : 0, text.Split(label, StringSplitOptions.None).Length - 1);
+            TestAssert.Contains("share the same input series.", text);
+            string part = story == "-header" ? "/word/header1.xml" : story == "-footer" ? "/word/footer1.xml" : document.MainPartName;
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION" || d.PartName != part),
+                "Ordinary numbering and unchanged-format run splitting cannot remove supported equations.");
+        }
+    }
+
     public static void DocxInlineCompositionMathTableTailAdmissionMatchesWordBoundaryControls()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "math-composition-numbered-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-composition-numbered-header.docx",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "Sha256": "ED8CC6857738BD094ADA85F76F59491F11B28FDEF9F294AC126A477A883AEB49",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Summary:",
+      "share the same input series.",
+      "The trend marker"
+    ]
+  }
+]

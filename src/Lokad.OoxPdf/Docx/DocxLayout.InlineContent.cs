@@ -15,6 +15,7 @@ internal sealed record DocxMeasuredInlineLine(IReadOnlyList<DocxMeasuredInlineFr
     double Advance, double BaselineInset, double OccupiedHeight)
 {
     public bool IsDisplayGroup { get; init; }
+    public IReadOnlyList<DocxTextSegmentLayout> ListLabelSegments { get; init; } = [];
 }
 internal readonly record struct DocxInlineParagraphFrame(double OccupiedHeight, DocxTextLineLayout LastLine);
 
@@ -82,9 +83,12 @@ internal sealed partial class DocxLayoutEngine
         int? sourceBlock, int? sourceParagraph, int sourceLine, DocxStoryId story)
     {
         var segments = new List<DocxTextSegmentLayout>();
+        segments.AddRange(measured.ListLabelSegments.Select(segment => segment with { X = frameOriginX + segment.X }));
         var images = new List<DocxInlineImageLayout>();
         var equations = new List<DocxInlineMathPlacement>();
         var text = new System.Text.StringBuilder();
+        if (measured.ListLabelSegments.Count != 0 && paragraph.ListLabel is { } label)
+            text.Append(label.Text).Append(label.SuffixValue switch { "nothing" => string.Empty, "space" => " ", _ => "\t" });
         double offset = 0d;
         foreach (var fragment in measured.Fragments)
         {
@@ -294,7 +298,17 @@ internal sealed partial class DocxLayoutEngine
                 current.All(fragment => fragment.Math is { UsesDisplayStyle: true } ||
                     fragment.Source is DocxInlineText text &&
                     text.Run.Text.AsSpan(text.Start, text.Length).IsWhiteSpace());
-            output.Add(new(current.ToArray(), advance, above, above + below) { IsDisplayGroup = displayGroup });
+            IReadOnlyList<DocxTextSegmentLayout> labelSegments = [];
+            if (output.Count == 0 && paragraph.ListLabel is { } label)
+            {
+                var style = paragraph.Runs.FirstOrDefault() ?? paragraph.ParagraphMarkRun ??
+                    new DocxTextRun(string.Empty, fontSize, null, false, false, false, null, null);
+                labelSegments = CreateListLabelSegments(label, style, fontSize,
+                    GetParagraphLabelStartOffset(paragraph, scale), measurer);
+                above += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, measurer);
+            }
+            output.Add(new(current.ToArray(), advance, above, above + below)
+                { IsDisplayGroup = displayGroup, ListLabelSegments = labelSegments });
             current.Clear(); advance = 0d; above = baselineInset; below = Math.Max(0d, lineHeight - baselineInset);
         }
     }

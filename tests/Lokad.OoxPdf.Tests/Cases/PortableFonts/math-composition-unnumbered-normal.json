@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "math-composition-unnumbered-normal",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PortableFonts/math-composition-unnumbered-normal.docx",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "Sha256": "12A1D9DB19C39169D1E1E8EA7801B0B1C6AA42F17788F698573C7CFC348E1F18",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Summary:",
+      "share the same input series.",
+      "The trend marker"
+    ]
+  }
+]

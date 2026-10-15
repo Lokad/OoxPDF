@@ -14,6 +14,26 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingNumberedMathPreservesFourStoryContent()
+    {
+        foreach (string story in new[] { "", "-cell", "-header", "-footer" })
+        foreach (bool numbered in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("PortableFonts/math-composition-" + (numbered ? "numbered" : "unnumbered") + story + "-normal.docx"), mode);
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, null, default).ToArray();
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal(2, text.Split("x+2y", StringSplitOptions.None).Length - 1);
+            TestAssert.Equal(2, text.Split("a+b=c", StringSplitOptions.None).Length - 1);
+            foreach (string label in new[] { "1.", "2.", "3." })
+                TestAssert.Equal(numbered ? 1 : 0, text.Split(label, StringSplitOptions.None).Length - 1);
+            TestAssert.Contains("share the same input series.", text);
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingEquationInspectionPreservesGeometryAndSource()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

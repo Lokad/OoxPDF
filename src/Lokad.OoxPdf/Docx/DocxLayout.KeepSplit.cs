@@ -813,45 +813,52 @@ internal sealed partial class DocxLayoutEngine
 
         IReadOnlyList<DocxTextSegmentLayout> CreateNumberedLineSegments(DocxListLabel label, IReadOnlyList<DocxTextSpan> lineSpans, DocxTextRun styleRun)
         {
-            DocxTextRun labelRun = CreateListLabelRun(label, styleRun, fontSize);
-            double labelFontSize = labelRun.EffectiveProperties.FontSize;
-            double labelWidth = textMeasurer.MeasureText(labelRun, label.Text, labelFontSize);
-            DocxTextEmissionPlan labelPlan = DocxTextEmissionPlanner.CreateForListLabel(labelRun, label);
-            var numberedSegments = new List<DocxTextSegmentLayout>
-            {
-                new(
-                    label.Text,
-                    labelRun,
-                    labelX,
-                    labelWidth,
-                    labelFontSize,
-                    PdfCharacterSpacing: labelPlan.PdfCharacterSpacing,
-                    PdfCharacterSpacingSource: labelPlan.PdfCharacterSpacingSource,
-                    CompensatePdfCharacterSpacing: labelPlan.CompensatePdfCharacterSpacing,
-                    SourceTextRunIndex: -1,
-                    BaselineOffsetY: 0d,
-                    SourceTextOffsetInRun: 0,
-                    Role: DocxTextSegmentRole.ListLabel)
-            };
-
-            string GetListLabelPdfSeparator(DocxListLabel label)
-            {
-                return label.SuffixValue.Equals("nothing", StringComparison.OrdinalIgnoreCase) ? string.Empty : " ";
-            }
-
-            string separator = GetListLabelPdfSeparator(label);
-            if (separator.Length != 0)
-            {
-                DocxTextRun separatorRun = styleRun;
-                double separatorFontSize = separatorRun.EffectiveProperties.FontSize;
-                double separatorX = labelX + labelWidth;
-                double separatorWidth = textMeasurer.MeasureText(separatorRun, separator, separatorFontSize);
-                numberedSegments.Add(new DocxTextSegmentLayout(separator, separatorRun, separatorX, separatorWidth, separatorFontSize, SourceTextRunIndex: -1, BaselineOffsetY: 0d, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, SourceTextOffsetInRun: 0, Role: DocxTextSegmentRole.ListSeparator));
-            }
-
+            var numberedSegments = CreateListLabelSegments(label, styleRun, fontSize, labelX, textMeasurer).ToList();
             numberedSegments.AddRange(CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer, tabStops, defaultTabStopPoints));
             return numberedSegments;
         }
+    }
+
+    private static IReadOnlyList<DocxTextSegmentLayout> CreateListLabelSegments(
+        DocxListLabel label, DocxTextRun styleRun, double fontSize, double labelX, IDocxTextMeasurer textMeasurer)
+    {
+        DocxTextRun labelRun = CreateListLabelRun(label, styleRun, fontSize);
+        double labelFontSize = labelRun.EffectiveProperties.FontSize;
+        double labelWidth = textMeasurer.MeasureText(labelRun, label.Text, labelFontSize);
+        DocxTextEmissionPlan labelPlan = DocxTextEmissionPlanner.CreateForListLabel(labelRun, label);
+        var numberedSegments = new List<DocxTextSegmentLayout>
+        {
+            new(
+                label.Text,
+                labelRun,
+                labelX,
+                labelWidth,
+                labelFontSize,
+                PdfCharacterSpacing: labelPlan.PdfCharacterSpacing,
+                PdfCharacterSpacingSource: labelPlan.PdfCharacterSpacingSource,
+                CompensatePdfCharacterSpacing: labelPlan.CompensatePdfCharacterSpacing,
+                SourceTextRunIndex: -1,
+                BaselineOffsetY: 0d,
+                SourceTextOffsetInRun: 0,
+                Role: DocxTextSegmentRole.ListLabel)
+        };
+
+        string GetListLabelPdfSeparator(DocxListLabel label)
+        {
+            return label.SuffixValue.Equals("nothing", StringComparison.OrdinalIgnoreCase) ? string.Empty : " ";
+        }
+
+        string separator = GetListLabelPdfSeparator(label);
+        if (separator.Length != 0)
+        {
+            DocxTextRun separatorRun = styleRun;
+            double separatorFontSize = separatorRun.EffectiveProperties.FontSize;
+            double separatorX = labelX + labelWidth;
+            double separatorWidth = textMeasurer.MeasureText(separatorRun, separator, separatorFontSize);
+            numberedSegments.Add(new DocxTextSegmentLayout(separator, separatorRun, separatorX, separatorWidth, separatorFontSize, SourceTextRunIndex: -1, BaselineOffsetY: 0d, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, SourceTextOffsetInRun: 0, Role: DocxTextSegmentRole.ListSeparator));
+        }
+
+        return numberedSegments;
     }
 
     private static double MeasureListLabel(DocxListLabel label, DocxTextRun? baseRun, double fontSize, IDocxTextMeasurer textMeasurer)
