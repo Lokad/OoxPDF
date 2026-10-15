@@ -274,3 +274,26 @@ rendering/inspection checks on Ubuntu. All ten portfolio PDFs remain exact, with
 14 independent comparisons reused by source/reference/PDF/threshold identity.
 Four smoke PDFs match after transferring 17 assets without root rebuild or suite
 replay. C1 remains incomplete and all eight DOCX portfolio gates remain failed.
+
+
+Authored breaks now delimit shared source rows for mathematical style. A formula
+on a row without another visible inline owner uses display measurement, including
+when another row of the paragraph contains an image. Prepared boxes retain that
+style, so wrapping and container placement consume the same decision. Soft
+wrapping stays unchanged. Invisible prose cannot change row ownership; its
+metamorphic geometry regression fails on the parent and passes after aligning the
+source visibility rule. Paragraphs without prepared math bypass row classification.
+
+Independent image/break variants cover body, cell, header and footer, separately
+in both modes. All eight destinations survive in each outcome. Final target
+differences are at most 0.52pt horizontally and 0.93pt vertically; review residuals
+reach 0.54pt and 3.39pt. All eight numerical visual gates still fail. Foreground
+recall improves in every control, but review cell MAE increases about 0.004;
+retain that nonmonotonic residual rather than claiming universal metric gains.
+
+The frozen batch passes 73 selected methods in one invocation and eight portable
+rendering/inspection checks on Ubuntu, including both modes in all four containers.
+All ten fixed portfolio PDFs remain exact. Eighteen independent comparisons reuse
+verified identities. Seventeen assets and four integration PDFs transfer without
+root rebuild or suite replay. C1 remains open; legacy single-inline marker paths
+and broader composition/geometry concerns remain to be addressed in bounded slices.
