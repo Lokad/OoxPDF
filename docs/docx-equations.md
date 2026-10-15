@@ -603,6 +603,25 @@ Six independent Word references cover literal, delimiter, scripted and fraction
 arguments, a larger control and an independently declared normal-text name font.
 Twenty-one focused source methods and 20 unchanged source/native neighboring PDFs
 qualify one artifact, with four exact transfer smoke PDFs. This source component
-keeps function rendering in complete fallback; native application spacing and
-metric ownership require their own qualification. No visual threshold or existing
-renderer eligibility is relaxed.
+qualified the source component before native painting. The subsequent native
+qualification below retains those source safeguards and visual thresholds.
+
+
+Native function application now paints a literal name followed by a bounded
+literal, delimiter, scripted or fraction argument. The invisible control owns
+application spacing and the typographic frame; independently declared name and
+argument fonts/colors keep their own paint. Metric-only controls reuse the
+conversion font owner without preparing an unused PDF subset or resource. An
+opening delimiter suppresses application glue, using the same semantic edge that
+also improves ordinary-prefix delimiter rows. Unsupported or deeper names and
+arguments retain complete fallback; functions inside mixed rows remain staged.
+
+Nine independent Word controls improve in both similarity and foreground recall,
+including two ordinary-prefix delimiter contrasts and an all-normal Arial
+function. All 50 embedded glyph outlines match Word and their source fonts.
+Text-operation differences stay below 0.16 pt horizontally and 0.063 pt vertically.
+Twenty-one focused methods and 16 exact neighboring PDFs qualify one strict
+Release artifact; four exact smoke PDFs verify its transfer without rebuilding or
+repeating the suite. Three public cases preserve existing thresholds and explicit
+visual residuals. The all-normal function emits only the painted Arial equation
+font, while its metric control remains separate from PDF resource ownership.
