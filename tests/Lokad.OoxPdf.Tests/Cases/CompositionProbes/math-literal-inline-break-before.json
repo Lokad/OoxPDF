@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "math-literal-inline-break-before",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-literal-inline-break-before.docx",
+    "SourceSha256": "45F27A6285C1A065D5F4BE435AD335FC9F96E8341AB3BDC1D880BBD6DE2D8867",
+    "Sha256": "0461C0635EAD6B556F96BABA86A3A15D1225F1B915255D61E1B130A65EC90CB4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Following prose."
+    ]
+  }
+]

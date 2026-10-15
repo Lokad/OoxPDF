@@ -26,6 +26,8 @@ internal sealed record DocxMathBox(
     public DocxMathMetricOwner? ParentMetrics { get; init; }
     public DocxMathRowLayout.RowEdges? Edges { get; init; }
     public IReadOnlyList<DocxMathRulePlacement> Rules { get; init; } = [];
+    // Top-level literal binary/relation boundaries; structured boxes stay atomic.
+    public IReadOnlyList<int> InlineBreakAfterGlyphs { get; init; } = [];
 }
 
 internal sealed record DocxMathMetricOwner(Lokad.OoxPdf.Fonts.OpenTypeFont Font, double Size)

@@ -1559,14 +1559,16 @@ internal static class DocxNativeMathTests
             "The paragraph terminal cannot overlap inline mathematical content or following prose.");
     }
 
-    public static void DocxNativeInlineMathOverfullRowsRetainTheWholeIgnoredFallback()
+    public static void DocxNativeInlineMathOverfullLiteralBreaksAtItsOperator()
     {
         RequireMathFont();
         var diagnostics = new List<OoxPdfDiagnostic>();
-        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-inline-overfull12"), diagnostics.Add, CancellationToken.None).Single();
-        TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION"), "Formula-driven wrapping retains an explicit fallback until qualified.");
-        TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_APPROXIMATED_EQUATION"), "An overfull row cannot claim painted math.");
-        TestAssert.True(!page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)), "Fallback output cannot publish unused math fonts.");
+        var document = NamedFixture("docx-omml-inline-overfull12");
+        PdfPage page = Renderer().RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+        string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
+        TestAssert.True(new[] { "α", "+", "β", "=", "γ" }.All(text.Contains), "Operator breaking must preserve every authored mathematical glyph.");
+        TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"), "Supported literal breaking cannot report ignored math.");
+        TestAssert.Equal(2, Renderer().InspectLayout(document).Pages.Single().Items.Count(item => item.Kind == "TextLine" && item.SourceBlockIndex == 0));
     }
 
     public static void DocxNativeInlineMathWrapsFollowingProseWithoutLosingItsSourceBoundary()

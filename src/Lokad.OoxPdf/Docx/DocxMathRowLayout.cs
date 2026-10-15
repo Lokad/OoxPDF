@@ -25,6 +25,9 @@ internal static class DocxMathRowLayout
         { fallback = "InvalidMathOperatorSpacingSize"; return false; }
         if (!TryGetAtoms(row, token, out List<Atom> atoms, out fallback, allowArgumentSize)) { return false; }
         var glyphs = new List<DocxMathGlyphPlacement>(atoms.Count);
+        var inlineBreaks = new List<int>();
+        int delimiterDepth = 0;
+        bool balancedDelimiters = true;
         double x = 0d, above = 0d, below = 0d, previousCorrection = 0d, slantedInkRight = 0d;
         AtomKind previous = neighbors.Before ?? AtomKind.Open, firstKind = AtomKind.Ordinary;
         for (int i = 0; i < atoms.Count; i++)
@@ -61,6 +64,11 @@ internal static class DocxMathRowLayout
                 next is null or AtomKind.Close or AtomKind.Relation or AtomKind.Punctuation))
             { kind = AtomKind.Ordinary; }
             if (i == 0) { firstKind = kind; }
+            if (kind == AtomKind.Open) delimiterDepth++;
+            if (kind == AtomKind.Close && --delimiterDepth < 0) balancedDelimiters = false;
+            if (scriptLevel == 0 && !atom.Run.NormalText && delimiterDepth == 0 &&
+                kind is AtomKind.Binary or AtomKind.Relation && i > 0 && i + 1 < atoms.Count)
+                inlineBreaks.Add(i + 1);
             if (i != 0)
             {
                 // Italic correction belongs to the previous glyph; operator glue
@@ -86,6 +94,7 @@ internal static class DocxMathRowLayout
         { fallback = "InvalidMathExtent"; return false; }
         box = new DocxMathBox(x, above, below, glyphs)
         { LogicalAdvance = advanceWidth == x ? null : advanceWidth,
+            InlineBreakAfterGlyphs = balancedDelimiters && delimiterDepth == 0 ? inlineBreaks : [],
             Edges = atoms.Count == 0 ? null : new(firstKind, previous, atoms[0].Run.NormalText) };
         fallback = null;
         return true;

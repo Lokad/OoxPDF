@@ -1387,7 +1387,7 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            if (textMeasurer is not null && DocxMathParagraphPolicy.NeedsOrderedInlineLayout(paragraph))
+            if (textMeasurer is not null && DocxMathParagraphPolicy.NeedsOrderedInlineLayout(paragraph, mathEquations))
             {
                 double firstInset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, textMeasurer, paragraphSpacingScale);
                 double nextInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);

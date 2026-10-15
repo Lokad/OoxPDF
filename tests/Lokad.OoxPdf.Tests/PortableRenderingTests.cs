@@ -14,6 +14,24 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingInlineLiteralOperatorBreakPreservesContent()
+    {
+        foreach (string setting in new[] { "default", "before", "after", "repeat" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("PortableFonts/math-literal-inline-break-" + setting + "-upright.docx"), mode);
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, null, default).ToArray();
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            foreach (string glyph in new[] { "α", "+", "β", "=", "γ" })
+                TestAssert.Equal(1, text.Split(glyph, StringSplitOptions.None).Length - 1);
+            TestAssert.Contains("Before", text);
+            TestAssert.Contains("Following prose.", text);
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingNumberedMathPreservesFourStoryContent()
     {
         foreach (string story in new[] { "", "-cell", "-header", "-footer" })

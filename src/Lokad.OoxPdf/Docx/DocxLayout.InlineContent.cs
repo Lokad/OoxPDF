@@ -9,6 +9,7 @@ internal sealed record DocxMeasuredInlineFragment(DocxInlineItem Source, double 
     DocxPreparedMathParagraph? Math = null)
 {
     public double LeadingAdvance { get; init; }
+    public double? MathContinuationAdvance { get; init; }
     public IReadOnlyList<DocxTextSegmentLayout> TextSegments { get; init; } = [];
 }
 internal sealed record DocxMeasuredInlineLine(IReadOnlyList<DocxMeasuredInlineFragment> Fragments,
@@ -63,7 +64,7 @@ internal sealed partial class DocxLayoutEngine
         [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines)
     {
         lines = null;
-        if (!DocxMathParagraphPolicy.NeedsOrderedInlineLayout(paragraph)) return false;
+        if (!DocxMathParagraphPolicy.NeedsOrderedInlineLayout(paragraph, context.MathEquations)) return false;
         double scale = context.ParagraphSpacingScale;
         double firstInset = ResolveTableCellFirstBaselineInset(paragraphs, context.TextMeasurer);
         double paragraphInset = DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight,
@@ -178,8 +179,7 @@ internal sealed partial class DocxLayoutEngine
                     break;
                 case DocxInlineEquation math:
                     if (!equations.TryGetValue(math.Equation, out var prepared)) return false;
-                    measured.Add(new(item, prepared.Box.AdvanceWidth * scale, prepared.BaselineInset * scale,
-                        prepared.LineHeight * scale, [], prepared));
+                    AddMeasuredMath(item, prepared);
                     break;
                 case DocxInlinePicture picture:
                     double imageWidth = picture.Image.WidthPoints * scale, imageHeight = picture.Image.HeightPoints * scale;
@@ -272,6 +272,8 @@ internal sealed partial class DocxLayoutEngine
             DocxTextBreakRules.IsBreakableWhitespaceChar(text.Run.Text[text.Start]);
         double InlineTextBoundaryAdvance(DocxMeasuredInlineFragment left, DocxMeasuredInlineFragment right)
         {
+            if (ReferenceEquals(left.Source, right.Source) && right.MathContinuationAdvance is { } mathGap)
+                return mathGap;
             if (left.Text.Count == 0 || right.Text.Count == 0) return 0d;
             var before = left.Text[^1];
             var after = right.Text[0];
@@ -286,6 +288,43 @@ internal sealed partial class DocxLayoutEngine
             double Measure(string value) => MeasureTextSpansForLayout([before with { Text = value }],
                 fontSize, measurer, [], 36d, null);
             return Measure(lastText + firstText) - Measure(lastText) - Measure(firstText);
+        }
+        void AddMeasuredMath(DocxInlineItem source, DocxPreparedMathParagraph prepared)
+        {
+            var box = prepared.Box;
+            if (prepared.UsesDisplayStyle || prepared.Equation.Display || box.InlineBreakAfterGlyphs.Count == 0)
+            {
+                measured.Add(new(source, box.AdvanceWidth * scale, prepared.BaselineInset * scale,
+                    prepared.LineHeight * scale, [], prepared));
+                return;
+            }
+            int start = 0;
+            double previousEnd = 0d;
+            foreach (int end in box.InlineBreakAfterGlyphs.Append(box.Glyphs.Count))
+            {
+                token.ThrowIfCancellationRequested();
+                double origin = box.Glyphs[start].X;
+                double endX = end == box.Glyphs.Count ? box.AdvanceWidth :
+                    box.Glyphs[end - 1].X + box.Glyphs[end - 1].Advance;
+                var glyphs = new DocxMathGlyphPlacement[end - start];
+                double inkRight = endX - origin;
+                for (int index = start; index < end; index++)
+                {
+                    token.ThrowIfCancellationRequested();
+                    var glyph = box.Glyphs[index] with { X = box.Glyphs[index].X - origin };
+                    glyphs[index - start] = glyph;
+                    var font = glyph.Font.Font.Font;
+                    if (font.TryGetGlyphBounds(glyph.OriginalGlyph, out var bounds))
+                        inkRight = Math.Max(inkRight, glyph.X + (bounds.XMax + glyph.TextShear * bounds.YMax) * glyph.FontSize / font.UnitsPerEm);
+                }
+                var part = prepared with { Box = box with { Width = inkRight,
+                    LogicalAdvance = endX - origin, Glyphs = glyphs, InlineBreakAfterGlyphs = [] } };
+                measured.Add(new(source, part.Box.AdvanceWidth * scale, prepared.BaselineInset * scale,
+                    prepared.LineHeight * scale, [], part)
+                    { MathContinuationAdvance = start == 0 ? null : (origin - previousEnd) * scale });
+                previousEnd = endX;
+                start = end;
+            }
         }
         void Flush()
         {

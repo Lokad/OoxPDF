@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "math-literal-inline-break-repeat",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-literal-inline-break-repeat.docx",
+    "SourceSha256": "45F27A6285C1A065D5F4BE435AD335FC9F96E8341AB3BDC1D880BBD6DE2D8867",
+    "Sha256": "8737E8828F78744224FC8A43AF44A5210B0B7710BCC08160C3C530ED6D451695",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Following prose."
+    ]
+  }
+]

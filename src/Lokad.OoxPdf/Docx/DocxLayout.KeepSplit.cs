@@ -485,7 +485,7 @@ internal sealed partial class DocxLayoutEngine
 
         double ParagraphHeight(DocxParagraph value)
         {
-            if (DocxMathParagraphPolicy.NeedsOrderedInlineLayout(value))
+            if (DocxMathParagraphPolicy.NeedsOrderedInlineLayout(value, mathEquations))
             {
                 double inlineSize = GetParagraphFontSize(value);
                 double inlineHeight = ResolveLineHeightProfile(value, inlineSize, textMeasurer).LineHeight;

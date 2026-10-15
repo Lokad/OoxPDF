@@ -392,5 +392,18 @@
     "DocxStyleAndNumberingLayoutRisksEmitDiagnostics",
     "DocxSupportedNumberingLeftHangingTabsDoNotEmitIndentDiagnostic",
     "DocxSupportedNumberingFirstLineIndentDoesNotEmitIndentDiagnostic"
+  ],
+  "docx-inline-operator-breaking": [
+    "PortableRendering",
+    "DocxInlineCompositionLiteral",
+    "DocxInlineCompositionBookmarkAndRunSplitting",
+    "DocxInlineCompositionHyperlinkPreservesSingleMathFrame",
+    "DocxInlineCompositionSingle",
+    "DocxNativeInline",
+    "DocxNativeIsolatedInlineMath",
+    "DocxNativeDisplayAutomaticSpacing",
+    "DocxTableMath",
+    "DocxMathNeutralArgumentProperties",
+    "DocxInlineCompositionNumberedMath"
   ]
 }

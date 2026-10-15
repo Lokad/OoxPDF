@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "math-literal-inline-break-before-upright",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PortableFonts/math-literal-inline-break-before-upright.docx",
+    "SourceSha256": "45F27A6285C1A065D5F4BE435AD335FC9F96E8341AB3BDC1D880BBD6DE2D8867",
+    "Sha256": "26906037302E954EA5A2A32DC59D66A367EDDEB60D493E44112C57717E248211",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Following prose."
+    ]
+  }
+]

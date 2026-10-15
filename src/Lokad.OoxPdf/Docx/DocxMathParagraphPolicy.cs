@@ -140,9 +140,12 @@ internal static class DocxMathParagraphPolicy
 
     // Retain qualified single-prose breaking until mathematical operator breaks
     // migrate. An unchanged annotation cannot choose a different layout engine.
-    public static bool NeedsOrderedInlineLayout(DocxParagraph paragraph) =>
+    public static bool NeedsOrderedInlineLayout(DocxParagraph paragraph,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? prepared = null) =>
         paragraph.Equations.Count > 1 || paragraph.Images.Count != 0 ||
-        paragraph.Equations.Count == 1 && GetInlineRow(paragraph) is null && GetStandaloneRow(paragraph) is null;
+        paragraph.Equations.Count == 1 && (GetInlineRow(paragraph) is null && GetStandaloneRow(paragraph) is null ||
+            GetInlineRow(paragraph) is { } inline && prepared is not null &&
+            prepared.TryGetValue(inline, out var math) && math.Box.InlineBreakAfterGlyphs.Count != 0);
 
     public static IReadOnlyList<DocxEquation> GetPreparationEquations(DocxParagraph paragraph)
     {

@@ -8,6 +8,51 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionLiteralBreakKeepsParenthesizedAndUnaryFallbacks()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the literal fallback control.");
+        foreach (string literal in new[] { "(α+β=γ)", "+αβγαβγ" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation("docx-omml-inline-overfull12", mode, false, false, (xml, w, m) =>
+            {
+                var texts = xml.Descendants(m + "t").ToArray();
+                texts[0].Value = literal;
+                foreach (var text in texts.Skip(1)) text.Value = string.Empty;
+            });
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"),
+                "Nested or unary-only breaking retains its qualified whole-formula fallback.");
+            TestAssert.True(pages.All(page => page.Fonts.All(font => !font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))),
+                "No partial or unused equation resource may escape the fallback.");
+        }
+    }
+
+    public static void DocxInlineCompositionLiteralOperatorBreakRetainsOfficeInlineSettingBehavior()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the inline operator control.");
+        foreach (string setting in new[] { "default", "before", "after", "repeat" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation("CompositionProbes/math-literal-inline-break-" + setting, mode, true, true);
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            foreach (string glyph in new[] { "α", "+", "β", "=", "γ" })
+                TestAssert.Equal(1, text.Split(glyph, StringSplitOptions.None).Length - 1);
+            TestAssert.Contains("Following prose.", text);
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "A bookmark and run splitting cannot remove the broken literal.");
+            TestAssert.Equal(2, renderer.InspectLayout(document).Pages.Single().Items.Count(item => item.Kind == "TextLine" && item.SourceBlockIndex == 0));
+        }
+    }
+
     public static void DocxInlineCompositionNumberedMathPreservesFourStoryContent()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
