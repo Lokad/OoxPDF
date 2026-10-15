@@ -5,16 +5,16 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static partial class DocxMathLayout
 {
-    private sealed record StructuredRow(DocxMathRow Before, DocxMathNode Structure, DocxMathRow After);
+    private sealed record StructuredPart(DocxMathRow Before, DocxMathNode Structure);
+    private sealed record StructuredRow(IReadOnlyList<StructuredPart> Parts, DocxMathRow After);
 
     private static DocxMathNode? GetSupportedStructure(DocxMathNode node) =>
         (DocxMathNode?)GetSupportedFraction(node) ?? GetSupportedScripts(node);
 
     private static StructuredRow? GetStructuredRow(DocxEquation equation, CancellationToken token)
     {
-        var before = new List<DocxMathNode>();
-        var after = new List<DocxMathNode>();
-        DocxMathNode? structure = null;
+        var literals = new List<DocxMathNode>();
+        var parts = new List<StructuredPart>();
         var pending = new Stack<DocxMathNode>(); pending.Push(equation.Content);
         while (pending.TryPop(out DocxMathNode? node))
         {
@@ -23,12 +23,15 @@ internal static partial class DocxMathLayout
             {
                 for (int i = row.Children.Count - 1; i >= 0; i--) { pending.Push(row.Children[i]); }
             }
-            else if (node is DocxMathRun) { (structure is null ? before : after).Add(node); }
-            else if (structure is null && GetSupportedStructure(node) is { } supported)
-            { structure = supported; }
+            else if (node is DocxMathRun) { literals.Add(node); }
+            else if (GetSupportedStructure(node) is { } supported)
+            { parts.Add(new(new(literals), supported)); literals = []; }
             else { return null; }
         }
-        return structure is not null && before.Count + after.Count > 0 ? new(new(before), structure, new(after)) : null;
+        // A lone structure is measured by its existing owner, so child
+        // delegation below cannot recurse into this same sequence grammar.
+        return parts.Count > 1 || parts.Count == 1 && parts[0].Before.Children.Count + literals.Count > 0
+            ? new(parts, new(literals)) : null;
     }
 
     private static bool TryMeasureStructuredRow(DocxEquation equation, StructuredRow row,
@@ -36,41 +39,60 @@ internal static partial class DocxMathLayout
         out DocxMathBox? box, out string? fallback, OpenTypeFont? parentMetricsFont)
     {
         box = null;
-        DocxEquation childEquation = equation with { Content = new([row.Structure]) };
-        if (!TryGetRuns(childEquation, token, out var childRuns) || childRuns.Count == 0)
-        { fallback = "UnsupportedMathStructuredRow"; return false; }
-        // The surrounding equation owns glue before a structured atom;
-        // its authored child glyph size continues to own the child's geometry.
-        double parentSize = equation.ParentFontSize ?? childRuns[0].Run.Text.FontSize;
-        if (!TryMeasure(childEquation, resolveFont, token, out var structure, out fallback, parentMetricsFont) || structure is null ||
-            !DocxMathRowLayout.TryMeasure(row.Before, resolveFont, token, out var before, out fallback,
-                neighbors: new(After: DocxMathRowLayout.AtomKind.Ordinary)) || before is null ||
-            !DocxMathRowLayout.TryMeasure(row.After, resolveFont, token, out var after, out fallback,
-                neighbors: new(Before: DocxMathRowLayout.AtomKind.Ordinary)) || after is null)
-        { fallback ??= "UnsupportedMathStructuredRow"; return false; }
-        double structureX = before.AdvanceWidth;
-        if (before.Edges is { } left) { structureX += DocxMathRowLayout.Glue(left.Last, DocxMathRowLayout.AtomKind.Ordinary) * parentSize / 18d; }
-        double afterX = structureX + structure.AdvanceWidth;
-        if (after.Edges is { FirstNormalText: false } right)
-            afterX += DocxMathRowLayout.Glue(DocxMathRowLayout.AtomKind.Ordinary, right.First) * after.Glyphs[0].FontSize / 18d;
-        double advance = afterX + after.AdvanceWidth;
-        double width = Math.Max(advance, Math.Max(before.Width, Math.Max(structureX + structure.Width, afterX + after.Width)));
-        double above = Math.Max(before.AboveBaseline, Math.Max(structure.AboveBaseline, after.AboveBaseline));
-        double below = Math.Max(before.BelowBaseline, Math.Max(structure.BelowBaseline, after.BelowBaseline));
+        var glyphs = new List<DocxMathGlyphPlacement>();
+        var rules = new List<DocxMathRulePlacement>();
+        double advance = 0d, width = 0d, above = 0d, below = 0d;
+        DocxMathMetricOwner? leadingOwner = null;
+        bool afterStructure = false;
+        foreach (StructuredPart part in row.Parts)
+        {
+            token.ThrowIfCancellationRequested();
+            DocxEquation childEquation = equation with { Content = new([part.Structure]) };
+            if (!TryGetRuns(childEquation, token, out var childRuns) || childRuns.Count == 0)
+            { fallback = "UnsupportedMathStructuredRow"; return false; }
+            double parentSize = equation.ParentFontSize ?? childRuns[0].Run.Text.FontSize;
+            if (!TryMeasure(childEquation, resolveFont, token, out var structure, out fallback, parentMetricsFont) || structure is null ||
+                !DocxMathRowLayout.TryMeasure(part.Before, resolveFont, token, out var before, out fallback,
+                    neighbors: new(Before: afterStructure ? DocxMathRowLayout.AtomKind.Ordinary : null,
+                        After: DocxMathRowLayout.AtomKind.Ordinary)) || before is null)
+            { fallback ??= "UnsupportedMathStructuredRow"; return false; }
+            AppendLiteral(before);
+            // Equation metrics own the gap before each structured atom;
+            // child glyph size continues to own its internal geometry.
+            if (before.Edges is { } left)
+                advance += DocxMathRowLayout.Glue(left.Last, DocxMathRowLayout.AtomKind.Ordinary) * parentSize / 18d;
+            Append(structure, advance); advance += structure.AdvanceWidth;
+            afterStructure = true;
+        }
+        if (!DocxMathRowLayout.TryMeasure(row.After, resolveFont, token, out var after, out fallback,
+            neighbors: new(Before: DocxMathRowLayout.AtomKind.Ordinary)) || after is null) { return false; }
+        AppendLiteral(after);
+        width = Math.Max(width, advance);
         if (!double.IsFinite(width) || width < 0d || !double.IsFinite(above) || !double.IsFinite(below))
         { fallback = "InvalidMathStructuredRowExtent"; return false; }
-        var glyphs = new List<DocxMathGlyphPlacement>(before.Glyphs.Count + structure.Glyphs.Count + after.Glyphs.Count);
-        var rules = new List<DocxMathRulePlacement>(structure.Rules.Count);
-        Append(before, 0d); Append(structure, structureX); Append(after, afterX);
         box = new(width, above, below, glyphs)
-        { LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = structure.ParentMetrics };
+        { LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = leadingOwner };
         fallback = null;
         return true;
 
         void Append(DocxMathBox child, double x)
         {
+            width = Math.Max(width, x + child.Width);
+            above = Math.Max(above, child.AboveBaseline); below = Math.Max(below, child.BelowBaseline);
+            if (child.ParentMetrics is { } owner && (leadingOwner is null || Leading(owner) > Leading(leadingOwner)))
+                leadingOwner = owner;
             foreach (var glyph in child.Glyphs) { token.ThrowIfCancellationRequested(); glyphs.Add(glyph with { X = glyph.X + x }); }
             foreach (var rule in child.Rules) { token.ThrowIfCancellationRequested(); rules.Add(rule with { X = rule.X + x }); }
         }
+
+        void AppendLiteral(DocxMathBox literal)
+        {
+            if (afterStructure && literal.Edges is { FirstNormalText: false } right)
+                advance += DocxMathRowLayout.Glue(DocxMathRowLayout.AtomKind.Ordinary, right.First) * literal.Glyphs[0].FontSize / 18d;
+            Append(literal, advance); advance += literal.AdvanceWidth;
+        }
+
+        static double Leading(DocxMathMetricOwner owner) => owner.Font.TryGetMathConstants(out var constants)
+            ? constants.GetValue(OpenTypeMathConstant.MathLeading) * owner.Size / owner.Font.UnitsPerEm : 0d;
     }
 }

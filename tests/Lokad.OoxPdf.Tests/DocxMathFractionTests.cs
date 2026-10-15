@@ -7,6 +7,52 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontStructuredSequencesRetainIndependentChildrenAndRules()
+    {
+        var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
+        DocxEquation child = Fraction();
+        var fraction = (DocxMathFraction)child.Content.Children[0];
+        var scripts = new DocxMathScripts(Row("B"), null, Row("C"));
+        var source = child with { Content = new([Row("A+"), fraction, Row("+"), scripts, Row("+"), fraction, Row("+B")]) };
+        TestAssert.True(DocxMathLayout.TryMeasure(source, _ => resource, CancellationToken.None, out var box, out var reason),
+            reason ?? "A supported sequence must not inherit the former single-structure guard.");
+        DocxMathBox measured = TestAssert.NotNull(box);
+        TestAssert.Equal("A+A+BC+BC+A+BC+B", string.Concat(measured.Glyphs.Select(g => char.ConvertFromUtf32(g.SourceCodePoint))));
+        TestAssert.Equal(2, measured.Rules.Count);
+        TestAssert.True(measured.Rules[0].X + measured.Rules[0].Width < measured.Rules[1].X,
+            "Independent child rules retain distinct source positions in the sequence.");
+        TestAssert.True(DocxMathLayout.TryMeasure(child with { Content = new([scripts]) }, _ => resource,
+            CancellationToken.None, out var scriptBox, out _), "Expected the independently measured script.");
+        TestAssert.True(measured.Glyphs.Single(g => g.SourceCodePoint == 'C' && g.FontSize < 12d).BaselineY ==
+            TestAssert.NotNull(scriptBox).Glyphs[1].BaselineY,
+            "The script role retains its independently measured style/baseline, including zero-shift synthetic metrics.");
+        var graphics = new PdfGraphicsBuilder();
+        DocxMathBoxPainter.Paint(measured, graphics, 20d, 50d, CancellationToken.None);
+        using var output = new MemoryStream();
+        PdfDocumentWriter.WriteBlank(output, [new PdfPage(300d, 150d, graphics.ToString(), [resource])], CancellationToken.None);
+        TestAssert.True(output.Length > 0, "All composed glyphs/rules retain valid owned PDF resources.");
+    }
+
+    public static void MathFontStructuredSequencesConsumeParentLeadingOnceForNormalChildren()
+    {
+        OpenTypeFont parent = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(Constants()));
+        var text = new PdfFontResource("Text1", PdfEmbeddedFont.Create(TestFontBuilder.LoadTestFont(),
+            "A+BC".Select(c => (int)c), CancellationToken.None));
+        DocxMathRow Normal(string value) => new([new DocxMathRun(new(value, 12d, null, false, false, false, null, "TestFont"),
+            null, null) { NormalTextValue = true }]);
+        var fraction = new DocxMathFraction(Normal("A+B"), Normal("C"), "bar");
+        var one = new DocxEquation(new([fraction]), 0, 0, true, null, null, null) { ParentFontSize = 12d };
+        var source = one with { Content = new([fraction, Normal("+"), fraction]) };
+        TestAssert.True(DocxMathLayout.TryMeasure(one, _ => text, CancellationToken.None, out var child, out _, parent), "Expected existing normal-child fraction.");
+        TestAssert.True(DocxMathLayout.TryMeasure(source, _ => text, CancellationToken.None, out var box, out _, parent), "Expected normal-child sequence.");
+        TestAssert.True(DocxMathLayout.TryGetLineMetrics(TestAssert.NotNull(child), CancellationToken.None, out double expectedAbove, out double expectedHeight) &&
+            DocxMathLayout.TryGetLineMetrics(TestAssert.NotNull(box), CancellationToken.None, out double actualAbove, out double actualHeight) &&
+            Math.Abs(actualAbove - expectedAbove) < 1e-9 && Math.Abs(actualHeight - expectedHeight) < 1e-9,
+            "Side-by-side boxes consume one parent-leading/occupied line frame, not one term per fraction.");
+        TestAssert.True(box!.ParentMetrics is { } owner && ReferenceEquals(owner.Font, parent) && box.Glyphs.All(g => g.Font == text),
+            "The hidden parent metric owner survives independently of actual text-face glyph resources.");
+    }
+
     public static void MathFontScriptRowsUseEquationSpacingWithoutChangingChildMetrics()
     {
         var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
@@ -61,16 +107,16 @@ internal static class DocxMathFractionTests
         }
     }
 
-    public static void MathFontScriptRowsKeepMultipleDeeperFallbackAndCancellation()
+    public static void MathFontScriptRowsKeepUnknownDeeperFallbackAndCancellation()
     {
         var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
         var scripts = new DocxMathScripts(Row("B"), null, Row("C"));
         DocxEquation source = Fraction() with { Content = new([Row("A+"), scripts]) };
-        foreach (var content in new[] { new DocxMathRow([Row("A+"), scripts, scripts]),
+        foreach (var content in new[] { new DocxMathRow([Row("A+"), scripts with { PropertiesXml = ["<m:sSupPr/>"] }]),
             new DocxMathRow([Row("A+"), scripts with { Base = new([scripts]) }]) })
             TestAssert.True(!DocxMathLayout.TryGetRuns(source with { Content = content }, CancellationToken.None, out _) &&
                 !DocxMathLayout.TryMeasure(source with { Content = content }, _ => resource, CancellationToken.None, out var box, out _) && box is null,
-                "Unsupported multiple/deeper structures retain the complete source fallback.");
+                "Unknown/deeper structures retain the complete source fallback.");
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(source, _ => resource, cancelled.Token, out _, out _));
         using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 }))
@@ -105,16 +151,16 @@ internal static class DocxMathFractionTests
         TestAssert.True(output.Length > 0, "Shared row encodings/resources must remain valid.");
     }
 
-    public static void MathFontFractionRowsKeepMultipleStructureFallbackCancellationAndWorkBounds()
+    public static void MathFontFractionRowsKeepDeeperStructureFallbackCancellationAndWorkBounds()
     {
         var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
         DocxEquation source = Fraction();
         var fraction = (DocxMathFraction)source.Content.Children[0];
         source = source with { Content = new([Row("A+"), fraction]) };
-        var multiple = source with { Content = new([Row("A+"), fraction, fraction]) };
-        TestAssert.True(!DocxMathLayout.TryGetRuns(multiple, CancellationToken.None, out _) &&
-            !DocxMathLayout.TryMeasure(multiple, _ => resource, CancellationToken.None, out var box, out _) && box is null,
-            "Multiple unsupported structured children cannot publish partial formula text.");
+        var deeper = source with { Content = new([Row("A+"), fraction with { Numerator = new([fraction]) }]) };
+        TestAssert.True(!DocxMathLayout.TryGetRuns(deeper, CancellationToken.None, out _) &&
+            !DocxMathLayout.TryMeasure(deeper, _ => resource, CancellationToken.None, out var box, out _) && box is null,
+            "Unsupported deeper structures cannot publish partial formula text.");
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(source, _ => resource, cancelled.Token, out _, out _));
         using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 }))

@@ -60,13 +60,17 @@ internal static partial class DocxMathLayout
         { int level = equation.Display ? 0 : 1; rows.Add((fraction.Numerator, level, false)); rows.Add((fraction.Denominator, level, false)); }
         else if (GetStructuredRow(equation, token) is { } compound)
         {
-            // The outer grammar permits only literal siblings and one known
-            // structure whose own discovery requires supported literal roles.
-            if (!TryGetRuns(equation with { Content = compound.Before }, token, out var before) ||
-                !TryGetRuns(equation with { Content = new([compound.Structure]) }, token, out var child) ||
-                !TryGetRuns(equation with { Content = compound.After }, token, out var after))
-            { runs = []; return false; }
-            runs = [.. before, .. child, .. after];
+            var sources = new List<DocxMathRunSource>();
+            foreach (StructuredPart part in compound.Parts)
+            {
+                token.ThrowIfCancellationRequested();
+                if (!TryGetRuns(equation with { Content = part.Before }, token, out var before) ||
+                    !TryGetRuns(equation with { Content = new([part.Structure]) }, token, out var child))
+                { runs = []; return false; }
+                sources.AddRange(before); sources.AddRange(child);
+            }
+            if (!TryGetRuns(equation with { Content = compound.After }, token, out var after)) { runs = []; return false; }
+            sources.AddRange(after); runs = sources;
             return true;
         }
         else { rows.Add((equation.Content, 0, false)); }
@@ -182,8 +186,8 @@ internal static partial class DocxMathLayout
 
     public static bool NeedsParentFractionMetrics(DocxEquation equation, IReadOnlyList<DocxMathRunSource> runs,
         CancellationToken token = default) =>
-        (GetFraction(equation) is not null || GetStructuredRow(equation, token)?.Structure is DocxMathFraction) &&
-        runs.Any(source => source.Run.NormalText);
+        runs.Any(source => source.Run.NormalText) && (GetFraction(equation) is not null ||
+            GetStructuredRow(equation, token)?.Parts.Any(part => part.Structure is DocxMathFraction) == true);
 
     private static DocxMathNode? GetSingleSupportedChild(DocxEquation equation) =>
         equation.Content.HasSupportedProperties && equation.Content.Children.Count == 1

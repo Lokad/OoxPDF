@@ -7,6 +7,26 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeStructuredSequencesRetainSourceOrderAndIndependentRules()
+    {
+        RequireMathFont();
+        foreach (string placement in new[] { "display", "inline" })
+        foreach ((string pair, string meaning, int rules) in new[]
+        {
+            ("fraction-script", "y=n+1k+x2+z", 1), ("script-fraction", "y=x2+n+1k+z", 1),
+            ("fraction-fraction", "y=n+1k+n+1k+z", 2), ("stack-script", "y=n+1k+x2+z", 0)
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-sequence-{placement}-{pair}"),
+                diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.Equal(rules, System.Text.RegularExpressions.Regex.Matches(page.Content, " re f").Count);
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") &&
+                diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Sequence diagnostics must describe the actual painted structures.");
+        }
+    }
+
     public static void DocxNativeMixedScriptRowsPaintLiteralAndScriptMeaning()
     {
         RequireMathFont();
