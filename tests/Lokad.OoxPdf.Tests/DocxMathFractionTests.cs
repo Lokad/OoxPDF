@@ -227,9 +227,9 @@ internal static class DocxMathFractionTests
         TestAssert.True(!DocxMathLayout.TryMeasure(equation,_=>text,CancellationToken.None,out var absent,out _,resolveControlFont:_=>missing) && absent is null,
             "A missing closing CID cannot publish an opening-only box.");
         foreach(var invalid in new[]{delimiter with { HasUnsupportedProperties=true },delimiter with { ShapeValue="match" },
-            delimiter with { Arguments=[new([new DocxMathFraction(child,child,"bar")])] },delimiter with { Arguments=[new([delimiter])] }})
+            delimiter with { Arguments=[new([new DocxMathFraction(new([delimiter]),child,"bar")])] },delimiter with { Arguments=[new([delimiter])] }})
             TestAssert.True(!DocxMathLayout.TryMeasure(equation with { Content=new([invalid]) },_=>text,CancellationToken.None,out var rejected,out _,
-                resolveControlFont:_=>parent) && rejected is null,"Unqualified shape/growth/argument roles retain complete fallback.");
+                resolveControlFont:_=>parent) && rejected is null,"Unsupported properties, shapes and deeper argument roles retain complete fallback.");
         var graphics=new PdfGraphicsBuilder();DocxMathBoxPainter.Paint(measured,graphics,20d,50d,CancellationToken.None);
         using var output=new MemoryStream();PdfDocumentWriter.WriteBlank(output,[new PdfPage(200d,150d,graphics.ToString(),[parent,text])],CancellationToken.None);
         TestAssert.True(output.Length>0,"Delimiter resources and encoding remain valid native PDF content.");
