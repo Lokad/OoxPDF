@@ -1,7 +1,7 @@
 {
   "id": "docx-math",
   "kind": "docx",
-  "description": "Native OMML mathematical structure and approximate body display/fitting inline rows; literal atoms alongside one supported fraction/stack/script, scripts with one fraction/stack base, wrapping, signed sizing, expanded display spacing, Latin/basic Greek/variant styles and normal-text faces/weight/slant; unsupported multiple structures/rich/metric owners, other alphabets, compressed/fixed spacing, operator breaking, deeper nesting and wider stories remain staged.",
+  "description": "Native OMML mathematical structure and approximate body display/fitting inline rows; supported literal/fraction/stack/script sequences, scripts with one fraction/stack base, wrapping, signed sizing, expanded display spacing, Latin/basic Greek/variant styles and normal-text faces/weight/slant; unsupported rich/metric owners, other alphabets, compressed/fixed spacing, operator breaking, deeper nesting and wider stories remain staged.",
   "support": {
     "minStructuralSimilarity": 0.985,
     "minForegroundRecall": 0.99

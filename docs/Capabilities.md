@@ -135,11 +135,12 @@ Partial or approximated:
 - Automatic note labels in simple section sequences support continuous and `eachSect` numbering, section starts/formats and their defaults, including minimum two-digit `decimalZero`. Continuous labels use document occurrence counts with the current section start; section restarts count from the section boundary. Custom marks do not advance automatic numbering, and authored document settings remain inspectable. Unsupported or malformed settings, revision bodies and hidden/nested section boundaries retain the prior numbering fallback.
 - Multi-column sections flow explicit breaks with first-pass exclusion geometry while continuous balancing stays approximate.
 - Markup modes keep the authored PDF media box and text-column geometry; no expanded review-pane margin is created.
+- Native OMML body equations support approximate standalone display and fitting inline rows, including literal/fraction/stack/script sequences and a fraction/stack used as a script base. Shared font metrics, child glyph ownership and source-order rules retain explicit fallbacks for unsupported deeper/rich structures, operator breaking, multiple separate equations, table cells and other stories. See [native DOCX equations](docx-equations.md) for independent Word evidence and remaining visual residuals.
 
 Unsupported or ignored:
 
 - Full Word-style tracked-change balloon content and collision-aware markup margin pagination.
-- Floating charts, SmartArt, equations, live OLE content, macros, and full Word-style text reflow around floating objects.
+- Floating charts, SmartArt, unsupported equation constructs/placements, live OLE content, macros, and full Word-style text reflow around floating objects.
 - Section variants beyond the simple page setup used by the current renderer.
 - Strict OOXML (ISO 29500) content: only the transitional dialect is supported; strict parts warn OOXML_STRICT_DIALECT and may render missing.
 - Complex scripts, bidirectional text, text shaping, and OpenType layout features beyond coverage fallback.
@@ -181,7 +182,8 @@ Each row links an unsupported family to its detection diagnostic, fallback, and 
 | SVG pictures | `SVG_UNSUPPORTED_CONTENT` Error/Warning | Ignored / Partial / RasterImage | PPTX SVG diagnostics; DOCX native/preview fallback and viewport tests |
 | DOCX floating charts | `DOCX_UNSUPPORTED_CHART` Warning | Ignored | `DocxUnsupportedChartInHeaderIsDiagnosed` (docx-core) |
 | DOCX SmartArt | `DOCX_UNSUPPORTED_SMARTART` Warning | Ignored | `DocxUnsupportedFeaturesEmitDiagnostics` (docx-core) |
-| DOCX equations | `DOCX_UNSUPPORTED_EQUATION` Warning | Ignored | `DocxUnsupportedEquationInFooterIsDiagnosed` (docx-core) |
+| Supported DOCX body equations | `DOCX_APPROXIMATED_EQUATION` Warning | Approximated | `DocxNativeStructuredSequencesRetainSourceOrderAndIndependentRules` (docx-core) |
+| Unsupported DOCX equation constructs/placements | `DOCX_UNSUPPORTED_EQUATION` Warning | Ignored | `DocxUnsupportedEquationInFooterIsDiagnosed` (docx-core) |
 | DOCX OLE objects | `DOCX_UNSUPPORTED_OLE_OBJECT` Warning | Ignored | `DocxUnsupportedFeaturesEmitDiagnostics` (docx-core) |
 | DOCX external images | `DOCX_UNSUPPORTED_EXTERNAL_IMAGE` Warning | Ignored | `DocxUnsupportedFeaturesEmitDiagnostics` (docx-core) |
 | DOCX macros | `DOCX_UNSUPPORTED_MACRO` Warning | Ignored | `DocxUnsupportedFeaturesEmitDiagnostics` (docx-core) |

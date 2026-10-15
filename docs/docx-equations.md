@@ -36,7 +36,7 @@ logical advance remains separate from occupied ink. Eight independent Word
 controls improve across display/inline placement and both fraction types, with
 position differences below 0.14 pt horizontally and 0.07 pt vertically.
 Twenty-one direct neighbor PDFs remain byte-identical; visual thresholds remain
-unchanged. Multiple structured children and deeper compound rows retain fallback.
+unchanged. Deeper compound rows retain fallback.
 The same sequence path now accepts one subscript/superscript structure alongside
 literal atoms. Eight uniform-size Word controls improve with position differences
 below 0.12 pt horizontally and 0.05 pt vertically. Two additional 20 pt script/
@@ -46,6 +46,16 @@ These contrasts also improve over the missing-row fallback, while internal
 script placement and line-height residuals reach 1.81 pt horizontally and 1.07 pt
 vertically. No size-specific correction is applied. Twenty-four direct neighbor
 PDFs remain byte-identical, including the accepted fraction rows and font styles.
+Supported literal, fraction, stack and script atoms can now form a sequence in
+one equation. Composition iterates in source order under the existing work and
+cancellation limits, with independent child rules and a single parent-leading
+contribution. Eight Word display/inline controls cover fraction/script order,
+two fractions and stack/script mixtures; all improve, with position differences
+below 0.11 pt horizontally and 0.07 pt vertically. Thirty-four prior capability
+PDFs remain byte-identical. The same frozen DLLs pass 32 selected portable math
+checks on Linux without rebuilding. Existing visual gates and unsupported deeper/
+rich structures remain explicit; this does not qualify multiple separate equation
+elements in a paragraph or additional stories.
 The reader retains equation position,
 display alignment, resolved run formatting, revision visibility and mathematical
 structure for literals, scripts and fractions. Unsupported or incomplete
