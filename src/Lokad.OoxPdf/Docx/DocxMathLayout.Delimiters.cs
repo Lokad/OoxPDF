@@ -9,10 +9,11 @@ namespace Lokad.OoxPdf.Docx;
 internal static partial class DocxMathLayout
 {
     private static DocxMathDelimiter? GetDelimiter(DocxEquation equation) =>
-        GetSingleSupportedChild(equation) is DocxMathDelimiter { HasUnsupportedProperties: false, Arguments.Count: 1,
+        GetSingleSupportedChild(equation) is DocxMathDelimiter { HasUnsupportedProperties: false, Arguments.Count: > 0,
             ShapeValue: null or "centered" } delimiter &&
         (delimiter.ControlText is null || DocxMathRowLayout.HasSupportedTextFormatting(delimiter.ControlText, allowBold: false)) &&
         IsCharacter(delimiter.BeginCharacter) && IsCharacter(delimiter.EndCharacter) &&
+        (delimiter.Arguments.Count == 1 || IsCharacter(delimiter.SeparatorCharacter)) &&
         delimiter.BeginCharacter.Length + delimiter.EndCharacter.Length > 0 ? delimiter : null;
 
     private static bool IsCharacter(string value) => value.Length == 0 ||
@@ -21,7 +22,8 @@ internal static partial class DocxMathLayout
     public static IReadOnlyList<int> GetControlCodePoints(IDocxMathControl control) => control switch
     {
         DocxMathRadical => [0x221A],
-        DocxMathDelimiter delimiter => (delimiter.BeginCharacter + delimiter.EndCharacter).EnumerateRunes()
+        DocxMathDelimiter delimiter => (delimiter.BeginCharacter + delimiter.EndCharacter +
+            (delimiter.Arguments.Count > 1 ? delimiter.SeparatorCharacter : string.Empty)).EnumerateRunes()
             .Select(rune => rune.Value).Distinct().ToArray(),
         _ => []
     };
@@ -40,28 +42,39 @@ internal static partial class DocxMathLayout
         double size = delimiter.ControlText?.FontSize ?? equation.ParentFontSize ?? sources[0].Run.Text.FontSize;
         if (!double.IsFinite(size) || size <= 0d)
         { fallback = "InvalidMathDelimiterSize"; return false; }
-        if (!DocxMathRowLayout.TryMeasure(delimiter.Arguments[0], resolveFont, token, out var child, out fallback,
-            exportFontSize: true, operatorSpacingFontSize: size) || child is null || child.Glyphs.Count == 0)
-        { fallback ??= "UnsupportedMathDelimiterArgument"; return false; }
+        var children = new List<DocxMathBox>();
+        double above = 0d, below = 0d;
+        foreach (var argument in delimiter.Arguments)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!DocxMathRowLayout.TryMeasure(argument, resolveFont, token, out var child, out fallback,
+                exportFontSize: true, operatorSpacingFontSize: size) || child is null || child.Glyphs.Count == 0)
+            { fallback ??= "UnsupportedMathDelimiterArgument"; return false; }
+            children.Add(child);above = Math.Max(above, child.AboveBaseline);below = Math.Max(below, child.BelowBaseline);
+        }
         double glyphSize = OfficePdfTextEmissionProfile.FontSize(size), scale = glyphSize / font.UnitsPerEm;
         double axis = constants.GetValue(OpenTypeMathConstant.AxisHeight) * size / font.UnitsPerEm;
-        double height = 2d * Math.Max(child.AboveBaseline - axis, child.BelowBaseline + axis);
+        double height = 2d * Math.Max(above - axis, below + axis);
         if (!double.IsFinite(height) || height <= 0d)
         { fallback = "InvalidMathDelimiterExtent"; return false; }
-        RgbColor color = child.Glyphs[0].Color;
+        RgbColor color = children[0].Glyphs[0].Color;
         if (delimiter.ControlText is { } control) { color = default; RgbColor.TryParse(control.ColorHex, out color); }
-        var glyphs = new List<DocxMathGlyphPlacement>(child.Glyphs.Count + 2);
-        double advance = 0d, width = 0d, above = child.AboveBaseline, below = child.BelowBaseline;
+        var glyphs = new List<DocxMathGlyphPlacement>();
+        var rules = new List<DocxMathRulePlacement>();
+        double advance = 0d, width = 0d;
         if (!AppendDelimiter(delimiter.BeginCharacter)) { fallback = "UnsupportedMathDelimiterVariant"; return false; }
-        double childX = advance;
-        foreach (var glyph in child.Glyphs) { token.ThrowIfCancellationRequested(); glyphs.Add(glyph with { X = glyph.X + childX }); }
-        width = Math.Max(width, childX + child.Width); advance += child.AdvanceWidth;
+        for (int i = 0; i < children.Count; i++)
+        {
+            if (i > 0 && !AppendDelimiter(delimiter.SeparatorCharacter)) { fallback = "UnsupportedMathDelimiterSeparator"; return false; }
+            var child = children[i];double childX = advance;
+            foreach (var glyph in child.Glyphs) { token.ThrowIfCancellationRequested(); glyphs.Add(glyph with { X = glyph.X + childX }); }
+            foreach (var rule in child.Rules) { token.ThrowIfCancellationRequested(); rules.Add(rule with { X = rule.X + childX }); }
+            width = Math.Max(width, childX + child.Width); advance += child.AdvanceWidth;
+        }
         if (!AppendDelimiter(delimiter.EndCharacter)) { fallback = "UnsupportedMathDelimiterVariant"; return false; }
         width = Math.Max(width, advance);
         if (!double.IsFinite(width) || !double.IsFinite(above) || !double.IsFinite(below) || width <= 0d)
         { fallback = "InvalidMathDelimiterExtent"; return false; }
-        var rules = new List<DocxMathRulePlacement>(child.Rules.Count);
-        foreach (var rule in child.Rules) { token.ThrowIfCancellationRequested(); rules.Add(rule with { X = rule.X + childX }); }
         box = new(width, above, below, glyphs)
         { LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = new(font, size) };
         fallback = null;

@@ -7,6 +7,20 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeDelimiterArgumentsKeepVisibleOrderAndEmptySeparators()
+    {
+        RequireMathFont();
+        foreach(string placement in new[]{"display","inline"})
+        foreach(string kind in new[]{"default","empty","large20"})
+        {
+            var diagnostics=new List<OoxPdfDiagnostic>();
+            var page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-delimiter-arguments-{placement}-{kind}"),diagnostics.Add,CancellationToken.None).Single();
+            TestAssert.Contains(kind=="empty"?"(n+1k+2)":"(n+1|k+2)",DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d=>d.Id=="DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d=>d.Id!="DOCX_UNSUPPORTED_EQUATION"),
+                "Supported argument lists retain actual native control and child glyph painting.");
+        }
+    }
+
     public static void DocxNativeFixedDelimitersRetainAuthoredGrowthAndChildSizes()
     {
         RequireMathFont();

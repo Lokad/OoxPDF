@@ -60,7 +60,10 @@ internal static partial class DocxMathLayout
         else if (GetFraction(equation) is { } fraction)
         { int level = equation.Display ? 0 : 1; rows.Add((fraction.Numerator, level, false)); rows.Add((fraction.Denominator, level, false)); }
         else if (GetDelimiter(equation) is { } delimiter)
-        { rows.Add((delimiter.Arguments[0], 0, false)); controlOwner = delimiter; }
+        {
+            foreach (var argument in delimiter.Arguments) { token.ThrowIfCancellationRequested(); rows.Add((argument, 0, false)); }
+            controlOwner = delimiter;
+        }
         else if (GetRadical(equation) is { } radical)
         {
             if (GetScripts(equation with { Content = radical.Radicand }) is { } childScripts)

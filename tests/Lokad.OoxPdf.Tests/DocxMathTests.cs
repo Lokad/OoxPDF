@@ -23,8 +23,6 @@ internal static class DocxMathTests
             if(properties.Contains("grow",StringComparison.Ordinal))
             { TestAssert.Equal((bool?)false,delimiter.GrowValue);TestAssert.Equal("match",delimiter.ShapeValue); }
             TestAssert.Equal(2,delimiter.Arguments.Count);TestAssert.Equal("a",RowText(delimiter.Arguments[0]));TestAssert.Equal("b",RowText(delimiter.Arguments[1]));
-            TestAssert.True(!DocxMathLayout.TryGetRuns(new(row,0,0,true,null,null,null),CancellationToken.None,out _),
-                "Typed delimiter source alone cannot claim native painting before its box is qualified.");
         }
     }
 

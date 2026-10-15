@@ -9,6 +9,41 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontDelimiterArgumentsShareHeightAndPreserveSeparatorsSourceOrderAndGrowth()
+    {
+        var font=OpenTypeFont.Load(DelimiterFontBytes(separator:true));
+        var resource=new PdfFontResource("Arguments",PdfEmbeddedFont.CreateForGlyphMappings(font,
+            new[]{((ushort)9,40),((ushort)10,41),((ushort)93,124),((ushort)128,40),((ushort)127,41),((ushort)126,124),
+                (font.MapCodePoint('B'),(int)'B'),(font.MapCodePoint('C'),(int)'C')},CancellationToken.None));
+        DocxMathRow Child(string text,double size,string color)=>new([new DocxMathRun(new(text,size,color,false,false,false,null,"TestFont"),"p",null)]);
+        foreach(bool fixedSize in new[]{true,false})
+        foreach(bool empty in new[]{true,false})
+        {
+            var delimiter=new DocxMathDelimiter([Child("B",12d,"FF0000"),Child("C",20d,"0000FF")])
+                { GrowValue=!fixedSize,SeparatorCharacterValue=empty?"":"|",ControlText=new("",12d,"008000",false,false,false,null,"TestFont") };
+            var equation=new DocxEquation(new([delimiter]),0,0,true,null,null,null) { ParentFontSize=12d };
+            TestAssert.True(DocxMathLayout.TryGetRuns(equation,CancellationToken.None,out var sources) && sources.Count==2 &&
+                ReferenceEquals(sources[0].ControlOwner,delimiter) && sources[1].ControlOwner is null,
+                "One control owner covers all independently measured literal argument rows.");
+            TestAssert.True(DocxMathLayout.TryMeasure(equation,_=>resource,CancellationToken.None,out var box,out var reason),reason??"Expected supported literal argument composition.");
+            var measured=TestAssert.NotNull(box);
+            TestAssert.Equal(empty?"(BC)":"(B|C)",string.Concat(measured.Glyphs.Select(g=>char.ConvertFromUtf32(g.SourceCodePoint))));
+            var first=measured.Glyphs.Single(g=>g.SourceCodePoint=='B');var second=measured.Glyphs.Single(g=>g.SourceCodePoint=='C');
+            TestAssert.True(first.FontSize==12d && Math.Abs(second.FontSize-20.04d)<1e-9 && first.Color.Red==255 && second.Color.Blue==255,
+                "Argument font sizes and colors retain independent ownership.");
+            TestAssert.True(measured.Glyphs[0].OriginalGlyph==(fixedSize?9:128) && measured.Glyphs[^1].OriginalGlyph==(fixedSize?10:127),
+                "Both outer characters use the common argument height or their authored fixed glyphs.");
+            if(empty)TestAssert.True(Math.Abs(second.X-first.X-first.Advance)<1e-9,"An empty separator adds no synthetic glyph or advance.");
+            else TestAssert.True(measured.Glyphs.Single(g=>g.SourceCodePoint=='|') is { Color.Green:128 } separator &&
+                separator.OriginalGlyph==(fixedSize?93:126),"The separator shares control color, height and growth semantics.");
+            var missing=new PdfFontResource("MissingSeparator",PdfEmbeddedFont.CreateForGlyphMappings(font,
+                new[]{((ushort)9,40),((ushort)10,41),((ushort)128,40),((ushort)127,41),
+                    (font.MapCodePoint('B'),(int)'B'),(font.MapCodePoint('C'),(int)'C')},CancellationToken.None));
+            if(!empty)TestAssert.True(!DocxMathLayout.TryMeasure(equation,_=>missing,CancellationToken.None,out var absent,out _) && absent is null,
+                "A missing separator CID cannot publish a partial collection of arguments.");
+        }
+    }
+
     public static void MathFontMixedGrowthControlsPrepareCanonicalAndVariantGlyphsInEitherOrder()
     {
         XNamespace w="http://schemas.openxmlformats.org/wordprocessingml/2006/main";
@@ -119,7 +154,7 @@ internal static class DocxMathFractionTests
         TestAssert.True(!DocxMathLayout.TryMeasure(equation,_=>text,CancellationToken.None,out var absent,out _,resolveControlFont:_=>missing) && absent is null,
             "A missing closing CID cannot publish an opening-only box.");
         foreach(var invalid in new[]{delimiter with { HasUnsupportedProperties=true },delimiter with { ShapeValue="match" },
-            delimiter with { Arguments=[child,child] },delimiter with { Arguments=[new([delimiter])] }})
+            delimiter with { Arguments=[new([new DocxMathFraction(child,child,"bar")])] },delimiter with { Arguments=[new([delimiter])] }})
             TestAssert.True(!DocxMathLayout.TryMeasure(equation with { Content=new([invalid]) },_=>text,CancellationToken.None,out var rejected,out _,
                 resolveControlFont:_=>parent) && rejected is null,"Unqualified shape/growth/argument roles retain complete fallback.");
         var graphics=new PdfGraphicsBuilder();DocxMathBoxPainter.Paint(measured,graphics,20d,50d,CancellationToken.None);
@@ -163,8 +198,21 @@ internal static class DocxMathFractionTests
         }
     }
 
-    private static byte[] DelimiterFontBytes()
+    private static byte[] DelimiterFontBytes(bool separator = false)
     {
+        if (separator)
+        {
+            byte[] combined=Constants();Array.Resize(ref combined,286);
+            void Put(int at,ushort value)=>BinaryPrimitives.WriteUInt16BigEndian(combined.AsSpan(at),value);
+            Put(8,224);Put(226,16);Put(230,3);Put(234,26);Put(236,38);Put(238,50);
+            Put(240,1);Put(242,3);Put(244,9);Put(246,10);Put(248,93);
+            for(int i=0;i<3;i++)
+            {
+                int at=250+i*12;Put(at+2,2);Put(at+4,(ushort)(i==0?9:i==1?10:93));Put(at+6,1000);
+                Put(at+8,(ushort)(128-i));Put(at+10,2000);
+            }
+            return TestFontBuilder.CreateMathFont(combined);
+        }
         byte[] math=Constants();Array.Resize(ref math,268);
         void Set(int at,ushort value)=>BinaryPrimitives.WriteUInt16BigEndian(math.AsSpan(at),value);
         Set(8,224);Set(226,14);Set(230,2);Set(234,22);Set(236,34);
