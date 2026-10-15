@@ -399,3 +399,24 @@ both decks pass. Memo Final page-two MAE improves from 1.172 to 0.429 and recall
 from 0.541 to 0.840. Seventeen assets/four exact smoke PDFs transfer without root
 rebuild or suite replay. C1 remains open for significant geometry and composition
 limits.
+
+Ordinary list numbering no longer excludes supported composed equations. Label
+measurement and text-state planning are shared with ordinary paragraph layout;
+the first measured line owns its label segments, while containers place those
+segments in their own frames. Authored indentation/suffix rules are reused.
+Numbered rows retain inline style and existing unsupported rich-content fallbacks.
+
+A numbering-only transformation previously removed four equations from three
+mixed paragraphs in both modes, while preserving prose. The candidate retains
+four equations and three labels across body/cell/header/footer controls. Native
+unchanged-format run splitting and pinned-font source transformations also retain
+content. The body control's recall improves 0.141→0.671 and MAE 1.464→0.821;
+all eight independent numbered-story visual gates still fail. Raster review shows
+the labels, fractions, literals and illustration together.
+
+Fifty-two selected methods pass in one invocation, including numbering emission,
+indentation/suffix/continuation and table-math neighbors. Thirteen portable methods
+pass on Ubuntu. All ten portfolio PDFs retain bytes; eighteen independent Office
+comparisons reuse verified identities. Global/page-local prose and simple-math
+screens pass. Seventeen assets/four exact smoke PDFs transfer without rebuilding
+or repeating the suite. The portfolio DOCX gates remain failed; decks remain passed.
