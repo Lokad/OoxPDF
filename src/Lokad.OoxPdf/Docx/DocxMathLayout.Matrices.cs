@@ -72,8 +72,8 @@ internal static partial class DocxMathLayout
             for (int c = 0; c < columns; c++)
             {
                 token.ThrowIfCancellationRequested();
-                if (!DocxMathRowLayout.TryMeasure(matrix.Rows[r].Cells[c], resolveFont, token, out var cell, out fallback,
-                    exportFontSize: true, operatorSpacingFontSize: size, neighbors: new(After: DocxMathRowLayout.AtomKind.Ordinary)) ||
+                if (!TryMeasureBoxArgument(equation with { Content = matrix.Rows[r].Cells[c], ParentFontSize = size },
+                    resolveFont, font, size, token, out var cell, out fallback, neighbors: new(After: DocxMathRowLayout.AtomKind.Ordinary)) ||
                     cell is null || cell.Glyphs.Count == 0)
                 { fallback ??= "UnsupportedMathMatrixCell"; return false; }
                 measured[c] = cell; widths[c] = Math.Max(widths[c], cell.AdvanceWidth);
@@ -88,7 +88,7 @@ internal static partial class DocxMathLayout
         double axis = constants.GetValue(OpenTypeMathConstant.AxisHeight) * size / font.UnitsPerEm;
         if (!double.IsFinite(height) || height <= 0d || !double.IsFinite(advance) || advance <= 0d || !double.IsFinite(axis))
         { fallback = "InvalidMathMatrixExtent"; return false; }
-        var glyphs = new List<DocxMathGlyphPlacement>();
+        var glyphs = new List<DocxMathGlyphPlacement>(); var rules = new List<DocxMathRulePlacement>();
         // Top/bottom alignment anchors the corresponding row baseline. Center
         // alignment keeps the complete row frame centered on the math axis.
         double top = matrix.BaseJustificationValue switch
@@ -110,12 +110,14 @@ internal static partial class DocxMathLayout
                 inkBelow = Math.Max(inkBelow, child.BelowBaseline - baseline);
                 foreach (var glyph in child.Glyphs)
                 { token.ThrowIfCancellationRequested(); glyphs.Add(glyph with { X = glyph.X + cellX, BaselineY = glyph.BaselineY + baseline }); }
+                foreach (var rule in child.Rules)
+                { token.ThrowIfCancellationRequested(); rules.Add(rule with { X = rule.X + cellX, Y = rule.Y + baseline }); }
                 x += widths[c] + size;
             }
             top -= rowAbove[r] + rowBelow[r];
         }
         box = new(width, inkAbove, inkBelow, glyphs)
-        { LogicalAdvance = advance == width ? null : advance, ParentMetrics = new(font, size) };
+        { LogicalAdvance = advance == width ? null : advance, ParentMetrics = new(font, size), Rules = rules };
         fallback = null;
         return true;
     }

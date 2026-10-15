@@ -7,6 +7,60 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathMatrixLayoutTests
 {
+    public static void MathFontMatrixStructuredCellsTranslateChildRulesAndKeepControlMetrics()
+    {
+        var font = MathFont(); var resource = Resource("Structured", font, "BC");
+        var basis = new DocxMathRow([Run("B")]); var argument = new DocxMathRow([Run("C")]);
+        foreach (bool display in new[] { true, false })
+        foreach (double size in new[] { 12d, 20d })
+        foreach (DocxMathNode structure in new DocxMathNode[] { new DocxMathFraction(basis, argument, "bar"),
+            new DocxMathFraction(basis, argument, "noBar"), new DocxMathScripts(basis, argument, argument) })
+        {
+            var cell = new DocxMathRow([structure]);
+            var matrix = Matrix([Run("B"), Run("C")], [Run("C"), Run("B")]) with
+            { Rows = [new([basis, cell]), new([argument, basis])], ControlText = new("", size, null, false, false, false, null, "TestFont") };
+            var equation = Equation(matrix) with { Display = display };
+            TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var sources) &&
+                ReferenceEquals(sources[0].ControlOwner, matrix) && sources.Skip(1).All(s => s.ControlOwner is null),
+                "Bounded structured cells retain one metric-only matrix owner and ordered child source roles.");
+            TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var box, out var reason,
+                resolveControlMetrics: _ => font), reason ?? "Expected bounded structured grid.");
+            TestAssert.True(DocxMathLayout.TryMeasure(equation with { Content = cell, ParentFontSize = size }, _ => resource,
+                CancellationToken.None, out var inner, out reason, parentMetricsFont: font), reason ?? "Expected existing child box.");
+            var grid = TestAssert.NotNull(box); var child = TestAssert.NotNull(inner);
+            double x = grid.Glyphs[1].X - child.Glyphs[0].X, y = grid.Glyphs[1].BaselineY - child.Glyphs[0].BaselineY;
+            TestAssert.True(x > 0d && child.Glyphs.Select((g, i) => (g, i)).All(pair =>
+                Math.Abs(grid.Glyphs[pair.i + 1].X - pair.g.X - x) < 1e-9 &&
+                Math.Abs(grid.Glyphs[pair.i + 1].BaselineY - pair.g.BaselineY - y) < 1e-9),
+                "Existing child geometry moves as a whole into the matrix slot, including script baselines.");
+            TestAssert.True(grid.Rules.Count == child.Rules.Count && grid.Rules.Zip(child.Rules).All(pair =>
+                Math.Abs(pair.First.X - pair.Second.X - x) < 1e-9 && Math.Abs(pair.First.Y - pair.Second.Y - y) < 1e-9 &&
+                pair.First.Thickness == pair.Second.Thickness), "Fraction rules retain child geometry and move with the same cell origin.");
+            TestAssert.True(grid.ParentMetrics?.Size == size && grid.Glyphs[0].FontSize == 12d,
+                "Control metrics remain independent of painted cell sizes.");
+        }
+    }
+
+    public static void MathFontMatrixStructuredCellsKeepDeeperAndLateFailureFallback()
+    {
+        var font = MathFont(); var resource = Resource("Grid", font, "BC");
+        var fraction = new DocxMathFraction(new([Run("B")]), new([Run("C")]), "bar");
+        var matrix = Matrix([Run("B"), Run("C")], [Run("C"), Run("B")]);
+        foreach (DocxMathNode invalid in new DocxMathNode[] { fraction with { Numerator = new([fraction]) },
+            fraction with { TypeValue = "skw" }, new DocxMathScripts(new([matrix]), null, new([Run("B")])) })
+        {
+            var bad = matrix with { Rows = [matrix.Rows[0], new([new([Run("B")]), new([invalid])])] };
+            TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(bad), CancellationToken.None, out _) &&
+                !DocxMathLayout.TryMeasure(Equation(bad), _ => resource, CancellationToken.None, out var absent, out _, resolveControlMetrics: _ => font) && absent is null,
+                "Deeper, unknown and unsupported cell roles reject the complete grid before publication.");
+        }
+        var last = Run("C"); var structured = matrix with { Rows = [new([new([fraction]), new([Run("B")])]), new([new([Run("B")]), new([last])])] };
+        var missing = Resource("Missing", font, "B");
+        TestAssert.True(!DocxMathLayout.TryMeasure(Equation(structured), r => ReferenceEquals(r, last) ? missing : resource,
+            CancellationToken.None, out var rejected, out _, resolveControlMetrics: _ => font) && rejected is null,
+            "A late missing glyph cannot publish an earlier fractional cell or its rule.");
+    }
+
     public static void MathFontMatrixBaseJustificationAnchorsRowsWithoutChangingSlots()
     {
         var font = MathFont(); var resource = Resource("Aligned", font, "BC");
@@ -147,9 +201,15 @@ internal static class DocxMathMatrixLayoutTests
     private static OpenTypeFont MathFont()
     {
         byte[] table = new byte[224]; BinaryPrimitives.WriteUInt16BigEndian(table, 1); BinaryPrimitives.WriteUInt16BigEndian(table.AsSpan(4), 10);
-        BinaryPrimitives.WriteUInt16BigEndian(table.AsSpan(10), 73);
+        BinaryPrimitives.WriteUInt16BigEndian(table.AsSpan(10), 73); BinaryPrimitives.WriteUInt16BigEndian(table.AsSpan(12), 50);
         BinaryPrimitives.WriteInt16BigEndian(table.AsSpan(18 + (int)OpenTypeMathConstant.AxisHeight * 4), 250);
         BinaryPrimitives.WriteInt16BigEndian(table.AsSpan(18 + (int)OpenTypeMathConstant.MathLeading * 4), 120);
+        void Set(OpenTypeMathConstant field, short value) => BinaryPrimitives.WriteInt16BigEndian(table.AsSpan(18 + (int)field * 4), value);
+        Set(OpenTypeMathConstant.FractionRuleThickness, 40); Set(OpenTypeMathConstant.SuperscriptShiftUp, 500);
+        Set(OpenTypeMathConstant.FractionNumeratorDisplayStyleShiftUp, 700); Set(OpenTypeMathConstant.FractionDenominatorDisplayStyleShiftDown, 500);
+        Set(OpenTypeMathConstant.FractionNumeratorShiftUp, 500); Set(OpenTypeMathConstant.FractionDenominatorShiftDown, 400);
+        Set(OpenTypeMathConstant.StackTopDisplayStyleShiftUp, 700); Set(OpenTypeMathConstant.StackBottomDisplayStyleShiftDown, 500);
+        Set(OpenTypeMathConstant.StackTopShiftUp, 500); Set(OpenTypeMathConstant.StackBottomShiftDown, 400);
         return OpenTypeFont.Load(TestFontBuilder.CreateMathFont(table));
     }
 }

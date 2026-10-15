@@ -7,6 +7,22 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeMatrixStructuredCellsRetainChildMeaningAndRules()
+    {
+        RequireMathFont();
+        foreach (string suffix in new[] { "inline-fraction", "display-stack", "inline-script", "display-script", "inline-fraction-top-control20", "display-fraction-bot-right" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-structured-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(suffix.EndsWith("script", StringComparison.Ordinal) ? "aknbcd" : "akbcd",
+                DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Bounded structured cells retain native numerator/denominator/script roles through matrix placement.");
+        }
+        var retained = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-display-fraction-cell"), null, CancellationToken.None).Single();
+        TestAssert.Contains("akbcd", DocxPageFootnoteNumberingTests.DecodeText(retained).Normalize(NormalizationForm.FormKC));
+    }
+
     public static void DocxNativeMatrixBaseJustificationPreservesOrderedCellMeaning()
     {
         RequireMathFont();

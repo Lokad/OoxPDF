@@ -66,9 +66,8 @@ internal static partial class DocxMathLayout
             foreach (var cell in row.Cells)
             {
                 token.ThrowIfCancellationRequested();
-                if (!DocxMathRowLayout.TryGetRenderCodePoints(cell, token, out var points, out _) || points.Count == 0)
+                if (!AddBoxArgumentRows(cell))
                 { runs = []; return false; }
-                rows.Add((cell, 0, false));
             }
             controlOwner = matrix;
         }
