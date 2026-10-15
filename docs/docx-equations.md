@@ -1,12 +1,16 @@
 # Native DOCX equations
 
-Standalone display equations also paint in automatic body-table rows. Cell
+Standalone display equations also paint in body-table rows with resolved
+automatic, exact or minimum heights. Cell
 measurement, line placement, clipping and keep estimation reuse the prepared
 math boxes and conversion-owned fonts. Five independent Word controls cover
 literals, fractions, scripts, adjacent cells and surrounding prose: all 18 math
 outlines match, with at most 0.10 pt horizontal and 0.34 pt vertical differences.
-The visual thresholds remain unchanged and unmet. A fixed-height row retains
-its exact ignored-equation output. Vertical merges, nested/nonparagraph cell
+Declared frames add 13 independent Word controls: all 40 math outlines match,
+within 0.05 pt horizontally and 0.18 pt vertically. Small exact rows use the
+existing cell clip. Zero exact height uses natural content height, fixing plain
+cells as well. The visual thresholds remain unchanged and unmet. Unknown,
+negative or unresolved heights, vertical merges, nested/nonparagraph cell
 content, fit/vertical text, revisions and inline cell equations retain fallback;
 math-bearing rows are atomic, with oversized-row pagination still unqualified.
 The earlier body qualifications below retain their scope and residuals.

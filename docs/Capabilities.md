@@ -69,12 +69,16 @@ page transition. Following prose moves to the next page when its line no longer
 fits; it cannot use an earlier page's item count to bypass the bottom margin.
 Independent plain-table and large-equation controls restore Word's page counts.
 
-Standalone display equations in automatic body-table rows reuse prepared math
+Standalone display equations in resolved body-table rows reuse prepared math
 boxes through cell measurement, placement, clipping and keep estimation. Word
 controls cover literals, fractions, scripts, adjacent cells and surrounding prose;
-all 18 painted outlines match, with ≤ 0.10 pt X / 0.34 pt Y residuals. Visual gates remain
-explicit needs-review. Fixed rows, vertical merges, nested/nonparagraph cell
-content, fitting/vertical text, revisions and inline cell equations keep fallback.
+all 18 initial outlines match, with ≤ 0.10 pt X / 0.34 pt Y residuals. Declared exact
+and minimum frames add 13 Word controls and 40 matching math outlines, within
+0.05 pt X / 0.18 pt Y. Small exact frames retain their authored clipping; zero
+exact height uses the natural content frame for both math and plain cells.
+Visual gates remain explicit needs-review. Unknown, negative or unresolved heights,
+vertical merges, nested cell content, fit text, vertical text, revisions and inline
+cell equations keep fallback.
 Math-bearing rows remain atomic; oversized-row and wider pagination are unqualified.
 
 Mathematical runs select the minus glyph for an authored ASCII hyphen across
