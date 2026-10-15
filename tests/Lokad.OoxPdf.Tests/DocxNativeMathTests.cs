@@ -7,6 +7,20 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeMixedDelimiterRowsKeepLiteralMeaningAndMultipleControls()
+    {
+        RequireMathFont();
+        foreach (string mode in new[] { "display", "inline" })
+        foreach ((string kind, string meaning) in new[] { ("single", "a+(n+1)=b"), ("multiple", "a+(n+1|k+2)=b"), ("mixed-growth", "a+(n+1)+(k+2)=b") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-delimiter-row-{mode}-{kind}"), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Supported mixed rows retain every literal, child argument and implicit delimiter control.");
+        }
+    }
+
     public static void DocxNativeInlineIntegralsRetainLiteralSizedAndStructuredBodyMeaning()
     {
         RequireMathFont();

@@ -9,7 +9,10 @@ namespace Lokad.OoxPdf.Docx;
 internal static partial class DocxMathLayout
 {
     private static DocxMathDelimiter? GetDelimiter(DocxEquation equation) =>
-        GetSingleSupportedChild(equation) is DocxMathDelimiter { HasUnsupportedProperties: false, Arguments.Count: > 0,
+        GetSupportedDelimiter(GetSingleSupportedChild(equation));
+
+    private static DocxMathDelimiter? GetSupportedDelimiter(DocxMathNode? node) =>
+        node is DocxMathDelimiter { HasUnsupportedProperties: false, Arguments.Count: > 0,
             ShapeValue: null or "centered" } delimiter &&
         (delimiter.ControlText is null || DocxMathRowLayout.HasSupportedTextFormatting(delimiter.ControlText, allowBold: false)) &&
         IsCharacter(delimiter.BeginCharacter) && IsCharacter(delimiter.EndCharacter) &&

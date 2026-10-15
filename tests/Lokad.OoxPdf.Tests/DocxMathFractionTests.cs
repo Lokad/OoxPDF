@@ -9,6 +9,36 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontMixedDelimiterRowsKeepControlOwnersGrowthAndCompleteFallback()
+    {
+        var font = OpenTypeFont.Load(DelimiterFontBytes());
+        var mappings = new[] { ((ushort)9, 40), ((ushort)10, 41), ((ushort)128, 40), ((ushort)127, 41),
+            (font.MapCodePoint('B'), (int)'B'), (font.MapCodePoint('C'), (int)'C'), (font.MapCodePoint('+'), (int)'+'), (font.MapCodePoint('='), (int)'=') };
+        var resource = new PdfFontResource("Mixed", PdfEmbeddedFont.CreateForGlyphMappings(font, mappings, CancellationToken.None));
+        DocxMathRow Child(string text, double size = 12d) => new([new DocxMathRun(new(text, size, "0000FF", false, false, false, null, "TestFont"), "p", null)]);
+        var first = new DocxMathDelimiter([Child("B", 20d)]) { ControlText = new("", 12d, "008000", false, false, false, null, "TestFont") };
+        var second = first with { Arguments = [Child("C", 20d)], GrowValue = false };
+        var equation = new DocxEquation(new([Child("B+"), first, Child("+"), second, Child("=C")]), 0, 0, true, null, null, null) { ParentFontSize = 12d };
+        TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var sources) && sources.Count == 5 &&
+            sources.Count(s => s.ControlOwner is not null) == 2 && sources.Any(s => ReferenceEquals(s.ControlOwner, first)) &&
+            sources.Any(s => ReferenceEquals(s.ControlOwner, second)), "Each delimiter retains its own source control inside one bounded row.");
+        TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var box, out var reason), reason ?? "Expected mixed delimiter composition.");
+        var measured = TestAssert.NotNull(box);
+        TestAssert.Equal("B+(B)+(C)=C", string.Concat(measured.Glyphs.Select(g => char.ConvertFromUtf32(g.SourceCodePoint))));
+        var openings = measured.Glyphs.Where(g => g.SourceCodePoint == '(').ToArray();
+        TestAssert.True(openings.Length == 2 && openings[0].OriginalGlyph == 128 && openings[1].OriginalGlyph == 9 && openings.All(g => g.Color.Green == 128),
+            "Growing and fixed controls retain distinct selected glyphs and shared control color within a row.");
+        TestAssert.True(measured.Glyphs.Count(g => Math.Abs(g.FontSize - 20.04d) < 1e-9) == 2 && measured.ParentMetrics?.Size == 12d,
+            "Larger child glyphs keep independent size while controls own the parent line frame.");
+        var missing = new PdfFontResource("MissingLater", PdfEmbeddedFont.CreateForGlyphMappings(font,
+            mappings.Where(m => m.Item1 != 9), CancellationToken.None));
+        TestAssert.True(!DocxMathLayout.TryMeasure(equation, _ => missing, CancellationToken.None, out var absent, out _) && absent is null,
+            "A missing later fixed-control CID cannot publish the preceding literal or growing delimiter.");
+        foreach (var invalid in new[] { second with { ShapeValue = "match" }, second with { Arguments = [new([first])] } })
+            TestAssert.True(!DocxMathLayout.TryGetRuns(equation with { Content = new([Child("B+"), first, Child("+"), invalid]) },
+                CancellationToken.None, out _), "Standalone and mixed rows share the same unsupported shape/argument fallback.");
+    }
+
     public static void MathFontDelimiterArgumentsShareHeightAndPreserveSeparatorsSourceOrderAndGrowth()
     {
         var font=OpenTypeFont.Load(DelimiterFontBytes(separator:true));
