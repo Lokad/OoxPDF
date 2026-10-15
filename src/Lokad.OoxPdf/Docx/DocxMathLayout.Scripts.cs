@@ -6,7 +6,10 @@ namespace Lokad.OoxPdf.Docx;
 internal static partial class DocxMathLayout
 {
     private static DocxMathScripts? GetScripts(DocxEquation equation) =>
-        GetSingleSupportedChild(equation) is DocxMathScripts { PropertiesXml.Count: 0 } scripts &&
+        GetSupportedScripts(GetSingleSupportedChild(equation));
+
+    private static DocxMathScripts? GetSupportedScripts(DocxMathNode? node) =>
+        node is DocxMathScripts { PropertiesXml.Count: 0 } scripts &&
         (scripts.Subscript is not null || scripts.Superscript is not null) ? scripts : null;
 
     private static bool TryMeasureScripts(DocxEquation equation, DocxMathScripts scripts,

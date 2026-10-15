@@ -58,13 +58,16 @@ internal static partial class DocxMathLayout
         }
         else if (GetFraction(equation) is { } fraction)
         { int level = equation.Display ? 0 : 1; rows.Add((fraction.Numerator, level, false)); rows.Add((fraction.Denominator, level, false)); }
-        else if (GetFractionRow(equation, token) is { } compound)
+        else if (GetStructuredRow(equation, token) is { } compound)
         {
-            rows.Add((compound.Before, 0, false));
-            int level = equation.Display ? 0 : 1;
-            rows.Add((compound.Fraction.Numerator, level, false));
-            rows.Add((compound.Fraction.Denominator, level, false));
-            rows.Add((compound.After, 0, false));
+            // The outer grammar permits only literal siblings and one known
+            // structure whose own discovery requires supported literal roles.
+            if (!TryGetRuns(equation with { Content = compound.Before }, token, out var before) ||
+                !TryGetRuns(equation with { Content = new([compound.Structure]) }, token, out var child) ||
+                !TryGetRuns(equation with { Content = compound.After }, token, out var after))
+            { runs = []; return false; }
+            runs = [.. before, .. child, .. after];
+            return true;
         }
         else { rows.Add((equation.Content, 0, false)); }
         var result = new List<DocxMathRunSource>();
@@ -90,8 +93,8 @@ internal static partial class DocxMathLayout
     {
         if (GetScripts(equation) is { } scripts)
             return TryMeasureScripts(equation, scripts, resolveFont, token, out box, out fallback);
-        if (GetFractionRow(equation, token) is { } compound)
-            return TryMeasureFractionRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont);
+        if (GetStructuredRow(equation, token) is { } compound)
+            return TryMeasureStructuredRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont);
         if (GetFraction(equation) is not { } fraction)
             return DocxMathRowLayout.TryMeasure(equation.Content, resolveFont, token, out box, out fallback);
         box = null;
@@ -179,7 +182,7 @@ internal static partial class DocxMathLayout
 
     public static bool NeedsParentFractionMetrics(DocxEquation equation, IReadOnlyList<DocxMathRunSource> runs,
         CancellationToken token = default) =>
-        (GetFraction(equation) is not null || GetFractionRow(equation, token) is not null) &&
+        (GetFraction(equation) is not null || GetStructuredRow(equation, token)?.Structure is DocxMathFraction) &&
         runs.Any(source => source.Run.NormalText);
 
     private static DocxMathNode? GetSingleSupportedChild(DocxEquation equation) =>

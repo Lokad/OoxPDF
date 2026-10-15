@@ -7,6 +7,22 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeMixedScriptRowsPaintLiteralAndScriptMeaning()
+    {
+        RequireMathFont();
+        foreach (string placement in new[] { "display", "inline" })
+        foreach (string suffix in new[] { "sub-prefix", "sub-both", "sup-prefix", "sup-both", "sup-size20" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-mixed-script-{placement}-{suffix}"),
+                diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(suffix.EndsWith("prefix", StringComparison.Ordinal) ? "y=x2" : "y=x2+z",
+                DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") &&
+                diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Mixed script rows must report actual native source painting.");
+        }
+    }
+
     public static void DocxNativeMixedFractionRowsPaintLiteralAtomsAndRetainAuthoredRules()
     {
         RequireMathFont();

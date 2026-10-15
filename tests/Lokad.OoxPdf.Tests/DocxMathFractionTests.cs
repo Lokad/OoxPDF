@@ -7,6 +7,76 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontScriptRowsUseEquationSpacingWithoutChangingChildMetrics()
+    {
+        var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
+        DocxMathRow Sized(string text) => new([new DocxMathRun(new(text, 20d, null, false, false, false, null, "TestFont"), "p", null)]);
+        var scripts = new DocxMathScripts(Sized("B"), null, Sized("C"));
+        DocxEquation child = Fraction() with { Content = new([scripts]), ParentFontSize = 12d };
+        DocxMathRow prefix = Row("A+");
+        TestAssert.True(DocxMathRowLayout.TryMeasure(prefix, _ => resource, CancellationToken.None, out var first, out _), "Expected literal prefix.");
+        TestAssert.True(DocxMathLayout.TryMeasure(child, _ => resource, CancellationToken.None, out var basis, out _), "Expected authored20pt child.");
+        TestAssert.True(DocxMathLayout.TryMeasure(child with { Content = new([prefix, scripts]) }, _ => resource,
+            CancellationToken.None, out var box, out _), "Expected mixed-size structured row.");
+        DocxMathBox measured = TestAssert.NotNull(box), standalone = TestAssert.NotNull(basis);
+        TestAssert.True(Math.Abs(measured.Glyphs[2].X - TestAssert.NotNull(first).AdvanceWidth - 8d * 12d / 18d) < 1e-9,
+            "Both sides of the binary boundary use the equation's12pt spacing, independently of20pt child glyphs.");
+        TestAssert.True(measured.Glyphs[2].FontSize == standalone.Glyphs[0].FontSize &&
+            measured.Glyphs[3].FontSize == standalone.Glyphs[1].FontSize &&
+            measured.Glyphs[3].BaselineY == standalone.Glyphs[1].BaselineY,
+            "Equation glue cannot rescale or reposition the already measured script role internally.");
+    }
+
+    public static void MathFontScriptRowsRetainChildStylesBaselinesAndSourceOwners()
+    {
+        var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
+        foreach (bool superscript in new[] { true, false })
+        {
+            var scripts = new DocxMathScripts(Row("B"), superscript ? null : Row("C"), superscript ? Row("C") : null);
+            DocxEquation child = Fraction() with { Content = new([scripts]) };
+            DocxEquation source = child with { Content = new([Row("A+"), scripts, Row("+B")]) };
+            TestAssert.True(DocxMathLayout.TryGetRuns(source, CancellationToken.None, out var runs) &&
+                runs.Count == 4 && runs[0].ScriptLevel == 0 && runs[1].ScriptLevel == 0 &&
+                runs[2].ScriptLevel == 1 && runs[3].ScriptLevel == 0,
+                "Literal siblings and base retain text style while the script role retains script style.");
+            TestAssert.True(DocxMathLayout.TryMeasure(child, _ => resource, CancellationToken.None, out var basis, out _), "Expected existing script box.");
+            TestAssert.True(DocxMathLayout.TryMeasure(source, _ => resource, CancellationToken.None, out var box, out var reason),
+                reason ?? "One supported script must compose alongside literal atoms.");
+            DocxMathBox measured = TestAssert.NotNull(box), scriptBox = TestAssert.NotNull(basis);
+            TestAssert.Equal("A+BC+B", string.Concat(measured.Glyphs.Select(g => char.ConvertFromUtf32(g.SourceCodePoint))));
+            for (int i = 0; i < scriptBox.Glyphs.Count; i++)
+            {
+                var expected = scriptBox.Glyphs[i]; var actual = measured.Glyphs[i + 2];
+                TestAssert.True(actual.Font == expected.Font && actual.FontSize == expected.FontSize &&
+                    actual.OriginalGlyph == expected.OriginalGlyph && actual.BaselineY == expected.BaselineY,
+                    "Composition cannot change the already qualified child's glyph/style/baseline ownership.");
+            }
+            TestAssert.True(measured.AdvanceWidth > scriptBox.AdvanceWidth && measured.Width >= measured.AdvanceWidth,
+                "Literal siblings extend logical advance while occupied ink remains bounded by the stored frame.");
+            var graphics = new PdfGraphicsBuilder();
+            DocxMathBoxPainter.Paint(measured, graphics, 20d, 50d, CancellationToken.None);
+            using var output = new MemoryStream();
+            PdfDocumentWriter.WriteBlank(output, [new PdfPage(200d, 150d, graphics.ToString(), [resource])], CancellationToken.None);
+            TestAssert.True(output.Length > 0, "The composed row retains valid source encodings/resources.");
+        }
+    }
+
+    public static void MathFontScriptRowsKeepMultipleDeeperFallbackAndCancellation()
+    {
+        var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
+        var scripts = new DocxMathScripts(Row("B"), null, Row("C"));
+        DocxEquation source = Fraction() with { Content = new([Row("A+"), scripts]) };
+        foreach (var content in new[] { new DocxMathRow([Row("A+"), scripts, scripts]),
+            new DocxMathRow([Row("A+"), scripts with { Base = new([scripts]) }]) })
+            TestAssert.True(!DocxMathLayout.TryGetRuns(source with { Content = content }, CancellationToken.None, out _) &&
+                !DocxMathLayout.TryMeasure(source with { Content = content }, _ => resource, CancellationToken.None, out var box, out _) && box is null,
+                "Unsupported multiple/deeper structures retain the complete source fallback.");
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(source, _ => resource, cancelled.Token, out _, out _));
+        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 }))
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(source, _ => resource, CancellationToken.None, out _, out _));
+    }
+
     public static void MathFontFractionRowsShareBinaryBoundarySpacingAndRetainSourceOrder()
     {
         var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
