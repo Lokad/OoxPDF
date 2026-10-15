@@ -2,7 +2,7 @@ docxpatch 1
 
 op replace-paragraph
 target M.P0001
-text Inline equation: 
+text Inline equation:
 end
 
 op insert-equation
