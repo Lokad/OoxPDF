@@ -484,3 +484,31 @@ when no line spacing resolves, while these sources use a single-line pitch in
 Word. That discrepancy is confirmed; paragraph-mark metric ownership is a
 hypothesis to test, not an accepted cause. Preserve older independent unstyled
 controls while isolating document defaults, style inheritance and mark formatting.
+
+Document paragraph defaults now retain their source ownership even when `pPr` is
+empty. With no resolved line token, a declared document default supplies single
+spacing; an absent owner retains implicit Normal 278/240. A uniquely declared
+default paragraph style binds through the existing cascade, so its explicit line
+setting overrides the fallback. Authored style IDs and cascade provenance remain
+separate from inherited formatting. Two identical fallback constants and a
+redundant qualification helper are removed. No font/size/document-shape guard is
+added or indiscriminately removed.
+
+The seven-source ownership matrix separates absent, run-only, empty/nonempty
+paragraph defaults and explicit Normal inheritance. Its fourteen mode outcomes
+preserve explicit Normal PDF bytes while affected recall improves 0.222→0.773 and
+MAE 9.173→3.981. The source controls still fail their original visual gates. Plain
+cell/header/footer controls improve recall from 0.377/0.286/0.353 to
+0.836/0.850/0.831; MAE and changed-pixel gates pass, with foreground/SSIM failures
+remaining. These controls disprove a global fallback replacement and do not
+establish paragraph-mark metrics as the cause.
+
+This shared-reader milestone qualifies 1,494 DOCX/neighbor methods once in one
+invocation and sixteen portable methods on Ubuntu. An earlier artifact passed
+1,493/1,494 but changed authored style identity; that defect was corrected before
+delivery and the failed artifact/report retained. All ten portfolio PDFs and their
+comparisons remain exact; full/global/page-local content screens pass. Seventeen
+assets/four exact smoke PDFs transfer without a root build or suite replay. The
+broader selection is a deliberate shared-contract milestone, not the selection
+policy for routine local changes. Existing limits, cancellation, safe managed code
+and visual thresholds remain intact.
