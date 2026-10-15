@@ -338,3 +338,19 @@ the candidate substitutes `Commented [Public reviewer1]:` when initials are abse
 This is a confirmed caption difference, not missing body prose. It remains open.
 The same audit functions identify exactly two missing `AAA` tokens in retained
 198/200-word table output and no source-prose deficit after the accepted correction.
+
+
+Word-compatible comment captions now use explicit initials and encounter-order
+numbers, without substituting author names. A five-case Office control confirms
+`[1]`, `[2]`, `[RV3]`, `[4]`, `[QA5]` for absent/empty/explicit initials, empty
+authors and nonsequential source IDs. Ordinary author titles, palette and thread
+rules stay on their existing paths. The portable regression fails on the parent.
+
+Twenty-three selected title/wrapping/thread/palette/rendering methods pass in one
+invocation; ten portable methods pass on Ubuntu. The four Final DOCX PDFs and both
+decks retain bytes. Four review outputs improve MAE on the affected pages, while
+all eight DOCX visual gates still fail. The complete source/Office token and simple
+math screen now passes all ten outcomes: 4,234 source prose tokens, no token/math
+deficits or unresolved source features. This does not establish image/ink/clipping
+or reading-order fidelity. Seventeen assets/four smoke PDFs transfer without root
+rebuild or suite replay. C1 remains open for geometry and composed-content limits.
