@@ -7,6 +7,27 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeFunctionMatrixArgumentsRetainNameCellsAndMetricOnlyOwners()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string meaning) in new[] { ("display-literal", "detabcd"), ("inline-normal", "trabcd"),
+            ("display-grouped", "detabbccccdeeee"), ("inline-hidden", "detbc"), ("display-fenced", "det(abcd)"),
+            ("inline-matrix-control20", "detabcd"), ("inline-function-control20", "detabcd"), ("inline-mixed-control20", "adetabcdb") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-function-matrix-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Bounded applications retain their upright name and every matrix cell through shared ownership and measurement.");
+            if (suffix == "inline-normal")
+            {
+                var fonts = page.Fonts.Where(f => f.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).ToArray();
+                TestAssert.True(fonts.Length == 1 && fonts[0].Font.Font.FamilyName.Contains("Arial", StringComparison.OrdinalIgnoreCase),
+                    "Normal names/cells publish only their painted font despite two mathematical metric controls.");
+            }
+        }
+    }
+
     public static void DocxNativeMatrixFencesRetainNestedControlsAndIndependentPaintFonts()
     {
         RequireMathFont();

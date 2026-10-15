@@ -7,6 +7,42 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathMatrixLayoutTests
 {
+    public static void MathFontMatrixFunctionArgumentsRetainOwnersIndependentPaintAndBoundedFallback()
+    {
+        var outerFont = MathFont(); var innerFont = MathFont(); var plain = TestFontBuilder.LoadTestFont();
+        var resource = Resource("FunctionCells", plain, "BC");
+        var matrix = Matrix([Run("B"), Run("C")], [Run("C"), Run("B")]) with { ControlText = new("", 20d, null, false, false, false, null, "TestFont") };
+        var function = new DocxMathFunction(new([Run("B")]), new([matrix])) { ControlText = new("", 12d, null, false, false, false, null, "TestFont") };
+        var equation = Equation(matrix) with { Content = new([function]) };
+        TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var sources) && sources.Count == 5 &&
+            ReferenceEquals(sources[0].ControlOwner, function) && ReferenceEquals(sources[1].ControlOwner, matrix),
+            "Function names and matrix arguments retain distinct metric owners without duplicating their painted source.");
+        OpenTypeFont? Metrics(IDocxMathControl control) => ReferenceEquals(control, matrix) ? innerFont : ReferenceEquals(control, function) ? outerFont : null;
+        TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var composed, out var reason,
+            resolveControlMetrics: Metrics), reason ?? "Expected bounded matrix argument.");
+        TestAssert.True(DocxMathLayout.TryMeasure(Equation(matrix), _ => resource, CancellationToken.None, out var alone, out reason,
+            resolveControlMetrics: Metrics, rowControlSize: 12d), reason ?? "Expected argument in surrounding function context.");
+        var box = TestAssert.NotNull(composed); var child = TestAssert.NotNull(alone); double x = box.Glyphs[1].X - child.Glyphs[0].X;
+        TestAssert.True(x > box.Glyphs[0].Advance && child.Glyphs.Select((g, i) => (g, i)).All(pair =>
+            Math.Abs(box.Glyphs[pair.i + 1].X - pair.g.X - x) < 1e-9 && box.Glyphs[pair.i + 1].BaselineY == pair.g.BaselineY),
+            "The existing function gap translates a complete matrix while surrounding context owns the effective control size.");
+        var graphics = new PdfGraphicsBuilder(); DocxMathBoxPainter.Paint(box, graphics, 20d, 80d, CancellationToken.None);
+        using var output = new MemoryStream();
+        PdfDocumentWriter.WriteBlank(output, [new PdfPage(300d, 200d, graphics.ToString(), [resource])], CancellationToken.None);
+        TestAssert.True(output.Length > 0, "Both invisible owners use metrics without adding unused PDF font resources.");
+        TestAssert.True(!DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var absent, out _,
+            resolveControlMetrics: control => ReferenceEquals(control, matrix) ? null : outerFont) && absent is null,
+            "A missing matrix metric owner rejects the complete application.");
+        var deeper = function with { Argument = new([function]) };
+        TestAssert.True(!DocxMathLayout.TryGetRuns(equation with { Content = new([deeper]) }, CancellationToken.None, out _),
+            "Adding a matrix argument cannot admit arbitrary function recursion.");
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, cancelled.Token, out _));
+        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 });
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None,
+            out _, out _, resolveControlMetrics: Metrics));
+    }
+
     public static void MathFontMatrixFencesRetainBothControlOwnersAndBoundedArgumentRoles()
     {
         var outerFont = MathFont(); var innerFont = MathFont(); var plain = TestFontBuilder.LoadTestFont();

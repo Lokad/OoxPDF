@@ -20,7 +20,7 @@ internal static partial class DocxMathLayout
         DocxEquation argument = equation with { Content = function.Argument };
         // Validate the bounded argument role before delegating discovery, so a
         // nested function cannot recursively expand arbitrary authored depth.
-        if (GetDelimiter(argument) is null && GetFraction(argument) is null && GetScripts(argument) is null &&
+        if (GetDelimiter(argument) is null && GetFraction(argument) is null && GetScripts(argument) is null && GetMatrix(argument, token) is null &&
             !DocxMathRowLayout.TryGetRenderCodePoints(function.Argument, token, out _, out _)) { return false; }
         if (!TryGetRuns(equation with { Content = function.Name }, token, out var nameRuns) || nameRuns.Count == 0 ||
             !TryGetRuns(argument, token, out var argumentRuns) || argumentRuns.Count == 0) { return false; }
@@ -52,7 +52,8 @@ internal static partial class DocxMathLayout
         DocxEquation argumentEquation = equation with { Content = function.Argument };
         bool measured = GetDelimiter(argumentEquation) is not null
             ? TryMeasure(argumentEquation, resolveFont, token, out var argument, out fallback, font, resolveControlFont, resolveControlMetrics)
-            : TryMeasureBoxArgument(argumentEquation, resolveFont, font, size, token, out argument, out fallback);
+            : TryMeasureBoxArgument(argumentEquation, resolveFont, font, size, token, out argument, out fallback,
+                resolveControlFont: resolveControlFont, resolveControlMetrics: resolveControlMetrics);
         if (!measured || argument is null || argument.Glyphs.Count == 0)
         { fallback ??= "UnsupportedMathFunctionArgument"; return false; }
         double gap = argument.Edges?.First == DocxMathRowLayout.AtomKind.Open ? 0d : size / 6d;
