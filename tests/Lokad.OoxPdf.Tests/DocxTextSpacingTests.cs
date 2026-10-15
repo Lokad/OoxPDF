@@ -1263,51 +1263,56 @@ internal static class DocxTextSpacingTests
 
     public static void DocxWordCompatibleAllMarkupScalesKeepNextParagraphEstimate()
     {
-        DocxParagraph filler = DocxTests.CreateDocxLayoutParagraph("Filler", 10d, 53d);
-        DocxParagraph keep = new(
-            [new DocxTextRun("Keep", 10d, null, false, false, false, null, null)],
-            [],
-            null,
-            DocxTextAlignment.Left,
-            null,
-            0d,
-            8d,
-            1d,
-            10d,
-            DocxParagraphSpacing.Empty,
-            DocxParagraphKeepRules.Empty with { KeepNext = true },
-            null);
-        DocxParagraph next = DocxTests.CreateDocxLayoutParagraph("Next", 10d, 10d);
-        DocxDocument document = new(
-            300d,
-            100d,
-            10d,
-            10d,
-            10d,
-            10d,
-            DocxPageSettings.Empty,
-            [],
-            [],
-            [],
-            [new DocxParagraphElement(filler), new DocxParagraphElement(keep), new DocxParagraphElement(next)],
-            [filler, keep, next],
-            [])
+        // Exercise both a fitting estimate and a chain that must move under
+        // printed paragraph capacity. The 8pt after-space scales in both cases.
+        foreach ((double fillerHeight, int expectedPages) in new[] { (33d, 1), (53d, 2) })
         {
-            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-        };
+            DocxParagraph filler = DocxTests.CreateDocxLayoutParagraph("Filler", 10d, fillerHeight);
+            DocxParagraph keep = new(
+                [new DocxTextRun("Keep", 10d, null, false, false, false, null, null)],
+                [],
+                null,
+                DocxTextAlignment.Left,
+                null,
+                0d,
+                8d,
+                1d,
+                10d,
+                DocxParagraphSpacing.Empty,
+                DocxParagraphKeepRules.Empty with { KeepNext = true },
+                null);
+            DocxParagraph next = DocxTests.CreateDocxLayoutParagraph("Next", 10d, 10d);
+            DocxDocument document = new(
+                300d,
+                100d,
+                10d,
+                10d,
+                10d,
+                10d,
+                DocxPageSettings.Empty,
+                [],
+                [],
+                [],
+                [new DocxParagraphElement(filler), new DocxParagraphElement(keep), new DocxParagraphElement(next)],
+                [filler, keep, next],
+                [])
+            {
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
 
-        DocxLayout reserve = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
-            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-        DocxLayout wordCompatible = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-        DocxTextLineLayout[] wordLines = wordCompatible.Pages[0].Items.OfType<DocxTextLineLayout>().ToArray();
+            DocxLayout reserve = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            DocxLayout wordCompatible = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            DocxTextLineLayout[] wordLines = wordCompatible.Pages[expectedPages - 1].Items.OfType<DocxTextLineLayout>().ToArray();
 
-        TestAssert.Equal(2, reserve.Pages.Count);
-        TestAssert.Equal(1, wordCompatible.Pages.Count);
-        TestAssert.Equal(3, wordLines.Length);
-        TestAssert.Equal("Filler", wordLines[0].Text);
-        TestAssert.Equal("Keep", wordLines[1].Text);
-        TestAssert.Equal("Next", wordLines[2].Text);
+            TestAssert.Equal(expectedPages, reserve.Pages.Count);
+            TestAssert.Equal(expectedPages, wordCompatible.Pages.Count);
+            TestAssert.Equal(expectedPages == 1 ? 3 : 2, wordLines.Length);
+            TestAssert.Equal("Keep", wordLines[^2].Text);
+            TestAssert.Equal("Next", wordLines[^1].Text);
+            TestAssert.Equal("Filler", wordCompatible.Pages[0].Items.OfType<DocxTextLineLayout>().First().Text);
+        }
     }
 
     public static void DocxAllMarkupStylesTrackedChangeRuns()

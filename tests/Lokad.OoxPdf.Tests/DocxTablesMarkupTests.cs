@@ -1131,50 +1131,58 @@ internal static class DocxTablesMarkupTests
 
     public static void DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate()
     {
-        DocxTable filler = DocxTests.CreateSingleCellTable("Filler", 53d);
-        DocxParagraph keep = new(
-            [new DocxTextRun("Keep", 10d, null, false, false, false, null, null)],
-            [],
-            null,
-            DocxTextAlignment.Left,
-            null,
-            0d,
-            8d,
-            1d,
-            10d,
-            DocxParagraphSpacing.Empty,
-            DocxParagraphKeepRules.Empty with { KeepNext = true },
-            null);
-        DocxParagraph targetParagraph = DocxTests.CreateDocxLayoutParagraph("Target", 10d, 10d);
-        var targetCell = new DocxTableCell("Target", [targetParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
-        DocxTable target = new(null, [80d], [new DocxTableRow([targetCell], 10d)]);
-        DocxDocument document = new(
-            300d,
-            100d,
-            10d,
-            10d,
-            10d,
-            10d,
-            DocxPageSettings.Empty,
-            [],
-            [],
-            [],
-            [new DocxTableElement(filler), new DocxParagraphElement(keep), new DocxTableElement(target)],
-            [keep, targetParagraph],
-            [filler, target])
+        // Exercise both a fitting estimate and a chain that must move under
+        // printed paragraph capacity. The 8pt after-space scales in both cases.
+        foreach ((double fillerHeight, int expectedPages) in new[] { (25d, 1), (53d, 2) })
         {
-            MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
-        };
+            DocxTable filler = DocxTests.CreateSingleCellTable("Filler", fillerHeight);
+            DocxParagraph keep = new(
+                [new DocxTextRun("Keep", 10d, null, false, false, false, null, null)],
+                [],
+                null,
+                DocxTextAlignment.Left,
+                null,
+                0d,
+                8d,
+                1d,
+                10d,
+                DocxParagraphSpacing.Empty,
+                DocxParagraphKeepRules.Empty with { KeepNext = true },
+                null);
+            DocxParagraph targetParagraph = DocxTests.CreateDocxLayoutParagraph("Target", 10d, 10d);
+            var targetCell = new DocxTableCell("Target", [targetParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+            DocxTable target = new(null, [80d], [new DocxTableRow([targetCell], 10d)]);
+            DocxDocument document = new(
+                300d,
+                100d,
+                10d,
+                10d,
+                10d,
+                10d,
+                DocxPageSettings.Empty,
+                [],
+                [],
+                [],
+                [new DocxTableElement(filler), new DocxParagraphElement(keep), new DocxTableElement(target)],
+                [keep, targetParagraph],
+                [filler, target])
+            {
+                MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
+            };
 
-        DocxLayout reserve = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
-            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
-        DocxLayout wordCompatible = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            DocxLayout reserve = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+            DocxLayout wordCompatible = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
-        TestAssert.Equal(2, reserve.Pages.Count);
-        TestAssert.Equal(1, reserve.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
-        TestAssert.Equal(2, wordCompatible.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
-        TestAssert.Equal("Keep", wordCompatible.Pages[0].Items.OfType<DocxTextLineLayout>().Single().Text);
+            TestAssert.Equal(expectedPages, reserve.Pages.Count);
+            TestAssert.Equal(expectedPages == 1 ? 2 : 1, reserve.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
+            TestAssert.Equal(expectedPages, wordCompatible.Pages.Count);
+            TestAssert.Equal(expectedPages == 1 ? 2 : 1, wordCompatible.Pages[0].Items.OfType<DocxTableRowLayout>().Count());
+            TestAssert.Equal("Keep", wordCompatible.Pages[expectedPages - 1].Items.OfType<DocxTextLineLayout>().Single().Text);
+            TestAssert.True(wordCompatible.Pages[expectedPages - 1].Items.OfType<DocxTableRowLayout>().Any(row => row.RowIndex == 0),
+                "The target table must remain with its preceding keep paragraph.");
+        }
     }
 
     public static void DocxWordCompatibleAllMarkupOmitsInventedMoveRevisionTrackingInTableCells()
