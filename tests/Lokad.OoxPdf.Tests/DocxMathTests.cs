@@ -7,6 +7,37 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathTests
 {
+    public static void DocxMathRadicalAuthoredControlPropertiesUseExistingRunResolution()
+    {
+        foreach(string placement in new[]{"display","inline"})
+        foreach((string tag,double size,bool italic) in new[]{("neutral",12d,false),("small8",8d,false),("large20",20d,false),
+            ("color-font",12d,false),("italic",12d,true)})
+        {
+            string path=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"..","..","..","Cases",$"docx-omml-root-control-{placement}-{tag}.docx"));
+            var equation=DocxTests.ReadDocx(path,OoxPdfDocxMarkupMode.Final).Paragraphs.SelectMany(p=>p.Equations).Single();
+            var radical=(DocxMathRadical)equation.Content.Children[0];
+            var control=TestAssert.NotNull(radical.ControlText);
+            TestAssert.True(!radical.HasUnsupportedProperties && control.Text.Length==0,"Neutral/known control properties retain typed source ownership.");
+            TestAssert.Equal(size,control.FontSize);TestAssert.Equal(italic,control.Italic);
+            TestAssert.Equal(12d,((DocxMathRun)radical.Radicand.Children[0]).Text.FontSize);
+            if(tag=="color-font")TestAssert.Equal("008000",control.ColorHex);
+            if(tag!="neutral")TestAssert.Equal("Cambria Math",radical.ControlFontFamily);
+        }
+    }
+
+    public static void DocxMathRadicalUnknownControlPropertiesRemainExplicit()
+    {
+        foreach(string control in new[]{"<m:ctrlPr/><m:ctrlPr/>","<m:ctrlPr extra='1'/>",
+            "<m:ctrlPr>bad</m:ctrlPr>","<m:ctrlPr><w:ins/></m:ctrlPr>","<m:ctrlPr><w:rPr/><w:rPr/></m:ctrlPr>",
+            "<m:ctrlPr><w:rPr><w:unknown/></w:rPr></m:ctrlPr>","<m:ctrlPr><w:rPr><w:rPrChange/></w:rPr></m:ctrlPr>"})
+        {
+            var row=Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}' xmlns:w='{WordprocessingNamespace}'><m:rad><m:radPr><m:degHide/>"+
+                control+"</m:radPr><m:deg/><m:e><m:r><m:t>x</m:t></m:r></m:e></m:rad></m:oMath>"));
+            TestAssert.True(row.Children[0] is DocxMathRadical { HasUnsupportedProperties:true },
+                "Unknown, malformed or revision-bearing control formatting cannot become silently renderable source.");
+        }
+    }
+
     public static void DocxMathRadicalPinnedControlsRetainLiteralSourceRoles()
     {
         foreach(string placement in new[]{"display","inline"})
@@ -36,7 +67,7 @@ internal static class DocxMathTests
             ("<m:radPr><m:degHide m:val='0'/></m:radPr>",false,false),
             ("<m:radPr><m:degHide m:val='bad'/></m:radPr>",false,true),
             ("<m:radPr><m:degHide/><m:degHide/></m:radPr>",true,true),
-            ("<m:radPr><m:ctrlPr/></m:radPr>",null,true),
+            ("<m:radPr><m:ctrlPr/></m:radPr>",null,false),
             ("<m:radPr/><m:radPr/>",null,true)
         })
         {

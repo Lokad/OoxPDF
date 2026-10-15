@@ -44,6 +44,7 @@ internal sealed record DocxMathRadical(DocxMathRow Radicand, DocxMathRow Degree,
 {
     public bool HasUnsupportedProperties { get; init; }
     public DocxTextRun? ControlText { get; init; }
+    public string? ControlFontFamily { get; init; }
 }
 internal sealed record DocxMathChild(string ElementName, string NamespaceName, DocxMathNode Content);
 internal sealed record DocxMathUnsupported(string ElementName, string NamespaceName, string? SourceXml,

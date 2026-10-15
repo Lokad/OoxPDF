@@ -7,6 +7,28 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeAuthoredRootControlsKeepMeaningSizeAndColor()
+    {
+        RequireMathFont();
+        foreach(string placement in new[]{"display","inline"})
+        foreach((string tag,double size) in new[]{("neutral",12d),("small8",8.04d),("large20",20.04d),("color-font",12d),("italic",12d)})
+        {
+            var diagnostics=new List<OoxPdfDiagnostic>();
+            PdfPage page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-root-control-{placement}-{tag}"),diagnostics.Add,CancellationToken.None).Single();
+            TestAssert.Contains("√n+1",DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.Contains(" "+size.ToString("0.##",System.Globalization.CultureInfo.InvariantCulture)+" Tf",page.Content);
+            int rule=page.Content.IndexOf(" re f",StringComparison.Ordinal);TestAssert.True(rule>=0,"Expected the authored control's root rule.");
+            if(tag=="color-font")
+            {
+                var colors=System.Text.RegularExpressions.Regex.Matches(page.Content[..rule],@"([-\d.]+) ([-\d.]+) ([-\d.]+) rg");
+                TestAssert.True(colors.Count>0 && Math.Abs(double.Parse(colors[^1].Groups[2].Value,System.Globalization.CultureInfo.InvariantCulture)-128d/255d)<0.001d,
+                    "Authored control color applies to the rule independently of child text.");
+            }
+            TestAssert.True(diagnostics.Any(d=>d.Id=="DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d=>d.Id!="DOCX_UNSUPPORTED_EQUATION"),
+                "Supported authored controls retain actual native painting.");
+        }
+    }
+
     public static void DocxNativeRootControlsRetainInheritedColorAndIndependentChildFaces()
     {
         RequireMathFont();

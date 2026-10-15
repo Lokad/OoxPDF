@@ -130,9 +130,12 @@ internal static class DocxMathRowLayout
 
     private static bool HasSupportedStyle(DocxMathRun run) =>
         !run.HasUnsupportedProperties && run.MathStyleValue is null or "i" or "p" or "b" or "bi" && run.ScriptValue is null or "roman" &&
-        (!run.Text.Bold || run.NormalText) && !run.Text.Underline && !run.Text.Strike && !run.Text.DoubleStrike && !run.Text.Hidden &&
-        !run.Text.AllCaps && !run.Text.SmallCaps && run.Text.VerticalAlignmentValue is null && run.Text.CharacterSpacingPoints == 0d &&
-        run.Text.HighlightValue is null && run.Text.ShadingFillHex is null;
+        HasSupportedTextFormatting(run.Text, run.NormalText);
+
+    internal static bool HasSupportedTextFormatting(DocxTextRun text, bool allowBold) =>
+        (!text.Bold || allowBold) && !text.Underline && !text.Strike && !text.DoubleStrike && !text.Hidden &&
+        !text.AllCaps && !text.SmallCaps && text.VerticalAlignmentValue is null && text.CharacterSpacingPoints == 0d &&
+        text.HighlightValue is null && text.ShadingFillHex is null;
 
     private static int RenderCodePoint(int codePoint, string? style)
     {

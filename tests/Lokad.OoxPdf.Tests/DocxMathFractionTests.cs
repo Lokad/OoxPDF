@@ -9,6 +9,29 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontRadicalAuthoredControlsKeepPerNodeFontsSizesAndChildMetrics()
+    {
+        var small=RadicalResource();var large=RadicalResource();
+        var original=(DocxMathRadical)RadicalEquation(12d).Content.Children[0];
+        var a=original with { ControlText=new("",8d,"008000",false,false,false,null,"TestFont") { Italic=true },ControlFontFamily="Small" };
+        var b=original with { ControlText=new("",20d,"000000",false,false,false,null,"TestFont"),ControlFontFamily="Large" };
+        var source=RadicalEquation(12d) with { Content=new([a,Row("+"),b]) };
+        TestAssert.True(DocxMathLayout.TryMeasure(source,_=>small,CancellationToken.None,out var box,out var reason,
+            resolveRadicalFont:root=>ReferenceEquals(root,a)?small:large),reason??"Independent control nodes own their own implicit font resources.");
+        DocxMathBox measured=TestAssert.NotNull(box);var roots=measured.Glyphs.Where(g=>g.SourceCodePoint==0x221A).ToArray();
+        TestAssert.True(roots.Length==2 && roots[0].Font==small && roots[1].Font==large &&
+            Math.Abs(roots[0].FontSize-8.04d)<1e-9 && Math.Abs(roots[1].FontSize-20.04d)<1e-9,
+            "Each authored control keeps its glyph resource and export size; no first-root ownership leaks to siblings.");
+        TestAssert.True(roots.All(g=>g.TextShear==0d) && measured.Glyphs.Where(g=>g.SourceCodePoint!=0x221A).All(g=>g.FontSize==12d),
+            "Italic control flags do not shear mathematical root symbols or rescale authored children.");
+        TestAssert.True(!DocxMathLayout.TryMeasure(source,_=>small,CancellationToken.None,out var missing,out _,
+            resolveRadicalFont:root=>ReferenceEquals(root,a)?small:null) && missing is null,
+            "A missing explicit glyph owner cannot silently adopt a sibling or first child resource.");
+        foreach(var control in new[]{a.ControlText! with { Underline=true },a.ControlText! with { Hidden=true },a.ControlText! with { Bold=true }})
+            TestAssert.True(!DocxMathLayout.TryMeasure(source with { Content=new([a with { ControlText=control }]) },_=>small,
+                CancellationToken.None,out _,out _),"Unqualified decorative/hidden/bold controls retain the shared formatting fallback.");
+    }
+
     public static void MathFontRadicalNormalChildrenKeepIndependentParentGlyphsAndControlColor()
     {
         var parent=RadicalResource();
@@ -19,7 +42,7 @@ internal static class DocxMathFractionTests
         var source=new DocxEquation(new([radical]),0,0,true,null,null,null) { ParentFontSize=12d };
         TestAssert.True(!DocxMathLayout.TryMeasure(source,_=>text,CancellationToken.None,out _,out _,parent.Font.Font),
             "Metrics alone cannot encode a parent root glyph in a child text-face resource.");
-        TestAssert.True(DocxMathLayout.TryMeasure(source,_=>text,CancellationToken.None,out var box,out var reason,parent.Font.Font,parent),
+        TestAssert.True(DocxMathLayout.TryMeasure(source,_=>text,CancellationToken.None,out var box,out var reason,parent.Font.Font,_=>parent),
             reason??"A glyph-bearing parent owns the root independently of the normal-text face.");
         DocxMathBox measured=TestAssert.NotNull(box);
         TestAssert.True(measured.Glyphs[0].Font==parent && measured.Glyphs.Skip(1).All(g=>g.Font==text),

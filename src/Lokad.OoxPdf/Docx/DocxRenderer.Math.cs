@@ -31,11 +31,11 @@ internal sealed partial class DocxRenderer
         DocxDocument document, IFontResolver resolver, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
         List<PdfFontResource> resources, CancellationToken token)
     {
-        var candidates = new List<(DocxParagraph Paragraph, DocxEquation Equation, OpenTypeFont? ParentMetrics,
-            (string StableId, int FaceIndex)? ParentGlyphKey, IReadOnlyList<OpenTypeFont> RadicalFaces)>();
+        var candidates = new List<(DocxParagraph Paragraph, DocxEquation Equation, OpenTypeFont? ParentMetrics, IReadOnlyList<OpenTypeFont> RadicalFaces)>();
         var groups = new Dictionary<(string StableId, int FaceIndex), (OpenTypeFont Font, Dictionary<ushort, int> Glyphs)>();
         var runKeys = new Dictionary<DocxMathRun, (string StableId, int FaceIndex)>();
         var radicalFaces = new Dictionary<OpenTypeFont, (Dictionary<ushort, int> Glyphs, List<OpenTypeMathGlyphVariant> Variants)>(ReferenceEqualityComparer.Instance);
+        var radicalKeys = new Dictionary<DocxMathRadical, (string StableId, int FaceIndex)>(ReferenceEqualityComparer.Instance);
         foreach (DocxParagraphElement element in document.BodyElements.OfType<DocxParagraphElement>())
         {
             token.ThrowIfCancellationRequested();
@@ -43,37 +43,41 @@ internal sealed partial class DocxRenderer
             DocxEquation? equation = DocxMathParagraphPolicy.GetDisplayRow(paragraph) ?? DocxMathParagraphPolicy.GetInlineRow(paragraph);
             if (equation is null || !DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
             OpenTypeFont? parentMetrics = null;
-            (string StableId, int FaceIndex)? parentGlyphKey = null;
             List<OpenTypeFont>? radicalOwners = null;
-            bool needsRoot = mathRuns.Any(source => source.NeedsRadicalGlyphs);
-            if (DocxMathLayout.NeedsParentMathMetrics(equation, mathRuns, token))
+            if (DocxMathLayout.NeedsParentFractionMetrics(equation, mathRuns, token))
             {
                 FontFaceResolution parent = resolver.Resolve(new FontRequest(document.Settings.MathFontFamily ?? "Cambria Math"));
                 parentMetrics = LoadFont(parent, fontCache, token);
                 if (parentMetrics is null || !parentMetrics.TryGetMathConstants(out _)) { continue; }
-                if (needsRoot)
-                {
-                    if (!parentMetrics.HasTrueTypeOutlines) { continue; }
-                    var key = (parent.Source.StableId, parent.FontFaceIndex);
-                    if (!groups.TryGetValue(key, out var group)) { group = (parentMetrics, new Dictionary<ushort, int>()); groups.Add(key, group); }
-                    if (!radicalFaces.ContainsKey(parentMetrics))
-                    {
-                        ushort root = parentMetrics.MapCodePoint(0x221A);
-                        var variants = new List<OpenTypeMathGlyphVariant>();
-                        double height = 0d;
-                        while (parentMetrics.TryGetMathVerticalVariant(root, height, token, out var variant))
-                        { variants.Add(variant); height = variant.Advance + 1d; }
-                        if (variants.Count == 0) { continue; }
-                        radicalFaces.Add(parentMetrics, (group.Glyphs, variants));
-                    }
-                    parentGlyphKey = key;
-                    radicalOwners = [parentMetrics];
-                }
             }
             bool valid = true;
             foreach (DocxMathRunSource source in mathRuns)
             {
                 token.ThrowIfCancellationRequested();
+                if (source.RadicalOwner is { } radical)
+                {
+                    if (!radicalKeys.TryGetValue(radical, out var rootKey))
+                    {
+                        FontFaceResolution rootFace = resolver.Resolve(new FontRequest(radical.ControlFontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math"));
+                        OpenTypeFont? rootFont = LoadFont(rootFace, fontCache, token);
+                        if (rootFont is null || !rootFont.HasTrueTypeOutlines || !rootFont.TryGetMathConstants(out _))
+                        { valid = false; break; }
+                        rootKey = (rootFace.Source.StableId, rootFace.FontFaceIndex);
+                        if (!groups.TryGetValue(rootKey, out var rootGroup)) { rootGroup = (rootFont, new Dictionary<ushort, int>()); groups.Add(rootKey, rootGroup); }
+                        if (!radicalFaces.ContainsKey(rootFont))
+                        {
+                            ushort root = rootFont.MapCodePoint(0x221A);
+                            var variants = new List<OpenTypeMathGlyphVariant>();
+                            double height = 0d;
+                            while (rootFont.TryGetMathVerticalVariant(root, height, token, out var variant))
+                            { variants.Add(variant); height = variant.Advance + 1d; }
+                            if (variants.Count == 0) { valid = false; break; }
+                            radicalFaces.Add(rootFont, (rootGroup.Glyphs, variants));
+                        }
+                        radicalKeys.Add(radical, rootKey);
+                    }
+                    (radicalOwners ??= []).Add(groups[rootKey].Font);
+                }
                 DocxMathRun run = source.Run;
                 string family = run.NormalText
                     ? run.ExplicitFontFamily ?? run.Text.FontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math"
@@ -100,7 +104,7 @@ internal sealed partial class DocxRenderer
                 if (!valid) { break; }
                 runKeys[run] = key;
             }
-            if (valid) { candidates.Add((paragraph, equation, parentMetrics, parentGlyphKey, radicalOwners ?? [])); }
+            if (valid) { candidates.Add((paragraph, equation, parentMetrics, radicalOwners ?? [])); }
         }
         var unavailableRadicalFaces = new HashSet<OpenTypeFont>(ReferenceEqualityComparer.Instance);
         foreach (var face in radicalFaces)
@@ -129,7 +133,7 @@ internal sealed partial class DocxRenderer
             if (candidate.RadicalFaces.Any(unavailableRadicalFaces.Contains)) { continue; }
             if (!DocxMathLayout.TryMeasure(candidate.Equation,
                 run => runKeys.TryGetValue(run, out var key) ? fonts[key] : null, token, out DocxMathBox? box, out _, candidate.ParentMetrics,
-                candidate.ParentGlyphKey is { } parentKey ? fonts[parentKey] : null) ||
+                radical => radicalKeys.TryGetValue(radical, out var rootKey) ? fonts[rootKey] : null) ||
                 box is null || box.Glyphs.Count == 0) { continue; }
             double lineSpacingFactor = 1d;
             if (candidate.Equation.Display && !DocxMathParagraphPolicy.TryGetDisplayLineSpacingFactor(candidate.Paragraph, out lineSpacingFactor))

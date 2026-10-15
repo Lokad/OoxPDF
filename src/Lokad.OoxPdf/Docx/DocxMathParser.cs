@@ -63,17 +63,29 @@ internal static class DocxMathParser
             {
                 XElement[] properties = element.Elements().Where(IsProperty).ToArray();
                 XElement[] visibility = element.Element(MathNamespace + "radPr")?.Elements(MathNamespace + "degHide").ToArray() ?? [];
+                XElement[] controls = element.Element(MathNamespace + "radPr")?.Elements(MathNamespace + "ctrlPr").ToArray() ?? [];
+                XElement? control = controls.FirstOrDefault();
+                DocxTextRun controlText = readRun(control ?? element, string.Empty);
                 string? value = (string?)visibility.FirstOrDefault()?.Attribute(MathNamespace + "val");
                 bool valid = properties.Length <= 1 && properties.All(p => p.Name == MathNamespace + "radPr" &&
                     p.Attributes().All(a => a.IsNamespaceDeclaration) &&
                     string.IsNullOrWhiteSpace(string.Concat(p.Nodes().OfType<XText>().Select(t => t.Value))) &&
-                    p.Elements().All(child => child.Name == MathNamespace + "degHide")) &&
+                    p.Elements().All(child => child.Name == MathNamespace + "degHide" || child.Name == MathNamespace + "ctrlPr")) &&
+                    controls.Length <= 1 && controls.All(c => c.Attributes().All(a => a.IsNamespaceDeclaration) &&
+                        string.IsNullOrWhiteSpace(string.Concat(c.Nodes().OfType<XText>().Select(t => t.Value))) &&
+                        c.Elements().Count() <= 1 && c.Elements().All(p => p.Name == WordprocessingNamespace + "rPr" &&
+                            p.Attributes().All(a => a.IsNamespaceDeclaration) &&
+                            string.IsNullOrWhiteSpace(string.Concat(p.Nodes().OfType<XText>().Select(t => t.Value))) &&
+                            p.Elements().All(HasKnownControlProperty))) &&
                     visibility.Length <= 1 && visibility.All(v => !v.HasElements && string.IsNullOrWhiteSpace(v.Value) &&
                         v.Attributes().All(a => a.IsNamespaceDeclaration || a.Name == MathNamespace + "val")) &&
                     (value is null || Lokad.OoxPdf.Ooxml.OoxBoolean.IsTrue(value) || Lokad.OoxPdf.Ooxml.OoxBoolean.IsOff(value));
                 node = new DocxMathRadical(radicand, degree, visibility.Length == 0 ? null :
                     Lokad.OoxPdf.Ooxml.OoxBoolean.ParseElement(visibility[0], false, valueAttributeName: MathNamespace + "val"))
-                    { HasUnsupportedProperties = !valid, ControlText = readRun(element, string.Empty) };
+                    { HasUnsupportedProperties = !valid, ControlText = controlText,
+                        ControlFontFamily = control?.Element(WordprocessingNamespace + "rPr") is { } runProperties &&
+                            (runProperties.Element(WordprocessingNamespace + "rFonts") is not null ||
+                             runProperties.Element(WordprocessingNamespace + "rStyle") is not null) ? controlText.FontFamily : null };
             }
             else
             {
@@ -96,6 +108,11 @@ internal static class DocxMathParser
     }
 
     private static bool IsRow(string name) => name is "oMath" or "e" or "sub" or "sup" or "num" or "den" or "deg";
+    private static bool HasKnownControlProperty(XElement property) =>
+        property.Name.Namespace == WordprocessingNamespace && !property.HasElements &&
+        string.IsNullOrWhiteSpace(property.Value) && property.Name.LocalName is
+            "rFonts" or "sz" or "szCs" or "color" or "i" or "iCs" or "b" or "bCs" or "lang" or "rStyle" or
+            "u" or "strike" or "dstrike" or "vanish" or "caps" or "smallCaps" or "vertAlign" or "spacing" or "highlight" or "shd";
     private static bool IsContainer(string name) => IsRow(name) || name is "f" or "sSub" or "sSup" or "sSubSup" or "rad";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
     private static IEnumerable<XElement> ContentChildren(XElement element) => element.Elements().Where(child => !IsProperty(child));

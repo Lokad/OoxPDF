@@ -7,7 +7,7 @@ namespace Lokad.OoxPdf.Docx;
 // existing layout; one display fraction adds two literal child boxes and a rule.
 internal sealed record DocxMathRunSource(DocxMathRun Run, int ScriptLevel)
 {
-    public bool NeedsRadicalGlyphs { get; init; }
+    public DocxMathRadical? RadicalOwner { get; init; }
 }
 
 internal static partial class DocxMathLayout
@@ -43,7 +43,7 @@ internal static partial class DocxMathLayout
     public static bool TryGetRuns(DocxEquation equation, CancellationToken token, out IReadOnlyList<DocxMathRunSource> runs)
     {
         var rows = new List<(DocxMathRow Row, int Level, bool AllowArgumentSize)>();
-        bool radicalOwner = false;
+        DocxMathRadical? radicalOwner = null;
         if (GetScripts(equation) is { } scripts)
         {
             if (GetFraction(equation with { Content = scripts.Base }) is { } basis)
@@ -63,7 +63,7 @@ internal static partial class DocxMathLayout
         else if (GetFraction(equation) is { } fraction)
         { int level = equation.Display ? 0 : 1; rows.Add((fraction.Numerator, level, false)); rows.Add((fraction.Denominator, level, false)); }
         else if (GetRadical(equation) is { } radical)
-        { rows.Add((radical.Radicand, 0, false)); radicalOwner = true; }
+        { rows.Add((radical.Radicand, 0, false)); radicalOwner = radical; }
         else if (GetStructuredRow(equation, token) is { } compound)
         {
             var sources = new List<DocxMathRunSource>();
@@ -94,21 +94,21 @@ internal static partial class DocxMathLayout
                     for (int index = sequence.Children.Count - 1; index >= 0; index--) { pending.Push(sequence.Children[index]); }
             }
         }
-        if (radicalOwner && result.Count > 0) { result[0] = result[0] with { NeedsRadicalGlyphs = true }; }
+        if (radicalOwner is not null && result.Count > 0) { result[0] = result[0] with { RadicalOwner = radicalOwner }; }
         runs = result;
         return true;
     }
 
     public static bool TryMeasure(DocxEquation equation, Func<DocxMathRun, PdfFontResource?> resolveFont,
         CancellationToken token, out DocxMathBox? box, out string? fallback, OpenTypeFont? parentMetricsFont = null,
-        PdfFontResource? parentGlyphFont = null)
+        Func<DocxMathRadical, PdfFontResource?>? resolveRadicalFont = null)
     {
         if (GetScripts(equation) is { } scripts)
             return TryMeasureScripts(equation, scripts, resolveFont, token, out box, out fallback);
         if (GetRadical(equation) is { } radical)
-            return TryMeasureRadical(equation, radical, resolveFont, token, out box, out fallback, parentGlyphFont);
+            return TryMeasureRadical(equation, radical, resolveFont, token, out box, out fallback, resolveRadicalFont);
         if (GetStructuredRow(equation, token) is { } compound)
-            return TryMeasureStructuredRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont, parentGlyphFont);
+            return TryMeasureStructuredRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont, resolveRadicalFont);
         if (GetFraction(equation) is not { } fraction)
             return DocxMathRowLayout.TryMeasure(equation.Content, resolveFont, token, out box, out fallback);
         box = null;
@@ -194,9 +194,9 @@ internal static partial class DocxMathLayout
         node is DocxMathFraction { HasUnsupportedProperties: false, TypeValue: null or "bar" or "noBar" } fraction
             ? fraction : null;
 
-    public static bool NeedsParentMathMetrics(DocxEquation equation, IReadOnlyList<DocxMathRunSource> runs,
+    public static bool NeedsParentFractionMetrics(DocxEquation equation, IReadOnlyList<DocxMathRunSource> runs,
         CancellationToken token = default) =>
-        runs.Any(source => source.NeedsRadicalGlyphs) || runs.Any(source => source.Run.NormalText) &&
+        runs.Any(source => source.Run.NormalText) &&
             (GetFraction(equation) is not null || GetStructuredRow(equation, token)?.Parts.Any(part => part.Structure is DocxMathFraction) == true);
 
     private static DocxMathNode? GetSingleSupportedChild(DocxEquation equation) =>
