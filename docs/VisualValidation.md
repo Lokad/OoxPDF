@@ -20,8 +20,9 @@ placements, including crop, repeated images and mixed equation/image flow.
 Recipes and regeneration instructions live in
 [Cases/DocxEditInterop](../tests/Lokad.OoxPdf.Tests/Cases/DocxEditInterop/README.md).
 The `docx-math-producer-*` and `docx-svg-producer-*` cases retain existing visual
-thresholds. Matrix fence/baseline residuals and consecutive image-paragraph
-spacing remain review items. DocxEdit is fixture tooling only.
+thresholds. Matrix fence/baseline residuals remain review items. Consecutive body
+pictures share their paragraph spacing with the keep estimate; table/story image
+flow remains separately qualified. DocxEdit is fixture tooling only.
 
 For affected DOCX qualification, use `tools/RunDocxAffectedTests.ps1` with the
 frozen runner and a fresh output directory. It runs overlapping DOCX/balloon

@@ -64,6 +64,13 @@ Unsupported chart kinds, SmartArt, videos, audio, OLE objects, transitions, and 
 
 ## DOCX
 
+Body inline picture paragraphs use their occupied image height and the existing
+collapsed paragraph spacing. The keep-with-next estimate uses the same advance;
+an extra fixed gap no longer separates consecutive pictures or moves a fitting
+pair to another page. Independent Word controls cover SVG/PNG, authored spacing,
+sizes and following prose. Mixed text/image lines retain their existing behavior.
+Table and story image geometry remains separately qualified and partial.
+
 Supported:
 
 - Document package discovery.
