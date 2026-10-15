@@ -376,3 +376,26 @@ no deficits. Twelve independent comparisons reuse verified identities. Seventeen
 assets/four smoke PDFs transfer without root rebuild or suite replay. The next
 rendering investigation is independently controlled trailing-spacing admission
 at a page boundary; the held-out memo remains an acceptance check.
+
+Natural mathematical last rows now distinguish measured content from trailing
+paragraph after-spacing at a page boundary. If all content fits atomically,
+placement may discard only the overflowing unpainted tail. Existing measurements
+are reused. Authored heights, keeps, merges, positioned content and shifted runs
+retain their fallbacks; no font, size or whole-document qualification is added.
+
+Independent 0/6/24pt spacing controls keep the equation on page one in Word and
+the candidate. CantSplit and insufficient-space controls keep it on page two in
+both modes. The held-out memo's Final equation row now stays on page one. Its
+four source cell clips match, with no unresolved cells and a maximum bounds delta
+of 1.333pt; the raster also shows the complete fraction inside the cell.
+
+Forty-one selected methods pass in one invocation; twelve pinned-font rendering
+methods pass on Ubuntu. Nine portfolio PDFs retain bytes, and fifteen independent
+comparisons reuse verified identities. A page-local token screen detects the old
+memo displacement despite matching page totals and passes all ten new outcomes.
+It supplements global prose/simple-math presence checks, without proving ink,
+image, clipping or reading-order fidelity. All eight DOCX visual gates still fail;
+both decks pass. Memo Final page-two MAE improves from 1.172 to 0.429 and recall
+from 0.541 to 0.840. Seventeen assets/four exact smoke PDFs transfer without root
+rebuild or suite replay. C1 remains open for significant geometry and composition
+limits.
