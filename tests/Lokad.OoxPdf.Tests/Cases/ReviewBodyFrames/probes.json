@@ -40,5 +40,31 @@
     ],
     "ExpectedEquationCount": 0,
     "HeldOut": false
+  },
+  {
+    "Id": "table-widow-on",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewBodyFrames/table-widow-on.docx",
+    "Sha256": "A48D0A8DAED7F88F7D26A556D448AD21EB6308840F35C130AE0922C49CE4AA9E",
+    "SourceSha256": "50FE6A8DDA140D39F98C9F0C4327642E90C0839A858526251060C2BEE329B9A4",
+    "ExpectedText": [
+      "Public review anchor",
+      "AAA",
+      "After public continuation."
+    ],
+    "ExpectedEquationCount": 0,
+    "HeldOut": false
+  },
+  {
+    "Id": "table-widow-off",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewBodyFrames/table-widow-off.docx",
+    "Sha256": "EF1E7752FD01DF4A09EABF9882DB747558B8918A00324AE95C36595468B1C2ED",
+    "SourceSha256": "50FE6A8DDA140D39F98C9F0C4327642E90C0839A858526251060C2BEE329B9A4",
+    "ExpectedText": [
+      "Public review anchor",
+      "AAA",
+      "After public continuation."
+    ],
+    "ExpectedEquationCount": 0,
+    "HeldOut": false
   }
 ]

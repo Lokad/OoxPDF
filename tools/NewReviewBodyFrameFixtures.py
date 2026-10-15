@@ -1,4 +1,4 @@
-"""Author three public page-capacity controls; never regenerate pinned inputs implicitly."""
+"""Author public page-capacity and continuation controls; never regenerate pinned inputs implicitly."""
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 import hashlib
@@ -19,7 +19,7 @@ ET.register_namespace("r", r[1:-1])
 manifest = output / "probes.json"
 existing = json.loads(manifest.read_text(encoding="utf-8")) if manifest.exists() else []
 rows = []
-for story in ["body", "header", "footer"]:
+for story in ["body", "header", "footer", "table-widow-on", "table-widow-off"]:
     path = output / (story + ".docx")
     if path.exists():
         pin = next(row for row in existing if row["Id"] == story)
@@ -50,6 +50,24 @@ for story in ["body", "header", "footer"]:
                     if height == 14:
                         ET.SubElement(paragraph, w + "commentRangeEnd", {w + "id": "0"})
                         ET.SubElement(ET.SubElement(paragraph, w + "r"), w + "commentReference", {w + "id": "0"})
+                if story.startswith("table-widow-"):
+                    for paragraph in list(body)[1:]:
+                        body.remove(paragraph)
+                    table = ET.SubElement(body, w + "tbl")
+                    props = ET.SubElement(table, w + "tblPr")
+                    ET.SubElement(props, w + "tblW", {w + "type": "dxa", w + "w": "3200"})
+                    ET.SubElement(props, w + "tblLayout", {w + "type": "fixed"})
+                    ET.SubElement(ET.SubElement(table, w + "tblGrid"), w + "gridCol", {w + "w": "3200"})
+                    cell = ET.SubElement(ET.SubElement(table, w + "tr"), w + "tc")
+                    ET.SubElement(ET.SubElement(cell, w + "tcPr"), w + "tcW", {w + "type": "dxa", w + "w": "3200"})
+                    paragraph = ET.SubElement(cell, w + "p")
+                    props = ET.SubElement(paragraph, w + "pPr")
+                    ET.SubElement(props, w + "spacing", {w + "before": "0", w + "after": "0", w + "lineRule": "auto", w + "line": "240"})
+                    ET.SubElement(props, w + "widowControl", {w + "val": "1" if story.endswith("-on") else "0"})
+                    run = ET.SubElement(paragraph, w + "r")
+                    ET.SubElement(ET.SubElement(run, w + "rPr"), w + "sz", {w + "val": "48"})
+                    ET.SubElement(run, w + "t").text = " ".join(["AAA"] * 200)
+                    ET.SubElement(ET.SubElement(ET.SubElement(body, w + "p"), w + "r"), w + "t").text = "After public continuation."
                 body.append(section)
                 data = ET.tostring(doc, encoding="utf-8", xml_declaration=True)
             elif entry.filename in ["word/header1.xml", "word/footer1.xml"]:
@@ -66,6 +84,6 @@ for story in ["body", "header", "footer"]:
                 data = ET.tostring(doc, encoding="utf-8", xml_declaration=True)
             target.writestr(entry, data)
     rows.append({"Id": story, "Input": path.relative_to(repo).as_posix(), "Sha256": hashlib.sha256(path.read_bytes()).hexdigest().upper(),
-                 "SourceSha256": source_hash, "ExpectedText": ["Public review anchor", "Public filler", "Plain spacer", "Following body"],
+                 "SourceSha256": source_hash, "ExpectedText": ["Public review anchor", "AAA", "After public continuation."] if story.startswith("table-") else ["Public review anchor", "Public filler", "Plain spacer", "Following body"],
                  "ExpectedEquationCount": 0, "HeldOut": False})
 manifest.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")

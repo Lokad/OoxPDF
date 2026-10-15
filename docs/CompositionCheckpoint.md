@@ -129,3 +129,15 @@ decks remain byte-identical. Four integration PDFs match after transferring the
 17 qualified assets without a root build or repeated suite. All eight DOCX raster
 gates still fail. Fourteen of sixteen comparisons reuse exact candidate/reference
 PDF and threshold identities; only two need new raster comparisons.
+
+
+A subsequent content-preservation regression reproduces missing table words on
+the delivered artifact: explicit widow control paints 117 of 120 synthetic words.
+Independent 200-word public controls paint 198 in review output on the parent.
+Automatic rows now publish their printed first-baseline geometry before fragment
+membership, using the same natural-cell rule for admission and painting. The
+later table translation does not scale that inset again. Keep/widow page-capacity
+fallbacks, authored heights and rich-cell fallbacks remain explicit. Focused
+coverage checks all words and baselines inside fragment bounds across lengths and
+widow settings; emitted text alone does not establish unclipped visual parity.
+The independent controls retain numerical visual and pagination failures.

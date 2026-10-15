@@ -101,10 +101,13 @@ internal sealed partial class DocxLayoutEngine
                 borderAdvanceCorrection = advance * (1d - printScale);
             }
             var cells = new DocxTableCellLayout[row.Cells.Count];
+            bool fragmentInsetsAlreadyPrinted = row.FragmentCount > 1 &&
+                row.Cells.All(cell => HasNaturalReviewTableCellMetrics(cell.VisualCell));
             for (int cellIndex = 0; cellIndex < cells.Length; cellIndex++)
             {
                 DocxTableCellLayout cell = row.Cells[cellIndex];
-                double baselineCorrection = insets[cellIndex] * (1d - printScale) - originCorrection + previousBorderAdvanceCorrection;
+                double baselineCorrection = (fragmentInsetsAlreadyPrinted ? 0d : insets[cellIndex] * (1d - printScale)) -
+                    originCorrection + previousBorderAdvanceCorrection;
                 cells[cellIndex] = cell with
                 {
                     Y = cell.Y - originCorrection + previousBorderAdvanceCorrection + borderAdvanceCorrection,
@@ -270,10 +273,11 @@ internal sealed partial class DocxLayoutEngine
                 // Keep only painted math boxes atomic until math-bearing row
                 // fragments have their own placement qualification.
                 if (textLines.Any(line => line.Math is not null || line.InlineMath.Count != 0)) { return false; }
-                if (reviewPaginationScale < 1d)
+                double fragmentBaselineScale = ResolveTableRowFragmentBaselineScale(row, paragraphSpacingScale, fragmentCount: 2);
+                if (fragmentBaselineScale < 1d)
                 {
                     double correction = ResolveTableCellFirstBaselineInset(
-                        GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell)), textMeasurer) * (1d - reviewPaginationScale);
+                        GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell)), textMeasurer) * (1d - fragmentBaselineScale);
                     textLines = textLines.Select(line => line with { BaselineY = line.BaselineY + correction }).ToArray();
                 }
                 laidOutCells.Add((GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell)), textLines));
@@ -368,14 +372,10 @@ internal sealed partial class DocxLayoutEngine
                 return false;
             foreach (DocxTableCell cell in row.Cells)
             {
-                IReadOnlyList<DocxBodyElement> elements = GetTableCellLayoutBodyElements(cell);
-                if (elements.Count != 1 || elements[0] is not DocxParagraphElement { Paragraph: var paragraph } ||
-                    cell.HasVerticalMerge || paragraph.Images.Count != 0 || paragraph.InlineTextBoxes.Count != 0 ||
-                    paragraph.InlineReferences.Count != 0 || paragraph.EffectiveProperties.LineSpacingPoints is not null ||
-                    paragraph.KeepRules.KeepLines == true || paragraph.KeepRules.KeepNext == true ||
-                    paragraph.KeepRules.WidowControl == true ||
-                    !string.IsNullOrEmpty(cell.VerticalAlignmentValue) &&
-                        !string.Equals(cell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase))
+                if (!HasNaturalReviewTableCellMetrics(cell)) return false;
+                DocxParagraph paragraph = ((DocxParagraphElement)GetTableCellLayoutBodyElements(cell)[0]).Paragraph;
+                if (paragraph.KeepRules.KeepLines == true || paragraph.KeepRules.KeepNext == true ||
+                    paragraph.KeepRules.WidowControl == true)
                     return false;
             }
         }
@@ -1207,7 +1207,6 @@ internal sealed partial class DocxLayoutEngine
                 pageCount: null,
                 paragraphSpacingScale: paragraphSpacingScale,
                 cellMemo: cellMemo,
-                reviewFragmentBaselineScale: reviewPaginationScale,
                 adjustAtLeastBodySpacing: true));
             cursorY -= fragmentHeight;
             consumedHeight += fragmentHeight;
@@ -1536,7 +1535,6 @@ internal sealed partial class DocxLayoutEngine
         int? pageCount,
         double paragraphSpacingScale,
         DocxTableCellTextLinesMemo? cellMemo = null,
-        double reviewFragmentBaselineScale = 1d,
         bool adjustAtLeastBodySpacing = false)
     {
         double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
@@ -1640,16 +1638,19 @@ internal sealed partial class DocxLayoutEngine
                     contentHeight, rowTopPadding, cellUsedHeight, rowIndex == table.Rows.Count - 1,
                     rowIndex < tableContext.AlignedMinimumRowBottomMargins.Count ? tableContext.AlignedMinimumRowBottomMargins[rowIndex] : 0d,
                     tableContext.AutomaticMinimumRowPlacement && HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue));
-            // Membership uses the same printed inset as the later geometry
-            // projection. Testing nominal baselines can discard a final line
-            // whose nominal font inset exceeds the already printed line pitch.
-            double fragmentBaselineCorrection = reviewFragmentBaselineScale < 1d && textMeasurer is not null
+            // Publish the printed baseline before fragment membership, so the
+            // admitted line is painted at the same position inside its clip.
+            double fragmentBaselineScale = ResolveTableRowFragmentBaselineScale(row, paragraphSpacingScale, FragmentCount);
+            double fragmentBaselineCorrection = fragmentBaselineScale < 1d && textMeasurer is not null
                 ? ResolveTableCellFirstBaselineInset(GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(contentCell)),
-                    textMeasurer) * (1d - reviewFragmentBaselineScale) : 0d;
+                    textMeasurer) * (1d - fragmentBaselineScale) : 0d;
+            if (fragmentBaselineCorrection != 0d)
+                cellTextLines = cellTextLines.Select(line => line with
+                    { BaselineY = line.BaselineY + fragmentBaselineCorrection }).ToArray();
             IReadOnlyList<DocxTextLineLayout> textLines = cellTextLines
                     .Where(line => IsTextLineOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerParagraphBoundaryIndex, cellPageBreakUpperParagraphBoundaryIndex, cell, line, FragmentIndex, FragmentCount))
                     .Where(line => IsTextLineVisibleInCellFragmentGeometry(useCellPageBreakBoundaryPartition, line, visualY, visualHeight,
-                        FragmentIndex, FragmentCount, fragmentBaselineCorrection))
+                        FragmentIndex, FragmentCount))
                     .ToArray();
             (IReadOnlyList<DocxInlineImageLayout> cellInlineImages, IReadOnlyList<DocxInlineTextBoxLayout> cellInlineTextBoxes) = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? (Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>())

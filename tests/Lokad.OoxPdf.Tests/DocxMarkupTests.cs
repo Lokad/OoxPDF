@@ -12,6 +12,40 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMarkupTests
 {
+    public static void DocxReviewTableFragmentsPreserveAllWordsWithExplicitWidowControl()
+    {
+        foreach (int words in new[] { 84, 120, 160, 200 })
+        foreach (bool widow in new[] { false, true })
+        {
+            var source = CreateReviewPaginationDocument(includeFollowingRow: false);
+            var table = source.Tables.Single();
+            var cell = table.Rows.Single().Cells.Single();
+            string text = string.Join(' ', Enumerable.Repeat("AAA", words));
+            var paragraph = cell.Paragraphs.Single() with
+            {
+                Runs = [cell.Paragraphs.Single().Runs.Single() with { Text = text }],
+                KeepRules = DocxParagraphKeepRules.Empty with { WidowControl = widow }
+            };
+            table = table with { Rows = [table.Rows.Single() with { Cells = [cell with { Text = text, Paragraphs = [paragraph] }] }] };
+            var document = source with
+            {
+                BodyElements = [source.BodyElements[0], new DocxTableElement(table), source.BodyElements[2]],
+                FallbackTables = [table]
+            };
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            int painted = Regex.Matches(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)), "AAA").Count;
+            TestAssert.True(painted == words, $"Fragmented content must survive explicit widow={widow}: expected {words} words, painted {painted}.");
+            var layout = renderer.InspectLayout(document);
+            foreach (var fragment in layout.Pages.SelectMany(page => page.TableRows).Where(row => row.FragmentCount > 1))
+            foreach (var placedCell in fragment.Cells)
+                TestAssert.True(placedCell.LastBaselineY >= placedCell.Y - .001d &&
+                    placedCell.FirstBaselineY <= placedCell.Y + placedCell.Height + .001d,
+                    "Preserved text baselines must also remain inside their painted cell fragment.");
+        }
+    }
+
     public static void DocxReviewTableBorderScalingKeepsExtremePrintScaleFallback()
     {
         DocxDocument control = CreateReviewTableInsetDocument(12d, 11d, 20d, tableFirst: false);

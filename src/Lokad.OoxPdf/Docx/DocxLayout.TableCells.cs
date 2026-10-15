@@ -10,6 +10,23 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
+    // Automatic rows measure their occupied height with printed line metrics.
+    // Fragment admission and painting must use that same first-baseline inset,
+    // independently of paragraph keep/widow policy or page-capacity eligibility.
+    private static double ResolveTableRowFragmentBaselineScale(DocxTableRow row, double scale, int fragmentCount) =>
+        fragmentCount > 1 && HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue) &&
+        row.Cells.All(HasNaturalReviewTableCellMetrics) ? scale : 1d;
+
+    private static bool HasNaturalReviewTableCellMetrics(DocxTableCell cell)
+    {
+        IReadOnlyList<DocxBodyElement> elements = GetTableCellLayoutBodyElements(cell);
+        return elements.Count == 1 && elements[0] is DocxParagraphElement { Paragraph: var paragraph } &&
+            !cell.HasVerticalMerge && paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0 &&
+            paragraph.InlineReferences.Count == 0 && paragraph.EffectiveProperties.LineSpacingPoints is null &&
+            (string.IsNullOrEmpty(cell.VerticalAlignmentValue) ||
+                string.Equals(cell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static int CountTableRowSourceRevisions(DocxTableRow row)
     {
         return CollectTableRowSourceRevisions(row).Count;
@@ -46,8 +63,7 @@ internal sealed partial class DocxLayoutEngine
         double cellY,
         double cellHeight,
         int fragmentIndex,
-        int fragmentCount,
-        double baselineCorrection = 0d)
+        int fragmentCount)
     {
         bool IsTextLineVisibleInCellFragment()
         {
@@ -57,7 +73,7 @@ internal sealed partial class DocxLayoutEngine
             }
     
             double bottom = fragmentIndex == 0 ? cellY - 0.001d : cellY + 0.001d;
-            double baselineY = line.BaselineY + baselineCorrection;
+            double baselineY = line.BaselineY;
             return baselineY >= bottom && baselineY <= cellY + cellHeight + 0.001d;
         }
 
