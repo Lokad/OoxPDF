@@ -12,6 +12,7 @@ internal sealed record DocxEquation(
     DocxRevisionInfo? Revision)
 {
     public double? ParentFontSize { get; init; }
+    public bool Cramped { get; init; }
 }
 
 internal abstract record DocxMathNode

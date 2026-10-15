@@ -46,19 +46,16 @@ internal static partial class DocxMathLayout
         DocxMathRadical? radicalOwner = null;
         if (GetScripts(equation) is { } scripts)
         {
-            AddArgumentRows(scripts.Base);
-            foreach (DocxMathRow? argument in new[] { scripts.Subscript, scripts.Superscript })
-            {
-                if (argument is null) { continue; }
-                if (!DocxMathArgumentMetrics.TryGetScriptLevel(argument, out int level)) { runs = []; return false; }
-                rows.Add((argument, level, true));
-            }
+            if (!AddScriptRows(scripts)) { runs = []; return false; }
         }
         else if (GetFraction(equation) is { } fraction)
         { int level = equation.Display ? 0 : 1; rows.Add((fraction.Numerator, level, false)); rows.Add((fraction.Denominator, level, false)); }
         else if (GetRadical(equation) is { } radical)
         {
-            AddArgumentRows(radical.Radicand); radicalOwner = radical;
+            if (GetScripts(equation with { Content = radical.Radicand }) is { } childScripts)
+            { if (!AddScriptRows(childScripts)) { runs = []; return false; } }
+            else { AddArgumentRows(radical.Radicand); }
+            radicalOwner = radical;
             if (radical.DegreeHidden != true)
             {
                 if (!DocxMathArgumentMetrics.TryGetScriptLevel(radical.Degree, out int level, startingLevel: 2))
@@ -99,6 +96,18 @@ internal static partial class DocxMathLayout
         if (radicalOwner is not null && result.Count > 0) { result[0] = result[0] with { RadicalOwner = radicalOwner }; }
         runs = result;
         return true;
+
+        bool AddScriptRows(DocxMathScripts script)
+        {
+            AddArgumentRows(script.Base);
+            foreach (DocxMathRow? argument in new[] { script.Subscript, script.Superscript })
+            {
+                if (argument is null) { continue; }
+                if (!DocxMathArgumentMetrics.TryGetScriptLevel(argument, out int level)) { return false; }
+                rows.Add((argument, level, true));
+            }
+            return true;
+        }
 
         void AddArgumentRows(DocxMathRow argument)
         {

@@ -17,6 +17,9 @@ internal sealed record DocxMathBox(
 {
     public double? LogicalAdvance { get; init; }
     public double AdvanceWidth => LogicalAdvance ?? Width;
+    // Enclosing operators include a script argument's nominal descent without
+    // changing the ink frame already used for paragraph flow and painting.
+    public double? EnclosureBelowBaseline { get; init; }
     public DocxMathMetricOwner? ParentMetrics { get; init; }
     public DocxMathRowLayout.RowEdges? Edges { get; init; }
     public IReadOnlyList<DocxMathRulePlacement> Rules { get; init; } = [];

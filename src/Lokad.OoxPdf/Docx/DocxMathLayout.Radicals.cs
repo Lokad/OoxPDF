@@ -28,8 +28,10 @@ internal static partial class DocxMathLayout
         double size = radical.ControlText?.FontSize ?? equation.ParentFontSize ?? sources[0].Run.Text.FontSize;
         if (!double.IsFinite(size) || size <= 0d)
         { fallback = "MixedMathRadicalMetrics"; return false; }
-        DocxEquation radicandEquation = equation with { Content = radical.Radicand, ParentFontSize = size };
-        bool measuredChild = GetFraction(radicandEquation) is not null
+        DocxEquation radicandEquation = equation with { Content = radical.Radicand, ParentFontSize = size, Cramped = true };
+        // Discovery admits existing bounded fraction/script boxes; their own
+        // literal-role checks prevent arbitrary recursive radicands.
+        bool measuredChild = GetFraction(radicandEquation) is not null || GetScripts(radicandEquation) is not null
             ? TryMeasure(radicandEquation, resolveFont, token, out var child, out fallback, parentMetricsFont: font)
             : DocxMathRowLayout.TryMeasure(radical.Radicand, resolveFont, token, out child, out fallback,
                 exportFontSize: true, operatorSpacingFontSize: size);
@@ -40,7 +42,7 @@ internal static partial class DocxMathLayout
         double gap = constants.GetValue(equation.Display ? OpenTypeMathConstant.RadicalDisplayStyleVerticalGap : OpenTypeMathConstant.RadicalVerticalGap) * scale;
         double rule = constants.GetValue(OpenTypeMathConstant.RadicalRuleThickness) * scale;
         double extra = constants.GetValue(OpenTypeMathConstant.RadicalExtraAscender) * scale;
-        double needed = child.AboveBaseline + child.BelowBaseline + gap + rule;
+        double needed = child.AboveBaseline + (child.EnclosureBelowBaseline ?? child.BelowBaseline) + gap + rule;
         if (gap < 0d || rule <= 0d || extra < 0d || !double.IsFinite(needed) ||
             !font.TryGetMathVerticalVariant(font.MapCodePoint(0x221A), needed / glyphScale, token, out var selected) ||
             !font.TryGetGlyphBounds(selected.Glyph, out var bounds) || !resource.Font.TryGetEncodedCid(selected.Glyph, out ushort cid))

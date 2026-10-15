@@ -7,6 +7,23 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeRootScriptsRetainMeaningCrampedSizesAndOwnedBars()
+    {
+        RequireMathFont();
+        foreach(string placement in new[]{"display","inline"})
+        foreach((string tag,string meaning) in new[]{("sub","xi"),("sup","x2"),("paired","xi2"),
+            ("paired-cube","n+1i23"),("descender","xg"),("large20","xi")})
+        {
+            var diagnostics=new List<OoxPdfDiagnostic>();
+            var page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-root-script-{placement}-{tag}"),diagnostics.Add,CancellationToken.None).Single();
+            TestAssert.Contains("√"+meaning,DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.Equal(1,System.Text.RegularExpressions.Regex.Matches(page.Content," re f").Count);
+            TestAssert.Contains(tag=="large20"?" 14.52 Tf":" 8.52 Tf",page.Content);
+            TestAssert.True(diagnostics.Any(d=>d.Id=="DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d=>d.Id!="DOCX_UNSUPPORTED_EQUATION"),
+                "Bounded scripted radicands retain native glyph/script/rule painting.");
+        }
+    }
+
     public static void DocxNativeRootFractionsKeepMeaningAndIndependentChildRules()
     {
         RequireMathFont();

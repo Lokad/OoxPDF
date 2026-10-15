@@ -24,7 +24,9 @@ internal static partial class DocxMathLayout
         { fallback = "MissingMathScriptConstants"; return false; }
         OpenTypeFont font = ownerResource.Font.Font;
         ReadOnlySpan<OpenTypeMathConstant> required = [OpenTypeMathConstant.SubscriptShiftDown, OpenTypeMathConstant.SubscriptTopMax,
-            OpenTypeMathConstant.SubscriptBaselineDropMin, OpenTypeMathConstant.SuperscriptShiftUp, OpenTypeMathConstant.SuperscriptBottomMin,
+            OpenTypeMathConstant.SubscriptBaselineDropMin,
+            equation.Cramped ? OpenTypeMathConstant.SuperscriptShiftUpCramped : OpenTypeMathConstant.SuperscriptShiftUp,
+            OpenTypeMathConstant.SuperscriptBottomMin,
             OpenTypeMathConstant.SuperscriptBaselineDropMax, OpenTypeMathConstant.SubSuperscriptGapMin,
             OpenTypeMathConstant.SuperscriptBottomMaxWithSubscript, OpenTypeMathConstant.SpaceAfterScript];
         foreach (OpenTypeMathConstant field in required)
@@ -67,7 +69,7 @@ internal static partial class DocxMathLayout
         }
         double up = 0d, down = 0d;
         if (superscript is not null)
-            up = Math.Max(Value(OpenTypeMathConstant.SuperscriptShiftUp), Math.Max(
+            up = Math.Max(Value(equation.Cramped ? OpenTypeMathConstant.SuperscriptShiftUpCramped : OpenTypeMathConstant.SuperscriptShiftUp), Math.Max(
                 boxBase ? basis.AboveBaseline - Value(OpenTypeMathConstant.SuperscriptBaselineDropMax) : 0d,
                 superscript.BelowBaseline + Value(OpenTypeMathConstant.SuperscriptBottomMin)));
         if (subscript is not null)
@@ -121,8 +123,22 @@ internal static partial class DocxMathLayout
         Append(basis, 0d, 0d);
         if (subscript is not null) { Append(subscript, subX, -down); }
         if (superscript is not null) { Append(superscript, supX, up); }
+        double? enclosureBelow = null;
+        if (subscript is not null)
+        {
+            double descent = below;
+            foreach (var glyph in subscript.Glyphs)
+            {
+                token.ThrowIfCancellationRequested();
+                OpenTypeFont argumentFont = glyph.Font.Font.Font;
+                descent = Math.Max(descent, down - glyph.BaselineY +
+                    Math.Max(0d, -argumentFont.Os2.TypographicDescender * glyph.FontSize / argumentFont.UnitsPerEm));
+            }
+            enclosureBelow = descent;
+        }
         box = new DocxMathBox(width, above, below, glyphs)
-        { LogicalAdvance = advanceWidth == width ? null : advanceWidth, Rules = rules, ParentMetrics = basis.ParentMetrics };
+        { LogicalAdvance = advanceWidth == width ? null : advanceWidth, Rules = rules, ParentMetrics = basis.ParentMetrics,
+            EnclosureBelowBaseline = enclosureBelow };
         fallback = null;
         return true;
 

@@ -9,6 +9,39 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontRadicalScriptArgumentsReuseCrampedBoxesAndSeparateEnclosureDescent()
+    {
+        byte[] bytes=RadicalFontBytes();var range=TestFontBuilder.GetTableRange(bytes,"MATH");
+        byte[] math=bytes.AsSpan(range.Offset,range.Length).ToArray();
+        void Set(OpenTypeMathConstant field,short value)=>BinaryPrimitives.WriteInt16BigEndian(math.AsSpan(18+(int)field*4),value);
+        Set(OpenTypeMathConstant.SuperscriptShiftUp,700);Set(OpenTypeMathConstant.SuperscriptShiftUpCramped,400);
+        Set(OpenTypeMathConstant.SubscriptShiftDown,300);Set(OpenTypeMathConstant.SubscriptTopMax,400);
+        bytes=TestFontBuilder.ReplaceTable(bytes,"MATH",math);var font=OpenTypeFont.Load(bytes);
+        var resource=new PdfFontResource("ScriptRoot",PdfEmbeddedFont.CreateForGlyphMappings(font,
+            new[]{(font.MapCodePoint('B'),(int)'B'),(font.MapCodePoint('+'),(int)'+'),(font.MapCodePoint('C'),(int)'C'),((ushort)130,0x221A),((ushort)128,0x221A)},CancellationToken.None));
+        foreach(bool sub in new[]{true,false})
+        {
+            var scripts=new DocxMathScripts(Row("B"),sub?Row("C"):null,sub?null:Row("C"));
+            var child=RadicalEquation(12d) with { Content=new([scripts]),Cramped=true };
+            TestAssert.True(DocxMathLayout.TryMeasure(child,_=>resource,CancellationToken.None,out var childBox,out _),"Expected a bounded cramped script child.");
+            var root=(DocxMathRadical)RadicalEquation(12d).Content.Children[0];
+            TestAssert.True(DocxMathLayout.TryMeasure(child with { Cramped=false,Content=new([root with { Radicand=child.Content }]) },
+                _=>resource,CancellationToken.None,out var box,out var reason),reason??"The radical must measure its script in cramped context.");
+            var measured=TestAssert.NotNull(box);var original=TestAssert.NotNull(childBox);
+            for(int i=0;i<original.Glyphs.Count;i++)
+                TestAssert.True(measured.Glyphs[i+1].BaselineY==original.Glyphs[i].BaselineY &&
+                    measured.Glyphs[i+1].OriginalGlyph==original.Glyphs[i].OriginalGlyph,
+                    "Enclosing the script preserves its independently measured cramped glyphs and baselines.");
+            if(sub)TestAssert.True(original.EnclosureBelowBaseline>original.BelowBaseline,
+                "Nominal script descent survives independently of the non-descending argument's ink frame.");
+            else TestAssert.True(original.EnclosureBelowBaseline is null && Math.Abs(original.Glyphs[1].BaselineY-4.8d)<1e-9,
+                "A superscript uses the font's cramped shift without inventing a subscript frame.");
+            var deeper=scripts with { Base=new([scripts]) };
+            TestAssert.True(!DocxMathLayout.TryGetRuns(child with { Content=new([root with { Radicand=new([deeper]) }]) },CancellationToken.None,out _),
+                "Shared discovery cannot recursively expand a script within its own base role.");
+        }
+    }
+
     public static void MathFontRadicalNormalFractionChildrenKeepIndependentFontAndRuleColors()
     {
         var parent=RadicalResource();
