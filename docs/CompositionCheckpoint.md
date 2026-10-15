@@ -28,9 +28,8 @@ in both modes, including unchanged-format prose run splitting. Nineteen capabili
 regressions fail on the previous library. Seventeen frozen assets transfer with
 four identical integration smoke PDFs and no root rebuild. Independent bookmarked
 Word controls still fail foreground/SSIM gates; no complete visual pass is claimed.
-Multiple formulas,
-image combinations and equation-only bookmark navigation still require the shared
-inline/fragment work; this correction does not complete the checkpoint.
+Equation-only bookmark navigation remains unresolved; this correction does not
+complete the checkpoint.
 
 Reusable commands:
 
@@ -54,13 +53,34 @@ math-bearing source paragraphs. Inline equation offsets and visible-prose policy
 consume this view. Original object identities and image positions within a run
 are preserved; zero-width annotations stay metadata. Fields, references, textboxes
 and revisions retain the legacy source path. Replacing a legacy content collection
-invalidates its borrowed view; placement-only changes preserve it. Multi-object
-measurement and common container placement remain the next migration steps.
+invalidates its borrowed view; placement-only changes preserve it. This source foundation preserves the baseline output identities.
 
 Twenty-seven selected methods pass in one invocation; six portable source/bookmark
 methods also pass on the exact artifact in Ubuntu. Seventeen assets and four
 integration PDFs transfer without root rebuild. All ten portfolio PDFs
 retain their baseline bytes, so their Office comparisons are reused. Mixed-document
-warm allocation medians rise by approximately 11–25KB for the DOCX sources; deck
+warm allocation medians rise by approximately 11â€“25KB for the DOCX sources; deck
 allocation medians are unchanged. Three-iteration timings are noisy and establish
 no speedup. These measurements precede any repeated-layout optimization.
+
+
+The bounded mixed-content path prepares each equation by its original identity.
+Ordered fragments retain measured text segments, advances, baseline insets and
+occupied heights. Body, cell and direct header/footer containers use the same
+wrapping and placement functions, including inline pictures and multiple fitting
+inline equations. Placement translates measured geometry instead of measuring
+text again. Original text-run affinity survives hidden-run filtering; character
+spacing and pair kerning survive tokenization. Long words reuse the existing
+bounded Unicode wrapping rules. Keep-next reserves the complete mixed frame.
+
+Eight separate probes place two equations and one picture in the body, a cell,
+a header or a footer, with and without review scaling. They supplement the fixed
+portfolio and do not replace its held-out documents. Source-to-page mapping moves
+text, equations and pictures together; one existing vertical-frame owner applies
+to all three. Independent Office comparisons retain their numerical failures.
+Content preservation does not establish Office geometry or unclipped painting.
+
+Display combinations, tabs, fields, revisions, list labels and rich source owners
+retain explicit fallbacks. The older single-equation marker path remains until a
+separate measured migration preserves its Office comparisons. This is a bounded
+migration, not completion of the composed-document checkpoint.

@@ -12,8 +12,10 @@ existing cell clip. Zero exact height uses natural content height, fixing plain
 cells as well. The visual thresholds remain unchanged and unmet. Unknown,
 negative or unresolved heights, vertical merges, nested/nonparagraph cell
 content, fit/vertical text and revisions retain fallback. Fitting inline cell
-equations with plain prose share body wrapping; unfit/multiple equations keep
-fallback. Painted math-bearing rows are atomic, with wider fragmentation still
+equations with plain prose share body wrapping. Multiple fitting inline equations
+and inline pictures now use shared ordered-fragment measurement and placement in
+body, cell and direct header/footer paragraphs. Wider display combinations and
+unfit objects retain fallback. Painted math-bearing rows are atomic, with wider fragmentation still
 unqualified.
 The earlier body qualifications below retain their scope and residuals.
 
