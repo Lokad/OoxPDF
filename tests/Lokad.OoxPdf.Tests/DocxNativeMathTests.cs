@@ -7,6 +7,25 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeCasesRetainMathematicalMinusAndNormalHyphenMeaning()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string meaning) in new[]
+        {
+            ("display-literal", "{xif x≥0−xotherwise"), ("inline-literal", "{xif x≥0−xotherwise"),
+            ("display-fraction", "{x+1yif y≠00otherwise"), ("display-script", "{xi2if i≥0−xotherwise"),
+            ("minus-unary", "−x"), ("minus-binary", "x−y"), ("minus-upright", "x−y"),
+            ("hyphen-normal", "x-y"), ("minus-explicit", "x−y")
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-cases-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Piecewise grouping, every cell, scripts/fraction and normal punctuation must retain native mathematical meaning.");
+        }
+    }
+
     public static void DocxNativeFunctionBoundariesRetainNeighborsAndPunctuationMeaning()
     {
         RequireMathFont();

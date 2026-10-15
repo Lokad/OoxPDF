@@ -139,6 +139,9 @@ internal static class DocxMathRowLayout
 
     private static int RenderCodePoint(int codePoint, string? style)
     {
+        // Word treats a mathematical hyphen as minus, including upright math.
+        // Normal-text runs bypass this mapper and retain their punctuation.
+        if (codePoint == '-') { return 0x2212; }
         if (style == "p") { return codePoint; }
         if (style is null or "i") { return ItalicCodePoint(codePoint); }
         bool italic = style == "bi";

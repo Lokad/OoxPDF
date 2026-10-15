@@ -8,6 +8,23 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathBoxTests
 {
+    public static void DocxMathBoxMathematicalHyphensPreserveSourceAndNormalTextIdentity()
+    {
+        foreach (string? style in new string?[] { null, "p", "i", "b", "bi" })
+        {
+            var source = new DocxMathRun(Run("-"), style, null);
+            var row = new DocxMathRow([source, new DocxMathRun(Run("−"), style, null)]);
+            TestAssert.True(DocxMathRowLayout.TryGetRenderCodePoints(row, CancellationToken.None, out var points, out _),
+                "Mathematical hyphen and explicit minus must share one render meaning across supported styles.");
+            TestAssert.Equal(0x2212, points.Single());
+            TestAssert.Equal("-", source.Text.Text);
+            var normal = new DocxMathRow([source with { NormalTextValue = true }]);
+            TestAssert.True(DocxMathRowLayout.TryGetRenderCodePoints(normal, CancellationToken.None, out var normalPoints, out _),
+                "Normal-text punctuation retains its authored identity.");
+            TestAssert.Equal((int)'-', normalPoints.Single());
+        }
+    }
+
     public static void DocxMathBoxSeparatesSyntheticSlantInkFromItsLogicalAdvance()
     {
         var font = Resource(TestFontBuilder.LoadTestFont(), "A");
