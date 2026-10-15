@@ -701,3 +701,23 @@ Twenty affected methods and 18 exact neighboring PDFs qualify one strict Release
 artifact; four exact integration PDFs verify transfer. Three public cases retain
 existing thresholds. The earlier cross-size stretch and optical-glyph residuals
 remain unchanged; this spacing correction does not claim to resolve them.
+
+
+Matrix source now retains typed rows and cell arguments through the iterative
+OMML parser, following the [matrix object definition](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.matrix?view=openxml-3.0.1).
+Matrices have no implicit delimiters. Empty cells, unequal row widths, nested
+known/unknown content, source argument properties and authored controls retain
+their boundaries. An absent control remains distinct from an authored one;
+the default control derives from the first character. Unknown matrix properties,
+malformed/orphan row roles and unqualified shapes remain explicit, without
+repeated raw subtree serialization. Column-spacing/alignment properties remain
+raw source until independently qualified.
+
+Six Word references retain ordered cell meanings and geometry for display/inline
+2x2 grids, a 3x2 grid, a fractional cell, a larger authored control and an Arial
+normal-text cell. All 31 embedded glyph outlines match their source fonts. The
+separate inspector's corrected UTF-16 range decoding supplies these text reports;
+the Office PDFs and geometry remain unchanged. Sixteen source-capability methods,
+14 exact source/native PDFs and four matching transfer PDFs qualify one strict
+Release artifact. Native matrix grid painting remains in complete fallback in
+this source component; no new visual case or grid-fidelity claim is made.
