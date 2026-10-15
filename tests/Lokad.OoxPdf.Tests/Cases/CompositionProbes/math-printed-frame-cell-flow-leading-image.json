@@ -1,0 +1,14 @@
+[
+  {
+    "Id": "math-printed-frame-fraction-anchor12-cell-flow-leading-image",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-printed-frame-fraction-anchor12-cell-flow-leading-image.docx",
+    "Sha256": "29782EEC02950009C229EAA7E7471B24A141955EA3B90FAFA283D0AABEA10BF3",
+    "SourceSha256": "DD4907536AF7C2EFCF99A0B0EEB6AB877A453229AB4E57313E17270790F97871",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Observed series.",
+      "Following prose."
+    ]
+  }
+]

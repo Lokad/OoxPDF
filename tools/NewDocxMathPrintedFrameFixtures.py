@@ -7,7 +7,10 @@ from copy import deepcopy
 parser = argparse.ArgumentParser()
 parser.add_argument("--multiple", action="store_true")
 parser.add_argument("--cell-context", choices=["sole", "flow"])
+parser.add_argument("--leading-content", choices=["math", "image"])
 args = parser.parse_args()
+if args.leading_content and not args.cell_context:
+    parser.error("Leading-content probes require a cell context")
 if args.multiple and args.cell_context:
     parser.error("Use separate source controls for repeated formulas and cell contexts")
 root = Path(__file__).resolve().parent.parent
@@ -21,6 +24,8 @@ sources = [('literal', 'docx-omml-literal-inline.docx', '16CFF81A67E2EBC2DDE0587
            ('fraction', 'docx-omml-normal-fraction-inline-arial-normal.docx', 'DD4907536AF7C2EFCF99A0B0EEB6AB877A453229AB4E57313E17270790F97871'),
            ('root-fraction', 'docx-omml-root-fraction-inline-bar-square.docx', '54DF93237B68A46DA4AE66455848EC9B01E729CFEC63BDA380102628923DDBF3')]
 for kind, filename, expected_sha in sources:
+    if args.leading_content and kind != "fraction":
+        continue
     if args.multiple and kind == "root-fraction":
         continue
     source = cases / filename
@@ -82,6 +87,38 @@ for kind, filename, expected_sha in sources:
         run = E.SubElement(leading, w + "r")
         E.SubElement(E.SubElement(run, w + "rPr"), w + "sz", {w + "val": str(heading_size * 2)})
         E.SubElement(run, w + "t").text = "Leading paragraph."
+        if args.leading_content == "math":
+            math = "{http://schemas.openxmlformats.org/officeDocument/2006/math}"
+            for index, value in enumerate(["a+b", "c"]):
+                separator = E.SubElement(leading, w + "r")
+                E.SubElement(separator, w + "t", {"{http://www.w3.org/XML/1998/namespace}space":"preserve"}).text = " and " if index else " "
+                equation = E.SubElement(leading, math + "oMath")
+                math_run = E.SubElement(equation, math + "r")
+                E.SubElement(E.SubElement(math_run, w + "rPr"), w + "rFonts", {w + "ascii":"Cambria Math", w + "hAnsi":"Cambria Math"})
+                E.SubElement(math_run, math + "t").text = value
+        elif args.leading_content == "image":
+            image_source = cases / "Composition/report.docx"
+            assert hashlib.sha256(image_source.read_bytes()).hexdigest().upper() == "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F"
+            rel = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
+            with ZipFile(image_source) as archive:
+                image_document = E.fromstring(archive.read("word/document.xml"))
+                image_run = deepcopy(next(run for run in image_document.iter(w + "r") if run.find(w + "drawing") is not None))
+                for node in image_run.iter():
+                    if rel + "embed" in node.attrib:
+                        source_id = node.attrib[rel + "embed"]
+                        node.set(rel + "embed", "leadingImage")
+                image_rels = E.fromstring(archive.read("word/_rels/document.xml.rels"))
+                image_target = next(node.attrib["Target"] for node in image_rels if node.attrib["Id"] == source_id)
+                image_bytes = archive.read("word/" + image_target)
+            entries["word/media/leading-image.png"] = image_bytes
+            relationships = E.fromstring(entries["word/_rels/document.xml.rels"])
+            E.SubElement(relationships, package + "Relationship", {"Id":"leadingImage", "Type":rel[1:-1] + "/image", "Target":"media/leading-image.png"})
+            entries["word/_rels/document.xml.rels"] = E.tostring(relationships, encoding="utf-8", xml_declaration=True)
+            content_types = E.fromstring(entries["[Content_Types].xml"])
+            if not any(node.attrib.get("Extension") == "png" for node in content_types):
+                E.SubElement(content_types, types + "Default", {"Extension":"png", "ContentType":"image/png"})
+            entries["[Content_Types].xml"] = E.tostring(content_types, encoding="utf-8", xml_declaration=True)
+            leading.append(image_run)
         body.insert(0, leading)
         last = body.findall(w + "p")[-1]
         E.SubElement(last, w + "commentRangeStart", {w + "id": "0"})
@@ -98,12 +135,12 @@ for kind, filename, expected_sha in sources:
         E.SubElement(content_types, types + "Override", {"PartName":"/word/comments.xml", "ContentType":"application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"})
         for name, value in [("word/document.xml",document),("word/comments.xml",comments),(rels_name,relationships),("[Content_Types].xml",content_types)]:
             entries[name] = E.tostring(value, encoding="utf-8", xml_declaration=True)
-        identifier = "math-printed-frame-" + kind + "-anchor" + str(heading_size) + ("-multiple" if args.multiple else "") + ("-cell-" + args.cell_context if args.cell_context else "")
+        identifier = "math-printed-frame-" + kind + "-anchor" + str(heading_size) + ("-multiple" if args.multiple else "") + ("-cell-" + args.cell_context if args.cell_context else "") + ("-leading-" + args.leading_content if args.leading_content else "")
         output = cases / "CompositionProbes" / (identifier + ".docx")
         with ZipFile(output, "w", ZIP_DEFLATED) as archive:
             for name, data in sorted(entries.items()):
                 info = ZipInfo(name, (2026,10,15,0,0,0)); info.compress_type = ZIP_DEFLATED
                 archive.writestr(info, data)
         manifest.append({"Id":identifier, "Input":output.relative_to(root).as_posix(), "Sha256":hashlib.sha256(output.read_bytes()).hexdigest().upper(), "SourceSha256":expected_sha, "HeldOut":False, "ExpectedText":["Leading paragraph.", "Observed series." if args.cell_context else "Before formula:", "Following prose."]})
-(cases / ("CompositionProbes/math-printed-frame" + ("-multiple" if args.multiple else "") + ("-cell-" + args.cell_context if args.cell_context else "") + ".json")).write_text(json.dumps(manifest,indent=2)+"\n",encoding="utf-8")
+(cases / ("CompositionProbes/math-printed-frame" + ("-multiple" if args.multiple else "") + ("-cell-" + args.cell_context if args.cell_context else "") + ("-leading-" + args.leading_content if args.leading_content else "") + ".json")).write_text(json.dumps(manifest,indent=2)+"\n",encoding="utf-8")
 print(str(len(manifest)) + " source controls pinned")

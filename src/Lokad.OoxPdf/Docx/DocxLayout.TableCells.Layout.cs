@@ -495,8 +495,8 @@ internal sealed partial class DocxLayoutEngine
             pendingSpacingAfter = 0d;
             if (TryGetStandaloneMath(paragraph, textWidth, context.ParagraphSpacingScale, context.MathEquations, out var math))
             {
-                // Equation-only cells have no text-run anchor. Preserve the
-                // nominal paragraph baseline fallback from the source size.
+                // Preserve a nominal paragraph fallback when the model has no
+                // recorded cell anchor; parsed empty runs normally carry it.
                 double mathBaselineAnchor = cellFirstBaselineInset > 0d ? cellFirstBaselineInset
                     : DocxLineMetrics.ResolveBodyBaselineOffset(math.Equation.ParentFontSize ?? GetParagraphFontSize(paragraph),
                         math.LineHeight, false);

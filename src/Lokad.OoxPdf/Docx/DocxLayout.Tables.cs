@@ -46,8 +46,8 @@ internal sealed partial class DocxLayoutEngine
                 DocxTableCellLayout cell = row.Cells[cellIndex];
                 IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell.VisualCell));
                 if (cell.TextLines.Count == 0 || cell.InlineImages.Count != 0 || cell.InlineTextBoxes.Count != 0 ||
-                    cell.NestedRows.Count != 0 || cell.Cell.HasVerticalMerge || paragraphs.Count != 1 ||
-                    paragraphs[0].EffectiveProperties.LineSpacingPoints is not null ||
+                    cell.NestedRows.Count != 0 || cell.Cell.HasVerticalMerge || paragraphs.Count == 0 ||
+                    paragraphs.Any(paragraph => paragraph.EffectiveProperties.LineSpacingPoints is not null) ||
                     !string.IsNullOrEmpty(cell.VisualCell.VerticalAlignmentValue) &&
                     !string.Equals(cell.VisualCell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase))
                 {

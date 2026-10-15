@@ -9,6 +9,30 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableMathTests
 {
+    public static void DocxTableMathNaturalParagraphFramesMatchIndependentTableOrigins()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the independent mixed-flow table controls.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "table-flow-frame-office-baselines.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string id = row.GetProperty("Id").GetString()!;
+            string source = Path.Combine(cases, id + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(source))));
+            bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var renderer = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var page = renderer.InspectLayout(DocxTests.ReadDocx(source, mode)).Pages.Single();
+            double leading = page.Items.Single(item => item.Kind == "TextLine" && item.SourceBlockIndex == 0).Y;
+            var table = page.TableRows.Single();
+            double delta = leading - table.Y - table.Height - row.GetProperty("LeadingToTableTop").GetDouble();
+            TestAssert.True(Math.Abs(delta) < .4d,
+                $"Adding natural cell paragraphs must preserve the admitted table origin: {id}/{mode} delta={delta}.");
+        }
+    }
+
     public static void DocxTableMathStandaloneMatchesIndependentCellBaselineTransitions()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

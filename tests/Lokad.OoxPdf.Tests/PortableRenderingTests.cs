@@ -161,6 +161,22 @@ internal static class PortableRenderingTests
         }
     }
 
+    public static void PortableRenderingAdditionalCellParagraphsPreserveTableOrigin()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var sole = renderer.InspectLayout(DocxTests.ReadDocx(Case("CompositionProbes/math-printed-frame-fraction-anchor12-cell-sole.docx"), mode))
+                .Pages.Single().TableRows.Single();
+            var flow = renderer.InspectLayout(DocxTests.ReadDocx(Case("CompositionProbes/math-printed-frame-fraction-anchor12-cell-flow.docx"), mode))
+                .Pages.Single().TableRows.Single();
+            TestAssert.True(flow.Height > sole.Height, "Additional cell paragraphs must contribute occupied height.");
+            TestAssert.True(Math.Abs(sole.Y + sole.Height - flow.Y - flow.Height) < .01d,
+                "Adding supported cell paragraphs must not shift the top of their table.");
+        }
+    }
+
     public static void PortableRenderingIsolatedFractionPreservesCellTextAndFrame()
     {
         foreach (string context in new[] { "sole", "flow" })

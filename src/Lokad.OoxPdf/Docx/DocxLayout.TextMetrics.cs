@@ -413,8 +413,9 @@ internal static class DocxLineMetrics
 
     public static double ResolveTableCellFirstBaselineInset(IReadOnlyList<DocxParagraph> paragraphs, IDocxTextMeasurer? measurer = null)
     {
-        DocxParagraph? firstTextParagraph = paragraphs.FirstOrDefault(paragraph => paragraph.Runs.Count != 0);
-        if (firstTextParagraph is null)
+        // Empty resolved runs retain font metrics for non-text content too.
+        DocxParagraph? firstMetricParagraph = paragraphs.FirstOrDefault(paragraph => paragraph.Runs.Count != 0);
+        if (firstMetricParagraph is null)
         {
             return 0d;
         }
@@ -424,7 +425,7 @@ internal static class DocxLineMetrics
         // height below the content top (19.2/28.8/38.4), independent of the font
         // ascent the auto rule applies. Font-size interaction past 12pt stays a
         // probe follow-up; atLeast keeps the auto rule for lack of Office evidence.
-        DocxEffectiveParagraphProperties effective = firstTextParagraph.EffectiveProperties;
+        DocxEffectiveParagraphProperties effective = firstMetricParagraph.EffectiveProperties;
         if (effective.LineSpacingPoints is { } exactLineHeight &&
             !string.Equals(effective.Spacing.LineRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase))
         {
@@ -435,13 +436,13 @@ internal static class DocxLineMetrics
         // Word 16.0 cell-inset probes (Calibri/Tahoma single cells 710.50 vs 710.02 at
         // 10pt): the rule is max(hheaAscender, 0.94em) (Tahoma gap 0.48 matches hheaAsc
         // 1.0005 over Calibri 0.9521). Opt-in measurer; null keeps legacy.
-        double maxSize = firstTextParagraph.Runs.Max(run => run.EffectiveProperties.FontSize);
+        double maxSize = firstMetricParagraph.Runs.Max(run => run.EffectiveProperties.FontSize);
         double? hheaAscender = null;
         if (measurer is IDocxLineMetricsProvider provider)
         {
             DocxTextRun? widest = null;
             double widestSize = -1d;
-            foreach (DocxTextRun run in firstTextParagraph.Runs)
+            foreach (DocxTextRun run in firstMetricParagraph.Runs)
             {
                 double size = run.EffectiveProperties.FontSize;
                 if (size > widestSize)
@@ -458,7 +459,7 @@ internal static class DocxLineMetrics
         }
 
         // The visible first baseline rides ResolveTableCellBodyBaselineOffset at the transition; the inset joins it there for non-top vertical alignment coherence while cancelling out of top-aligned first lines.
-        if (ResolveTableCellFirstBaselinePoints(paragraphs, firstTextParagraph, maxSize, measurer) is { } cellFirstInset)
+        if (ResolveTableCellFirstBaselinePoints(paragraphs, firstMetricParagraph, maxSize, measurer) is { } cellFirstInset)
         {
             return cellFirstInset;
         }

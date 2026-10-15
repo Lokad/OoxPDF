@@ -1,0 +1,47 @@
+{
+  "Scope": "Independent Word 16 table top border relative to preceding baseline; source-specific 2-column natural-row controls",
+  "Rows": [
+    {
+      "Id": "math-printed-frame-fraction-anchor12-cell-flow-leading-math",
+      "Mode": "final-preserve",
+      "InputSha256": "A843A867BF7BD859443BD1396D723CD5D18992B252240F045579F48E8862921B",
+      "ReferencePdfSha256": "A2DF0CCB405489B568EBB41449B5D4949DADBA6B58506CC62C482DE3AEC45575",
+      "LeadingToTableTop": 3.24
+    },
+    {
+      "Id": "math-printed-frame-fraction-anchor12-cell-flow-leading-math",
+      "Mode": "all-word-compatible",
+      "InputSha256": "A843A867BF7BD859443BD1396D723CD5D18992B252240F045579F48E8862921B",
+      "ReferencePdfSha256": "1AB740E5939C206CFEB486D11BE3785F9A8AB1AF4CAFCEEC8E18F897C1BCB977",
+      "LeadingToTableTop": 2.48
+    },
+    {
+      "Id": "math-printed-frame-fraction-anchor12-cell-flow-leading-image",
+      "Mode": "final-preserve",
+      "InputSha256": "29782EEC02950009C229EAA7E7471B24A141955EA3B90FAFA283D0AABEA10BF3",
+      "ReferencePdfSha256": "096DBD843E869D20EBA049ACA866D78C9DC68B2A2052A77EF3A7D2291E54DFEE",
+      "LeadingToTableTop": 3.24
+    },
+    {
+      "Id": "math-printed-frame-fraction-anchor12-cell-flow-leading-image",
+      "Mode": "all-word-compatible",
+      "InputSha256": "29782EEC02950009C229EAA7E7471B24A141955EA3B90FAFA283D0AABEA10BF3",
+      "ReferencePdfSha256": "1E2BD582A9791D4CD84D176CF0A225E36A38F802F0C99A44049A963542FD8207",
+      "LeadingToTableTop": 2.45
+    },
+    {
+      "Id": "math-printed-frame-fraction-anchor12-cell-flow",
+      "Mode": "final-preserve",
+      "InputSha256": "6CBCCA5C4B060FD75EA03FB4A531B3CAB651E46A5F0EEC486AD6B20544C058B7",
+      "ReferencePdfSha256": "554AB0C2F009AA347D8FB64AE20A8EEDFD445CDBC629CB565DBE770D57AC2CAD",
+      "LeadingToTableTop": 3.24
+    },
+    {
+      "Id": "math-printed-frame-fraction-anchor12-cell-flow",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6CBCCA5C4B060FD75EA03FB4A531B3CAB651E46A5F0EEC486AD6B20544C058B7",
+      "ReferencePdfSha256": "DF1F38794EB3E6F2592F2F4AC19FF92C8BCFC12A2AC1E958A50B0102CDA934C3",
+      "LeadingToTableTop": 2.48
+    }
+  ]
+}

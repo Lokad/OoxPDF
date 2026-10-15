@@ -470,5 +470,19 @@
     "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement",
     "PortableRenderingIsolatedFractionPreservesCellTextAndFrame",
     "PortableRenderingMathRowKeepsPaintedContentBeforeUnpaintedTail"
+  ],
+  "docx-natural-cell-paragraph-frame": [
+    "DocxTableMathNaturalParagraphFramesMatchIndependentTableOrigins",
+    "PortableRenderingAdditionalCellParagraphsPreserveTableOrigin",
+    "DocxTableMathStandaloneMatchesIndependentCellBaselineTransitions",
+    "PortableRenderingIsolatedFractionPreservesCellTextAndFrame",
+    "DocxReviewTablePagination",
+    "DocxTableAutomaticGridRetainsComplexAndFragmentFallbacks",
+    "DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate",
+    "DocxTableCellTextLinesMemoSharesSplitCells",
+    "DocxRendererKeepsSplitTableCellHyperlinkAnnotationsOnVisibleFragment",
+    "DocxTableLayoutStageHonorsExactRowHeightRule",
+    "DocxTableLayoutStageKeepsCellKeepNextParagraphWithFollowingParagraphAtPageBoundary",
+    "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement"
   ]
 }
