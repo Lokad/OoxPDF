@@ -1,0 +1,29 @@
+docxpatch 1
+
+op replace-paragraph
+target M.P0001
+text Cropped SVG diagram.
+end
+
+op insert-image-after
+target M.P0001
+asset diagram.svg
+width 2in
+height 1in
+alt Public geometric diagram
+as diagram
+end
+
+op set-image-crop
+target @diagram
+left-percent 10
+top-percent 5
+right-percent 15
+bottom-percent 0
+end
+
+op set-image-size
+target @diagram
+width 180pt
+height 90pt
+end

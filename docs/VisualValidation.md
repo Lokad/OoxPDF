@@ -15,6 +15,14 @@ The repository vendors the exact rasterizer binary (`tools/vendor/pdfium/win-x64
 
 ## Running A Case
 
+Pinned DocxEdit 0.2.0 producer fixtures cover authored/edited equations and SVG
+placements, including crop, repeated images and mixed equation/image flow.
+Recipes and regeneration instructions live in
+[Cases/DocxEditInterop](../tests/Lokad.OoxPdf.Tests/Cases/DocxEditInterop/README.md).
+The `docx-math-producer-*` and `docx-svg-producer-*` cases retain existing visual
+thresholds. Matrix fence/baseline residuals and consecutive image-paragraph
+spacing remain review items. DocxEdit is fixture tooling only.
+
 For affected DOCX qualification, use `tools/RunDocxAffectedTests.ps1` with the
 frozen runner and a fresh output directory. It runs overlapping DOCX/balloon
 methods once and gives each runner invocation the output directory's

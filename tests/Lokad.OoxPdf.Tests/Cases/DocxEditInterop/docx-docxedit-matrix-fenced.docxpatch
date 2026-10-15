@@ -1,0 +1,12 @@
+docxpatch 1
+
+op replace-paragraph
+target M.P0001
+text Fenced matrix.
+end
+
+op insert-equation
+target M.P0001
+placement after
+latex \begin{bmatrix}a&b\\c&d\end{bmatrix}
+end

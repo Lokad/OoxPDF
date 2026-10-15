@@ -1,0 +1,18 @@
+docxpatch 1
+
+op replace-paragraph
+target M.P0001
+text Edited fraction.
+end
+
+op insert-equation
+target M.P0001
+placement after
+latex \frac{x+1}{y}
+as formula
+end
+
+op replace-equation
+target @formula
+latex \frac{x+2}{y}
+end

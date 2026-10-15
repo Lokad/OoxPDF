@@ -1,0 +1,12 @@
+docxpatch 1
+
+op replace-paragraph
+target M.P0001
+text Inline equation: 
+end
+
+op insert-equation
+target M.P0001
+placement inline
+latex \alpha_i^2
+end
