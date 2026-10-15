@@ -37,6 +37,15 @@ controls improve across display/inline placement and both fraction types, with
 position differences below 0.14 pt horizontally and 0.07 pt vertically.
 Twenty-one direct neighbor PDFs remain byte-identical; visual thresholds remain
 unchanged. Multiple structured children and deeper compound rows retain fallback.
+The same sequence path now accepts one subscript/superscript structure alongside
+literal atoms. Eight uniform-size Word controls improve with position differences
+below 0.12 pt horizontally and 0.05 pt vertically. Two additional 20 pt script/
+12 pt literal contrasts establish that the surrounding equation owns the gap
+before the structure; the child's authored size retains its glyph geometry.
+These contrasts also improve over the missing-row fallback, while internal
+script placement and line-height residuals reach 1.81 pt horizontally and 1.07 pt
+vertically. No size-specific correction is applied. Twenty-four direct neighbor
+PDFs remain byte-identical, including the accepted fraction rows and font styles.
 The reader retains equation position,
 display alignment, resolved run formatting, revision visibility and mathematical
 structure for literals, scripts and fractions. Unsupported or incomplete
