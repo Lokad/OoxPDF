@@ -510,3 +510,18 @@ neighbor PDFs and four exact transfer smoke PDFs qualify one artifact. Three
 public cases retain existing visual thresholds. Default operator characters,
 integral sizing, stored hidden content, richer structures and assemblies remain
 staged with explicit fallback.
+
+
+Sum/product bodies now reuse the bounded fraction/stack/script argument grammar
+and measurement shared with roots. Child source roles, script levels, inner
+fraction rules and colors retain their existing owners; the n-ary control owns
+its operator and outer limits. Literal child checks bound composition before
+measurement recurs, and missing body encoding retains complete fallback.
+Six Word controls improve across display/inline fraction, stack and paired-script
+bodies. All six operator variants retain the existing selection profile, and all
+44 glyph outlines match Word/source. Position differences reach 0.11 pt
+horizontally and 0.49 pt vertically. Twenty-nine focused methods, 24 exact
+neighbors (including fraction/script roots) and four matching transfer smoke
+PDFs qualify one artifact. Three public cases retain existing visual thresholds.
+Arbitrary deeper/rich bodies, integral sizing, default operator characters and
+assemblies remain staged; full visual parity is not established.
