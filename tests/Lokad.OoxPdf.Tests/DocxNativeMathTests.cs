@@ -24,7 +24,7 @@ internal static class DocxNativeMathTests
         foreach (string suffix in new[] { "display-diagonal-off", "display-diagonal-omitted" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-empty-" + suffix), diagnostics.Add, CancellationToken.None);
+            Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-empty-" + suffix), diagnostics.Add, CancellationToken.None).Single();
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"), "Visible-placeholder grids retain their full fallback.");
         }
     }
