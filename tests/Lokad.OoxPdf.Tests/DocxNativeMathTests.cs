@@ -7,6 +7,28 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeMixedFunctionsKeepContextAndAdjacentSourceMeaning()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string meaning) in new[] {
+            ("display-sin-literal-binary", "a+sinx=b"), ("display-sin-literal-ordinary", "asinx=b"),
+            ("inline-sin-delimiter-binary", "a+sin(n+1)=b"), ("inline-sin-delimiter-ordinary", "asin(n+1)=b"),
+            ("display-sin-fraction-binary", "a+sinxk=b"), ("inline-log-normal-both-ordinary", "alogx=b"),
+            ("inline-cos-control20-ordinary", "acosx=b"),
+            ("inline-sin-delimiter-ordinary-then-cos-control20", "asin(n+1)cosx=b"),
+            ("inline-cos-control20-ordinary-then-sin-delimiter", "acosxsin(n+1)=b"),
+            ("display-sin-literal-ordinary-parent20", "asinx=b"),
+            ("inline-sin-delimiter-ordinary-parent20", "asin(n+1)=b"),
+            ("inline-cos-control20-ordinary-parent16", "acosx=b") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-function-row-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Mixed functions retain prefix, argument, adjacent controls and outgoing relation source in native paint.");
+        }
+    }
+
     public static void DocxNativeFunctionsRetainNamesAndBoundedArgumentMeaning()
     {
         RequireMathFont();

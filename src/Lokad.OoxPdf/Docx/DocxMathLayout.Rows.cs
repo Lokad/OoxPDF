@@ -10,7 +10,8 @@ internal static partial class DocxMathLayout
 
     private static DocxMathNode? GetSupportedStructure(DocxMathNode node, DocxEquation equation, CancellationToken token) =>
         (DocxMathNode?)GetSupportedFraction(node) ?? (DocxMathNode?)GetSupportedScripts(node) ??
-        (DocxMathNode?)GetSupportedRadical(node) ?? (DocxMathNode?)GetSupportedDelimiter(node) ?? GetSupportedNary(node, equation, token);
+        (DocxMathNode?)GetSupportedRadical(node) ?? (DocxMathNode?)GetSupportedDelimiter(node) ??
+        (DocxMathNode?)GetSupportedNary(node, equation, token) ?? GetSupportedFunction(node);
 
     private static StructuredRow? GetStructuredRow(DocxEquation equation, CancellationToken token)
     {
@@ -55,7 +56,11 @@ internal static partial class DocxMathLayout
             if (!TryGetRuns(childEquation, token, out var childRuns) || childRuns.Count == 0)
             { fallback = "UnsupportedMathStructuredRow"; return false; }
             double parentSize = equation.ParentFontSize ?? childRuns[0].Run.Text.FontSize;
-            if (!TryMeasure(childEquation, resolveFont, token, out var structure, out fallback, parentMetricsFont, resolveControlFont, resolveControlMetrics) || structure is null)
+            bool measured = part.Structure is DocxMathFunction function
+                ? TryMeasureFunction(childEquation, function, resolveFont, token, out var structure, out fallback,
+                    resolveControlFont, resolveControlMetrics, rowControlSize: parentSize)
+                : TryMeasure(childEquation, resolveFont, token, out structure, out fallback, parentMetricsFont, resolveControlFont, resolveControlMetrics);
+            if (!measured || structure is null)
             { fallback ??= "UnsupportedMathStructuredRow"; return false; }
             var first = structure.Edges?.First ?? DocxMathRowLayout.AtomKind.Ordinary;
             if (!DocxMathRowLayout.TryMeasure(part.Before, resolveFont, token, out var before, out fallback,

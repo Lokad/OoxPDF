@@ -6,7 +6,10 @@ namespace Lokad.OoxPdf.Docx;
 internal static partial class DocxMathLayout
 {
     private static DocxMathFunction? GetFunction(DocxEquation equation) =>
-        GetSingleSupportedChild(equation) is DocxMathFunction { HasUnsupportedProperties: false } function &&
+        GetSingleSupportedChild(equation) is { } node ? GetSupportedFunction(node) : null;
+
+    private static DocxMathFunction? GetSupportedFunction(DocxMathNode node) =>
+        node is DocxMathFunction { HasUnsupportedProperties: false } function &&
         (function.ControlText is null || DocxMathRowLayout.HasSupportedTextFormatting(function.ControlText, allowBold: false)) ? function : null;
 
     private static bool TryGetFunctionRuns(DocxEquation equation, DocxMathFunction function, CancellationToken token,
@@ -30,7 +33,7 @@ internal static partial class DocxMathLayout
     private static bool TryMeasureFunction(DocxEquation equation, DocxMathFunction function,
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token,
         out DocxMathBox? box, out string? fallback, Func<IDocxMathControl, PdfFontResource?>? resolveControlFont,
-        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics)
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics, double? rowControlSize = null)
     {
         box = null;
         if (!TryGetRuns(equation, token, out var sources) || sources.Count == 0)
@@ -39,7 +42,9 @@ internal static partial class DocxMathLayout
             resolveControlFont is not null ? resolveControlFont(function)?.Font.Font : resolveFont(sources[0].Run)?.Font.Font;
         if (font is null || !font.TryGetMathConstants(out _))
         { fallback = "MissingMathFunctionMetrics"; return false; }
-        double size = function.ControlText?.FontSize ?? equation.ParentFontSize ?? sources[0].Run.Text.FontSize;
+        // A mixed row owns application spacing/frame size. A standalone
+        // application retains its authored invisible control size.
+        double size = rowControlSize ?? function.ControlText?.FontSize ?? equation.ParentFontSize ?? sources[0].Run.Text.FontSize;
         if (!double.IsFinite(size) || size <= 0d)
         { fallback = "InvalidMathFunctionSize"; return false; }
         if (!DocxMathRowLayout.TryMeasure(function.Name, resolveFont, token, out var name, out fallback, exportFontSize: true) || name is null || name.Glyphs.Count == 0)

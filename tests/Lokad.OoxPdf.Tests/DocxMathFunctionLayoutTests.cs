@@ -7,6 +7,49 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFunctionLayoutTests
 {
+    public static void MathFontMixedFunctionRowsShareParentFrameAndSemanticEdgesWithoutPartialPaint()
+    {
+        var font = OpenTypeFont.Load(MathFontBytes()); var resource = Resource("Rows", font, "BcustomCsin=Z");
+        foreach (bool reverse in new[] { false, true })
+        foreach (double parentSize in new[] { 12d, 18d })
+        {
+            var first = Function(new([Run("custom", color: "0000FF")]), new([Run("C")]), 20d);
+            var lastArgument = Run("Z", color: "008000");
+            var second = Function(new([Run("sin")]), new([lastArgument]), 8d);
+            DocxMathNode[] functions = reverse ? [second, first] : [first, second];
+            var equation = Equation(first) with { Content = new([Run("B"), .. functions, Run("=B")]), ParentFontSize = parentSize };
+            TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var sources) &&
+                sources.Count == 6 && sources.Count(s => s.ControlOwner is DocxMathFunction) == 2,
+                "Mixed discovery retains literal order and two independent invisible control owners.");
+            TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var box, out var reason,
+                resolveControlMetrics: _ => font), reason ?? "Expected contextual function row.");
+            var measured = TestAssert.NotNull(box);
+            TestAssert.True(measured.ParentMetrics is { IncludeTypographicFrame: true } owner && owner.Size == parentSize,
+                "The surrounding row owns its frame in either control order, independent of authored standalone control sizes.");
+            TestAssert.True(Math.Abs(measured.Glyphs[1].X - measured.Glyphs[0].Advance - parentSize / 6d) < 1e-9,
+                "An ordinary atom before a function consumes one thin math space.");
+            int nameLength = reverse ? 3 : 6;
+            var nameLast = measured.Glyphs[nameLength]; var argument = measured.Glyphs[nameLength + 1];
+            TestAssert.True(Math.Abs(argument.X - nameLast.X - nameLast.Advance - parentSize / 6d) < 1e-9,
+                "Application spacing uses the same parent context while painted name glyphs keep their authored size.");
+            TestAssert.True(measured.Glyphs.Where(g => g.SourceCodePoint == 'Z').All(g => g.Color.Green == 128),
+                "Per-node argument paint remains independent of the row frame.");
+            var missing = Resource("MissingLateArgument", font, "BcustomCsin=");
+            TestAssert.True(!DocxMathLayout.TryMeasure(equation, r => ReferenceEquals(r, lastArgument) ? missing : resource,
+                CancellationToken.None, out var absent, out _, resolveControlMetrics: _ => font) && absent is null,
+                "A missing encoding in either function rejects the complete row without publishing a partial prefix.");
+            var nested = equation with { Content = new([Run("B"), first with { Argument = new([second]) }]) };
+            TestAssert.True(!DocxMathLayout.TryGetRuns(nested, CancellationToken.None, out _),
+                "Mixed eligibility cannot recursively expand nested application arguments.");
+        }
+        var bounded = Equation(Function(new([Run("sin")]), new([Run("C")]))) with
+            { Content = new([Run("B"), Function(new([Run("sin")]), new([Run("C")]))]) };
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(bounded, _ => resource, cancelled.Token, out _, out _));
+        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 });
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(bounded, _ => resource, CancellationToken.None, out _, out _, resolveControlMetrics: _ => font));
+    }
+
     public static void MathFontFunctionMetricOnlyControlsKeepIndependentFontsAndWholeLineFrame()
     {
         var metric = OpenTypeFont.Load(MathFontBytes()); var text = TestFontBuilder.LoadTestFont();
