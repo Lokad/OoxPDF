@@ -664,8 +664,9 @@ and a function with a fenced fractional argument. The earlier literal-axis
 prototype chose an oversized display parenthesis; the complete-box profile
 corrects that case. All 57 matching outlines out of 69 and the 12 mismatches are
 recorded individually. Three cross-size cases retain delimiter-variant or optical
-glyph differences, with baseline residuals up to 4.47 pt; the composed function
-also retains about 2 pt of application-spacing difference. These are explicit
+glyph differences, with baseline residuals up to 4.47 pt. Before the semantic
+spacing qualification below, the composed function also retained about 2 pt of
+application-spacing difference. These are explicit
 approximate results, not full Office parity. The minimum delimited-expression
 constant in the [OpenType MATH definition](https://learn.microsoft.com/en-us/typography/opentype/spec/math)
 does not by itself establish Word's remaining cross-size selection rule; no
@@ -678,3 +679,25 @@ An older literal-only regression was updated to keep testing unsupported deeper
 nesting after fractions became eligible. Its failed report remains separate from
 the final qualification. Safe managed code, cancellation/work bounds, bounded
 staging and atomic publication remain unchanged.
+
+
+Painted enclosing marks now use the font's `DelimitedSubFormulaMinHeight` to
+classify a delimited subformula as an inner mathematical atom. That shared edge
+supplies thin spacing around ordinary neighbors and after function names while
+retaining binary/relation priority. The threshold classifies spacing; it does not
+force a larger stretched glyph. The rule is inferred from independent Word
+controls alongside the [MATH constant's documented role](https://learn.microsoft.com/en-us/typography/opentype/spec/math).
+
+Nine Word controls qualify six improvements and three exact guards. Literal
+16 pt and short-stack controls retain opening semantics; larger painted marks
+around a 20 pt literal or a fraction receive the additional thin space. A tall
+argument with fixed small parentheses stays unchanged. That contrast rejects the
+prototype's child-height classification and supports painted-mark ownership,
+without a font/size/function/fraction whitelist. All 77 glyph outlines match
+Word/source. The retained function/fenced-fraction X residual falls from 2.09 pt
+to 0.09 pt; the set retains differences up to 0.43 pt X and 0.072 pt Y.
+
+Twenty affected methods and 18 exact neighboring PDFs qualify one strict Release
+artifact; four exact integration PDFs verify transfer. Three public cases retain
+existing thresholds. The earlier cross-size stretch and optical-glyph residuals
+remain unchanged; this spacing correction does not claim to resolve them.
