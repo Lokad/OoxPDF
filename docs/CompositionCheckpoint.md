@@ -437,3 +437,33 @@ not inferred content omissions. Exact review pairs reach 3.152pt Y. Global and
 page-local content screens remain separate evidence; neither proves complete ink
 or clipping fidelity. Sub-point Final refinements remain lower priority than
 confirmed composition loss and the overfull operator-breaking contract.
+
+Top-level inline literals now expose binary/relation break opportunities from
+their existing measured glyph order. The ordered paragraph path wraps those
+pieces, drops inter-piece glue at a line boundary and preserves source equation
+identity. Structured boxes, display rows, nested and unary-only literals retain
+their qualified fallbacks. No font/size/document-shape rule is added.
+
+Word 16 keeps `α+` on the first line and `β=γ` on the next for default, before,
+after and repeat settings in the independent inline control. This observed inline
+behavior differs from the general default described in [Microsoft's brkBin
+documentation](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.breakbinary?view=openxml-2.10.0);
+the implementation claim is limited to the validated inline scope. All five
+glyphs now paint in a two-line source paragraph, including with bookmarks and run
+splitting. The portable regression fails on the previous library.
+
+Forty selected methods pass in one invocation; fourteen portable methods pass on
+Ubuntu. The overfull control's recall improves 0.375→0.480 and MAE 0.290→0.280.
+All eight setting/mode controls still fail foreground/MAE/SSIM gates. Its body
+auto line height remains 16.968pt versus Word's 14.64pt; font/measurement ownership
+needs separate evidence before changing it. Eight fitting literal/fraction/script
+outcomes retain their comparison results. All ten portfolio rasters retain bytes
+at the existing 144dpi qualification, while eight DOCX PDF byte streams change
+with mathematical boxing. Content/page-local screens pass, but DOCX visual gates
+remain failed. Seventeen assets/four exact smoke PDFs transfer without root build
+or suite replay.
+
+An ink-only inline-frame prototype worsened review portfolio MAE by up to 1.904
+and recall by 0.0434. That measurement rule was rejected and reverted before
+delivery; the accepted operator change retains the prior frames. The rejected
+artifact and comparisons remain available as negative evidence.
