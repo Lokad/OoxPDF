@@ -22,6 +22,7 @@ internal static partial class DocxMathLayout
     public static IReadOnlyList<int> GetControlCodePoints(IDocxMathControl control) => control switch
     {
         DocxMathRadical => [0x221A],
+        DocxMathNary { CharacterValue: { Length: > 0 } character } => [Rune.GetRuneAt(character, 0).Value],
         DocxMathDelimiter delimiter => (delimiter.BeginCharacter + delimiter.EndCharacter +
             (delimiter.Arguments.Count > 1 ? delimiter.SeparatorCharacter : string.Empty)).EnumerateRunes()
             .Select(rune => rune.Value).Distinct().ToArray(),

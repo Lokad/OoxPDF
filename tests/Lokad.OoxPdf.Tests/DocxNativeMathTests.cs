@@ -7,6 +7,20 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeStackedNaryOperatorsKeepBodyAndLimitMeaning()
+    {
+        RequireMathFont();
+        foreach ((string kind, string character, string suffix) in new[] { ("sum", "\u2211", ""), ("product", "\u220F", ""),
+            ("sum", "\u2211", "-control20"), ("product", "\u220F", "-body16") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-nary-display-{kind}-undOvr{suffix}"), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(character + "xni=1", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Stacked sum/product operators retain native body and both limits.");
+        }
+    }
+
     public static void DocxNativeDelimiterArgumentsKeepVisibleOrderAndEmptySeparators()
     {
         RequireMathFont();

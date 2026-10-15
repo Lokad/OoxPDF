@@ -1,0 +1,87 @@
+using System.Buffers.Binary;
+using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Fonts;
+using Lokad.OoxPdf.Pdf;
+
+namespace Lokad.OoxPdf.Tests;
+
+internal static class DocxMathNaryTests
+{
+    public static void MathFontNaryStackedLimitsKeepIndependentResourcesAndCompleteFallback()
+    {
+        foreach (int point in new[] { 0x2211, 0x220F })
+        {
+            var font = OpenTypeFont.Load(FontBytes(point));
+            var parent = new PdfFontResource("Operator", PdfEmbeddedFont.CreateForGlyphMappings(font,
+                new[] { ((ushort)128, point) }, CancellationToken.None));
+            var text = new PdfFontResource("Children", PdfEmbeddedFont.Create(font, new[] { (int)'B', (int)'C' }, CancellationToken.None));
+            var nary = Nary(char.ConvertFromUtf32(point));
+            var equation = Equation(nary);
+            TestAssert.True(DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out var sources) && sources.Count == 3 &&
+                sources[0].ScriptLevel == 0 && sources.Skip(1).All(s => s.ScriptLevel == 1) &&
+                ReferenceEquals(sources[0].ControlOwner, nary), "The operator owns one control while literal body and limits retain their source levels.");
+            TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => text, CancellationToken.None, out var box, out var reason,
+                resolveControlFont: _ => parent), reason ?? "Expected native stacked limits.");
+            var measured = TestAssert.NotNull(box);
+            TestAssert.Equal(char.ConvertFromUtf32(point) + "BCB", string.Concat(measured.Glyphs.Select(g => char.ConvertFromUtf32(g.SourceCodePoint))));
+            TestAssert.True(ReferenceEquals(measured.Glyphs[0].Font, parent) && measured.Glyphs[0].OriginalGlyph == 128 &&
+                measured.Glyphs.Skip(1).All(g => ReferenceEquals(g.Font, text)) && measured.Glyphs[2].BaselineY > 0 &&
+                measured.Glyphs[3].BaselineY < 0 && measured.ParentMetrics?.Size == 12d,
+                "Selected operator variants and independently encoded children share one bounded occupied frame.");
+            TestAssert.True(measured.Glyphs[0].Color.Red == 255 && measured.Glyphs.Skip(1).All(g => g.Color.Blue == 255),
+                "Control color and child colors retain independent source ownership.");
+            var missing = new PdfFontResource("Missing", PdfEmbeddedFont.CreateForGlyphMappings(font,
+                new[] { ((ushort)130, point) }, CancellationToken.None));
+            TestAssert.True(!DocxMathLayout.TryMeasure(equation, _ => text, CancellationToken.None, out var absent, out _,
+                resolveControlFont: _ => missing) && absent is null, "A missing selected variant CID cannot publish a partial body or operator.");
+            var graphics = new PdfGraphicsBuilder(); DocxMathBoxPainter.Paint(measured, graphics, 20d, 50d, CancellationToken.None);
+            using var output = new MemoryStream();
+            PdfDocumentWriter.WriteBlank(output, [new PdfPage(200d, 150d, graphics.ToString(), [parent, text])], CancellationToken.None);
+            TestAssert.True(output.Length > 0, "Native operator and child resources remain valid PDF content.");
+        }
+    }
+
+    public static void MathFontNaryEligibilityBoundsAndCancellationRemainExplicit()
+    {
+        var nary = Nary("\u2211");
+        foreach (var invalid in new[] { nary with { CharacterValue = "\u222B" }, nary with { LimitLocationValue = null },
+            nary with { LimitLocationValue = "subSup" }, nary with { GrowValue = false },
+            nary with { SubscriptHiddenValue = true }, nary with { SuperscriptHiddenValue = true },
+            nary with { Body = new([nary]) }, nary with { HasUnsupportedProperties = true } })
+            TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(invalid), CancellationToken.None, out _),
+                "Unqualified defaults, roles and sizing retain complete source fallback.");
+        TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(nary) with { Display = false }, CancellationToken.None, out _),
+            "Inline side limits await their own independent geometry qualification.");
+        var font = OpenTypeFont.Load(FontBytes(0x2211));
+        var resource = new PdfFontResource("Bounded", PdfEmbeddedFont.CreateForGlyphMappings(font,
+            new[] { ((ushort)128, 0x2211), (font.MapCodePoint('B'), (int)'B'), (font.MapCodePoint('C'), (int)'C') }, CancellationToken.None));
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(Equation(nary), cancelled.Token, out _));
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(Equation(nary), _ => resource, cancelled.Token, out _, out _));
+        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 });
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(Equation(nary), _ => resource, CancellationToken.None, out _, out _));
+    }
+
+    private static DocxEquation Equation(DocxMathNary nary) => new(new([nary]), 0, 0, true, null, null, null) { ParentFontSize = 12d };
+    private static DocxMathNary Nary(string character) => new(Row("B"), Row("B"), Row("C"))
+        { CharacterValue = character, LimitLocationValue = "undOvr", ControlText = new("", 12d, "FF0000", false, false, false, null, "TestFont") };
+    private static DocxMathRow Row(string value) => new([new DocxMathRun(new(value, 12d, "0000FF", false, false, false, null, "TestFont"), "p", null)]);
+
+    private static byte[] FontBytes(int point)
+    {
+        byte[] math = new byte[254];
+        void Put(int at, ushort value) => BinaryPrimitives.WriteUInt16BigEndian(math.AsSpan(at), value);
+        Put(0, 1); Put(4, 10); Put(10, 73); Put(12, 50); Put(16, 1500);
+        foreach (var field in new[] { OpenTypeMathConstant.AxisHeight, OpenTypeMathConstant.UpperLimitGapMin,
+            OpenTypeMathConstant.UpperLimitBaselineRiseMin, OpenTypeMathConstant.LowerLimitGapMin, OpenTypeMathConstant.LowerLimitBaselineDropMin })
+            Put(18 + (int)field * 4, 250);
+        Put(8, 224); Put(226, 12); Put(230, 1); Put(234, 18); Put(236, 1); Put(238, 1); Put(240, 130);
+        Put(244, 2); Put(246, 130); Put(248, 1000); Put(250, 128); Put(252, 2000);
+        byte[] cmap = new byte[52];
+        void U16(int at, ushort value) => BinaryPrimitives.WriteUInt16BigEndian(cmap.AsSpan(at), value);
+        void U32(int at, uint value) => BinaryPrimitives.WriteUInt32BigEndian(cmap.AsSpan(at), value);
+        U16(2, 1); U16(4, 3); U16(6, 10); U32(8, 12); U16(12, 12); U32(16, 40); U32(24, 2);
+        U32(28, 0x20); U32(32, 0x9F); U32(36, 1); U32(40, (uint)point); U32(44, (uint)point); U32(48, 130);
+        return TestFontBuilder.ReplaceTable(TestFontBuilder.CreateMathFont(math), "cmap", cmap);
+    }
+}

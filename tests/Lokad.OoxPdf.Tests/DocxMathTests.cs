@@ -21,7 +21,7 @@ internal static class DocxMathTests
             TestAssert.Equal(character,nary.CharacterValue);TestAssert.Equal(location,nary.LimitLocationValue);
             TestAssert.Equal(lower,RowText(nary.Subscript));TestAssert.Equal(upper,RowText(nary.Superscript));TestAssert.Equal("x",RowText(nary.Body));
             TestAssert.True(nary.ControlText is { FontSize:12d } && nary.GrowValue is null,"Inherited controls and omitted growth retain distinct source ownership.");
-            TestAssert.True(!DocxMathLayout.TryGetRuns(equation,CancellationToken.None,out _),"Typed n-ary source cannot claim operator painting before placement is qualified.");
+            TestAssert.Equal(placement == "display" && location == "undOvr", DocxMathLayout.TryGetRuns(equation,CancellationToken.None,out _));
         }
     }
 

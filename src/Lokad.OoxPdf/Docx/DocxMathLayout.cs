@@ -59,6 +59,16 @@ internal static partial class DocxMathLayout
         }
         else if (GetFraction(equation) is { } fraction)
         { int level = equation.Display ? 0 : 1; rows.Add((fraction.Numerator, level, false)); rows.Add((fraction.Denominator, level, false)); }
+        else if (GetNary(equation) is { } nary)
+        {
+            rows.Add((nary.Body, 0, false));
+            foreach (var argument in new[] { nary.Subscript, nary.Superscript })
+            {
+                if (!DocxMathArgumentMetrics.TryGetScriptLevel(argument, out int level)) { runs = []; return false; }
+                rows.Add((argument, level, true));
+            }
+            controlOwner = nary;
+        }
         else if (GetDelimiter(equation) is { } delimiter)
         {
             foreach (var argument in delimiter.Arguments) { token.ThrowIfCancellationRequested(); rows.Add((argument, 0, false)); }
@@ -143,6 +153,8 @@ internal static partial class DocxMathLayout
     {
         if (GetScripts(equation) is { } scripts)
             return TryMeasureScripts(equation, scripts, resolveFont, token, out box, out fallback);
+        if (GetNary(equation) is { } nary)
+            return TryMeasureNary(equation, nary, resolveFont, token, out box, out fallback, resolveControlFont);
         if (GetDelimiter(equation) is { } delimiter)
             return TryMeasureDelimiter(equation, delimiter, resolveFont, token, out box, out fallback, resolveControlFont);
         if (GetRadical(equation) is { } radical)
