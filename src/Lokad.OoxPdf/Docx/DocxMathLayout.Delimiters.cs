@@ -66,7 +66,7 @@ internal static partial class DocxMathLayout
         if (delimiter.ControlText is { } control) { color = default; RgbColor.TryParse(control.ColorHex, out color); }
         var glyphs = new List<DocxMathGlyphPlacement>();
         var rules = new List<DocxMathRulePlacement>();
-        double advance = 0d, width = 0d;
+        double advance = 0d, width = 0d, delimiterHeight = 0d;
         if (!AppendDelimiter(delimiter.BeginCharacter)) { fallback = "UnsupportedMathDelimiterVariant"; return false; }
         for (int i = 0; i < children.Count; i++)
         {
@@ -80,10 +80,14 @@ internal static partial class DocxMathLayout
         width = Math.Max(width, advance);
         if (!double.IsFinite(width) || !double.IsFinite(above) || !double.IsFinite(below) || width <= 0d)
         { fallback = "InvalidMathDelimiterExtent"; return false; }
+        double subformulaMinimum = constants.DelimitedSubFormulaMinHeight * scale;
+        // Classification follows the painted enclosing mark, so a small fixed
+        // delimiter stays an opening/closing atom even around taller content.
+        bool subformula = subformulaMinimum > 0d && delimiterHeight >= subformulaMinimum;
         box = new(width, above, below, glyphs)
         { LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = new(font, size),
-            Edges = new(delimiter.BeginCharacter.Length > 0 ? DocxMathRowLayout.AtomKind.Open : children[0].Edges?.First ?? DocxMathRowLayout.AtomKind.Ordinary,
-                delimiter.EndCharacter.Length > 0 ? DocxMathRowLayout.AtomKind.Close : children[^1].Edges?.Last ?? DocxMathRowLayout.AtomKind.Ordinary,
+            Edges = new(delimiter.BeginCharacter.Length > 0 ? (subformula ? DocxMathRowLayout.AtomKind.Inner : DocxMathRowLayout.AtomKind.Open) : children[0].Edges?.First ?? DocxMathRowLayout.AtomKind.Ordinary,
+                delimiter.EndCharacter.Length > 0 ? (subformula ? DocxMathRowLayout.AtomKind.Inner : DocxMathRowLayout.AtomKind.Close) : children[^1].Edges?.Last ?? DocxMathRowLayout.AtomKind.Ordinary,
                 delimiter.BeginCharacter.Length == 0 && children[0].Edges?.FirstNormalText == true) };
         fallback = null;
         return true;
@@ -103,6 +107,7 @@ internal static partial class DocxMathLayout
             { return false; }
             double baseline = axis - (bounds.YMax + bounds.YMin) / 2d * scale;
             double glyphAdvance = font.GetAdvanceWidth(glyph) * scale;
+            delimiterHeight = Math.Max(delimiterHeight, (bounds.YMax - bounds.YMin) * scale);
             OoxConversionBudget.Current?.ChargeSceneNodes(1);
             glyphs.Add(new(point, point, resource, cid.ToString("X4", CultureInfo.InvariantCulture), glyphSize,
                 advance, baseline, glyphAdvance, color) { OriginalGlyph = glyph });

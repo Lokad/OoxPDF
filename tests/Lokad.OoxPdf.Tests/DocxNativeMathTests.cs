@@ -7,6 +7,21 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNativeMathTests
 {
+    public static void DocxNativeDelimitedSubformulasPreserveFunctionAndOrdinaryMeaning()
+    {
+        RequireMathFont();
+        foreach ((string suffix, string meaning) in new[] { ("function-literal16", "sin(n+1)"), ("function-literal20", "sin(n+1)"),
+            ("function-stack", "sin(n+1k)"), ("function-display-fraction", "sin(n+1k)"), ("ordinary-display-fraction", "a(n+1k)=b"),
+            ("ordinary-inline-fraction", "a(n+1k)=b"), ("ordinary-inline-literal20", "a(n+1)=b"), ("function-fixed-literal20", "sin(n+1)") })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-subformula-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Semantic delimiter classification retains every authored name, operand and ordinary-row neighbor.");
+        }
+    }
+
     public static void DocxNativeFractionDelimitersRetainChildRulesAndSourceMeaning()
     {
         RequireMathFont();

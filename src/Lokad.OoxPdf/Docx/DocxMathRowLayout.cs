@@ -9,7 +9,7 @@ namespace Lokad.OoxPdf.Docx;
 // explicit fallback until they have their own independently qualified boxes.
 internal static class DocxMathRowLayout
 {
-    internal enum AtomKind { Ordinary, Binary, Relation, Open, Close, Punctuation, LargeOperator }
+    internal enum AtomKind { Ordinary, Binary, Relation, Open, Close, Punctuation, LargeOperator, Inner }
     internal readonly record struct Neighbors(AtomKind? Before = null, AtomKind? After = null);
     internal sealed record RowEdges(AtomKind First, AtomKind Last, bool FirstNormalText);
     private sealed record Atom(DocxMathRun Run, Rune Source, Rune Render, AtomKind Kind);
@@ -199,5 +199,6 @@ internal static class DocxMathRowLayout
         left == AtomKind.Relation || right == AtomKind.Relation ? 5 :
         left == AtomKind.Binary || right == AtomKind.Binary ? 4 :
         left == AtomKind.LargeOperator || right == AtomKind.LargeOperator ? 3 :
+        left == AtomKind.Inner || right == AtomKind.Inner ? 3 :
         left == AtomKind.Punctuation ? 3 : 0;
 }

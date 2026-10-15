@@ -7,6 +7,49 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFunctionLayoutTests
 {
+    public static void MathFontDelimitedSubformulasSharePaintedThresholdAndSemanticGlue()
+    {
+        foreach (ushort minimum in new ushort[] { 0, 1500, 2500 })
+        {
+            byte[] bytes = MathFontBytes();
+            var tables = TestFontBuilder.GetDirectoryEntries(bytes);
+            int math = tables.Single(t => t.Tag == "MATH").Offset, glyf = tables.Single(t => t.Tag == "glyf").Offset;
+            BinaryPrimitives.WriteUInt16BigEndian(bytes.AsSpan(math + 14), minimum);
+            foreach (int glyph in new[] { 9, 10, 127, 128 })
+            {
+                bool variant = glyph >= 127;
+                BinaryPrimitives.WriteInt16BigEndian(bytes.AsSpan(glyf + glyph * 10 + 4), (short)(variant ? -750 : -250));
+                BinaryPrimitives.WriteInt16BigEndian(bytes.AsSpan(glyf + glyph * 10 + 8), (short)(variant ? 1250 : 750));
+            }
+            var font = OpenTypeFont.Load(bytes);
+            var resource = new PdfFontResource("Subformula", PdfEmbeddedFont.CreateForGlyphMappings(font,
+                new[] { ((ushort)9, 40), ((ushort)10, 41), ((ushort)128, 40), ((ushort)127, 41) }
+                    .Concat("sinBC".Select(c => (font.MapCodePoint(c), (int)c))), CancellationToken.None));
+            foreach (bool fixedSize in new[] { false, true })
+            foreach (double childSize in new[] { 12d, 20d })
+            {
+                var child = Run("B") with { Text = Run("B").Text with { FontSize = childSize } };
+                var delimiter = new DocxMathDelimiter([new([child])]) { GrowValue = !fixedSize };
+                var function = Function(new([Run("sin")]), new([delimiter]));
+                var equation = Equation(function);
+                bool inner = minimum == 1500 && !fixedSize && childSize == 20d;
+                TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var box, out var reason,
+                    resolveControlFont: _ => resource, resolveControlMetrics: _ => font), reason ?? "Expected bounded function delimiter.");
+                var measured = TestAssert.NotNull(box); double nameAdvance = measured.Glyphs.Take(3).Sum(g => g.Advance);
+                TestAssert.True(Math.Abs(measured.Glyphs[3].X - nameAdvance - (inner ? 2d : 0d)) < 1e-9,
+                    "Only a painted mark meeting its own font's positive subformula threshold consumes application glue; fixed marks and unknown thresholds retain opening semantics.");
+                var row = equation with { Content = new([Run("B"), delimiter, Run("C")]) };
+                TestAssert.True(DocxMathLayout.TryMeasure(row, _ => resource, CancellationToken.None, out var mixed, out reason), reason ?? "Expected ordinary subformula boundaries.");
+                var sequence = TestAssert.NotNull(mixed);
+                TestAssert.True(Math.Abs(sequence.Glyphs[1].X - sequence.Glyphs[0].Advance - (inner ? 2d : 0d)) < 1e-9 &&
+                    Math.Abs(sequence.Glyphs[^1].X - sequence.Glyphs[^2].X - sequence.Glyphs[^2].Advance - (inner ? 2d : 0d)) < 1e-9,
+                    "The same inner edge supplies incoming and outgoing ordinary spacing, rather than a function-only correction.");
+            }
+        }
+        TestAssert.Equal(4, DocxMathRowLayout.Glue(DocxMathRowLayout.AtomKind.Binary, DocxMathRowLayout.AtomKind.Inner));
+        TestAssert.Equal(5, DocxMathRowLayout.Glue(DocxMathRowLayout.AtomKind.Inner, DocxMathRowLayout.AtomKind.Relation));
+    }
+
     public static void MathFontMixedFunctionRowsShareParentFrameAndSemanticEdgesWithoutPartialPaint()
     {
         var font = OpenTypeFont.Load(MathFontBytes()); var resource = Resource("Rows", font, "BcustomCsin=Z");
