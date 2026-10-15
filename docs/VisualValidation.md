@@ -3563,3 +3563,18 @@ stay needs-review with all thresholds unchanged.493 cases/11 families validate.
 Safe managed0.1.5/release deferral and bounds/work/publication remain. Prior
 3f2acc44 CI passes2696 Windows/417 Ubuntu methods plus source Release/package/
 tools; rendering continues during the accepted push's CI.
+
+
+The PDF inspector decodes sequential `ToUnicode` ranges containing UTF-16
+surrogate pairs as distinct characters. A retained Word matrix exposed the former
+decoder repeating the first mathematical letter for a/b/c/d; the correction
+increments the target before decoding the complete UTF-16 string. Three focused
+CMap regressions cover astral ranges, BMP ranges, multi-character strings and
+explicit arrays. `OOXPDF_TEST_PDF_INSPECTOR` optionally pins a frozen inspector
+assembly for those tests; ordinary test runs retain the shared tool-build path.
+
+Six retained Word matrix PDFs verify corrected text while PDF bytes, all text
+coordinates/spacing, fonts and graphics remain exact. Earlier inspection reports
+may repeat the initial character of a sequential astral range. Re-inspect an
+affected retained PDF when its decoded text is needed; existing raster, glyph-
+outline and coordinate evidence does not require a broad corpus replay.
