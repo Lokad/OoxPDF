@@ -92,7 +92,13 @@ boxes, static height/body-frame ownership and footer block translation. Eight
 Word controls improve with 28/28 matching outlines and residuals within 0.155 pt X /
 0.430 pt Y. Complete and partial equation warnings retain the source part; repeated
 story references share original identity. Mixed-inline/multiple/table/rich static
-owners and wider scaled/overflow story layout remain staged.
+owners and richer scaled/overflow story layout remain staged.
+Complete natural text/math static stories share source-scale layout and one print
+mapping under markup. Footer prose remains visible, while header overflow moves
+body text once. Six scaled Word controls improve and eight unscaled/flow controls
+stay byte-identical; prose/math residuals are below 0.23/0.20 pt. Declared, field,
+image/table/rich, unresolved and table-first/multicolumn owners retain existing paths.
+
 
 
 Mathematical runs select the minus glyph for an authored ASCII hyphen across

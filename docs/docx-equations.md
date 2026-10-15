@@ -1012,3 +1012,20 @@ is within 0.19 pt and footer prose within 0.11 pt vertically. Forty affected
 methods, 33 exact neighboring PDFs (including SVG headers/footers and mixed-source
 fallback) and four exact integration PDFs qualify one Release artifact. Three
 public cases retain unchanged visual thresholds and explicit remaining gates.
+
+Complete natural static stories now reuse the existing layout at source scale,
+then map the whole text/math block through one print coordinate transform. The
+same source frame owns header/body reservation and footer bottom anchoring. Body
+placement restores a header displacement before selecting its print origin, so
+that displacement is applied once. This shared rule fixes scaled plain footers
+as well as mathematical ones; it adds no font/size-specific correction.
+
+Fourteen Word controls qualify six improvements and eight byte-identical guards,
+with 64/64 matching math outlines. Footer prose moves from below the page to
+138.571 pt versus Word's 138.79 pt. Scaled math residuals fall below 0.20 pt and
+header/body text below 0.075 pt. Forty-eight capability checks, 23 exact neighbor
+PDFs and four transfer PDFs qualify one Release artifact. Unscaled static stories,
+actual 120 pt controls and scaled SVG fallbacks preserve PDF identities. Declared,
+field/image/table/rich stories, incomplete metrics/math and table-first or multiple
+column body ownership retain existing paths. Visual thresholds remain unchanged;
+remaining comment typography and paint differences stay explicit.
