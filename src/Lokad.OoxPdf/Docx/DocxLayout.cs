@@ -1833,7 +1833,8 @@ internal sealed partial class DocxLayoutEngine
                     SourceBlockIndex: elementIndex,
                     SourceParagraphIndex: 0, Story: null));
                 activeColumnHasContent = true;
-                cursorY -= imageHeight + InlineImageParagraphGapPoints;
+                // Paragraph spacing owns the gap after an inline picture line.
+                cursorY -= imageHeight;
             }
 
             foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)

@@ -606,7 +606,7 @@ internal sealed partial class DocxLayoutEngine
         {
             double imageWidth = Math.Min(availableWidth, image.WidthPoints);
             double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
-            height += imageHeight + InlineImageParagraphGapPoints;
+            height += imageHeight;
         }
 
         foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
