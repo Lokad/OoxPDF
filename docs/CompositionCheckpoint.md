@@ -741,3 +741,16 @@ comparisons. The portfolio has no authored inline tabs, so its complete previous
 qualification is retained; letter and held-out memo review smokes retain bytes.
 Seventeen assets/four integration PDFs transfer without a root rebuild or suite
 replay. Evidence: `artifacts/composition-c1/math-left-tabs-evidence.json`.
+
+
+A follow-up footprint check found 6.089GB, principally historical runtime
+archives. Their obsolete compiled blobs and 86 Git-export duplicates were
+retired after every exported file was checked against reachable Git history
+(recording checkout CRLF normalization for text). Four exports lacking reachable
+commits were retained. Compact archives retain original path maps and explicit
+retirement metadata; all remaining blobs were SHA-verified. Current/rollback
+runtimes, source inputs, PDF/raster evidence, uncommitted patches and Git refs
+remain. No previously rejected retirement target was retried. The workspace is
+4.606GB / 257,880 files with no scan errors; proof and compaction maps are under
+`artifacts/workspace-maintenance/`, and the complete check is
+`artifacts/workspace-footprint-after-archive-compaction.json`.
