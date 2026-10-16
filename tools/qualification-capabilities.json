@@ -1498,5 +1498,24 @@
     "EffectShadowsRespectRetainedImageBudget",
     "EffectShadowBudgetFailureKeepsStreamEmpty",
     "EffectGlowsRespectRetainedImageBudget"
+  ],
+  "docx-numbered-display-rows": [
+    "DocxInlineCompositionNumberedDisplay",
+    "DocxInlineCompositionListLabelOwnsOnlyTheFirstAuthoredMathRow",
+    "PortableRenderingNumberedExplicitMath",
+    "DocxInlineCompositionNumberedMathPreservesFourStoryContent",
+    "PortableRenderingNumberedMathPreservesFourStoryContent",
+    "DocxInlineCompositionMixedDisplaySourceRolesFollowAuthoredRows",
+    "DocxInlineCompositionMixedDisplayRowsMatchIndependentWord",
+    "DocxInlineCompositionMixedDisplayRowsRetainSourceAndResolvedInlineStyle",
+    "PortableRenderingMixedDisplaySourceRowsPreserveInlineGeometry",
+    "DocxInlineCompositionExplicitDisplaysRetainSourceRowsAndFallbacks",
+    "DocxInlineCompositionExplicitDisplaysMatchWordAndSourceTransforms",
+    "DocxInlineCompositionExplicitDisplayLinksRetainSourceAndResolvedStyleOwnership",
+    "DocxInlineCompositionAuthoredDisplayAlignmentOwnsMathRowsAndKeepsFallbacks",
+    "DocxInlineCompositionMathOnlyGroupsCenterAcrossParagraphAlignment",
+    "PortableRenderingMathOnlyGroupsPreserveDisplayMeasurementAndAlignment",
+    "PortableRenderingHardBreakMathRowsPreserveDisplayFramesAcrossStories",
+    "DocxInlineCompositionMeasurementKeepsMultipleEquationsAndPicturesInSourceOrder"
   ]
 }

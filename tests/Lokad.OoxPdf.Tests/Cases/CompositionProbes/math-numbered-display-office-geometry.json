@@ -1,0 +1,1469 @@
+{
+  "Source": "Independent Word 16: first authored numbered row remains inline; a later math-only row after a hard break owns display style/alignment. Unreferenced header-part diagnostics are retained separately.",
+  "Rows": [
+    {
+      "Id": "math-numbered-display-body",
+      "Mode": "final-preserve",
+      "InputSha256": "396DF62C526FF77B985D2A3E91A31AC3CA674DB590636327C1DAB8D753A7E183",
+      "PdfSha256": "3E9F1FEE59672B6E35FBB5E55519965C5E4E73641A0BF394612FD34DC993F02D",
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 701.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 675.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 649.66,
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "math-numbered-display-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "396DF62C526FF77B985D2A3E91A31AC3CA674DB590636327C1DAB8D753A7E183",
+      "PdfSha256": "DEECDD9D360F2BAF2D5C4E385B5F09ACFD104BE059A2ED954DE218AC5A821620",
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 701.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 675.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 649.66,
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "math-numbered-display-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "BF6C08DB053F1A468F51500F5EFFB7975BC9CF0015A42D6DDCEE7864B36B43D5",
+      "PdfSha256": "8F0BF6E3EBEC7E90090CEC1C62180FD0314C42BD16E70901E5C466D94A2FA414",
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 701.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 675.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 649.66,
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "math-numbered-display-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "BF6C08DB053F1A468F51500F5EFFB7975BC9CF0015A42D6DDCEE7864B36B43D5",
+      "PdfSha256": "779A7573754852F0F018177005859C8D0325EF5111F61C1630FFD4D0AC428A91",
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 701.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 675.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 649.66,
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "math-numbered-display-header",
+      "Mode": "final-preserve",
+      "InputSha256": "F3E14A9D03CB6DF8F9D9889C851CF3E1F02A03716721623FCD8FA878790744B8",
+      "PdfSha256": "20DCEE78DAA3D158619D13ECE7FA114B91B701A1E2AB8E95C97FD85C4FD1FA31",
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 749.4,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 749.4,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 749.4,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 737.4,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 716.76,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 716.76,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 716.76,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 716.76,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 716.76,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 723.24,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 723.24,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 723.24,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 711.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 685.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 685.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 685.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 685.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 685.66,
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "math-numbered-display-header",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F3E14A9D03CB6DF8F9D9889C851CF3E1F02A03716721623FCD8FA878790744B8",
+      "PdfSha256": "CFC901359216E10D79079519172BA7E3DD36C63D7DE9402690A5C2C167184C97",
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 749.4,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 749.4,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 749.4,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 737.4,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 716.76,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 716.76,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 716.76,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 716.76,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 716.76,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 723.24,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 723.24,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 723.24,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 711.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 685.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 685.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 685.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 685.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 685.66,
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "math-numbered-display-footer",
+      "Mode": "final-preserve",
+      "InputSha256": "A355BF23D39DD8E6F59428ADEC85A1CF401DD69580BED41743F2BDEEDAE57040",
+      "PdfSha256": "26F2217D70948EFF6F725DEFBB97EB8AD489E97820E0FDD9F3753095DD70A694",
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 108.62,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 108.62,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 108.62,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 96.624,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 75.984,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 75.984,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 75.984,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 75.984,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 75.984,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 82.464,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 82.464,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 82.464,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 70.464,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 44.904,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 44.904,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 44.904,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 44.904,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 44.904,
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "math-numbered-display-footer",
+      "Mode": "all-word-compatible",
+      "InputSha256": "A355BF23D39DD8E6F59428ADEC85A1CF401DD69580BED41743F2BDEEDAE57040",
+      "PdfSha256": "DEDB9B09A64427CA5CFA7F28D9EF3B3CA862DA2CF0B5209609467FEA03B31CC7",
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 108.62,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 108.62,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 108.62,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 96.624,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 75.984,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 75.984,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 75.984,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 75.984,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 75.984,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 82.464,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 82.464,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 82.464,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 70.464,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 44.904,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 44.904,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 44.904,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 44.904,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 44.904,
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "math-numbered-display-math-only",
+      "Mode": "final-preserve",
+      "InputSha256": "4496B7EF4D400C36A8A24CAF68D220D6153721EB8CA43DAC883CD0CF8C27CAD8",
+      "PdfSha256": "258281FC1ADE3C013B039D8A5029AC9696B8DE67D3D83AF3F2600D65F23F495C",
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 90.024,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 94.944,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 100.82,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 95.064,
+          "Y": 701.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 675.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 649.66,
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "math-numbered-display-math-only",
+      "Mode": "all-word-compatible",
+      "InputSha256": "4496B7EF4D400C36A8A24CAF68D220D6153721EB8CA43DAC883CD0CF8C27CAD8",
+      "PdfSha256": "057044025D1B620BA9487F919AFDB07986C87E29D824968C4103668758AC1839",
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 90.024,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 94.944,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 100.82,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 95.064,
+          "Y": 701.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 675.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 649.66,
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "math-numbered-display-math-break",
+      "Mode": "final-preserve",
+      "InputSha256": "3914C272B59B51E3F36585C740BE17F98C701290FE5B5CB61FAEBCDDE15C9317",
+      "PdfSha256": "E255F0E99D20143A7AFABE038C9C1B89AAC393578868D461952EAE9842F0D122",
+      "MathText": "x+2yx+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 90.024,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 94.944,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 100.82,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 95.064,
+          "Y": 701.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "x",
+          "X": 302.33,
+          "Y": 690.82,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 310.97,
+          "Y": 690.82,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "2",
+          "X": 321.67,
+          "Y": 690.82,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "y",
+          "X": 311.81,
+          "Y": 674.98,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 653.62,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 653.62,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 653.62,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 653.62,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 653.62,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 660.1,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 660.1,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 660.1,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 648.1,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 622.54,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 622.54,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 622.54,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 622.54,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 622.54,
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "math-numbered-display-math-break",
+      "Mode": "all-word-compatible",
+      "InputSha256": "3914C272B59B51E3F36585C740BE17F98C701290FE5B5CB61FAEBCDDE15C9317",
+      "PdfSha256": "6BEC024CC44F61336C671D2E2CDE28EFBE9134342985F1F5BBCBEAD1CD579034",
+      "MathText": "x+2yx+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 90.024,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 94.944,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 100.82,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 95.064,
+          "Y": 701.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "x",
+          "X": 302.33,
+          "Y": 690.82,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 310.97,
+          "Y": 690.82,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "2",
+          "X": 321.67,
+          "Y": 690.82,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "y",
+          "X": 311.81,
+          "Y": 674.98,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 653.62,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 653.62,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 653.62,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 653.62,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 653.62,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 660.1,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 660.1,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 660.1,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 648.1,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 622.54,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 622.54,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 622.54,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 622.54,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 622.54,
+          "FontSize": 11.04
+        }
+      ]
+    }
+  ]
+}

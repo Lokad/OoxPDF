@@ -145,12 +145,15 @@ internal static class DocxMathParagraphPolicy
         CancellationToken token, bool withInlineOwner)
     {
         var display = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
-        if (!HasSupportedSourceOwner(paragraph, hasPageInputs: true) || paragraph.ListLabel is not null ||
+        if (!HasSupportedSourceOwner(paragraph, hasPageInputs: true) ||
             paragraph.InlineContent is not { } items || !TryGetDisplayLineSpacingFactor(paragraph, out _))
             return display;
         var row = new List<DocxEquation>();
-        bool hasOtherContent = false;
-        bool hasInlineOwner = false;
+        // A list label is visible content on the first authored row. A hard
+        // break ends that ownership just like prose; later math-only rows may
+        // own their display frame independently.
+        bool hasInlineOwner = paragraph.ListLabel is not null;
+        bool hasOtherContent = hasInlineOwner;
         foreach (var item in items)
         {
             token.ThrowIfCancellationRequested();

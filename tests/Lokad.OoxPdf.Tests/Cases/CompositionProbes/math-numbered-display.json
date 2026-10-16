@@ -1,0 +1,68 @@
+[
+  {
+    "Id": "math-numbered-display-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-numbered-display-body.docx",
+    "Sha256": "396DF62C526FF77B985D2A3E91A31AC3CA674DB590636327C1DAB8D753A7E183",
+    "SourceSha256": "581B00B5BC1394318C6FD47F8B3A6627F0FF5F04556DCD269B045166073659D1",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-numbered-display-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-numbered-display-cell.docx",
+    "Sha256": "BF6C08DB053F1A468F51500F5EFFB7975BC9CF0015A42D6DDCEE7864B36B43D5",
+    "SourceSha256": "8BFBC2CDA46A24B122E5A968F11C18C9DE2F76534A63828DAD74C8D04DCF2B62",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-numbered-display-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-numbered-display-header.docx",
+    "Sha256": "F3E14A9D03CB6DF8F9D9889C851CF3E1F02A03716721623FCD8FA878790744B8",
+    "SourceSha256": "ED8CC6857738BD094ADA85F76F59491F11B28FDEF9F294AC126A477A883AEB49",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-numbered-display-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-numbered-display-footer.docx",
+    "Sha256": "A355BF23D39DD8E6F59428ADEC85A1CF401DD69580BED41743F2BDEEDAE57040",
+    "SourceSha256": "F6155C2472D943803B281E14AF89E52E0DF988439393734C358A85F9848BE4EA",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-numbered-display-math-only",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-numbered-display-math-only.docx",
+    "Sha256": "4496B7EF4D400C36A8A24CAF68D220D6153721EB8CA43DAC883CD0CF8C27CAD8",
+    "SourceSha256": "396DF62C526FF77B985D2A3E91A31AC3CA674DB590636327C1DAB8D753A7E183",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-numbered-display-math-break",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-numbered-display-math-break.docx",
+    "Sha256": "3914C272B59B51E3F36585C740BE17F98C701290FE5B5CB61FAEBCDDE15C9317",
+    "SourceSha256": "396DF62C526FF77B985D2A3E91A31AC3CA674DB590636327C1DAB8D753A7E183",
+    "ExpectedEquationCount": 5,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]

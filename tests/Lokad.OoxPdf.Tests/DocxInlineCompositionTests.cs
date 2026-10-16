@@ -9,7 +9,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxInlineCompositionTests
+internal static partial class DocxInlineCompositionTests
 {
     public static void DocxInlineCompositionOrderedPictureTranslationKeepsClipsAndFallbacks()
     {

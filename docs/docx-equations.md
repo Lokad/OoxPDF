@@ -1,5 +1,13 @@
 # Native DOCX equations
 
+Numbered paragraphs retain supported explicit math zones alongside prose and
+inline pictures. The list label owns only the first authored row: its formulas
+use inline sizing, while a later math-only row after a hard break owns display
+sizing and alignment. Source math flags, bookmarks and unchanged-format run
+splitting retain their identities across body/cell/header/footer placement.
+Independent controls retain sub-point geometry residuals and failed visual gates;
+unreferenced header-part diagnostics remain separate from printed content.
+
 Standalone display equations also paint in body-table rows with resolved
 automatic, exact or minimum heights. Cell
 measurement, line placement, clipping and keep estimation reuse the prepared
