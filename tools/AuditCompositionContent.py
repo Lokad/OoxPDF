@@ -126,19 +126,40 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("artifact", "candidate", "references", "inspector", "cache", "output"):
         parser.add_argument("--" + name, required=True, type=Path)
+    parser.add_argument("--manifest", default="tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json",
+                        help="Public fixture manifest relative to the input root")
+    parser.add_argument("--input-root", type=Path,
+                        help="Optional clean tracked public inputs; reuse the frozen runtime without rebuilding")
     args = parser.parse_args()
     artifact, candidate, references = args.artifact.resolve(), args.candidate.resolve(), args.references.resolve()
     inspector = args.inspector.resolve()
     pin = read(artifact / "identity.json")
     library = artifact / "src/Lokad.OoxPdf/bin/Release/net10.0/Lokad.OoxPdf.dll"
-    manifest_name = "tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json"
-    manifest = artifact / manifest_name
+    inputs = args.input_root.resolve() if args.input_root else artifact
+    public_cases = (inputs / "tests/Lokad.OoxPdf.Tests/Cases").resolve()
+    manifest_name = Path(args.manifest).as_posix()
+    if Path(manifest_name).is_absolute() or ".." in Path(manifest_name).parts:
+        raise ValueError("Manifest must be relative to the public input root")
+    manifest = inputs / manifest_name
+    if not manifest.resolve().is_relative_to(public_cases):
+        raise ValueError("Only public fixture manifests are supported")
+    input_revision = None
+    def check_tracked_input(path):
+        relative = path.relative_to(inputs).as_posix()
+        git = ["git", "--literal-pathspecs", "-C", str(inputs)]
+        subprocess.run(git + ["ls-files", "--error-unmatch", "--", relative],
+                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if subprocess.check_output(git + ["status", "--porcelain", "--untracked-files=all", "--", relative]):
+            raise ValueError("Supplemental public inputs must be committed: " + relative)
+    if args.input_root:
+        check_tracked_input(manifest)
+        input_revision = subprocess.check_output(["git", "-C", str(inputs), "rev-parse", "HEAD"], text=True).strip()
     outcomes = read(candidate / "outcomes.json")
     comparisons = read(candidate / "office-comparisons.json")
     if sha(library) != pin["LibrarySha256"] or outcomes["LibrarySha256"] != pin["LibrarySha256"]:
         raise ValueError("Candidate/frozen library identity differs")
-    if sha(manifest) != pin["Inputs"][manifest_name] or outcomes["ManifestSha256"] != sha(manifest):
-        raise ValueError("Frozen portfolio manifest identity differs")
+    if (not args.input_root and sha(manifest) != pin["Inputs"][manifest_name]) or outcomes["ManifestSha256"] != sha(manifest):
+        raise ValueError("Pinned public manifest identity differs")
     inspector_hash = sha(inspector)
     if outcomes["InspectorSha256"] != inspector_hash:
         raise ValueError("Use the same qualified PDF inspector")
@@ -155,10 +176,12 @@ def main():
     for outcome in outcomes["Rows"]:
         identifier, mode = outcome["Id"], outcome["Mode"]
         case, comparison = cases[identifier], compared[identifier, mode]
-        source = artifact / case["Input"]
-        if not source.resolve().is_relative_to(artifact / "tests/Lokad.OoxPdf.Tests/Cases"):
-            raise ValueError("Only frozen public fixture inputs are supported")
-        if sha(source) != case["Sha256"] or outcome["InputSha256"] != case["Sha256"] or pin["Inputs"][case["Input"]] != case["Sha256"]:
+        source = inputs / case["Input"]
+        if not source.resolve().is_relative_to(public_cases):
+            raise ValueError("Only public fixture inputs are supported")
+        if args.input_root:
+            check_tracked_input(source)
+        if sha(source) != case["Sha256"] or outcome["InputSha256"] != case["Sha256"] or (not args.input_root and pin["Inputs"][case["Input"]] != case["Sha256"]):
             raise ValueError("Public source identity differs")
         folder = identifier + "-" + mode
         run = candidate / folder
@@ -200,6 +223,7 @@ def main():
     report = {"Scope": "Public portfolio prose-token and simple-math presence screen; not reading order, ink, images, clipping or geometry proof",
               "FrozenRevision": pin["Revision"], "LibrarySha256": pin["LibrarySha256"], "InspectorSha256": inspector_hash,
               "ManifestSha256": sha(manifest), "Conversions": 0, "LibraryBuilds": 0,
+              "InputRoot": str(inputs), "InputRevision": input_revision,
               "Rows": rows}
     if args.output.exists():
         raise ValueError("Preserve immutable reports; select a fresh output file")

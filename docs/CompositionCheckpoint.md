@@ -828,3 +828,16 @@ is performed. Portfolio paragraphs do not combine equations and footnote
 references, and their tables/static stories/comments already exclude plain-text
 corrections; prior complete qualification remains. Evidence:
 `artifacts/composition-c1/math-footnotes-evidence.json`.
+
+C2 adds a separately pinned, held-out composed annotation report. The existing
+qualified library preserves all prose and equations in both DOCX presets, but
+moves a complete review section to page 2 where Word retains it on page 1.
+The checkpoint remains open. Independent small note-admission controls must
+reproduce the cause before changing layout; the acceptance report stays outside
+derivation. Reuse committed supplemental manifests with
+`AuditCompositionContent.py --input-root . --manifest <public-manifest>` and the
+existing frozen runtime. Input Git identity, source/PDF hashes and public-only
+boundaries remain checked. Legacy ten-outcome compatibility and three negative
+input controls pass without new conversions or library builds. Evidence is in
+`artifacts/composition-c1/supplemental-audit-tool-evidence.json` and
+`composed-report-content-audit.json`. CI through `be411f37` is green on both OSes.
