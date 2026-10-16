@@ -1,5 +1,23 @@
 # Composed-document reliability checkpoint
 
+C64 skips the font-resource/layout retry when complete measured footnote owners
+already have the requested labels. On a public one-page control, three warm
+calling-thread allocation samples fall from a 19.54 MB median to 10.46 MB, saving
+9.08 MB (46%). Its PDF stays byte-identical to both C62 and C63. The two-page
+correction still retries and retains C63 PDF bytes; allocation changes by 72 bytes.
+Stage measurements overlap and timings are noisy, so no timing speedup is claimed.
+
+The expanded numbering capability covers 57 Windows methods and 55 Ubuntu passes
+with two native-font skips. After C63 CI exposed a stale mixed-threshold assertion,
+only eight newly selected mixed/spacing neighbors run on the corrected harness;
+49 unchanged results are reused with source/library identity proof. One new check
+fails on the parent. The tracked generator reproduces the no-op fixture exactly.
+Four typography PDFs retain their independent Office comparisons, including all
+four failed visual gates and approximation warnings. Seventeen frozen assets and
+four integration PDFs transfer without root rebuild or corpus replay. Evidence:
+`artifacts/composition-c1/footnote-noop-evidence.json` and
+`artifacts/composition-c1/footnote-noop-transfer/evidence.json`.
+
 C63 fixes default each-page footnote numbering through complete measured owners.
 The old default path retained document labels 105–108 while Word and the review
 path printed section labels 09/10 on each page. The existing source-marker/actual-
