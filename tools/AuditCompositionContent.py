@@ -41,6 +41,63 @@ def deficits(expected, actual):
     return dict(sorted((expected - actual).items()))
 
 
+def unresolved_fields(root):
+    """Recognize stored text results, without evaluating fields or page values."""
+    def cached_instruction(value):
+        opcode = re.match(r"\s*([A-Za-z]+)", value)
+        return bool(value.strip()) and (not opcode or opcode[1].upper() not in {"PAGE", "NUMPAGES"})
+
+    def paragraph_items(paragraph):
+        pending = list(reversed(list(paragraph)))
+        while pending:
+            item = pending.pop()
+            if item.tag == W + "p":
+                continue  # A nested paragraph owns an independent field stack.
+            yield item
+            pending.extend(reversed(list(item)))
+
+    unresolved = set()
+    for field in root.iter(W + "fldSimple"):
+        if not cached_instruction(field.get(W + "instr", "")) or not any(item.text for item in field.iter(W + "t")):
+            unresolved.add("fldSimple")
+    visited = set()
+    for paragraph in root.iter(W + "p"):
+        stack = []
+        for item in paragraph_items(paragraph):
+            if item.tag not in {W + "fldChar", W + "instrText", W + "t"}:
+                continue
+            visited.add(item)
+            if item.tag == W + "fldChar":
+                kind = item.get(W + "fldCharType")
+                if kind == "begin":
+                    stack.append({"instruction": "", "separate": False, "text": False})
+                elif kind == "separate" and stack and not stack[-1]["separate"]:
+                    stack[-1]["separate"] = True
+                elif kind == "end" and stack:
+                    field = stack.pop()
+                    if not field["separate"] or not field["text"] or not cached_instruction(field["instruction"]):
+                        unresolved.add("fldChar")
+                else:
+                    unresolved.add("fldChar")
+            elif item.tag == W + "instrText":
+                if not stack or stack[-1]["separate"]:
+                    unresolved.add("instrText")
+                else:
+                    stack[-1]["instruction"] += item.text or ""
+            elif stack and item.text:
+                for field in stack:
+                    if field["separate"]:
+                        field["text"] = True
+                    else:
+                        unresolved.add("fldChar")
+        if stack:
+            unresolved.add("fldChar")
+    for item in root.iter():
+        if item.tag in {W + "fldChar", W + "instrText"} and item not in visited:
+            unresolved.add(item.tag.removeprefix(W))
+    return sorted(unresolved)
+
+
 def source_content(path, mode, pages):
     prose, math = Counter(), Counter()
     parts, unresolved = [], []
@@ -81,9 +138,10 @@ def source_content(path, mode, pages):
                 selected.extend(item for item in root.findall(W + kind) if item.get(W + "id") in ids)
                 root = selected
             # This bounded audit does not reimplement OOXML display eligibility.
-            for feature in ("del", "ins", "moveFrom", "moveTo", "vanish", "fldSimple", "fldChar"):
+            for feature in ("del", "ins", "moveFrom", "moveTo", "vanish"):
                 if root.find(".//" + W + feature) is not None:
                     unresolved.append({"Part": name, "Feature": feature})
+            unresolved.extend({"Part": name, "Feature": feature} for feature in unresolved_fields(root))
             counts = words(" ".join(item.text or "" for item in root.iter(tag)))
             prose.update({token: count * weight for token, count in counts.items()})
             for equation in root.iter(M + "oMath"):
@@ -221,6 +279,7 @@ def main():
     if sha(library) != pin["LibrarySha256"] or sha(inspector) != inspector_hash:
         raise ValueError("Audit runtime changed")
     report = {"Scope": "Public portfolio prose-token and simple-math presence screen; not reading order, ink, images, clipping or geometry proof",
+              "ToolSha256": sha(Path(__file__)),
               "FrozenRevision": pin["Revision"], "LibrarySha256": pin["LibrarySha256"], "InspectorSha256": inspector_hash,
               "ManifestSha256": sha(manifest), "Conversions": 0, "LibraryBuilds": 0,
               "InputRoot": str(inputs), "InputRevision": input_revision,
