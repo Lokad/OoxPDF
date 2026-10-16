@@ -16,7 +16,7 @@ internal static class DocxMathParagraphPolicy
             else if (element is DocxTableElement table)
             {
                 foreach (DocxParagraph source in EnumerateSupportedTableParagraphs(table.Table, token))
-                    if (GetPreparationEquations(source, UsesOnlyPageNumberCounters(source)).Count != 0) { yield return source; }
+                    if (GetPreparationEquations(source, UsesOnlyPageNumberCounters(source), token).Count != 0) { yield return source; }
             }
         }
     }
@@ -78,7 +78,7 @@ internal static class DocxMathParagraphPolicy
                 {
                     token.ThrowIfCancellationRequested();
                     bool hasPageInputs = pageOwners.Contains(paragraph);
-                    if (GetPreparationEquations(paragraph, hasPageInputs).Count != 0 && seen.Add(paragraph))
+                    if (GetPreparationEquations(paragraph, hasPageInputs, token).Count != 0 && seen.Add(paragraph))
                         yield return (paragraph, hasPageInputs);
                 }
             }
@@ -195,15 +195,28 @@ internal static class DocxMathParagraphPolicy
         paragraph.Runs.All(run => run.FieldKind != DocxFieldKind.NumPages) &&
         paragraph.FieldReferences.All(field => field.Kind != DocxFieldKind.NumPages);
 
-    public static IReadOnlyList<DocxEquation> GetPreparationEquations(DocxParagraph paragraph, bool hasPageInputs = false)
+    public static IReadOnlyList<DocxEquation> GetPreparationEquations(DocxParagraph paragraph, bool hasPageInputs = false) =>
+        GetPreparationEquations(paragraph, hasPageInputs, default);
+
+    public static IReadOnlyList<DocxEquation> GetPreparationEquations(DocxParagraph paragraph, bool hasPageInputs, CancellationToken token)
     {
         if (GetStandaloneRow(paragraph) is { } standalone) return [standalone];
         if (GetInlineRow(paragraph) is { } inline) return [inline];
-        return NeedsOrderedInlineLayout(paragraph) && HasSupportedSourceOwner(paragraph, hasPageInputs) && paragraph.InlineContent is not null &&
-            paragraph.Equations.All(equation => !equation.Display) &&
-            HasSupportedOrderedAlignment(paragraph) &&
-            paragraph.Spacing.LineRuleValue is null or "auto" && paragraph.LineSpacingPoints is null
-            ? paragraph.Equations : [];
+        if (!NeedsOrderedInlineLayout(paragraph) || !HasSupportedSourceOwner(paragraph, hasPageInputs) ||
+            paragraph.InlineContent is null || !HasSupportedOrderedAlignment(paragraph) ||
+            paragraph.Spacing.LineRuleValue is not (null or "auto") || paragraph.LineSpacingPoints is not null) return [];
+        // Explicit display containers share the existing source-row ownership
+        // contract. A display formula mixed into visible prose still falls back;
+        // centered math-only rows keep display measurement and ordered placement.
+        var displayRows = paragraph.Equations.Any(equation => equation.Display)
+            ? GetDisplaySourceEquations(paragraph, token) : null;
+        foreach (var equation in paragraph.Equations)
+        {
+            token.ThrowIfCancellationRequested();
+            if (equation.Display && (equation.AlignmentValue is not (null or "center" or "centerGroup") ||
+                displayRows is null || !displayRows.Contains(equation))) return [];
+        }
+        return paragraph.Equations;
     }
 
     private static bool HasSupportedOwner(DocxParagraph paragraph) =>

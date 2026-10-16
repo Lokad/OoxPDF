@@ -1250,5 +1250,20 @@
     "PortableRenderingSingleMathAnnotationsPreserveFrames",
     "PortableRenderingNormalNotesPreserveInlineImagesAndMath",
     "DocxInlineCompositionNormalNoteMathSurvivesRunSplittingAndContinuation"
+  ],
+  "docx-explicit-display-groups": [
+    "DocxInlineCompositionExplicitDisplays",
+    "DocxInlineCompositionMathOnlyGroupsCenterAcrossParagraphAlignment",
+    "DocxInlineCompositionCommentedSoleFormulaRetainsDisplayOwnership",
+    "DocxInlineCompositionAuthoredWhitespaceFramesMatchIndependentWord",
+    "DocxInlineCompositionSourceCursorRetainsBreakTabsAndFirstLineLabel",
+    "DocxInlineCompositionAtomicPlacementRetainsSourceBoundAndOverwidthFallbacks",
+    "DocxNativeMathUsesItsOccupiedBodyFrameBeforeFollowingProseTurnsPage",
+    "DocxNativeMathMissingFontsAndUnqualifiedFormattingRetainIgnoredDiagnostics",
+    "DocxNativeDisplayFraction",
+    "DocxTableMathStandaloneMatchesIndependentCellBaselineTransitions",
+    "DocxNativeStaticMathRetainsStoryFlow",
+    "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance",
+    "PortableRenderingSingleMathAnnotationsPreserveFrames"
   ]
 }

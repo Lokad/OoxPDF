@@ -1,0 +1,26 @@
+[
+  {
+    "Id": "math-explicit-display-same-group",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-explicit-display-same-group.docx",
+    "Sha256": "D4B2C8C1365A081E098C9DD472DB61CFB4270A2B258A9AF1C1E61477DEE0042B",
+    "SourceSha256": "FBE2C3D11FFAFD6BE8EE9CBE4A7A4CDA26BA0E938B6FA6C2B7AD5214E36873CD",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Before formula:",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-explicit-display-separate-groups",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-explicit-display-separate-groups.docx",
+    "Sha256": "0829414C55F28F834B5DEACECAD3A01E5167716E7F16B3A6D2E6A805F2B55731",
+    "SourceSha256": "FBE2C3D11FFAFD6BE8EE9CBE4A7A4CDA26BA0E938B6FA6C2B7AD5214E36873CD",
+    "HeldOut": true,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Before formula:",
+      "Following prose."
+    ]
+  }
+]

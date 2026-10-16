@@ -217,7 +217,7 @@ internal sealed partial class DocxLayoutEngine
                 DocxFieldText.CanResolve(kind, pageNumber, pageCount));
         if (paragraph.InlineContent is not { } items || equations is null ||
             paragraph.Equations.Count == 0 ||
-            DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasActualFieldInputs).Count != paragraph.Equations.Count) return false;
+            DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasActualFieldInputs, token).Count != paragraph.Equations.Count) return false;
         bool hasTabs = items.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden);
         // Right/center tabs measure a complete following field. Decimal/bar
         // stops and leaders retain their explicit measurement/painting fallback.

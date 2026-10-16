@@ -1,0 +1,117 @@
+{
+  "Source": "Independent Word 16 PDF text operations; whole centered display groups. Existing visual thresholds retained.",
+  "Rows": [
+    {
+      "Id": "math-explicit-display-same-group",
+      "Mode": "final-preserve",
+      "InputSha256": "D4B2C8C1365A081E098C9DD472DB61CFB4270A2B258A9AF1C1E61477DEE0042B",
+      "ReferencePdfSha256": "A66CDC4762DE9FB3BB475C518C6E3A822EC64ABF40C3944C3A0937238F258657",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6",
+      "OriginX": 255.89,
+      "BaselineY": 693.94,
+      "Operators": [
+        {
+          "Text": "+",
+          "X": 266.09
+        },
+        {
+          "Text": "=",
+          "X": 288.77
+        },
+        {
+          "Text": "+",
+          "X": 316.97
+        },
+        {
+          "Text": "=",
+          "X": 337.75
+        }
+      ],
+      "FollowingBaselineY": 679.9
+    },
+    {
+      "Id": "math-explicit-display-same-group",
+      "Mode": "all-word-compatible",
+      "InputSha256": "D4B2C8C1365A081E098C9DD472DB61CFB4270A2B258A9AF1C1E61477DEE0042B",
+      "ReferencePdfSha256": "AE7E60AF8BB87EE402B7F3092665450E4078371B6578E45FD212AAF42384E520",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6",
+      "OriginX": 255.89,
+      "BaselineY": 693.94,
+      "Operators": [
+        {
+          "Text": "+",
+          "X": 266.09
+        },
+        {
+          "Text": "=",
+          "X": 288.77
+        },
+        {
+          "Text": "+",
+          "X": 316.97
+        },
+        {
+          "Text": "=",
+          "X": 337.75
+        }
+      ],
+      "FollowingBaselineY": 679.9
+    },
+    {
+      "Id": "math-explicit-display-separate-groups",
+      "Mode": "final-preserve",
+      "InputSha256": "0829414C55F28F834B5DEACECAD3A01E5167716E7F16B3A6D2E6A805F2B55731",
+      "ReferencePdfSha256": "B313DBC985E10101BB18B61CB5FA3AE0249A6428862E02B2C6A9CE7646AD9BAF",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6",
+      "OriginX": 255.89,
+      "BaselineY": 693.94,
+      "Operators": [
+        {
+          "Text": "+",
+          "X": 266.09
+        },
+        {
+          "Text": "=",
+          "X": 288.77
+        },
+        {
+          "Text": "+",
+          "X": 316.97
+        },
+        {
+          "Text": "=",
+          "X": 337.75
+        }
+      ],
+      "FollowingBaselineY": 679.9
+    },
+    {
+      "Id": "math-explicit-display-separate-groups",
+      "Mode": "all-word-compatible",
+      "InputSha256": "0829414C55F28F834B5DEACECAD3A01E5167716E7F16B3A6D2E6A805F2B55731",
+      "ReferencePdfSha256": "ECB527DC0EDE2C6D28E28E2B39DB0510A96C526F597C7B523D3A47ED8BBADDA5",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6",
+      "OriginX": 255.89,
+      "BaselineY": 693.94,
+      "Operators": [
+        {
+          "Text": "+",
+          "X": 266.09
+        },
+        {
+          "Text": "=",
+          "X": 288.77
+        },
+        {
+          "Text": "+",
+          "X": 316.97
+        },
+        {
+          "Text": "=",
+          "X": 337.75
+        }
+      ],
+      "FollowingBaselineY": 679.9
+    }
+  ]
+}

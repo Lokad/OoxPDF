@@ -102,7 +102,7 @@ internal sealed partial class DocxRenderer
         {
             token.ThrowIfCancellationRequested();
             DocxParagraph paragraph = owner.Paragraph;
-            var sourceEquations = DocxMathParagraphPolicy.GetPreparationEquations(paragraph, owner.HasPageInputs);
+            var sourceEquations = DocxMathParagraphPolicy.GetPreparationEquations(paragraph, owner.HasPageInputs, token);
             if (sourceEquations.Count == 0) { continue; }
             bool standalone = DocxMathParagraphPolicy.GetStandaloneRow(paragraph) is not null;
             var displayRows = DocxMathParagraphPolicy.GetDisplaySourceEquations(paragraph, token);

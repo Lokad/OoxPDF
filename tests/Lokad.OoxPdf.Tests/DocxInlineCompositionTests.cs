@@ -1909,6 +1909,69 @@ internal static class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxInlineCompositionExplicitDisplaysRetainSourceRowsAndFallbacks()
+    {
+        var paragraph = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-explicit-display-same-group")
+            .Paragraphs.Single(value => value.Equations.Count == 2);
+        TestAssert.True(paragraph.Equations.All(equation => equation.Display), "The probe uses explicit display source containers.");
+        TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
+        var math = paragraph.Equations.ToDictionary(equation => equation,
+            equation => new DocxPreparedMathParagraph(equation, new(10d, 6d, 1d, []), 9d, 16d) { UsesDisplayStyle = true });
+        TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph, math, new TrackingMeasurer(),
+            12d, 100d, 100d, 9d, 16d, 1d, default, out var lines), "Explicit display rows share ordered measurement.");
+        TestAssert.True(TestAssert.NotNull(lines).Single().IsDisplayGroup, "The complete math-only row retains display alignment.");
+        var prose = new DocxTextRun("Visible prose", 12d, null, false, false, false, null, null);
+        var mixed = paragraph with { Runs = [prose], InlineContent = [new DocxInlineText(prose, 0, prose.Text.Length), .. paragraph.InlineContent!] };
+        TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(mixed).Count);
+        foreach (string alignment in new[] { "left", "right" })
+        {
+            var equations = paragraph.Equations.Select(equation => equation with { AlignmentValue = alignment }).ToArray();
+            var aligned = paragraph with { Equations = equations, InlineContent = equations.Select(equation => (DocxInlineItem)new DocxInlineEquation(equation)).ToArray() };
+            TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(aligned).Count);
+        }
+        TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph, math, new TrackingMeasurer(),
+            12d, 8d, 8d, 9d, 16d, 1d, default, out _), "An individual box wider than every line retains fallback.");
+        using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathParagraphPolicy.GetPreparationEquations(paragraph, false, cancellation.Token));
+    }
+
+    public static void DocxInlineCompositionExplicitDisplaysMatchWordAndSourceTransforms()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for explicit display groups.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-explicit-display-office-geometry.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        foreach (bool transformed in new[] { false, true })
+        {
+            string id = row.GetProperty("Id").GetString()!;
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(Path.Combine(cases, id + ".docx")))));
+            var mode = row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(ReadMutation("CompositionProbes/" + id, mode, transformed, transformed), diagnostics.Add, default).Single();
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
+            var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
+            var math = shows.Where(show => fonts.Contains(show.Font)).ToArray();
+            TestAssert.Equal(row.GetProperty("MathText").GetString(), string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+            TestAssert.Equal(10, math.Length);
+            TestAssert.True(math.All(show => Math.Abs(show.Y - row.GetProperty("BaselineY").GetDouble()) < .3d) &&
+                Math.Abs(math[0].X - row.GetProperty("OriginX").GetDouble()) < .3d, "The complete display row retains independent Word placement.");
+            var operators = math.Where(show => show.Text is "+" or "=").ToArray();
+            var expected = row.GetProperty("Operators").EnumerateArray().ToArray();
+            TestAssert.Equal(expected.Length, operators.Length);
+            for (int index = 0; index < operators.Length; index++)
+                TestAssert.True(operators[index].Text == expected[index].GetProperty("Text").GetString() &&
+                    Math.Abs(operators[index].X - expected[index].GetProperty("X").GetDouble()) < .35d,
+                    "Display-group operator advances follow independent Word geometry.");
+            var following = shows.Single(show => show.Text.StartsWith("Foll", StringComparison.Ordinal));
+            TestAssert.True(Math.Abs(following.Y - row.GetProperty("FollowingBaselineY").GetDouble()) < .75d,
+                "Following prose retains the complete display frame; the remaining sub-point pitch residual stays explicit.");
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Explicit display containers cannot discard either supported formula.");
+        }
+    }
+
     public static void DocxInlineCompositionMathOnlyGroupsCenterAcrossParagraphAlignment()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
