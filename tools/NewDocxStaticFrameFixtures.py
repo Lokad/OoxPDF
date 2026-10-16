@@ -12,14 +12,15 @@ w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 m = '{http://schemas.openxmlformats.org/officeDocument/2006/math}'
 rows = []
 for name in ['footer-distance-18', 'footer-distance-72', 'footer-second-paragraph',
-             'footer-plain-first', 'footer-plain-second', 'header-second-paragraph']:
+             'footer-plain-first', 'footer-plain-second', 'header-second-paragraph',
+             'header-plain-first', 'header-plain-second']:
     story = 'header' if name.startswith('header') else 'footer'
     source = cases / ('math-run-format-' + story + '-bold.docx')
     with ZipFile(source) as z:
         entries = {part: z.read(part) for part in z.namelist()}
     part = 'word/' + story + '1.xml'
     xml = E.fromstring(entries[part])
-    if name.endswith('second-paragraph') or name == 'footer-plain-second':
+    if name.endswith('second-paragraph') or name.endswith('plain-second'):
         paragraphs = xml.findall(w + 'p')
         before = paragraphs[0].find(w + 'r/' + w + 'rPr')
         after = paragraphs[1].find(w + 'r')

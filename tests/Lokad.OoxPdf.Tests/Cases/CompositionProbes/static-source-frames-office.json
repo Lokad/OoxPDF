@@ -130,5 +130,5 @@
       ]
     }
   ],
-  "KnownResidual": "Text-only static list labels are omitted by the legacy paragraph layout; restoring that content is the next bounded migration."
+  "KnownResidual": "Compound pinned-font math frames and legacy exact/minimum spacing remain outside the text-only list migration."
 }

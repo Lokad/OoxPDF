@@ -64,5 +64,27 @@
     "ExpectedText": [
       "share the same input series."
     ]
+  },
+  {
+    "Id": "header-plain-first",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/static-frame-header-plain-first.docx",
+    "Sha256": "9254FF77445E2758C6770E58F7DA0463B611B15D040B82F7BB6EC5C2374202B4",
+    "SourceSha256": "EFBBA4E653CA704936159ED3AA7F8EF68DBCCB5355A505B17888BA3E4C0ED8E2",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "header-plain-second",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/static-frame-header-plain-second.docx",
+    "Sha256": "42F64B3EC81EEA4B3C907CAC793F60DDA4652841C934EEF8CD3E034597C75B7B",
+    "SourceSha256": "EFBBA4E653CA704936159ED3AA7F8EF68DBCCB5355A505B17888BA3E4C0ED8E2",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
   }
 ]
