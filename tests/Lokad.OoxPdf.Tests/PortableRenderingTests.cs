@@ -16,6 +16,23 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingAtomicFootnoteRetainsLastBodyLine()
+    {
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/complete-note-" + container + ".docx"), mode);
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, null, default).ToArray();
+            TestAssert.Equal(1, pages.Length);
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
+            TestAssert.True(text.Contains("Section 6 line 3.", StringComparison.Ordinal) &&
+                text.Contains("Public calculation note.", StringComparison.Ordinal), "The final body line and atomic note share the admitted page.");
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingFootnoteLinksIgnoreIdenticalAuthoredDigits()
     {
         foreach (bool includeMath in new[] { false, true })

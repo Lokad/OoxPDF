@@ -697,7 +697,11 @@ internal sealed partial class DocxLayoutEngine
             }
         }
 
-        if (inFlight.RemainingLineCount > 0)
+        // A new one-line note is indivisible: its complete head is already
+        // charged above, and cannot need a future continuation rule. A tail
+        // still owns its current continuation rule even when one line remains.
+        if (inFlight.RemainingLineCount > 1 ||
+            inFlight.RemainingLineCount > 0 && inFlight.SeparatorPlaced)
         {
             remainder += ContinuationRuleOverhead(inFlight.ContinuationLayout, separatorMeasurer);
         }

@@ -1,0 +1,24 @@
+[
+  {
+    "Id": "complete-note-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/complete-note-cell.docx",
+    "Sha256": "B8539CA2049816C568A10ABD39FA076EB276A5D911C9B130CAC487D499273D73",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Section 6 line 3.",
+      "Public calculation note."
+    ]
+  },
+  {
+    "Id": "complete-note-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/complete-note-body.docx",
+    "Sha256": "C2A36E3B34A48A3439F29930EFB8ABC1A883CEDF5D396B0480BEB012CC2A3FA6",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Section 6 line 3.",
+      "Public calculation note."
+    ]
+  }
+]

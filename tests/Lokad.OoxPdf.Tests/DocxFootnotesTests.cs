@@ -14,6 +14,50 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxFootnotesTests
 {
+    public static void DocxAtomicFootnoteHeadIgnoresFutureContinuationRule()
+    {
+        var story = new DocxRelatedStory(DocxRelatedStoryKind.Footnote, "/word/footnotes.xml", "1", [], [], [], null);
+        var run = new DocxTextRun("Note", 10d, null, false, false, false, null, null);
+        var line = new DocxTextLineLayout("Note", run, 10d, 0d, -10d, 100d, [], null, null, null, null, 12d,
+            null, null, false, null, null, null, null, null, null, null, null, null, null, null, null, false);
+        var layout = new DocxRelatedStoryLayout(story, 0, [line], [], [], [], 12d);
+        var separator = new DocxRelatedStoryLayout(story, 0, [line with { Text = " " }], [], [], [], 8d);
+        var location = new DocxLayoutEngine.DocxInlineReferenceLocation(0,
+            DocxTests.CreateDocxLayoutParagraph("Anchor", 10d, 12d),
+            new DocxInlineReference(DocxRelatedStoryKind.Footnote, "1", null, "1", 0, 0, 0));
+        var head = new DocxLayoutEngine.InFlightRelatedStory(layout, separator, separator, 0, location);
+        var noFutureRule = new DocxLayoutEngine.InFlightRelatedStory(layout, separator, null, 0, location);
+        double headHeight = DocxLayoutEngine.FootnoteRemainderHeight(head, [12d], null);
+        TestAssert.Equal(DocxLayoutEngine.FootnoteRemainderHeight(noFutureRule, [12d], null), headHeight);
+        head.SeparatorPlaced = true;
+        TestAssert.True(DocxLayoutEngine.FootnoteRemainderHeight(head, [12d], null) > 12d,
+            "A continued one-line tail must still charge its present continuation rule.");
+        var split = new DocxLayoutEngine.InFlightRelatedStory(layout with { TextLines = [line, line] }, separator, separator, 0, location);
+        TestAssert.True(DocxLayoutEngine.FootnoteRemainderHeight(split, [12d, 12d], null) > headHeight + 12d,
+            "Potentially split multi-line notes retain their qualified conservative reserve.");
+    }
+
+    public static void DocxAtomicFootnotesMatchIndependentPageAdmission()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("The Office controls use installed Arial metrics.");
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes",
+                "complete-note-" + container + ".docx"), mode);
+            var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, null, default).ToArray();
+            TestAssert.Equal(1, pages.Length);
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
+            for (int section = 1; section <= 6; section++)
+            for (int line = 1; line <= 3; line++)
+                TestAssert.True(text.Contains($"Section {section} line {line}.", StringComparison.Ordinal), "Every admitted line remains visible in the PDF stream.");
+            TestAssert.True(text.Contains("Public calculation note.", StringComparison.Ordinal), "The complete note survives page admission.");
+            TestAssert.Equal(1, pages.Single().Annotations.Count(annotation => annotation.Destination is not null));
+        }
+    }
+
     public static void DocxSimpleSectionPaginationUsesFollowingStartType()
     {
         foreach ((string? preceding, string? following, int expected) in new[]

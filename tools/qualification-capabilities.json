@@ -578,5 +578,32 @@
     "DocxReaderEmitsAutomaticFootnoteAndEndnoteMarkersWithCascadeAlignment",
     "DocxDocumentEndnotesFollowTrailingBodySpacingAtNominalScale",
     "DocxRendererEmitsPlacedEndnoteInternalHyperlinkDestinations"
+  ],
+  "docx-atomic-footnote-admission": [
+    "DocxAtomicFootnote",
+    "PortableRenderingAtomicFootnote",
+    "DocxFootnoteRemainder",
+    "DocxNarrowedFootnoteRemainder",
+    "DocxCompleteFootnoteReserve",
+    "DocxSharedFootnote",
+    "DocxSharedContinuedFootnote",
+    "DocxMidBodyFootnoteAnchor",
+    "DocxTableAnchoredFootnote",
+    "DocxExhaustedFootnoteDrain",
+    "DocxLongFootnote",
+    "DocxFootnoteTake",
+    "DocxFootnoteContinuationTake",
+    "DocxFootnoteHeadTake",
+    "DocxFootnoteNinePtHeadTake",
+    "DocxContinuedFootnote",
+    "DocxContinuedPhysicalFootnote",
+    "DocxHeaderFootnoteFrames",
+    "DocxMinimumFootnoteFrames",
+    "DocxMixedFootnoteFrame",
+    "DocxMiddleFootnoteContinuation",
+    "DocxPageFootnoteNumbersRenderLabelsAndDistinctDestinationsTogether",
+    "DocxMultipleFootnoteNumbersRenderSeparateLabelsAndDestinations",
+    "DocxInlineCompositionAutomaticFootnotesPreserveContentAndDestinations",
+    "PortableRenderingAutomaticFootnotesPreserveMixedMathAndLinks"
   ]
 }
