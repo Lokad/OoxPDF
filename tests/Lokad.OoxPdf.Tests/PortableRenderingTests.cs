@@ -16,6 +16,28 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingCachedFieldsPreserveMixedMathAcrossContainers()
+    {
+        foreach (string form in new[] { "simple", "packed" })
+        foreach (string container in new[] { "body", "cell", "header", "footer" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/math-fields-" + form + "-" + container + ".docx"), mode);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(1, pages.Length);
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            foreach (string value in new[] { "North", "South" })
+                TestAssert.Equal(2, text.Split(value, StringSplitOptions.None).Length - 1);
+            foreach (string value in new[] { "Start", "middle", "End.", "Following prose." }) TestAssert.Contains(value, text);
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Cached field metadata cannot discard supported math.");
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingCommentSelectionUsesOccupiedLineFrame()
     {
         foreach (string container in new[] { "body", "cell" })

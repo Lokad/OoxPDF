@@ -10,6 +10,103 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionCachedFieldsMatchIndependentWordOffsets()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the independent cached-field controls.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-fields-office-offsets.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var document = DocxTests.ReadDocx(input, mode);
+            var page = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, default).Single();
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).ToArray();
+            var start = shows.Single(show => show.Text.Trim() == "Start");
+            TestAssert.True(Math.Abs(start.Y - row.GetProperty("BaselineY").GetDouble()) < .5d,
+                $"Cached results preserve the independently printed paragraph frame: {input}/{mode}/{start.Y}.");
+            foreach (string value in new[] { "North", "South" })
+            {
+                var field = shows.Single(show => show.Text.Trim() == value && Math.Abs(show.Y - start.Y) < .1d);
+                double offset = field.X - start.X;
+                TestAssert.True(Math.Abs(offset - row.GetProperty(value + "Offset").GetDouble()) < .2d,
+                    $"Materialized cached fields retain independent Word advances: {input}/{mode}/{value}/{offset}.");
+            }
+        }
+    }
+
+    public static void DocxInlineCompositionCachedFieldsPublishResolvedSourceItems()
+    {
+        foreach (string form in new[] { "simple", "packed" })
+        foreach (string container in new[] { "body", "cell", "header", "footer" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadPlacedComposition(mode, "math-fields-" + form + "-" + container);
+            var paragraph = document.Paragraphs.Concat(document.Tables.SelectMany(table => table.Rows)
+                .SelectMany(row => row.Cells).SelectMany(cell => cell.Paragraphs))
+                .Concat(document.EquationParts.SelectMany(part => part.BodyElements.OfType<DocxParagraphElement>()).Select(item => item.Paragraph))
+                .First(paragraph => paragraph.Equations.Count != 0);
+            TestAssert.Equal(2, paragraph.FieldReferences.Count);
+            TestAssert.True(paragraph.FieldReferences.All(field => field.HasCachedResult && field.RendersCachedResult && !field.UsesPlaceholder),
+                "Both field forms expose their already materialized cached results.");
+            string prose = string.Concat(paragraph.Runs.Select(run => run.Text));
+            string ordered = string.Concat(TestAssert.NotNull(paragraph.InlineContent).OfType<DocxInlineText>().Select(item => item.Run.Text.Substring(item.Start, item.Length)));
+            TestAssert.True(prose == ordered, "Cached field results before and after a formula must enter the ordered source view.");
+            TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
+        }
+    }
+
+    public static void DocxInlineCompositionCachedFieldsRetainRunSplittingAndFallbacks()
+    {
+        foreach (string form in new[] { "simple", "packed" })
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string fixture = "CompositionProbes/math-fields-" + form + "-" + container;
+            var source = ReadMutation(fixture, mode, false, false);
+            var split = ReadMutation(fixture, mode, true, true, (xml, w, _) =>
+            {
+                foreach (var run in xml.Descendants(w + "r").Where(run => run.Element(w + "fldChar") is not null).ToArray())
+                {
+                    var properties = run.Element(w + "rPr");
+                    run.ReplaceWith(run.Elements().Where(child => child.Name != w + "rPr")
+                        .Select(child => new XElement(w + "r", properties is null ? null : new XElement(properties), new XElement(child))).ToArray());
+                }
+            });
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var before = renderer.RenderBlankPages(source, diagnostics.Add, default).ToArray();
+            var after = renderer.RenderBlankPages(split, diagnostics.Add, default).ToArray();
+            string Text(IEnumerable<Lokad.OoxPdf.Pdf.PdfPage> pages) => string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal(System.Text.RegularExpressions.Regex.Replace(Text(before), @"\s", ""),
+                System.Text.RegularExpressions.Regex.Replace(Text(after), @"\s", ""));
+            TestAssert.Equal(2, Text(before).Split("ratetime", StringSplitOptions.None).Length - 1);
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Cached field metadata cannot suppress supported equations.");
+            var paragraph = source.Paragraphs.Concat(source.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells)
+                .SelectMany(cell => cell.Paragraphs)).First(paragraph => paragraph.Equations.Count != 0);
+            foreach (var field in paragraph.FieldReferences)
+            {
+                TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with
+                    { FieldReferences = [field with { UsesPlaceholder = true }] }).Count);
+                TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with
+                    { FieldReferences = [field with { RendersCachedResult = false }] }).Count);
+            }
+            var dynamic = ReadMutation(fixture, mode, false, false, (xml, w, _) =>
+            {
+                foreach (var field in xml.Descendants(w + "fldSimple")) field.SetAttributeValue(w + "instr", " PAGE ");
+                foreach (var instruction in xml.Descendants(w + "instrText")) instruction.Value = " NUMPAGES ";
+            });
+            var dynamicParagraph = dynamic.Paragraphs.Concat(dynamic.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells)
+                .SelectMany(cell => cell.Paragraphs)).First(paragraph => paragraph.Equations.Count != 0);
+            TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(dynamicParagraph).Count);
+        }
+    }
+
     public static void DocxInlineCompositionAutomaticFootnotesRetainOwnedMarkerRuns()
     {
         foreach (string position in new[] { "before", "after" })

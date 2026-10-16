@@ -2,7 +2,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)] [string] $Manifest,
-    [Parameter(Mandatory=$true)] [string] $OutputDirectory
+    [Parameter(Mandatory=$true)] [string] $OutputDirectory,
+    [ValidateSet('Both','Final','Review')] [string] $DocxPreset = 'Both'
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
@@ -10,7 +11,9 @@ foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Js
     $inputPath = (Resolve-Path -LiteralPath (Join-Path $repo $document.Input)).Path
     if ((Get-FileHash $inputPath).Hash -ne $document.Sha256) { throw ('Reference input differs: ' + $document.Id) }
     $docx = $inputPath.EndsWith('.docx',[StringComparison]::OrdinalIgnoreCase)
-    foreach ($mode in $(if ($docx) {@('final-preserve','all-word-compatible')} else {@('presentation')})) {
+    $modes = if ($docx) { @('final-preserve','all-word-compatible') } else { @('presentation') }
+    if ($docx -and $DocxPreset -ne 'Both') { $modes = if ($DocxPreset -eq 'Final') { @('final-preserve') } else { @('all-word-compatible') } }
+    foreach ($mode in $modes) {
         $folder = Join-Path $OutputDirectory ($document.Id+'-'+$mode)
         $identity = Join-Path $folder 'source-identity.json'
         $pdf = Join-Path $folder 'reference.pdf'

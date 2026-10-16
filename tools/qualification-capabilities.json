@@ -688,5 +688,33 @@
     "DocxWordCompatiblePlainHeader",
     "PortableRenderingCommentsPreserveMixedMathematics",
     "DocxWordCompatibleAllMarkupUsesOfficeRevisionDecorationColor"
+  ],
+  "docx-inline-cached-fields": [
+    "DocxInlineCompositionCachedFieldsPublishResolvedSourceItems",
+    "DocxInlineCompositionCachedFieldsRetainRunSplittingAndFallbacks",
+    "DocxInlineCompositionCachedFieldsMatchIndependentWordOffsets",
+    "PortableRenderingCachedFieldsPreserveMixedMathAcrossContainers",
+    "DocxReaderPreservesFieldReferencesStructurally",
+    "DocxReaderPreservesParagraphSimpleFieldCachedResultRunsInOrder",
+    "DocxComplexField",
+    "DocxCrossReferenceComplexField",
+    "DocxNestedComplexFields",
+    "DocxMalformedComplexField",
+    "DocxLiteralFieldLikeTextSurvivesWhileActualFieldsResolve",
+    "DocxReaderSizesRunlessFieldPlaceholderThroughStyleCascade",
+    "DocxReaderPromotesSimpleFieldRunPageBreakInsideParagraph",
+    "DocxLayoutUsesResolvedBodyPageFieldForLineBreaking",
+    "DocxLayoutUsesCompactBodyNumPagesFieldForLineBreaking",
+    "DocxTableLayoutUsesResolvedPageFieldForCellLineBreaking",
+    "DocxTableLayoutUsesCompactNumPagesFieldForCellLineBreaking",
+    "DocxLayoutStageResolvesStaticHeaderTablePageFieldsPerPage",
+    "DocxLayoutStageResolvesStaticHeaderTableNumPagesFieldFromPageCount",
+    "DocxNativeStaticMathRetainsStoryFlowAndPerPartDiagnosticScope",
+    "DocxStaticMathFramesSharePreparedAdvanceAndFooterBlockTranslation",
+    "DocxInlineCompositionLeftTabsMatchIndependentFieldOffsets",
+    "PortableRenderingLeftTabsPreserveMixedMathAcrossContainers",
+    "DocxMarkupModesFilterHyperlinkAndFieldRevisionsBeforeLayout",
+    "DocxTableCellTextLinesMemoSharesSplitCells",
+    "DocxInlineCompositionCommentsPreserveMathematicsAndCaptions"
   ]
 }

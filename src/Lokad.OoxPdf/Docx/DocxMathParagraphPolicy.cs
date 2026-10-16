@@ -172,6 +172,6 @@ internal static class DocxMathParagraphPolicy
         DocxInlineContent.HasSupportedReferences(paragraph.InlineReferences, paragraph.Runs) &&
         // Bookmarks are source metadata with no measured or painted extent.
         // Their presence cannot change ownership of an otherwise supported box.
-        paragraph.FieldReferences.Count == 0 &&
+        DocxInlineContent.HasMaterializedFieldResults(paragraph.FieldReferences, paragraph.Runs) &&
         paragraph.RevisionRanges.Count == 0;
 }

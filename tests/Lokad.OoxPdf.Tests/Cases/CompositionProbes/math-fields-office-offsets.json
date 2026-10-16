@@ -1,0 +1,149 @@
+{
+  "Source": "Independent Word 16 exports; materialized REF field offsets from Start and printed baseline in both presets. References retained once; no visual threshold change.",
+  "Rows": [
+    {
+      "Id": "math-fields-simple-body",
+      "Mode": "final-preserve",
+      "InputSha256": "F813CAE3479B3BBA4B11D8E3361DE08698804481270C0AF3E00301B3C915DEE4",
+      "ReferencePdfSha256": "4B068737AD7CD3FE6BE86BDA2B5D76CD01C11833656EE00D88538B79D1005C44",
+      "BaselineY": 691.42,
+      "NorthOffset": 28.795999999999992,
+      "SouthOffset": 119.54599999999999
+    },
+    {
+      "Id": "math-fields-simple-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F813CAE3479B3BBA4B11D8E3361DE08698804481270C0AF3E00301B3C915DEE4",
+      "ReferencePdfSha256": "5D6203CD66EF5E2494ECB86530ADEE68062FCD6C552DF365150B2814A94515DE",
+      "BaselineY": 620.33,
+      "NorthOffset": 21.863999999999997,
+      "SouthOffset": 90.67000000000002
+    },
+    {
+      "Id": "math-fields-simple-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "77C1EADDE402F2C9B20B51CB3B5530D975930EF76EDBFCD51B377197828B4DC6",
+      "ReferencePdfSha256": "7F5815226BDAA9A7D48D04D35AD268D71BAC79CB601AC3A66FF58484EF165C30",
+      "BaselineY": 690.94,
+      "NorthOffset": 28.82000000000005,
+      "SouthOffset": 119.54000000000002
+    },
+    {
+      "Id": "math-fields-simple-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "77C1EADDE402F2C9B20B51CB3B5530D975930EF76EDBFCD51B377197828B4DC6",
+      "ReferencePdfSha256": "A700847D42BD77F7E9786515629FCC025FA83854A5DDDB7378BE67BFF2B52083",
+      "BaselineY": 619.94,
+      "NorthOffset": 21.840000000000003,
+      "SouthOffset": 90.65
+    },
+    {
+      "Id": "math-fields-simple-header",
+      "Mode": "final-preserve",
+      "InputSha256": "D5174B521ABE52748B66AFD70C0DA55873F9AC742980CBD8CF71F1924BBE7D7B",
+      "ReferencePdfSha256": "31AC5F4F399362A51B5C6E93EFB77511CEE3AC24AE0E2EA28990F32688262912",
+      "BaselineY": 741.24,
+      "NorthOffset": 28.795999999999992,
+      "SouthOffset": 119.54599999999999
+    },
+    {
+      "Id": "math-fields-simple-header",
+      "Mode": "all-word-compatible",
+      "InputSha256": "D5174B521ABE52748B66AFD70C0DA55873F9AC742980CBD8CF71F1924BBE7D7B",
+      "ReferencePdfSha256": "1B0B2E449B519D4BE3AAF93DD90C8423B5EDED3B530F4A56AE440337154A1C2F",
+      "BaselineY": 658.08,
+      "NorthOffset": 21.863999999999997,
+      "SouthOffset": 90.67000000000002
+    },
+    {
+      "Id": "math-fields-simple-footer",
+      "Mode": "final-preserve",
+      "InputSha256": "902AFBC47084C2C2E89AF4D06BF8F4BF441B05FA0C3BFE64EBEEE500F1984B5B",
+      "ReferencePdfSha256": "20539E90D4CFDF07460EF55A567014117A07EFCD744F7E6184E183288D628C0C",
+      "BaselineY": 42,
+      "NorthOffset": 28.795999999999992,
+      "SouthOffset": 119.54599999999999
+    },
+    {
+      "Id": "math-fields-simple-footer",
+      "Mode": "all-word-compatible",
+      "InputSha256": "902AFBC47084C2C2E89AF4D06BF8F4BF441B05FA0C3BFE64EBEEE500F1984B5B",
+      "ReferencePdfSha256": "94BD3D9DDA5A9CDE393A5CF20998A26F2F1C16E270BADCEA28212597E095BBA5",
+      "BaselineY": 127.85,
+      "NorthOffset": 21.863999999999997,
+      "SouthOffset": 90.67000000000002
+    },
+    {
+      "Id": "math-fields-packed-body",
+      "Mode": "final-preserve",
+      "InputSha256": "66F32D82A4AA0A5802FB1710D3E72625FA9B0BEA1AAAEC416669E5FF09972D1E",
+      "ReferencePdfSha256": "3AA559DADC85FB628AB018281D8032896990189559BC3578CD3C4CCD702BF73C",
+      "BaselineY": 691.42,
+      "NorthOffset": 28.795999999999992,
+      "SouthOffset": 119.54599999999999
+    },
+    {
+      "Id": "math-fields-packed-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "66F32D82A4AA0A5802FB1710D3E72625FA9B0BEA1AAAEC416669E5FF09972D1E",
+      "ReferencePdfSha256": "06744B806707AE974E57469D2CE197A6662AF90ACFBDDE27130DB01B95AD1226",
+      "BaselineY": 620.33,
+      "NorthOffset": 21.863999999999997,
+      "SouthOffset": 90.67000000000002
+    },
+    {
+      "Id": "math-fields-packed-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "174B689299A801815DCC298D9B140BF6B7D6E22DAD950E02E0977B46DA94FE11",
+      "ReferencePdfSha256": "DFE781D43BFEADA96444EFF07FBF165124BE7927FEBD3EF17CEE16745D209C87",
+      "BaselineY": 690.94,
+      "NorthOffset": 28.82000000000005,
+      "SouthOffset": 119.54000000000002
+    },
+    {
+      "Id": "math-fields-packed-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "174B689299A801815DCC298D9B140BF6B7D6E22DAD950E02E0977B46DA94FE11",
+      "ReferencePdfSha256": "07B9E8E7CDFE3A54A9B42FCA97C521E01AF12E4331170809A7E43901B8F4E3B3",
+      "BaselineY": 619.94,
+      "NorthOffset": 21.840000000000003,
+      "SouthOffset": 90.65
+    },
+    {
+      "Id": "math-fields-packed-header",
+      "Mode": "final-preserve",
+      "InputSha256": "6406AE6B0CFD3742AD055F6747917B9CE24348303B65CF275B40EBBB13DA78C5",
+      "ReferencePdfSha256": "967B2AA87DA9CCCF5399AAC7AAEA08E47CB26DAE35B9D1058F6E9588C48B8EB5",
+      "BaselineY": 741.24,
+      "NorthOffset": 28.795999999999992,
+      "SouthOffset": 119.54599999999999
+    },
+    {
+      "Id": "math-fields-packed-header",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6406AE6B0CFD3742AD055F6747917B9CE24348303B65CF275B40EBBB13DA78C5",
+      "ReferencePdfSha256": "5DF4948CB30F3E4D5565192E831B3FEBD4EDE47A00E92C6584482D6F6DB35F2F",
+      "BaselineY": 658.08,
+      "NorthOffset": 21.863999999999997,
+      "SouthOffset": 90.67000000000002
+    },
+    {
+      "Id": "math-fields-packed-footer",
+      "Mode": "final-preserve",
+      "InputSha256": "9327C72197037FF1A2B3A9FB7B315E1B57AF92C333EF998783618FC1A4F607BF",
+      "ReferencePdfSha256": "6D62797086E3E39A29C4F2A7699C1161AAA933F03B8FADB1A4E9BF11DB94C307",
+      "BaselineY": 42,
+      "NorthOffset": 28.795999999999992,
+      "SouthOffset": 119.54599999999999
+    },
+    {
+      "Id": "math-fields-packed-footer",
+      "Mode": "all-word-compatible",
+      "InputSha256": "9327C72197037FF1A2B3A9FB7B315E1B57AF92C333EF998783618FC1A4F607BF",
+      "ReferencePdfSha256": "292D59D8820C115699F8B42B0E6FD00D078AF9735650EEDBAD99865257CC1D88",
+      "BaselineY": 127.85,
+      "NorthOffset": 21.863999999999997,
+      "SouthOffset": 90.67000000000002
+    }
+  ]
+}

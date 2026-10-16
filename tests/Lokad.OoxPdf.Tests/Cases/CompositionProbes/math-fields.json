@@ -1,0 +1,122 @@
+[
+  {
+    "Id": "math-fields-simple-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-fields-simple-body.docx",
+    "Sha256": "F813CAE3479B3BBA4B11D8E3361DE08698804481270C0AF3E00301B3C915DEE4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "North",
+      "South",
+      "middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-fields-simple-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-fields-simple-cell.docx",
+    "Sha256": "77C1EADDE402F2C9B20B51CB3B5530D975930EF76EDBFCD51B377197828B4DC6",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "North",
+      "South",
+      "middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-fields-simple-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-fields-simple-header.docx",
+    "Sha256": "D5174B521ABE52748B66AFD70C0DA55873F9AC742980CBD8CF71F1924BBE7D7B",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "North",
+      "South",
+      "middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-fields-simple-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-fields-simple-footer.docx",
+    "Sha256": "902AFBC47084C2C2E89AF4D06BF8F4BF441B05FA0C3BFE64EBEEE500F1984B5B",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "North",
+      "South",
+      "middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-fields-packed-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-fields-packed-body.docx",
+    "Sha256": "66F32D82A4AA0A5802FB1710D3E72625FA9B0BEA1AAAEC416669E5FF09972D1E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "North",
+      "South",
+      "middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-fields-packed-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-fields-packed-cell.docx",
+    "Sha256": "174B689299A801815DCC298D9B140BF6B7D6E22DAD950E02E0977B46DA94FE11",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "North",
+      "South",
+      "middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-fields-packed-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-fields-packed-header.docx",
+    "Sha256": "6406AE6B0CFD3742AD055F6747917B9CE24348303B65CF275B40EBBB13DA78C5",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "North",
+      "South",
+      "middle",
+      "End.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-fields-packed-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-fields-packed-footer.docx",
+    "Sha256": "9327C72197037FF1A2B3A9FB7B315E1B57AF92C333EF998783618FC1A4F607BF",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "North",
+      "South",
+      "middle",
+      "End.",
+      "Following prose."
+    ]
+  }
+]

@@ -22,3 +22,11 @@ Frozen fixtures are read-only. Tests that mutate OOXML must copy the input and
 clear read-only only on that temporary copy; never alter a frozen input or its
 hard-link aliases. The freezer reuses matching immutable files across input trees
 and verifies every published input hash.
+
+`math-fields.json` pins two cached REF results adjoining two fractions, as simple
+fields or complex fields packed into one source run, across body/cell/header/footer.
+`math-fields-office-offsets.json` pins independent Word references for both public
+presets. Run splitting and bookmarks retain all visible source content. Cached
+results must publish ordinary resolved inline items; PAGE/NUMPAGES placeholders,
+unresolved fields and revision owners retain their existing fallback. Cached text
+is displayed as stored; this slice does not add field evaluation.

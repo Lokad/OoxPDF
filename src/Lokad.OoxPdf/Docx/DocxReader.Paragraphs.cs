@@ -313,9 +313,9 @@ internal sealed partial class DocxReader
                 ? styles.ContextualSpacingDefaultStyleId : null,
             InlineTextBoxes = inlineTextBoxes,
             Equations = equations,
-            // Fields/unowned note references/textboxes and revisions retain their existing
+            // Dynamic fields/unowned note references/textboxes and revisions retain their existing
             // source reconstruction until those owners migrate explicitly.
-            InlineContent = fieldReferences.Count == 0 && DocxInlineContent.HasSupportedReferences(inlineReferences, runs) &&
+            InlineContent = DocxInlineContent.HasMaterializedFieldResults(fieldReferences, runs) && DocxInlineContent.HasSupportedReferences(inlineReferences, runs) &&
                 inlineTextBoxes.Count == 0 && paragraphRevisions.Count == 0 ? inlineItems : null,
             InlineReferences = inlineReferences,
             CommentRanges = commentRanges,
@@ -521,6 +521,8 @@ internal sealed partial class DocxReader
                     ref currentPageInstructionSeen);
                 images.AddRange(ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex));
                 inlineTextBoxes.AddRange(ReadInlineTextBoxes(run, styles, numbering, package, relationships, markupMode, revision, cancellationToken));
+                if (inlineItems is not null)
+                    DocxInlineContent.AppendRun(inlineItems, runs.Skip(firstRun), images.Skip(firstImage), cancellationToken);
                 return;
             }
 
