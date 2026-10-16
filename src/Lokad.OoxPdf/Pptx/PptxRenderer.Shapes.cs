@@ -631,21 +631,9 @@ internal sealed partial class PptxRenderer
                     DrawPresetArcStroke(graphics, shapeProperties, x, y, width, height, presetAdjustmentsOverride);
                 }
             }
-            else if (preset == "ellipse")
-            {
-                graphics.StrokeEllipse(x, y, width, height);
-            }
-            else if (preset == "roundRect")
-            {
-                graphics.StrokeRoundedRectangle(x, y, width, height, ReadRoundRectangleRadius(shapeProperties, presetAdjustmentsOverride, width, height));
-            }
-            else if (TryCreatePresetPolygonPoints(preset, x, y, width, height, out (double X, double Y)[] polygonPoints))
-            {
-                graphics.StrokePolygon(polygonPoints);
-            }
             else
             {
-                graphics.StrokeRectangle(x, y, width, height);
+                StrokePresetShape(graphics, shapeProperties, preset, x, y, width, height, presetAdjustmentsOverride);
             }
 
             if (hasDash)

@@ -52,6 +52,16 @@ if '--extended' in sys.argv:
         dict(name='pic-ellipse-fill-alpha-crop', preset='ellipse', nonsquare=True, crop=True, fillalpha=True, following=True),
     ]
 
+if '--effects' in sys.argv:
+    controls = [
+        dict(name='pic-ellipse-outline', preset='ellipse', nonsquare=True, outline=True, following=True),
+        dict(name='pic-roundRect-outline-adjusted', preset='roundRect', nonsquare=True, adjustment=40000, outline=True, following=True),
+        dict(name='pic-ellipse-outline-transformed', preset='ellipse', nonsquare=True, outline=True, transformed=True, following=True),
+        dict(name='pic-ellipse-shadow', preset='ellipse', nonsquare=True, shadow=True, following=True),
+        dict(name='pic-roundRect-shadow-adjusted', preset='roundRect', nonsquare=True, adjustment=40000, shadow=True, following=True),
+        dict(name='pic-ellipse-blurred-shadow', preset='ellipse', nonsquare=True, shadow=True, blur=True, following=True),
+    ]
+
 def xml(element):
     return E.tostring(element, encoding='utf-8', xml_declaration=True)
 
@@ -93,7 +103,15 @@ for number, control in enumerate(controls, 1):
         E.SubElement(fill.find(f'{{{A}}}blip'), f'{{{A}}}alphaModFix', amt='60000')
     if control.get('transformed'):
         xfrm.attrib.update(rot='1500000', flipH='1')
-    E.SubElement(E.SubElement(properties, f'{{{A}}}ln'), f'{{{A}}}noFill')
+    line = E.SubElement(properties, f'{{{A}}}ln')
+    if control.get('outline'):
+        line.set('w', '50800')
+        E.SubElement(E.SubElement(line, f'{{{A}}}solidFill'), f'{{{A}}}srgbClr', val='000000')
+    else:
+        E.SubElement(line, f'{{{A}}}noFill')
+    if control.get('shadow'):
+        shadow=E.SubElement(E.SubElement(properties,f'{{{A}}}effectLst'),f'{{{A}}}outerShdw',blurRad='63500' if control.get('blur') else '0',dist='91440',dir='2700000',rotWithShape='1')
+        E.SubElement(E.SubElement(shadow,f'{{{A}}}srgbClr',val='444444'),f'{{{A}}}alpha',val='50000')
     if control.get('shape'):
         shape = E.Element(f'{{{P}}}sp')
         nonvisual = E.SubElement(shape, f'{{{P}}}nvSpPr')
@@ -141,7 +159,7 @@ for number, control in enumerate(controls, 1):
 parts['ppt/presentation.xml'] = xml(presentation)
 parts['ppt/_rels/presentation.xml.rels'] = xml(relationships)
 parts['[Content_Types].xml'] = xml(types)
-stem = 'picture-geometry-extended' if '--extended' in sys.argv else 'picture-geometry-controls'
+stem = 'picture-geometry-effects' if '--effects' in sys.argv else 'picture-geometry-extended' if '--extended' in sys.argv else 'picture-geometry-controls'
 with ZipFile(OUT / (stem + '.pptx'), 'w', ZIP_DEFLATED) as archive:
     for name, data in parts.items():
         info = ZipInfo(name, (2026, 10, 16, 0, 0, 0))

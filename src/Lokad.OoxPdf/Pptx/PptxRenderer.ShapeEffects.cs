@@ -28,7 +28,7 @@ internal sealed partial class PptxRenderer
 
     private static void DrawOuterShadow(
         PdfGraphicsBuilder graphics,
-        XElement shapeProperties,
+        XElement? shapeProperties,
         string preset,
         double x,
         double y,
@@ -111,7 +111,7 @@ internal sealed partial class PptxRenderer
 
     private static void DrawPresetFill(
         PdfGraphicsBuilder graphics,
-        XElement shapeProperties,
+        XElement? shapeProperties,
         string preset,
         double x,
         double y,

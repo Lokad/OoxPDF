@@ -95,10 +95,10 @@ internal sealed partial class PptxRenderer
                 SlideIndex: slideIndex, Feature: "picture geometry", Fallback: "Rectangular frame"));
             preset = "rect";
         }
-        if (preset != "rect" && (line.HasLine || outerShadow is not null))
+        if (preset != "rect" && outerShadow is { BlurRadius: > 0d })
             diagnosticSink?.Invoke(new OoxPdfDiagnostic("PPTX_PICTURE_GEOMETRY_EFFECT_FALLBACK", OoxPdfSeverity.Warning,
-                "Picture paint uses its shape mask; its outline or shadow retains rectangular geometry.", targetPartName,
-                SlideIndex: slideIndex, Feature: "picture geometry effects", Fallback: "Rectangular outline/shadow"));
+                "Picture paint and vector effects use their shape geometry; its blurred shadow retains rectangular geometry.", targetPartName,
+                SlideIndex: slideIndex, Feature: "picture geometry effects", Fallback: "Rectangular blurred shadow"));
 
         ShapeBounds transformedBounds = transform.Apply(rawBounds);
         double x = OoxUnits.EmuToPoints(transformedBounds.X);
@@ -107,11 +107,11 @@ internal sealed partial class PptxRenderer
         double height = OoxUnits.EmuToPoints(transformedBounds.Height);
         double y = document.SlideHeightPoints - yTop - height;
         bool hasTransform = Math.Abs(transformedBounds.RotationDegrees) > 0.001d || transformedBounds.FlipHorizontal || transformedBounds.FlipVertical;
-        RenderPictureOuterShadow(document, graphics, transformedBounds, x, y, width, height, hasTransform, outerShadow, images, ref index);
+        RenderPictureOuterShadow(document, graphics, transformedBounds, x, y, width, height, hasTransform, outerShadow, images, ref index, preset, geometry.PresetAdjustments);
         if (imageResource.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
         {
             RenderSvgPicture(graphics, document, transformedBounds, imageResource.Bytes, crop, fillRect, diagnosticSink, slideIndex, targetPartName, cancellationToken, preset, geometry.PresetAdjustments);
-            StrokePictureFrame(document, graphics, transformedBounds, x, y, width, height, line, hasTransform);
+            StrokePictureFrame(document, graphics, transformedBounds, x, y, width, height, line, hasTransform, preset, geometry.PresetAdjustments);
             return;
         }
 
@@ -250,7 +250,7 @@ internal sealed partial class PptxRenderer
 
         images.Add(new PdfImageResource(name, image));
 
-        StrokePictureFrame(document, graphics, transformedBounds, x, y, width, height, line, hasTransform);
+        StrokePictureFrame(document, graphics, transformedBounds, x, y, width, height, line, hasTransform, preset, geometry.PresetAdjustments);
     }
 
     private static void RenderPictureOuterShadow(
@@ -264,7 +264,9 @@ internal sealed partial class PptxRenderer
         bool transformed,
         OuterShadow? outerShadow,
         List<PdfImageResource> images,
-        ref int imageIndex)
+        ref int imageIndex,
+        string preset,
+        IReadOnlyDictionary<string, double> adjustments)
     {
         if (outerShadow is not { } shadow)
         {
@@ -284,7 +286,7 @@ internal sealed partial class PptxRenderer
         }
         else
         {
-            DrawOuterShadow(graphics, "rect", x, y, width, height, shadow);
+            DrawOuterShadow(graphics, null, preset, x, y, width, height, shadow, adjustments);
         }
 
         graphics.RestoreState();
@@ -299,7 +301,9 @@ internal sealed partial class PptxRenderer
         double width,
         double height,
         LineStyle line,
-        bool transformed)
+        bool transformed,
+        string preset,
+        IReadOnlyDictionary<string, double> adjustments)
     {
         if (!line.HasLine)
         {
@@ -342,11 +346,10 @@ internal sealed partial class PptxRenderer
         }
 
         double outlineOutset = line.Width / 2d;
-        graphics.StrokeRectangle(
-            x - outlineOutset,
-            y - outlineOutset,
-            width + line.Width,
-            height + line.Width);
+        // Office's picture outline surrounds the frame: its centerline grows
+        // by half the authored width on each side, including nonrectangular masks.
+        StrokePresetShape(graphics, null, preset, x - outlineOutset, y - outlineOutset,
+            width + line.Width, height + line.Width, adjustments);
 
         if (line.DashPattern is { Count: > 0 })
         {
@@ -739,6 +742,17 @@ internal sealed partial class PptxRenderer
     {
         return preset is "rect" or "ellipse" or "roundRect" ||
             TryCreatePresetPolygonPoints(preset, 0d, 0d, 1d, 1d, out _);
+    }
+
+    private static void StrokePresetShape(PdfGraphicsBuilder graphics, XElement? shapeProperties, string preset,
+        double x, double y, double width, double height, IReadOnlyDictionary<string, double>? adjustments)
+    {
+        if (preset == "ellipse") graphics.StrokeEllipse(x, y, width, height);
+        else if (preset == "roundRect")
+            graphics.StrokeRoundedRectangle(x, y, width, height, ReadRoundRectangleRadius(shapeProperties, adjustments, width, height));
+        else if (TryCreatePresetPolygonPoints(preset, x, y, width, height, out (double X, double Y)[] points))
+            graphics.StrokePolygon(points);
+        else graphics.StrokeRectangle(x, y, width, height);
     }
 
     private static void ClipToPresetShape(
