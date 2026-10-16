@@ -1236,3 +1236,31 @@ gates remain failed. Typography, spacing and annotation geometry remain cosmetic
 residuals; PNG top/X residuals reach 1pt/1.5pt with half-point raster sampling.
 Unknown total-count composition remains staged. Evidence:
 `artifacts/composition-c1/composed-page-counter-evidence.json`.
+
+Shared ordered wrapping now preserves authored leading spaces and the closing
+paragraph line after a trailing hard break. The paragraph-end cursor represents
+the source mark explicitly; soft-wrap whitespace remains discarded. A combined
+body/cell/header control corrects accumulated occupied-height errors up to 29.175pt.
+Eighteen independent Word anchor comparisons have maximum X/Y errors of
+0.118pt/0.139pt. The existing cross-page PAGE control's former 3.384pt start offset
+falls to 0.05pt. Frozen a08dcfa6 / root 323c0539 passes 38 capability/neighbor
+methods in one invocation, sixteen Ubuntu checks and four genuine parent behavior
+regressions. All eighteen equations and prose remain visible in the reviewed
+control; both preset page pairs share exact raster identities. Both numerical
+visual gates and generic rate/time whole-word screens remain failed; source prose
+and simple-math deficits are zero. Ten fixed-portfolio PDFs plus both complete
+PAGE-report PDFs remain exact. Transfer verifies 17 assets/four exact PDFs with
+no root build or repeated suite. Evidence:
+`artifacts/composition-c1/inline-whitespace-evidence.json`.
+
+Parent regressions now use `tools/NewParentRegressionRuntime.ps1`, with independent
+owned input copies and rejection of unowned/linked destinations. Thirteen Windows
+fixture-sharing/ownership checks pass and run in existing CI on both platforms;
+local Ubuntu lacks pwsh, while its .NET checks pass. This follows a confirmed
+agent setup error: a legacy Cases junction received six unpinned additions and
+one shared input lost its read-only flag. Existing pinned bytes remain exact and
+protection is restored. Automatic review blocked removal of the additions and old
+junction; both remain, with no retry. The historical 444f5a55 input set is excluded
+from strict immutable identity claims. All 1,337 current frozen inputs retain
+pinned hashes/protection and the six current parent inputs have independent file
+ownership. Ownership repair/rejection evidence remains beside the delivery report.

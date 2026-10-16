@@ -11,6 +11,8 @@ New-Item -ItemType Directory -Path (Join-Path $repo 'tools') -Force | Out-Null
 $repo = (Resolve-Path -LiteralPath $repo).Path
 $script = Join-Path $repo 'tools/FreezeQualificationArtifact.ps1'
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'FreezeQualificationArtifact.ps1') -Destination $script
+$parentScript = Join-Path $repo 'tools/NewParentRegressionRuntime.ps1'
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'NewParentRegressionRuntime.ps1') -Destination $parentScript
 function Invoke-Git([string[]] $Arguments) {
     $result = git -C $repo @Arguments 2>&1
     if ($LASTEXITCODE -ne 0) { throw ($result -join "`n") }
@@ -34,6 +36,9 @@ foreach ($project in @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.
     'same fake library; no executable code' | Set-Content -LiteralPath (Join-Path $directory 'Lokad.OoxPdf.dll')
     'fake test assembly' | Set-Content -LiteralPath (Join-Path $directory 'Lokad.OoxPdf.Tests.dll')
 }
+foreach ($name in @('Lokad.OoxPdf.Tests.pdb','Lokad.OoxPdf.Tests.deps.json','Lokad.OoxPdf.Tests.runtimeconfig.json')) {
+    'fake runner support; no executable code' | Set-Content -LiteralPath (Join-Path $repo ('tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/' + $name))
+}
 Invoke-Git @('add', '.')
 Invoke-Git @('commit', '--quiet', '-m', 'Initial fixtures')
 function Freeze([string] $Name) {
@@ -56,6 +61,25 @@ if ($first.ReusedInputSnapshot -or !$second.ReusedInputSnapshot -or
     $first.InputSnapshot -ne $second.InputSnapshot -or $first.InputTree -ne $second.InputTree) { throw 'Unchanged input reuse failed' }
 $link = Get-Item -LiteralPath (Join-Path $repo ('artifacts/second/' + (Split-Path $inputPath)))
 if (!$link.LinkType -or (Get-Content -LiteralPath (Join-Path $link.FullName 'sample.txt') -Raw) -notmatch 'first fixture') { throw 'Frozen input link is unusable' }
+# Mutating a parent fixture must never mutate the frozen source, including
+# its read-only metadata. Reuse replaces owned entries rather than aliases.
+$parentManifest = Join-Path $OutputDirectory 'parent-inputs.json'
+@('sample.txt','nested\second.txt') | ConvertTo-Json | Set-Content -LiteralPath $parentManifest
+$parentOutput = Join-Path $OutputDirectory 'parent-runtime'
+$parentArguments = @{TestArtifactDirectory=(Join-Path $repo 'artifacts/first'); ParentArtifactDirectory=(Join-Path $repo 'artifacts/second'); InputManifest=$parentManifest; OutputDirectory=$parentOutput}
+& $parentScript @parentArguments | Out-Null
+$frozenInput = Join-Path $first.InputSnapshot $inputPath
+$frozenHash = (Get-FileHash -LiteralPath $frozenInput).Hash
+$ownedInput = Join-Path $parentOutput $inputPath
+[IO.File]::WriteAllText([IO.Path]::GetFullPath($ownedInput), 'mutable parent fixture')
+if ((Get-FileHash -LiteralPath $frozenInput).Hash -ne $frozenHash -or !(Get-Item -LiteralPath $frozenInput).IsReadOnly) { throw 'Parent fixture aliases a frozen input' }
+& $parentScript @parentArguments | Out-Null
+if ((Get-FileHash -LiteralPath $ownedInput).Hash -ne $frozenHash) { throw 'Owned parent reuse failed' }
+$parentArguments.OutputDirectory = Join-Path $repo 'artifacts/second'
+$parentRejected = $false
+try { & $parentScript @parentArguments | Out-Null }
+catch { if (!$_.Exception.Message.Contains('unowned existing')) { throw }; $parentRejected = $true }
+if (!$parentRejected -or (Get-FileHash -LiteralPath $frozenInput).Hash -ne $frozenHash) { throw 'Frozen parent output was not rejected without writes' }
 $worktree = Join-Path $repo 'artifacts/worktree'
 Invoke-Git @('worktree', 'add', '--quiet', '--detach', $worktree, 'HEAD')
 foreach ($project in @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests')) {
@@ -108,8 +132,9 @@ Reject 'mixed' 'Release library copies differ'
 [ordered]@{
     Checks=@('Shared unchanged fixture tree', 'Frozen runner input link', 'Linked worktree reuse', 'Dirty source rejection',
         'Changed fixture isolation', 'Cross-tree immutable file sharing', 'Corrupt alias rejection',
-        'Corrupt prior-tree rejection', 'Corrupt snapshot rejection', 'Mixed library rejection')
+        'Corrupt prior-tree rejection', 'Corrupt snapshot rejection', 'Mixed library rejection',
+        'Owned parent input isolation', 'Owned parent reuse', 'Frozen parent destination rejection')
     LibraryBuilds=0;LibraryTestRuns=0;First=$first;Second=$second;Changed=$changed
     SharedInputPathLength=$changedNested.Length
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json') -Encoding utf8
-Write-Output 'Ten fixture-freeze checks passed; no library build or test-suite replay.'
+Write-Output 'Thirteen fixture-freeze/parent-ownership checks passed; no library build or test-suite replay.'
