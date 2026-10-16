@@ -139,4 +139,30 @@ internal static class DocxInlineContent
         }
         return false;
     }
+
+    public static bool HasSupportedTextRevisionOwners(IReadOnlyList<DocxRevisionInfo> revisions,
+        IReadOnlyList<DocxTextRun> runs, CancellationToken token)
+    {
+        if (revisions.Count == 0) return true;
+        var remaining = new HashSet<DocxRevisionInfo>(ReferenceEqualityComparer.Instance);
+        foreach (var revision in revisions)
+        {
+            token.ThrowIfCancellationRequested();
+            if (revision.Kind != DocxRevisionKind.Insertion) return false;
+            remaining.Add(revision);
+        }
+        // Inserted text already owns its inline style and source extent.
+        // Markup deletions require a balloon/frame contract; marks/properties,
+        // equation revisions and nontext owners retain their existing fallbacks.
+        // Resolve actual source ownership in linear work.
+        foreach (var run in runs)
+        {
+            token.ThrowIfCancellationRequested();
+            if (run.Text.Length == 0) continue;
+            if (run.Revision is { } revision) remaining.Remove(revision);
+            foreach (var item in run.Revisions)
+            { token.ThrowIfCancellationRequested(); remaining.Remove(item); }
+        }
+        return remaining.Count == 0;
+    }
 }

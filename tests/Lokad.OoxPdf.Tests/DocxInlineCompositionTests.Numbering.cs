@@ -9,13 +9,17 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
-    public static void DocxInlineCompositionNumberedDisplayRowsMatchIndependentWord()
+    public static void DocxInlineCompositionNumberedDisplayRowsMatchIndependentWord() =>
+        AssertNumberedWordFrames("math-numbered-display-office-geometry.json");
+
+    private static void AssertNumberedWordFrames(string referenceFile)
     {
         if (!OperatingSystem.IsWindows() || !File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc"))) TestAssert.Skip("Independent controls use installed Windows math/text metrics.");
         string folder = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
-        using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, "math-numbered-display-office-geometry.json")));
+        using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, referenceFile)));
         foreach (var row in reference.RootElement.GetProperty("Rows").EnumerateArray())
         {
+            if (row.TryGetProperty("Supported", out var supported) && !supported.GetBoolean()) continue;
             string id = row.GetProperty("Id").GetString()!;
             string input = Path.Combine(folder, id + ".docx");
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));

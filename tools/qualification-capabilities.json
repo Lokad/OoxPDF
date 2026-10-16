@@ -1517,5 +1517,24 @@
     "PortableRenderingMathOnlyGroupsPreserveDisplayMeasurementAndAlignment",
     "PortableRenderingHardBreakMathRowsPreserveDisplayFramesAcrossStories",
     "DocxInlineCompositionMeasurementKeepsMultipleEquationsAndPicturesInSourceOrder"
+  ],
+  "docx-math-text-insertions": [
+    "DocxInlineCompositionInsertedTextMath",
+    "DocxInlineCompositionTextRevisionOwnershipKeepsNontextFallbacksAndCancellation",
+    "PortableRenderingInsertedTextMath",
+    "DocxInlineCompositionNumberedDisplayRowsMatchIndependentWord",
+    "DocxInlineCompositionListLabelOwnsOnlyTheFirstAuthoredMathRow",
+    "PortableRenderingNumberedExplicitMath",
+    "DocxInlineCompositionMixedDisplaySourceRolesFollowAuthoredRows",
+    "DocxInlineCompositionMixedDisplayRowsMatchIndependentWord",
+    "DocxInlineCompositionExplicitDisplaysRetainSourceRowsAndFallbacks",
+    "DocxInlineCompositionExplicitDisplayLinksRetainSourceAndResolvedStyleOwnership",
+    "DocxWordCompatiblePrintScaleSkipsInsertionOnlyRevisions",
+    "DocxWordCompatiblePrintScaleKeepsFormattingRevisions",
+    "DocxWordCompatibleAllMarkupUsesOfficeRevisionDecorationColor",
+    "DocxWordCompatibleAllMarkupOmitsInventedMoveRevisionTracking",
+    "DocxSimpleMarkupRendererDrawsChangeBarsForRunRevisions",
+    "DocxWordCompatibleRevisionRunsChainWithoutInventedOffsets",
+    "DocxInlineCompositionMeasurementKeepsMultipleEquationsAndPicturesInSourceOrder"
   ]
 }

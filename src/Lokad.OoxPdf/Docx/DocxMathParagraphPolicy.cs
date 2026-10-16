@@ -145,7 +145,7 @@ internal static class DocxMathParagraphPolicy
         CancellationToken token, bool withInlineOwner)
     {
         var display = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
-        if (!HasSupportedSourceOwner(paragraph, hasPageInputs: true) ||
+        if (!HasSupportedSourceOwner(paragraph, hasPageInputs: true, token) ||
             paragraph.InlineContent is not { } items || !TryGetDisplayLineSpacingFactor(paragraph, out _))
             return display;
         var row = new List<DocxEquation>();
@@ -258,9 +258,10 @@ internal static class DocxMathParagraphPolicy
 
     public static IReadOnlyList<DocxEquation> GetPreparationEquations(DocxParagraph paragraph, bool hasPageInputs, CancellationToken token)
     {
+        token.ThrowIfCancellationRequested();
         if (GetStandaloneRow(paragraph) is { } standalone) return [standalone];
         if (GetInlineRow(paragraph) is { } inline) return [inline];
-        if (!NeedsOrderedInlineLayout(paragraph) || !HasSupportedSourceOwner(paragraph, hasPageInputs) ||
+        if (!NeedsOrderedInlineLayout(paragraph) || !HasSupportedSourceOwner(paragraph, hasPageInputs, token) ||
             paragraph.InlineContent is null ||
             paragraph.Spacing.LineRuleValue is not (null or "auto") || paragraph.LineSpacingPoints is not null) return [];
         // Source rows own resolved style: Word measures explicit formulas inline
@@ -284,8 +285,10 @@ internal static class DocxMathParagraphPolicy
         HasSupportedSourceOwner(paragraph) && paragraph.Equations.Count == 1 &&
         paragraph.Images.Count == 0;
 
-    private static bool HasSupportedSourceOwner(DocxParagraph paragraph, bool hasPageInputs = false) =>
-        paragraph.Equations.Count != 0 && paragraph.Equations.All(equation => equation.Revision is null) && paragraph.Revisions.Count == 0 &&
+    private static bool HasSupportedSourceOwner(DocxParagraph paragraph, bool hasPageInputs = false,
+        CancellationToken token = default) =>
+        paragraph.Equations.Count != 0 && paragraph.Equations.All(equation => equation.Revision is null) &&
+        DocxInlineContent.HasSupportedTextRevisionOwners(paragraph.Revisions, paragraph.Runs, token) &&
         paragraph.InlineTextBoxes.Count == 0 &&
         DocxInlineContent.HasSupportedReferences(paragraph.InlineReferences, paragraph.Runs) &&
         // Bookmarks are source metadata with no measured or painted extent.

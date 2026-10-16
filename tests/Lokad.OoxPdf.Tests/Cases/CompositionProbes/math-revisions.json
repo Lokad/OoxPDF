@@ -1,0 +1,90 @@
+[
+  {
+    "Id": "math-revision-body-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-revision-body-ins.docx",
+    "Sha256": "ABD40B8074ED4A8CBCE167B37059E00F726A1FBEDE573F090D7D0666135F607E",
+    "SourceSha256": "396DF62C526FF77B985D2A3E91A31AC3CA674DB590636327C1DAB8D753A7E183",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-revision-body-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-revision-body-del.docx",
+    "Sha256": "67401B2D4DBAF0D781C3FBEF86CEE7285361631A612E619678D717FAFAA11303",
+    "SourceSha256": "396DF62C526FF77B985D2A3E91A31AC3CA674DB590636327C1DAB8D753A7E183",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-revision-cell-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-revision-cell-ins.docx",
+    "Sha256": "DDEB9859EA790804BB72E257460D509A8A0C2604BDEE2964A1CBF4DAC2A0517C",
+    "SourceSha256": "BF6C08DB053F1A468F51500F5EFFB7975BC9CF0015A42D6DDCEE7864B36B43D5",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-revision-cell-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-revision-cell-del.docx",
+    "Sha256": "EFFEF0D2C84B8E17F10408D94C0E52086B85C3E5275D5D9C6345076923FD1C02",
+    "SourceSha256": "BF6C08DB053F1A468F51500F5EFFB7975BC9CF0015A42D6DDCEE7864B36B43D5",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-revision-header-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-revision-header-ins.docx",
+    "Sha256": "2A5AFC5BB4975174935E11105B8FF174DC2A98CB8202F06A159C216C0F244B35",
+    "SourceSha256": "F3E14A9D03CB6DF8F9D9889C851CF3E1F02A03716721623FCD8FA878790744B8",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-revision-header-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-revision-header-del.docx",
+    "Sha256": "B44E65CD877E2946F3D6B651E825737F365CB35D6136D4D87A6A4D2E90C98404",
+    "SourceSha256": "F3E14A9D03CB6DF8F9D9889C851CF3E1F02A03716721623FCD8FA878790744B8",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-revision-footer-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-revision-footer-ins.docx",
+    "Sha256": "CA8835BCC1AEE9185A476568E9DE2065CECBE610A16632211067E330055497C1",
+    "SourceSha256": "A355BF23D39DD8E6F59428ADEC85A1CF401DD69580BED41743F2BDEEDAE57040",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-revision-footer-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-revision-footer-del.docx",
+    "Sha256": "A393C2FE3E2B3DB3213C8E15B4F8EE60703D9CAE750A2834C4E88E39AFD47157",
+    "SourceSha256": "A355BF23D39DD8E6F59428ADEC85A1CF401DD69580BED41743F2BDEEDAE57040",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]

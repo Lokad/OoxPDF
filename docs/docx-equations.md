@@ -1,5 +1,12 @@
 # Native DOCX equations
 
+Plain inserted text no longer excludes adjacent unchanged equations. The reader
+and math preparation share a linear check that the actual insertion metadata is
+owned by materialized text runs; those runs retain their existing inline style.
+Equation revisions, paragraph marks/property changes, move ranges and markup
+deletions retain explicit fallbacks. Markup deletion balloons still need their
+separate placement contract; filtered deletions in Final remain ordinary content.
+
 Numbered paragraphs retain supported explicit math zones alongside prose and
 inline pictures. The list label owns only the first authored row: its formulas
 use inline sizing, while a later math-only row after a hard break owns display
