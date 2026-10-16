@@ -432,6 +432,21 @@ static (T Value, object Metrics) MeasureStep<T>(Func<T> produce, string scope)
 // whole-pipeline measurements, so shared static caches are warm; the whole
 // control stays the cold/warm reference. Prerequisite objects are left for
 // GC like the converter itself (no disposal).
+static string HashKerningMap(IReadOnlyDictionary<uint, short> pairs)
+{
+    uint[] keys = pairs.Keys.ToArray();
+    Array.Sort(keys);
+    using var digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+    Span<byte> record = stackalloc byte[6];
+    foreach (uint key in keys)
+    {
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(record, key);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt16BigEndian(record[4..], pairs[key]);
+        digest.AppendData(record);
+    }
+    return Convert.ToHexString(digest.GetHashAndReset());
+}
+
 static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSha, string outputMode, ProbeFont? probeFont, bool docxReview)
 {
     bool isDocx = string.Equals(kind, "docx", StringComparison.OrdinalIgnoreCase);
@@ -514,7 +529,7 @@ static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSh
                 (IReadOnlyDictionary<uint, short>)kerningMethod.Invoke(null, kerningArguments)!,
                 "standalone legacy kern/GPOS preparation; SFNT bytes/table directory excluded; reflection invocation included");
             parsedFaceMetrics.Add(new { family = font.FamilyName, programBytes = font.Bytes.Length, glyphCount = font.GlyphCount,
-                metrics, kerningPairCount = pairs.Count, kerning = kerningMetrics });
+                metrics, kerningPairCount = pairs.Count, kerningMapSha256 = HashKerningMap(pairs), kerning = kerningMetrics });
         }
         var layoutRenderer = new DocxRenderer(probeFont, markupMode, geometryMode);
         (_, object coordinatedLayoutMetrics) = MeasureStep(() => layoutRenderer.InspectLayout(detailDocument),
@@ -685,6 +700,15 @@ static int RunSelfTest(ProbeFont? probeFont)
         ("self-test.docx", BuildMinimalDocx()),
     };
     bool ok = true;
+    var firstMap = new Dictionary<uint, short> { [0x00010002] = -50, [0x00020001] = 20 };
+    var reversedMap = new Dictionary<uint, short> { [0x00020001] = 20, [0x00010002] = -50 };
+    var changedMap = new Dictionary<uint, short> { [0x00010002] = -51, [0x00020001] = 20 };
+    if (HashKerningMap(firstMap) != HashKerningMap(reversedMap) || HashKerningMap(firstMap) == HashKerningMap(changedMap))
+    {
+        Console.WriteLine("FAIL self-test kerning-map fingerprint ordering/value sensitivity.");
+        ok = false;
+    }
+    else Console.WriteLine("PASS self-test kerning-map fingerprint ordering/value sensitivity.");
     foreach ((string name, byte[] package) in cases)
     {
         try
