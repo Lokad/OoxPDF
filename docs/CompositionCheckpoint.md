@@ -1111,3 +1111,16 @@ selection now honors measured Both/Final/Review modes; 14 adversarial controls
 retain missing/extra/duplicate rejection on Windows/Ubuntu. Broader composed
 note-math acceptance remains the next step. Evidence:
 `artifacts/composition-c1/note-width-evidence.json`.
+
+The held-out composed endnote report also retains two supported fractions inside
+its note, alongside all six original equations, prose, image, cached fields and
+annotations. Only the endnote package part changes. Both presets retain two
+pages, pass global/page-local prose and simple-math presence screens, and preserve
+four navigation targets with the note destination on page two. All four page
+pairs were reviewed without visible omission or serious pagination, overlap or
+clipping defects. Note-baseline residual reaches 0.302pt; note-numerator horizontal
+residual reaches 1.682pt. Both numerical visual gates remain failed. Source
+7ede0fb3 reuses frozen 86b6dd92 with 17 asset hashes checked, no library rebuild,
+suite replay or new fitting branch. The authoring command's original mode still
+regenerates the prior C7 source byte for byte. Evidence:
+`artifacts/composition-c1/composed-note-math-evidence.json`.
