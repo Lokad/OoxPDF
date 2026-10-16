@@ -148,11 +148,11 @@ internal static class DocxInlineContent
         foreach (var revision in revisions)
         {
             token.ThrowIfCancellationRequested();
-            if (revision.Kind != DocxRevisionKind.Insertion) return false;
+            if (revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion)) return false;
             remaining.Add(revision);
         }
-        // Inserted text already owns its inline style and source extent.
-        // Markup deletions require a balloon/frame contract; marks/properties,
+        // Inserted/deleted text owns its inline style and source extent. The
+        // declared Word-compatible view prints both inline; marks/properties,
         // equation revisions and nontext owners retain their existing fallbacks.
         // Resolve actual source ownership in linear work.
         foreach (var run in runs)

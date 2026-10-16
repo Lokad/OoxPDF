@@ -85,10 +85,10 @@ internal static partial class DocxInlineCompositionTests
         TestAssert.True(!label.Underline && label.UnderlineValue == "none", "Numbering-level formatting keeps precedence.");
     }
 
-    public static void DocxInlineCompositionInsertedTextMathMatchesIndependentWord() =>
+    public static void DocxInlineCompositionTextRevisionMathMatchesIndependentWord() =>
         AssertNumberedWordFrames("math-revisions-office-geometry.json");
 
-    public static void DocxInlineCompositionInsertedTextMathPreservesSourceAndDeletionFallbacks()
+    public static void DocxInlineCompositionTextRevisionMathPreservesSourceAndFallbacks()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Native source controls use installed math fonts.");
         CheckTextRevisionMath(null);
@@ -100,7 +100,6 @@ internal static partial class DocxInlineCompositionTests
         foreach (string kind in new[] { "ins", "del" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            bool supported = kind == "ins" || mode == OoxPdfDocxMarkupMode.Final;
             string? part = story == "header" ? "word/header1.xml" : story == "footer" ? "word/footer1.xml" : null;
             (double X, double Y, double Size)[]? original = null;
             foreach (bool metadata in new[] { false, true })
@@ -118,23 +117,23 @@ internal static partial class DocxInlineCompositionTests
                 var owner = story == "header" ? source.HeaderParagraphs.First(p => p.Equations.Count != 0) :
                     story == "footer" ? source.FooterParagraphs.First(p => p.Equations.Count != 0) :
                     DocxBlockTraversal.EnumerateBodyParagraphs(source.BodyElements).First(p => p.Equations.Count != 0);
-                TestAssert.Equal(supported, owner.InlineContent is not null);
+                TestAssert.True(owner.InlineContent is not null, "Actual inline insertion/deletion owners preserve the shared source view.");
                 TestAssert.True(owner.Equations.All(e => e.Revision is null), "Revising adjacent text cannot change equation ownership.");
                 var page = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                     ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
                     .RenderBlankPages(source, null, default).Single();
                 var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
                 var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Where(show => fonts.Contains(show.Font)).ToArray();
-                TestAssert.Equal(supported ? 18 : 14, math.Length);
+                TestAssert.Equal(18, math.Length);
                 string text = string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC);
-                TestAssert.Equal(supported ? 2 : 1, text.Split("x+2y", StringSplitOptions.None).Length - 1);
+                TestAssert.Equal(2, text.Split("x+2y", StringSplitOptions.None).Length - 1);
                 TestAssert.Equal(2, text.Split("a+b=c", StringSplitOptions.None).Length - 1);
                 TestAssert.Equal(1, page.Images.Count);
                 TestAssert.Contains("share the same input series.", DocxPageFootnoteNumberingTests.DecodeText(page));
                 if (original is not null)
                     for (int i = 0; i < math.Length; i++)
                         TestAssert.True(Math.Abs(original[i].X - math[i].X) < .01d && Math.Abs(original[i].Y - math[i].Y) < .01d && original[i].Size == math[i].Size,
-                            "Bookmark/run-split metadata preserves inserted-text math geometry and the staged deletion fallback.");
+                            "Bookmark/run-split metadata preserves inserted-text math geometry and deletion text geometry.");
                 original = math.Select(show => (show.X, show.Y, show.Size)).ToArray();
             }
         }
@@ -147,6 +146,10 @@ internal static partial class DocxInlineCompositionTests
         var revision = paragraph.Revisions.Single();
         TestAssert.True(DocxInlineContent.HasSupportedTextRevisionOwners(paragraph.Revisions, paragraph.Runs, default),
             "The same parsed insertion object owns its ordinary resolved text run.");
+        var deleted = ReadMutation("CompositionProbes/math-revision-body-del", OoxPdfDocxMarkupMode.AllMarkup, false, false)
+            .Paragraphs.First(p => p.Equations.Count != 0);
+        TestAssert.True(DocxInlineContent.HasSupportedTextRevisionOwners(deleted.Revisions, deleted.Runs, default),
+            "Materialized deletion text owns its actual revision in the declared inline view.");
         foreach (var unsupported in new[] { revision with { }, revision with { Kind = DocxRevisionKind.Deletion },
             revision with { Kind = DocxRevisionKind.ParagraphPropertiesChange }, revision with { Kind = DocxRevisionKind.MoveTo } })
             TestAssert.True(!DocxInlineContent.HasSupportedTextRevisionOwners([unsupported], paragraph.Runs, default),

@@ -16,7 +16,7 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
-    public static void PortableRenderingInsertedTextMathKeepsSourceOwnersAndDeletionFallbacks() =>
+    public static void PortableRenderingTextRevisionMathKeepsSourceOwnersAndFallbacks() =>
         DocxInlineCompositionTests.CheckTextRevisionMath(new PinnedResolver());
 
     public static void PortableRenderingNumberedExplicitMathRetainsAuthoredRowOwnership() =>

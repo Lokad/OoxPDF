@@ -1519,9 +1519,9 @@
     "DocxInlineCompositionMeasurementKeepsMultipleEquationsAndPicturesInSourceOrder"
   ],
   "docx-math-text-insertions": [
-    "DocxInlineCompositionInsertedTextMath",
+    "DocxInlineCompositionTextRevisionMath",
     "DocxInlineCompositionTextRevisionOwnershipKeepsNontextFallbacksAndCancellation",
-    "PortableRenderingInsertedTextMath",
+    "PortableRenderingTextRevisionMath",
     "DocxInlineCompositionNumberedDisplayRowsMatchIndependentWord",
     "DocxInlineCompositionListLabelOwnsOnlyTheFirstAuthoredMathRow",
     "PortableRenderingNumberedExplicitMath",
@@ -1539,8 +1539,8 @@
   ],
   "docx-list-label-revision-owners": [
     "DocxInlineCompositionListLabel",
-    "DocxInlineCompositionInsertedTextMath",
-    "PortableRenderingInsertedTextMath",
+    "DocxInlineCompositionTextRevisionMath",
+    "PortableRenderingTextRevisionMath",
     "DocxInlineCompositionNumberedDisplayRowsMatchIndependentWord",
     "PortableRenderingNumberedExplicitMath",
     "DocxFontPlanIncludesNumberingMarkerTypeface",
@@ -1554,5 +1554,28 @@
     "DocxWordCompatibleAllMarkupUsesOfficeRevisionDecorationColor",
     "DocxWordCompatibleRevisionRunsChainWithoutInventedOffsets",
     "DocxSimpleMarkupRendererDrawsChangeBarsForRunRevisions"
+  ],
+  "docx-math-text-revisions": [
+    "DocxInlineCompositionTextRevisionMath",
+    "DocxInlineCompositionTextRevisionOwnershipKeepsNontextFallbacksAndCancellation",
+    "PortableRenderingTextRevisionMath",
+    "DocxInlineCompositionNumberedDisplayRowsMatchIndependentWord",
+    "DocxInlineCompositionListLabelOwnsOnlyTheFirstAuthoredMathRow",
+    "PortableRenderingNumberedExplicitMath",
+    "DocxInlineCompositionMixedDisplaySourceRolesFollowAuthoredRows",
+    "DocxInlineCompositionMixedDisplayRowsMatchIndependentWord",
+    "DocxInlineCompositionExplicitDisplaysRetainSourceRowsAndFallbacks",
+    "DocxInlineCompositionExplicitDisplayLinksRetainSourceAndResolvedStyleOwnership",
+    "DocxWordCompatiblePrintScaleSkipsInsertionOnlyRevisions",
+    "DocxWordCompatiblePrintScaleKeepsFormattingRevisions",
+    "DocxWordCompatibleAllMarkupUsesOfficeRevisionDecorationColor",
+    "DocxWordCompatibleAllMarkupOmitsInventedMoveRevisionTracking",
+    "DocxSimpleMarkupRendererDrawsChangeBarsForRunRevisions",
+    "DocxWordCompatibleRevisionRunsChainWithoutInventedOffsets",
+    "DocxInlineCompositionMeasurementKeepsMultipleEquationsAndPicturesInSourceOrder",
+    "DocxInlineCompositionListLabelsKeepTextRevisionFormattingOwners",
+    "DocxMarkupModesFilterHyperlinkAndFieldRevisionsBeforeLayout",
+    "DocxMarkupModesFilterStaticAndRelatedStoryRevisions",
+    "DocxRevisionViewSettingsFilterRevisionsBeforeLayout"
   ]
 }

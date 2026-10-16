@@ -1,11 +1,13 @@
 # Native DOCX equations
 
-Plain inserted text no longer excludes adjacent unchanged equations. The reader
-and math preparation share a linear check that the actual insertion metadata is
-owned by materialized text runs; those runs retain their existing inline style.
-Equation revisions, paragraph marks/property changes, move ranges and markup
-deletions retain explicit fallbacks. Markup deletion balloons still need their
-separate placement contract; filtered deletions in Final remain ordinary content.
+Plain inserted or deleted text no longer excludes adjacent unchanged equations.
+Reader publication and math preparation share a linear check that the actual
+revision metadata is owned by materialized text runs; those runs retain their
+existing inline style. Equation revisions, paragraph marks/property changes and
+move ranges retain explicit fallbacks. Word-compatible references explicitly use
+inline revision mode 1. Balloon deletions are a different view; the earlier large
+frame difference against mode 0 did not establish a library geometry defect.
+Filtered deletions in Final remain ordinary content.
 
 Numbered paragraphs retain supported explicit math zones alongside prose and
 inline pictures. The list label owns only the first authored row: its formulas
