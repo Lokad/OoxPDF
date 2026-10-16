@@ -7,11 +7,11 @@ and maps image rows to PDF Y; the same bounded raster planes, image budgets and
 per-row cancellation remain. Arbitrary custom geometry keeps its diagnosed
 rectangular frame. The shipped library remains safe managed and dependency-free.
 
-Frozen d9f598c1 qualifies43 Windows and43 Ubuntu methods once each, with zero
-skips and one causal parent failure. Five public decks cover26 page pairs:25 gates
+Frozen d9f598c1 qualifies 43 Windows and 43 Ubuntu methods once each, with zero
+skips and one causal parent failure. Five public decks cover 26 page pairs: 25 gates
 pass and the prior alpha-color case remains failed. Triangle SSIM improves from
-0.87693 to0.99813; rotated right-triangle, star and grouped-chevron controls pass
-unchanged0.995 SSIM/0.98 color thresholds. The four changed/new pairs were reviewed
+0.87693 to 0.99813; rotated right-triangle, star and grouped-chevron controls pass
+unchanged 0.995 SSIM/0.98 color thresholds. The four changed/new pairs were reviewed
 including full transformed/clipped footprints and following paint. Nineteen old
 picture pages retain PDF identity; all compared prototype PDFs match the frozen
 artifact, so raster/diff evidence is reused. Four transfer smoke PDFs match after
@@ -21,7 +21,7 @@ artifact, so raster/diff evidence is reused. Four transfer smoke PDFs match afte
 The image-only portfolio exposed a tool assumption: the PDF inspector omits an
 empty text-operation report. Measurement now treats that as no text and counts
 page objects independently. The failed first measurement is retained; the same
-production DLL then measures all five decks/26 pages without rebuilding.
+production DLL then measures all five decks / 26 pages without rebuilding.
 
 C61 matches white formatting-balloon fill in seven independently inspected Word
 paths, retaining comment-author colors, mixed summaries and other profiles.
