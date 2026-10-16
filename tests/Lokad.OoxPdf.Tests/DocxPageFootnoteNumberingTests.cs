@@ -8,7 +8,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxPageFootnoteNumberingTests
+internal static partial class DocxPageFootnoteNumberingTests
 {
     public static void DocxPageFootnoteNumbersRestartWithoutChangingAuthoredDigits()
     {

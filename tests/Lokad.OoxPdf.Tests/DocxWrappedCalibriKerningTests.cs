@@ -63,7 +63,7 @@ internal static class DocxWrappedCalibriKerningTests
         TestAssert.True(ReferenceEquals(source, fallback), "Rejected ownership retains source.");
     }
 
-    public static void DocxWrappedCalibriKerningRendersNumberingAndPreserveSeparately()
+    public static void DocxWrappedCalibriKerningKeepsSourceNumberingAcrossModes()
     {
         var source = Read("0");
         foreach (var geometry in new[] { OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout })
@@ -71,7 +71,7 @@ internal static class DocxWrappedCalibriKerningTests
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
             var pages = renderer.RenderBlankPages(source, null, CancellationToken.None).ToArray();TestAssert.Equal(2, pages.Length);
             string text = string.Join('|', pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
-            TestAssert.Contains(geometry == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ? "09 Public destination" : "105 Public destination", text);
+            TestAssert.Contains("09 Public destination", text);
             TestAssert.Equal(4, pages.Sum(p => p.Annotations.Count));
             for (int i = 0; i < pages.Length; i++) TestAssert.True(pages[i].Annotations.All(a => a.Destination!.Value.PageIndex == i), "Every actual destination retains its complete source owner page.");
         }

@@ -1713,5 +1713,20 @@
     "PortableRenderingRunFormattingRetainsAuthoredInk",
     "PortableRenderingRunFormattingMathKeepsSourceAndMetadata",
     "PortableRenderingReviewAuthorsShareSourceTextPalette"
+  ],
+  "docx-measured-footnote-numbering": [
+    "DocxMeasuredFootnoteOwners",
+    "PortableRenderingMeasuredFootnoteOwners",
+    "DocxPageFootnoteNumbers",
+    "DocxMultipleFootnote",
+    "DocxPlainFootnoteKerning",
+    "DocxWrappedCalibriKerning",
+    "DocxMetGlyphAdvance",
+    "DocxNominalGlyphAdvance",
+    "DocxCompleteFootnote",
+    "DocxMetWrappedFootnoteNumbers",
+    "DocxInlineCompositionAutomaticFootnotes",
+    "PortableRenderingAutomaticFootnotes",
+    "DocxWrappedFootnoteNumbers"
   ]
 }

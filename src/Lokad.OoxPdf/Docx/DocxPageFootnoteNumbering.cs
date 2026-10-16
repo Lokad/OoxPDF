@@ -134,7 +134,10 @@ internal static class DocxPageFootnoteNumbering
             if ((ownerScope != DocxFootnoteOwnerScope.AllSourceReferences && p.InlineReferences.Count != 1) ||
                 !linesByParagraph.TryGetValue(p, out var lines) || lines.Count == 0) return false;
             bool wrapped = lines.Count != 1;
-            if (wrapped && (!allowWrappedBody || (wrappedBodyEligible ??= DocxWrappedFootnoteFrame.IsEligible(document, calibriPolicy, ownerScope)) != true ||
+            // Numbering can use complete measured marker/note ownership below.
+            // Font adjustment purposes keep their separately qualified frames.
+            if (wrapped && (!allowWrappedBody || ownerScope != DocxFootnoteOwnerScope.AllSourceReferences &&
+                (wrappedBodyEligible ??= DocxWrappedFootnoteFrame.IsEligible(document, calibriPolicy, ownerScope)) != true ||
                 lines.Any(l => l.Page != lines[0].Page))) return false;
             // Index source runs and actual text segments once per paragraph.
             // Numbering can own every marker; layout/kerning purposes retain

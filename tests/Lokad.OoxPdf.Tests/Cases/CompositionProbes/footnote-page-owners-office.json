@@ -1,0 +1,261 @@
+{
+  "Source": "Independent Word16 Final, explicit hidden markup; original zero-threshold control also has identical mixed-view geometry. Variants change typography only and have no visible markup.",
+  "Rows": [
+    {
+      "Id": "footnote-page-owners-calibri-12-zero",
+      "InputSha256": "E70290A5ECB37604406E24BEC90E2210F1BD73DBAC404362C48E9C4E2CA884E8",
+      "ReferencePdfSha256": "B8AE65BCBDB3BF7863440CA89F8BE2CEE96257566547BF451D5E7CDF8B78387F",
+      "MarkerFontSize": 8.04,
+      "Markers": [
+        {
+          "DecodedText": "09",
+          "PageNumber": 1,
+          "FontSize": 8.04,
+          "EffectiveX": 93.024,
+          "EffectiveY": 639.34
+        },
+        {
+          "DecodedText": "10",
+          "PageNumber": 1,
+          "FontSize": 8.04,
+          "EffectiveX": 93.024,
+          "EffectiveY": 551.38
+        },
+        {
+          "DecodedText": "09",
+          "PageNumber": 1,
+          "FontSize": 8.04,
+          "EffectiveX": 72.024,
+          "EffectiveY": 93.744
+        },
+        {
+          "DecodedText": "10",
+          "PageNumber": 1,
+          "FontSize": 8.04,
+          "EffectiveX": 72.024,
+          "EffectiveY": 79.104
+        },
+        {
+          "DecodedText": "09",
+          "PageNumber": 2,
+          "FontSize": 8.04,
+          "EffectiveX": 93.024,
+          "EffectiveY": 639.34
+        },
+        {
+          "DecodedText": "10",
+          "PageNumber": 2,
+          "FontSize": 8.04,
+          "EffectiveX": 93.024,
+          "EffectiveY": 551.38
+        },
+        {
+          "DecodedText": "09",
+          "PageNumber": 2,
+          "FontSize": 8.04,
+          "EffectiveX": 72.024,
+          "EffectiveY": 93.744
+        },
+        {
+          "DecodedText": "10",
+          "PageNumber": 2,
+          "FontSize": 8.04,
+          "EffectiveX": 72.024,
+          "EffectiveY": 79.104
+        }
+      ]
+    },
+    {
+      "Id": "footnote-page-owners-calibri-12-met",
+      "InputSha256": "34B369BFA170AAF908B32D5CE6E4C2891DA34B29585A0854B2E09AD37BD9E94A",
+      "ReferencePdfSha256": "09A1B2BEC0FF6E9C8087A292E89C2A9CEDCC1AFF24209AFEF9BA1DA603EE0ED7",
+      "MarkerFontSize": 8.04,
+      "Markers": [
+        {
+          "DecodedText": "09",
+          "PageNumber": 1,
+          "FontSize": 8.04,
+          "EffectiveX": 93.024,
+          "EffectiveY": 639.34
+        },
+        {
+          "DecodedText": "10",
+          "PageNumber": 1,
+          "FontSize": 8.04,
+          "EffectiveX": 93.024,
+          "EffectiveY": 551.38
+        },
+        {
+          "DecodedText": "09",
+          "PageNumber": 1,
+          "FontSize": 8.04,
+          "EffectiveX": 72.024,
+          "EffectiveY": 93.744
+        },
+        {
+          "DecodedText": "10",
+          "PageNumber": 1,
+          "FontSize": 8.04,
+          "EffectiveX": 72.024,
+          "EffectiveY": 79.104
+        },
+        {
+          "DecodedText": "09",
+          "PageNumber": 2,
+          "FontSize": 8.04,
+          "EffectiveX": 93.024,
+          "EffectiveY": 639.34
+        },
+        {
+          "DecodedText": "10",
+          "PageNumber": 2,
+          "FontSize": 8.04,
+          "EffectiveX": 93.024,
+          "EffectiveY": 551.38
+        },
+        {
+          "DecodedText": "09",
+          "PageNumber": 2,
+          "FontSize": 8.04,
+          "EffectiveX": 72.024,
+          "EffectiveY": 93.744
+        },
+        {
+          "DecodedText": "10",
+          "PageNumber": 2,
+          "FontSize": 8.04,
+          "EffectiveX": 72.024,
+          "EffectiveY": 79.104
+        }
+      ]
+    },
+    {
+      "Id": "footnote-page-owners-arial-11-zero",
+      "InputSha256": "18D343F5FB99AD3FC146AE42E1345E3046FF860E66D3F81D2802F7EB291542FB",
+      "ReferencePdfSha256": "EB17D4AE4E6B3EB412CE46B99B123BC09A46AB8BD08D291ACB236BD0AE10F3CA",
+      "MarkerFontSize": 6.96,
+      "Markers": [
+        {
+          "DecodedText": "09",
+          "PageNumber": 1,
+          "FontSize": 6.96,
+          "EffectiveX": 93.384,
+          "EffectiveY": 650.38
+        },
+        {
+          "DecodedText": "10",
+          "PageNumber": 1,
+          "FontSize": 6.96,
+          "EffectiveX": 93.384,
+          "EffectiveY": 574.54
+        },
+        {
+          "DecodedText": "09",
+          "PageNumber": 1,
+          "FontSize": 6.96,
+          "EffectiveX": 72.024,
+          "EffectiveY": 90.864
+        },
+        {
+          "DecodedText": "10",
+          "PageNumber": 1,
+          "FontSize": 6.96,
+          "EffectiveX": 72.024,
+          "EffectiveY": 78.144
+        },
+        {
+          "DecodedText": "09",
+          "PageNumber": 2,
+          "FontSize": 6.96,
+          "EffectiveX": 93.384,
+          "EffectiveY": 650.38
+        },
+        {
+          "DecodedText": "10",
+          "PageNumber": 2,
+          "FontSize": 6.96,
+          "EffectiveX": 93.384,
+          "EffectiveY": 574.54
+        },
+        {
+          "DecodedText": "09",
+          "PageNumber": 2,
+          "FontSize": 6.96,
+          "EffectiveX": 72.024,
+          "EffectiveY": 90.864
+        },
+        {
+          "DecodedText": "10",
+          "PageNumber": 2,
+          "FontSize": 6.96,
+          "EffectiveX": 72.024,
+          "EffectiveY": 78.144
+        }
+      ]
+    },
+    {
+      "Id": "footnote-page-owners-times-14-zero",
+      "InputSha256": "2984549C87188ADF6650C130EFDDCBC57905CA8F38F2D9EB5AE5803E7988D10E",
+      "ReferencePdfSha256": "2F179FA4C8C484EDF9C8C209CA4A7030F40339B221E527FE6C0BFBF26105A746",
+      "MarkerFontSize": 9,
+      "Markers": [
+        {
+          "DecodedText": "09",
+          "PageNumber": 1,
+          "FontSize": 9,
+          "EffectiveX": 406.99,
+          "EffectiveY": 631.42
+        },
+        {
+          "DecodedText": "10",
+          "PageNumber": 1,
+          "FontSize": 9,
+          "EffectiveX": 406.99,
+          "EffectiveY": 534.79
+        },
+        {
+          "DecodedText": "09",
+          "PageNumber": 1,
+          "FontSize": 9,
+          "EffectiveX": 72.024,
+          "EffectiveY": 96.024
+        },
+        {
+          "DecodedText": "10",
+          "PageNumber": 1,
+          "FontSize": 9,
+          "EffectiveX": 72.024,
+          "EffectiveY": 79.944
+        },
+        {
+          "DecodedText": "09",
+          "PageNumber": 2,
+          "FontSize": 9,
+          "EffectiveX": 406.99,
+          "EffectiveY": 631.42
+        },
+        {
+          "DecodedText": "10",
+          "PageNumber": 2,
+          "FontSize": 9,
+          "EffectiveX": 406.99,
+          "EffectiveY": 534.79
+        },
+        {
+          "DecodedText": "09",
+          "PageNumber": 2,
+          "FontSize": 9,
+          "EffectiveX": 72.024,
+          "EffectiveY": 96.024
+        },
+        {
+          "DecodedText": "10",
+          "PageNumber": 2,
+          "FontSize": 9,
+          "EffectiveX": 72.024,
+          "EffectiveY": 79.944
+        }
+      ]
+    }
+  ]
+}
