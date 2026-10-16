@@ -47,7 +47,15 @@ if (!$reusedInputs) {
             $shared = Join-Path $prior.FullName $name
             if ((Get-FileHash -LiteralPath $shared).Hash -ne $inputs[$name]) { throw 'Prior shared input differs' }
             if (!(Get-Item -LiteralPath $shared).IsReadOnly) { throw 'Prior shared input is writable' }
-            New-Item -ItemType HardLink -Path $target -Target $shared | Out-Null
+            # The Windows hard-link provider needs extended paths for nested
+            # qualification repositories; file hashing/copying already supports them.
+            $linkPath = $target
+            $linkTarget = $shared
+            if ($IsWindows) {
+                $linkPath = if ($target.StartsWith('\\')) { '\\?\UNC\' + $target.Substring(2) } else { '\\?\' + $target }
+                $linkTarget = if ($shared.StartsWith('\\')) { '\\?\UNC\' + $shared.Substring(2) } else { '\\?\' + $shared }
+            }
+            New-Item -ItemType HardLink -Path $linkPath -Target $linkTarget | Out-Null
             $sharedInputFiles++
         }
         else { Copy-Item -LiteralPath (Join-Path $repo $name) -Destination $target }

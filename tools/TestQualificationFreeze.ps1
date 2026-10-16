@@ -19,6 +19,7 @@ Invoke-Git @('init', '--quiet')
 Invoke-Git @('config', 'user.name', 'Qualification test')
 Invoke-Git @('config', 'user.email', 'qualification@example.invalid')
 Invoke-Git @('config', 'core.autocrlf', 'false')
+if ($IsWindows) { Invoke-Git @('config', 'core.longpaths', 'true') }
 @('bin/', 'artifacts/') | Set-Content -LiteralPath (Join-Path $repo '.gitignore')
 $inputPath = 'tests/Lokad.OoxPdf.Tests/Cases/sample.txt'
 $inputFile = Join-Path $repo $inputPath
@@ -109,5 +110,6 @@ Reject 'mixed' 'Release library copies differ'
         'Changed fixture isolation', 'Cross-tree immutable file sharing', 'Corrupt alias rejection',
         'Corrupt prior-tree rejection', 'Corrupt snapshot rejection', 'Mixed library rejection')
     LibraryBuilds=0;LibraryTestRuns=0;First=$first;Second=$second;Changed=$changed
+    SharedInputPathLength=$changedNested.Length
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json') -Encoding utf8
 Write-Output 'Ten fixture-freeze checks passed; no library build or test-suite replay.'
