@@ -1,0 +1,26 @@
+[
+  {
+    "Id": "composed-endnotes-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/composed-endnotes-report.docx",
+    "Sha256": "B5B37D24BE35D83240ED806935718321E67C8D31558FF0D76FF29A070C70C2E3",
+    "HeldOut": true,
+    "ExpectedEquationCount": 6,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "See calculation",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "Features": [
+      "image/math/comment/link/bookmark in one paragraph",
+      "math/endnote reference in a table cell",
+      "numbering",
+      "header equation",
+      "footer",
+      "continuous endnote",
+      "wrapped prose",
+      "cached field results beside math/image/comment and inside an internal hyperlink"
+    ]
+  }
+]
