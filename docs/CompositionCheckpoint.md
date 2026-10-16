@@ -1676,3 +1676,31 @@ Microsoft documents [adjacent math-zone merging](https://learn.microsoft.com/en-
 and [OfficeMath spacing](https://devblogs.microsoft.com/math-in-office/officemath/).
 Using existing atom glue across prepared boxes is an inference confirmed by the
 independent controls here.
+
+
+## C44: owned picture and table frames
+
+The C43 printed-cell placement blocker is corrected. Ordered pictures retain their
+measured source-line owner; shared table translation moves the line, picture,
+clip and optional picture frame together. Unowned pictures retain the existing
+whole-table fallback before mutation. First-page pinning uses the measured text
+strut rather than object-inflated ascent, and object-only paragraphs consume
+retained paragraph-mark size. Removing a neighboring prose cell now preserves
+the picture/math baseline without a font, size or document-shape exception.
+
+Eight inputs/sixteen independent Word outcomes cover body/cell/first-table,
+pictures before/between fractions, combined source formulas and neighboring-cell
+removal. Bookmarks/run splitting retain content and placement. Maximum baseline
+error falls from 2.567pt to 0.170pt; X/local-X remain within 0.916/0.109pt.
+Four reviewed page pairs retain pictures and fraction rules, with the table top
+clear of preceding prose. All sixteen visual gates still fail unchanged thresholds;
+the three changed review controls now fail structural similarity only. Their mean
+pixel error falls approximately 0.60 to 0.19, with foreground recall about 99.85%.
+Source-prose/simple-math screens pass; generic rate/time extraction warnings remain.
+
+Frozen 988936bd passes 60 Windows methods once, 47 Ubuntu checks (13 font skips),
+two causal parent regressions and a 17-asset/four-PDF transfer. Twelve fixed/complete
+PDFs retain accepted bytes/comparisons/reviews; no root build or suite replay.
+C43 CI caught two older assertions assuming zero inter-formula spacing. Their
+replacement checks exact spacing/centering and belongs to both capability sets.
+Evidence: `artifacts/composition-c1/owned-picture-frames-evidence.json`.
