@@ -130,6 +130,35 @@ PDFs without a root build or repeated suite. Independent Office comparisons and
 failed visual thresholds remain unchanged. Evidence:
 `artifacts/composition-c1/kerning-stream-evidence.json`.
 
+## Shared inline placement baseline, 2026-10-16
+
+The accepted `924eb51a` library (SHA-256
+`1697D44EFA8FDFEE49C2A0CD6BE12898D32243612497390571FAC9E6DE474C9C`)
+is measured after the shared math, source-run and aligned-field changes. The
+existing probe loads the frozen DLL in its mutable diagnostic runtime; neither
+library nor probe is rebuilt. Every repeated and staged output matches all twelve
+accepted fixed/complete-document PDFs. Office comparisons are not rerun.
+
+| Document | Final / review warm allocation (MB) | Final / review median time (ms) |
+|---|---:|---:|
+| report | 31.36 / 35.16 | 109.5 / 110.3 |
+| letter | 28.92 / 32.67 | 30.5 / 46.5 |
+| specification | 34.00 / 37.64 | 45.4 / 61.9 |
+| technical memo | 30.28 / 33.78 | 46.2 / 46.6 |
+| briefing deck | 6.72 / — | 14.5 / — |
+| held-out deck | 16.89 / — | 14.3 / — |
+| complete static-cell report | 37.11 / 41.25 | 76.4 / 92.8 |
+
+The same Windows/.NET/default-resolver protocol measures one cold conversion,
+one warmup and three warm samples per input, sequentially in one process per mode.
+Later inputs reuse static caches. Initial DOCX font-resource preparation allocates
+23.90–25.67MB; inclusive coordinated layout/snapshot allocates 27.32–34.40MB.
+These diagnostic stages overlap. They do not isolate coordinator repeats, which
+remain unproven as the main cost. The first report still reflects tiered warmup;
+three samples establish neither a speedup nor a timing regression. No production
+optimization or quota change is justified by these totals alone. Evidence:
+`artifacts/composition-c1/shared-placement-allocation-evidence.json`.
+
 ## Linux forced-break workload, 2026-10-05
 
 Measured renderer/tool revision: `cef195d77e4e8b116002dd8dcdb985eed4e30fd8`,
