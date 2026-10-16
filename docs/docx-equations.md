@@ -31,6 +31,14 @@ and wider related/floating-story combinations remain staged. Independent Word
 controls preserve the original visual thresholds; significant typography and
 annotation-height residuals remain.
 
+Simple and complex NUMPAGES fields can accompany supported equations in body
+paragraphs and simple cells when one bounded retry preserves the finalized page
+count. The retry recomputes note-dependent layout and preserves canonical source
+fields. If restoring the equations changes the total, the original diagnostic
+fallback remains. Independent two-page controls cover both public modes, bookmarks
+and run splitting; visual field-font/cell-origin residuals remain. See the
+[composition checkpoint](CompositionCheckpoint.md) for evidence and limitations.
+
 The earlier body qualifications below retain their scope and residuals.
 
 Native OMML rendering is in progress. A first native slice paints standalone

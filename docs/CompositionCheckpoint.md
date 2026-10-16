@@ -1581,3 +1581,33 @@ Two causal regressions fail on C39. Twelve fixed/complete PDFs retain accepted
 bytes, comparisons, screens and reviews. Transfer verifies 17 assets/four PDFs
 without a root build or suite replay. Evidence:
 `artifacts/composition-c1/authored-display-alignment-evidence.json`.
+
+### Finalized total-page fields alongside equations (C41)
+
+Simple and complex NUMPAGES fields beside supported body/cell fractions no longer
+discard the equations when pagination is stable. Preparation records deferred
+dependencies without loading unused math fonts. One additional complete note-aware
+coordinator pass receives the actual total; placement, keep estimates and table
+rows share that input. Acceptance requires an unchanged final count and all
+deferred equations placed. Changed counts retain the original fallback. Source
+counter runs remain canonical; no guessed count or fixed-point loop is introduced.
+
+Four inputs/eight outcomes distinguish actual total 2, current page 1 and stale
+cache 777. Independent Word geometry, sixteen mathematical glyphs, bookmarks/run
+splitting, portable normal-note composition, cancellation and unstable-count
+fallback pass. Existing field-font/cell-origin residuals accumulate to 1.975pt;
+fraction baseline/local-X errors remain within 0.158/0.574pt. Four simple first-page
+pairs and both shared second-page pairs were reviewed without observed content
+loss or new serious overlap/clipping. Complex first pages retain native checks.
+All eight numerical visual gates fail at unchanged thresholds. Simple-math
+presence screens pass; raw stale-cache and fragmented-prose token warnings remain.
+
+Frozen 3eed2672 retains the production library from 5e838c1b and passes 25 Windows
+methods in one invocation plus 17 Ubuntu checks (eight font skips). An earlier
+incorrect fixture-count assertion was corrected without rebuilding the library or
+repeating PDF conversions. Two content tests fail on C40. Twelve fixed/complete
+PDFs retain accepted bytes/comparisons/screens/reviews; transfer verifies 17 assets
+and four PDFs without a root build or suite replay. Focused warm allocation is
+27.99–28.47MB Final and 31.47–31.90MB review; overlapping stages are not additive,
+and no speedup is claimed. Evidence:
+`artifacts/composition-c1/total-page-math-evidence.json`.
