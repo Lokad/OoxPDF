@@ -1609,6 +1609,20 @@
     "DocxInlineCompositionExplicitDisplaysRetainSourceRowsAndFallbacks",
     "PortableRenderingStaticCellsPreserveMixedMathImagesAndCounters"
   ],
+  "docx-formatting-review-ink": [
+    "DocxInlineCompositionRunFormatting",
+    "PortableRenderingRunFormatting",
+    "DocxWordCompatibleAllMarkupUsesOfficeRevisionDecorationColor",
+    "DocxWordCompatibleAllMarkupOmitsInventedMoveRevisionTracking",
+    "DocxWordCompatibleAllMarkupKeepsFormattingRevisionBalloons",
+    "DocxWordCompatibleAllMarkupSkipsVoidPropertyChangeBalloons",
+    "DocxInlineCompositionListLabelsKeepTextRevisionFormattingOwners",
+    "DocxInlineCompositionListLabelsRetainParagraphRevisionOwners",
+    "DocxInlineCompositionTextRevisionMathMatchesIndependentWord",
+    "PortableRenderingTextRevisionMath",
+    "DocxWordCompatibleRevisionRunsChainWithoutInventedOffsets",
+    "DocxWordCompatibleForeignFormattingBalloonsRetainReviewLane"
+  ],
   "docx-review-author-composition": [
     "DocxReviewCommentAuthors",
     "PortableRenderingReviewAuthors",

@@ -1,12 +1,64 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
+using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionRunFormattingRetainsAuthoredInk()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Native controls use installed fonts.");
+        CheckRunFormattingInk(null);
+    }
+
+    internal static void CheckRunFormattingInk(IFontResolver? resolver)
+    {
+        foreach (string story in new[] { "body", "cell", "header", "footer" })
+        foreach (bool authoredColor in new[] { false, true })
+        {
+            string? part = story == "header" ? "word/header1.xml" : story == "footer" ? "word/footer1.xml" : null;
+            var document = ReadMutation("CompositionProbes/math-run-format-" + story + "-bold",
+                OoxPdfDocxMarkupMode.AllMarkup, false, false, (xml, w, m) =>
+                {
+                    if (authoredColor)
+                    {
+                        var properties = xml.Descendants(w + "rPrChange").Single().Parent!;
+                        properties.Add(new XElement(w + "color", new XAttribute(w + "val", "1964AE")),
+                            new XElement(w + "u", new XAttribute(w + "val", "single")));
+                    }
+                    if (resolver is not null)
+                        foreach (var run in xml.Descendants(m + "r"))
+                        {
+                            var properties = run.Element(m + "rPr");
+                            if (properties is null) { properties = new XElement(m + "rPr"); run.AddFirst(properties); }
+                            properties.Elements(m + "nor").Remove(); properties.Add(new XElement(m + "nor", new XAttribute(m + "val", "1")));
+                        }
+                }, partOverride: part);
+            var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, null, default).Single();
+            var targetText = new HashSet<string>(["1.", "Summary: "], StringComparer.Ordinal);
+            var matched = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Match block in Regex.Matches(page.Content, @"(?m)^BT\r?\n.*?^ET\r?$", RegexOptions.Singleline))
+            {
+                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(new PdfPage(page.Width, page.Height, block.Value, page.Fonts)).ToArray();
+                if (shows.Length != 1 || !targetText.Contains(shows[0].Text)) continue;
+                string expected = authoredColor ? "0.098 0.392 0.682 rg" : "0 g";
+                TestAssert.Contains(expected, block.Value);
+                matched.Add(shows[0].Text);
+            }
+            TestAssert.Equal(2, matched.Count);
+            if (authoredColor)
+                TestAssert.True(Regex.IsMatch(page.Content, @"0\.098 0\.392 0\.682 rg\s+[-\d.]+ [-\d.]+ [\d.]+ [\d.]+ re f"),
+                    "Authored underline ink survives formatting metadata as well as glyph ink.");
+            TestAssert.True(page.Content.Contains("0.949 g", StringComparison.Ordinal),
+                "Retaining authored ink cannot remove the formatting balloon's review lane.");
+        }
+    }
+
     public static void DocxInlineCompositionRunFormattingMathMatchesIndependentWord() =>
         AssertNumberedWordFrames("math-run-format-office-geometry.json");
 

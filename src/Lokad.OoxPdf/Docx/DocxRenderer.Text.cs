@@ -22,7 +22,7 @@ internal sealed partial class DocxRenderer
         bool ShouldUseWordCompatibleRevisionDecorationProfile()
         {
             return UsesWordCompatibleAllMarkupTextProfile(markupContext) &&
-                (segment.StyleRun.Revision is not null || segment.StyleRun.Revisions.Count != 0);
+                HasTextContentRevision(segment.StyleRun);
         }
 
         RgbColor color = segment.Color;
@@ -389,8 +389,7 @@ internal sealed partial class DocxRenderer
         bool useWordCompatibleTextProfile,
         RgbColor fallbackColor)
     {
-        if (!useWordCompatibleTextProfile ||
-            (styleRun.Revision is null && styleRun.Revisions.Count == 0))
+        if (!useWordCompatibleTextProfile || !HasTextContentRevision(styleRun))
         {
             return fallbackColor;
         }
@@ -465,6 +464,11 @@ internal sealed partial class DocxRenderer
         return HasRevisionKind(styleRun, DocxRevisionKind.Insertion) ||
             HasRevisionKind(styleRun, DocxRevisionKind.MoveTo);
     }
+
+    // Property revisions retain authored glyph/decorative ink. Their metadata
+    // still drives formatting balloons and change bars independently.
+    private static bool HasTextContentRevision(DocxTextRun styleRun) =>
+        HasInsertionLikeRevisionKind(styleRun) || HasDeletionLikeRevisionKind(styleRun);
 
     private static bool HasDeletionLikeRevisionKind(DocxTextRun styleRun)
     {
@@ -696,7 +700,7 @@ internal sealed partial class DocxRenderer
         if (!segment.IsTerminalLineSpace)
         {
             bool revisionProfile = UsesWordCompatibleAllMarkupTextProfile(markupContext) &&
-                (segment.StyleRun.Revision is not null || segment.StyleRun.Revisions.Count != 0);
+                HasTextContentRevision(segment.StyleRun);
             RgbColor decorationColor = revisionProfile
                 ? new RgbColor(WordCompatibleAllMarkupReviewStrokeRgb.Red, WordCompatibleAllMarkupReviewStrokeRgb.Green, WordCompatibleAllMarkupReviewStrokeRgb.Blue)
                 : segment.Color;
