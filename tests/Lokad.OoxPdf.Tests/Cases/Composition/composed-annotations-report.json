@@ -1,0 +1,25 @@
+[
+  {
+    "Id": "composed-annotations-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/composed-annotations-report.docx",
+    "Sha256": "CD239F3752E1F34C801530C0E93FA1501E0A4D6A823828E6A18463B4F0CD9598",
+    "HeldOut": true,
+    "ExpectedEquationCount": 6,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "See calculation.",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "Features": [
+      "image/math/comment/link/bookmark in one paragraph",
+      "math/footnote reference in a table cell",
+      "numbering",
+      "header equation",
+      "footer",
+      "continuous footnote",
+      "wrapped prose"
+    ]
+  }
+]
