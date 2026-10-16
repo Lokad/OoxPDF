@@ -1,5 +1,20 @@
 # Composed-document reliability checkpoint
 
+C72 adds a test-only, hash-pinned DejaVu Math TeX Gyre face with retained upstream
+2.37 notices. TrueType outlines, MATH constants and the five mathematical italic
+letters missing from the existing Sans face are checked explicitly. Forty
+ordinary-math composition matrices cover body/cells/headers/footers, bookmarks,
+run splitting, revisions and images in both public presets, without rewriting
+authored math to normal text. Eight composed pages also pass serialization.
+The old missing-glyph and explicit-normal controls remain.
+
+Twelve selected Windows methods and eleven Ubuntu methods/one explicit native
+skip pass, each in one invocation. A test-only build leaves the C71 library
+byte-identical; its independent Office and corpus comparisons are reused. This
+adds portable content/resource coverage, not an Office-typography claim or a
+runtime dependency. Evidence:
+`artifacts/composition-c1/portable-default-math-evidence.json`.
+
 C71 corrects undeclared Latin prose fallback across body, cells and static stories.
 After an explicit resolver document default, the fallback prefers Word's Times
 New Roman before the existing modern-face alternatives. Explicit family, theme
