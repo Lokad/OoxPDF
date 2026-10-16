@@ -136,14 +136,21 @@ internal static class DocxMathParagraphPolicy
             : new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
 
     private static IReadOnlySet<DocxEquation> GetMathOnlySourceEquations(DocxParagraph paragraph,
-        CancellationToken token)
+        CancellationToken token) => GetSourceRowEquations(paragraph, token, withProse: false);
+
+    public static IReadOnlySet<DocxEquation> GetProseSourceEquations(DocxParagraph paragraph,
+        CancellationToken token) => GetSourceRowEquations(paragraph, token, withProse: true);
+
+    private static IReadOnlySet<DocxEquation> GetSourceRowEquations(DocxParagraph paragraph,
+        CancellationToken token, bool withProse)
     {
         var display = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
-        if (!HasSupportedSourceOwner(paragraph) || paragraph.ListLabel is not null ||
+        if (!HasSupportedSourceOwner(paragraph, hasPageInputs: true) || paragraph.ListLabel is not null ||
             paragraph.InlineContent is not { } items || !TryGetDisplayLineSpacingFactor(paragraph, out _))
             return display;
         var row = new List<DocxEquation>();
         bool hasOtherContent = false;
+        bool hasProse = false;
         foreach (var item in items)
         {
             token.ThrowIfCancellationRequested();
@@ -156,6 +163,10 @@ internal static class DocxMathParagraphPolicy
                     break;
                 case DocxInlineEquation math:
                     row.Add(math.Equation);
+                    break;
+                case DocxInlineText:
+                    hasProse = true;
+                    hasOtherContent = true;
                     break;
                 case DocxInlineBreak:
                     CompleteRow();
@@ -170,7 +181,7 @@ internal static class DocxMathParagraphPolicy
 
         void CompleteRow()
         {
-            if (!hasOtherContent)
+            if (withProse ? hasProse : !hasOtherContent)
                 foreach (var equation in row)
                 {
                     token.ThrowIfCancellationRequested();
@@ -178,6 +189,7 @@ internal static class DocxMathParagraphPolicy
                 }
             row.Clear();
             hasOtherContent = false;
+            hasProse = false;
         }
     }
 
@@ -247,18 +259,19 @@ internal static class DocxMathParagraphPolicy
         if (!NeedsOrderedInlineLayout(paragraph) || !HasSupportedSourceOwner(paragraph, hasPageInputs) ||
             paragraph.InlineContent is null ||
             paragraph.Spacing.LineRuleValue is not (null or "auto") || paragraph.LineSpacingPoints is not null) return [];
-        // Explicit display containers share the existing source-row ownership
-        // contract. A display formula mixed into visible prose still falls back;
-        // math-only rows keep display measurement and authored alignment.
+        // Source rows own resolved style: Word measures explicit formulas inline
+        // beside prose, while math-only rows retain display measurement/alignment.
         var displayRows = paragraph.Equations.Any(equation => equation.Display)
             ? GetMathOnlySourceEquations(paragraph, token) : null;
+        var proseRows = displayRows is not null ? GetProseSourceEquations(paragraph, token) : null;
         if (displayRows is not null && ResolveDisplayAlignment(paragraph.Equations, token) is null) return [];
         if (!HasSupportedOrderedAlignment(paragraph) &&
             (displayRows is null || !DisplayRowsOwnParagraphAlignment(paragraph, displayRows, token))) return [];
         foreach (var equation in paragraph.Equations)
         {
             token.ThrowIfCancellationRequested();
-            if (equation.Display && (displayRows is null || !displayRows.Contains(equation))) return [];
+            if (equation.Display && (displayRows is null || !displayRows.Contains(equation)) &&
+                (proseRows is null || !proseRows.Contains(equation))) return [];
         }
         return paragraph.Equations;
     }

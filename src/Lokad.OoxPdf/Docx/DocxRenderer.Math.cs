@@ -117,10 +117,12 @@ internal sealed partial class DocxRenderer
             bool standalone = DocxMathParagraphPolicy.GetStandaloneRow(paragraph) is not null;
             var displayRows = DocxMathParagraphPolicy.GetDisplaySourceEquations(paragraph, token);
             var hyperlinked = DocxInlineContent.GetHyperlinkedEquations(paragraph, token);
+            var proseRows = sourceEquations.Any(equation => equation.Display)
+                ? DocxMathParagraphPolicy.GetProseSourceEquations(paragraph, token) : null;
             foreach (DocxEquation sourceEquation in sourceEquations)
             {
                 bool displayStyle = hyperlinked?.Contains(sourceEquation) != true &&
-                    (sourceEquation.Display || standalone || displayRows.Contains(sourceEquation));
+                    (sourceEquation.Display && proseRows?.Contains(sourceEquation) != true || standalone || displayRows.Contains(sourceEquation));
                 DocxEquation equation = sourceEquation.Display == displayStyle
                     ? sourceEquation : sourceEquation with { Display = displayStyle };
                 if (!DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }

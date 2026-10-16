@@ -1,0 +1,753 @@
+{
+  "Source": "Independent Word 16 PDFs: explicit formulas beside prose use inline argument sizing across body/cell/footer. Source containers retain their flags; numerical visual thresholds unchanged.",
+  "Rows": [
+    {
+      "Id": "math-mixed-display-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "4C0B084C7E3D53577962070EB4A0EF3BBA41179CD16FD7114E4FAA16B31E247E",
+      "PdfSha256": "D53D1536933DF94BF984945412E8F6E1AF965E551A14A4DCBA994C6400089D08",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6",
+      "Anchors": [
+        {
+          "Text": "\u03b1",
+          "Occurrence": 0,
+          "X": 296.54,
+          "Y": 621.86,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "+",
+          "Occurrence": 0,
+          "X": 304.37,
+          "Y": 621.86,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 0,
+          "X": 313.2,
+          "Y": 621.86,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "=",
+          "Occurrence": 0,
+          "X": 321.48,
+          "Y": 621.86,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "+",
+          "Occurrence": 1,
+          "X": 342.86,
+          "Y": 621.86,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "\u03b5",
+          "Occurrence": 0,
+          "X": 351.7,
+          "Y": 621.86,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "=",
+          "Occurrence": 1,
+          "X": 358.61,
+          "Y": 621.86,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "\u03b6",
+          "Occurrence": 0,
+          "X": 367.99,
+          "Y": 621.86,
+          "FontSize": 9.096
+        }
+      ],
+      "ProseFontSize": 9.096,
+      "ExtractionNote": "Exact mathematical text comes from source; joined Word operations are not split into invented glyph coordinates."
+    },
+    {
+      "Id": "math-mixed-display-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "4C0B084C7E3D53577962070EB4A0EF3BBA41179CD16FD7114E4FAA16B31E247E",
+      "PdfSha256": "268E9A42DF7E1F76116D4E860615490619D3776DA78ECE9419189BEE30C7E2C7",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6",
+      "Anchors": [
+        {
+          "Text": "\u03b1",
+          "Occurrence": 0,
+          "X": 391.03,
+          "Y": 693.46,
+          "FontSize": 12
+        },
+        {
+          "Text": "+",
+          "Occurrence": 0,
+          "X": 401.35,
+          "Y": 693.46,
+          "FontSize": 12
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 0,
+          "X": 412.99,
+          "Y": 693.46,
+          "FontSize": 12
+        },
+        {
+          "Text": "=",
+          "Occurrence": 0,
+          "X": 423.91,
+          "Y": 693.46,
+          "FontSize": 12
+        },
+        {
+          "Text": "+",
+          "Occurrence": 1,
+          "X": 452.14,
+          "Y": 693.46,
+          "FontSize": 12
+        },
+        {
+          "Text": "\u03b5",
+          "Occurrence": 0,
+          "X": 463.78,
+          "Y": 693.46,
+          "FontSize": 12
+        },
+        {
+          "Text": "=",
+          "Occurrence": 1,
+          "X": 472.9,
+          "Y": 693.46,
+          "FontSize": 12
+        },
+        {
+          "Text": "\u03b6",
+          "Occurrence": 0,
+          "X": 485.26,
+          "Y": 693.46,
+          "FontSize": 12
+        }
+      ],
+      "ProseFontSize": 12,
+      "ExtractionNote": "Exact mathematical text comes from source; joined Word operations are not split into invented glyph coordinates."
+    },
+    {
+      "Id": "math-mixed-display-footer",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F228446F6C65D1D3FBBE2B103ADE1B9C05E47995BACB4060743CB5FBD43971F3",
+      "PdfSha256": "99AEF2A904A73BC5A88F55EF9E072DED430A8CCE747F726F16C5412B7C46C793",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6",
+      "Anchors": [
+        {
+          "Text": "\u03b1",
+          "Occurrence": 0,
+          "X": 119.33,
+          "Y": 125.21,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "+",
+          "Occurrence": 0,
+          "X": 127.15,
+          "Y": 125.21,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 0,
+          "X": 135.98,
+          "Y": 125.21,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "=",
+          "Occurrence": 0,
+          "X": 144.26,
+          "Y": 125.21,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "+",
+          "Occurrence": 1,
+          "X": 165.65,
+          "Y": 125.21,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "\u03b5",
+          "Occurrence": 0,
+          "X": 174.48,
+          "Y": 125.21,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "=",
+          "Occurrence": 1,
+          "X": 181.39,
+          "Y": 125.21,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "\u03b6",
+          "Occurrence": 0,
+          "X": 190.78,
+          "Y": 125.21,
+          "FontSize": 9.096
+        }
+      ],
+      "ProseFontSize": 9.096,
+      "ExtractionNote": "Exact mathematical text comes from source; joined Word operations are not split into invented glyph coordinates."
+    },
+    {
+      "Id": "math-mixed-display-footer",
+      "Mode": "final-preserve",
+      "InputSha256": "F228446F6C65D1D3FBBE2B103ADE1B9C05E47995BACB4060743CB5FBD43971F3",
+      "PdfSha256": "96B83D2D7A972831133F494D9ADEC877B3D8F31FCF94CE2E3BB9D87F8143EDC7",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6",
+      "Anchors": [
+        {
+          "Text": "\u03b1",
+          "Occurrence": 0,
+          "X": 157.34,
+          "Y": 38.52,
+          "FontSize": 12
+        },
+        {
+          "Text": "+",
+          "Occurrence": 0,
+          "X": 167.66,
+          "Y": 38.52,
+          "FontSize": 12
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 0,
+          "X": 179.3,
+          "Y": 38.52,
+          "FontSize": 12
+        },
+        {
+          "Text": "=",
+          "Occurrence": 0,
+          "X": 190.22,
+          "Y": 38.52,
+          "FontSize": 12
+        },
+        {
+          "Text": "+",
+          "Occurrence": 1,
+          "X": 218.45,
+          "Y": 38.52,
+          "FontSize": 12
+        },
+        {
+          "Text": "\u03b5",
+          "Occurrence": 0,
+          "X": 230.09,
+          "Y": 38.52,
+          "FontSize": 12
+        },
+        {
+          "Text": "=",
+          "Occurrence": 1,
+          "X": 239.21,
+          "Y": 38.52,
+          "FontSize": 12
+        },
+        {
+          "Text": "\u03b6",
+          "Occurrence": 0,
+          "X": 251.57,
+          "Y": 38.52,
+          "FontSize": 12
+        }
+      ],
+      "ProseFontSize": 12,
+      "ExtractionNote": "Exact mathematical text comes from source; joined Word operations are not split into invented glyph coordinates."
+    },
+    {
+      "Id": "math-mixed-display-fraction-all",
+      "Mode": "all-word-compatible",
+      "InputSha256": "220392EBAD6BF56009220F30E6CDAAAE37F7070CBA80EAE51BBD4B52736A0156",
+      "PdfSha256": "CFB3DB636BF43278AE7637D0CB44B93FF8D70B34367063078E22AE2B5593236F",
+      "MathText": "ratetimeratetime",
+      "Anchors": [
+        {
+          "Text": "rate",
+          "Occurrence": 0,
+          "X": 115.68,
+          "Y": 625.06,
+          "FontSize": 6.456
+        },
+        {
+          "Text": "time",
+          "Occurrence": 0,
+          "X": 115.13,
+          "Y": 615.12,
+          "FontSize": 6.456
+        },
+        {
+          "Text": "rate",
+          "Occurrence": 1,
+          "X": 145.99,
+          "Y": 625.06,
+          "FontSize": 6.456
+        },
+        {
+          "Text": "time",
+          "Occurrence": 1,
+          "X": 145.44,
+          "Y": 615.12,
+          "FontSize": 6.456
+        }
+      ],
+      "ProseFontSize": 9.096,
+      "ExtractionNote": "Exact mathematical text comes from source; joined Word operations are not split into invented glyph coordinates."
+    },
+    {
+      "Id": "math-mixed-display-fraction-all",
+      "Mode": "final-preserve",
+      "InputSha256": "220392EBAD6BF56009220F30E6CDAAAE37F7070CBA80EAE51BBD4B52736A0156",
+      "PdfSha256": "5AE0B02EF31575E9F1BBE5AB8A93783B5231AE3875C6B2FEA00A8E47290FA3D4",
+      "MathText": "ratetimeratetime",
+      "Anchors": [
+        {
+          "Text": "rate",
+          "Occurrence": 0,
+          "X": 152.54,
+          "Y": 697.66,
+          "FontSize": 8.52
+        },
+        {
+          "Text": "time",
+          "Occurrence": 0,
+          "X": 151.82,
+          "Y": 684.58,
+          "FontSize": 8.52
+        },
+        {
+          "Text": "rate",
+          "Occurrence": 1,
+          "X": 192.53,
+          "Y": 697.66,
+          "FontSize": 8.52
+        },
+        {
+          "Text": "time",
+          "Occurrence": 1,
+          "X": 191.81,
+          "Y": 684.58,
+          "FontSize": 8.52
+        }
+      ],
+      "ProseFontSize": 12,
+      "ExtractionNote": "Exact mathematical text comes from source; joined Word operations are not split into invented glyph coordinates."
+    },
+    {
+      "Id": "math-mixed-display-fraction-first",
+      "Mode": "all-word-compatible",
+      "InputSha256": "D9A9A7DFF6FDA2B5B27122229C69D8EECF3CC2ACBF73BFFC24275A640EAAAF0C",
+      "PdfSha256": "18DB11720DBA87983051A87A1D837CCD0ABAC1A77CDAB9745DCCB89A6B354345",
+      "MathText": "ratetimeratetime",
+      "Anchors": [
+        {
+          "Text": "rate",
+          "Occurrence": 0,
+          "X": 115.68,
+          "Y": 625.06,
+          "FontSize": 6.456
+        },
+        {
+          "Text": "time",
+          "Occurrence": 0,
+          "X": 115.13,
+          "Y": 615.12,
+          "FontSize": 6.456
+        },
+        {
+          "Text": "rate",
+          "Occurrence": 1,
+          "X": 145.99,
+          "Y": 625.06,
+          "FontSize": 6.456
+        },
+        {
+          "Text": "time",
+          "Occurrence": 1,
+          "X": 145.44,
+          "Y": 615.12,
+          "FontSize": 6.456
+        }
+      ],
+      "ProseFontSize": 9.096,
+      "ExtractionNote": "Exact mathematical text comes from source; joined Word operations are not split into invented glyph coordinates."
+    },
+    {
+      "Id": "math-mixed-display-fraction-first",
+      "Mode": "final-preserve",
+      "InputSha256": "D9A9A7DFF6FDA2B5B27122229C69D8EECF3CC2ACBF73BFFC24275A640EAAAF0C",
+      "PdfSha256": "AF06BFFDDEBC8EAB70351A2A543BFD72C1657A6A0B4BBE733D6F6223F66C806C",
+      "MathText": "ratetimeratetime",
+      "Anchors": [
+        {
+          "Text": "rate",
+          "Occurrence": 0,
+          "X": 152.54,
+          "Y": 697.66,
+          "FontSize": 8.52
+        },
+        {
+          "Text": "time",
+          "Occurrence": 0,
+          "X": 151.82,
+          "Y": 684.58,
+          "FontSize": 8.52
+        },
+        {
+          "Text": "rate",
+          "Occurrence": 1,
+          "X": 192.53,
+          "Y": 697.66,
+          "FontSize": 8.52
+        },
+        {
+          "Text": "time",
+          "Occurrence": 1,
+          "X": 191.81,
+          "Y": 684.58,
+          "FontSize": 8.52
+        }
+      ],
+      "ProseFontSize": 12,
+      "ExtractionNote": "Exact mathematical text comes from source; joined Word operations are not split into invented glyph coordinates."
+    },
+    {
+      "Id": "math-mixed-display-literal-all",
+      "Mode": "all-word-compatible",
+      "InputSha256": "EAE2F7E25983608FCA5916B839BCA5C5E501129C9E905C6F38421DF53C30B559",
+      "PdfSha256": "B05677538C286877F9CA74FD9A4D161CE701E36C3319E0377FA64BB24C64576B",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b1+\u03b2=\u03b3",
+      "Anchors": [
+        {
+          "Text": "\u03b1",
+          "Occurrence": 0,
+          "X": 115.13,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "+",
+          "Occurrence": 0,
+          "X": 122.98,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 0,
+          "X": 131.78,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "=",
+          "Occurrence": 0,
+          "X": 140.06,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "\u03b3",
+          "Occurrence": 0,
+          "X": 149.35,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "\u03b1",
+          "Occurrence": 1,
+          "X": 172.49,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "+",
+          "Occurrence": 1,
+          "X": 180.22,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 1,
+          "X": 189.05,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "=",
+          "Occurrence": 1,
+          "X": 197.33,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "\u03b3",
+          "Occurrence": 1,
+          "X": 206.71,
+          "Y": 622.22,
+          "FontSize": 9.096
+        }
+      ],
+      "ProseFontSize": 9.096,
+      "ExtractionNote": "Exact mathematical text comes from source; joined Word operations are not split into invented glyph coordinates."
+    },
+    {
+      "Id": "math-mixed-display-literal-all",
+      "Mode": "final-preserve",
+      "InputSha256": "EAE2F7E25983608FCA5916B839BCA5C5E501129C9E905C6F38421DF53C30B559",
+      "PdfSha256": "763A58B4D92736B5F643A1B291F05C72930871069F5CFDD13FD7F1C5EFA02F0D",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b1+\u03b2=\u03b3",
+      "Anchors": [
+        {
+          "Text": "\u03b1",
+          "Occurrence": 0,
+          "X": 151.82,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "+",
+          "Occurrence": 0,
+          "X": 162.14,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 0,
+          "X": 173.78,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "=",
+          "Occurrence": 0,
+          "X": 184.7,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "\u03b3",
+          "Occurrence": 0,
+          "X": 196.97,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "\u03b1",
+          "Occurrence": 1,
+          "X": 227.45,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "+",
+          "Occurrence": 1,
+          "X": 237.65,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 1,
+          "X": 249.29,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "=",
+          "Occurrence": 1,
+          "X": 260.21,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "\u03b3",
+          "Occurrence": 1,
+          "X": 272.57,
+          "Y": 693.94,
+          "FontSize": 12
+        }
+      ],
+      "ProseFontSize": 12,
+      "ExtractionNote": "Exact mathematical text comes from source; joined Word operations are not split into invented glyph coordinates."
+    },
+    {
+      "Id": "math-mixed-display-literal-first",
+      "Mode": "all-word-compatible",
+      "InputSha256": "649BF5A28B44A4C197255103334B9211F31492E0D457D7CE1C20DED74602CD31",
+      "PdfSha256": "89D06A3ED8479C66393A51A0B49B034BF53EC539AEBE94B603E28B7DBE9D06AA",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b1+\u03b2=\u03b3",
+      "Anchors": [
+        {
+          "Text": "\u03b1",
+          "Occurrence": 0,
+          "X": 115.13,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "+",
+          "Occurrence": 0,
+          "X": 122.98,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 0,
+          "X": 131.78,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "=",
+          "Occurrence": 0,
+          "X": 140.06,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "\u03b3",
+          "Occurrence": 0,
+          "X": 149.35,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "\u03b1",
+          "Occurrence": 1,
+          "X": 172.49,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "+",
+          "Occurrence": 1,
+          "X": 180.22,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 1,
+          "X": 189.05,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "=",
+          "Occurrence": 1,
+          "X": 197.33,
+          "Y": 622.22,
+          "FontSize": 9.096
+        },
+        {
+          "Text": "\u03b3",
+          "Occurrence": 1,
+          "X": 206.71,
+          "Y": 622.22,
+          "FontSize": 9.096
+        }
+      ],
+      "ProseFontSize": 9.096,
+      "ExtractionNote": "Exact mathematical text comes from source; joined Word operations are not split into invented glyph coordinates."
+    },
+    {
+      "Id": "math-mixed-display-literal-first",
+      "Mode": "final-preserve",
+      "InputSha256": "649BF5A28B44A4C197255103334B9211F31492E0D457D7CE1C20DED74602CD31",
+      "PdfSha256": "E81777FEA7CFD4CC2D308CDD32354C50028B6391684A3CCC24E54E591405D312",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b1+\u03b2=\u03b3",
+      "Anchors": [
+        {
+          "Text": "\u03b1",
+          "Occurrence": 0,
+          "X": 151.82,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "+",
+          "Occurrence": 0,
+          "X": 162.14,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 0,
+          "X": 173.78,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "=",
+          "Occurrence": 0,
+          "X": 184.7,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "\u03b3",
+          "Occurrence": 0,
+          "X": 196.97,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "\u03b1",
+          "Occurrence": 1,
+          "X": 227.45,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "+",
+          "Occurrence": 1,
+          "X": 237.65,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 1,
+          "X": 249.29,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "=",
+          "Occurrence": 1,
+          "X": 260.21,
+          "Y": 693.94,
+          "FontSize": 12
+        },
+        {
+          "Text": "\u03b3",
+          "Occurrence": 1,
+          "X": 272.57,
+          "Y": 693.94,
+          "FontSize": 12
+        }
+      ],
+      "ProseFontSize": 12,
+      "ExtractionNote": "Exact mathematical text comes from source; joined Word operations are not split into invented glyph coordinates."
+    }
+  ]
+}

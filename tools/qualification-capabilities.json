@@ -1325,5 +1325,24 @@
     "PortableRenderingNormalNotesPreserveInlineImagesAndMath",
     "DocxStaticTableMathCompleteReportMatchesIndependentPrintedFrames",
     "DocxNativeMathUsesItsOccupiedBodyFrameBeforeFollowingProseTurnsPage"
+  ],
+  "docx-mixed-display-rows": [
+    "DocxInlineCompositionMixedDisplay",
+    "PortableRenderingMixedDisplay",
+    "DocxInlineCompositionExplicitDisplays",
+    "DocxInlineCompositionExplicitDisplayLinks",
+    "DocxInlineCompositionAuthoredDisplayAlignment",
+    "DocxInlineCompositionMathOnlyGroupsCenterAcrossParagraphAlignment",
+    "PortableRenderingMathOnlyGroupsPreserveDisplayMeasurementAndAlignment",
+    "PortableRenderingHardBreakMathRowsPreserveDisplayFramesAcrossStories",
+    "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance",
+    "PortableRenderingTotalPageMath",
+    "DocxInlineCompositionCounterAtomsMeasureOnlyTheirOwnedInputs",
+    "DocxNativeIsolatedInlineMath",
+    "DocxNativeAlignedStaticFrames",
+    "DocxNativeScaledStaticFrames",
+    "DocxNativeTableDisplayMathRetainsCellsProseAndDeclaredClips",
+    "DocxStaticTableMathCompleteReportMatchesIndependentPrintedFrames",
+    "DocxInlineCompositionAtomicPlacementRetainsSourceBoundAndOverwidthFallbacks"
   ]
 }

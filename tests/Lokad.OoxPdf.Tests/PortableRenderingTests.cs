@@ -16,6 +16,12 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingMixedDisplaySourceRowsPreserveInlineGeometry() =>
+        DocxInlineCompositionTests.CheckMixedDisplaySourceRows(new PinnedResolver());
+
+    public static void PortableRenderingMixedDisplayCountersPreserveTotalPageDependencies() =>
+        DocxInlineCompositionTests.CheckTotalPageMath(new PinnedResolver(), explicitSource: true);
+
     public static void PortableRenderingTotalPageMathUsesFinalizedCountAndPreservesSource() =>
         DocxInlineCompositionTests.CheckTotalPageMath(new PinnedResolver());
 

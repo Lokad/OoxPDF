@@ -1,0 +1,78 @@
+[
+  {
+    "Id": "math-mixed-display-literal-first",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-mixed-display-literal-first.docx",
+    "Sha256": "649BF5A28B44A4C197255103334B9211F31492E0D457D7CE1C20DED74602CD31",
+    "SourceSha256": "553D9355CB8504EA6B95B1E503AF15535B5C52725823F085B56168B4D864C0A5",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Before formula:",
+      "and",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-mixed-display-literal-all",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-mixed-display-literal-all.docx",
+    "Sha256": "EAE2F7E25983608FCA5916B839BCA5C5E501129C9E905C6F38421DF53C30B559",
+    "SourceSha256": "553D9355CB8504EA6B95B1E503AF15535B5C52725823F085B56168B4D864C0A5",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Before formula:",
+      "and",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-mixed-display-fraction-first",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-mixed-display-fraction-first.docx",
+    "Sha256": "D9A9A7DFF6FDA2B5B27122229C69D8EECF3CC2ACBF73BFFC24275A640EAAAF0C",
+    "SourceSha256": "EA7FB764C259DEA27489D7BBDA18BE64CC1AC37C6C091656715B6FC7897C0AFC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Before formula:",
+      "and",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-mixed-display-fraction-all",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-mixed-display-fraction-all.docx",
+    "Sha256": "220392EBAD6BF56009220F30E6CDAAAE37F7070CBA80EAE51BBD4B52736A0156",
+    "SourceSha256": "EA7FB764C259DEA27489D7BBDA18BE64CC1AC37C6C091656715B6FC7897C0AFC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Before formula:",
+      "and",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-mixed-display-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-mixed-display-cell.docx",
+    "Sha256": "4C0B084C7E3D53577962070EB4A0EF3BBA41179CD16FD7114E4FAA16B31E247E",
+    "SourceSha256": "419A0A42C1BC94FE97C4097A6C6FEFB69E88CC7D2410E32017347A8ED3DA5724",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Before formula:",
+      "End."
+    ]
+  },
+  {
+    "Id": "math-mixed-display-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-mixed-display-footer.docx",
+    "Sha256": "F228446F6C65D1D3FBBE2B103ADE1B9C05E47995BACB4060743CB5FBD43971F3",
+    "SourceSha256": "E5EACD61179168A36F335A8EB9D2E1269724F8F8999DD9C4B05685F502EDBEF1",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Before formula:",
+      "End."
+    ]
+  }
+]
