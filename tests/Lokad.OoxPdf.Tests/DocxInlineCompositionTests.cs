@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -311,7 +312,7 @@ internal static class DocxInlineCompositionTests
                 TestAssert.True(Math.Abs(prose.Y - row.GetProperty("BaselineY").GetDouble()) < .15d,
                     "A source line admitted to the next page retains its independent Word baseline.");
                 var field = shows.Single(show => show.Text.Trim() == number.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                TestAssert.True(Math.Abs(field.X - prose.X - row.GetProperty("FieldOffset").GetDouble()) < .3d,
+                TestAssert.True(Math.Abs(field.X - VisibleTextStartX(prose) - row.GetProperty("FieldOffset").GetDouble()) < .3d,
                     "Actual digits retain their advance relative to the same prose owner.");
             }
             TestAssert.True(document.Paragraphs.SelectMany(paragraph => paragraph.Runs).Where(run => run.FieldKind == DocxFieldKind.Page)
@@ -454,11 +455,12 @@ internal static class DocxInlineCompositionTests
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages.Single()).ToArray();
             foreach (var container in group.GroupBy(row => row.GetProperty("Container").GetString()))
             {
-                var anchors = shows.Where(show => show.Text == container.Key).OrderByDescending(show => show.Y).ToArray();
+                var anchors = shows.Where(show => show.Text.TrimStart() == container.Key ||
+                    show.Text.TrimStart().StartsWith(container.Key + " ", StringComparison.Ordinal)).OrderByDescending(show => show.Y).ToArray();
                 var expected = container.ToArray();
                 TestAssert.Equal(3, anchors.Length);
                 for (int index = 0; index < expected.Length; index++)
-                    TestAssert.True(Math.Abs(anchors[index].X - expected[index].GetProperty("X").GetDouble()) < .2d &&
+                    TestAssert.True(Math.Abs(VisibleTextStartX(anchors[index]) - expected[index].GetProperty("X").GetDouble()) < .2d &&
                         Math.Abs(anchors[index].Y - expected[index].GetProperty("BaselineY").GetDouble()) < .2d,
                         "Authored spaces and closing line struts retain independently measured " + container.Key + " geometry.");
             }
@@ -1898,6 +1900,15 @@ internal static class DocxInlineCompositionTests
     private static DocxDocument ReadPlacedComposition(OoxPdfDocxMarkupMode mode, string placement) =>
         DocxTests.ReadDocx(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
             "CompositionProbes", placement + ".docx")), mode);
+
+    // Text-show boundaries are an encoding detail. Independent anchors describe
+    // the first visible glyph, including when leading spaces share its show.
+    private static double VisibleTextStartX((PdfEmbeddedFont Font, string Text, double Size, double X, double Y) show)
+    {
+        int leading = 0;
+        while (leading < show.Text.Length && char.IsWhiteSpace(show.Text[leading])) { leading++; }
+        return show.X + show.Font.MeasureTextPoints(show.Text[..leading], show.Size, kerningEnabled: false);
+    }
 
     private sealed class CountingMeasurer : IDocxTextMeasurer
     {
