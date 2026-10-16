@@ -1094,3 +1094,20 @@ Images, note tables and special-separator equations retain staged fallbacks.
 The 17-asset/four-PDF transfer preserves held-out endnote-report review and memo
 Final without rebuilding or replaying a suite. Evidence:
 `artifacts/composition-c1/note-content-evidence.json`.
+
+Normal footnotes and endnotes now share their owning section's full design text
+width before the review print transform. This removes the extra wrapped endnote
+line and 24.645pt X / 11.439pt Y formula displacement. Frozen 86b6dd92 / root
+eb81f193 passes 60 affected methods in one invocation and four Ubuntu checks;
+both new regressions fail with the preceding library. Eight Word outcomes retain
+all four fractions and source prose/simple math; note numerator residuals are at
+most 0.704pt X / 0.381pt Y. Six identical PDFs reuse comparisons, and both changed
+review crops are reviewed. All eight numerical gates and generic math-token
+screens remain failed. The complete C7 report changes only two note clip widths:
+text operations and both raster pages remain exact. Its affected review outcome
+passes source/page-local screens. The checked 17-asset/four-PDF transfer uses the
+verified new PDF identity without a root build, suite or corpus replay. Audit
+selection now honors measured Both/Final/Review modes; 14 adversarial controls
+retain missing/extra/duplicate rejection on Windows/Ubuntu. Broader composed
+note-math acceptance remains the next step. Evidence:
+`artifacts/composition-c1/note-width-evidence.json`.
