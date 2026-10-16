@@ -858,3 +858,21 @@ both modes retain all equations/prose, but both numerical gates fail. C2 stays
 open for an independent scaled-admission reduction. Evidence:
 `artifacts/composition-c1/atomic-note-evidence.json` and
 `composed-report-atomic-note-content.json`. Workspace is 4.941GB at the latest scan.
+
+C2 now passes prose, simple-math and page-local content screens in both presets;
+all four held-out page pairs are reviewed. Table-fraction/border clearance,
+annotation geometry and typography remain residuals; both numerical gates fail.
+`c433142b` converts note reserve once to printed paragraph points and uses shared
+resolved script sizes for existing exact-line eligibility. Four valid standard-page
+Word controls retain eighteen body lines and their note on one page; the parent
+fails all three new regressions. Custom short-sheet review references were rejected
+for out-of-page Word ink. The final frozen identity qualifies 44 affected methods
+in one invocation and five Ubuntu methods. A test-only revision-metadata rebuild
+required that final qualification; retain the qualified DLL for future test-only
+builds with `--no-dependencies`. Four original review portfolio PDFs remain exact.
+Transfer/remaining PDF identity smokes use no root build or suite replay.
+`39d7beab` repairs the sole Windows CI failure at `fcc0ad96`: its synthetic column
+test now retains the two-column frame and verifies all four note destinations on
+the admitted page. Ubuntu was green; the next push is under CI. Evidence:
+`artifacts/composition-c1/scaled-note-evidence.json`. C2 is accepted for bounded
+composition with the numerical/geometry residuals; release preparation stays deferred.
