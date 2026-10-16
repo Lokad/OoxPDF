@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingListLabelFamiliesKeepSourceOwners() =>
+        DocxInlineCompositionTests.CheckListLabelFamilies(new PinnedResolver());
+
     public static void PortableRenderingListLabelStylesKeepSourceOwners() =>
         DocxInlineCompositionTests.CheckListLabelStyles(new PinnedResolver());
 

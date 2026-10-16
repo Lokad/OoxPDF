@@ -1,0 +1,365 @@
+{
+  "Source": "Independent Word 16 PDF text/font resources; exported clean Final and visible Review with view readback.",
+  "Rows": [
+    {
+      "Id": "list-family-defaults-arial",
+      "File": "list-family-defaults-arial.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "79EC70AFBC2672014C9D04F5C1D5E70DF7511A6D457FCB36BF35E7294DD81832",
+      "ReferencePdfSha256": "8E27A5D3927E9CC83669BB856730830D0BE9EB584B555640D3CED545CA585F7E",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Family": "Arial",
+          "WordFont": "ArialMT",
+          "X": 72.024,
+          "Y": 81.624
+        },
+        {
+          "Text": "2.",
+          "Family": "Arial",
+          "WordFont": "ArialMT",
+          "X": 72.024,
+          "Y": 62.904
+        },
+        {
+          "Text": "3.",
+          "Family": "Arial",
+          "WordFont": "ArialMT",
+          "X": 72.024,
+          "Y": 44.184
+        }
+      ]
+    },
+    {
+      "Id": "list-family-level-courier",
+      "File": "list-family-level-courier.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "DC40F21A42CCB47821970111C679C0337989004C19A2BCC69257153278317B4D",
+      "ReferencePdfSha256": "D8B4CE5DF7EB9ED70A2707BDCD07AFB8C0A66DCEA50DCE081F5074E8E8C1C8F7",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Family": "Courier New",
+          "WordFont": "CourierNewPSMT",
+          "X": 72.024,
+          "Y": 83.784
+        },
+        {
+          "Text": "2.",
+          "Family": "Courier New",
+          "WordFont": "CourierNewPSMT",
+          "X": 72.024,
+          "Y": 64.344
+        },
+        {
+          "Text": "3.",
+          "Family": "Courier New",
+          "WordFont": "CourierNewPSMT",
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    },
+    {
+      "Id": "list-family-mark-times",
+      "File": "list-family-mark-times.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "9B1DB3DC332AF22D552EFCD13208C5A6FC26853CFA4C5F2BD131634923D93B46",
+      "ReferencePdfSha256": "97C205371581917CB12FE362EACACE1F945F9A2520A304E95B37A3BFD50056E1",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 83.784
+        },
+        {
+          "Text": "2.",
+          "Family": "Calibri",
+          "WordFont": "Calibri",
+          "X": 72.024,
+          "Y": 64.344
+        },
+        {
+          "Text": "3.",
+          "Family": "Calibri",
+          "WordFont": "Calibri",
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    },
+    {
+      "Id": "list-family-no-family-default",
+      "File": "list-family-no-family-default.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "FB4270E7F78721BA27761195C681CEF2E8E39C4CFECA2CD17FF31608D938D042",
+      "ReferencePdfSha256": "FA2E2C4C5FB75F208D10145ECD4E593B4550692C067F3D738B26A1E6E8410C16",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 81.624
+        },
+        {
+          "Text": "2.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 62.904
+        },
+        {
+          "Text": "3.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 44.184
+        }
+      ]
+    },
+    {
+      "Id": "list-family-normal-times",
+      "File": "list-family-normal-times.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "881CE54EA2DCE60C1C36ADD7674EF414BE2CFCE29BC1403D70B37AFF2874EBD1",
+      "ReferencePdfSha256": "0233D3C83631559731CAD58805465F8589E93F963C33D0FC3CE313CF0B7EFD19",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 81.624
+        },
+        {
+          "Text": "2.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 62.904
+        },
+        {
+          "Text": "3.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 44.184
+        }
+      ]
+    },
+    {
+      "Id": "list-family-run-arial",
+      "File": "list-family-run-arial.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "5E2F5DC27FFFF7E9100AA3F06D6702FD7D7361974E610D707527B45EF16BEFFF",
+      "ReferencePdfSha256": "9CED17B9D170ED77EED60B1F450E201B08B4DC0B61F39BA19A6B67EAAD17033F",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Family": "Calibri",
+          "WordFont": "Calibri",
+          "X": 72.024,
+          "Y": 83.784
+        },
+        {
+          "Text": "2.",
+          "Family": "Calibri",
+          "WordFont": "Calibri",
+          "X": 72.024,
+          "Y": 64.344
+        },
+        {
+          "Text": "3.",
+          "Family": "Calibri",
+          "WordFont": "Calibri",
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    },
+    {
+      "Id": "list-family-defaults-arial",
+      "File": "list-family-defaults-arial.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "79EC70AFBC2672014C9D04F5C1D5E70DF7511A6D457FCB36BF35E7294DD81832",
+      "ReferencePdfSha256": "A048ECC9349AAFCF9B85720D43E80E663F780CD7B33283B4565CEC6FD6041A1C",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Family": "Arial",
+          "WordFont": "ArialMT",
+          "X": 72.024,
+          "Y": 81.624
+        },
+        {
+          "Text": "2.",
+          "Family": "Arial",
+          "WordFont": "ArialMT",
+          "X": 72.024,
+          "Y": 62.904
+        },
+        {
+          "Text": "3.",
+          "Family": "Arial",
+          "WordFont": "ArialMT",
+          "X": 72.024,
+          "Y": 44.184
+        }
+      ]
+    },
+    {
+      "Id": "list-family-level-courier",
+      "File": "list-family-level-courier.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "DC40F21A42CCB47821970111C679C0337989004C19A2BCC69257153278317B4D",
+      "ReferencePdfSha256": "85A19EE251CAE3F698D855F7E1AF2B90F2A1A58C2ECCD249F79649743E02475A",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Family": "Courier New",
+          "WordFont": "CourierNewPSMT",
+          "X": 72.024,
+          "Y": 83.784
+        },
+        {
+          "Text": "2.",
+          "Family": "Courier New",
+          "WordFont": "CourierNewPSMT",
+          "X": 72.024,
+          "Y": 64.344
+        },
+        {
+          "Text": "3.",
+          "Family": "Courier New",
+          "WordFont": "CourierNewPSMT",
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    },
+    {
+      "Id": "list-family-mark-times",
+      "File": "list-family-mark-times.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "9B1DB3DC332AF22D552EFCD13208C5A6FC26853CFA4C5F2BD131634923D93B46",
+      "ReferencePdfSha256": "96EA190BA0A5E85D9250E9D90A34A6AC90657F0E9CFC045931BC84CC7E972C85",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 83.784
+        },
+        {
+          "Text": "2.",
+          "Family": "Calibri",
+          "WordFont": "Calibri",
+          "X": 72.024,
+          "Y": 64.344
+        },
+        {
+          "Text": "3.",
+          "Family": "Calibri",
+          "WordFont": "Calibri",
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    },
+    {
+      "Id": "list-family-no-family-default",
+      "File": "list-family-no-family-default.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "FB4270E7F78721BA27761195C681CEF2E8E39C4CFECA2CD17FF31608D938D042",
+      "ReferencePdfSha256": "972CD68CA8339667331F79E22A07092B980365B8D592D857102597E7B22E047B",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 81.624
+        },
+        {
+          "Text": "2.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 62.904
+        },
+        {
+          "Text": "3.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 44.184
+        }
+      ]
+    },
+    {
+      "Id": "list-family-normal-times",
+      "File": "list-family-normal-times.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "881CE54EA2DCE60C1C36ADD7674EF414BE2CFCE29BC1403D70B37AFF2874EBD1",
+      "ReferencePdfSha256": "2A1AC045FBACAD8683392B1F2D5B5B7A66BF916D324F420AB8D6A2C17A79CE42",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 81.624
+        },
+        {
+          "Text": "2.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 62.904
+        },
+        {
+          "Text": "3.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 44.184
+        }
+      ]
+    },
+    {
+      "Id": "list-family-run-arial",
+      "File": "list-family-run-arial.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "5E2F5DC27FFFF7E9100AA3F06D6702FD7D7361974E610D707527B45EF16BEFFF",
+      "ReferencePdfSha256": "EDD5E8B427D2E61C820264F551B108F36583AC2A1C82470965286F2914DD89FE",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Family": "Calibri",
+          "WordFont": "Calibri",
+          "X": 72.024,
+          "Y": 83.784
+        },
+        {
+          "Text": "2.",
+          "Family": "Calibri",
+          "WordFont": "Calibri",
+          "X": 72.024,
+          "Y": 64.344
+        },
+        {
+          "Text": "3.",
+          "Family": "Calibri",
+          "WordFont": "Calibri",
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    }
+  ]
+}

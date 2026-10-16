@@ -875,7 +875,14 @@ internal sealed partial class DocxLayoutEngine
 
     internal static DocxTextRun CreateListLabelRun(DocxListLabel label, DocxTextRun? baseRun, double fontSize)
     {
-        return label.Style.ApplyTo(ResolveListLabelBaseRun(label, baseRun), label.Text, fontSize);
+        // Typeface slots belong to the resolved label, including absent slots.
+        // Merging them with the first text run would leak its direct formatting
+        // into otherwise inherited or theme-based numbering faces.
+        return label.Style.ApplyTo(ResolveListLabelBaseRun(label, baseRun), label.Text, fontSize) with
+        {
+            FontFamily = label.Style.FontFamily,
+            Fonts = label.Style.Fonts
+        };
     }
 
     private static DocxTextRun? ResolveListLabelBaseRun(DocxListLabel label, DocxTextRun? baseRun)

@@ -99,11 +99,15 @@ internal sealed partial class DocxReader
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxTextRunStyle ResolveListLabelStyle(DocxTextRunStyle levelStyle, XElement? paragraphProperties, DocxStyleSet styles, string? paragraphStyleId, DocxTableCellStyle? tableCellStyle, DocxResolvedRunProperties paragraphMarkRun)
     {
-        // Independent Word controls: the level owns explicit weight/slant;
+        // Independent Word controls: the level owns explicit typeface/weight/slant;
         // missing values inherit the resolved paragraph mark, including styles
         // and defaults. Formatting the first text run does not format a label.
+        DocxRunFonts labelFonts = paragraphMarkRun.Fonts.Merge(levelStyle.Fonts);
         levelStyle = levelStyle with
         {
+            FontFamily = levelStyle.FontFamily ?? paragraphMarkRun.FontFamily ??
+                (labelFonts == DocxRunFonts.Empty ? "Times New Roman" : null),
+            Fonts = labelFonts,
             Bold = levelStyle.Bold ?? paragraphMarkRun.Bold ?? false,
             Italic = levelStyle.Italic ?? paragraphMarkRun.Italic ?? false
         };
