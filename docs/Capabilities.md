@@ -120,6 +120,7 @@ Supported:
 - Basic page size extraction.
 - Page margin extraction.
 - Basic body paragraphs and text runs.
+- Undeclared Latin prose uses Times New Roman when available, after an explicit resolver document default and before modern fallback alternatives. Explicit families, themes and font-table alternates retain their existing resolution order.
 - Document defaults, paragraph styles, and character styles for common run and paragraph properties, including paragraph spacing inheritance, contextual spacing, line-unit spacing, automatic before/after spacing, and exact/at-least line heights.
 - Simple paragraph page breaking.
 - Simple decimal and bullet list labels from `numbering.xml`, including twip-based left, right, first-line, hanging, and numbering-tab indentation. Label font family/weight/slant follows explicit numbering-level values, then the resolved paragraph mark/style/defaults, independently of first-run formatting; an undeclared label family falls back to Times New Roman. Existing label-size, color/underline and revision-decoration rules remain separately qualified.

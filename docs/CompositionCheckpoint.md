@@ -1,5 +1,27 @@
 # Composed-document reliability checkpoint
 
+C71 corrects undeclared Latin prose fallback across body, cells and static stories.
+After an explicit resolver document default, the fallback prefers Word's Times
+New Roman before the existing modern-face alternatives. Explicit family, theme
+and alternate resolution retains its precedence; no font-size or shape guard is
+added. Four fresh Word exports at 11/14pt plus two retained controls establish
+38 matching emitted anchors. Qualification passes 150 Windows and 116 Ubuntu
+methods/34 explicit skips, each in one invocation. Two checks fail on the parent;
+its portable custom-default control still passes.
+
+All six focused visual gates still fail unchanged thresholds, but MAE and recall
+improve in every outcome. At 14pt, MAE falls from 2.704 to 0.221 and foreground
+recall rises from 0.276 to 0.958. Two page pairs were reviewed; ten fixed/complete
+corpus PDFs retain their bytes and comparisons. Evidence:
+`artifacts/composition-c1/default-typeface-evidence.json` and linked reports.
+
+Source inspection also refines the earlier list-family header warning: its
+related header has no section reference. Both Word and candidate omit that unused
+story. The package contains an equation, but this warning does not establish a
+visible omission. Raw diagnostics, source counts and earlier severity remain
+alongside `artifacts/composition-c1/list-family-unused-header-classification.json`;
+neither diagnostic policy nor visual gates are relaxed.
+
 C70 bounds new qualification-asset duplication within each fresh frozen output.
 Identical assets share files there; writable builds, other artifacts and transfer
 copies remain independent. Seventeen tool checks exercise those ownership rules.
