@@ -14,10 +14,15 @@ import time
 
 def measure(path):
     root = str(Path(path).resolve())
-    if not os.path.isdir(root):
+    # scandir/stat need extended Windows paths even when .NET created the
+    # directory successfully. Keep the ordinary resolved root in the report.
+    walk_root = root
+    if os.name == 'nt' and not root.startswith('\\\\?\\'):
+        walk_root = '\\\\?\\UNC\\' + root[2:] if root.startswith('\\\\') else '\\\\?\\' + root
+    if not os.path.isdir(walk_root):
         raise ValueError("Not a directory: " + root)
     started = time.monotonic()
-    pending, seen, groups, errors = [root], set(), {}, []
+    pending, seen, groups, errors = [walk_root], set(), {}, []
     total = logical = files = directories = links = shared = 0
     while pending:
         directory = pending.pop()
@@ -45,7 +50,7 @@ def measure(path):
                             else:
                                 seen.add(identity)
                         total += charge
-                        relative = os.path.relpath(entry.path, root)
+                        relative = os.path.relpath(entry.path, walk_root)
                         group = relative.split(os.sep, 1)[0] if os.sep in relative else "."
                         item = groups.setdefault(group, dict(Path=group, Bytes=0, Files=0))
                         item["Bytes"] += charge

@@ -981,3 +981,11 @@ verified cached review references are reused without export. Evidence:
 `artifacts/composition-c1/math-fields-evidence.json`. CI through `4ed093b6` is green
 on both OSes. The latest workspace scan reports 5.365GB with four long-path fixture
 traversal errors; those errors remain explicit pending the bounded tool correction.
+
+The workspace counter now uses extended Windows paths for traversal while retaining
+its ordinary reported root. A regression reproduces the missing long-path byte;
+Windows wrapper and direct Ubuntu Python checks retain unique/logical byte, hard
+link and loop behavior. The complete scan reports 5.379GB with zero errors. The
+Ubuntu PowerShell wrapper remains a CI check; local Ubuntu has no PowerShell.
+No library build or rendering suite is replayed. Evidence:
+`artifacts/composition-c1/footprint-longpath-evidence.json`.

@@ -12,10 +12,13 @@ $inputs = (Resolve-Path -LiteralPath $inputs).Path
 New-Item -ItemType HardLink -Path (Join-Path $inputs nested/b.bin) -Target (Join-Path $inputs a.bin) | Out-Null
 $linkType = if ($IsWindows) { 'Junction' } else { 'SymbolicLink' }
 New-Item -ItemType $linkType -Path (Join-Path $inputs loop) -Target $inputs | Out-Null
+$longDirectory = Join-Path (Join-Path $inputs ('a' * 160)) ('b' * 160)
+[IO.Directory]::CreateDirectory($longDirectory) | Out-Null
+[IO.File]::WriteAllBytes((Join-Path $longDirectory 'long.bin'), [byte[]](9))
 $path = Join-Path $OutputDirectory report.json
 $report = & (Join-Path $PSScriptRoot 'MeasureWorkspaceFootprint.ps1') -Path $inputs -ReportPath $path
-if ($report.Bytes -ne 8 -or $report.LogicalBytes -ne 13 -or $report.SharedHardLinkBytes -ne 5) { throw 'Shared content was charged more than once' }
-if ($report.Files -ne 3 -or $report.Directories -ne 1 -or $report.SkippedLinks -ne 1 -or $report.Errors.Count) { throw 'Input/link traversal differs' }
+if ($report.Bytes -ne 9 -or $report.LogicalBytes -ne 14 -or $report.SharedHardLinkBytes -ne 5) { throw 'Shared or long-path content was counted incorrectly' }
+if ($report.Files -ne 4 -or $report.Directories -ne 3 -or $report.SkippedLinks -ne 1 -or $report.Errors.Count) { throw 'Input/link/long-path traversal differs' }
 $stored = Get-Content $path -Raw | ConvertFrom-Json
 if ($stored.Bytes -ne $report.Bytes -or $stored.Root -ne $inputs) { throw 'Persisted footprint report differs' }
-Write-Output 'Unique bytes, logical bytes, hard-link aliases and directory-loop checks passed.'
+Write-Output 'Unique bytes, logical bytes, hard-link aliases, directory loops and long paths passed.'
