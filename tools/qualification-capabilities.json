@@ -1729,6 +1729,11 @@
     "PortableRenderingAutomaticFootnotes",
     "DocxWrappedFootnoteNumbers",
     "DocxMixedWrappedThresholds",
-    "DocxSpacedWrappedAfter"
+    "DocxSpacedWrappedAfter",
+    "DocxMinimumBodyLineLeading",
+    "DocxMarkedMinimumLeading",
+    "DocxMinimumBeforeLeading",
+    "DocxContextualMinimum",
+    "DocxElevenPointMinimum"
   ]
 }

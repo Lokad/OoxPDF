@@ -72,7 +72,7 @@ internal static class DocxPlainFootnoteKerning
             if (changed) replacements.Add(p, p with { Runs = runs });
         }
         if (replacements.Count == 0 ||
-            !ordinary && !DocxPageFootnoteNumbering.TryCreateDocument(source, layout, out _, out pages)) return false;
+            !ordinary && !DocxPageFootnoteNumbering.TryGetReferencePages(source, layout, out pages)) return false;
         DocxParagraph Replace(DocxParagraph p) => replacements.GetValueOrDefault(p, p);
         IReadOnlyList<DocxBodyElement> ReplaceElements(IReadOnlyList<DocxBodyElement> elements) =>
             elements.Select(e => e is DocxParagraphElement p ? p with { Paragraph = Replace(p.Paragraph) } : e).ToArray();

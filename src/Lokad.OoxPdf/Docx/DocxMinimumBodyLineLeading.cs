@@ -13,7 +13,7 @@ internal static class DocxMinimumBodyLineLeading
             !DocxPlainFootnoteKerning.HasSingleLineBody(source) ||
             source.Pages.Any(p => p.ColumnFrames.Count > 1 || p.StaticTextLines.Count != 0 || p.StaticInlineImages.Count != 0) ||
             document.Paragraphs.Any(p => p.KeepRules.KeepNext == true || p.KeepRules.KeepLines == true) ||
-            (!ordinaryBody && !DocxPageFootnoteNumbering.TryCreateDocument(document, source, out _, out _))) return false;
+            (!ordinaryBody && !DocxPageFootnoteNumbering.TryGetReferencePages(document, source, out _))) return false;
 
         var replacements = new Dictionary<DocxTextLineLayout, DocxTextLineLayout>(ReferenceEqualityComparer.Instance);
         double bodyFontSize = DocxPlainElevenPointBody.IsEligible(document, source) ? 11d : 12d;

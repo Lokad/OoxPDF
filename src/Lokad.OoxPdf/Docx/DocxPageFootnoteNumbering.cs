@@ -91,6 +91,23 @@ internal static class DocxPageFootnoteNumbering
     internal static bool HasCompleteNoteOwners(DocxDocument document, DocxLayout layout) =>
         TryMapReferencePages(document, layout, out _);
 
+    // Layout and font adjustments need complete source ownership even when
+    // numbering itself would leave every label unchanged. Do not clone a
+    // numbered document merely to answer this independent question.
+    internal static bool TryGetReferencePages(DocxDocument document, DocxLayout layout,
+        out IReadOnlyDictionary<string, int> pages)
+    {
+        pages = new Dictionary<string, int>();
+        if (!IsEligibleDocument(document) || !TryMapReferencePages(document, layout, out var mapped)) return false;
+        var labels = document.Paragraphs.SelectMany(p => p.InlineReferences)
+            .ToDictionary(reference => reference.Id!, reference => reference.DisplayText!, StringComparer.Ordinal);
+        foreach (var story in document.RelatedStories.Where(story => story.IsNormalStoryType))
+            if (story.Id is null || !labels.TryGetValue(story.Id, out var label) || story.Paragraphs.Count != 1 ||
+                story.Paragraphs[0].Runs.Count == 0 || story.Paragraphs[0].Runs[0].Text != label) return false;
+        pages = mapped;
+        return true;
+    }
+
     internal static bool HasCompleteWrappedNoteOwners(DocxDocument document, DocxLayout layout) =>
         IsEligibleDocument(document) &&
         DocxWrappedFootnoteFrame.IsEligible(document, DocxWrappedCalibriPolicy.NormalizedThresholds) &&
