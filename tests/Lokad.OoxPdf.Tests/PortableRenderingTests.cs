@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingPictureFirstTablesRetainTheirTextStrutAnchor() =>
+        DocxInlineCompositionTests.CheckPictureFirstTables(new PinnedResolver());
+
     public static void PortableRenderingDisplayImageRowsPreserveAdjacentFractionOwnership() =>
         DocxInlineCompositionTests.CheckDisplayImageRows(new PinnedResolver());
 
@@ -908,14 +911,19 @@ internal static class PortableRenderingTests
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var single = renderer.InspectLayout(DocxTests.ReadDocx(Case("PortableFonts/math-navigation-normal.docx"), mode));
             double width = single.Pages.Single().Items.Single(item => item.Kind == "Equation").Width;
-            var grouped = renderer.InspectLayout(DocxTests.ReadDocx(Case("PortableFonts/inline-math-navigation-normal.docx"), mode));
+            var document = DocxTests.ReadDocx(Case("PortableFonts/inline-math-navigation-normal.docx"), mode);
+            var grouped = renderer.InspectLayout(document);
+            double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document, DocxMarkupContext.FromMode(mode,
+                mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+            // The pinned 11pt default contributes three math units between Inner atoms.
+            double fractionGap = 11d / 6d * scale;
             var page = grouped.Pages.Single();
             var staticGroups = page.StaticItems.Where(item => item.Kind.EndsWith("TextLine", StringComparison.Ordinal) && item.TextLength == 0).ToArray();
             TestAssert.Equal(2, staticGroups.Length);
             foreach (var group in staticGroups)
             {
-                TestAssert.True(Math.Abs(group.Width - 2d * width) < 0.000001d,
-                    "Duplicating a formula in a math-only row must preserve its display measurement.");
+                TestAssert.True(Math.Abs(group.Width - 2d * width - fractionGap) < 0.000001d,
+                    "Adjacent fractions retain each display measurement and mathematical spacing: " + group.Width + "/" + width + "/" + fractionGap);
                 double center = (page.MarginLeft + page.Width - page.MarginRight) / 2d;
                 TestAssert.True(Math.Abs(group.X + group.Width / 2d - center) < 0.000001d,
                     "Math-only rows must center the complete measured group in their container.");

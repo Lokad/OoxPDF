@@ -1,0 +1,157 @@
+{
+  "Source": "Independent Word 16 anchors: first-table math/image rows retain the same baseline with or without a neighboring prose cell; paragraph mark explicitly Arial 12pt. Existing visual thresholds unchanged.",
+  "Rows": [
+    {
+      "Id": "math-picture-first-table-single-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "048B348CE50D20E4AAF2E3A25A8BBE69B860534EB22ED42BD73A2CD4022EC07D",
+      "PdfSha256": "1CCC028BC3E36FBA99EA6DB9034BDADA8D9C6DE81A2A9B1C541B8D49BE90BC8B",
+      "MathText": "ratetimeratetime",
+      "ProseFontSize": 9.096,
+      "Anchors": [
+        {
+          "Text": "rate",
+          "Occurrence": 0,
+          "X": 82.2,
+          "Y": 633.34,
+          "FontSize": 6.456
+        },
+        {
+          "Text": "rate",
+          "Occurrence": 1,
+          "X": 95.832,
+          "Y": 633.34,
+          "FontSize": 6.456
+        },
+        {
+          "Text": "time",
+          "Occurrence": 0,
+          "X": 81.648,
+          "Y": 623.4,
+          "FontSize": 6.456
+        },
+        {
+          "Text": "time",
+          "Occurrence": 1,
+          "X": 95.304,
+          "Y": 623.4,
+          "FontSize": 6.456
+        }
+      ]
+    },
+    {
+      "Id": "math-picture-first-table-single-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "048B348CE50D20E4AAF2E3A25A8BBE69B860534EB22ED42BD73A2CD4022EC07D",
+      "PdfSha256": "D835EB244B81F93BA425E553FAF4D55231D517A985CEFF716D72FAF0D536A71C",
+      "MathText": "ratetimeratetime",
+      "ProseFontSize": 12,
+      "Anchors": [
+        {
+          "Text": "rate",
+          "Occurrence": 0,
+          "X": 108.38,
+          "Y": 708.58,
+          "FontSize": 8.52
+        },
+        {
+          "Text": "rate",
+          "Occurrence": 1,
+          "X": 126.38,
+          "Y": 708.58,
+          "FontSize": 8.52
+        },
+        {
+          "Text": "time",
+          "Occurrence": 0,
+          "X": 107.66,
+          "Y": 695.5,
+          "FontSize": 8.52
+        },
+        {
+          "Text": "time",
+          "Occurrence": 1,
+          "X": 125.66,
+          "Y": 695.5,
+          "FontSize": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "math-picture-first-table-two-cells",
+      "Mode": "all-word-compatible",
+      "InputSha256": "9A39171926A7EC1D366D2BB98418C680D8086D4341B1FAFE7FF2FA84C5504430",
+      "PdfSha256": "0D87ED273D4CA5098E79F83386E0BDF6E260EB9253C03FDAB003F986C3FDB6DC",
+      "MathText": "ratetimeratetime",
+      "ProseFontSize": 9.096,
+      "Anchors": [
+        {
+          "Text": "rate",
+          "Occurrence": 0,
+          "X": 259.68,
+          "Y": 633.34,
+          "FontSize": 6.456
+        },
+        {
+          "Text": "rate",
+          "Occurrence": 1,
+          "X": 273.34,
+          "Y": 633.34,
+          "FontSize": 6.456
+        },
+        {
+          "Text": "time",
+          "Occurrence": 0,
+          "X": 259.13,
+          "Y": 623.4,
+          "FontSize": 6.456
+        },
+        {
+          "Text": "time",
+          "Occurrence": 1,
+          "X": 272.78,
+          "Y": 623.4,
+          "FontSize": 6.456
+        }
+      ]
+    },
+    {
+      "Id": "math-picture-first-table-two-cells",
+      "Mode": "final-preserve",
+      "InputSha256": "9A39171926A7EC1D366D2BB98418C680D8086D4341B1FAFE7FF2FA84C5504430",
+      "PdfSha256": "06A01AB43AD548735A631D73161FF8A7A2F8DCE1FFE279616A16AE7293AD98E4",
+      "MathText": "ratetimeratetime",
+      "ProseFontSize": 12,
+      "Anchors": [
+        {
+          "Text": "rate",
+          "Occurrence": 0,
+          "X": 342.43,
+          "Y": 708.58,
+          "FontSize": 8.52
+        },
+        {
+          "Text": "rate",
+          "Occurrence": 1,
+          "X": 360.43,
+          "Y": 708.58,
+          "FontSize": 8.52
+        },
+        {
+          "Text": "time",
+          "Occurrence": 0,
+          "X": 341.71,
+          "Y": 695.5,
+          "FontSize": 8.52
+        },
+        {
+          "Text": "time",
+          "Occurrence": 1,
+          "X": 359.71,
+          "Y": 695.5,
+          "FontSize": 8.52
+        }
+      ]
+    }
+  ]
+}

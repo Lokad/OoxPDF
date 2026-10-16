@@ -10,7 +10,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    private static void ApplyReviewTableBaselineGeometry(
+    internal static void ApplyReviewTableBaselineGeometry(
         List<DocxLayoutItem> items,
         int firstItem,
         double? precedingBodyBaselineInset,
@@ -45,7 +45,7 @@ internal sealed partial class DocxLayoutEngine
                 cancellationToken.ThrowIfCancellationRequested();
                 DocxTableCellLayout cell = row.Cells[cellIndex];
                 IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell.VisualCell));
-                if (cell.TextLines.Count == 0 || cell.InlineImages.Count != 0 || cell.InlineTextBoxes.Count != 0 ||
+                if (cell.TextLines.Count == 0 || !HasOrderedPictureLineOwners(cell, cancellationToken) || cell.InlineTextBoxes.Count != 0 ||
                     cell.NestedRows.Count != 0 || cell.Cell.HasVerticalMerge || paragraphs.Count == 0 ||
                     paragraphs.Any(paragraph => paragraph.EffectiveProperties.LineSpacingPoints is not null) ||
                     !string.IsNullOrEmpty(cell.VisualCell.VerticalAlignmentValue) &&
@@ -55,6 +55,8 @@ internal sealed partial class DocxLayoutEngine
                 }
 
                 double inset = ResolveTableCellFirstBaselineInset(paragraphs, measurer);
+                if (inset == 0d && cell.TextLines[0].InlineFrame?.TextBaselineInset is { } measuredInset)
+                    inset = measuredInset / printScale;
                 if (!double.IsFinite(inset) || inset <= 0d)
                 {
                     return;
@@ -117,7 +119,9 @@ internal sealed partial class DocxLayoutEngine
                     Y = cell.Y - originCorrection + previousBorderAdvanceCorrection + borderAdvanceCorrection,
                     Height = cell.Height - borderAdvanceCorrection,
                     TextLines = cell.TextLines.Select(line => line with { BaselineY = line.BaselineY +
-                        (line.InlineFrame is null ? baselineCorrection : ownedFrameCorrection) }).ToArray()
+                        (line.InlineFrame is null ? baselineCorrection : ownedFrameCorrection) }).ToArray(),
+                    InlineImages = cell.InlineImages.Count == 0 ? cell.InlineImages :
+                        cell.InlineImages.Select(image => image.Translate(0d, ownedFrameCorrection)).ToArray()
                 };
             }
 
@@ -136,6 +140,27 @@ internal sealed partial class DocxLayoutEngine
                 .DefaultIfEmpty(0d).Max();
         }
         cursorY += previousBorderAdvanceCorrection;
+    }
+
+    private static bool HasOrderedPictureLineOwners(DocxTableCellLayout cell, CancellationToken token)
+    {
+        if (cell.InlineImages.Count == 0) return true;
+        // The measured line owns the physical frame; pictures retain its source
+        // key instead of publishing another copy of the same geometry.
+        var owners = new HashSet<(int? Paragraph, int? Line)>();
+        foreach (var line in cell.TextLines)
+        {
+            token.ThrowIfCancellationRequested();
+            if (line.InlineFrame is not null && line.SourceParagraphIndex is >= 0 && line.SourceLineIndex is >= 0)
+                owners.Add((line.SourceParagraphIndex, line.SourceLineIndex));
+        }
+        foreach (var image in cell.InlineImages)
+        {
+            token.ThrowIfCancellationRequested();
+            if (image.SourceParagraphIndex is not >= 0 || image.SourceLineIndex is not >= 0 ||
+                !owners.Contains((image.SourceParagraphIndex, image.SourceLineIndex))) return false;
+        }
+        return true;
     }
 
     private static void LayoutTable(

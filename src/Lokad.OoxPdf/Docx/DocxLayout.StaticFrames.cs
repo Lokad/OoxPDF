@@ -59,7 +59,7 @@ internal sealed partial class DocxLayoutEngine
                     token.ThrowIfCancellationRequested();
                     return placement with { OffsetX = placement.OffsetX * scale };
                 }).ToArray(),
-                InlineFrame = line.InlineFrame is { } frame ? new(frame.BaselineInset * scale, frame.Height * scale) : null,
+                InlineFrame = line.InlineFrame is { } frame ? frame.Scale(scale) : null,
                 InlineObjectEndOffsetX = line.InlineObjectEndOffsetX * scale,
                 InlineSourceExtents = line.InlineSourceExtents.Select(extent =>
                 {

@@ -979,7 +979,12 @@ internal sealed partial class DocxRenderer
         double? firstBaselineY = null;
         foreach (DocxTextLineLayout line in EnumerateBodyTextLines(page))
         {
-            firstBaselineY = firstBaselineY is null ? line.BaselineY : Math.Max(firstBaselineY.Value, line.BaselineY);
+            // Inline objects may enlarge ascent without moving the source text
+            // strut. Pin that measured strut, not an object's occupied baseline.
+            double anchor = line.BaselineY;
+            if (line.InlineFrame is { TextBaselineInset: { } textInset } frame)
+                anchor += frame.BaselineInset - textInset;
+            firstBaselineY = firstBaselineY is null ? anchor : Math.Max(firstBaselineY.Value, anchor);
         }
 
         double? firstBodyBaselineY = firstBaselineY;

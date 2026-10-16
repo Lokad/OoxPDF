@@ -46,7 +46,13 @@ internal abstract record DocxLayoutItem
 internal sealed record DocxEquationLayout(DocxPreparedMathParagraph Math, double X, double BaselineY,
     double Scale, int SourceBlockIndex, DocxParagraph SourceParagraph) : DocxLayoutItem;
 internal sealed record DocxInlineMathPlacement(DocxPreparedMathParagraph Math, double OffsetX);
-internal readonly record struct DocxInlineLineFrame(double BaselineInset, double Height);
+internal readonly record struct DocxInlineLineFrame(double BaselineInset, double Height)
+{
+    public double? TextBaselineInset { get; init; }
+
+    public DocxInlineLineFrame Scale(double scale) => new(BaselineInset * scale, Height * scale)
+        { TextBaselineInset = TextBaselineInset * scale };
+}
 internal readonly record struct DocxInlineSourceExtent(int ItemIndex, double StartOffset, double EndOffset,
     double AboveBaseline = 0d, double BelowBaseline = 0d, bool IsMath = false)
 {
@@ -157,6 +163,7 @@ internal sealed record DocxInlineImageLayout(
     int? SourceParagraphIndex,
     DocxStoryId? Story) : DocxLayoutItem
 {
+    public int? SourceLineIndex { get; init; }
     public PdfRectangle? ClipBounds { get; init; }
     public DocxPictureLineFrame? LineFrame { get; init; }
 

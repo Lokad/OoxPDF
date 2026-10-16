@@ -124,7 +124,8 @@ internal sealed partial class DocxLayoutEngine
             else if (fragment.Math is { } math) equations.Add(new(math, offset));
             else if (fragment.Source is DocxInlinePicture picture)
                 images.Add(new(picture.Image, x + offset, top - measured.BaselineInset, fragment.Advance,
-                    fragment.OccupiedHeight, pageIndex, sourceBlock, sourceParagraph, story));
+                    fragment.OccupiedHeight, pageIndex, sourceBlock, sourceParagraph, story)
+                    { SourceLineIndex = sourceLine });
             else if (fragment.Source is DocxInlineTab) text.Append('\t');
             if (sourceExtents is not null)
                 sourceExtents.Add(fragment.VisibleSourceExtent is { } visible
@@ -143,7 +144,8 @@ internal sealed partial class DocxLayoutEngine
             ParagraphAfterSpacing: null, ContextualSpacingSuppressed: null, SourceParagraph: paragraph,
             LineHeightSource: null, EmitsTerminalParagraphMark: false)
         { FrameOriginOffsetX = frameOriginX - x, InlineMath = equations, MathScale = scale, InlineObjectEndOffsetX = measured.Advance,
-            InlineFrame = new(measured.BaselineInset, measured.OccupiedHeight),
+            InlineFrame = new(measured.BaselineInset, measured.OccupiedHeight)
+                { TextBaselineInset = measured.IsDisplayGroup ? null : measured.TextBaselineInset },
             InlineSourceExtents = sourceExtents is null ? [] : sourceExtents };
         return (line, images);
     }

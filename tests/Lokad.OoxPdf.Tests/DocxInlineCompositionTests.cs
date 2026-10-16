@@ -11,11 +11,90 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
-    public static void DocxInlineCompositionDisplayImageRowsKeepOfficeFractionGeometryAndKnownCellOffset()
+    public static void DocxInlineCompositionOrderedPictureTranslationKeepsClipsAndFallbacks()
+    {
+        var source = ReadMutation("CompositionProbes/math-picture-first-table-single-cell", OoxPdfDocxMarkupMode.Final, false, false);
+        var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(source.BodyElements).Single(p => p.Equations.Count != 0);
+        var equations = paragraph.Equations.ToDictionary(equation => equation,
+            equation => new DocxPreparedMathParagraph(equation, new(18d, 8d, 2d, []), 10d, 16d) { UsesDisplayStyle = false });
+        var measurer = new TrackingMeasurer();
+        var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(source, measurer, default, mathEquations: equations);
+        var row = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+        var cell = row.Cells.Single();
+        var picture = cell.InlineImages.Single();
+        TestAssert.True(picture.SourceLineIndex == cell.TextLines.Single().SourceLineIndex,
+            "A picture retains the measured source-line owner without copying its geometry.");
+        picture = picture with { ClipBounds = new(picture.X, picture.Y, picture.Width, picture.Height),
+            LineFrame = new(picture.Y - 2d, picture.Height + 2d) };
+        row = row with { Cells = [cell with { InlineImages = [picture] }] };
+        var items = new List<DocxLayoutItem> { row };
+        double cursor = 0d;
+        DocxLayoutEngine.ApplyReviewTableBaselineGeometry(items, 0, 12d, measurer, .75d, ref cursor, default);
+        var moved = ((DocxTableRowLayout)items[0]).Cells.Single();
+        var image = moved.InlineImages.Single();
+        TestAssert.True(Math.Abs(image.Y - picture.Y + 3d) < .000001d &&
+            Math.Abs(image.ClipBounds!.Value.Y - picture.ClipBounds!.Value.Y + 3d) < .000001d &&
+            Math.Abs(image.LineFrame!.Value.Bottom - picture.LineFrame!.Value.Bottom + 3d) < .000001d &&
+            Math.Abs(moved.TextLines.Single().BaselineY - cell.TextLines.Single().BaselineY + 3d) < .000001d,
+            "Line, picture, crop clip and optional picture frame translate together exactly once.");
+        foreach (int? missingOwner in new int?[] { null, 999 })
+        {
+            var invalid = row with { RowIndex = 1, Cells = [cell with
+                { InlineImages = [picture with { SourceLineIndex = missingOwner }] }] };
+            var fallback = new List<DocxLayoutItem> { row, invalid };
+            cursor = 0d;
+            DocxLayoutEngine.ApplyReviewTableBaselineGeometry(fallback, 0, 12d, measurer, .75d, ref cursor, default);
+            TestAssert.True(ReferenceEquals(row, fallback[0]) && ReferenceEquals(invalid, fallback[1]) && cursor == 0d,
+                "An unowned picture retains the whole table fallback before any earlier row is mutated.");
+        }
+        using var canceled = new CancellationTokenSource(); canceled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() =>
+            DocxLayoutEngine.ApplyReviewTableBaselineGeometry(items, 0, 12d, measurer, .75d, ref cursor, canceled.Token));
+    }
+
+    public static void DocxInlineCompositionDisplayImageRowsRetainIndependentOfficeFractionFrames()
+        => AssertPictureWordFrames("math-display-images-office-geometry.json");
+
+    public static void DocxInlineCompositionPictureFirstTablesUseTheirOwnedTextAnchor()
+    {
+        AssertPictureWordFrames("math-picture-first-tables-office-geometry.json");
+        if (OperatingSystem.IsWindows()) CheckPictureFirstTables(null);
+    }
+
+    internal static void CheckPictureFirstTables(Lokad.OoxPdf.Fonts.IFontResolver? resolver)
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            double? baseline = null;
+            foreach (string shape in new[] { "two-cells", "single-cell" })
+            foreach (bool transformed in new[] { false, true })
+            {
+                var source = ReadMutation("CompositionProbes/math-picture-first-table-" + shape, mode, transformed, transformed);
+                var owner = DocxBlockTraversal.EnumerateBodyParagraphs(source.BodyElements).Single(p => p.Equations.Count != 0);
+                TestAssert.True(owner.Runs.Count == 0 && owner.ParagraphMarkRun is null && owner.ParagraphMarkFontSize == 12d,
+                    "Unpainted paragraph-mark metrics remain available for the object-only source owner.");
+                var page = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
+                    ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                    .RenderBlankPages(source, null, default).Single();
+                TestAssert.Equal(1, page.Images.Count);
+                var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
+                var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Where(show => fonts.Contains(show.Font)).ToArray();
+                TestAssert.Equal(16, math.Length);
+                TestAssert.Equal("ratetimeratetime", string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+                baseline ??= math[0].Y;
+                TestAssert.True(Math.Abs(math[0].Y - baseline.Value) < .01d,
+                    "Removing a neighboring prose cell or adding source metadata cannot change the picture/math baseline.");
+                TestAssert.Contains("Following prose.", DocxPageFootnoteNumberingTests.DecodeText(page));
+            }
+        }
+    }
+
+    private static void AssertPictureWordFrames(string referenceFile)
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent controls use installed Arial metrics.");
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
-        using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-display-images-office-geometry.json")));
+        using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, referenceFile)));
         foreach (var row in reference.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
@@ -37,11 +116,10 @@ internal static class DocxInlineCompositionTests
                 TestAssert.True(Math.Abs(math[index].X - anchor.GetProperty("X").GetDouble()) < 1d &&
                     Math.Abs(math[index].X - math[0].X - (anchor.GetProperty("X").GetDouble() - origin)) < .2d,
                     "Word's inline fraction geometry and separation survive adjacent source equation boundaries.");
-                // The image-only printed-cell baseline differs by about 2.6pt.
-                // Retain this measured defect and the failed visual gate; this
-                // bound prevents further displacement without claiming fidelity.
-                TestAssert.True(Math.Abs(math[index].Y - anchor.GetProperty("Y").GetDouble()) < 2.7d,
-                    "The known printed-cell baseline residual must not grow.");
+                // Body, cell and table-first placements share the measured text strut.
+                // Whole-page visual thresholds remain independent and unchanged.
+                TestAssert.True(Math.Abs(math[index].Y - anchor.GetProperty("Y").GetDouble()) < .2d,
+                    "Owned picture/math baselines retain independent Word placement.");
                 TestAssert.True(Math.Abs(math[index].Size / 12d - anchor.GetProperty("FontSize").GetDouble() / row.GetProperty("ProseFontSize").GetDouble()) < .01d,
                     "A visible image selects independently observed inline argument sizing.");
             }
@@ -2456,13 +2534,18 @@ internal static class DocxInlineCompositionTests
                 "CompositionProbes/math-navigation.docx"), mode)).Pages.Single().Items.Single(item => item.Kind == "Equation").Width;
             var document = DocxTests.ReadDocx(Path.Combine(root, "CompositionProbes/math-display-groups.docx"), mode);
             var page = renderer.InspectLayout(document).Pages.Single();
+            double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document, DocxMarkupContext.FromMode(mode,
+                mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+            // The pinned 11pt default contributes three math units between Inner atoms.
+            double fractionGap = 11d / 6d * scale;
             var groups = page.Items.Where(item => item.Kind == "TextLine" && item.TextLength == 0).ToArray();
             TestAssert.Equal(3, groups.Length);
             var column = page.ColumnFrames.Single();
             for (int index = 0; index < groups.Length; index++)
             {
-                TestAssert.True(Math.Abs(groups[index].Width - singleWidth * (index == 1 ? 3d : 2d)) < 0.000001d,
-                    "Adding adjacent formulas must preserve each display box's measurement.");
+                int count = index == 1 ? 3 : 2;
+                TestAssert.True(Math.Abs(groups[index].Width - singleWidth * count - fractionGap * (count - 1)) < 0.000001d,
+                    "Adjacent fractions retain each box's measurement plus their mathematical spacing: " + groups[index].Width + "/" + singleWidth + "/" + count + "/" + fractionGap);
                 TestAssert.True(Math.Abs(groups[index].X + groups[index].Width / 2d - column.X - column.Width / 2d) < 0.000001d,
                     "Word's math-only groups center independently of surrounding paragraph alignment.");
             }
