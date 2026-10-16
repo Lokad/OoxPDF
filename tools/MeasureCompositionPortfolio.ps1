@@ -43,7 +43,12 @@ foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Js
         $inspect = Join-Path $run 'inspect'
         dotnet $inspector $pdf $inspect *> (Join-Path $run 'inspect.log')
         if ($LASTEXITCODE -ne 0) { throw ('Portfolio inspection failed: ' + $document.Id) }
-        $operations = @(Get-Content -LiteralPath (Join-Path $inspect 'text-operations.json') -Raw | ConvertFrom-Json)
+        # The inspector omits its text report when a PDF contains no text.
+        # Page objects still identify image-only and blank pages independently.
+        $textReport = Join-Path $inspect 'text-operations.json'
+        $operations = if (Test-Path -LiteralPath $textReport) { @(Get-Content -LiteralPath $textReport -Raw | ConvertFrom-Json) } else { @() }
+        $pageCount = @(Get-Content -LiteralPath (Join-Path $run 'inspect.log') | Where-Object { $_ -match '^\d+ \d+ obj: page$' }).Count
+        if ($pageCount -lt 1) { throw ('No inspected PDF pages: ' + $document.Id) }
         $text = Normalize-Text (($operations.DecodedText) -join ' ')
         $missing = @($document.ExpectedText | Where-Object { !$text.Contains((Normalize-Text $_), [StringComparison]::Ordinal) })
         $diagnostics = @(Get-Content -LiteralPath $diagnosticsPath -Raw | ConvertFrom-Json)
@@ -54,7 +59,7 @@ foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Js
             MissingExpectedText=$missing;IgnoredEquationDiagnostics=$ignoredMath
             ExpectedSourceEquations=$document.ExpectedEquationCount
             MathematicalTextOperations=@($operations | Where-Object Font -Like 'Eq*').Count
-            InspectedPages=@($operations.PageNumber | Sort-Object -Unique).Count
+            InspectedPages=$pageCount
             Diagnostics=$diagnostics;VisualStatus='Pending independent Office comparison; no visual pass claimed'
             Severity=if ($missing.Count -or $ignoredMath) {'Content blocker'} else {'Needs geometry and visual review'}
         }
