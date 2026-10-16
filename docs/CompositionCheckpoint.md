@@ -1029,3 +1029,20 @@ review and held-out memo, with no root build or suite replay. The generic prose
 audit deliberately leaves dynamic source fields unresolved; independent per-page
 checks qualify this slice. Evidence: `artifacts/composition-c1/static-page-fields-evidence.json`.
 CI through `cce36176` is green on Windows and Ubuntu.
+
+`72ae0ebd` shares owned automatic-reference rules across footnotes and endnotes,
+retaining restarted/custom/unowned fallbacks. Four Word controls / eight outcomes
+keep both fractions, note text and the destination in body/cell, before/after
+combinations. Twenty-nine methods pass in one invocation and five Ubuntu checks
+pass; three regressions fail with the preceding library. Single/repeated formulas,
+bookmarks, run splitting, wider Roman starts and adjoining marker-run text are
+covered. Marker raise/font ratio agree within 0.040pt/0.000187; X residual is
+1.243pt. All eight visual gates remain failed, as do the generic rate/time token
+screens; source prose and simple-math deficits are zero. Four pairs reveal a
+separate significant defect: endnote story gap is excessive by 8.163pt in Final
+table cases and about 6.213pt in review body/table cases. Notes remain visible;
+broader composition acceptance waits for semantic spacing work. No fitting branch
+is added. Frozen `3b79f164` transfers 17 assets/four exact PDFs, including C3 review
+and held-out memo Final, without root build or suite/corpus replay. Evidence:
+`artifacts/composition-c1/math-endnotes-evidence.json`. CI through `500cdacf` is
+green on Windows and Ubuntu.
