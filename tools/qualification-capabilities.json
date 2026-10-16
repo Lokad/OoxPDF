@@ -812,5 +812,14 @@
     "PortableRenderingNormalNotesKeepSectionDesignWidth",
     "DocxLayoutWrapsDocumentEndEndnoteUsingFinalSectionPageWidth",
     "DocxLayoutWrapsSectEndEndnoteUsingOwningSectionPageWidth"
+  ],
+  "docx-note-inline-images": [
+    "DocxInlineCompositionNoteImageDimensionsAndVerticalFrameMatchOffice",
+    "DocxInlineCompositionNoteImagesAndMathSurviveSourceSplitting",
+    "PortableRenderingNormalNotesPreserveInlineImagesAndMath",
+    "DocxRendererRendersPlacedFootnoteFloatingImages",
+    "DocxFootnoteInlineImageEmitsBetweenSurroundingText",
+    "DocxFootnoteInlineImageBottomSitsOnBaseline",
+    "DocxPictureLineFrameTravelsWithImagePlacement"
   ]
 }

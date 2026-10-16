@@ -2317,9 +2317,9 @@ internal sealed partial class DocxLayoutEngine
             pendingSpacingAfter = 0d;
             // Direct normal-note paragraphs share ordered measurement and retain
             // their design-space frame until the common note emission mapping.
-            // Rich images/tables and special separator stories keep their path.
+            // Tables and special separator stories keep their existing path.
             if (story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
-                paragraph.Equations.Count != 0 && paragraph.Images.Count == 0)
+                paragraph.Equations.Count != 0)
             {
                 double size = GetParagraphFontSize(paragraph);
                 double lineHeight = ResolveLineHeightProfile(paragraph, size, textMeasurer, selectMaxAcrossRuns: true).LineHeight;
@@ -2348,6 +2348,7 @@ internal sealed partial class DocxLayoutEngine
                             ParagraphAfterSpacing = index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
                             PendingAfterSpacing = null
                         });
+                        inlineImages.AddRange(placed.Images);
                         cursorY -= line.OccupiedHeight;
                     }
                     if (measured.Count != 0) firstRelatedLineBaselineOffset ??= measured[0].BaselineInset;

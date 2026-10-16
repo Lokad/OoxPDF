@@ -1,0 +1,82 @@
+[
+  {
+    "Id": "footnote-image-math",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/footnote-image-math.docx",
+    "Sha256": "38B688B8E064C098881A983EFE965E824172D09BBC4F923722EC9B462EA9E266",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Public calculation note.",
+      "End of supported note."
+    ],
+    "Features": [
+      "footnote content",
+      "inline prose",
+      "two note fractions",
+      "bookmark",
+      "inline PNG between note prose and math",
+      "two body fractions"
+    ]
+  },
+  {
+    "Id": "footnote-image-math-wrapped",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/footnote-image-math-wrapped.docx",
+    "Sha256": "98440C1C68AB690024BF160F730B6354A5DDDB2CD726C53110DC542D1CBF4557",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Public calculation note.",
+      "End of supported note."
+    ],
+    "Features": [
+      "footnote content",
+      "wrapped prose",
+      "two note fractions",
+      "bookmark",
+      "inline PNG between note prose and math",
+      "two body fractions"
+    ]
+  },
+  {
+    "Id": "endnote-image-math",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/endnote-image-math.docx",
+    "Sha256": "D8BC46055DE402362662B200967DCBE4CABB71E07AE49C1D3612D9BBC8C53CC0",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Public calculation note.",
+      "End of supported note."
+    ],
+    "Features": [
+      "endnote content",
+      "inline prose",
+      "two note fractions",
+      "bookmark",
+      "inline PNG between note prose and math",
+      "two body fractions"
+    ]
+  },
+  {
+    "Id": "endnote-image-math-wrapped",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/endnote-image-math-wrapped.docx",
+    "Sha256": "54CC54A465AE611F3EF4BA400DE0B2C855C0318989D8D17D46BCE34D640A810E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Public calculation note.",
+      "End of supported note."
+    ],
+    "Features": [
+      "endnote content",
+      "wrapped prose",
+      "two note fractions",
+      "bookmark",
+      "inline PNG between note prose and math",
+      "two body fractions"
+    ]
+  }
+]

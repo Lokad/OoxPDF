@@ -1,0 +1,101 @@
+{
+  "Source": "Independent Word 16 exports; pure blue source PNG bounds at 144 DPI, 0.5pt granularity per edge (up to 1pt span uncertainty). Whole-page visual thresholds unchanged.",
+  "Rows": [
+    {
+      "Id": "footnote-image-math",
+      "Mode": "final-preserve",
+      "InputSha256": "38B688B8E064C098881A983EFE965E824172D09BBC4F923722EC9B462EA9E266",
+      "ReferencePdfSha256": "F66CD4397C7075D01A419F019330135A78ED16BB49BAA97E95CD855B804EEAA7",
+      "ImageBounds": {
+        "X": 254.0,
+        "Top": 96.5,
+        "Width": 36.5,
+        "Height": 18.5
+      }
+    },
+    {
+      "Id": "footnote-image-math",
+      "Mode": "all-word-compatible",
+      "InputSha256": "38B688B8E064C098881A983EFE965E824172D09BBC4F923722EC9B462EA9E266",
+      "ReferencePdfSha256": "C0B9549CAF7CFA5F8CC44DC05E31805438C8E0BC6BB4453CA3401121440720A0",
+      "ImageBounds": {
+        "X": 192.5,
+        "Top": 168.5,
+        "Width": 28.0,
+        "Height": 14.0
+      }
+    },
+    {
+      "Id": "footnote-image-math-wrapped",
+      "Mode": "final-preserve",
+      "InputSha256": "98440C1C68AB690024BF160F730B6354A5DDDB2CD726C53110DC542D1CBF4557",
+      "ReferencePdfSha256": "F7777BDA1D4533705384CBD252D611CCBE6305F6B2D50FAEF3E57E764BBF7DE4",
+      "ImageBounds": {
+        "X": 195.0,
+        "Top": 114.5,
+        "Width": 72.5,
+        "Height": 36.5
+      }
+    },
+    {
+      "Id": "footnote-image-math-wrapped",
+      "Mode": "all-word-compatible",
+      "InputSha256": "98440C1C68AB690024BF160F730B6354A5DDDB2CD726C53110DC542D1CBF4557",
+      "ReferencePdfSha256": "B2EE827CAF2E3095B8AD52D963304AFFE653C692A1BA3B51D4E24CA308BACAFC",
+      "ImageBounds": {
+        "X": 147.5,
+        "Top": 182.5,
+        "Width": 55.5,
+        "Height": 28.0
+      }
+    },
+    {
+      "Id": "endnote-image-math",
+      "Mode": "final-preserve",
+      "InputSha256": "D8BC46055DE402362662B200967DCBE4CABB71E07AE49C1D3612D9BBC8C53CC0",
+      "ReferencePdfSha256": "A3EF793181AD540F30A7EB2882C58F94997ECDEEF4541F7D562DC4E07D473424",
+      "ImageBounds": {
+        "X": 250.5,
+        "Top": 655.5,
+        "Width": 36.5,
+        "Height": 18.5
+      }
+    },
+    {
+      "Id": "endnote-image-math",
+      "Mode": "all-word-compatible",
+      "InputSha256": "D8BC46055DE402362662B200967DCBE4CABB71E07AE49C1D3612D9BBC8C53CC0",
+      "ReferencePdfSha256": "0C8BBB1760AE9CF9008BD56B8CAF65F96E699A0C670D9BA80B34D12FF401186C",
+      "ImageBounds": {
+        "X": 190.0,
+        "Top": 593.0,
+        "Width": 28.0,
+        "Height": 14.0
+      }
+    },
+    {
+      "Id": "endnote-image-math-wrapped",
+      "Mode": "final-preserve",
+      "InputSha256": "54CC54A465AE611F3EF4BA400DE0B2C855C0318989D8D17D46BCE34D640A810E",
+      "ReferencePdfSha256": "649CEFA48C65A0B14876596097EB7CA72DD75B4244F4334EFCE0313B3339834A",
+      "ImageBounds": {
+        "X": 195.0,
+        "Top": 611.5,
+        "Width": 72.5,
+        "Height": 36.5
+      }
+    },
+    {
+      "Id": "endnote-image-math-wrapped",
+      "Mode": "all-word-compatible",
+      "InputSha256": "54CC54A465AE611F3EF4BA400DE0B2C855C0318989D8D17D46BCE34D640A810E",
+      "ReferencePdfSha256": "16419A67FC04B4351168131AA11E22228F826ABE0C851AEEE0D00D90590D4781",
+      "ImageBounds": {
+        "X": 147.5,
+        "Top": 559.5,
+        "Width": 55.5,
+        "Height": 27.5
+      }
+    }
+  ]
+}

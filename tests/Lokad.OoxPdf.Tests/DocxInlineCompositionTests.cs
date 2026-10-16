@@ -10,6 +10,65 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionNoteImageDimensionsAndVerticalFrameMatchOffice()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent controls use installed Arial metrics.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-note-images-office-geometry.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var document = DocxTests.ReadDocx(input, mode);
+            var page = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, default).Single();
+            TestAssert.Equal(1, page.Images.Count);
+            var image = System.Text.RegularExpressions.Regex.Match(page.Content,
+                @"(?<width>-?[\d.]+) 0 0 (?<height>-?[\d.]+) (?<x>-?[\d.]+) (?<y>-?[\d.]+) cm\s*/" + page.Images.Single().ResourceName + @" Do");
+            TestAssert.True(image.Success, "The note image must reach PDF painting.");
+            double Value(string name) => double.Parse(image.Groups[name].Value, System.Globalization.CultureInfo.InvariantCulture);
+            var bounds = row.GetProperty("ImageBounds");
+            // Each independent raster edge is sampled at half-point intervals;
+            // a dimension spans two edges and therefore has one-point uncertainty.
+            // Horizontal prose-advance residuals remain in the visual report.
+            TestAssert.True(Math.Abs(Value("width") - bounds.GetProperty("Width").GetDouble()) <= 1.001d &&
+                Math.Abs(Value("height") - bounds.GetProperty("Height").GetDouble()) <= 1.001d,
+                $"{input}/{mode}: image={Value("width")}/{Value("height")}, raster={bounds.GetProperty("Width").GetDouble()}/{bounds.GetProperty("Height").GetDouble()}.");
+            TestAssert.True(Math.Abs(Value("y") + Value("height") - bounds.GetProperty("Top").GetDouble()) < .75d,
+                $"The occupied note line owns the picture's vertical frame: {input}/{mode}.");
+        }
+    }
+
+    public static void DocxInlineCompositionNoteImagesAndMathSurviveSourceSplitting()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Native controls use installed math fonts.");
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (string suffix in new[] { "", "-wrapped" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation("CompositionProbes/" + kind + "-image-math" + suffix, mode, true, true,
+                partOverride: "word/" + kind + "s.xml");
+            var note = document.RelatedStories.Single(story => story.IsNormalStoryType && story.Id == "1" &&
+                story.Kind == (kind == "footnote" ? DocxRelatedStoryKind.Footnote : DocxRelatedStoryKind.Endnote));
+            TestAssert.Equal(1, note.Paragraphs.Single().InlineContent!.OfType<DocxInlinePicture>().Count());
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(1, pages.Length);
+            string text = System.Text.RegularExpressions.Regex.Replace(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText))
+                .Normalize(NormalizationForm.FormKC), @"\s", "");
+            TestAssert.Equal(4, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            TestAssert.Contains("Endofsupportednote.", text.Replace("ratetime", "", StringComparison.Ordinal));
+            TestAssert.Equal(1, pages.Single().Images.Count);
+            TestAssert.Equal(1, pages.Single().Annotations.Count(annotation => annotation.Destination is not null));
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "A picture or unchanged-format run split cannot remove supported note math.");
+        }
+    }
+
     public static void DocxInlineCompositionNormalNoteBaselinesMatchIndependentOffice()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent controls use installed Arial metrics.");

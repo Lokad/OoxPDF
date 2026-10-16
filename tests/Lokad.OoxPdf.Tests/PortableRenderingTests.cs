@@ -16,6 +16,29 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingNormalNotesPreserveInlineImagesAndMath()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (string suffix in new[] { "", "-wrapped" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/" + kind + "-image-math" + suffix + ".docx"), mode);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(1, pages.Length);
+            string text = Regex.Replace(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText))
+                .Normalize(NormalizationForm.FormKC), @"\s", "");
+            TestAssert.Equal(4, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            TestAssert.Contains("Endofsupportednote.", text.Replace("ratetime", "", StringComparison.Ordinal));
+            TestAssert.Equal(1, pages.Single().Images.Count);
+            TestAssert.Equal(1, pages.Single().Annotations.Count(annotation => annotation.Destination is not null));
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Normal-note pictures and math retain their shared frame.");
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingNormalNotesKeepSectionDesignWidth()
     {
         foreach (string kind in new[] { "footnote", "endnote" })

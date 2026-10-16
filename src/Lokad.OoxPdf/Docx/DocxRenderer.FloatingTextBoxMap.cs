@@ -86,6 +86,21 @@ internal sealed partial class DocxRenderer
             };
         }
 
+        public DocxInlineImageLayout PrecompensateNoteImage(DocxInlineImageLayout image, int pageIndex)
+        {
+            // Notes retain design-space positions and extents through layout.
+            // Their image frame joins the same printed map as text and math.
+            return image with
+            {
+                X = PrecompensateX(image.X), Y = PrecompensateY(image.Y),
+                Width = ScaleExtent(image.Width), Height = ScaleExtent(image.Height), PageIndex = pageIndex,
+                ClipBounds = image.ClipBounds is { } clip
+                    ? new(PrecompensateX(clip.X), PrecompensateY(clip.Y), ScaleExtent(clip.Width), ScaleExtent(clip.Height)) : null,
+                LineFrame = image.LineFrame is { } frame
+                    ? new(PrecompensateY(frame.Bottom), ScaleExtent(frame.Height)) : null
+            };
+        }
+
         public DocxInlineImageLayout PrecompensateImage(DocxInlineImageLayout image, double originX, double originY, int pageIndex)
         {
             // Image dimensions stay file values, like body images on scaled pages; only the

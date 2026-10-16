@@ -270,7 +270,7 @@ internal sealed partial class DocxLayoutEngine
             DocxPlainBodyFrame.IsPlainParagraph(paragraph) &&
             paragraph.Runs.Count >= 2 && IsAutomaticSuperscriptNoteMarker(paragraph.Runs[0]);
         bool plainNoteMetrics = plainNoteParagraph && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph);
-        if (plainNoteParagraph && HasPlainNoteParagraphShape(paragraph) && sourceStoryScale == 1d &&
+        if (plainNoteParagraph && HasNoteParagraphFlowProperties(paragraph) && sourceStoryScale == 1d &&
             lineHeightProfile.Source == DocxLineHeightSource.ExactLineSpacing &&
             double.IsFinite(baseLineHeight) && baseLineHeight > 0d)
         {
@@ -289,9 +289,9 @@ internal sealed partial class DocxLayoutEngine
         }
         bool customNoteMetrics = customNoteMarker is not null && sourceStoryScale == 1d && fixedScale == 1d &&
             transitionScale == 1d && DocxPlainBodyFrame.IsPlainParagraph(paragraph) &&
-            HasPlainNoteParagraphShape(paragraph) && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph);
+            HasNoteParagraphFlowProperties(paragraph) && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph);
         if (sourceStoryScale == 1d && (customNoteMetrics ||
-            plainNoteMetrics && HasPlainNoteParagraphShape(paragraph)))
+            plainNoteMetrics && HasNoteParagraphFlowProperties(paragraph)))
         {
             DocxLineHeightProfile natural = ResolveNoteContentLineHeightProfile(paragraph, fontSize,
                 textMeasurer, out double? naturalInset);

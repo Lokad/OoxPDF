@@ -64,7 +64,7 @@ internal sealed partial class DocxRenderer
         System.Collections.Generic.IEnumerable<DocxTextLineLayout> storyTextLines = suppressSeparatorText ? story.TextLines.Select(line => RewriteSeparatorTextLineAsMarkSpace(line, story, fontResources)) : story.TextLines;
         IReadOnlyList<DocxLayoutItem> items = (mapStory ? storyTextLines.Select(line => storyMap.PrecompensateLine(line, 0d, 0d)) : storyTextLines)
             .Cast<DocxLayoutItem>()
-            .Concat(mapStory ? story.InlineImages.Select(image => storyMap.PrecompensateImage(image, 0d, 0d, pageNumber)) : story.InlineImages)
+            .Concat(mapStory ? story.InlineImages.Select(image => storyMap.PrecompensateNoteImage(image, pageNumber)) : story.InlineImages)
             .Concat(story.TableRows)
             .OrderByDescending(ResolveLayoutItemTop)
             .ToArray();

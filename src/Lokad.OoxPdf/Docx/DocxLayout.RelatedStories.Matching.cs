@@ -285,11 +285,14 @@ internal sealed partial class DocxLayoutEngine
             HasNumericTrailingBodyAfterSpacing(page);
     }
 
-    private static bool HasEmptyNoteSeparatorFlow(DocxRelatedStoryLayout? separator,
-        IReadOnlyList<DocxRelatedStoryLayout> contentStories) =>
+    private static bool HasEmptyNoteSeparator(DocxRelatedStoryLayout? separator) =>
         separator is not null && separator.TextLines.Count == 1 &&
         string.IsNullOrWhiteSpace(separator.TextLines[0].Text) && separator.TableRows.Count == 0 &&
-        separator.InlineImages.Count == 0 && separator.FloatingDrawings.Count == 0 && separator.Story.BodyElements.Count == 1 &&
+        separator.InlineImages.Count == 0 && separator.FloatingDrawings.Count == 0 && separator.Story.BodyElements.Count == 1;
+
+    private static bool HasEmptyNoteSeparatorFlow(DocxRelatedStoryLayout? separator,
+        IReadOnlyList<DocxRelatedStoryLayout> contentStories) =>
+        HasEmptyNoteSeparator(separator) &&
         contentStories.All(story => story.TableRows.Count == 0 && story.InlineImages.Count == 0 && story.FloatingDrawings.Count == 0);
 
     private static bool CanUseTrailingParagraphEndnoteStart(DocxLayoutPage page,
@@ -297,8 +300,10 @@ internal sealed partial class DocxLayoutEngine
         double printScale, IReadOnlyList<DocxRelatedStoryLayout> contentStories) =>
         double.IsFinite(printScale) && printScale > 0d && page.ColumnFrames.Count <= 1 && page.Items.Count != 0 &&
         !placedStories.Any(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote) &&
-        HasEmptyNoteSeparatorFlow(separator, contentStories) && contentStories.Count != 0 &&
-        contentStories.All(HasPlainNoteFlowStory) && HasNumericTrailingBodyAfterSpacing(page);
+        HasEmptyNoteSeparator(separator) && contentStories.Count != 0 &&
+        contentStories.All(story => story.TableRows.Count == 0 && story.FloatingDrawings.Count == 0 &&
+            (story.InlineImages.Count == 0 && HasPlainNoteFlowStory(story) || HasOwnedInlineNoteFlowStory(story))) &&
+        HasNumericTrailingBodyAfterSpacing(page);
 
     private static bool HasNumericTrailingBodyAfterSpacing(DocxLayoutPage page) =>
         page.Items.MinBy(item => GetVerticalBounds(item).Y) is DocxTextLineLayout
@@ -412,15 +417,25 @@ internal sealed partial class DocxLayoutEngine
         story.TextLines.All(line => ReferenceEquals(line.SourceParagraph, paragraph)) &&
         IsPlainNoteFlowParagraph(paragraph) && double.IsFinite(story.ContentHeight);
 
+    private static bool HasOwnedInlineNoteFlowStory(DocxRelatedStoryLayout story) =>
+        story.Story.BodyElements.Count == 1 && story.TextLines.Count != 0 &&
+        story.TableRows.Count == 0 && story.FloatingDrawings.Count == 0 &&
+        story.Story.BodyElements[0] is DocxParagraphElement { Paragraph: var paragraph } &&
+        story.TextLines.All(line => ReferenceEquals(line.SourceParagraph, paragraph) &&
+            line.InlineFrame is { } frame && double.IsFinite(frame.BaselineInset) && frame.BaselineInset >= 0d &&
+            double.IsFinite(frame.Height) && frame.Height > 0d && frame.Height >= frame.BaselineInset) &&
+        HasNoteParagraphFlowProperties(paragraph, allowSourceAffinedImages: true) &&
+        DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) && double.IsFinite(story.ContentHeight);
+
     private static bool IsPlainNoteFlowParagraph(DocxParagraph paragraph) =>
-        HasPlainNoteParagraphShape(paragraph) &&
+        HasNoteParagraphFlowProperties(paragraph) &&
         // Fixed boxes share paragraph ownership/flow, not content-driven metrics.
         (DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) ||
             paragraph.LineSpacingPoints is { } fixedHeight && double.IsFinite(fixedHeight) && fixedHeight > 0d &&
             string.Equals(paragraph.Spacing.LineRuleValue, "exact", StringComparison.OrdinalIgnoreCase));
 
-    private static bool HasPlainNoteParagraphShape(DocxParagraph paragraph) =>
-        IsPlainContextualSpacingParagraph(paragraph) && paragraph.Spacing.ContextualSpacing != true &&
+    private static bool HasNoteParagraphFlowProperties(DocxParagraph paragraph, bool allowSourceAffinedImages = false) =>
+        IsPlainContextualSpacingParagraph(paragraph, allowSourceAffinedImages) && paragraph.Spacing.ContextualSpacing != true &&
         paragraph.KeepRules.KeepNext != true && paragraph.KeepRules.KeepLines != true &&
         IsNumericNoteTwips(paragraph.Spacing.BeforeValue) && IsNumericNoteTwips(paragraph.Spacing.AfterValue);
 
