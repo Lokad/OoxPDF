@@ -202,6 +202,8 @@ internal static class DocxInlineCompositionTests
                     Height: double.Parse(match.Groups["h"].Value, System.Globalization.CultureInfo.InvariantCulture)))
                 .Where(fill => fill.X < 400d).ToArray();
             TestAssert.Equal(1, fills.Length);
+            TestAssert.True(Math.Abs(fills[0].Height - row.GetProperty("Height").GetDouble()) < .25d,
+                $"Comment selection must retain the independently measured Word line height: {input}/{fills[0].Height}.");
             string container = Path.GetFileNameWithoutExtension(input).Split('-')[^1];
             if (heights.TryGetValue(container, out double height))
                 TestAssert.True(Math.Abs(height - fills[0].Height) < .001d,

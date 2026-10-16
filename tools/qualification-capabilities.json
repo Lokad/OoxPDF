@@ -532,7 +532,19 @@
     "DocxWordCompatibleAllMarkupRendersCommentRangeBrackets",
     "DocxWordCompatibleAllMarkupRendersWrappedCommentRangeContinuationMarkers",
     "DocxWordCompatibleAllMarkupAnchorsCommentConnectorsAtRangeEnd",
-    "DocxWordCompatibleAllMarkupRendersBareCommentReferenceMarker"
+    "DocxWordCompatibleAllMarkupRendersBareCommentReferenceMarker",
+    "PortableRenderingCommentSelectionUsesOccupiedLineFrame",
+    "DocxWordCompatibleAllMarkupRendersCommentRangeBracketsAcrossTextFlows",
+    "DocxWordCompatibleAllMarkupRendersReaderCommentRangeFill",
+    "DocxInlineCompositionCommentedSoleFormulaRetainsDisplayOwnership",
+    "DocxWordCompatibleReviewPaneMatchesIndependentPaperFrames",
+    "PortableRenderingReviewPaneIgnoresBodyVerticalMargins",
+    "DocxWordCompatibleMixedStoryCommentsRetainBodyAnchor",
+    "DocxWordCompatibleHiddenBodyCommentsKeepNominalTextPlacement",
+    "DocxWordCompatibleStaticAndNoteCommentsUseNominalCanvas",
+    "DocxCommentsPreserveAuthoredWhitespace",
+    "PortableRenderingCommentsPreserveAuthoredWhitespace",
+    "DocxTableCellTextLinesMemoSharesSplitCells"
   ],
   "docx-math-continuous-footnotes": [
     "DocxInlineCompositionAutomaticFootnotes",

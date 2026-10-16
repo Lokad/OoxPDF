@@ -226,9 +226,11 @@ internal sealed partial class DocxRenderer
             {
                 double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
                 int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
-                double above = 0d, below = 0d;
-                // Office's selection height follows the line's content frame;
-                // source endpoints constrain its horizontal extent only.
+                double above = line.InlineFrame?.BaselineInset ?? 0d;
+                double below = line.InlineFrame is { } frame ? Math.Max(0d, frame.Height - frame.BaselineInset) : 0d;
+                // Selection owns the complete occupied line, including its
+                // baseline strut. Source endpoints constrain horizontal extent;
+                // visible bounds may only enlarge that already measured frame.
                 foreach (var extent in line.InlineSourceExtents)
                     if (extent.IsMath)
                     { above = Math.Max(above, extent.AboveBaseline); below = Math.Max(below, extent.BelowBaseline); }

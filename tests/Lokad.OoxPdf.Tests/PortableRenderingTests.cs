@@ -16,6 +16,29 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingCommentSelectionUsesOccupiedLineFrame()
+    {
+        foreach (string container in new[] { "body", "cell" })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/math-comment-prose-" + container + ".docx"), OoxPdfDocxMarkupMode.AllMarkup);
+            var renderer = new DocxRenderer(new PinnedResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var layout = renderer.InspectLayout(document).Pages.Single();
+            double occupied = layout.Items.SelectMany(item => item.Kind == "TextLine" ? new[] { item }
+                : item.TextLines ?? []).Max(line => line.LineHeightPoints ?? 0d);
+            var page = renderer.RenderBlankPages(document, null, default).Single();
+            var fills = Regex.Matches(page.Content,
+                @"0\.973 0\.863 0\.867 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re f")
+                .Cast<Match>().Where(match => double.Parse(match.Groups["x"].Value,
+                    System.Globalization.CultureInfo.InvariantCulture) < 400d).ToArray();
+            TestAssert.Equal(1, fills.Length);
+            double height = double.Parse(fills[0].Groups["h"].Value, System.Globalization.CultureInfo.InvariantCulture);
+            TestAssert.True(occupied > 0d && height >= occupied - .002d && height <= occupied + .2d,
+                $"Selection must contain the occupied frame while allowing visible bounds to enlarge it: {container}/{height}/{occupied}.");
+            CheckWrittenPages([page]);
+        }
+    }
+
     public static void PortableRenderingReviewPaneIgnoresBodyVerticalMargins()
     {
         (double Y, double Height)? expected = null;
