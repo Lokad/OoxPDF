@@ -1811,3 +1811,23 @@ DOCX/two complete-report PDFs retain accepted bytes/comparisons/reviews. An init
 unqualified probe built root by mistake; source moved to the isolated worktree and
 17 accepted root assets were restored by SHA before qualification. The root suite
 was not replayed. Evidence: `artifacts/composition-c1/numbered-display-evidence.json`.
+
+
+Inserted text beside unchanged equations now shares source ownership between the
+reader and preparation policy. Four containers retain all equations in both modes;
+source-reference identity prevents equal-looking or nontext revisions from
+qualifying. Deletions in Final retain their existing filtered path. Deletion
+markup still has a confirmed balloon/frame mismatch and missing fraction; broad
+admission was evaluated and rejected. Mark/property/move/equation revisions retain
+explicit fallback. No font/size/document eligibility branch was added.
+
+One frozen artifact passes 20 Windows methods once, 16 Ubuntu checks (four
+native-font skips), two causal parent regressions and 17-asset/four-PDF transfer.
+Twelve supported Word outcomes retain all 18 math glyphs within 0.877pt X and
+0.768pt Y. All sixteen numerical page gates still fail unchanged thresholds.
+Four inserted-markup pages were reviewed independently; inherited red/underlined
+list labels and change-bar position remain defects. Twelve prose/simple-math
+screens have no deficits, while generic revision flags and unused-part warnings
+remain unresolved. Four deletion-markup controls retain actual deficits.
+Eight fixed DOCX/two complete-report PDFs retain accepted bytes and comparisons;
+no root rebuild or suite replay. Evidence: math-insertion-evidence.json.
