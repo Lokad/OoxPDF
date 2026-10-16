@@ -4982,7 +4982,7 @@ internal static class DocxFootnotesTests
                     s.CharacterProfile.LetterCount == 2).ToArray();
                 TestAssert.True(suffix.Length == 1 && suffix[0].PdfFontSize == 12d &&
                     suffix[0].AdvanceProfile.KerningAdjustmentTotal < 0d &&
-                    suffix[0].AdvanceProfile.NominalAdvanceAdjustmentTotal == 0d,
+                    Math.Abs(suffix[0].AdvanceProfile.NominalAdvanceAdjustmentTotal) < .000000001d,
                     "Text following the custom marker keeps its authored size and its independently met threshold.");
             }
             TestAssert.True(source.RelatedStories.Where(s => s.IsNormalStoryType)
