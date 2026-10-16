@@ -5,6 +5,32 @@ specific expansion, retention and output boundaries. Host capacity also includes
 runtime/JIT, resolver ownership, concurrent conversions, input/output owners and
 headroom. Office and PDFium validation processes are outside library measurements.
 
+## Composed annotation report, 2026-10-16
+
+The separately pinned [C2 report](../tests/Lokad.OoxPdf.Tests/Cases/Composition/composed-annotations-report.json)
+combines tables, numbering, images, six source equations, links/bookmarks,
+comments, static stories and a footnote. Both presets produce two pages.
+The existing probe reuses qualified library SHA-256
+`0535E097903C0F1E7B9A4457ACB47A7648351C2759C841E101268CEA31539E08`
+without a library build; frozen source/input identity is `6690268c`.
+
+| Preset | Warm allocation (MB) | Warm median time (ms) | Render allocation (MB) | Cold allocation (MB) / time (ms) |
+|---|---:|---:|---:|---:|
+| Final / preserved layout | 47.37 | 137.7 | 45.91 | 593.80 / 668.5 |
+| AllMarkup / Word-compatible | 51.95 | 123.4 | 50.41 | 599.37 / 680.0 |
+
+One fresh process per preset measures one cold conversion, one warmup and three
+warm samples using the default resolver (466 discovered faces). This is the same
+Windows/.NET/GC environment as the portfolio below. Allocations cover the calling
+thread; cold allocation totals include transient allocations and are not retained
+heap size. Rendering includes fonts, layout and painting. Package opening uses
+0.16MB, reading 0.77MB, and writing 0.53/0.61MB. Stage samples run with warm caches.
+Every whole and staged PDF matches the accepted independent-comparison output.
+Three samples do not establish a speedup or explain repeated-layout costs; no
+measured-fragment optimization is justified by these totals alone. Evidence:
+`artifacts/composition-c1/c2-allocation-evidence.json` and the two `c2-allocation-*.json`
+reports. Earlier baselines remain retained.
+
 ## Mixed-document portfolio, 2026-10-15
 
 The six fixed public/synthetic documents in the [composition portfolio](../tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json) combine supported features. The four DOCX inputs are measured separately in Final/preserved layout and AllMarkup/Word-compatible modes; the two decks retain absolute-position rendering. Source and output hashes are pinned. This is a compound-document baseline, not a speedup claim.
