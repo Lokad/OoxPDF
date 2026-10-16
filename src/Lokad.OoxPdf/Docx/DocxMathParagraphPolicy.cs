@@ -200,6 +200,39 @@ internal static class DocxMathParagraphPolicy
         paragraph.Runs.All(run => run.FieldKind != DocxFieldKind.NumPages) &&
         paragraph.FieldReferences.All(field => field.Kind != DocxFieldKind.NumPages);
 
+    public static DocxTextAlignment? ResolveDisplayAlignment(IEnumerable<DocxEquation> equations, CancellationToken token)
+    {
+        DocxTextAlignment? alignment = null;
+        foreach (var equation in equations)
+        {
+            token.ThrowIfCancellationRequested();
+            DocxTextAlignment? current = equation.AlignmentValue switch
+            {
+                null or "center" or "centerGroup" => DocxTextAlignment.Center,
+                "left" => DocxTextAlignment.Left,
+                "right" => DocxTextAlignment.Right,
+                _ => null
+            };
+            if (current is null || alignment is not null && alignment != current) return null;
+            alignment = current;
+        }
+        return alignment;
+    }
+
+    private static bool DisplayRowsOwnParagraphAlignment(DocxParagraph paragraph,
+        IReadOnlySet<DocxEquation> displayRows, CancellationToken token)
+    {
+        if (paragraph.Hyperlinks.Count != 0 || paragraph.InlineContent is not { } items) return false;
+        foreach (var item in items)
+        {
+            token.ThrowIfCancellationRequested();
+            if (item is DocxInlineEquation math && displayRows.Contains(math.Equation) || item is DocxInlineBreak ||
+                item is DocxInlineText text && (text.Run.EffectiveProperties.Hidden || text.Run.Text.AsSpan(text.Start, text.Length).IsWhiteSpace())) continue;
+            return false;
+        }
+        return true;
+    }
+
     public static IReadOnlyList<DocxEquation> GetPreparationEquations(DocxParagraph paragraph, bool hasPageInputs = false) =>
         GetPreparationEquations(paragraph, hasPageInputs, default);
 
@@ -208,18 +241,20 @@ internal static class DocxMathParagraphPolicy
         if (GetStandaloneRow(paragraph) is { } standalone) return [standalone];
         if (GetInlineRow(paragraph) is { } inline) return [inline];
         if (!NeedsOrderedInlineLayout(paragraph) || !HasSupportedSourceOwner(paragraph, hasPageInputs) ||
-            paragraph.InlineContent is null || !HasSupportedOrderedAlignment(paragraph) ||
+            paragraph.InlineContent is null ||
             paragraph.Spacing.LineRuleValue is not (null or "auto") || paragraph.LineSpacingPoints is not null) return [];
         // Explicit display containers share the existing source-row ownership
         // contract. A display formula mixed into visible prose still falls back;
-        // centered math-only rows keep display measurement and ordered placement.
+        // math-only rows keep display measurement and authored alignment.
         var displayRows = paragraph.Equations.Any(equation => equation.Display)
             ? GetMathOnlySourceEquations(paragraph, token) : null;
+        if (displayRows is not null && ResolveDisplayAlignment(paragraph.Equations, token) is null) return [];
+        if (!HasSupportedOrderedAlignment(paragraph) &&
+            (displayRows is null || !DisplayRowsOwnParagraphAlignment(paragraph, displayRows, token))) return [];
         foreach (var equation in paragraph.Equations)
         {
             token.ThrowIfCancellationRequested();
-            if (equation.Display && (equation.AlignmentValue is not (null or "center" or "centerGroup") ||
-                displayRows is null || !displayRows.Contains(equation))) return [];
+            if (equation.Display && (displayRows is null || !displayRows.Contains(equation))) return [];
         }
         return paragraph.Equations;
     }

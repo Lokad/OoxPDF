@@ -1927,8 +1927,11 @@ internal static class DocxInlineCompositionTests
         {
             var equations = paragraph.Equations.Select(equation => equation with { AlignmentValue = alignment }).ToArray();
             var aligned = paragraph with { Equations = equations, InlineContent = equations.Select(equation => (DocxInlineItem)new DocxInlineEquation(equation)).ToArray() };
-            TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(aligned).Count);
+            TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(aligned).Count);
         }
+        var conflicting = paragraph.Equations.Select((equation, index) => equation with { AlignmentValue = index == 0 ? "left" : "right" }).ToArray();
+        TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with { Equations = conflicting,
+            InlineContent = conflicting.Select(equation => (DocxInlineItem)new DocxInlineEquation(equation)).ToArray() }).Count);
         TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph, math, new TrackingMeasurer(),
             12d, 8d, 8d, 9d, 16d, 1d, default, out _), "An individual box wider than every line retains fallback.");
         using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
@@ -2043,6 +2046,70 @@ internal static class DocxInlineCompositionTests
                     link.Y <= glyph.Y + .01d && link.Y + link.Height >= glyph.Y - .01d,
                     "The source hyperlink covers every final mathematical glyph across containers.");
             TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "A supported source hyperlink cannot omit explicit formulas.");
+        }
+    }
+
+    public static void DocxInlineCompositionAuthoredDisplayAlignmentOwnsMathRowsAndKeepsFallbacks()
+    {
+        var paragraph = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-explicit-display-right-body")
+            .Paragraphs.Single(value => value.Equations.Count == 2);
+        TestAssert.True(paragraph.Alignment == DocxTextAlignment.Justified &&
+            DocxMathParagraphPolicy.ResolveDisplayAlignment(paragraph.Equations, default) == DocxTextAlignment.Right,
+            "Authored math alignment is a separate owner from the surrounding paragraph alignment.");
+        TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
+        var math = paragraph.Equations.ToDictionary(equation => equation,
+            equation => new DocxPreparedMathParagraph(equation, new(10d, 6d, 1d, []), 9d, 16d));
+        TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph, math, new TrackingMeasurer(),
+            12d, 100d, 100d, 9d, 16d, 1d, default, out var lines), "A math-owned paragraph alignment must measure.");
+        TestAssert.True(TestAssert.NotNull(lines).Single().DisplayAlignment == DocxTextAlignment.Right,
+            "The measured line retains one display alignment instead of a centering flag.");
+        var prose = new DocxTextRun("Visible prose", 12d, null, false, false, false, null, null);
+        var lineBreak = prose with { Text = "\n" };
+        var mixed = paragraph with { Runs = [lineBreak, prose], InlineContent = [.. paragraph.InlineContent!,
+            new DocxInlineBreak(lineBreak, 0), new DocxInlineText(prose, 0, prose.Text.Length)] };
+        TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(mixed).Count);
+        var unknown = paragraph.Equations.Select(equation => equation with { AlignmentValue = "unknown" }).ToArray();
+        TestAssert.True(DocxMathParagraphPolicy.ResolveDisplayAlignment(unknown, default) is null,
+            "An unknown alignment retains an explicit fallback.");
+        using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathParagraphPolicy.ResolveDisplayAlignment(paragraph.Equations, cancellation.Token));
+    }
+
+    public static void DocxInlineCompositionAuthoredDisplayAlignmentMatchesIndependentWord()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for authored display alignment.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-explicit-display-alignment-office-geometry.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        foreach (bool transformed in new[] { false, true })
+        {
+            string id = row.GetProperty("Id").GetString()!;
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(Path.Combine(cases, id + ".docx")))));
+            var mode = row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
+            var document = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed,
+                partOverride: id.EndsWith("-footer", StringComparison.Ordinal) ? "word/math-tabs-footer.xml" : null);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).Single();
+            var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
+            var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Where(show => fonts.Contains(show.Font)).ToArray();
+            TestAssert.Equal(row.GetProperty("MathText").GetString(), string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+            TestAssert.Equal(10, math.Length);
+            var anchors = row.GetProperty("Anchors").EnumerateArray().ToArray();
+            var origin = anchors.Single(anchor => anchor.GetProperty("Text").GetString() == math[0].Text.Normalize(NormalizationForm.FormKC));
+            TestAssert.True(Math.Abs(math[0].X - origin.GetProperty("X").GetDouble()) < 1d,
+                "Authored display alignment follows independent Word placement, including the retained cell-origin residual.");
+            foreach (var anchor in anchors)
+            {
+                var glyph = math.Where(show => show.Text.Normalize(NormalizationForm.FormKC) == anchor.GetProperty("Text").GetString())
+                    .ElementAt(anchor.GetProperty("Occurrence").GetInt32());
+                TestAssert.True(Math.Abs((glyph.X - math[0].X) - (anchor.GetProperty("X").GetDouble() - origin.GetProperty("X").GetDouble())) < .5d &&
+                    Math.Abs(glyph.Y - anchor.GetProperty("Y").GetDouble()) < 1d,
+                    "Authored display glyphs retain independent local geometry and static/cell baselines: " + id + ".");
+            }
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "A supported authored alignment cannot omit the formulas.");
         }
     }
 

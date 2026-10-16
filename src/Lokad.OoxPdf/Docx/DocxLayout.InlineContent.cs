@@ -17,7 +17,8 @@ internal sealed record DocxMeasuredInlineFragment(DocxInlineItem Source, double 
 internal sealed record DocxMeasuredInlineLine(IReadOnlyList<DocxMeasuredInlineFragment> Fragments,
     double Advance, double BaselineInset, double OccupiedHeight)
 {
-    public bool IsDisplayGroup { get; init; }
+    public DocxTextAlignment? DisplayAlignment { get; init; }
+    public bool IsDisplayGroup => DisplayAlignment is not null;
     public double TextBaselineInset { get; init; }
     public DocxInlineSourceCursor EndCursor { get; init; }
     public IReadOnlyList<DocxTextSegmentLayout> ListLabelSegments { get; init; } = [];
@@ -40,7 +41,7 @@ internal sealed partial class DocxLayoutEngine
 {
     private static double ResolveOrderedInlineAlignment(DocxMeasuredInlineLine line,
         DocxTextAlignment alignment, double available) =>
-        (line.IsDisplayGroup ? DocxTextAlignment.Center : alignment) switch
+        (line.DisplayAlignment ?? alignment) switch
         {
             DocxTextAlignment.Center => Math.Max(0d, available - line.Advance) / 2d,
             DocxTextAlignment.Right => Math.Max(0d, available - line.Advance),
@@ -704,7 +705,9 @@ internal sealed partial class DocxLayoutEngine
                 above += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, measurer);
             }
             output.Add(new(current.ToArray(), advance, above, above + below)
-                { IsDisplayGroup = displayGroup, ListLabelSegments = labelSegments, TextBaselineInset = textInset,
+                { DisplayAlignment = displayGroup ? DocxMathParagraphPolicy.ResolveDisplayAlignment(
+                    current.Where(fragment => fragment.Math is not null).Select(fragment => fragment.Math!.Equation), token) : null,
+                    ListLabelSegments = labelSegments, TextBaselineInset = textInset,
                     EndCursor = endCursor with { LineIndex = cursor.LineIndex + output.Count + 1 } });
             current.Clear(); advance = 0d; above = baselineInset; below = Math.Max(0d, lineHeight - baselineInset);
         }

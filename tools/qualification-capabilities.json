@@ -1285,5 +1285,22 @@
     "DocxRendererMergesMultiRunHyperlinkAnnotationsPerLine",
     "PortableRenderingSingleMathAnnotationsPreserveFrames",
     "PortableRenderingNormalNotesPreserveInlineImagesAndMath"
+  ],
+  "docx-authored-display-alignment": [
+    "DocxInlineCompositionAuthoredDisplayAlignment",
+    "DocxInlineCompositionExplicitDisplays",
+    "DocxInlineCompositionExplicitDisplayLinks",
+    "DocxInlineCompositionMathOnlyGroupsCenterAcrossParagraphAlignment",
+    "DocxInlineCompositionAtomicPlacementRetainsSourceBoundAndOverwidthFallbacks",
+    "DocxInlineCompositionAuthoredWhitespaceFramesMatchIndependentWord",
+    "DocxInlineCompositionSourceCursorRetainsBreakTabsAndFirstLineLabel",
+    "DocxNativeIsolatedInlineMath",
+    "DocxNativeAlignedStaticFrames",
+    "DocxNativeScaledStaticFrames",
+    "DocxNativeTableDisplayMathRetainsCellsProseAndDeclaredClips",
+    "DocxNativeMathUsesItsOccupiedBodyFrameBeforeFollowingProseTurnsPage",
+    "DocxStaticTableMathCompleteReportMatchesIndependentPrintedFrames",
+    "PortableRenderingSingleMathAnnotationsPreserveFrames",
+    "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance"
   ]
 }

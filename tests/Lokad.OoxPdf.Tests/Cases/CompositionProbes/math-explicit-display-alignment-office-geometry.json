@@ -1,0 +1,461 @@
+{
+  "Source": "Independent Word 16 PDF text anchors; authored display alignment overrides paragraph alignment for math-only rows. Visual thresholds unchanged.",
+  "Rows": [
+    {
+      "Id": "math-explicit-display-left-body",
+      "Mode": "final-preserve",
+      "InputSha256": "6792DF109D3659BED370A0BE3A2B3C5BBD62BD4280A9A036CF8E41B2BC657FE7",
+      "ReferencePdfSha256": "6657240239A923F3379AA315C5A5E0C47B05AD739F5C803CC4B371258BCF1DDB",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6",
+      "Anchors": [
+        {
+          "Text": "\u03b1",
+          "Occurrence": 0,
+          "X": 72.024,
+          "Y": 693.94
+        },
+        {
+          "Text": "+",
+          "Occurrence": 0,
+          "X": 82.224,
+          "Y": 693.94
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 0,
+          "X": 93.864,
+          "Y": 693.94
+        },
+        {
+          "Text": "=",
+          "Occurrence": 0,
+          "X": 104.9,
+          "Y": 693.94
+        },
+        {
+          "Text": "+",
+          "Occurrence": 1,
+          "X": 132.98,
+          "Y": 693.94
+        },
+        {
+          "Text": "\u03b5",
+          "Occurrence": 0,
+          "X": 144.62,
+          "Y": 693.94
+        },
+        {
+          "Text": "=",
+          "Occurrence": 1,
+          "X": 153.86,
+          "Y": 693.94
+        },
+        {
+          "Text": "\u03b6",
+          "Occurrence": 0,
+          "X": 166.1,
+          "Y": 693.94
+        }
+      ]
+    },
+    {
+      "Id": "math-explicit-display-left-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6792DF109D3659BED370A0BE3A2B3C5BBD62BD4280A9A036CF8E41B2BC657FE7",
+      "ReferencePdfSha256": "8DE5315A3AC4A5A2BDB426B2E2FE42A372EB0A114EAA06AD4FBA285807CA8C18",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6",
+      "Anchors": [
+        {
+          "Text": "\u03b1",
+          "Occurrence": 0,
+          "X": 72.024,
+          "Y": 693.94
+        },
+        {
+          "Text": "+",
+          "Occurrence": 0,
+          "X": 82.224,
+          "Y": 693.94
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 0,
+          "X": 93.864,
+          "Y": 693.94
+        },
+        {
+          "Text": "=",
+          "Occurrence": 0,
+          "X": 104.9,
+          "Y": 693.94
+        },
+        {
+          "Text": "+",
+          "Occurrence": 1,
+          "X": 132.98,
+          "Y": 693.94
+        },
+        {
+          "Text": "\u03b5",
+          "Occurrence": 0,
+          "X": 144.62,
+          "Y": 693.94
+        },
+        {
+          "Text": "=",
+          "Occurrence": 1,
+          "X": 153.86,
+          "Y": 693.94
+        },
+        {
+          "Text": "\u03b6",
+          "Occurrence": 0,
+          "X": 166.1,
+          "Y": 693.94
+        }
+      ]
+    },
+    {
+      "Id": "math-explicit-display-right-body",
+      "Mode": "final-preserve",
+      "InputSha256": "AF0C467A7AB500198202CBF477CBF51C67BC7DDBFA6D7A31DB1E36BFAC04CE90",
+      "ReferencePdfSha256": "E9C8A7CA3E86516797584A2458A77FEE32A5DF00D2464FBCB6C71600E429F92E",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6",
+      "Anchors": [
+        {
+          "Text": "\u03b1",
+          "Occurrence": 0,
+          "X": 439.75,
+          "Y": 693.94
+        },
+        {
+          "Text": "+",
+          "Occurrence": 0,
+          "X": 450.1,
+          "Y": 693.94
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 0,
+          "X": 461.62,
+          "Y": 693.94
+        },
+        {
+          "Text": "=",
+          "Occurrence": 0,
+          "X": 472.66,
+          "Y": 693.94
+        },
+        {
+          "Text": "+",
+          "Occurrence": 1,
+          "X": 500.86,
+          "Y": 693.94
+        },
+        {
+          "Text": "\u03b5",
+          "Occurrence": 0,
+          "X": 512.5,
+          "Y": 693.94
+        },
+        {
+          "Text": "=",
+          "Occurrence": 1,
+          "X": 521.62,
+          "Y": 693.94
+        },
+        {
+          "Text": "\u03b6",
+          "Occurrence": 0,
+          "X": 533.98,
+          "Y": 693.94
+        }
+      ]
+    },
+    {
+      "Id": "math-explicit-display-right-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "AF0C467A7AB500198202CBF477CBF51C67BC7DDBFA6D7A31DB1E36BFAC04CE90",
+      "ReferencePdfSha256": "656CCF95BDACDAF1A5839C4AFD7B0F5B2ACBCB07E1791D3B7156F72428C85B18",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6",
+      "Anchors": [
+        {
+          "Text": "\u03b1",
+          "Occurrence": 0,
+          "X": 439.75,
+          "Y": 693.94
+        },
+        {
+          "Text": "+",
+          "Occurrence": 0,
+          "X": 450.1,
+          "Y": 693.94
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 0,
+          "X": 461.62,
+          "Y": 693.94
+        },
+        {
+          "Text": "=",
+          "Occurrence": 0,
+          "X": 472.66,
+          "Y": 693.94
+        },
+        {
+          "Text": "+",
+          "Occurrence": 1,
+          "X": 500.86,
+          "Y": 693.94
+        },
+        {
+          "Text": "\u03b5",
+          "Occurrence": 0,
+          "X": 512.5,
+          "Y": 693.94
+        },
+        {
+          "Text": "=",
+          "Occurrence": 1,
+          "X": 521.62,
+          "Y": 693.94
+        },
+        {
+          "Text": "\u03b6",
+          "Occurrence": 0,
+          "X": 533.98,
+          "Y": 693.94
+        }
+      ]
+    },
+    {
+      "Id": "math-explicit-display-left-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "419A0A42C1BC94FE97C4097A6C6FEFB69E88CC7D2410E32017347A8ED3DA5724",
+      "ReferencePdfSha256": "1849A4BF9E69C39ACA8E2976D2DACD5B698338AD2A98BE2033C18F1CE2990ABD",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6",
+      "Anchors": [
+        {
+          "Text": "\u03b1",
+          "Occurrence": 0,
+          "X": 305.69,
+          "Y": 693.46
+        },
+        {
+          "Text": "+",
+          "Occurrence": 0,
+          "X": 315.89,
+          "Y": 693.46
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 0,
+          "X": 327.55,
+          "Y": 693.46
+        },
+        {
+          "Text": "=",
+          "Occurrence": 0,
+          "X": 338.59,
+          "Y": 693.46
+        },
+        {
+          "Text": "+",
+          "Occurrence": 1,
+          "X": 366.67,
+          "Y": 693.46
+        },
+        {
+          "Text": "\u03b5",
+          "Occurrence": 0,
+          "X": 378.31,
+          "Y": 693.46
+        },
+        {
+          "Text": "=",
+          "Occurrence": 1,
+          "X": 387.55,
+          "Y": 693.46
+        },
+        {
+          "Text": "\u03b6",
+          "Occurrence": 0,
+          "X": 399.79,
+          "Y": 693.46
+        }
+      ]
+    },
+    {
+      "Id": "math-explicit-display-left-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "419A0A42C1BC94FE97C4097A6C6FEFB69E88CC7D2410E32017347A8ED3DA5724",
+      "ReferencePdfSha256": "99B45D79AA4E7E55448B286FD45DA7BAE1A0640737FB18289BAAF5A519378469",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6",
+      "Anchors": [
+        {
+          "Text": "\u03b1",
+          "Occurrence": 0,
+          "X": 231.82,
+          "Y": 621.86
+        },
+        {
+          "Text": "+",
+          "Occurrence": 0,
+          "X": 239.57,
+          "Y": 621.86
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 0,
+          "X": 248.38,
+          "Y": 621.86
+        },
+        {
+          "Text": "=",
+          "Occurrence": 0,
+          "X": 256.75,
+          "Y": 621.86
+        },
+        {
+          "Text": "+",
+          "Occurrence": 1,
+          "X": 278.06,
+          "Y": 621.86
+        },
+        {
+          "Text": "\u03b5",
+          "Occurrence": 0,
+          "X": 286.9,
+          "Y": 621.86
+        },
+        {
+          "Text": "=",
+          "Occurrence": 1,
+          "X": 293.9,
+          "Y": 621.86
+        },
+        {
+          "Text": "\u03b6",
+          "Occurrence": 0,
+          "X": 303.17,
+          "Y": 621.86
+        }
+      ]
+    },
+    {
+      "Id": "math-explicit-display-right-footer",
+      "Mode": "final-preserve",
+      "InputSha256": "E5EACD61179168A36F335A8EB9D2E1269724F8F8999DD9C4B05685F502EDBEF1",
+      "ReferencePdfSha256": "B66075378122AC144B608F6B59A2EB056306D98716F86310D305544451031F93",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6",
+      "Anchors": [
+        {
+          "Text": "\u03b1",
+          "Occurrence": 0,
+          "X": 439.75,
+          "Y": 38.52
+        },
+        {
+          "Text": "+",
+          "Occurrence": 0,
+          "X": 450.1,
+          "Y": 38.52
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 0,
+          "X": 461.62,
+          "Y": 38.52
+        },
+        {
+          "Text": "=",
+          "Occurrence": 0,
+          "X": 472.66,
+          "Y": 38.52
+        },
+        {
+          "Text": "+",
+          "Occurrence": 1,
+          "X": 500.86,
+          "Y": 38.52
+        },
+        {
+          "Text": "\u03b5",
+          "Occurrence": 0,
+          "X": 512.5,
+          "Y": 38.52
+        },
+        {
+          "Text": "=",
+          "Occurrence": 1,
+          "X": 521.62,
+          "Y": 38.52
+        },
+        {
+          "Text": "\u03b6",
+          "Occurrence": 0,
+          "X": 533.98,
+          "Y": 38.52
+        }
+      ]
+    },
+    {
+      "Id": "math-explicit-display-right-footer",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E5EACD61179168A36F335A8EB9D2E1269724F8F8999DD9C4B05685F502EDBEF1",
+      "ReferencePdfSha256": "BECE4AB8C4088E9CCD583C88BB110BE47ED5CD92F851E61881387A0F59856E8F",
+      "MathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6",
+      "Anchors": [
+        {
+          "Text": "\u03b1",
+          "Occurrence": 0,
+          "X": 333.48,
+          "Y": 125.21
+        },
+        {
+          "Text": "+",
+          "Occurrence": 0,
+          "X": 341.3,
+          "Y": 125.21
+        },
+        {
+          "Text": "\u03b2",
+          "Occurrence": 0,
+          "X": 350.04,
+          "Y": 125.21
+        },
+        {
+          "Text": "=",
+          "Occurrence": 0,
+          "X": 358.42,
+          "Y": 125.21
+        },
+        {
+          "Text": "+",
+          "Occurrence": 1,
+          "X": 379.82,
+          "Y": 125.21
+        },
+        {
+          "Text": "\u03b5",
+          "Occurrence": 0,
+          "X": 388.63,
+          "Y": 125.21
+        },
+        {
+          "Text": "=",
+          "Occurrence": 1,
+          "X": 395.57,
+          "Y": 125.21
+        },
+        {
+          "Text": "\u03b6",
+          "Occurrence": 0,
+          "X": 404.93,
+          "Y": 125.21
+        }
+      ]
+    }
+  ]
+}
