@@ -1,0 +1,134 @@
+{
+  "Source": "Independent Word 16 mixed view, read-back MarkupMode 2; six retained transformations plus original header/footer controls",
+  "Rows": [
+    {
+      "Id": "footer-distance-18",
+      "File": "static-frame-footer-distance-18.docx",
+      "InputSha256": "25DE337FE408BC0F03CB58A91FE00D4520176DD3A4C93555E3A9BAE4D51F8054",
+      "ReferencePdfSha256": "220410478264AC10F6E3601660EE1C460727003CAF6D67437B6871CC841DB7E7",
+      "IsFooter": true,
+      "TitleY": 171.36,
+      "SummaryY": 159.79,
+      "RelationshipsY": 139.94,
+      "SourceEquations": 4,
+      "VisibleListLabels": [
+        "1.",
+        "2.",
+        "3."
+      ]
+    },
+    {
+      "Id": "footer-distance-72",
+      "File": "static-frame-footer-distance-72.docx",
+      "InputSha256": "4BC2BC8A5F01F224ABCD87C1ED3D15EE4338D63A978D434EBBA679BDEB47BC94",
+      "ReferencePdfSha256": "5CF8CF42C3F720456EE9F7A3F996FFA3A517640420F3EF5228767FF6F87D715B",
+      "IsFooter": true,
+      "TitleY": 212.3,
+      "SummaryY": 200.74,
+      "RelationshipsY": 180.91,
+      "SourceEquations": 4,
+      "VisibleListLabels": [
+        "1.",
+        "2.",
+        "3."
+      ]
+    },
+    {
+      "Id": "footer-second-paragraph",
+      "File": "static-frame-footer-second-paragraph.docx",
+      "InputSha256": "66070AB92F72D631F44BC11A0F2D4131802E504C94A5FCA976E1F0F32A89932A",
+      "ReferencePdfSha256": "A16EA318F2D2DCFA1341F5DB28BACEC87DBB51FA6A28D3CE240843F00B70DA5E",
+      "IsFooter": true,
+      "TitleY": 184.99,
+      "SummaryY": 173.45,
+      "RelationshipsY": 153.6,
+      "SourceEquations": 4,
+      "VisibleListLabels": [
+        "1.",
+        "2.",
+        "3."
+      ]
+    },
+    {
+      "Id": "footer-plain-first",
+      "File": "static-frame-footer-plain-first.docx",
+      "InputSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
+      "ReferencePdfSha256": "176861502A1648D07DF5B506BC2E69B0C8389F86B999838E39F58D0D67360D6C",
+      "IsFooter": true,
+      "TitleY": 168.98,
+      "SummaryY": 159.53,
+      "RelationshipsY": 144.77,
+      "SourceEquations": 0,
+      "VisibleListLabels": [
+        "1.",
+        "2.",
+        "3."
+      ]
+    },
+    {
+      "Id": "footer-plain-second",
+      "File": "static-frame-footer-plain-second.docx",
+      "InputSha256": "363ECFCB4DC9FA2C2D8DD6ED7B3F7C657C27E4BDAC482FBFEBE1DEAE6E4E0732",
+      "ReferencePdfSha256": "4CD98182AB4599D2331293A2B4E40719A031F94E42DFD8A6A404C876A0021324",
+      "IsFooter": true,
+      "TitleY": 168.98,
+      "SummaryY": 159.53,
+      "RelationshipsY": 144.77,
+      "SourceEquations": 0,
+      "VisibleListLabels": [
+        "1.",
+        "2.",
+        "3."
+      ]
+    },
+    {
+      "Id": "header-second-paragraph",
+      "File": "static-frame-header-second-paragraph.docx",
+      "InputSha256": "E3DB901CE2C15DD4022C3554443D224153D2CD16C77481EECF3C56F0253ADDA9",
+      "ReferencePdfSha256": "24ED1A4BF84E42C8DF7A126D7DEB5FF716E35AB0807A19636FCAECB6E5D1C240",
+      "IsFooter": false,
+      "TitleY": 640.34,
+      "SummaryY": 659.35,
+      "RelationshipsY": 639.53,
+      "SourceEquations": 4,
+      "VisibleListLabels": [
+        "1.",
+        "2.",
+        "3."
+      ]
+    },
+    {
+      "Id": "math-run-format-footer-bold",
+      "File": "math-run-format-footer-bold.docx",
+      "InputSha256": "377B83EBD37BAB7A16E493EC8BA725A28C8C7194E998E6547AEF3BA8D61A98CD",
+      "ReferencePdfSha256": "33745B345D2D55D15F504D53DCCC78434E8C6B132E33BEFFF18111002C99BA32",
+      "IsFooter": true,
+      "TitleY": 184.99,
+      "SummaryY": 173.45,
+      "RelationshipsY": 153.6,
+      "SourceEquations": 4,
+      "VisibleListLabels": [
+        "1.",
+        "2.",
+        "3."
+      ]
+    },
+    {
+      "Id": "math-run-format-header-bold",
+      "File": "math-run-format-header-bold.docx",
+      "InputSha256": "EFBBA4E653CA704936159ED3AA7F8EF68DBCCB5355A505B17888BA3E4C0ED8E2",
+      "ReferencePdfSha256": "A2BA0280C270FA6E5C716E202B4BFAD5D24A3F8B92A43E9BBA4A7466C3566A0F",
+      "IsFooter": false,
+      "TitleY": 660.19,
+      "SummaryY": 659.35,
+      "RelationshipsY": 639.53,
+      "SourceEquations": 4,
+      "VisibleListLabels": [
+        "1.",
+        "2.",
+        "3."
+      ]
+    }
+  ],
+  "KnownResidual": "Text-only static list labels are omitted by the legacy paragraph layout; restoring that content is the next bounded migration."
+}
