@@ -30,3 +30,11 @@ presets. Run splitting and bookmarks retain all visible source content. Cached
 results must publish ordinary resolved inline items; PAGE/NUMPAGES placeholders,
 unresolved fields and revision owners retain their existing fallback. Cached text
 is displayed as stored; this slice does not add field evaluation.
+
+`math-page-fields.json` combines PAGE/NUMPAGES with fractions in twelve-page
+headers/footers, including both sides of the 9/10 digit boundary. Independent Word
+frames pin pages 1/9/10/12 in both presets. Page inputs belong to static placement;
+body/cell and related-story dynamic math retain their earlier fallback. Complex
+field cache suppression ends with its owning field, preserving subsequent authored
+spaces and numbers. Word's simple-field digits select Calibri in these controls;
+cached run formatting remains Arial, with the advance residual retained explicitly.

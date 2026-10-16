@@ -12,6 +12,14 @@ internal sealed record DocxInlineEquation(DocxEquation Equation) : DocxInlineIte
 
 internal static class DocxInlineContent
 {
+    public static bool HasSourceFieldResults(IReadOnlyList<DocxFieldReference> fields,
+        IReadOnlyList<DocxTextRun> runs) => fields.All(field =>
+            field.HasCachedResult && field.RendersCachedResult && !field.UsesPlaceholder ||
+            field.Kind.IsDynamic() && field.UsesPlaceholder && !field.RendersCachedResult &&
+                field.Placeholder == DocxFieldText.Placeholder(field.Kind)) &&
+        runs.All(run => run.FieldKind is null || run.FieldKind is { } kind && kind.IsDynamic() &&
+            run.Text == DocxFieldText.Placeholder(kind));
+
     // Cached field results already own ordinary resolved runs. Instructions and
     // page/count placeholders still need their separate dynamic layout path.
     public static bool HasMaterializedFieldResults(IReadOnlyList<DocxFieldReference> fields,

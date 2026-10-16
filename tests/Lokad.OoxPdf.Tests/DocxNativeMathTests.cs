@@ -61,8 +61,8 @@ internal static class DocxNativeMathTests
         TestAssert.Equal(1, part.SourceCount);
         var candidates = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).ToArray();
         TestAssert.Equal(1, candidates.Length);
-        TestAssert.True(ReferenceEquals(candidates[0], document.HeaderParagraphsByType["default"][0]) &&
-            ReferenceEquals(candidates[0], document.HeaderParagraphsByType["first"][0]),
+        TestAssert.True(ReferenceEquals(candidates[0].Paragraph, document.HeaderParagraphsByType["default"][0]) &&
+            ReferenceEquals(candidates[0].Paragraph, document.HeaderParagraphsByType["first"][0]),
             "Repeated story variants share one parsed paragraph and one preparation owner.");
         TestAssert.True(document.EquationDiagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION" && d.PartName == part.PartName),
             "A later renderer retains the source warning even when reading had no diagnostic sink and no body equation.");

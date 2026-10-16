@@ -96,11 +96,13 @@ internal sealed partial class DocxRenderer
         var controlFaces = new Dictionary<OpenTypeFont, (Dictionary<ushort, int> Glyphs, Dictionary<ushort, int> Operators, HashSet<int> Characters)>(ReferenceEqualityComparer.Instance);
         var controlKeys = new Dictionary<IDocxMathControl, (string StableId, int FaceIndex)>(ReferenceEqualityComparer.Instance);
         var unavailableControlFaces = new HashSet<OpenTypeFont>(ReferenceEqualityComparer.Instance);
-        foreach (DocxParagraph paragraph in DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, token)
+        foreach (var owner in DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, token)
+            .Select(paragraph => (Paragraph: paragraph, HasPageInputs: false))
             .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, token)))
         {
             token.ThrowIfCancellationRequested();
-            var sourceEquations = DocxMathParagraphPolicy.GetPreparationEquations(paragraph);
+            DocxParagraph paragraph = owner.Paragraph;
+            var sourceEquations = DocxMathParagraphPolicy.GetPreparationEquations(paragraph, owner.HasPageInputs);
             if (sourceEquations.Count == 0) { continue; }
             bool standalone = DocxMathParagraphPolicy.GetStandaloneRow(paragraph) is not null;
             var displayRows = DocxMathParagraphPolicy.GetDisplaySourceEquations(paragraph, token);

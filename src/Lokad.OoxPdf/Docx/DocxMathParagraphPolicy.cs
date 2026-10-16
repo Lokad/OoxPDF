@@ -37,8 +37,20 @@ internal static class DocxMathParagraphPolicy
         }
     }
 
-    public static IEnumerable<DocxParagraph> EnumerateStaticPreparationCandidates(DocxDocument document, CancellationToken token)
+    public static IEnumerable<(DocxParagraph Paragraph, bool HasPageInputs)> EnumerateStaticPreparationCandidates(DocxDocument document, CancellationToken token)
     {
+        var pageOwners = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
+        foreach (var paragraph in DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(
+                document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderParagraphs)
+            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(
+                document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterParagraphs))
+            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
+            .Concat(document.BodyElements.OfType<DocxSectionBreakElement>().SelectMany(section =>
+                DocxBlockTraversal.EnumerateStaticStoryParagraphs(section.PageSettings))))
+        {
+            token.ThrowIfCancellationRequested();
+            pageOwners.Add(paragraph);
+        }
         var seen = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
         foreach (DocxEquationPartSource part in document.EquationParts)
         {
@@ -47,8 +59,9 @@ internal static class DocxMathParagraphPolicy
             foreach (DocxParagraphElement element in part.BodyElements.OfType<DocxParagraphElement>())
             {
                 token.ThrowIfCancellationRequested();
-                if (GetPreparationEquations(element.Paragraph).Count != 0 && seen.Add(element.Paragraph))
-                    yield return element.Paragraph;
+                bool hasPageInputs = pageOwners.Contains(element.Paragraph);
+                if (GetPreparationEquations(element.Paragraph, hasPageInputs).Count != 0 && seen.Add(element.Paragraph))
+                    yield return (element.Paragraph, hasPageInputs);
             }
         }
     }
@@ -147,15 +160,16 @@ internal static class DocxMathParagraphPolicy
         paragraph.Equations.Count > 1 || paragraph.Images.Count != 0 ||
         paragraph.Equations.Count != 0 && paragraph.CommentRanges.Count != 0 ||
         paragraph.Equations.Count != 0 && paragraph.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Footnote) ||
+        paragraph.Equations.Count != 0 && paragraph.Runs.Any(run => run.FieldKind is { } kind && kind.IsDynamic()) ||
         paragraph.Equations.Count == 1 && (GetInlineRow(paragraph) is null && GetStandaloneRow(paragraph) is null ||
             GetInlineRow(paragraph) is { } inline && prepared is not null &&
             prepared.TryGetValue(inline, out var math) && math.Box.InlineBreakAfterGlyphs.Count != 0);
 
-    public static IReadOnlyList<DocxEquation> GetPreparationEquations(DocxParagraph paragraph)
+    public static IReadOnlyList<DocxEquation> GetPreparationEquations(DocxParagraph paragraph, bool hasPageInputs = false)
     {
         if (GetStandaloneRow(paragraph) is { } standalone) return [standalone];
         if (GetInlineRow(paragraph) is { } inline) return [inline];
-        return NeedsOrderedInlineLayout(paragraph) && HasSupportedSourceOwner(paragraph) && paragraph.InlineContent is not null &&
+        return NeedsOrderedInlineLayout(paragraph) && HasSupportedSourceOwner(paragraph, hasPageInputs) && paragraph.InlineContent is not null &&
             paragraph.Equations.All(equation => !equation.Display) &&
             paragraph.Alignment is DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right &&
             paragraph.Spacing.LineRuleValue is null or "auto" && paragraph.LineSpacingPoints is null
@@ -166,12 +180,13 @@ internal static class DocxMathParagraphPolicy
         HasSupportedSourceOwner(paragraph) && paragraph.Equations.Count == 1 &&
         paragraph.Images.Count == 0;
 
-    private static bool HasSupportedSourceOwner(DocxParagraph paragraph) =>
+    private static bool HasSupportedSourceOwner(DocxParagraph paragraph, bool hasPageInputs = false) =>
         paragraph.Equations.Count != 0 && paragraph.Equations.All(equation => equation.Revision is null) && paragraph.Revisions.Count == 0 &&
         paragraph.InlineTextBoxes.Count == 0 &&
         DocxInlineContent.HasSupportedReferences(paragraph.InlineReferences, paragraph.Runs) &&
         // Bookmarks are source metadata with no measured or painted extent.
         // Their presence cannot change ownership of an otherwise supported box.
-        DocxInlineContent.HasMaterializedFieldResults(paragraph.FieldReferences, paragraph.Runs) &&
+        (hasPageInputs ? DocxInlineContent.HasSourceFieldResults(paragraph.FieldReferences, paragraph.Runs)
+            : DocxInlineContent.HasMaterializedFieldResults(paragraph.FieldReferences, paragraph.Runs)) &&
         paragraph.RevisionRanges.Count == 0;
 }

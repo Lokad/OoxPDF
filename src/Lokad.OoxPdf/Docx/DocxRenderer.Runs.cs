@@ -747,19 +747,7 @@ internal sealed partial class DocxRenderer
     }
 
     private static string ResolveStaticFieldPlaceholders(DocxTextRun styleRun, string text, int pageNumber, int pageCount)
-    {
-        if (styleRun.FieldKind == DocxFieldKind.Page)
-        {
-            text = text.Replace("{PAGE}", pageNumber.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
-        }
-
-        if (styleRun.FieldKind == DocxFieldKind.NumPages)
-        {
-            text = text.Replace("{NUMPAGES}", pageCount.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
-        }
-
-        return text;
-    }
+        => DocxFieldText.Resolve(styleRun, text, pageNumber, pageCount);
 
     private static double ResolveSubstitutedFieldEmissionWidth(
         string sourceText,

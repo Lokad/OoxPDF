@@ -11,14 +11,7 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed partial class DocxReader
 {
     private static string? ResolveFieldPlaceholder(string? instruction)
-    {
-        return ResolveFieldKind(instruction) switch
-        {
-            DocxFieldKind.NumPages => "{NUMPAGES}",
-            DocxFieldKind.Page => "{PAGE}",
-            _ => null
-        };
-    }
+        => DocxFieldText.Placeholder(ResolveFieldKind(instruction));
 
     private static DocxFieldKind ResolveFieldKind(string? instruction)
     {

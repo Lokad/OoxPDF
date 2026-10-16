@@ -1,0 +1,62 @@
+[
+  {
+    "Id": "math-page-fields-simple-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-page-fields-simple-header.docx",
+    "Sha256": "00B0E71C45B207208FA55F4BF672EBD9F6D92C3FC86B0250DE476C08EF31A742",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "North",
+      "South",
+      "Start",
+      "middle",
+      "End.",
+      "Public page 12."
+    ]
+  },
+  {
+    "Id": "math-page-fields-simple-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-page-fields-simple-footer.docx",
+    "Sha256": "192D6DE94F304B43BB55CFA4B550AA60D22CA961A1AAFAF41B0B67E685F7E9E6",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "North",
+      "South",
+      "Start",
+      "middle",
+      "End.",
+      "Public page 12."
+    ]
+  },
+  {
+    "Id": "math-page-fields-packed-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-page-fields-packed-header.docx",
+    "Sha256": "67683CE66A315F05E9C47733F2327A06B5B83727DA909CC0ACECCE62D74581AF",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "North",
+      "South",
+      "Start",
+      "middle",
+      "End.",
+      "Public page 12."
+    ]
+  },
+  {
+    "Id": "math-page-fields-packed-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-page-fields-packed-footer.docx",
+    "Sha256": "168895E7070945A5A0653A1739E664CD6A7784EB590DC7E68E7DC6DB3CBEDB99",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "North",
+      "South",
+      "Start",
+      "middle",
+      "End.",
+      "Public page 12."
+    ]
+  }
+]

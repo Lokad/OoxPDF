@@ -16,6 +16,33 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingStaticPageFieldsPreserveMathAcrossDigitBoundary()
+    {
+        foreach (string form in new[] { "simple", "packed" })
+        foreach (string story in new[] { "header", "footer" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/math-page-fields-" + form + "-" + story + ".docx"), mode);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(12, pages.Length);
+            for (int index = 0; index < pages.Length; index++)
+            {
+                string text = System.Text.RegularExpressions.Regex.Replace(DocxPageFootnoteNumberingTests.DecodeText(pages[index])
+                    .Normalize(NormalizationForm.FormKC), @"\s", "");
+                TestAssert.True(text.Contains("Start" + (index + 1) + "middle12End.", StringComparison.Ordinal),
+                    $"{form}/{story}/{mode}/page {index + 1}: {text}");
+                TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+                TestAssert.True(!text.Contains("{PAGE}", StringComparison.Ordinal) && !text.Contains("{NUMPAGES}", StringComparison.Ordinal),
+                    "Source placeholders cannot leak into printed page content.");
+            }
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Page-owned fields cannot remove supported static-story math.");
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingCachedFieldsPreserveMixedMathAcrossContainers()
     {
         foreach (string form in new[] { "simple", "packed" })

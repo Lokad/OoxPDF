@@ -95,7 +95,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 if (!TryGetStandaloneMath(paragraph, width, 1d, mathEquations, out _) &&
                     (mathEquations is null || paragraph.InlineContent is null ||
-                    DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count != paragraph.Equations.Count ||
+                    DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasPageInputs: true).Count != paragraph.Equations.Count ||
                     paragraph.Equations.Any(equation => !mathEquations.TryGetValue(equation, out var math) || math.Box.AdvanceWidth > width) ||
                     paragraph.Images.Any(image => image.WidthPoints > width))) { return false; }
             }

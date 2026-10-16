@@ -33,20 +33,7 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static string ResolveLayoutFieldPlaceholders(DocxTextRun run, int? pageNumber, int? pageCount)
-    {
-        string text = run.Text;
-        if (run.FieldKind == DocxFieldKind.Page && pageNumber is not null)
-        {
-            text = text.Replace("{PAGE}", pageNumber.Value.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
-        }
-
-        if (run.FieldKind == DocxFieldKind.NumPages && pageCount is not null)
-        {
-            text = text.Replace("{NUMPAGES}", pageCount.Value.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
-        }
-
-        return text;
-    }
+        => DocxFieldText.Resolve(run, run.Text, pageNumber, pageCount);
 
     private static DocxTextSpan CreateTextSpan(string text, DocxTextRun run, int fallbackSourceRunIndex)
     {

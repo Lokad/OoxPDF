@@ -313,9 +313,9 @@ internal sealed partial class DocxReader
                 ? styles.ContextualSpacingDefaultStyleId : null,
             InlineTextBoxes = inlineTextBoxes,
             Equations = equations,
-            // Dynamic fields/unowned note references/textboxes and revisions retain their existing
-            // source reconstruction until those owners migrate explicitly.
-            InlineContent = DocxInlineContent.HasMaterializedFieldResults(fieldReferences, runs) && DocxInlineContent.HasSupportedReferences(inlineReferences, runs) &&
+            // Page fields retain their canonical source placeholders. Layout
+            // eligibility separately requires the actual page inputs.
+            InlineContent = DocxInlineContent.HasSourceFieldResults(fieldReferences, runs) && DocxInlineContent.HasSupportedReferences(inlineReferences, runs) &&
                 inlineTextBoxes.Count == 0 && paragraphRevisions.Count == 0 ? inlineItems : null,
             InlineReferences = inlineReferences,
             CommentRanges = commentRanges,
@@ -345,6 +345,12 @@ internal sealed partial class DocxReader
                         bookmarkAnchors[index] = anchor with { InlineItemIndex = inlineItems.Count };
                 }
             }
+        }
+
+        void PublishInlineRunItems(int firstRun, int firstImage)
+        {
+            if (inlineItems is not null)
+                DocxInlineContent.AppendRun(inlineItems, runs.Skip(firstRun), images.Skip(firstImage), cancellationToken);
         }
 
         void AddEquation(XElement container, DocxRevisionInfo? revision)
@@ -387,6 +393,7 @@ internal sealed partial class DocxReader
             string? placeholder = ResolveFieldPlaceholder(instruction);
             int fieldSourceRunIndex = sourceRunIndex;
             int fieldTextRunIndex = runs.Count;
+            int fieldImageIndex = images.Count;
             int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
             bool hasCachedResult = FieldHasCachedResultText(field);
             if (placeholder is not null)
@@ -415,6 +422,7 @@ internal sealed partial class DocxReader
                         usesPlaceholder: true, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
                         fieldReferences: fieldReferences,
                         runs: runs);
+                    PublishInlineRunItems(fieldTextRunIndex, fieldImageIndex);
                     return;
                 }
 
@@ -433,6 +441,7 @@ internal sealed partial class DocxReader
                     usesPlaceholder: true, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
                     fieldReferences: fieldReferences,
                     runs: runs);
+                PublishInlineRunItems(fieldTextRunIndex, fieldImageIndex);
                 return;
             }
 
@@ -521,8 +530,7 @@ internal sealed partial class DocxReader
                     ref currentPageInstructionSeen);
                 images.AddRange(ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex));
                 inlineTextBoxes.AddRange(ReadInlineTextBoxes(run, styles, numbering, package, relationships, markupMode, revision, cancellationToken));
-                if (inlineItems is not null)
-                    DocxInlineContent.AppendRun(inlineItems, runs.Skip(firstRun), images.Skip(firstImage), cancellationToken);
+                PublishInlineRunItems(firstRun, firstImage);
                 return;
             }
 
@@ -579,8 +587,7 @@ internal sealed partial class DocxReader
 
             images.AddRange(ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex));
             inlineTextBoxes.AddRange(ReadInlineTextBoxes(run, styles, numbering, package, relationships, markupMode, revision, cancellationToken));
-            if (inlineItems is not null)
-                DocxInlineContent.AppendRun(inlineItems, runs.Skip(firstRun), images.Skip(firstImage), cancellationToken);
+            PublishInlineRunItems(firstRun, firstImage);
         }
 
         void AddParagraphDisplayText(string text, int currentSourceRunIndex, int sourceTextOffset, DocxResolvedRunProperties resolvedRun, DocxRunStyleResolution runStyleResolution, DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo> effectiveRevisions, DocxFieldKind? fieldKind = null)
@@ -703,6 +710,9 @@ internal sealed partial class DocxReader
                 }
 
                 complexFieldStack.RemoveAt(complexFieldStack.Count - 1);
+                // A completed page field no longer owns following authored
+                // spaces or numbers. Nested page results keep their own cache.
+                pageInstructionSeen = complexFieldStack.Any(active => active.PlaceholderEmitted);
                 AddComplexFieldReference(field, null, null);
             }
         }

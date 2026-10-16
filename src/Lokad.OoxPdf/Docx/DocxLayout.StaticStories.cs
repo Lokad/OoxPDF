@@ -346,7 +346,8 @@ internal sealed partial class DocxLayoutEngine
                 if (TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, size,
                     Math.Max(1d, width - firstInset - rightInset), Math.Max(1d, width - nextInset - rightInset),
                     sourceInset * paragraphSpacingScale, sourceHeight * factor * paragraphSpacingScale,
-                    paragraphSpacingScale, cancellationToken, out var measured, defaultTabStopPoints: defaultTabStopPoints))
+                    paragraphSpacingScale, cancellationToken, out var measured, defaultTabStopPoints: defaultTabStopPoints,
+                    pageNumber: pageNumber, pageCount: pageCount))
                 {
                     for (int index = 0; index < measured.Count; index++)
                     {
@@ -962,18 +963,5 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static string ResolveStaticFieldPlaceholders(DocxTextRun run, int pageNumber, int pageCount)
-    {
-        string text = run.Text;
-        if (run.FieldKind == DocxFieldKind.Page)
-        {
-            text = text.Replace("{PAGE}", pageNumber.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
-        }
-
-        if (run.FieldKind == DocxFieldKind.NumPages)
-        {
-            text = text.Replace("{NUMPAGES}", pageCount.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
-        }
-
-        return text;
-    }
+        => DocxFieldText.Resolve(run, run.Text, pageNumber, pageCount);
 }

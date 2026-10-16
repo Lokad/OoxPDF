@@ -10,6 +10,95 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionStaticPageFieldsMatchIndependentWordFrames()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the independent page-field controls.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-page-fields-office-offsets.json")));
+        foreach (var group in references.RootElement.GetProperty("Rows").EnumerateArray()
+            .GroupBy(row => (Id: row.GetProperty("Id").GetString()!, Mode: row.GetProperty("Mode").GetString()!)))
+        {
+            string input = Path.Combine(cases, group.Key.Id + ".docx");
+            TestAssert.Equal(group.First().GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            bool review = group.Key.Mode == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var pages = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).ToArray();
+            TestAssert.Equal(12, pages.Length);
+            foreach (var row in group)
+            {
+                int number = row.GetProperty("Page").GetInt32();
+                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[number - 1]).ToArray();
+                var start = shows.Single(show => show.Text.Trim() == "Start");
+                TestAssert.True(Math.Abs(start.Y - row.GetProperty("BaselineY").GetDouble()) < .5d,
+                    $"Page-owned field/math baseline retains its independent Word frame: {group.Key}/{number}/{start.Y}.");
+                var fields = shows.Where(show => Math.Abs(show.Y - start.Y) < .1d &&
+                    (show.Text.Trim() == number.ToString(System.Globalization.CultureInfo.InvariantCulture) || show.Text.Trim() == "12"))
+                    .OrderBy(show => show.X).ToArray();
+                TestAssert.Equal(2, fields.Length);
+                TestAssert.Equal(number.ToString(System.Globalization.CultureInfo.InvariantCulture), fields[0].Text.Trim());
+                TestAssert.Equal("12", fields[1].Text.Trim());
+                TestAssert.True(Math.Abs(fields[0].X - start.X - row.GetProperty("PageOffset").GetDouble()) < .2d,
+                    "The leading field keeps its independent Word source position.");
+                // Word selects Calibri for these simple-field digits; authored
+                // cached runs retain Arial here. Keep this measured residual
+                // explicit, separately from the unchanged whole-page gates.
+                TestAssert.True(Math.Abs(fields[1].X - start.X - row.GetProperty("CountOffset").GetDouble()) < 1.25d,
+                    $"Total-page field advance remains within the qualified font-owner residual: {group.Key}/{number}.");
+            }
+        }
+    }
+
+    public static void DocxInlineCompositionPageFieldCacheEndsWithItsOwner()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation("CompositionProbes/math-page-fields-packed-header", mode, false, false, (xml, w, _) =>
+            {
+                foreach (var run in xml.Descendants(w + "r").Where(run => run.Element(w + "instrText") is not null).ToArray())
+                    run.ElementsAfterSelf(w + "r").First().Element(w + "t")!.Value = " 2026 ";
+            }, partOverride: "word/math-fields-header.xml");
+            var paragraph = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Single().Paragraph;
+            TestAssert.Equal(2, paragraph.Runs.Count(run => run.Text == " 2026 "));
+            TestAssert.Equal(2, paragraph.InlineContent!.OfType<DocxInlineText>().Count(item => item.Run.Text == " 2026 "));
+            TestAssert.True(paragraph.FieldReferences.All(field => !field.RendersCachedResult && field.UsesPlaceholder),
+                "Authored text after the end marker does not become a page-field cache.");
+        }
+    }
+
+    public static void DocxInlineCompositionStaticPageFieldsRequireActualPageInputs()
+    {
+        foreach (string form in new[] { "simple", "packed" })
+        foreach (string story in new[] { "header", "footer" })
+        {
+            var document = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-page-fields-" + form + "-" + story);
+            var owner = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Single();
+            TestAssert.True(owner.HasPageInputs, "The referenced header/footer owns per-page field inputs.");
+            var paragraph = owner.Paragraph;
+            TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
+            TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasPageInputs: true).Count);
+            string ordered = string.Concat(TestAssert.NotNull(paragraph.InlineContent).OfType<DocxInlineText>()
+                .Select(item => item.Run.Text.Substring(item.Start, item.Length)));
+            TestAssert.Equal(string.Concat(paragraph.Runs.Select(run => run.Text)), ordered);
+            var equations = paragraph.Equations.ToDictionary(equation => equation,
+                equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
+            bool Measure(int? number, int? count, out IReadOnlyList<DocxMeasuredInlineLine>? lines) =>
+                DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph, equations, new TrackingMeasurer(), 12d,
+                    500d, 500d, 9d, 16d, 1d, default, out lines, pageNumber: number, pageCount: count);
+            TestAssert.True(!Measure(null, null, out _) && !Measure(1, null, out _),
+                "Unavailable page inputs retain an explicit fallback rather than measuring placeholder letters.");
+            foreach (int number in new[] { 1, 9, 10, 12 })
+            {
+                TestAssert.True(Measure(number, 12, out var lines), "Page-owned fields must measure with actual values.");
+                string text = string.Concat(TestAssert.NotNull(lines).Single().Fragments.SelectMany(fragment => fragment.Text).Select(span => span.Text));
+                TestAssert.Equal("Start " + number + "  middle 12  End.", text);
+                TestAssert.Contains("{PAGE}", ordered);
+                TestAssert.Contains("{NUMPAGES}", ordered);
+            }
+        }
+    }
+
     public static void DocxInlineCompositionCachedFieldsMatchIndependentWordOffsets()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
@@ -709,7 +798,7 @@ internal static class DocxInlineCompositionTests
         {
             var document = DocxTests.ReadDocx(path, mode);
             var paragraphs = DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, default)
-                .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default))
+                .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Select(owner => owner.Paragraph))
                 .Where(paragraph => paragraph.Equations.Count == 2).ToArray();
             TestAssert.Equal(4, paragraphs.Length);
             foreach (var paragraph in paragraphs)

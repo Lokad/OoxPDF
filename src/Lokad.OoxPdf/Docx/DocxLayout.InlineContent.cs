@@ -139,12 +139,13 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer measurer, double fontSize, double firstWidth, double nextWidth,
         double baselineInset, double lineHeight, double scale, CancellationToken token,
         [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines,
-        double? physicalTextBaselineInset = null, double defaultTabStopPoints = WordDefaultTabStopPoints)
+        double? physicalTextBaselineInset = null, double defaultTabStopPoints = WordDefaultTabStopPoints,
+        int? pageNumber = null, int? pageCount = null)
     {
         lines = null;
         if (paragraph.InlineContent is not { } items || equations is null ||
             paragraph.Equations.Count == 0 ||
-            DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count != paragraph.Equations.Count) return false;
+            DocxMathParagraphPolicy.GetPreparationEquations(paragraph, pageNumber is not null && pageCount is not null).Count != paragraph.Equations.Count) return false;
         bool hasTabs = items.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden);
         // Left/default tabs depend only on the preceding advance. Aligned fields,
         // bar stops and leaders need a separate field-measurement/painting contract.
@@ -172,6 +173,18 @@ internal sealed partial class DocxLayoutEngine
                 case DocxInlineText text when text.Run.EffectiveProperties.Hidden:
                 case DocxInlineTab tab when tab.Run.EffectiveProperties.Hidden:
                 case DocxInlineBreak lineBreak when lineBreak.Run.EffectiveProperties.Hidden:
+                    break;
+                case DocxInlineText text when text.Run.FieldKind is { } kind && kind.IsDynamic():
+                    // The owned placeholder is atomic. Resolve only with actual
+                    // page inputs; retain the original run/item for annotations.
+                    if (pageNumber is null || pageCount is null || !runIndices.TryGetValue(text.Run, out int fieldRunIndex)) return false;
+                    string fieldValue = DocxFieldText.Resolve(text.Run, text.Run.Text.Substring(text.Start, text.Length), pageNumber, pageCount);
+                    var fieldSpan = CreateTextSpan(fieldValue, text.Run, fieldRunIndex) with
+                    { SourceTextOffsetInRun = text.Run.SourceTextOffsetInRun + text.Start, SourceInlineItemIndex = sourceItemIndex };
+                    var fieldSegments = CreateTextSegments([fieldSpan], 0d, fontSize, measurer, [], 36d);
+                    double fieldWidth = fieldSegments.Count == 0 ? 0d : fieldSegments[^1].X + fieldSegments[^1].Width;
+                    measured.Add(new(text, fieldWidth, baselineInset, Math.Max(lineHeight, baselineInset), [fieldSpan])
+                        { TextSegments = fieldSegments });
                     break;
                 case DocxInlineText text:
                     int start = text.Start, end = start + text.Length;

@@ -716,5 +716,27 @@
     "DocxMarkupModesFilterHyperlinkAndFieldRevisionsBeforeLayout",
     "DocxTableCellTextLinesMemoSharesSplitCells",
     "DocxInlineCompositionCommentsPreserveMathematicsAndCaptions"
+  ],
+  "docx-static-page-fields": [
+    "DocxInlineCompositionStaticPageFieldsRequireActualPageInputs",
+    "DocxInlineCompositionPageFieldCacheEndsWithItsOwner",
+    "DocxInlineCompositionStaticPageFieldsMatchIndependentWordFrames",
+    "PortableRenderingStaticPageFieldsPreserveMathAcrossDigitBoundary",
+    "DocxStaticMathSourcesRetainPartCountsAndSharedIdentityWithoutAReaderSink",
+    "DocxInlineCompositionMixedMathBookmarksRetainOrderedSourceTargets",
+    "DocxNativeStaticMathRetainsStoryFlowAndPerPartDiagnosticScope",
+    "DocxStaticMathFramesSharePreparedAdvanceAndFooterBlockTranslation",
+    "DocxSyntheticFooterPageFieldsUseGeneratedPageNumbers",
+    "DocxLayoutStageResolvesStaticHeaderFloatingTextBoxNumPagesFieldFromPageCount",
+    "DocxTextEmissionResolvesFloatingTextBoxPageFieldsAtEmission",
+    "DocxLayoutUsesResolvedPageFieldForKeepEstimate",
+    "DocxTextEmissionCompactsResolvedNumPagesFieldAdvance",
+    "DocxReaderPreservesDynamicFieldReferencesInsideNoteStories",
+    "DocxTextEmissionResolvesPlacedFootnotePageFieldsAtEmission",
+    "DocxTextEmissionResolvesPlacedEndnotePageFieldsAtEmission",
+    "DocxLayoutRightAlignsBodyNumPagesUsingCompactFieldWidth",
+    "DocxLayoutRightAlignsFloatingTextBoxNumPagesUsingCompactFieldWidth",
+    "PortableRenderingHardBreakMathRowsPreserveDisplayFramesAcrossStories",
+    "PortableRenderingOrderedMathCellRetainsPrintedBorderFrame"
   ]
 }
