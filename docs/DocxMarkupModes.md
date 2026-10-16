@@ -21,6 +21,10 @@ Independent Word 16 references for this profile use mixed `RevisionsMode=2`,
 with comments, formatting changes and insertions/deletions explicitly enabled.
 Inline mode 1 suppresses formatting balloons and is equivalent only where the
 input has no surviving formatting changes. Export tools verify the observed view.
+Formatting balloons anchored in direct header/footer paragraphs fit the page
+like body balloons. Supported source-owned run revisions retain shared static
+frame mapping, so adjacent equations stay visible. Other story/effect combinations
+retain their previous scale behavior.
 
 Dense overflow is still represented by compact margin continuation boxes when the reserved or existing margin cannot fit every balloon on the page.
 

@@ -1,5 +1,28 @@
 # Composed-document reliability checkpoint
 
+Latest bounded batch, C56: unchanged equations now survive adjacent source-owned
+run-formatting revisions in body, cell, header and footer paragraphs. Five public
+controls cover a bold change and an empty change; all ten Final/Review outcomes
+retain 18 mathematical operations instead of dropping the first fraction in eight
+outcomes. Parsing, mathematical preparation and static frame mapping share actual
+run ownership. Unowned, paragraph/mark, move and equation revisions keep fallbacks.
+
+Independent Word 16 mixed-mode references also establish that direct static
+formatting balloons fit the page. The old body-only scale and static revision
+exclusion produced errors up to 163pt in the intermediate candidate. Shared frame
+mapping reduces all ten controls to maximum X/Y errors of 0.877/0.768pt without
+loosening the one-point placement check. Twenty-three Windows methods once,
+18 Ubuntu checks/five native-font skips and two causal parent failures qualify
+frozen `64dcd2b7`; 17 assets/four smoke PDFs transfer without rebuilding. Twelve
+existing document PDFs retain their bytes and prior comparisons.
+
+All ten new numerical visual gates still fail. Header/footer Review page pairs
+retain visible equations and images; inherited typography, review ink, bar extent
+and balloon content/geometry differ from Word. Formatting-only text/labels print
+red in the candidate and black in Word: this is a confirmed separate residual.
+No aggregate prose audit or complete fidelity claim is made for these controls.
+Evidence: ignored `artifacts/composition-c1/math-run-format-evidence.json`.
+
 The fixed [portfolio](../tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json)
 contains four synthetic DOCX documents and two existing composite decks. The
 report, letter and specification exercise mixed content; the technical memo and
