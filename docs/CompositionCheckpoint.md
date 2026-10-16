@@ -1302,3 +1302,34 @@ Frozen f684dc29 / root 8bf5354e passes 32 exact Windows methods in one invocatio
 fixed DOCX PDFs retain bytes; PPTX production is unchanged and the held-out deck
 passes transfer smoke. Transfer verifies 17 assets/four PDFs with no root rebuild
 or suite replay. Evidence: `artifacts/composition-c1/static-cell-evidence.json`.
+
+The complete held-out static-cell report preserves every original package part
+except its header/footer stories, adding mixed footer math/image/page fields.
+It exposed two consequential integration defects beyond the simple controls:
+a row's bottom Y was used as its top keep-out, and scaled review tables painted
+below the page. The boundary now uses Y + Height. Simple static tables join the
+existing complete-frame transform for text, math, images, clips, cells and borders;
+printed paragraph admission converts the already resolved footer/note reserve
+once. Shared simple-cell eligibility and the inherited physical-coordinate marker
+are reused; no new flag, font/size/document guard or quota was added.
+
+The accepted report retains ten source equations, three source image placements
+and five navigation rectangles on two pages in each preset. All four page pairs
+were reviewed against independent Word: the footer remains visible, section seven
+starts on page two, and no serious omission/overlap/clipping is observed. Twelve
+static prose anchors have maximum X/Y errors 0.024pt/0.422pt. Both numerical visual
+gates still fail. Generic source screens remain unresolved: cached digit-one gaps
+match Word, and whole-word rate/time extraction gaps remain; all simple expressions
+are present. Typography, spacing, note-image alignment and annotation geometry
+remain cosmetic residuals.
+
+Frozen d0cc21fe / root 5b1af0af passes 29 exact Windows methods in one invocation;
+22 Ubuntu checks pass and seven Office-font checks skip. The portable complete
+report normalizes mathematical letters to the pinned face's supported ordinary
+alphabet; the Windows Office control uses the original document. Two regressions
+fail against the preceding artifact. Eight fixed DOCX PDFs and four prior static
+controls remain exact. Transfer verifies 17 assets/four PDFs without a root rebuild
+or suite replay. An intermediate keep-out artifact remains as the regression
+parent; final promotion followed review of all presets. Evidence:
+`artifacts/composition-c1/static-table-print-evidence.json` and
+`artifacts/composition-c1/composed-static-cell-evidence.json`.
