@@ -36,7 +36,7 @@ for container in ['cell','body']:
             E.SubElement(r,w+'t').text=f'Section {i+1} line {j+1}.'
             if j<2:E.SubElement(r,w+'br')
         if i==0 and container=='body':p.append(owner)
-    size=sect.find(w+'pgSz');size.set(w+'h','7440');size.set(w+'w','8640')
+    size=sect.find(w+'pgSz');size.set(w+'h','7440');size.set(w+'w','12240')
     margins=sect.find(w+'pgMar')
     for edge in ['top','bottom','left','right']:margins.set(w+edge,'720')
     body.append(sect);entries['word/document.xml']=E.tostring(doc,encoding='utf-8',xml_declaration=True)

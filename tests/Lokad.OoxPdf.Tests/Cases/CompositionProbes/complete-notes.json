@@ -2,7 +2,7 @@
   {
     "Id": "complete-note-cell",
     "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/complete-note-cell.docx",
-    "Sha256": "B8539CA2049816C568A10ABD39FA076EB276A5D911C9B130CAC487D499273D73",
+    "Sha256": "489BA1305179B4CB8FBC46B4C7338A319B77D3DA5C826168893E003FFEA84963",
     "HeldOut": false,
     "ExpectedEquationCount": 0,
     "ExpectedText": [
@@ -13,7 +13,7 @@
   {
     "Id": "complete-note-body",
     "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/complete-note-body.docx",
-    "Sha256": "C2A36E3B34A48A3439F29930EFB8ABC1A883CEDF5D396B0480BEB012CC2A3FA6",
+    "Sha256": "86802540A87D00594C80A7707B922BB6AE0F71BB7A6C5B34EACDF5FE4142A21A",
     "HeldOut": false,
     "ExpectedEquationCount": 0,
     "ExpectedText": [
