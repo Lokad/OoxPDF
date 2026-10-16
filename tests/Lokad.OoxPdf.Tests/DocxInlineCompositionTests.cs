@@ -205,6 +205,8 @@ internal static class DocxInlineCompositionTests
 
     public static void DocxInlineCompositionEndnoteRunSplittingRetainsSingleAndRepeatedMath()
     {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the native endnote composition control.");
         foreach (int start in new[] { 1, 12 })
         foreach (bool single in new[] { false, true })
         foreach (string container in new[] { "body", "cell" })
@@ -851,6 +853,8 @@ internal static class DocxInlineCompositionTests
 
     public static void DocxInlineCompositionCachedFieldsRetainRunSplittingAndFallbacks()
     {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the native cached-field composition controls.");
         foreach (string form in new[] { "simple", "packed" })
         foreach (string container in new[] { "body", "cell" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
