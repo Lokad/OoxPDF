@@ -140,6 +140,8 @@ internal sealed record DocxInlineReference(
     public string? CustomMarkText { get; init; }
     public DocxRevisionInfo? Revision { get; init; }
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
+    public DocxTextRun? DisplayRun { get; init; }
+    public string? NoteNumberRestartValue { get; init; }
 }
 
 internal sealed record DocxCommentRange(

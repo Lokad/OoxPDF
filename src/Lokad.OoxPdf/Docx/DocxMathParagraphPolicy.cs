@@ -146,6 +146,7 @@ internal static class DocxMathParagraphPolicy
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? prepared = null) =>
         paragraph.Equations.Count > 1 || paragraph.Images.Count != 0 ||
         paragraph.Equations.Count != 0 && paragraph.CommentRanges.Count != 0 ||
+        paragraph.Equations.Count != 0 && paragraph.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Footnote) ||
         paragraph.Equations.Count == 1 && (GetInlineRow(paragraph) is null && GetStandaloneRow(paragraph) is null ||
             GetInlineRow(paragraph) is { } inline && prepared is not null &&
             prepared.TryGetValue(inline, out var math) && math.Box.InlineBreakAfterGlyphs.Count != 0);
@@ -168,7 +169,7 @@ internal static class DocxMathParagraphPolicy
     private static bool HasSupportedSourceOwner(DocxParagraph paragraph) =>
         paragraph.Equations.Count != 0 && paragraph.Equations.All(equation => equation.Revision is null) && paragraph.Revisions.Count == 0 &&
         paragraph.InlineTextBoxes.Count == 0 &&
-        paragraph.InlineReferences.All(reference => reference.Kind == DocxRelatedStoryKind.Comment) &&
+        DocxInlineContent.HasSupportedReferences(paragraph.InlineReferences, paragraph.Runs) &&
         // Bookmarks are source metadata with no measured or painted extent.
         // Their presence cannot change ownership of an otherwise supported box.
         paragraph.FieldReferences.Count == 0 &&

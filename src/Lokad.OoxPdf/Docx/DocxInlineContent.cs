@@ -12,6 +12,17 @@ internal sealed record DocxInlineEquation(DocxEquation Equation) : DocxInlineIte
 
 internal static class DocxInlineContent
 {
+    public static bool HasSupportedReferences(IReadOnlyList<DocxInlineReference> references,
+        IReadOnlyList<DocxTextRun> runs)
+    {
+        if (references.All(reference => reference.Kind == DocxRelatedStoryKind.Comment)) return true;
+        var owners = new HashSet<DocxTextRun>(runs, ReferenceEqualityComparer.Instance);
+        return references.All(reference => reference.Kind == DocxRelatedStoryKind.Comment ||
+            reference.Kind == DocxRelatedStoryKind.Footnote && reference.DisplayRun is { } run &&
+            reference.NoteNumberRestartValue is null or "continuous" &&
+            run.Text == reference.DisplayText && owners.Contains(run));
+    }
+
     public static List<DocxInlineItem> FromPrefix(IReadOnlyList<DocxTextRun> runs,
         IReadOnlyList<DocxInlineImage> images, CancellationToken token)
     {

@@ -102,7 +102,8 @@ internal sealed partial class DocxLayoutEngine
             if (fragment.Text.Count != 0)
             {
                 foreach (var segment in fragment.TextSegments)
-                    segments.Add(segment with { X = segment.X + x + offset });
+                    segments.Add(segment with { X = segment.X + x + offset,
+                        BaselineOffsetY = segment.BaselineOffsetY * scale });
                 foreach (var span in fragment.Text) text.Append(span.Text);
             }
             else if (fragment.Math is { } math) equations.Add(new(math, offset));

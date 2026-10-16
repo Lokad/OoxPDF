@@ -10,6 +10,111 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionAutomaticFootnotesRetainOwnedMarkerRuns()
+    {
+        foreach (string position in new[] { "before", "after" })
+        foreach (string suffix in new[] { "", "-plain" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var paragraph = ReadPlacedComposition(mode, "math-footnote-" + position + "-body" + suffix).Paragraphs.Single(p => p.Equations.Count != 0);
+            var reference = paragraph.InlineReferences.Single();
+            TestAssert.True(paragraph.InlineContent is not null && reference.DisplayRun is { } run &&
+                paragraph.Runs.Any(item => ReferenceEquals(item, run)) && run.Text == reference.DisplayText,
+                "Automatic footnote glyphs must have an explicit resolved source owner in the ordered content.");
+            TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
+            foreach (string restart in new[] { "eachPage", "eachSect", "invalid" })
+                TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with
+                    { InlineReferences = [reference with { NoteNumberRestartValue = restart }] }).Count);
+            TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with
+                { InlineReferences = [reference with { DisplayRun = null }] }).Count);
+        }
+    }
+
+    public static void DocxInlineCompositionMathCannotEnterPlainTextCorrections()
+    {
+        var document = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-footnote-before-body-plain");
+        var paragraph = document.Paragraphs.Single(p => p.Equations.Count != 0);
+        TestAssert.True(!DocxPlainBodyFrame.HasPlainTextContent(paragraph),
+            "Plain-text correction ownership must exclude visible measured objects such as equations.");
+        TestAssert.True(!DocxPlainBodyFrame.IsEligible(document), "A paragraph's math cannot disappear from whole-document eligibility.");
+    }
+
+    public static void DocxInlineCompositionFootnoteOwnershipSurvivesSharedRunsAndNumberStarts()
+    {
+        foreach (int start in new[] { 1, 9, 12, 103 })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation("CompositionProbes/math-footnote-before-body-plain", mode, true, true, (xml, w, _) =>
+            {
+                var marker = xml.Descendants(w + "footnoteReference").Single();
+                marker.AddBeforeSelf(new XElement(w + "t", "mark"));
+                marker.AddAfterSelf(new XElement(w + "t", "edge"));
+                xml.Descendants(w + "footnotePr").Single().Add(new XElement(w + "numStart", new XAttribute(w + "val", start)));
+            });
+            var paragraph = document.Paragraphs.Single(p => p.Equations.Count != 0);
+            var reference = paragraph.InlineReferences.Single();
+            TestAssert.Equal(start.ToString(System.Globalization.CultureInfo.InvariantCulture), reference.DisplayText);
+            TestAssert.True(reference.DisplayRun is { } owner && paragraph.Runs.Count(run => run.SourceRunIndex == reference.SourceRunIndex) == 3 &&
+                paragraph.InlineContent!.OfType<DocxInlineText>().Any(item => ReferenceEquals(item.Run, owner)),
+                "The marker's identity must survive adjoining text in the same authored run and wider automatic labels.");
+            TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
+        }
+    }
+
+    public static void DocxInlineCompositionAutomaticFootnotesPreserveContentAndDestinations()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the footnote composition controls.");
+        foreach (string position in new[] { "before", "after" })
+        foreach (string container in new[] { "body", "cell" })
+        foreach (string suffix in new[] { "", "-plain" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadPlacedComposition(mode, "math-footnote-" + position + "-" + container + suffix);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(1, pages.Length);
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            TestAssert.Contains("Public calculation note.", text);
+            var link = pages.Single().Annotations.Single(annotation => annotation.Destination is not null);
+            TestAssert.True(link.Width > 0d && link.Height > 0d && link.Destination!.Value.PageIndex == 0,
+                "The measured marker must keep its link to the visible note.");
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "A footnote cannot discard the supported formulas.");
+        }
+    }
+
+    public static void DocxInlineCompositionFootnoteMarkersMatchIndependentPrintedOffsets()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the independent footnote marker controls.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-footnotes-office-markers.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var document = DocxTests.ReadDocx(input, mode);
+            var renderer = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var line = renderer.InspectTextEmission(document).Lines.Single(line =>
+                line.Segments.Any(segment => segment.TextLength == 1 && segment.CharacterProfile.DigitCount == 1 &&
+                    segment.FontSize < line.Segments.Max(s => s.FontSize) - .01d));
+            var segments = line.Segments.Where(segment => !segment.IsTerminalLineSpace).ToArray();
+            var marker = segments.Single(segment => segment.FontSize == segments.Min(s => s.FontSize));
+            var prose = segments.First(segment => segment.FontSize == segments.Max(s => s.FontSize));
+            double raise = marker.BaselineY - prose.BaselineY;
+            TestAssert.True(Math.Abs(raise - row.GetProperty("MarkerRaise").GetDouble()) < .1d,
+                $"Source vertical offsets must scale with the printed container: {input}/{mode}/raise={raise}.");
+            TestAssert.True(Math.Abs(marker.PdfFontSize / prose.PdfFontSize - row.GetProperty("MarkerFontRatio").GetDouble()) < .002d,
+                "The reference marker must keep its independently measured superscript font ratio.");
+        }
+    }
+
     public static void DocxInlineCompositionCommentsRetainOrderedRangeBoundaries()
     {
         foreach (string anchor in new[] { "prose", "between", "formula", "mixed" })

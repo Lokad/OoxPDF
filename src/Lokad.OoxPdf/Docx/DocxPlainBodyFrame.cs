@@ -28,7 +28,7 @@ internal static class DocxPlainBodyFrame
         p.Alignment == DocxTextAlignment.Left && HasPlainTextContent(p);
 
     internal static bool HasPlainTextContent(DocxParagraph p) =>
-        p.Images.Count == 0 && p.InlineTextBoxes.Count == 0 &&
+        p.Images.Count == 0 && p.InlineTextBoxes.Count == 0 && p.Equations.Count == 0 &&
         p.FieldReferences.Count == 0 && p.CommentRanges.Count == 0 && p.Revisions.Count == 0 &&
         p.RevisionRanges.Count == 0 && !p.HasDeletedParagraphMark && p.DeletedText.Length == 0 &&
         p.ListLabel is null && p.Hyperlinks.Count == 0 && p.BookmarkAnchors.Count == 0 &&

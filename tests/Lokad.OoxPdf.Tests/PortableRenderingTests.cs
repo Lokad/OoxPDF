@@ -16,6 +16,30 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingAutomaticFootnotesPreserveMixedMathAndLinks()
+    {
+        foreach (string position in new[] { "before", "after" })
+        foreach (string container in new[] { "body", "cell" })
+        foreach (string suffix in new[] { "", "-plain" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/math-footnote-" + position + "-" + container + suffix + ".docx"), mode);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(1, pages.Length);
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            TestAssert.Contains("Public calculation note.", text);
+            var link = pages.Single().Annotations.Single(annotation => annotation.Destination is not null);
+            TestAssert.True(link.Width > 0d && link.Height > 0d && link.Destination!.Value.PageIndex == 0,
+                "Portable marker geometry must retain the source-to-note destination.");
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Automatic footnotes cannot remove the mathematical content.");
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingCommentsPreserveMixedMathematics()
     {
         foreach (string anchor in new[] { "prose", "between", "formula", "mixed" })

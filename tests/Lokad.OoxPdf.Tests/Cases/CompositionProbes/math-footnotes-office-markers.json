@@ -1,0 +1,133 @@
+{
+  "Source": "Independent Word 16 PDF exports; note marker raise and effective font size relative to surrounding prose. Existing visual thresholds remain unchanged.",
+  "Rows": [
+    {
+      "Id": "math-footnote-after-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "58D35075545E386AB5CFDC2763638D948B345D91D0BD16E2ADF83C1BE716CE80",
+      "ReferencePdfSha256": "B230D3FA4CC15A6B702DEE50C3466F324FDBB9A00E32DBE432DAFBE2F80C3CA9",
+      "MarkerRaise": 3.0,
+      "MarkerFontRatio": 0.6701846965699209
+    },
+    {
+      "Id": "math-footnote-after-body",
+      "Mode": "final-preserve",
+      "InputSha256": "58D35075545E386AB5CFDC2763638D948B345D91D0BD16E2ADF83C1BE716CE80",
+      "ReferencePdfSha256": "A69B1F98484C335409159E9828B22A37A1C63CA4A08C8EE8B40A7DAA714FBFCD",
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-footnote-after-body-plain",
+      "Mode": "all-word-compatible",
+      "InputSha256": "C314FADCED03F6E4C2EF99F17F4A0ED5A6765CDC9D5EF34440C8134656A744E9",
+      "ReferencePdfSha256": "980681DDAB55A8F7E96BE9540F54B6B4EC2FD47087F33BFDAB610B7263D307AD",
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-footnote-after-body-plain",
+      "Mode": "final-preserve",
+      "InputSha256": "C314FADCED03F6E4C2EF99F17F4A0ED5A6765CDC9D5EF34440C8134656A744E9",
+      "ReferencePdfSha256": "8D0130D6B20A6859C1B09F20DDB46BDDCAF2A5560F08D0BBB349B6CAD10DDCEB",
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-footnote-after-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "8136804C75785215FD750DC3476BE4AB7A4272E17D9471FCCDC1E1777D714A86",
+      "ReferencePdfSha256": "50F2ECEFCDFE9A17DF84B677A2B89918550F234A1A71ABDC4A0DA7971D0A2AED",
+      "MarkerRaise": 3.0,
+      "MarkerFontRatio": 0.6701846965699209
+    },
+    {
+      "Id": "math-footnote-after-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "8136804C75785215FD750DC3476BE4AB7A4272E17D9471FCCDC1E1777D714A86",
+      "ReferencePdfSha256": "7A43FE5EE46AC6486D67D0DB0C9B7E1B0485626279203051A90C80FF345CBB43",
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-footnote-after-cell-plain",
+      "Mode": "all-word-compatible",
+      "InputSha256": "911B04B645C5D620175DFFC2715FDA77F18591D1E848CA101AA931085A590901",
+      "ReferencePdfSha256": "E4102702CED41F0C7290D55D9D5310CA683CFA0573068B94B35D0982122E92CE",
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-footnote-after-cell-plain",
+      "Mode": "final-preserve",
+      "InputSha256": "911B04B645C5D620175DFFC2715FDA77F18591D1E848CA101AA931085A590901",
+      "ReferencePdfSha256": "65558773963C0E709BA3A3E6C7B89FE483A4216B7436C87C14CEFE2D7EBDF449",
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-footnote-before-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "7CF6B9B511E25F7ECCC7663D9673EC5FB065C91E40B4A809F2571EF95FAF4C26",
+      "ReferencePdfSha256": "0C288F4DD9872CF2123D8320CF8E128D80EF928312ACDAE9E0F743C055514A37",
+      "MarkerRaise": 3.0,
+      "MarkerFontRatio": 0.6701846965699209
+    },
+    {
+      "Id": "math-footnote-before-body",
+      "Mode": "final-preserve",
+      "InputSha256": "7CF6B9B511E25F7ECCC7663D9673EC5FB065C91E40B4A809F2571EF95FAF4C26",
+      "ReferencePdfSha256": "598A0DC536003882EE0C20DB653AF444EB704228A3D7EF9BD472842DE7272E1F",
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-footnote-before-body-plain",
+      "Mode": "all-word-compatible",
+      "InputSha256": "70A13AE2267DFEE0FE60E128EFA9FF44CC751CB3B89260F2896244250DBCD1F1",
+      "ReferencePdfSha256": "B6BD9BAE6391E896953EBB447FC35413408AC14C2EEB16FC3B39952B39714840",
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-footnote-before-body-plain",
+      "Mode": "final-preserve",
+      "InputSha256": "70A13AE2267DFEE0FE60E128EFA9FF44CC751CB3B89260F2896244250DBCD1F1",
+      "ReferencePdfSha256": "ACBC51DC7B84CF9FB3AE3831A873591CA765204BCF5C482D2E5DC8FBE3554B50",
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-footnote-before-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "732A1234CCC7A114E318D423E061901255ABF474B98AD61C621BE69C603D761D",
+      "ReferencePdfSha256": "2CC1361807316B974A82326F07E5E3E094F2CED26A6340F50D9510F8004ED0D4",
+      "MarkerRaise": 3.0,
+      "MarkerFontRatio": 0.6701846965699209
+    },
+    {
+      "Id": "math-footnote-before-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "732A1234CCC7A114E318D423E061901255ABF474B98AD61C621BE69C603D761D",
+      "ReferencePdfSha256": "357F9A875C78993DA8654133B0A063B5D627D5E6A1CDA70E206B2408238C9D5E",
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-footnote-before-cell-plain",
+      "Mode": "all-word-compatible",
+      "InputSha256": "67F5F26A39FCDD6DB135E75069E8A2FAEC8286504506AFD595A84B151BCBADBE",
+      "ReferencePdfSha256": "46E64BB0CB78E2F06028F0BFA7126F70E70EF8ED9997B394EA05F50D8567464B",
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-footnote-before-cell-plain",
+      "Mode": "final-preserve",
+      "InputSha256": "67F5F26A39FCDD6DB135E75069E8A2FAEC8286504506AFD595A84B151BCBADBE",
+      "ReferencePdfSha256": "B4FCEE336E810B4DE6B69AA8DEC2B88FB5ED9F4FA0EF18A4E402495A939EFABA",
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    }
+  ]
+}

@@ -313,9 +313,9 @@ internal sealed partial class DocxReader
                 ? styles.ContextualSpacingDefaultStyleId : null,
             InlineTextBoxes = inlineTextBoxes,
             Equations = equations,
-            // Fields/note references/textboxes and revisions retain their existing
+            // Fields/unowned note references/textboxes and revisions retain their existing
             // source reconstruction until those owners migrate explicitly.
-            InlineContent = fieldReferences.Count == 0 && inlineReferences.All(reference => reference.Kind == DocxRelatedStoryKind.Comment) &&
+            InlineContent = fieldReferences.Count == 0 && DocxInlineContent.HasSupportedReferences(inlineReferences, runs) &&
                 inlineTextBoxes.Count == 0 && paragraphRevisions.Count == 0 ? inlineItems : null,
             InlineReferences = inlineReferences,
             CommentRanges = commentRanges,
@@ -1263,6 +1263,9 @@ internal sealed partial class DocxReader
             textOffset)
         {
             CustomMarkText = ResolveCustomMarkText(),
+            NoteNumberRestartValue = kind == DocxRelatedStoryKind.Footnote
+                ? documentSettings?.FootnoteReferenceSettings.NumberRestartValue
+                : kind == DocxRelatedStoryKind.Endnote ? documentSettings?.EndnoteReferenceSettings.NumberRestartValue : null,
             Revision = revision,
             Revisions = revisions
         });
@@ -1273,7 +1276,10 @@ internal sealed partial class DocxReader
 
         if (emitDisplayRun && displayText is not null)
         {
+            int firstRun = runs.Count;
             AddInlineReferenceDisplayRun(displayText, currentSourceRunIndex, textOffset, resolvedRun, runStyleResolution, revision);
+            if (runs.Count == firstRun + 1)
+                inlineReferences[^1] = inlineReferences[^1] with { DisplayRun = runs[firstRun] };
         }
 
         void AddCommentReferenceRange(string? id, int currentSourceRunIndex, int textOffset)
