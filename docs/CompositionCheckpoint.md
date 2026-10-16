@@ -1849,3 +1849,19 @@ Eight fixed DOCX/two complete-report PDFs retain accepted bytes/comparisons. A
 wrong historical manifest also ran fourteen unnecessary spacing conversions;
 those are excluded from acceptance and recorded. No root rebuild or suite replay.
 Evidence: list-label-owner-evidence.json.
+
+
+Correction to the deletion-markup investigation: the composition reference helper
+left Word's RevisionsMode at 0 (balloons), while the library declares inline mode
+1. The earlier 77–85pt comparison therefore does not establish a library frame
+defect; that claim is withdrawn. Equation omission remains confirmed. Four new
+independent deletion review references use the declared inline view; old exports
+remain as provenance. View-agnostic historical comparisons are retained.
+
+The helper now explicitly selects all six view settings, verifies observed export
+logs and pins settings/log hashes. Cached source/PDF/view provenance is preflighted
+before starting Office. Legacy pins require a matching retained export log;
+mismatches reject without overwriting or global re-export. Eight tool checks pass
+without Office or library builds. Four parent candidates reuse C50 PDF hashes,
+with all four numerical gates still failed. The existing frozen library is reused;
+no library rebuild or repeated suite. Evidence: reference-view-evidence.json.
