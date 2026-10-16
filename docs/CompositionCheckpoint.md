@@ -1,27 +1,35 @@
 # Composed-document reliability checkpoint
 
-Latest bounded batch, C56: unchanged equations now survive adjacent source-owned
+Latest bounded batches, C56–C57: unchanged equations survive adjacent source-owned
 run-formatting revisions in body, cell, header and footer paragraphs. Five public
 controls cover a bold change and an empty change; all ten Final/Review outcomes
 retain 18 mathematical operations instead of dropping the first fraction in eight
 outcomes. Parsing, mathematical preparation and static frame mapping share actual
 run ownership. Unowned, paragraph/mark, move and equation revisions keep fallbacks.
 
-Independent Word 16 mixed-mode references also establish that direct static
-formatting balloons fit the page. The old body-only scale and static revision
-exclusion produced errors up to 163pt in the intermediate candidate. Shared frame
-mapping reduces all ten controls to maximum X/Y errors of 0.877/0.768pt without
-loosening the one-point placement check. Twenty-three Windows methods once,
-18 Ubuntu checks/five native-font skips and two causal parent failures qualify
-frozen `64dcd2b7`; 17 assets/four smoke PDFs transfer without rebuilding. Twelve
-existing document PDFs retain their bytes and prior comparisons.
+Independent Word 16 mixed-mode references establish that direct static formatting
+balloons fit the page. Shared frame mapping reduces intermediate errors up to
+163pt to maximum X/Y errors of 0.877/0.768pt, retaining the one-point check. C56
+qualifies 23 Windows methods once, 18 Ubuntu checks/five native-font skips and two
+causal parent failures. Twelve existing document PDFs retain their bytes.
 
-All ten new numerical visual gates still fail. Header/footer Review page pairs
-retain visible equations and images; inherited typography, review ink, bar extent
-and balloon content/geometry differ from Word. Formatting-only text/labels print
-red in the candidate and black in Word: this is a confirmed separate residual.
-No aggregate prose audit or complete fidelity claim is made for these controls.
-Evidence: ignored `artifacts/composition-c1/math-run-format-evidence.json`.
+C57 separates formatting metadata from text-revision ink in the shared glyph and
+decoration paths. Eight independent Word text operations confirm black glyph ink;
+authored color/underline transformations remain covered. Formatting balloons,
+change bars, insertion/deletion/move behavior and source geometry remain intact.
+Frozen `44d45883` qualifies 18 Windows methods once, 14 Ubuntu checks/four
+native-font skips and two causal parent failures. All five Review text/graphics
+inspections retain C56 bytes. Fixed documents contain no property changes, so
+prior corpus qualification is retained. Both batches transfer 17 assets/four
+identical smoke PDFs without root builds or repeated suites.
+
+All ten C56 and five C57 numerical gates still fail unchanged thresholds.
+Header/footer and body Review page pairs retain visible equations and images;
+typography, bar extent and balloon content/geometry still differ from Word.
+Formatting-only text and labels now retain authored ink. No aggregate prose audit
+or complete fidelity claim is made for these controls. Evidence: ignored
+`artifacts/composition-c1/math-run-format-evidence.json` and
+`formatting-review-ink-evidence.json`.
 
 The fixed [portfolio](../tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json)
 contains four synthetic DOCX documents and two existing composite decks. The
