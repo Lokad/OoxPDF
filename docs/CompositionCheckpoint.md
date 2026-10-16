@@ -1220,3 +1220,19 @@ transfer verifies 17 assets/four exact PDFs without a root rebuild or repeated
 suite/corpus. Complete compound-document acceptance is next; unknown total-count
 composition remains staged. Evidence:
 `artifacts/composition-c1/body-page-counters-evidence.json`.
+
+The finite PAGE composition checkpoint is accepted on the complete held-out
+report (source 7a8208ea), using frozen 645d5508 without a library rebuild or suite
+replay. All 17 assets were rechecked. Existing cached field words remain, with
+three PAGE fields added beside body math/images, inside an internal hyperlink and
+in the math/note table cell. Eight source equations, two image placements and four
+logical navigation targets survive both presets on two pages; the wrapped link
+uses two rectangles, giving five painted navigation rectangles. The note target
+remains on page two. All four page pairs were reviewed against independent Word;
+no visible omission or serious pagination/overlap/clipping defect was observed.
+Global/page-local prose and simple-math deficits are zero. Generic source screens
+retain their explicit unresolved dynamic-field evaluation; both numerical visual
+gates remain failed. Typography, spacing and annotation geometry remain cosmetic
+residuals; PNG top/X residuals reach 1pt/1.5pt with half-point raster sampling.
+Unknown total-count composition remains staged. Evidence:
+`artifacts/composition-c1/composed-page-counter-evidence.json`.
