@@ -10,6 +10,59 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionEndnotesShareOwnedAutomaticReferenceRules()
+    {
+        foreach (string position in new[] { "before", "after" })
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadPlacedComposition(mode, "math-endnote-" + position + "-" + container);
+            var paragraph = document.Paragraphs.Concat(document.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells)
+                .SelectMany(cell => cell.Paragraphs)).First(paragraph => paragraph.Equations.Count != 0);
+            TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
+            var reference = paragraph.InlineReferences.Single();
+            TestAssert.Equal(DocxRelatedStoryKind.Endnote, reference.Kind);
+            TestAssert.Equal("i", reference.DisplayText);
+            var marker = TestAssert.NotNull(reference.DisplayRun);
+            TestAssert.True(marker.IsAutomaticNoteReferenceMarker && paragraph.InlineContent!.OfType<DocxInlineText>()
+                .Any(item => ReferenceEquals(item.Run, marker)), "Endnote markers retain their actual owned source run.");
+            foreach (string restart in new[] { "eachPage", "eachSect" })
+                TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with
+                    { InlineReferences = [reference with { NoteNumberRestartValue = restart }] }).Count);
+            foreach (DocxTextRun? other in new DocxTextRun?[] { null, marker with { } })
+                TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with
+                    { InlineReferences = [reference with { DisplayRun = other }] }).Count);
+        }
+    }
+
+    public static void DocxInlineCompositionEndnoteRunSplittingRetainsSingleAndRepeatedMath()
+    {
+        foreach (int start in new[] { 1, 12 })
+        foreach (bool single in new[] { false, true })
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation("CompositionProbes/math-endnote-before-" + container, mode, true, true, (xml, w, m) =>
+            {
+                if (single) xml.Descendants(m + "oMath").Last().Remove();
+                var reference = xml.Descendants(w + "endnoteReference").Single();
+                reference.AddBeforeSelf(new XElement(w + "t", "mark"));
+                reference.AddAfterSelf(new XElement(w + "t", "edge"));
+                xml.Descendants(w + "endnotePr").Single().Add(new XElement(w + "numStart", new XAttribute(w + "val", start)));
+            });
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal(single ? 1 : 2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            TestAssert.Contains("mark" + (start == 1 ? "i" : "xii") + "edge", System.Text.RegularExpressions.Regex.Replace(text, @"\s", ""));
+            TestAssert.Contains("Public calculation note.", text);
+            TestAssert.Equal(1, pages.Sum(page => page.Annotations.Count(annotation => annotation.Destination is not null)));
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Owned endnotes cannot remove supported math.");
+        }
+    }
+
     public static void DocxInlineCompositionStaticPageFieldsMatchIndependentWordFrames()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
@@ -293,12 +346,18 @@ internal static class DocxInlineCompositionTests
         }
     }
 
-    public static void DocxInlineCompositionFootnoteMarkersMatchIndependentPrintedOffsets()
+    public static void DocxInlineCompositionFootnoteMarkersMatchIndependentPrintedOffsets() =>
+        CheckAutomaticNoteMarkerGeometry("math-footnotes-office-markers.json");
+
+    public static void DocxInlineCompositionEndnoteMarkersMatchIndependentPrintedOffsets() =>
+        CheckAutomaticNoteMarkerGeometry("math-endnotes-office-markers.json");
+
+    private static void CheckAutomaticNoteMarkerGeometry(string referenceFile)
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
-            TestAssert.Skip("Installed Cambria Math is required for the independent footnote marker controls.");
+            TestAssert.Skip("Installed Cambria Math is required for the independent note marker controls.");
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
-        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-footnotes-office-markers.json")));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, referenceFile)));
         foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
@@ -309,7 +368,7 @@ internal static class DocxInlineCompositionTests
             var renderer = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                 : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
             var line = renderer.InspectTextEmission(document).Lines.Single(line =>
-                line.Segments.Any(segment => segment.TextLength == 1 && segment.CharacterProfile.DigitCount == 1 &&
+                line.Segments.Any(segment => segment.TextLength == 1 &&
                     segment.FontSize < line.Segments.Max(s => s.FontSize) - .01d));
             var segments = line.Segments.Where(segment => !segment.IsTerminalLineSpace).ToArray();
             var marker = segments.Single(segment => segment.FontSize == segments.Min(s => s.FontSize));

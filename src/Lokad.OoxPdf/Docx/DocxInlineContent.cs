@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Lokad.OoxPdf.Docx;
 
 // A source view for the migrating paragraph path. Items retain the original
@@ -12,6 +14,14 @@ internal sealed record DocxInlineEquation(DocxEquation Equation) : DocxInlineIte
 
 internal static class DocxInlineContent
 {
+    public static bool TryGetAutomaticNoteRun(DocxInlineReference reference, [NotNullWhen(true)] out DocxTextRun? run)
+    {
+        run = reference.DisplayRun;
+        return reference.Kind is (DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote) &&
+            reference.NoteNumberRestartValue is null or "continuous" &&
+            run is { IsAutomaticNoteReferenceMarker: true } && run.Text == reference.DisplayText;
+    }
+
     public static bool HasSourceFieldResults(IReadOnlyList<DocxFieldReference> fields,
         IReadOnlyList<DocxTextRun> runs) => fields.All(field =>
             field.HasCachedResult && field.RendersCachedResult && !field.UsesPlaceholder ||
@@ -33,9 +43,7 @@ internal static class DocxInlineContent
         if (references.All(reference => reference.Kind == DocxRelatedStoryKind.Comment)) return true;
         var owners = new HashSet<DocxTextRun>(runs, ReferenceEqualityComparer.Instance);
         return references.All(reference => reference.Kind == DocxRelatedStoryKind.Comment ||
-            reference.Kind == DocxRelatedStoryKind.Footnote && reference.DisplayRun is { } run &&
-            reference.NoteNumberRestartValue is null or "continuous" &&
-            run.IsAutomaticNoteReferenceMarker && run.Text == reference.DisplayText && owners.Contains(run));
+            TryGetAutomaticNoteRun(reference, out var run) && owners.Contains(run));
     }
 
     public static List<DocxInlineItem> FromPrefix(IReadOnlyList<DocxTextRun> runs,

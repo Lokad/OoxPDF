@@ -16,6 +16,27 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingAutomaticEndnotesPreserveMixedMathAndDestinations()
+    {
+        foreach (string position in new[] { "before", "after" })
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/math-endnote-" + position + "-" + container + ".docx"), mode);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(1, pages.Length);
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            TestAssert.Contains("Public calculation note.", text);
+            TestAssert.Equal(1, pages.Single().Annotations.Count(annotation => annotation.Destination is not null));
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Endnote composition preserves supported equations.");
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingStaticPageFieldsPreserveMathAcrossDigitBoundary()
     {
         foreach (string form in new[] { "simple", "packed" })

@@ -159,7 +159,7 @@ internal static class DocxMathParagraphPolicy
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? prepared = null) =>
         paragraph.Equations.Count > 1 || paragraph.Images.Count != 0 ||
         paragraph.Equations.Count != 0 && paragraph.CommentRanges.Count != 0 ||
-        paragraph.Equations.Count != 0 && paragraph.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Footnote) ||
+        paragraph.Equations.Count != 0 && paragraph.InlineReferences.Any(reference => DocxInlineContent.TryGetAutomaticNoteRun(reference, out _)) ||
         paragraph.Equations.Count != 0 && paragraph.Runs.Any(run => run.FieldKind is { } kind && kind.IsDynamic()) ||
         paragraph.Equations.Count == 1 && (GetInlineRow(paragraph) is null && GetStandaloneRow(paragraph) is null ||
             GetInlineRow(paragraph) is { } inline && prepared is not null &&

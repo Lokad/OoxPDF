@@ -38,3 +38,10 @@ body/cell and related-story dynamic math retain their earlier fallback. Complex
 field cache suppression ends with its owning field, preserving subsequent authored
 spaces and numbers. Word's simple-field digits select Calibri in these controls;
 cached run formatting remains Arial, with the advance residual retained explicitly.
+
+`math-endnotes.json` retains the continuous-note controls with automatic lower-Roman
+endnotes before/after formulas in body/cells. The same owned-marker rule covers
+footnotes and endnotes; restarted/custom/unowned markers keep their fallback.
+`math-endnotes-office-markers.json` pins independent Word marker raise/font ratios.
+Single/repeated formulas, bookmarks, run splitting, wider Roman starts and adjoining
+text within the marker run must preserve both content and the note destination.

@@ -1,0 +1,50 @@
+[
+  {
+    "Id": "math-endnote-before-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-endnote-before-body.docx",
+    "Sha256": "129338958A0320D450ACFBB8708BEEDAFA40D1220048CDD5A4020FD628C3C047",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Before formula:",
+      "Following prose.",
+      "Public calculation note."
+    ]
+  },
+  {
+    "Id": "math-endnote-before-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-endnote-before-cell.docx",
+    "Sha256": "77188225538B67E18FE897BAE9AE6F773276647506F21AF78FC559D05530F27E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Before formula:",
+      "Following prose.",
+      "Public calculation note."
+    ]
+  },
+  {
+    "Id": "math-endnote-after-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-endnote-after-body.docx",
+    "Sha256": "3722D7DE335390BF55E5CEB508C9263B8816FF319A7B972B67EFC66BF61B3C94",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Before formula:",
+      "Following prose.",
+      "Public calculation note."
+    ]
+  },
+  {
+    "Id": "math-endnote-after-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-endnote-after-cell.docx",
+    "Sha256": "25EF1BA3FC3999EA3B0D602EADC0632D58C06F6ABC8D4695B8EA7A6E21CBD02E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Before formula:",
+      "Following prose.",
+      "Public calculation note."
+    ]
+  }
+]
