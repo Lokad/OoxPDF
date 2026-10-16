@@ -1415,13 +1415,9 @@ internal static class DocxInlineCompositionTests
                     {
                         TestAssert.True(before.Text == after.Text && before.Y == after.Y,
                             "Bookmarks and unchanged-format run splitting retain every glyph and mathematical row baseline.");
-                        // Source owners still have separate kerning state. Keep
-                        // the observed row-origin residual outside this local
-                        // math-geometry contract instead of adding a correction.
-                        double beforeOrigin = baseline.First(show => show.Y == before.Y).X;
-                        double afterOrigin = math.First(show => show.Y == after.Y).X;
-                        TestAssert.True(Math.Abs((before.X - beforeOrigin) - (after.X - afterOrigin)) < .001d,
-                            "Source transformations preserve local grouped glyph geometry.");
+                        TestAssert.True(Math.Abs(before.X - after.X) < .001d,
+                            "Unchanged-format source transformations preserve absolute grouped glyph positions: " +
+                            before.X + " versus " + after.X + ".");
                     }
                 }
             }
@@ -1461,6 +1457,43 @@ internal static class DocxInlineCompositionTests
             TestAssert.True(annotations.Any(annotation => annotation.Y <= row.Key && annotation.Y + annotation.Height >= row.Key &&
                 annotation.X <= row.Min(show => show.X) + .01d && annotation.X + annotation.Width >= row.Max(show => show.X) - .01d),
                 "Review transforms must move hyperlink bounds with their painted mathematical rows.");
+    }
+
+    public static void DocxInlineCompositionRunSplittingPreservesMeasurementAndSourceOwners()
+    {
+        var source = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "atomic-math-unary")
+            .Paragraphs.Single(paragraph => paragraph.Equations.Count != 0);
+        var equation = source.Equations.Single();
+        foreach (double spacing in new[] { 0d, .75d })
+        {
+            var whole = source.Runs[0] with { Text = "B F ", SourceRunIndex = 0,
+                SourceTextOffsetInRun = 0, CharacterSpacingPoints = spacing };
+            var before = whole with { Text = "B" };
+            var after = whole with { Text = " F ", SourceRunIndex = 1 };
+            DocxMeasuredInlineLine Measure(params DocxTextRun[] runs)
+            {
+                var paragraph = source with { Runs = runs, InlineContent = runs
+                    .Select(run => (DocxInlineItem)new DocxInlineText(run, 0, run.Text.Length))
+                    .Append(new DocxInlineEquation(equation)).ToArray() };
+                TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph,
+                    new Dictionary<DocxEquation, DocxPreparedMathParagraph> { [equation] = new(equation,
+                        new(10d, 6d, 1d, []), 9d, 16d) }, new TrackingMeasurer(), 12d,
+                    200d, 200d, 9d, 16d, 1d, default, out var lines), "The supported source paragraph must measure.");
+                return TestAssert.NotNull(lines).Single();
+            }
+            var original = Measure(whole);
+            var split = Measure(before, after);
+            TestAssert.True(Math.Abs(original.Advance - split.Advance) < .000001d,
+                "Unchanged formatting preserves the total advance, including boundary kerning and spacing.");
+            TestAssert.True(Math.Abs(split.Advance - (26d + 3d * spacing)) < .000001d, "The expected pair and character-spacing advances survive.");
+            var owners = split.Fragments.SelectMany(fragment => fragment.Text).ToArray();
+            TestAssert.True(owners.Any(span => ReferenceEquals(span.StyleRun, before) && span.SourceTextRunIndex == 0) &&
+                owners.Any(span => ReferenceEquals(span.StyleRun, after) && span.SourceTextRunIndex == 1),
+                "Shared measurement state never merges annotation/source ownership.");
+            var changed = Measure(before, after with { Bold = !after.Bold });
+            TestAssert.True(Math.Abs(changed.Advance - split.Advance - 2d) < .000001d,
+                "An actual text-state change retains its existing boundary fallback.");
+        }
     }
 
     public static void DocxInlineCompositionAtomicPlacementRetainsSourceBoundAndOverwidthFallbacks()

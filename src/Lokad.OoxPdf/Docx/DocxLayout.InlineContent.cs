@@ -180,6 +180,14 @@ internal sealed partial class DocxLayoutEngine
         return result;
     }
 
+    private static bool HaveSameInlineMeasurementState(DocxTextRun before, DocxTextRun after) =>
+        before.FieldKind is null && after.FieldKind is null &&
+        !before.IsAutomaticNoteReferenceMarker && !after.IsAutomaticNoteReferenceMarker &&
+        !before.IsAutomaticNoteStoryMarker && !after.IsAutomaticNoteStoryMarker &&
+        before.ScriptBaseFontSize == after.ScriptBaseFontSize &&
+        before.UseLogicalSizeForPdfAdvances == after.UseLogicalSizeForPdfAdvances &&
+        before.EffectiveProperties == after.EffectiveProperties;
+
     internal static bool TryMeasureOrderedInlineContent(DocxParagraph paragraph,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? equations,
         IDocxTextMeasurer measurer, double fontSize, double firstWidth, double nextWidth,
@@ -605,10 +613,12 @@ internal sealed partial class DocxLayoutEngine
             if (left.Text.Count == 0 || right.Text.Count == 0) return 0d;
             var before = left.Text[^1];
             var after = right.Text[0];
-            if (!ReferenceEquals(before.StyleRun, after.StyleRun))
+            if (!ReferenceEquals(before.StyleRun, after.StyleRun) &&
+                !HaveSameInlineMeasurementState(before.StyleRun, after.StyleRun))
                 return DocxTextSpacing.BoundarySpacing(before.StyleRun, before.Text, after.Text);
-            // Tokenization must preserve pair kerning and character spacing
-            // within an authored run. Decode complete Unicode scalars, including
+            // Source-run boundaries with unchanged measurement state do not
+            // reset pair kerning. Keep their separate annotation/source owners.
+            // Decode complete Unicode scalars, including
             // replacement scalars for malformed input, as the text measurer does.
             System.Text.Rune.DecodeLastFromUtf16(before.Text, out var last, out _);
             System.Text.Rune.DecodeFromUtf16(after.Text, out var first, out _);

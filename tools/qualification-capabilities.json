@@ -1204,5 +1204,26 @@
     "DocxNativeAlignedStaticFrames",
     "DocxNativeScaledStaticFrames",
     "PortableRenderingSingleMathAnnotationsPreserveFrames"
+  ],
+  "docx-inline-run-boundaries": [
+    "DocxInlineCompositionRunSplittingPreservesMeasurementAndSourceOwners",
+    "DocxInlineCompositionGroupedLiterals",
+    "DocxInlineCompositionGroupedHyperlinks",
+    "DocxInlineCompositionMeasurementPreservesSourceTrackingKerningAndHiddenRuns",
+    "DocxInlineCompositionWordWrappingSharesBreakRulesAcrossRunSplits",
+    "DocxInlineCompositionBookmarkAndRunSplitting",
+    "DocxInlineCompositionCommentsPreserveMathematicsAndCaptions",
+    "DocxInlineCompositionCommentHighlightsMatchIndependentSelectionBounds",
+    "DocxInlineCompositionLeftTabsMatchIndependentFieldOffsets",
+    "DocxInlineCompositionCachedFields",
+    "DocxInlineCompositionSourceCursor",
+    "DocxInlineCompositionNoteImagesAndMathSurviveSourceSplitting",
+    "DocxInlineCompositionEndnoteRunSplittingRetainsSingleAndRepeatedMath",
+    "DocxInlineCompositionNormalNoteMathSurvivesRunSplittingAndContinuation",
+    "DocxInlineCompositionAtomic",
+    "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance",
+    "PortableRenderingSingleMathAnnotationsPreserveFrames",
+    "DocxRendererUsesSourceRunIndexesForHyperlinkAnnotations",
+    "DocxRendererUsesSourceRunIndexesForBookmarkDestinations"
   ]
 }
