@@ -197,10 +197,20 @@ internal static class DocxFootnotesTests
                 SetSectionTypes(xml, "continuous", "continuous");
                 modify(xml, settings, parts);
             });
-            int pages = RenderSectionPages(document).Length;
-            // The synthetic face already needs two pages in the two-column case.
-            int expected = variant == 1 ? 2 : 1;
-            TestAssert.True(pages == expected, $"Excluded variant {variant} must retain {expected} pages; got {pages}.");
+            PdfPage[] pages = RenderSectionPages(document);
+            // Atomic heads no longer reserve unused future continuation rules.
+            // Column-flow fallback must remain; the old second page was capacity
+            // overhead, rather than an independently qualified section boundary.
+            TestAssert.True(pages.Length == 1, $"Excluded variant {variant} must retain its admitted source page; got {pages.Length}.");
+            if (variant == 1)
+            {
+                var layout = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).InspectLayout(document);
+                TestAssert.True(layout.Pages.All(page => page.ColumnFrameCount == 2), "The excluded case must retain two-column placement.");
+                TestAssert.Equal(4, pages.Single().Annotations.Count);
+                TestAssert.True(pages.Single().Annotations.All(link => link.Destination is { PageIndex: 0 }),
+                    "All four source markers retain note destinations on their admitted page.");
+            }
             variant++;
         }
         DocxDocument ordinary = ReadSectionNumberingFixture("footnote", (xml, _, _) => SetSectionTypes(xml, "continuous", "continuous"));

@@ -604,7 +604,8 @@
     "DocxPageFootnoteNumbersRenderLabelsAndDistinctDestinationsTogether",
     "DocxMultipleFootnoteNumbersRenderSeparateLabelsAndDestinations",
     "DocxInlineCompositionAutomaticFootnotesPreserveContentAndDestinations",
-    "PortableRenderingAutomaticFootnotesPreserveMixedMathAndLinks"
+    "PortableRenderingAutomaticFootnotesPreserveMixedMathAndLinks",
+    "DocxSimpleSectionPagination"
   ],
   "docx-scaled-note-admission": [
     "DocxScaledFootnote",
@@ -627,6 +628,7 @@
     "DocxWordCompatibleAllMarkupScalesKeepNextParagraphEstimate",
     "DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate",
     "DocxWordCompatiblePrintScale",
-    "DocxSuperscriptUnstyledRunScalesFromDocumentDefault"
+    "DocxSuperscriptUnstyledRunScalesFromDocumentDefault",
+    "DocxSimpleSectionPagination"
   ]
 }
