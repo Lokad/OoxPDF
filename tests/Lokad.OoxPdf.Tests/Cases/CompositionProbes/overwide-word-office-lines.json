@@ -1,0 +1,158 @@
+{
+  "Source": "Independent Word 16 PDF exports; relative line gaps. Default, on and off ordinary-word controls; existing visual thresholds retained.",
+  "Rows": [
+    {
+      "Id": "overwide-word-default",
+      "InputSha256": "CEA541521F291F89AAAC1506898404D7B5DC49F9F33D3ED2FDD3EC91D5C8EB97",
+      "ReferencePdfSha256": "3B6EA1E9A7CA78D61A0E36403076DAE6965D5E3B045E5B0456B61AB306C2B77E",
+      "Lines": [
+        {
+          "Text": "Befor",
+          "Gap": 0.0
+        },
+        {
+          "Text": "e",
+          "Gap": 14.639999999999986
+        },
+        {
+          "Text": "form",
+          "Gap": 29.280000000000086
+        },
+        {
+          "Text": "ula:",
+          "Gap": 43.92000000000007
+        },
+        {
+          "Text": "after",
+          "Gap": 58.56000000000006
+        },
+        {
+          "Text": "form",
+          "Gap": 73.20000000000005
+        },
+        {
+          "Text": "ula.",
+          "Gap": 87.84000000000003
+        },
+        {
+          "Text": "Follo",
+          "Gap": 102.48000000000002
+        },
+        {
+          "Text": "wing",
+          "Gap": 117.24000000000001
+        },
+        {
+          "Text": "prose",
+          "Gap": 131.88
+        },
+        {
+          "Text": ".",
+          "Gap": 146.5200000000001
+        }
+      ]
+    },
+    {
+      "Id": "overwide-word-on",
+      "InputSha256": "902B954FF90A85D60B44EBDC5F3B6F72931EE253322FDEC49205919C1B1243F3",
+      "ReferencePdfSha256": "EF3343C1009F242F99359D31EAB1150FF796D99BA22C778EFB7C32C1B0D4225D",
+      "Lines": [
+        {
+          "Text": "Befor",
+          "Gap": 0.0
+        },
+        {
+          "Text": "e",
+          "Gap": 14.639999999999986
+        },
+        {
+          "Text": "form",
+          "Gap": 29.280000000000086
+        },
+        {
+          "Text": "ula:",
+          "Gap": 43.92000000000007
+        },
+        {
+          "Text": "after",
+          "Gap": 58.56000000000006
+        },
+        {
+          "Text": "form",
+          "Gap": 73.20000000000005
+        },
+        {
+          "Text": "ula.",
+          "Gap": 87.84000000000003
+        },
+        {
+          "Text": "Follo",
+          "Gap": 102.48000000000002
+        },
+        {
+          "Text": "wing",
+          "Gap": 117.24000000000001
+        },
+        {
+          "Text": "prose",
+          "Gap": 131.88
+        },
+        {
+          "Text": ".",
+          "Gap": 146.5200000000001
+        }
+      ]
+    },
+    {
+      "Id": "overwide-word-off",
+      "InputSha256": "AD69CE02945AEE1D2EFDE9E71E6479D3E871A11F86023B96A7BC7BFFD7F23303",
+      "ReferencePdfSha256": "1566664D608B77B4EBF48DA26238F0AB4FC48F9A814B9F4B5606234DD79C9E0B",
+      "Lines": [
+        {
+          "Text": "Befor",
+          "Gap": 0.0
+        },
+        {
+          "Text": "e",
+          "Gap": 14.639999999999986
+        },
+        {
+          "Text": "form",
+          "Gap": 29.280000000000086
+        },
+        {
+          "Text": "ula:",
+          "Gap": 43.92000000000007
+        },
+        {
+          "Text": "after",
+          "Gap": 58.56000000000006
+        },
+        {
+          "Text": "form",
+          "Gap": 73.20000000000005
+        },
+        {
+          "Text": "ula.",
+          "Gap": 87.84000000000003
+        },
+        {
+          "Text": "Follo",
+          "Gap": 102.48000000000002
+        },
+        {
+          "Text": "wing",
+          "Gap": 117.24000000000001
+        },
+        {
+          "Text": "prose",
+          "Gap": 131.88
+        },
+        {
+          "Text": ".",
+          "Gap": 146.5200000000001
+        }
+      ]
+    }
+  ]
+}

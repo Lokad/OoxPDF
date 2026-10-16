@@ -1,0 +1,38 @@
+[
+  {
+    "Id": "overwide-word-default",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/overwide-word-default.docx",
+    "Sha256": "CEA541521F291F89AAAC1506898404D7B5DC49F9F33D3ED2FDD3EC91D5C8EB97",
+    "SourceSha256": "1ABBC8AA37727FB1E57894F8F0EFF715BF05FD25FEB3DCACCC0472F76F15E29C",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "overwide-word-on",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/overwide-word-on.docx",
+    "Sha256": "902B954FF90A85D60B44EBDC5F3B6F72931EE253322FDEC49205919C1B1243F3",
+    "SourceSha256": "1ABBC8AA37727FB1E57894F8F0EFF715BF05FD25FEB3DCACCC0472F76F15E29C",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "overwide-word-off",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/overwide-word-off.docx",
+    "Sha256": "AD69CE02945AEE1D2EFDE9E71E6479D3E871A11F86023B96A7BC7BFFD7F23303",
+    "SourceSha256": "1ABBC8AA37727FB1E57894F8F0EFF715BF05FD25FEB3DCACCC0472F76F15E29C",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Following prose."
+    ]
+  }
+]

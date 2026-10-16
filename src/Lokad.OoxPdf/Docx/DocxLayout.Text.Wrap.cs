@@ -180,6 +180,7 @@ internal sealed partial class DocxLayoutEngine
         // produced while wrapping one chain share its end, so the first full
         // measure of a chain lets later remainders skip their full measure.
         var chainAverages = new Dictionary<int, double>();
+        Dictionary<int, bool>? emergencyWordChains = null;
         // R07.2: index span start offsets once per segment so slice lookups seek
         // instead of restarting traversal from the first span on every measure.
         int[] spanStarts = new int[spans.Count + 1];
@@ -326,9 +327,9 @@ internal sealed partial class DocxLayoutEngine
                 tokenIndex--;
             }
             else if (lineLength == 0 &&
-                allowOverwideTokenBreaks &&
                 !token.IsBreakableWhitespace &&
-                TryFindOverwideTokenBreak(text, spans, token, maxWidth(lineIndex), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, counters, breakOpportunities, out breakLength))
+                TryFindOverwideTokenBreak(text, spans, token, maxWidth(lineIndex), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, counters, breakOpportunities, out breakLength) &&
+                (allowOverwideTokenBreaks || CanEmergencyBreakWord(token)))
             {
                 yield return CreateWrappedTextLine(text, spans, token.Start, breakLength, endsWithIntraTokenBreak: true, spanStarts);
                 lineIndex++;
@@ -350,6 +351,21 @@ internal sealed partial class DocxLayoutEngine
         if (lineLength > 0)
         {
             yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false, spanStarts);
+        }
+
+        bool CanEmergencyBreakWord(TextToken token)
+        {
+            // Word still breaks an ordinary word which fits no line, including
+            // with wordWrap on/default. Keep the existing non-breaking-span
+            // fallback; those compounds need their own independent geometry.
+            // Remainders share a token end: scan a long chain only once.
+            int end = token.Start + token.Length;
+            emergencyWordChains ??= new();
+            if (emergencyWordChains.TryGetValue(end, out bool allowed)) return allowed;
+            cancellationToken.ThrowIfCancellationRequested();
+            allowed = text.AsSpan(token.Start, token.Length).IndexOfAny("\u2011\u00A0\u2007\u202F\u2060\uFEFF".AsSpan()) < 0;
+            emergencyWordChains.Add(end, allowed);
+            return allowed;
         }
     }
 

@@ -815,6 +815,57 @@ internal static class DocxTextWrapTests
         TestAssert.Equal("ABC\u2011DEFG", lines[0].Text);
     }
 
+    public static void DocxEmergencyWrappingMatchesIndependentWordLineCountsAndGaps()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "calibri.ttf")))
+            TestAssert.Skip("Installed Calibri is required for independent ordinary-word frames.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "overwide-word-office-lines.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(),
+                Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(input))));
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var page = renderer.RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).Single();
+            var lines = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).GroupBy(show => show.Y)
+                .OrderByDescending(group => group.Key).Select(group =>
+                    (Baseline: group.Key, Text: string.Concat(group.Select(show => show.Text)).Trim())).ToArray();
+            var expected = row.GetProperty("Lines").EnumerateArray().ToArray();
+            TestAssert.Equal(expected.Length, lines.Length);
+            // Existing kerning differences can choose an adjacent character at
+            // a wrap boundary; retain that visual residual independently.
+            string Compact(string value) => string.Concat(value.Where(character => !char.IsWhiteSpace(character)));
+            TestAssert.Equal(Compact(string.Concat(expected.Select(line => line.GetProperty("Text").GetString()))),
+                Compact(string.Concat(lines.Select(line => line.Text))));
+            for (int index = 0; index < expected.Length; index++)
+            {
+                TestAssert.True(Math.Abs(lines[0].Baseline - lines[index].Baseline - expected[index].GetProperty("Gap").GetDouble()) < .15d,
+                    "Emergency breaking must retain independent Word line gaps in both presets.");
+            }
+        }
+    }
+
+    public static void DocxEmergencyWrappingBreaksOrdinaryWordsWithoutChangingProtectedSpans()
+    {
+        var measurer = new ProfilingMeasurer((run, text) => text.Length);
+        foreach (bool authoredCharacterWrap in new[] { false, true })
+        {
+            var lines = WrapSpans("ABCDEFGH", SingleSpan("ABCDEFGH"), 5d, authoredCharacterWrap, measurer, default);
+            TestAssert.Equal(2, lines.Count);
+            TestAssert.Equal("ABCDE", string.Concat(lines[0].Spans.Select(span => span.Text)));
+            TestAssert.Equal("FGH", string.Concat(lines[1].Spans.Select(span => span.Text)));
+        }
+        foreach (string value in new[] { "ABC\u2011DEFG", "ABC\u00A0DEFG", "ABC\u2060DEFG" })
+            TestAssert.Equal(1, WrapSpans(value, SingleSpan(value), 5d, false, measurer, default).Count);
+        string longWord = new('a', 20000);
+        var continued = WrapSpans(longWord, SingleSpan(longWord), 10d, false, measurer, default);
+        TestAssert.Equal(2000, continued.Count);
+        TestAssert.Equal(longWord, string.Concat(continued.SelectMany(line => line.Spans).Select(span => span.Text)));
+    }
+
     public static void DocxParagraphLayoutWordWrapOffBreaksOverwideLatinTokens()
     {
         var paragraph = new DocxParagraph(
