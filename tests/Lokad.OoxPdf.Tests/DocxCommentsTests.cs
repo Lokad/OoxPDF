@@ -1540,6 +1540,7 @@ internal static partial class DocxCommentsTests
 
     public static void DocxWordCompatibleAllMarkupRendersGroupedCommentTextWithOfficeBalloonFont()
     {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Exact grouped balloon font weights and wrapping use installed Office-compatible fonts.");
         DocxParagraph boldSeedParagraph = new(
             [new DocxTextRun("Bold label seed", 10d, null, true, false, false, null, null)],
             [],
@@ -9186,7 +9187,7 @@ internal static partial class DocxCommentsTests
                 """
         });
         DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
-        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         DocxMarkupBalloonPlacementSnapshot balloon = renderer.InspectMarkupBalloons(document).Single(item => item.Kind == "Comment");
         TestAssert.True(balloon.Height > 30d, "Word-compatible balloons should grow past the two-row preview cap for long comment bodies. Height=" + balloon.Height.ToString(CultureInfo.InvariantCulture));
         PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
