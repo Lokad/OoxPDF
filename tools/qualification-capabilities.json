@@ -2191,5 +2191,17 @@
     "DocxFontPlanUsesWordClassicTypefaceBeforeModernFallbacks",
     "DocxInlineCompositionUndeclaredTypefaces",
     "PortableRenderingUndeclaredTypefaces"
+  ],
+  "docx-portable-default-math": [
+    "PortableRenderingDefaultMath",
+    "PortableRenderingStaticMissingMathKeepsSourceContent",
+    "PortableRenderingTextRevisionMathKeepsSourceOwnersAndFallbacks",
+    "PortableRenderingDocxFinalPreservesMixedContent",
+    "PortableRenderingDocxAllMarkupPreservesMixedContent",
+    "PortableRenderingStaticListsKeepLabelsAcrossModes",
+    "PortableRenderingStaticSourceFramesKeepProseOnPage",
+    "DocxInlineCompositionTextRevisionMathPreservesSourceAndFallbacks",
+    "DocxInlineCompositionTextRevisionOwnershipKeepsNontextFallbacksAndCancellation",
+    "DocxNativeMathMissingFontsAndUnqualifiedFormattingRetainIgnoredDiagnostics"
   ]
 }

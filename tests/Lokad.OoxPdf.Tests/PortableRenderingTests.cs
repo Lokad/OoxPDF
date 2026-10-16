@@ -16,6 +16,54 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingDefaultMathFontCoversItalicAlphabet()
+    {
+        var resolver = new PinnedResolver(mathFont: true);
+        var resolution = resolver.Resolve(new FontRequest("Cambria Math"));
+        var font = OpenTypeFont.Load(resolution.Source.GetBytesAsync().GetAwaiter().GetResult().ToArray());
+        TestAssert.True(font.HasTrueTypeOutlines && font.TryGetMathConstants(out _),
+            "The pinned math face must supply managed TrueType outlines and MATH constants.");
+        foreach (int scalar in new[] { 0x1D44E, 0x1D44F, 0x1D450, 0x1D465, 0x1D466 })
+            TestAssert.True(font.MapCodePoint(scalar) != 0,
+                "Constants alone do not establish mathematical italic glyph coverage: " + scalar.ToString("X"));
+    }
+
+    public static void PortableRenderingDefaultMathKeepsTextRevisionOwners() =>
+        DocxInlineCompositionTests.CheckTextRevisionMath(new PinnedResolver(mathFont: true), preserveDefaultMath: true);
+
+    public static void PortableRenderingDefaultMathComposesAcrossStories()
+    {
+        foreach (string story in new[] { "body", "cell", "header", "footer" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/math-run-format-" + story + "-bold.docx"), mode);
+            var paragraphs = DocxBlockTraversal.EnumerateSourceParagraphs(document).ToArray();
+            var owners = paragraphs.SelectMany(paragraph => paragraph.Runs).ToArray();
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = new DocxRenderer(new PinnedResolver(mathFont: true), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).Single();
+            var fonts = page.Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
+                .Select(font => font.Font).ToHashSet();
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, includeTextTransforms: true)
+                .Where(show => fonts.Contains(show.Font)).ToArray();
+            TestAssert.Equal(18, shows.Length);
+            TestAssert.True(shows.All(show => show.X >= 0d && show.X < page.Width && show.Y > 0d && show.Y < page.Height),
+                "Ordinary mathematical italic content must reach its visible body/cell/static frame.");
+            string math = string.Concat(shows.Select(show => show.Text)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal(2, math.Split("x+2y", StringSplitOptions.None).Length - 1);
+            TestAssert.Equal(2, math.Split("a+b=c", StringSplitOptions.None).Length - 1);
+            TestAssert.Equal(1, page.Images.Count);
+            TestAssert.Contains("share the same input series.", DocxPageFootnoteNumberingTests.DecodeText(page));
+            string part = story == "body" || story == "cell" ? document.MainPartName : "/word/" + story + "1.xml";
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION" || d.PartName != part),
+                "A supplied complete math face cannot silently lose supported selected-story equations.");
+            TestAssert.True(owners.Zip(paragraphs.SelectMany(paragraph => paragraph.Runs)).All(pair => ReferenceEquals(pair.First, pair.Second)),
+                "Portable default math retains authored runs and source ownership.");
+            CheckWrittenPages([page]);
+        }
+    }
+
     public static void PortableRenderingUndeclaredTypefacesKeepSourceOwners() =>
         DocxInlineCompositionTests.CheckDefaultTypefaces(new PinnedResolver());
 
@@ -1100,16 +1148,19 @@ internal static class PortableRenderingTests
     private sealed class PinnedResolver : IFontResolver
     {
         private readonly FileFontProgramSource source;
+        private readonly string family;
 
-        public PinnedResolver()
+        public PinnedResolver(bool mathFont = false)
         {
-            string path = Case("PortableFonts/DejaVuSans.ttf");
-            TestAssert.Equal("AE7B7855E115A5966D8B1B3F80F254CCC117EC86F9965E202EE2940453837280",
+            string path = Case(mathFont ? "PortableFonts/DejaVuMathTeXGyre.ttf" : "PortableFonts/DejaVuSans.ttf");
+            TestAssert.Equal(mathFont ? "75A6CB527B0175F9D13AF29C33A6915AE38645016C6FE9881653155CD1F62485"
+                : "AE7B7855E115A5966D8B1B3F80F254CCC117EC86F9965E202EE2940453837280",
                 Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
             source = new(path);
+            family = mathFont ? "DejaVu Math TeX Gyre" : "DejaVu Sans";
         }
 
-        public FontFaceResolution Resolve(FontRequest request) => new(request.FamilyName, "DejaVu Sans",
+        public FontFaceResolution Resolve(FontRequest request) => new(request.FamilyName, family,
             new FontStyleKey(HasMathTable: true), source, IsFallback: false);
     }
 }

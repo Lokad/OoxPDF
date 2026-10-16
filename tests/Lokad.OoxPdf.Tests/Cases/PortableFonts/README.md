@@ -1,4 +1,4 @@
-# Portable rendering font
+# Portable rendering fonts
 
 Unmodified `DejaVuSans.ttf` from Debian `fonts-dejavu-core` 2.37-8, upstream
 <https://dejavu-fonts.github.io/>. SHA-256:
@@ -12,6 +12,18 @@ font. This is a test input, never a shipped library dependency.
 The portable rendering group maps every family/style request to this one face.
 It checks composed content, image painting and PDF resources on both platforms.
 It does not establish Office typography or replace independent visual gates.
+
+`DejaVuMathTeXGyre.ttf` is an unmodified test-only face from Ubuntu
+`fonts-dejavu-extra` 2.37-8. Its package/font hashes and upstream licence source
+are pinned in `math-font-provenance.json`; `DejaVuMath-LICENSE.txt` retains the
+complete upstream 2.37 notices, including the math extensions and AMS glyphs.
+The math resolver explicitly selects this face for ordinary mathematical italic
+content. Coverage verifies the five letters missing from the Sans face and
+equations alongside bookmarks, run splitting, revisions and images across body,
+cells, headers and footers, in both public presets. Those inputs keep their
+authored mathematical style. Existing Sans checks still exercise missing-glyph
+fallback and explicit normal math. Neither substituted face proves Office
+typography; independent native-font comparisons and thresholds remain separate.
 
 `letter-normal-math.docx` derives from the pinned composition letter by adding
 `m:rPr/m:nor m:val="1"` to each mathematical run. The font lacks the default

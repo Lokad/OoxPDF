@@ -94,7 +94,7 @@ internal static partial class DocxInlineCompositionTests
         CheckTextRevisionMath(null);
     }
 
-    internal static void CheckTextRevisionMath(IFontResolver? resolver)
+    internal static void CheckTextRevisionMath(IFontResolver? resolver, bool preserveDefaultMath = false)
     {
         foreach (string story in new[] { "body", "cell", "header", "footer" })
         foreach (string kind in new[] { "ins", "del" })
@@ -105,7 +105,7 @@ internal static partial class DocxInlineCompositionTests
             foreach (bool metadata in new[] { false, true })
             {
                 var source = ReadMutation("CompositionProbes/math-revision-" + story + "-" + kind, mode, metadata, metadata,
-                    resolver is null ? null : (xml, w, m) =>
+                    resolver is null || preserveDefaultMath ? null : (xml, w, m) =>
                     {
                         foreach (var run in xml.Descendants(m + "r"))
                         {

@@ -1,0 +1,11 @@
+{
+  "Font": "DejaVuMathTeXGyre.ttf",
+  "FontSha256": "75A6CB527B0175F9D13AF29C33A6915AE38645016C6FE9881653155CD1F62485",
+  "SourcePackage": "Ubuntu fonts-dejavu-extra 2.37-8",
+  "SourcePackageUrl": "https://archive.ubuntu.com/ubuntu/pool/main/f/fonts-dejavu/fonts-dejavu-extra_2.37-8_all.deb",
+  "SourcePackageSha256": "5502E5CCC416683E5251DC105B37BE31158BC2E02133221E56524EA2A8E426FE",
+  "License": "DejaVuMath-LICENSE.txt",
+  "LicenseSha256": "7A083B136E64D064794C3419751E5C7DD10D2F64C108FE5BA161EAE5E5958A93",
+  "UpstreamLicense": "https://github.com/dejavu-fonts/dejavu-fonts/blob/version_2_37/LICENSE",
+  "Scope": "Unmodified test input only; preserve authored ordinary mathematical italic text and existing missing-glyph fallback controls."
+}
