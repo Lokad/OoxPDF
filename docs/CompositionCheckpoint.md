@@ -1333,3 +1333,33 @@ or suite replay. An intermediate keep-out artifact remains as the regression
 parent; final promotion followed review of all presets. Evidence:
 `artifacts/composition-c1/static-table-print-evidence.json` and
 `artifacts/composition-c1/composed-static-cell-evidence.json`.
+
+Ordered inline painting now rejoins adjacent word atoms within the same source
+owner and identical font/spacing state. Wrapping retains word atoms and source
+extents; painting retains glyph-run continuity with linear string assembly. This
+improves all eight portfolio first-page Office comparisons (MAE down 0.04146 Final /
+0.01897 review), with later-page metrics unchanged, and all four complete-report
+page pairs. Eight classic failure sets remain unchanged; small cosmetic wrapping
+metric tradeoffs are retained. All existing numerical thresholds remain.
+
+A broader single-equation eligibility prototype is rejected: it discarded 0.348pt
+of script occupied leading and added a failed visual gate. The original eligibility
+and script/fraction PDFs remain unchanged; no script/font/size exception is added.
+The next investigation is the shared prepared-frame versus ink-fit contract.
+
+Frozen 94f6f425 / root 8994b85a passes 36 Windows methods in one invocation and
+12 Ubuntu checks; 24 native/Office-font controls skip without their prerequisites.
+Two missing test prerequisites reproduced parent failures and are now explicit.
+Text-show anchor extraction accounts for leading spaces, preserving the original
+Office values/tolerances. The test-only correction retains qualified library
+SHA-256 44A76742D209D729F993E9BC692E9D53EAA81313178F942A29C9AF3499BBA354;
+all completed conversion/comparison work is reused.
+
+Ten portfolio outcomes retain zero prose/simple-math presence deficits; eight DOCX
+gates fail and both decks pass. The complete report retains two pages in both
+presets, all ten source equations, three source image placements and five navigation
+rectangles; all four page pairs were reviewed without serious omission/overlap/
+clipping. Its generic dynamic-field/rate-time screens remain unresolved, and both
+numerical gates fail. Transfer verifies 17 assets/four PDFs with no root build or
+suite replay. No speedup is claimed. Evidence:
+`artifacts/composition-c1/ordered-glyph-run-evidence.json`.
