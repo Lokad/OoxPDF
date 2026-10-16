@@ -1,0 +1,80 @@
+[
+  {
+    "Id": "math-display-image-body-before",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-display-image-body-before.docx",
+    "Sha256": "FFAE6B4703BAA21C2794FEF97A608221057CE37E49199DBB84D636E03D543A1E",
+    "SourceSha256": "F813CAE3479B3BBA4B11D8E3361DE08698804481270C0AF3E00301B3C915DEE4",
+    "ImageSourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "ExpectedEquationCount": 2,
+    "ExpectedInlineImageCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-display-image-body-between",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-display-image-body-between.docx",
+    "Sha256": "5085A4C8DB9177B51046A33DB963E8CD5A0A895C8ABEDE581BC05646EFFF2B2E",
+    "SourceSha256": "F813CAE3479B3BBA4B11D8E3361DE08698804481270C0AF3E00301B3C915DEE4",
+    "ImageSourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "ExpectedEquationCount": 2,
+    "ExpectedInlineImageCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-display-image-body-combined",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-display-image-body-combined.docx",
+    "Sha256": "BA6452A492B205BA53E5E592DB0134DB478376BA2DD6D10EC906D4DC55E5F0A2",
+    "SourceSha256": "F813CAE3479B3BBA4B11D8E3361DE08698804481270C0AF3E00301B3C915DEE4",
+    "ImageSourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "ExpectedEquationCount": 1,
+    "ExpectedInlineImageCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-display-image-cell-before",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-display-image-cell-before.docx",
+    "Sha256": "05476A5D718E7162E6F83FEDB4ED5BE9385691612644ED12E12711692F9C11C2",
+    "SourceSha256": "77C1EADDE402F2C9B20B51CB3B5530D975930EF76EDBFCD51B377197828B4DC6",
+    "ImageSourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "ExpectedEquationCount": 2,
+    "ExpectedInlineImageCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-display-image-cell-between",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-display-image-cell-between.docx",
+    "Sha256": "A784316B4D6989EEE6879E6CA62B8D2D9949F4D0CCE41430A4C852869715A119",
+    "SourceSha256": "77C1EADDE402F2C9B20B51CB3B5530D975930EF76EDBFCD51B377197828B4DC6",
+    "ImageSourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "ExpectedEquationCount": 2,
+    "ExpectedInlineImageCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-display-image-cell-combined",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-display-image-cell-combined.docx",
+    "Sha256": "5269CFC5CAD1BC6ECBCF52615330F543ACF5668D6D7B6478C3C909127EB1021E",
+    "SourceSha256": "77C1EADDE402F2C9B20B51CB3B5530D975930EF76EDBFCD51B377197828B4DC6",
+    "ImageSourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "ExpectedEquationCount": 1,
+    "ExpectedInlineImageCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "Following prose."
+    ]
+  }
+]

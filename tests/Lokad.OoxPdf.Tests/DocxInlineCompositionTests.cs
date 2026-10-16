@@ -11,6 +11,91 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionDisplayImageRowsKeepOfficeFractionGeometryAndKnownCellOffset()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent controls use installed Arial metrics.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-display-images-office-geometry.json")));
+        foreach (var row in reference.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            var mode = row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
+            var page = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).Single();
+            TestAssert.Equal(1, page.Images.Count);
+            var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
+            var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Where(show => fonts.Contains(show.Font)).ToArray();
+            TestAssert.Equal(row.GetProperty("MathText").GetString(), string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+            TestAssert.Equal(16, math.Length);
+            var anchors = row.GetProperty("Anchors").EnumerateArray().ToArray();
+            double origin = anchors[0].GetProperty("X").GetDouble();
+            foreach (var anchor in anchors)
+            {
+                int index = anchor.GetProperty("Occurrence").GetInt32() * 8 + (anchor.GetProperty("Text").GetString() == "rate" ? 0 : 4);
+                TestAssert.True(Math.Abs(math[index].X - anchor.GetProperty("X").GetDouble()) < 1d &&
+                    Math.Abs(math[index].X - math[0].X - (anchor.GetProperty("X").GetDouble() - origin)) < .2d,
+                    "Word's inline fraction geometry and separation survive adjacent source equation boundaries.");
+                // The image-only printed-cell baseline differs by about 2.6pt.
+                // Retain this measured defect and the failed visual gate; this
+                // bound prevents further displacement without claiming fidelity.
+                TestAssert.True(Math.Abs(math[index].Y - anchor.GetProperty("Y").GetDouble()) < 2.7d,
+                    "The known printed-cell baseline residual must not grow.");
+                TestAssert.True(Math.Abs(math[index].Size / 12d - anchor.GetProperty("FontSize").GetDouble() / row.GetProperty("ProseFontSize").GetDouble()) < .01d,
+                    "A visible image selects independently observed inline argument sizing.");
+            }
+        }
+    }
+
+    public static void DocxInlineCompositionDisplayImageRowsPreserveSourceAndFractionSeparation()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Native controls use installed math fonts.");
+        CheckDisplayImageRows(null);
+    }
+
+    internal static void CheckDisplayImageRows(Lokad.OoxPdf.Fonts.IFontResolver? resolver)
+    {
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var combined = renderer.RenderBlankPages(ReadMutation($"CompositionProbes/math-display-image-{container}-combined", mode, false, false), null, default).Single();
+            var combinedFonts = combined.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
+            var expected = DocxCommentsTests.ReadEmbeddedGlyphTextShows(combined, usePageCoordinates: true).Where(show => combinedFonts.Contains(show.Font)).ToArray();
+            foreach (string position in new[] { "before", "between", "combined" })
+            foreach (bool transformed in new[] { false, true })
+            {
+                var source = ReadMutation($"CompositionProbes/math-display-image-{container}-{position}", mode, transformed, transformed);
+                var owner = DocxBlockTraversal.EnumerateBodyParagraphs(source.BodyElements).Single(paragraph => paragraph.Equations.Count != 0);
+                TestAssert.Equal(position == "combined" ? 1 : 2, owner.Equations.Count);
+                TestAssert.True(owner.Equations.All(equation => equation.Display), "Source display flags remain attached to the original formulas.");
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var page = renderer.RenderBlankPages(source, diagnostics.Add, default).Single();
+                TestAssert.Equal(1, page.Images.Count);
+                var picture = System.Text.RegularExpressions.Regex.Match(page.Content,
+                    @"(?<width>-?[\d.]+) 0 0 (?<height>-?[\d.]+) (?<x>-?[\d.]+) (?<y>-?[\d.]+) cm\s*/" + page.Images.Single().ResourceName + @" Do");
+                TestAssert.True(picture.Success, "The real image must reach PDF painting with its own placement.");
+                var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
+                var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Where(show => fonts.Contains(show.Font)).ToArray();
+                TestAssert.Equal("ratetimeratetime", string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+                TestAssert.Equal(16, math.Length);
+                if (position != "between")
+                {
+                    TestAssert.Equal(16, expected.Length);
+                    for (int index = 0; index < math.Length; index++)
+                        TestAssert.True(Math.Abs(math[index].X - expected[index].X) < .01d && Math.Abs(math[index].Y - expected[index].Y) < .01d,
+                            "Merging adjacent source equations must preserve fraction spacing and placement: " + container + "/" + mode + "/" + position + "/" + index + ": " + math[index].X + "," + math[index].Y + " versus " + expected[index].X + "," + expected[index].Y + ".");
+                }
+                else TestAssert.True(math[8].X - math[0].X > owner.Images.Single().WidthPoints * (mode == OoxPdfDocxMarkupMode.Final ? 1d : .7d),
+                    "The image retains its source position between both fractions.");
+                TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "A visible picture cannot discard supported equations.");
+                TestAssert.Contains("Following prose.", DocxPageFootnoteNumberingTests.DecodeText(page));
+            }
+        }
+    }
+
     public static void DocxInlineCompositionMixedDisplaySourceRolesFollowAuthoredRows()
     {
         var document = ReadMutation("CompositionProbes/math-mixed-display-literal-all", OoxPdfDocxMarkupMode.Final, false, false);
@@ -18,7 +103,7 @@ internal static class DocxInlineCompositionTests
         var prose = source.Runs.First(run => run.Text.Contains("Before formula:", StringComparison.Ordinal));
         var paragraph = source with { InlineContent = [new DocxInlineText(prose, 0, prose.Text.Length),
             new DocxInlineEquation(source.Equations[0]), new DocxInlineBreak(prose, 0), new DocxInlineEquation(source.Equations[1])] };
-        var mixed = DocxMathParagraphPolicy.GetProseSourceEquations(paragraph, default);
+        var mixed = DocxMathParagraphPolicy.GetMixedSourceEquations(paragraph, default);
         var display = DocxMathParagraphPolicy.GetDisplaySourceEquations(paragraph, default);
         TestAssert.Equal(1, mixed.Count);
         TestAssert.Equal(1, display.Count);
@@ -26,7 +111,7 @@ internal static class DocxInlineCompositionTests
             "Authored row boundaries keep the prose formula inline and the following math-only row in display style.");
         TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
         using var canceled = new CancellationTokenSource(); canceled.Cancel();
-        TestAssert.Throws<OperationCanceledException>(() => DocxMathParagraphPolicy.GetProseSourceEquations(paragraph, canceled.Token));
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathParagraphPolicy.GetMixedSourceEquations(paragraph, canceled.Token));
     }
 
     public static void DocxInlineCompositionMixedDisplayRowsMatchIndependentWord()
@@ -111,7 +196,7 @@ internal static class DocxInlineCompositionTests
                 : DocxBlockTraversal.EnumerateBodyParagraphs(source.BodyElements).Single(p => p.Equations.Count == 2);
             var originalFlags = owner.Equations.Select(equation => equation.Display).ToArray();
             TestAssert.True(originalFlags.Any(value => value), "The source retains explicit display containers.");
-            TestAssert.Equal(2, DocxMathParagraphPolicy.GetProseSourceEquations(owner, default).Count);
+            TestAssert.Equal(2, DocxMathParagraphPolicy.GetMixedSourceEquations(owner, default).Count);
             var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var before = renderer.RenderBlankPages(inline, null, default).Single();

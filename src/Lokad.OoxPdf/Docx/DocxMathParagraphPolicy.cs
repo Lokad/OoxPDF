@@ -136,13 +136,13 @@ internal static class DocxMathParagraphPolicy
             : new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
 
     private static IReadOnlySet<DocxEquation> GetMathOnlySourceEquations(DocxParagraph paragraph,
-        CancellationToken token) => GetSourceRowEquations(paragraph, token, withProse: false);
+        CancellationToken token) => GetSourceRowEquations(paragraph, token, withInlineOwner: false);
 
-    public static IReadOnlySet<DocxEquation> GetProseSourceEquations(DocxParagraph paragraph,
-        CancellationToken token) => GetSourceRowEquations(paragraph, token, withProse: true);
+    public static IReadOnlySet<DocxEquation> GetMixedSourceEquations(DocxParagraph paragraph,
+        CancellationToken token) => GetSourceRowEquations(paragraph, token, withInlineOwner: true);
 
     private static IReadOnlySet<DocxEquation> GetSourceRowEquations(DocxParagraph paragraph,
-        CancellationToken token, bool withProse)
+        CancellationToken token, bool withInlineOwner)
     {
         var display = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
         if (!HasSupportedSourceOwner(paragraph, hasPageInputs: true) || paragraph.ListLabel is not null ||
@@ -150,7 +150,7 @@ internal static class DocxMathParagraphPolicy
             return display;
         var row = new List<DocxEquation>();
         bool hasOtherContent = false;
-        bool hasProse = false;
+        bool hasInlineOwner = false;
         foreach (var item in items)
         {
             token.ThrowIfCancellationRequested();
@@ -165,7 +165,8 @@ internal static class DocxMathParagraphPolicy
                     row.Add(math.Equation);
                     break;
                 case DocxInlineText:
-                    hasProse = true;
+                case DocxInlinePicture:
+                    hasInlineOwner = true;
                     hasOtherContent = true;
                     break;
                 case DocxInlineBreak:
@@ -181,7 +182,7 @@ internal static class DocxMathParagraphPolicy
 
         void CompleteRow()
         {
-            if (withProse ? hasProse : !hasOtherContent)
+            if (withInlineOwner ? hasInlineOwner : !hasOtherContent)
                 foreach (var equation in row)
                 {
                     token.ThrowIfCancellationRequested();
@@ -189,7 +190,7 @@ internal static class DocxMathParagraphPolicy
                 }
             row.Clear();
             hasOtherContent = false;
-            hasProse = false;
+            hasInlineOwner = false;
         }
     }
 
@@ -260,10 +261,10 @@ internal static class DocxMathParagraphPolicy
             paragraph.InlineContent is null ||
             paragraph.Spacing.LineRuleValue is not (null or "auto") || paragraph.LineSpacingPoints is not null) return [];
         // Source rows own resolved style: Word measures explicit formulas inline
-        // beside prose, while math-only rows retain display measurement/alignment.
+        // beside visible text/pictures; math-only rows retain display measurement/alignment.
         var displayRows = paragraph.Equations.Any(equation => equation.Display)
             ? GetMathOnlySourceEquations(paragraph, token) : null;
-        var proseRows = displayRows is not null ? GetProseSourceEquations(paragraph, token) : null;
+        var mixedRows = displayRows is not null ? GetMixedSourceEquations(paragraph, token) : null;
         if (displayRows is not null && ResolveDisplayAlignment(paragraph.Equations, token) is null) return [];
         if (!HasSupportedOrderedAlignment(paragraph) &&
             (displayRows is null || !DisplayRowsOwnParagraphAlignment(paragraph, displayRows, token))) return [];
@@ -271,7 +272,7 @@ internal static class DocxMathParagraphPolicy
         {
             token.ThrowIfCancellationRequested();
             if (equation.Display && (displayRows is null || !displayRows.Contains(equation)) &&
-                (proseRows is null || !proseRows.Contains(equation))) return [];
+                (mixedRows is null || !mixedRows.Contains(equation))) return [];
         }
         return paragraph.Equations;
     }

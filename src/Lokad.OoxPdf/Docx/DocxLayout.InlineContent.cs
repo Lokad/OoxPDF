@@ -485,7 +485,7 @@ internal sealed partial class DocxLayoutEngine
                     for (int field = index + 1; field < measured.Count && Atom(field).Source is not (DocxInlineTab or DocxInlineBreak); field++)
                     {
                         token.ThrowIfCancellationRequested();
-                        if (field > index + 1) fieldWidth += InlineTextBoundaryAdvance(Atom(field - 1), Atom(field));
+                        if (field > index + 1) fieldWidth += InlineBoundaryAdvance(Atom(field - 1), Atom(field));
                         fieldWidth += Atom(field).Advance;
                     }
                     double start = GetAlignedTabFieldStart(tabStop, fieldWidth, null);
@@ -518,7 +518,7 @@ internal sealed partial class DocxLayoutEngine
             double groupWidth = 0d;
             for (int offset = index; offset < end; offset++)
             {
-                if (offset > index) groupWidth += InlineTextBoundaryAdvance(measured[offset - 1], Atom(offset));
+                if (offset > index) groupWidth += InlineBoundaryAdvance(measured[offset - 1], Atom(offset));
                 groupWidth += Atom(offset).Advance;
             }
             double width = output.Count == 0 ? firstWidth : nextWidth;
@@ -563,7 +563,7 @@ internal sealed partial class DocxLayoutEngine
                         if (!double.IsFinite(partWidth) || partWidth < 0d) return false;
                         var part = new DocxMeasuredInlineFragment(source, partWidth, baselineInset, Math.Max(lineHeight, baselineInset), [span])
                             { TextSegments = segments, SourceItemIndex = span.SourceInlineItemIndex };
-                        part = part with { LeadingAdvance = current.Count == 0 ? 0d : InlineTextBoundaryAdvance(current[^1], part) };
+                        part = part with { LeadingAdvance = current.Count == 0 ? 0d : InlineBoundaryAdvance(current[^1], part) };
                         current.Add(part);
                         advance += part.LeadingAdvance + partWidth;
                     }
@@ -579,7 +579,7 @@ internal sealed partial class DocxLayoutEngine
                 index = end;
                 continue;
             }
-            double boundary = current.Count == 0 ? 0d : InlineTextBoundaryAdvance(current[^1], Atom(index));
+            double boundary = current.Count == 0 ? 0d : InlineBoundaryAdvance(current[^1], Atom(index));
             if (current.Count != 0 && advance + boundary + groupWidth > width)
             {
                 if (Atom(index).Math is { Box.AllowsInlineRelocation: false }) return false;
@@ -600,7 +600,7 @@ internal sealed partial class DocxLayoutEngine
             for (; index < end; index++)
             {
                 var fragment = Atom(index) with
-                    { LeadingAdvance = current.Count == 0 ? 0d : InlineTextBoundaryAdvance(current[^1], Atom(index)) };
+                    { LeadingAdvance = current.Count == 0 ? 0d : InlineBoundaryAdvance(current[^1], Atom(index)) };
                 current.Add(fragment); advance += fragment.LeadingAdvance + fragment.Advance;
                 above = Math.Max(above, fragment.BaselineInset);
                 below = Math.Max(below, fragment.OccupiedHeight - fragment.BaselineInset);
@@ -629,10 +629,19 @@ internal sealed partial class DocxLayoutEngine
 
         static bool IsSpace(DocxMeasuredInlineFragment fragment) => fragment.Source is DocxInlineText { Length: > 0 } text &&
             DocxTextBreakRules.IsBreakableWhitespaceChar(text.Run.Text[text.Start]);
-        double InlineTextBoundaryAdvance(DocxMeasuredInlineFragment left, DocxMeasuredInlineFragment right)
+        double InlineBoundaryAdvance(DocxMeasuredInlineFragment left, DocxMeasuredInlineFragment right)
         {
             if (ReferenceEquals(left.Source, right.Source) && right.MathContinuationAdvance is { } mathGap)
                 return mathGap;
+            // Word merges adjacent math zones. Reuse the same atom glue as a
+            // structured equation row so independent fractions keep their bars.
+            if (left.Math is { } beforeMath && right.Math is { } afterMath &&
+                !ReferenceEquals(beforeMath.Equation, afterMath.Equation) &&
+                beforeMath.Box.Edges is { } beforeEdges && afterMath.Box.Edges is { FirstNormalText: false } afterEdges)
+            {
+                double spacingSize = afterMath.Equation.ParentFontSize ?? afterMath.Box.ParentMetrics?.Size ?? fontSize;
+                return DocxMathRowLayout.Glue(beforeEdges.Last, afterEdges.First) * spacingSize * scale / 18d;
+            }
             if (left.Text.Count == 0 || right.Text.Count == 0) return 0d;
             var before = left.Text[^1];
             var after = right.Text[0];

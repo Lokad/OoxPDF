@@ -47,6 +47,8 @@ internal static partial class DocxMathLayout
         var rules = new List<DocxMathRulePlacement>();
         double advance = 0d, width = 0d, above = 0d, below = 0d;
         DocxMathMetricOwner? leadingOwner = null;
+        DocxMathRowLayout.RowEdges? leadingEdges = null;
+        var trailingKind = DocxMathRowLayout.AtomKind.Ordinary;
         bool afterStructure = false;
         var previousEnd = DocxMathRowLayout.AtomKind.Ordinary;
         foreach (StructuredPart part in row.Parts)
@@ -82,12 +84,19 @@ internal static partial class DocxMathLayout
         if (!double.IsFinite(width) || width < 0d || !double.IsFinite(above) || !double.IsFinite(below))
         { fallback = "InvalidMathStructuredRowExtent"; return false; }
         box = new(width, above, below, glyphs)
-        { LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = leadingOwner };
+        { LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = leadingOwner,
+            Edges = leadingEdges is null ? null : leadingEdges with { Last = trailingKind } };
         fallback = null;
         return true;
 
         void Append(DocxMathBox child, double x)
         {
+            if (child.Glyphs.Count != 0 || child.Rules.Count != 0)
+            {
+                var edges = child.Edges ?? new(DocxMathRowLayout.AtomKind.Ordinary, DocxMathRowLayout.AtomKind.Ordinary, false);
+                leadingEdges ??= edges;
+                trailingKind = edges.Last;
+            }
             width = Math.Max(width, x + child.Width);
             above = Math.Max(above, child.AboveBaseline); below = Math.Max(below, child.BelowBaseline);
             if (child.ParentMetrics is { } owner && (leadingOwner is null || Leading(owner) > Leading(leadingOwner)))

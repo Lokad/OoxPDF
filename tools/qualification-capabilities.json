@@ -1344,5 +1344,33 @@
     "DocxNativeTableDisplayMathRetainsCellsProseAndDeclaredClips",
     "DocxStaticTableMathCompleteReportMatchesIndependentPrintedFrames",
     "DocxInlineCompositionAtomicPlacementRetainsSourceBoundAndOverwidthFallbacks"
+  ],
+  "docx-display-image-rows": [
+    "DocxInlineCompositionDisplayImageRows",
+    "PortableRenderingDisplayImageRows",
+    "MathFontStructuredSequences",
+    "MathFontFractionRows",
+    "MathFontFractionScriptBases",
+    "MathFontDelimitedSubformulasSharePaintedThresholdAndSemanticGlue",
+    "DocxNativeStructuredSequences",
+    "DocxNativeMixedFractionRows",
+    "DocxNativeFractionDelimiters",
+    "DocxNativeNaryStructuredBodies",
+    "DocxNativeRootFractions",
+    "DocxNativeFractionScriptBases",
+    "DocxNativeDisplayFraction",
+    "DocxInlineCompositionMixedDisplay",
+    "PortableRenderingMixedDisplay",
+    "DocxInlineCompositionExplicitDisplays",
+    "DocxInlineCompositionExplicitDisplayLinks",
+    "DocxInlineCompositionAuthoredDisplayAlignment",
+    "PortableRenderingTotalPageMath",
+    "PortableRenderingNormalNotesPreserveInlineImagesAndMath",
+    "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance",
+    "DocxInlineCompositionMeasurementKeepsMultipleEquationsAndPicturesInSourceOrder",
+    "DocxInlineCompositionAtomicPlacementRetainsSourceBoundAndOverwidthFallbacks",
+    "DocxPictureLineFrameTravelsWithImagePlacement",
+    "DocxInlineImageClipTravelsWithScaledStoryPlacement",
+    "DocxStaticTableMathCompleteReportMatchesIndependentPrintedFrames"
   ]
 }

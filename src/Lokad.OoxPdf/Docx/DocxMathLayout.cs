@@ -258,6 +258,7 @@ internal static partial class DocxMathLayout
         box = new DocxMathBox(width, above, below, glyphs)
         { Rules = stack ? [] : [new DocxMathRulePlacement(0d, axis - thickness / 2d, width, thickness, first.Color)],
             EnclosureHeight = above + below,
+            Edges = new(DocxMathRowLayout.AtomKind.Inner, DocxMathRowLayout.AtomKind.Inner, false),
             ParentMetrics = sources.Any(source => source.Run.NormalText) ? new(metricOwner, parentSize) : null };
         fallback = null;
         return true;
