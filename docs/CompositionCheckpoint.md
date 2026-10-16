@@ -1718,3 +1718,30 @@ outlines, shadows and unsupported/custom geometry require explicit scope and tes
 raster controls alone do not qualify them. Safe managed/dependency-free constraints
 and existing visual thresholds remain. Detailed tasks are in `PLAN.md`; retained
 public synthetic evidence is under `artifacts/pptx-picture-geometry/`.
+
+
+## C45: ordinary PowerPoint picture masks
+
+The high-priority picture handoff is implemented for raster and native SVG paint.
+Resolved pictures retain preset geometry and adjustment guides; shared shape
+readers and picture-fill clips apply the mask in transformed frame coordinates,
+independently of source crop/fill and image alpha/recolor. Unknown/custom geometry
+retains a diagnosed rectangle fallback. Outlines/shadows also retain explicit
+rectangular effect warnings pending the next bounded geometry qualification.
+Six-letter SVG color keywords no longer throw in the hex parser and drop paint.
+
+Nine original pages and four new non-square/grouped/SVG/crop-fill-alpha controls
+retain masks and following paint. Twelve of thirteen page gates pass the retained
+image-family thresholds. The alpha control still fails SSIM (0.971024 versus
+0.995; MAE 0.292673), with sampled saturated channels two levels below the
+candidate in Office. Seven full-page pairs were reviewed, including transformed
+footprints. Original ellipse frame MAE falls 28.27 to about 0.002; rectangles retain
+pixels. The nine original Office raster references are reused with source-part
+identity proof; only the four new pages required an export.
+
+Frozen 2b91e23d passes 28 Windows methods once and 28 Ubuntu checks. Three parent
+regressions fail on C44. Sixteen existing cached image-family cases pass their
+individual thresholds; one cache miss retains the C44 PDF. All twelve fixed/
+complete PDFs retain accepted bytes/comparisons/reviews. Transfer verifies 17
+assets/four PDFs without rebuilding or repeating the root suite. Evidence:
+`artifacts/pptx-picture-geometry/evidence.json`.
