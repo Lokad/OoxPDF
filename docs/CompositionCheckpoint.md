@@ -1789,3 +1789,25 @@ source; only the four-PDF transfer smoke repeats. Transfer verifies 17 assets.
 Evidence: `artifacts/pptx-picture-geometry/bounded-blur-evidence.json`.
 The bounded picture handoff is complete with explicit unsupported/cosmetic limits;
 main rendering work returns to supported DOCX composition.
+
+
+## C48: numbered explicit-math composition
+
+A list label now owns the first authored inline row through shared source-row
+classification. Explicit math zones retain inline sizing beside that visible
+label/prose/picture; a later math-only row after an authored break retains display
+sizing/alignment. This fixes four-formula omissions across body/cell/header/footer
+without font, size or document-shape guards. Six public inputs/twelve Word outcomes
+retain all 18/22 glyphs, three labels and one picture. Bookmarks and unchanged-format
+run splitting retain geometry with native/portable fonts. Maximum Word X/Y errors
+are 0.877/0.834pt. Six reviewed pairs cover both modes by raster identity. All twelve
+numerical gates still fail unchanged thresholds; source-prose/simple-math presence
+screens have no deficits. Unreferenced-header warnings remain separate from visible
+content; that part is not printed by Word.
+
+Frozen 1de30ea5 passes 18 Windows methods once, 11 Ubuntu checks (seven native-font
+skips), two causal parent regressions and a 17-asset/four-PDF transfer. Eight fixed
+DOCX/two complete-report PDFs retain accepted bytes/comparisons/reviews. An initial
+unqualified probe built root by mistake; source moved to the isolated worktree and
+17 accepted root assets were restored by SHA before qualification. The root suite
+was not replayed. Evidence: `artifacts/composition-c1/numbered-display-evidence.json`.
