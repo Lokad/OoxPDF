@@ -1,0 +1,50 @@
+[
+  {
+    "Id": "revision-bar-comment-scaled",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionBars/revision-bar-comment-scaled.docx",
+    "Sha256": "4047993DF214A7A631364258DA830D6A2B0DCD20744D2A3B20AB64BC496E8319",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": []
+  },
+  {
+    "Id": "review-authors-same-author",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/review-authors-same-author.docx",
+    "Sha256": "AB0C40D7B194B9AFBE8A061785BB447ECA8FA430A3E744DC61F4FB398CFFD986",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": []
+  },
+  {
+    "Id": "review-authors-no-revision",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/review-authors-no-revision.docx",
+    "Sha256": "201EEFC0969A39E392FE50CB94FA6D7402DB65A212A3EF102A32345B6A29E569",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": []
+  },
+  {
+    "Id": "review-authors-late-revision",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/review-authors-late-revision.docx",
+    "Sha256": "FB1F5ABE7160100BFD75264BCE75C4A317CE52298CA915F77A786D886F186B6C",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": []
+  },
+  {
+    "Id": "review-authors-reverse-lexical",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/review-authors-reverse-lexical.docx",
+    "Sha256": "6AB6727BB41674A975096840833656E38D865ED0C36E44DE7468B62E04C4C78F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": []
+  },
+  {
+    "Id": "review-authors-deletion",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/review-authors-deletion.docx",
+    "Sha256": "47C008B706F4DAAC6811B58347608FB23FABF60008DE14E3C1C9EAEA73D0435C",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": []
+  }
+]

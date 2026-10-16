@@ -64,3 +64,11 @@ scale. They remain centered in a narrow margin, with the distance from body text
 capped at 36pt; their 0.72pt nominal thickness scales with the page. Independent
 Word controls cover 36–144pt margins, right-margin changes, landscape and a
 comment-fitted page. Vertical bar extents remain approximate.
+
+In the Word-compatible profile, source-owned insertion/deletion authors occupy
+comment palette slots before comment authors, independent of the body anchor
+order. Author identity preserves name casing; repeated exact names share a slot.
+Comment IDs retain their qualified numeric ordering and the twenty-color cycle.
+Balloon fills/outlines and body range washes/brackets share the same slots. The
+legacy revision-color hash keeps its existing normalization. Registration of
+nontext/property/move-only authors and inline multi-author ink remains approximate.

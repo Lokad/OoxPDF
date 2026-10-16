@@ -68,14 +68,56 @@ internal sealed partial class DocxRenderer
 
     internal static IReadOnlyDictionary<string, int> BuildCommentAuthorPaletteSlots(
         IEnumerable<(string? Id, string? Author)> commentsInFileOrder)
+        => BuildCommentAuthorPaletteSlotsCore(commentsInFileOrder, [], default);
+
+    internal static IReadOnlyDictionary<string, int> BuildWordReviewCommentAuthorPaletteSlots(
+        DocxDocument document, IEnumerable<(string? Id, string? Author)> comments, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        return BuildCommentAuthorPaletteSlotsCore(comments, TextRevisionAuthors(), token);
+
+        IEnumerable<string?> TextRevisionAuthors()
+        {
+            foreach (var paragraph in DocxBlockTraversal.EnumerateSourceParagraphs(document))
+            {
+                token.ThrowIfCancellationRequested();
+                foreach (var run in paragraph.Runs)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (run.Text.Length == 0) continue;
+                    if (run.Revision is { Kind: DocxRevisionKind.Insertion or DocxRevisionKind.Deletion } revision)
+                        yield return revision.Author;
+                    foreach (var item in run.Revisions)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (item.Kind is DocxRevisionKind.Insertion or DocxRevisionKind.Deletion) yield return item.Author;
+                    }
+                }
+            }
+        }
+    }
+
+    private static IReadOnlyDictionary<string, int> BuildCommentAuthorPaletteSlotsCore(
+        IEnumerable<(string? Id, string? Author)> commentsInFileOrder,
+        IEnumerable<string?> textRevisionAuthors, CancellationToken token)
     {
         var slotsById = new Dictionary<string, int>(StringComparer.Ordinal);
         var slotByAuthor = new Dictionary<string, int>(StringComparer.Ordinal);
+        // Word registers source text-revision authors before comment authors,
+        // independently of their anchor order. Name casing remains identity;
+        // the legacy revision-color hash still uses its case-folded key.
+        foreach (string? author in textRevisionAuthors)
+        {
+            token.ThrowIfCancellationRequested();
+            string key = NormalizeReviewAuthorIdentity(author);
+            if (!slotByAuthor.ContainsKey(key)) slotByAuthor.Add(key, slotByAuthor.Count);
+        }
         foreach ((string? id, string? author) in commentsInFileOrder
             .OrderBy(comment => TryParseCommentAuthorPaletteId(comment.Id, out int numericId) ? numericId : int.MaxValue)
             .ThenBy(comment => comment.Id, StringComparer.Ordinal))
         {
-            string key = NormalizeRevisionAuthorBucketKey(author);
+            token.ThrowIfCancellationRequested();
+            string key = NormalizeReviewAuthorIdentity(author);
             if (!slotByAuthor.TryGetValue(key, out int slot))
             {
                 slot = slotByAuthor.Count;

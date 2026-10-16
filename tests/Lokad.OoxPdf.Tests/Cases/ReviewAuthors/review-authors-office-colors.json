@@ -1,0 +1,155 @@
+{
+  "Source": "Independent Word16 inline-mode1 controls for comment colors beside ordinary text revisions; fonts/geometry remain separate visual gates.",
+  "Rows": [
+    {
+      "Id": "revision-bar-comment-scaled",
+      "Fixture": "RevisionBars/revision-bar-comment-scaled.docx",
+      "InputSha256": "4047993DF214A7A631364258DA830D6A2B0DCD20744D2A3B20AB64BC496E8319",
+      "ReferencePdfSha256": "9E0378ABC934C01416AFBE17F7FDFDA54FA3955BF16A170251A5F0454158A898",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 1,
+        "ShowComments": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        213,
+        237,
+        255
+      ],
+      "StrokeRgb": [
+        0,
+        120,
+        212
+      ],
+      "PageNumber": 2
+    },
+    {
+      "Id": "review-authors-same-author",
+      "Fixture": "ReviewAuthors/review-authors-same-author.docx",
+      "InputSha256": "AB0C40D7B194B9AFBE8A061785BB447ECA8FA430A3E744DC61F4FB398CFFD986",
+      "ReferencePdfSha256": "E995F56D482599BEFAC728DA0B73B46E4BF002CDBA05FFF2694B35C98E9EE886",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 1,
+        "ShowComments": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        248,
+        220,
+        221
+      ],
+      "StrokeRgb": [
+        209,
+        52,
+        56
+      ],
+      "PageNumber": 2
+    },
+    {
+      "Id": "review-authors-no-revision",
+      "Fixture": "ReviewAuthors/review-authors-no-revision.docx",
+      "InputSha256": "201EEFC0969A39E392FE50CB94FA6D7402DB65A212A3EF102A32345B6A29E569",
+      "ReferencePdfSha256": "64F7FA670278285715ACD454AA1BDDB9DF625FF861CAD521C80CBA71184DF3D0",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 1,
+        "ShowComments": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        248,
+        220,
+        221
+      ],
+      "StrokeRgb": [
+        209,
+        52,
+        56
+      ],
+      "PageNumber": 2
+    },
+    {
+      "Id": "review-authors-late-revision",
+      "Fixture": "ReviewAuthors/review-authors-late-revision.docx",
+      "InputSha256": "FB1F5ABE7160100BFD75264BCE75C4A317CE52298CA915F77A786D886F186B6C",
+      "ReferencePdfSha256": "D59E1F5D23573C272AD212EF3545FFEE26A2783B9ACA6CA8D9ED5335EC537572",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 1,
+        "ShowComments": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        213,
+        237,
+        255
+      ],
+      "StrokeRgb": [
+        0,
+        120,
+        212
+      ],
+      "PageNumber": 2
+    },
+    {
+      "Id": "review-authors-reverse-lexical",
+      "Fixture": "ReviewAuthors/review-authors-reverse-lexical.docx",
+      "InputSha256": "6AB6727BB41674A975096840833656E38D865ED0C36E44DE7468B62E04C4C78F",
+      "ReferencePdfSha256": "60AD7C23D7816A5E3E1F2EBC305079F55C8F463D7530CDE6A1BDC12B4555F26D",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 1,
+        "ShowComments": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        213,
+        237,
+        255
+      ],
+      "StrokeRgb": [
+        0,
+        120,
+        212
+      ],
+      "PageNumber": 2
+    },
+    {
+      "Id": "review-authors-deletion",
+      "Fixture": "ReviewAuthors/review-authors-deletion.docx",
+      "InputSha256": "47C008B706F4DAAC6811B58347608FB23FABF60008DE14E3C1C9EAEA73D0435C",
+      "ReferencePdfSha256": "8A16199418AAB9C36C0903E1D34C7F48B41E16AB41EBEE786A0E65ADBD0DF170",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 1,
+        "ShowComments": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        213,
+        237,
+        255
+      ],
+      "StrokeRgb": [
+        0,
+        120,
+        212
+      ],
+      "PageNumber": 2
+    }
+  ]
+}

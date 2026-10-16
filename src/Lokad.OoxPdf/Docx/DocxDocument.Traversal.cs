@@ -2,6 +2,70 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxBlockTraversal
 {
+    // Preserve the established source order shared by font purposes and review ownership.
+    public static IEnumerable<DocxParagraph> EnumerateSourceParagraphs(DocxDocument document)
+    {
+        return DocxBlockTraversal.EnumerateBodyParagraphs(document)
+            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderParagraphs))
+            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterParagraphs))
+            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
+            .Concat(document.BodyElements
+                .OfType<DocxSectionBreakElement>()
+                .SelectMany(sectionBreak => DocxBlockTraversal.EnumerateStaticStoryParagraphs(sectionBreak.PageSettings)))
+            .Concat(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs))
+            .Concat(EnumerateFloatingDrawingTextBoxParagraphs(document))
+            .Concat(EnumerateInlineTextBoxParagraphs(document));
+    }
+
+    private static IEnumerable<DocxParagraph> EnumerateFloatingDrawingTextBoxParagraphs(DocxDocument document)
+    {
+        return EnumerateFloatingDrawingTextBoxParagraphs(document.FloatingDrawings)
+            .Concat(document.HeaderFloatingDrawingsByType.Values.SelectMany(EnumerateFloatingDrawingTextBoxParagraphs))
+            .Concat(document.FooterFloatingDrawingsByType.Values.SelectMany(EnumerateFloatingDrawingTextBoxParagraphs))
+            .Concat(document.PageSettings.HeaderFloatingDrawingsByType.Values.SelectMany(EnumerateFloatingDrawingTextBoxParagraphs))
+            .Concat(document.PageSettings.FooterFloatingDrawingsByType.Values.SelectMany(EnumerateFloatingDrawingTextBoxParagraphs))
+            .Concat(document.BodyElements
+                .OfType<DocxSectionBreakElement>()
+                .SelectMany(sectionBreak => sectionBreak.PageSettings.HeaderFloatingDrawingsByType.Values
+                    .Concat(sectionBreak.PageSettings.FooterFloatingDrawingsByType.Values)
+                    .SelectMany(EnumerateFloatingDrawingTextBoxParagraphs)))
+            .Concat(document.RelatedStories.SelectMany(story => EnumerateFloatingDrawingTextBoxParagraphs(story.FloatingDrawings)));
+    }
+
+    private static IEnumerable<DocxParagraph> EnumerateFloatingDrawingTextBoxParagraphs(IEnumerable<DocxFloatingDrawing> drawings)
+    {
+        return drawings.SelectMany(drawing => DocxBlockTraversal.EnumerateBodyParagraphs(drawing.TextBoxBodyElements));
+    }
+
+    private static IEnumerable<DocxParagraph> EnumerateInlineTextBoxParagraphs(DocxDocument document)
+    {
+        return DocxBlockTraversal.EnumerateBodyParagraphs(document)
+            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderParagraphs))
+            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterParagraphs))
+            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
+            .Concat(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs))
+            .Concat(EnumerateFloatingDrawingTextBoxParagraphs(document))
+            .SelectMany(EnumerateInlineTextBoxParagraphs);
+    }
+
+    private static IEnumerable<DocxParagraph> EnumerateInlineTextBoxParagraphs(DocxParagraph paragraph)
+    {
+        foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
+        {
+            foreach (DocxParagraph boxParagraph in DocxBlockTraversal.EnumerateBodyParagraphs(textBox.BodyElements))
+            {
+                yield return boxParagraph;
+                foreach (DocxParagraph nested in EnumerateInlineTextBoxParagraphs(boxParagraph))
+                {
+                    yield return nested;
+                }
+            }
+        }
+    }
+
+
+
+
     public static IEnumerable<DocxParagraph> EnumerateBodyParagraphs(DocxDocument document)
     {
         return EnumerateBodyParagraphs(document.BodyElements);

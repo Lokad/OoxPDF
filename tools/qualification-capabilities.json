@@ -1590,5 +1590,18 @@
     "DocxInlineCompositionTextRevisionMathMatchesIndependentWord",
     "PortableRenderingTextRevisionMathKeepsSourceOwnersAndFallbacks",
     "DocxSimpleMarkupRendererDrawsChangeBars"
+  ],
+  "docx-review-author-composition": [
+    "DocxReviewCommentAuthors",
+    "PortableRenderingReviewAuthors",
+    "DocxCommentAuthorPalette",
+    "DocxWordCompatibleBalloonsUseFirstSeenAuthorColors",
+    "DocxMarkupRevisionColorsUse",
+    "DocxFontPlan",
+    "PortableRenderingStaticCellsPreserveMixedMathImagesAndCounters",
+    "DocxInlineCompositionTextRevisionMathMatchesIndependentWord",
+    "PortableRenderingTextRevisionMathKeepsSourceOwnersAndFallbacks",
+    "DocxWordCompatibleAllMarkupUsesOfficeRevisionDecorationColor",
+    "DocxWordCompatibleAllMarkupEmitsOfficeLikeMarkupPrimitiveInventory"
   ]
 }

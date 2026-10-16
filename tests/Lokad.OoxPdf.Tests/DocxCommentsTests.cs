@@ -10,7 +10,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxCommentsTests
+internal static partial class DocxCommentsTests
 {
     internal static (double X, double Y, double Width, double Height) ReviewLaneBounds(PdfPage page)
     {

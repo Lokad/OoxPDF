@@ -511,7 +511,11 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    internal static string NormalizeRevisionAuthorBucketKey(string? author)
+    internal static string NormalizeRevisionAuthorBucketKey(string? author) => NormalizeMarkupAuthor(author, foldCase: true);
+
+    private static string NormalizeReviewAuthorIdentity(string? author) => NormalizeMarkupAuthor(author, foldCase: false);
+
+    private static string NormalizeMarkupAuthor(string? author, bool foldCase)
     {
         string? value = FirstNonEmpty(author);
         if (value is null)
@@ -535,7 +539,7 @@ internal sealed partial class DocxRenderer
                 pendingSpace = false;
             }
 
-            builder.Append(char.ToUpperInvariant(character));
+            builder.Append(foldCase ? char.ToUpperInvariant(character) : character);
         }
 
         return builder.ToString();
