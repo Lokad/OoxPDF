@@ -1410,3 +1410,12 @@ The test-only correction retains the qualified production DLL and tests the
 actual whole-formula fallback boundary at an 8pt frame. Transfer checks 17 assets
 and four exact PDFs without a root build or suite replay. Evidence:
 `artifacts/composition-c1/emergency-word-wrap-evidence.json`.
+
+The following CI repair restores image-driven admission before an emergency word
+split and retains the remaining token's source range. The existing image-position
+test now also checks complete prose preservation. A synthetic keep-lines test
+retains its two-page result and now checks the complete three-line owner, reflecting
+the corrected overwide-word behavior. Frozen c53a6a76 / root 626f1321 passes 93
+Windows methods once and 62 Ubuntu checks (31 font-specific skips). All twelve
+fixed/complete PDFs retain bytes; 17 assets/four smoke PDFs transfer without a root
+build or suite replay. Evidence: `artifacts/composition-c1/emergency-image-ownership-evidence.json`.
