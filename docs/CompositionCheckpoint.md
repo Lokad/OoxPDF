@@ -1264,3 +1264,17 @@ junction; both remain, with no retry. The historical 444f5a55 input set is exclu
 from strict immutable identity claims. All 1,337 current frozen inputs retain
 pinned hashes/protection and the six current parent inputs have independent file
 ownership. Ownership repair/rejection evidence remains beside the delivery report.
+
+The measured font-maintenance batch reduces warm portfolio allocation to
+28.75–33.83MB for Final DOCX and 32.34–37.36MB for review, with unchanged PDFs.
+Counted kerning source batches replace the expanded pair list, retaining bounded
+source contributions, last-wins lookup values and cancellation. All 715,743 map
+entries across the three actual faces match. Frozen f35fa653 / root 993543d6 passes
+31 Windows methods in one invocation and 17 Ubuntu checks (four installed-font
+checks skip); transfer verifies 17 assets/four PDFs. The ten allocation-probe
+whole/staged PDFs provide corpus identity, without an extra CLI sweep. A generated
+out-of-range class-matrix regression confirms an older managed bounds exception;
+wide offsets now preserve the valid prefix. This is not evidence of corruption.
+Matched sustained-warm timings overlap, so no speedup is claimed. Office output
+and existing failed visual gates remain unchanged. See
+`docs/OperatingEnvelope.md` and `artifacts/composition-c1/kerning-stream-evidence.json`.

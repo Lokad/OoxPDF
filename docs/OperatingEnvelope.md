@@ -81,12 +81,54 @@ and includes reflection invocation. The detail probes neither count coordinator
 passes nor establish a speedup. Font preparation is the demonstrated allocation
 cost; repeated layout is not established as the main cause on this portfolio.
 
-The next bounded investigation is kerning-pair accumulation: retain lookup values,
+The ensuing bounded investigation targeted kerning-pair accumulation: retain lookup values,
 last-wins behavior, pair/work bounds, cancellation and owned buffers while avoiding
 avoidable intermediate pair lists. Do not add a cache, class-layout framework or
 production quota knob for this experiment. Existing failed visual thresholds and
 independent Office comparisons remain unchanged. Evidence:
 `artifacts/composition-c1/layout-attribution-evidence.json`.
+
+## Bounded kerning materialization, 2026-10-16
+
+Frozen `f35fa653` (root `993543d6`), library SHA-256
+`0307DA26C0B96D3D30815F25F02BC1FC7D634355AB02E81D647110D68D73D6DC`,
+replaces the expanded intermediate pair list with counted source batches and one
+final dictionary allocation. Source contribution counts still include duplicates;
+last-wins values, owned buffers, cancellation and existing pair/work bounds remain.
+No cache or production quota was added.
+
+| Document | Previous Final / review allocation (MB) | Current Final / review allocation (MB) |
+|---|---:|---:|
+| report | 47.14 / 51.70 | 31.20 / 34.83 |
+| letter | 44.70 / 49.23 | 28.75 / 32.34 |
+| specification | 49.79 / 54.35 | 33.83 / 37.36 |
+| technical memo | 46.06 / 50.50 | 30.10 / 33.55 |
+| briefing deck | 10.64 / — | 6.72 / — |
+| held-out deck | 28.91 / — | 16.89 / — |
+
+These calling-thread allocation measurements use the attribution baseline above
+and the same ten inputs/modes, Windows/.NET/default resolver and one cold sample,
+one warmup and three warm samples. DOCX allocation falls 31–36%, and deck
+allocation 37–42%. All ten whole/staged PDFs retain their accepted hashes; these
+outputs also supply corpus identity without another CLI conversion sweep.
+
+A separate matched sustained-warm report control (sixteen warmups, seven samples)
+compares the preceding library with the same final accumulation algorithm:
+47.05MB / 45.15ms versus 31.18MB / 45.38ms. Timing ranges overlap; this is an
+allocation improvement with no speedup claim. That timing control used the final
+algorithm prototype; the subsequently frozen artifact supplies the ten-outcome
+measurements and qualification above. Diagnostic stages overlap and are not
+additive. Three actual font maps retain all 715,743 keys/values, verified again
+from the final artifact by sorted-map fingerprints.
+
+Thirty-one Windows methods pass in one invocation; seventeen Ubuntu methods pass
+and four installed-Windows-font checks skip. A generated malformed class matrix
+reproduces a bounds exception in the preceding library; wide offset arithmetic
+now retains its valid prefix. Managed bounds already prevented unchecked memory
+access, and no corruption is claimed. Transfer verifies seventeen assets/four
+PDFs without a root build or repeated suite. Independent Office comparisons and
+failed visual thresholds remain unchanged. Evidence:
+`artifacts/composition-c1/kerning-stream-evidence.json`.
 
 ## Linux forced-break workload, 2026-10-05
 
