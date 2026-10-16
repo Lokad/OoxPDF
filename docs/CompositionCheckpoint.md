@@ -1925,3 +1925,26 @@ Both Word and candidate gray-lane samples are RGB242: the earlier gray-color
 difference wording is withdrawn. The pink/blue comment author-color discrepancy
 remains confirmed; source uses differently cased insertion/comment reviewer
 names. Evidence: build-workspace-guard-evidence.json and review-author-view-probe.json.
+
+
+Comment colors now register source-owned insertion/deletion authors before
+comment authors, preserving exact name case and the qualified comment-ID order
+and twenty-color cycle. Six Word controls distinguish author identity from anchor
+and alphabetical order, including deletions. Word revision modes0/1 yield identical
+baseline rasters. Balloon/range fills and strokes share the corrected slots; the
+legacy revision hash keeps its normalization. Other revision-author classes and
+inline multi-author ink remain approximate. The existing source paragraph walk
+is shared with font purposes without changing its order.
+
+One artifact passes25 Windows methods once,21 Ubuntu checks/four native-font
+skips, two causal parent regressions and17-asset/four-PDF transfer. All six text
+inspections retain parent bytes; two unchanged-color controls retain entire PDF
+bytes. Eight fixed DOCX/two complete-report PDFs retain accepted bytes/comparisons.
+Six prose/simple-math screens have no deficits; five generic revision flags stay
+unresolved. All six numerical gates still fail unchanged thresholds. Three page
+pairs reviewed; comment colors match while geometry/typography residuals remain.
+
+The guarded command successfully built/froze the linked worktree from a main
+checkout caller. An initial compile error stopped before freezing; a comparison
+helper was restored to its font-plan owner before the accepted build. No root
+build or suite replay. Evidence: review-author-evidence.json.
