@@ -54,8 +54,14 @@ foreach ($row in $outcomes.Rows) {
         continue
     }
     foreach ($item in @(@{Pdf=$pdf;Folder=(Join-Path $run 'raster')},@{Pdf=$referencePdf;Folder=(Join-Path $source 'raster')})) {
-        if (!(Test-Path -LiteralPath $item.Folder)) {
+        # A failed rasterizer startup can leave an empty output directory.
+        # Retry that incomplete stage instead of reporting missing PDF pages.
+        if (!(Test-Path -LiteralPath $item.Folder) -or
+            !(Get-ChildItem -LiteralPath $item.Folder -Filter 'page-*.png' -File | Select-Object -First 1)) {
             & (Join-Path $ValidationToolsDirectory 'RasterizePdf.ps1') -InputPdf $item.Pdf -OutputDirectory $item.Folder -Dpi 144 -SkipBuild *> ($item.Folder+'.log')
+        }
+        if (!(Get-ChildItem -LiteralPath $item.Folder -Filter 'page-*.png' -File | Select-Object -First 1)) {
+            throw ('Rasterization produced no pages: ' + $item.Pdf)
         }
     }
     $diff = Join-Path $run 'office-diff'
