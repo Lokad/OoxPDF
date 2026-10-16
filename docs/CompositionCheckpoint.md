@@ -1865,3 +1865,24 @@ mismatches reject without overwriting or global re-export. Eight tool checks pas
 without Office or library builds. Four parent candidates reuse C50 PDF hashes,
 with all four numerical gates still failed. The existing frozen library is reused;
 no library rebuild or repeated suite. Evidence: reference-view-evidence.json.
+
+
+Source-owned deletion text now shares the existing insertion composition path.
+All sixteen revision controls retain unchanged formulas across body/cells/static
+stories; mark/property/move/equation revisions retain fallback. Four affected
+review outcomes use independently exported Word inline-mode references. No frame
+correction or font/size/document eligibility branch was needed.
+
+One artifact passes 24 Windows methods once, 20 Ubuntu checks/four native-font
+skips, two causal parent regressions and 17-asset/four-PDF transfer. Four full-page
+pairs were reviewed; frozen PDFs equal reviewed prototypes. Math residuals are
+at most 0.877pt X/0.768pt Y. All four numerical gates still fail, though MAE and
+recall improve. Prose/simple-math screens have no deficits; generic revision flags
+and unreferenced-part warnings remain unresolved. The shared screen functions
+verify an exact public-manifest subset; the whole-manifest CLI cannot accept that
+subset and its rejected invocation is not an accepted report.
+
+Only four affected review outputs were converted. Five fixed/complete inputs are
+verified to contain no deletion elements, so their C50 comparisons/reviews carry
+forward. Complete-report modes, memo and deck retain transfer-smoke PDF hashes.
+No root rebuild or broad suite/corpus replay. Evidence: deletion-inline-evidence.json.
