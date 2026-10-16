@@ -1124,3 +1124,21 @@ residual reaches 1.682pt. Both numerical visual gates remain failed. Source
 suite replay or new fitting branch. The authoring command's original mode still
 regenerates the prior C7 source byte for byte. Evidence:
 `artifacts/composition-c1/composed-note-math-evidence.json`.
+
+Direct normal notes now compose inline images and equations through shared
+measured frames. Note-image positions and dimensions join the text/math printed
+map; owned inline frames also retain local endnote start-spacing ownership.
+Existing whole-flow, table/floating and rich-story fallbacks remain. Frozen
+65b9c4fe / root 2cc71652 passes 67 affected methods in one invocation and five
+Ubuntu checks; three regressions fail with the previous library. Four Word
+control documents in both presets cover inline/wrapped notes and two image sizes.
+All four fractions, PNG, prose and destination survive; source prose/simple-math
+deficits are zero. Eight exact prototype PDFs reuse comparisons, and four source/
+mode identities reuse Word references. Four crops were reviewed. All eight
+numerical gates and generic rate/time screens remain failed. PNG raster-bound
+residuals reach 0.5pt top/size and 1pt horizontal prose advance. Native dimension
+checks account for the two-edge 144 DPI sampling uncertainty; visual thresholds
+are unchanged. The 17-asset/four-PDF transfer preserves complete note-math report
+review and held-out memo Final without a root rebuild or suite/corpus replay.
+Complete-document note-image acceptance remains the next finite step. Evidence:
+`artifacts/composition-c1/note-images-evidence.json`.
