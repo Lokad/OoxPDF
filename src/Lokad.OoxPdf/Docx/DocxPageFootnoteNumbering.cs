@@ -57,6 +57,9 @@ internal static class DocxPageFootnoteNumbering
             replacements.Add(paragraph, paragraph with { Runs = runs,
                 InlineReferences = references.ToArray() });
         }
+        // Complete ownership was validated, but unchanged labels need neither
+        // a replacement document nor the coordinator's font/layout retry.
+        if (labels.Values.All(label => label.Before == label.After)) return false;
         foreach (var story in source.RelatedStories.Where(s => s.IsNormalStoryType))
         {
             if (story.Id is null || !labels.TryGetValue(story.Id, out var label) || story.Paragraphs.Count != 1 ||

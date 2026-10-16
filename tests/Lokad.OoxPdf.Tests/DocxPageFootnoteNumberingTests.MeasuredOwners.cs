@@ -7,6 +7,20 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxPageFootnoteNumberingTests
 {
+    public static void DocxMeasuredFootnoteOwnersAlreadyCorrectAvoidsResourceRetry()
+    {
+        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes",
+            "footnote-page-owners-single-page-unchanged.docx"));
+        var source = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        TestAssert.Equal("09,10,11,12", string.Join(',', source.Paragraphs.SelectMany(p => p.InlineReferences).Select(reference => reference.DisplayText)));
+        var layout = CreateLayout(source);
+        TestAssert.Equal(1, layout.Pages.Count);
+        TestAssert.True(!DocxPageFootnoteNumbering.TryCreateDocument(source, layout, out var unchanged, out _,
+            allowWrappedBody: true, ownerScope: DocxFootnoteOwnerScope.AllSourceReferences),
+            "An already-correct complete page must not request a font/layout retry.");
+        TestAssert.True(ReferenceEquals(source, unchanged), "No-op numbering retains the original source document.");
+    }
+
     public static void DocxMeasuredFootnoteOwnersMatchIndependentWordAcrossTypography()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent note controls use installed Windows fonts.");
