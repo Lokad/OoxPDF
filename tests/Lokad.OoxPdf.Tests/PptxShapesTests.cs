@@ -143,14 +143,14 @@ internal static class PptxShapesTests
 
         OoxPdfConverter.Convert(input, output);
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        int shapeClip = pdf.IndexOf("0 0 720 540 re W* n\r\n1 0 0 rg", StringComparison.Ordinal);
+        string pdf = File.ReadAllText(output, Encoding.ASCII).Replace("\r\n", "\n", StringComparison.Ordinal);
+        int shapeClip = pdf.IndexOf("0 0 720 540 re W* n\n1 0 0 rg", StringComparison.Ordinal);
         int fill = pdf.IndexOf("72 396 144 72 re f*", StringComparison.Ordinal);
         int strokeColor = pdf.IndexOf("0 0 1 RG", StringComparison.Ordinal);
         TestAssert.True(shapeClip >= 0, "Expected the repeated slide clip to precede the filled shape region.");
         TestAssert.True(fill > shapeClip, "Expected the shape fill after the repeated slide clip.");
         TestAssert.True(strokeColor > fill, "Expected the stroke state after the filled region.");
-        TestAssert.True(pdf.IndexOf("re f*\r\n0 0 720 540 re W* n", fill, StringComparison.Ordinal) < 0, "Filled/stroked shapes should not repeat the slide clip between fill and stroke.");
+        TestAssert.True(pdf.IndexOf("re f*\n0 0 720 540 re W* n", fill, StringComparison.Ordinal) < 0, "Filled/stroked shapes should not repeat the slide clip between fill and stroke.");
     }
 
     public static void PptxSyntheticShapeExplicitLineColorInheritsStyleLineWidth()
