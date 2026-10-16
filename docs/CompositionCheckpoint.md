@@ -1200,3 +1200,23 @@ remain failed/unresolved; no simple-math deficit is observed. Transfer verifies
 17 assets/four exact PDFs without a root build or suite replay. Body PAGE and
 unknown total-count composition remain deferred. Evidence:
 `artifacts/composition-c1/cell-page-counters-evidence.json`.
+
+Body PAGE/math composition now binds counters after line admission. A source
+cursor retries unchanged when pagination moves a line, including past an unfit
+continuation column. A confirmed trailing-whitespace cursor defect was reproduced
+and corrected. Fixed paragraphs reuse their measured wrap; counter indices/tab
+stops are retained and rebinding occurs on page changes. No speedup is claimed.
+Frozen 645d5508 / root c1f41899 passes 33 exact capability/neighbor checks in one
+invocation, fifteen Ubuntu checks and four genuine parent behavior regressions.
+Simple/packed source tests retain bookmarks and run splits. The independent Word
+simple-field control places one paragraph across pages nine and ten with two
+fractions and correct values 9 then 10. Relevant page pairs were reviewed through
+exact preset raster reuse, with no visible omission or serious overlap/clipping.
+Both visual gates remain failed: baseline residual reaches 0.105pt, authored
+leading-space trimming shifts the second prose start 3.384pt, and field/numerator
+X residuals reach 3.456pt/2.148pt. Generic dynamic-field source screens remain
+unresolved, with no simple-math deficit. Ten fixed-portfolio PDFs are exact;
+transfer verifies 17 assets/four exact PDFs without a root rebuild or repeated
+suite/corpus. Complete compound-document acceptance is next; unknown total-count
+composition remains staged. Evidence:
+`artifacts/composition-c1/body-page-counters-evidence.json`.
