@@ -1383,10 +1383,19 @@ internal static class DocxNativeMathTests
         TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
             "Following-prose wrapping must share the same script source owner.");
         diagnostics.Clear();
-        PdfPage overwide = Renderer().RenderBlankPages(NamedFixture("docx-omml-inline-script-overwide30"), diagnostics.Add, CancellationToken.None).Single();
+        var narrow = NamedFixture("docx-omml-inline-script-overwide30");
+        PdfPage retained = Renderer().RenderBlankPages(narrow, diagnostics.Add, CancellationToken.None).Single();
+        TestAssert.Contains("xi2", DocxPageFootnoteNumberingTests.DecodeText(retained).Normalize(NormalizationForm.FormKC));
+        TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
+            "Emergency word breaks retain a formula that now fits its source line; Word also preserves this equation.");
+        diagnostics.Clear();
+        double right = narrow.PageWidthPoints - narrow.MarginLeftPoints - 8d;
+        var unfit = narrow with { MarginRightPoints = right,
+            PageSettings = narrow.PageSettings with { MarginRightValue = (right * 20d).ToString(System.Globalization.CultureInfo.InvariantCulture) } };
+        var overwide = Renderer().RenderBlankPages(unfit, diagnostics.Add, CancellationToken.None).ToArray();
         TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION"),
-            "Unqualified formula relocation retains its whole-equation fallback.");
-        TestAssert.True(!overwide.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
+            "A formula wider than every available line retains its whole-equation fallback.");
+        TestAssert.True(overwide.All(page => !page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))),
             "Fallback output cannot publish an unused mathematical subset.");
     }
 
