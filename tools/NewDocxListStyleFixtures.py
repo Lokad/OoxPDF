@@ -9,6 +9,7 @@ root = Path(__file__).resolve().parent.parent
 cases = root / 'tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes'
 source = cases / 'static-frame-footer-plain-first.docx'
 w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+m = '{http://schemas.openxmlformats.org/officeDocument/2006/math}'
 rows = []
 for name in ['mark-bold', 'level-bold', 'mark-bold-level-off', 'normal-bold', 'mark-italic', 'level-italic',
              'run-bold-untracked', 'run-bold-inserted']:
@@ -58,6 +59,8 @@ for name in ['mark-bold', 'level-bold', 'mark-bold-level-off', 'normal-bold', 'm
     rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
         Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
         SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(),
-        ExpectedEquationCount=0, HeldOut=False, ExpectedText=['share the same input series.']))
+        ExpectedEquationCount=sum(len(list(E.fromstring(data).iter(m + 'oMath')))
+            for part, data in entries.items() if part.endswith('.xml')),
+        HeldOut=False, ExpectedText=['share the same input series.']))
 (cases / 'list-styles.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')
 print('Pinned', len(rows), 'list font-style owner controls')

@@ -4,7 +4,7 @@
     "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-family-run-arial.docx",
     "Sha256": "5E2F5DC27FFFF7E9100AA3F06D6702FD7D7361974E610D707527B45EF16BEFFF",
     "SourceSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
-    "ExpectedEquationCount": 0,
+    "ExpectedEquationCount": 1,
     "HeldOut": false,
     "ExpectedText": [
       "share the same input series."
@@ -15,7 +15,7 @@
     "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-family-mark-times.docx",
     "Sha256": "9B1DB3DC332AF22D552EFCD13208C5A6FC26853CFA4C5F2BD131634923D93B46",
     "SourceSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
-    "ExpectedEquationCount": 0,
+    "ExpectedEquationCount": 1,
     "HeldOut": false,
     "ExpectedText": [
       "share the same input series."
@@ -26,7 +26,7 @@
     "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-family-level-courier.docx",
     "Sha256": "DC40F21A42CCB47821970111C679C0337989004C19A2BCC69257153278317B4D",
     "SourceSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
-    "ExpectedEquationCount": 0,
+    "ExpectedEquationCount": 1,
     "HeldOut": false,
     "ExpectedText": [
       "share the same input series."
@@ -37,7 +37,7 @@
     "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-family-normal-times.docx",
     "Sha256": "881CE54EA2DCE60C1C36ADD7674EF414BE2CFCE29BC1403D70B37AFF2874EBD1",
     "SourceSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
-    "ExpectedEquationCount": 0,
+    "ExpectedEquationCount": 1,
     "HeldOut": false,
     "ExpectedText": [
       "share the same input series."
@@ -48,7 +48,7 @@
     "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-family-defaults-arial.docx",
     "Sha256": "79EC70AFBC2672014C9D04F5C1D5E70DF7511A6D457FCB36BF35E7294DD81832",
     "SourceSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
-    "ExpectedEquationCount": 0,
+    "ExpectedEquationCount": 1,
     "HeldOut": false,
     "ExpectedText": [
       "share the same input series."
@@ -59,7 +59,7 @@
     "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-family-no-family-default.docx",
     "Sha256": "FB4270E7F78721BA27761195C681CEF2E8E39C4CFECA2CD17FF31608D938D042",
     "SourceSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
-    "ExpectedEquationCount": 0,
+    "ExpectedEquationCount": 1,
     "HeldOut": false,
     "ExpectedText": [
       "share the same input series."
