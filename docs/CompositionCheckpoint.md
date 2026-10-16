@@ -908,3 +908,22 @@ reject directory loops. Latest size: 5.159GB unique content / 5.171GB logical fi
 lengths, near the loose cap. Historical/denied retirement targets are untouched.
 Evidence: `artifacts/composition-c1/cross-tree-inputs-evidence.json`. CI through
 `3b7b8865` is green on both OSes; resume annotation geometry with existing references.
+
+`1765e222` maps review-pane vertical bounds through the shared printed paper
+frame, independently of body margins, and retires two fitted inset constants.
+The same Y mapping preserves floating-textbox emission. Nine independent Word
+controls cover six margin pairs, Letter/A4/landscape and mirrored pages: maximum
+error is 0.427pt, down from a 377.571pt body-margin error. Twenty-six affected
+methods in one invocation and five Ubuntu checks pass; both parent regressions
+fail. The shared paint change justifies one fixed-corpus run: all ten content/
+page-local screens pass; text operations and non-pane graphics remain exact;
+seven review pages change only gray paper pixels, and six Final/deck PDFs are
+exact. Eight DOCX gates still fail and two decks pass. C2 content/pagination remain
+qualified in both presets, with both numerical gates failed and connector/range
+geometry still residual. All nine new control gates remain failed. Transfer uses
+17 checked assets/four PDFs, without root build or suite replay. `-DocxPreset Review`
+selects only relevant DOCX outcomes for subsequent control batches. Evidence:
+`artifacts/composition-c1/review-paper-frame-evidence.json`. CI at `c71ef4c8`
+passed Ubuntu and Windows rendering but exposed a Windows long hard-link path;
+`367656f1` uses extended paths, passing ten tool checks on both OSes and a
+277-character shared-input path without renderer rebuild/requalification.
