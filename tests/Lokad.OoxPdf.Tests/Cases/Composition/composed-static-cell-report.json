@@ -1,0 +1,32 @@
+[
+  {
+    "Id": "composed-static-cell-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/composed-static-cell-report.docx",
+    "Sha256": "98980EB43EA8B9662666C026B7DD467F40D79A34E4A96F5805D032C192C8CEB3",
+    "HeldOut": true,
+    "ExpectedEquationCount": 10,
+    "ExpectedInlineImageCount": 3,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "See calculation",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative.",
+      "Calculation:",
+      "Footer:"
+    ],
+    "Features": [
+      "image/math/comment/link/bookmark in one paragraph",
+      "math/endnote reference in a table cell",
+      "numbering",
+      "header equation",
+      "footer",
+      "continuous endnote",
+      "wrapped prose",
+      "cached field results beside math/image/comment and inside an internal hyperlink",
+      "two supported fractions and a bookmark inside the endnote",
+      "source PNG also embedded beside the endnote fractions",
+      "simple/packed PAGE fields beside cached fields/math/images, inside an internal hyperlink and in a math/note table cell",
+      "existing header/footer prose and equation preserved in simple cells; mixed footer fractions/image/PAGE/NUMPAGES"
+    ]
+  }
+]
