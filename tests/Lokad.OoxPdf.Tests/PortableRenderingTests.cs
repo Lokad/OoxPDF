@@ -16,6 +16,25 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingAuthoredWhitespaceSurvivesMixedMathContainers()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/math-authored-inline-whitespace.docx"), mode);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(1, pages.Length);
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            foreach (string container in new[] { "Body", "Cell", "Header" })
+                TestAssert.Contains("  " + container + " Leading:", text);
+            TestAssert.Equal(18, Regex.Replace(text, @"\s", "").Split("ratetime", StringSplitOptions.None).Length - 1);
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Whitespace ownership retains every equation.");
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingBodyPageCountersFollowLineAdmission()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

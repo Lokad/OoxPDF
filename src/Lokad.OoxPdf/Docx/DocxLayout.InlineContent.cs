@@ -24,10 +24,11 @@ internal sealed record DocxMeasuredInlineLine(IReadOnlyList<DocxMeasuredInlineFr
 }
 // A cursor commits consumed source only after its container admits the line.
 // A split counter retains the value bound when its first digits were placed.
+// Position Count addresses the closing paragraph mark; Count + 1 consumes it.
 internal readonly record struct DocxInlineSourceCursor(int AtomIndex, int TextOffset = 0,
     string? BoundFieldValue = null, int LineIndex = 0)
 {
-    public bool IsComplete(DocxMeasuredInlineAtoms atoms) => AtomIndex == atoms.Fragments.Count && TextOffset == 0;
+    public bool IsComplete(DocxMeasuredInlineAtoms atoms) => AtomIndex == atoms.Fragments.Count + 1 && TextOffset == 0;
 }
 internal sealed record DocxMeasuredInlineAtoms(DocxParagraph Paragraph,
     IReadOnlyList<DocxMeasuredInlineFragment> Fragments, IDocxTextMeasurer Measurer,
@@ -390,8 +391,8 @@ internal sealed partial class DocxLayoutEngine
         double fontSize = atoms.FontSize, baselineInset = atoms.BaselineInset, lineHeight = atoms.LineHeight,
             scale = atoms.Scale, defaultTabStopPoints = atoms.DefaultTabStopPoints;
         var tabStops = atoms.TabStops;
-        if (cursor.AtomIndex < 0 || cursor.AtomIndex > measured.Count || cursor.TextOffset < 0 || cursor.LineIndex < 0 ||
-            cursor.AtomIndex == measured.Count && cursor.TextOffset != 0) return false;
+        if (cursor.AtomIndex < 0 || cursor.AtomIndex > measured.Count + 1 || cursor.TextOffset < 0 || cursor.LineIndex < 0 ||
+            cursor.AtomIndex >= measured.Count && cursor.TextOffset != 0) return false;
         DocxMeasuredInlineFragment? partial = null;
         if (cursor.TextOffset != 0)
         {
@@ -415,12 +416,15 @@ internal sealed partial class DocxLayoutEngine
         var output = new List<DocxMeasuredInlineLine>();
         var current = new List<DocxMeasuredInlineFragment>();
         double advance = 0d, above = baselineInset, below = Math.Max(0d, lineHeight - baselineInset);
+        bool authoredLineStart = cursor.AtomIndex == 0 && cursor.LineIndex == 0 ||
+            cursor.AtomIndex > 0 && measured[cursor.AtomIndex - 1].Source is DocxInlineBreak;
         for (int index = cursor.AtomIndex; index < measured.Count;)
         {
             token.ThrowIfCancellationRequested();
             if (Atom(index).Source is DocxInlineBreak)
             {
                 Flush(new(index + 1));
+                authoredLineStart = true;
                 if (stopAfterFirstLine) { lines = output; return true; }
                 index++; continue;
             }
@@ -525,7 +529,7 @@ internal sealed partial class DocxLayoutEngine
                 }
                 else return false;
             }
-            if (space && current.Count == 0) { index = end; continue; }
+            if (space && current.Count == 0 && !authoredLineStart) { index = end; continue; }
             for (; index < end; index++)
             {
                 var fragment = Atom(index) with
@@ -535,7 +539,7 @@ internal sealed partial class DocxLayoutEngine
                 below = Math.Max(below, fragment.OccupiedHeight - fragment.BaselineInset);
             }
         }
-        if (current.Count != 0 || output.Count == 0) Flush(new(measured.Count));
+        if (current.Count != 0 || output.Count == 0 || authoredLineStart) Flush(new(measured.Count + 1));
         lines = output; return true;
 
         DocxInlineSourceCursor? CursorAfterSpan(DocxTextSpan span, int begin, int end)
@@ -579,12 +583,18 @@ internal sealed partial class DocxLayoutEngine
         }
         void Flush(DocxInlineSourceCursor endCursor)
         {
-            // Whitespace discarded at the next line start is consumed source,
-            // including the tail after an authored break. It must not leave an
-            // extra incremental line after whole-paragraph wrapping completes.
-            if (endCursor.TextOffset == 0)
+            // Only soft wrapping discards the next line's leading spaces.
+            // Authored starts retain their spaces and the closing paragraph
+            // mark owns a final text strut after a trailing hard break.
+            if (endCursor.TextOffset == 0 && endCursor.AtomIndex <= measured.Count &&
+                (endCursor.AtomIndex == 0 || measured[endCursor.AtomIndex - 1].Source is not DocxInlineBreak))
+            {
                 while (endCursor.AtomIndex < measured.Count && IsSpace(measured[endCursor.AtomIndex]))
                     endCursor = endCursor with { AtomIndex = endCursor.AtomIndex + 1 };
+                if (endCursor.AtomIndex == measured.Count)
+                    endCursor = endCursor with { AtomIndex = measured.Count + 1 };
+            }
+            authoredLineStart = false;
             while (current.Count != 0 && IsSpace(current[^1]))
             {
                 var removed = current[^1];

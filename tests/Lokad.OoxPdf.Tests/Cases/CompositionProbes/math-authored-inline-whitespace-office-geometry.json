@@ -1,0 +1,131 @@
+{
+  "InputSha256": "F931E0F03C16724018E93D52F577FD67C6BB250A194280FC9C17768B9EDDBC38",
+  "Rows": [
+    {
+      "Mode": "final-preserve",
+      "Container": "Header",
+      "Kind": "Leading",
+      "X": 77.544,
+      "BaselineY": 741.24
+    },
+    {
+      "Mode": "final-preserve",
+      "Container": "Header",
+      "Kind": "Hard",
+      "X": 72.024,
+      "BaselineY": 720.36
+    },
+    {
+      "Mode": "final-preserve",
+      "Container": "Header",
+      "Kind": "Trailing",
+      "X": 72.024,
+      "BaselineY": 678.58
+    },
+    {
+      "Mode": "final-preserve",
+      "Container": "Body",
+      "Kind": "Leading",
+      "X": 77.544,
+      "BaselineY": 643.06
+    },
+    {
+      "Mode": "final-preserve",
+      "Container": "Body",
+      "Kind": "Hard",
+      "X": 72.024,
+      "BaselineY": 622.18
+    },
+    {
+      "Mode": "final-preserve",
+      "Container": "Body",
+      "Kind": "Trailing",
+      "X": 72.024,
+      "BaselineY": 580.54
+    },
+    {
+      "Mode": "final-preserve",
+      "Container": "Cell",
+      "Kind": "Leading",
+      "X": 78.024,
+      "BaselineY": 544.99
+    },
+    {
+      "Mode": "final-preserve",
+      "Container": "Cell",
+      "Kind": "Hard",
+      "X": 72.504,
+      "BaselineY": 524.11
+    },
+    {
+      "Mode": "final-preserve",
+      "Container": "Cell",
+      "Kind": "Trailing",
+      "X": 72.504,
+      "BaselineY": 482.35
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Container": "Header",
+      "Kind": "Leading",
+      "X": 77.544,
+      "BaselineY": 741.24
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Container": "Header",
+      "Kind": "Hard",
+      "X": 72.024,
+      "BaselineY": 720.36
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Container": "Header",
+      "Kind": "Trailing",
+      "X": 72.024,
+      "BaselineY": 678.58
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Container": "Body",
+      "Kind": "Leading",
+      "X": 77.544,
+      "BaselineY": 643.06
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Container": "Body",
+      "Kind": "Hard",
+      "X": 72.024,
+      "BaselineY": 622.18
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Container": "Body",
+      "Kind": "Trailing",
+      "X": 72.024,
+      "BaselineY": 580.54
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Container": "Cell",
+      "Kind": "Leading",
+      "X": 78.024,
+      "BaselineY": 544.99
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Container": "Cell",
+      "Kind": "Hard",
+      "X": 72.504,
+      "BaselineY": 524.11
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Container": "Cell",
+      "Kind": "Trailing",
+      "X": 72.504,
+      "BaselineY": 482.35
+    }
+  ]
+}

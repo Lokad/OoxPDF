@@ -425,13 +425,82 @@ internal static class DocxInlineCompositionTests
         var atoms = TestAssert.NotNull(measured);
         TestAssert.True(DocxLayoutEngine.TryWrapOrderedInlineAtoms(atoms, 300d, 300d, default, out var whole), "The control must wrap.");
         var lines = TestAssert.NotNull(whole);
+        TestAssert.Equal(2, lines.Count);
+        TestAssert.Equal(0, lines[^1].Fragments.Count);
         var cursor = new DocxInlineSourceCursor();
         foreach (var expected in lines)
         {
             TestAssert.True(DocxLayoutEngine.TryGetNextOrderedInlineLine(atoms, cursor, 300d, 300d, default, out var next), "The expected line must remain.");
             cursor = TestAssert.NotNull(next).EndCursor;
         }
-        TestAssert.True(cursor.IsComplete(atoms), "Discarded trailing whitespace cannot create another line or leave source unconsumed.");
+        TestAssert.True(cursor.IsComplete(atoms), "The trailing authored line and paragraph mark must be consumed without an extra incremental line.");
+    }
+
+    public static void DocxInlineCompositionAuthoredWhitespaceFramesMatchIndependentWord()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent controls use installed Calibri/Arial metrics.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        string input = Path.Combine(cases, "math-authored-inline-whitespace.docx");
+        using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-authored-inline-whitespace-office-geometry.json")));
+        TestAssert.Equal(reference.RootElement.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+        foreach (var group in reference.RootElement.GetProperty("Rows").EnumerateArray().GroupBy(row => row.GetProperty("Mode").GetString()))
+        {
+            bool review = group.Key == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(DocxTests.ReadDocx(input, mode), diagnostics.Add, default).ToArray();
+            TestAssert.Equal(1, pages.Length);
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages.Single()).ToArray();
+            foreach (var container in group.GroupBy(row => row.GetProperty("Container").GetString()))
+            {
+                var anchors = shows.Where(show => show.Text == container.Key).OrderByDescending(show => show.Y).ToArray();
+                var expected = container.ToArray();
+                TestAssert.Equal(3, anchors.Length);
+                for (int index = 0; index < expected.Length; index++)
+                    TestAssert.True(Math.Abs(anchors[index].X - expected[index].GetProperty("X").GetDouble()) < .2d &&
+                        Math.Abs(anchors[index].Y - expected[index].GetProperty("BaselineY").GetDouble()) < .2d,
+                        "Authored spaces and closing line struts retain independently measured " + container.Key + " geometry.");
+            }
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Whitespace cannot remove supported mixed math.");
+        }
+    }
+
+    public static void DocxInlineCompositionAuthoredWhitespaceRetainsSourceLineOwnership()
+    {
+        var document = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-authored-inline-whitespace");
+        var paragraphs = document.Paragraphs.Where(paragraph => paragraph.Equations.Count != 0).ToArray();
+        TestAssert.Equal(3, paragraphs.Length);
+        foreach (var paragraph in paragraphs)
+        {
+            var equations = paragraph.Equations.ToDictionary(equation => equation,
+                equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
+            TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, equations, new TrackingMeasurer(),
+                12d, 9d, 16d, 1d, default, out var measured), "Whitespace is authored inline source.");
+            var atoms = TestAssert.NotNull(measured);
+            foreach (double width in new[] { 500d, 90d })
+            {
+                TestAssert.True(DocxLayoutEngine.TryWrapOrderedInlineAtoms(atoms, width, width, default, out var whole), "Mixed whitespace must wrap.");
+                var lines = TestAssert.NotNull(whole);
+                var cursor = new DocxInlineSourceCursor();
+                foreach (var expected in lines)
+                {
+                    TestAssert.True(DocxLayoutEngine.TryGetNextOrderedInlineLine(atoms, cursor, width, width, default, out var next), "The source cursor retains the same whitespace decisions.");
+                    var line = TestAssert.NotNull(next);
+                    TestAssert.Equal(expected.EndCursor, line.EndCursor);
+                    TestAssert.True(Math.Abs(expected.Advance - line.Advance) < .001d &&
+                        Math.Abs(expected.OccupiedHeight - line.OccupiedHeight) < .001d, "The line frame is independent of incremental wrapping.");
+                    cursor = line.EndCursor;
+                }
+                TestAssert.True(cursor.IsComplete(atoms), "The paragraph mark must be consumed exactly once.");
+                string Text(DocxMeasuredInlineLine line) => string.Concat(line.Fragments.SelectMany(fragment => fragment.Text).Select(span => span.Text));
+                if (paragraph.Runs[0].Text.StartsWith("  ", StringComparison.Ordinal)) TestAssert.True(Text(lines[0]).StartsWith("  ", StringComparison.Ordinal), "Paragraph-start spaces remain visible source.");
+                if (width == 500d && paragraph.Runs.Any(run => run.Text.Contains("Hard:", StringComparison.Ordinal)))
+                    TestAssert.True(Text(lines[1]).StartsWith(" and ", StringComparison.Ordinal), "Authored-break leading spaces retain their advance.");
+                if (paragraph.Runs.Any(run => run.Text.Contains("Trailing:", StringComparison.Ordinal)))
+                    TestAssert.True(lines[^1].Fragments.Count == 0 && lines[^1].OccupiedHeight == 16d, "The closing paragraph mark retains a normal text strut.");
+            }
+        }
     }
 
     public static void DocxInlineCompositionSourceCursorMatchesWholeParagraphWrapping()

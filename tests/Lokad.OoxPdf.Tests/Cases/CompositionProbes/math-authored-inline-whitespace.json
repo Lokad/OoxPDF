@@ -1,0 +1,21 @@
+[
+  {
+    "Id": "math-authored-inline-whitespace",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-authored-inline-whitespace.docx",
+    "Sha256": "F931E0F03C16724018E93D52F577FD67C6BB250A194280FC9C17768B9EDDBC38",
+    "HeldOut": false,
+    "ExpectedEquationCount": 18,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Body Leading:",
+      "Body Hard:",
+      "Body Trailing:",
+      "Cell Leading:",
+      "Cell Hard:",
+      "Cell Trailing:",
+      "Header Leading:",
+      "Header Hard:",
+      "Header Trailing:"
+    ]
+  }
+]
