@@ -1999,7 +1999,7 @@ internal static class DocxMarkupTests
         TestAssert.Contains("0.973 0.863 0.867 rg", page.Content);
         TestAssert.Contains("0.475 w", page.Content);
         TestAssert.Contains("[0.475 0.475] 0 d", page.Content);
-        TestAssert.Contains("27.925 ", page.Content);
+        TestAssert.Contains("32.81 ", page.Content);
         TestAssert.Contains("0 0 1 rg", page.Content);
         TestAssert.True(DocxTests.CountOccurrences(page.Content, " c") >= 4 && page.Content.Contains("h" + Environment.NewLine + "B*", StringComparison.Ordinal),
             "Markup balloons should render as closed fill/stroke paths with rounded corners.");

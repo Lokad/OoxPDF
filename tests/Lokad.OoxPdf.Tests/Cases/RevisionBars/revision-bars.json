@@ -1,0 +1,66 @@
+[
+  {
+    "Id": "revision-bar-left54",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionBars/revision-bar-left54.docx",
+    "Sha256": "CC76E0752BF6F4C161FCF5986FE23EA27D1B14062FC6A4B747901038AD1E49CE",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": []
+  },
+  {
+    "Id": "revision-bar-left108",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionBars/revision-bar-left108.docx",
+    "Sha256": "78379931BA22A86AA7EBDD19D24B72CA26F915719038B7F65496D0572DF7BA05",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": []
+  },
+  {
+    "Id": "revision-bar-left144",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionBars/revision-bar-left144.docx",
+    "Sha256": "845224693525A0F157F4C116519ED0A02122847BD146D56759AC90C366BBCC03",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": []
+  },
+  {
+    "Id": "revision-bar-right144",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionBars/revision-bar-right144.docx",
+    "Sha256": "1012A003F197D57DC1EAD9080464ECE6F4DA8548B463759884D42568BA2CDC8C",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": []
+  },
+  {
+    "Id": "revision-bar-landscape",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionBars/revision-bar-landscape.docx",
+    "Sha256": "EA7E047784CBC2B417977C4080A196D25079279B56103167DF1F45D67B063362",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": []
+  },
+  {
+    "Id": "revision-bar-comment-scaled",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionBars/revision-bar-comment-scaled.docx",
+    "Sha256": "4047993DF214A7A631364258DA830D6A2B0DCD20744D2A3B20AB64BC496E8319",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": []
+  },
+  {
+    "Id": "revision-bar-left36",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionBars/revision-bar-left36.docx",
+    "Sha256": "C2A2A4DB44481BF4C65A7A4F75EE0590B088331DD9FA974A09507D03006F5660",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": []
+  },
+  {
+    "Id": "revision-bar-left90",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionBars/revision-bar-left90.docx",
+    "Sha256": "E85BEA733760BC1DCC0098C2837EAADC28BDDDC2176CAA34FE8A4378EFE1F30F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": []
+  }
+]

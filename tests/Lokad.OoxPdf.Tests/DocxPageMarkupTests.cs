@@ -476,7 +476,7 @@ internal static class DocxPageMarkupTests
             };
             PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).Single();
-            int count = Regex.Matches(page.Content, @"27\.925\s+-?[\d.]+\s+0\.475\s+[\d.]+\s+re\s+f\b").Count;
+            int count = Regex.Matches(page.Content, @"18\s+-?[\d.]+\s+0\.72\s+[\d.]+\s+re\s+f\b").Count;
             TestAssert.Equal(gap ? 2 : 1, count);
         }
     }
@@ -498,7 +498,7 @@ internal static class DocxPageMarkupTests
         };
         PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).Single();
-        TestAssert.Equal(1, Regex.Matches(page.Content, @"27\.925\s+-?[\d.]+\s+0\.475\s+[\d.]+\s+re\s+f\b").Count);
+        TestAssert.Equal(1, Regex.Matches(page.Content, @"18\s+-?[\d.]+\s+0\.72\s+[\d.]+\s+re\s+f\b").Count);
     }
 
     public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBar()
@@ -536,8 +536,8 @@ internal static class DocxPageMarkupTests
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
-        TestAssert.Contains("27.925 ", page.Content);
-        TestAssert.Contains(" 0.475 ", page.Content);
+        TestAssert.Contains("36 ", page.Content);
+        TestAssert.Contains(" 0.72 ", page.Content);
         TestAssert.True(
             !page.Content.Contains(" 1.5 ", StringComparison.Ordinal),
             "Word-compatible all-markup should use a single page revision bar instead of legacy per-line change bars.");
@@ -584,8 +584,8 @@ internal static class DocxPageMarkupTests
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
-        TestAssert.Contains("27.925 ", page.Content);
-        TestAssert.Contains(" 0.475 ", page.Content);
+        TestAssert.Contains("36 ", page.Content);
+        TestAssert.Contains(" 0.72 ", page.Content);
     }
 
     public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBarForPlacedFootnoteRevisions()
@@ -645,8 +645,8 @@ internal static class DocxPageMarkupTests
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
-        TestAssert.Contains("27.925 ", page.Content);
-        TestAssert.Contains(" 0.475 ", page.Content);
+        TestAssert.Contains("36 ", page.Content);
+        TestAssert.Contains(" 0.72 ", page.Content);
         TestAssert.True(
             !page.Content.Contains(" 1.5 ", StringComparison.Ordinal),
             "Word-compatible all-markup should keep placed footnote revisions on the shared page revision bar path.");
@@ -709,8 +709,8 @@ internal static class DocxPageMarkupTests
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
-        TestAssert.Contains("27.925 ", page.Content);
-        TestAssert.Contains(" 0.475 ", page.Content);
+        TestAssert.Contains("36 ", page.Content);
+        TestAssert.Contains(" 0.72 ", page.Content);
         TestAssert.True(
             !page.Content.Contains(" 1.5 ", StringComparison.Ordinal),
             "Word-compatible all-markup should keep placed endnote revisions on the shared page revision bar path.");
@@ -758,8 +758,8 @@ internal static class DocxPageMarkupTests
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
-        TestAssert.Contains("27.925 ", page.Content);
-        TestAssert.Contains(" 0.475 ", page.Content);
+        TestAssert.Contains("36 ", page.Content);
+        TestAssert.Contains(" 0.72 ", page.Content);
     }
 
     public static void DocxWordCompatibleAllMarkupPaintsPageRevisionBarForStaticFloatingTextBoxRunRevisions()
@@ -810,7 +810,7 @@ internal static class DocxPageMarkupTests
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
-        TestAssert.Contains("27.925 ", page.Content);
-        TestAssert.Contains(" 0.475 ", page.Content);
+        TestAssert.Contains("36 ", page.Content);
+        TestAssert.Contains(" 0.72 ", page.Content);
     }
 }

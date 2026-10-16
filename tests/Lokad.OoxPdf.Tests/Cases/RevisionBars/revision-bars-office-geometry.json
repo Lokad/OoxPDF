@@ -1,0 +1,149 @@
+{
+  "Source": "Independent Word16 inline revision-mode1. Horizontal frame qualification only; vertical residuals retained.",
+  "Rows": [
+    {
+      "Id": "revision-bar-left54",
+      "InputSha256": "CC76E0752BF6F4C161FCF5986FE23EA27D1B14062FC6A4B747901038AD1E49CE",
+      "ReferencePdfSha256": "79F04561A898C04115091A522EF5C936C956CD8E3C4887ED8703181C563EFCEE",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 1,
+        "ShowComments": true,
+        "RejectAll": false
+      },
+      "PageNumber": 1,
+      "X": 27,
+      "Width": 0.7199999999999989,
+      "Bottom": 693.82,
+      "Top": 720.004
+    },
+    {
+      "Id": "revision-bar-left108",
+      "InputSha256": "78379931BA22A86AA7EBDD19D24B72CA26F915719038B7F65496D0572DF7BA05",
+      "ReferencePdfSha256": "F5B9B90C9387BBA7D9D535544B678456322E23639300FB2303312D5856726128",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 1,
+        "ShowComments": true,
+        "RejectAll": false
+      },
+      "PageNumber": 1,
+      "X": 72.024,
+      "Width": 0.7199999999999989,
+      "Bottom": 693.82,
+      "Top": 720.004
+    },
+    {
+      "Id": "revision-bar-left144",
+      "InputSha256": "845224693525A0F157F4C116519ED0A02122847BD146D56759AC90C366BBCC03",
+      "ReferencePdfSha256": "544C67343310CDD6074BF5C82F69FA3BCA8E2A8EF33DF8603911D97AF1DE4E70",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 1,
+        "ShowComments": true,
+        "RejectAll": false
+      },
+      "PageNumber": 1,
+      "X": 108.02,
+      "Width": 0.7199999999999989,
+      "Bottom": 693.82,
+      "Top": 720.004
+    },
+    {
+      "Id": "revision-bar-right144",
+      "InputSha256": "1012A003F197D57DC1EAD9080464ECE6F4DA8548B463759884D42568BA2CDC8C",
+      "ReferencePdfSha256": "A2DAAC376362EE5555E27B443DFB1E36A86EE4BE32D3C8EFE1EB9A435A8A508F",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 1,
+        "ShowComments": true,
+        "RejectAll": false
+      },
+      "PageNumber": 1,
+      "X": 36,
+      "Width": 0.7199999999999989,
+      "Bottom": 693.82,
+      "Top": 720.004
+    },
+    {
+      "Id": "revision-bar-landscape",
+      "InputSha256": "EA7E047784CBC2B417977C4080A196D25079279B56103167DF1F45D67B063362",
+      "ReferencePdfSha256": "BD96AB837795926E8A7C06C60703B1C4CD600FD6CE23FCC9B736EAA10F301C10",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 1,
+        "ShowComments": true,
+        "RejectAll": false
+      },
+      "PageNumber": 1,
+      "X": 36,
+      "Width": 0.7199999999999989,
+      "Bottom": 513.82,
+      "Top": 539.98
+    },
+    {
+      "Id": "revision-bar-comment-scaled",
+      "InputSha256": "4047993DF214A7A631364258DA830D6A2B0DCD20744D2A3B20AB64BC496E8319",
+      "ReferencePdfSha256": "9E0378ABC934C01416AFBE17F7FDFDA54FA3955BF16A170251A5F0454158A898",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 1,
+        "ShowComments": true,
+        "RejectAll": false
+      },
+      "PageNumber": 1,
+      "X": 27.312,
+      "Width": 0.5279999999999987,
+      "Bottom": 619.03,
+      "Top": 640.246
+    },
+    {
+      "Id": "revision-bar-left36",
+      "InputSha256": "C2A2A4DB44481BF4C65A7A4F75EE0590B088331DD9FA974A09507D03006F5660",
+      "ReferencePdfSha256": "7FBE80D3D710A30AC67E9C2B1672C111CF19F119D8BE2B022DD6FEE7E5C1B58E",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 1,
+        "ShowComments": true,
+        "RejectAll": false
+      },
+      "PageNumber": 1,
+      "X": 18,
+      "Width": 0.7199999999999989,
+      "Bottom": 693.82,
+      "Top": 720.004
+    },
+    {
+      "Id": "revision-bar-left90",
+      "InputSha256": "E85BEA733760BC1DCC0098C2837EAADC28BDDDC2176CAA34FE8A4378EFE1F30F",
+      "ReferencePdfSha256": "90AE47660AB6C6DE91CFCED88FDB838C1F425743F7CBC9FD877ED2F17E0D8581",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 1,
+        "ShowComments": true,
+        "RejectAll": false
+      },
+      "PageNumber": 1,
+      "X": 54,
+      "Width": 0.7199999999999989,
+      "Bottom": 693.82,
+      "Top": 720.004
+    }
+  ]
+}

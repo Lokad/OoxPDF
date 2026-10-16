@@ -96,11 +96,18 @@ internal sealed partial class DocxRenderer
             double barHeight = Math.Max(0d, barTop - barBottom);
             if (barHeight > 0d)
             {
+                // Word centers the marker in a narrow left margin, with its
+                // distance from the body capped at half an inch. Both its X and
+                // thickness belong to the printed page frame, not text styling.
+                double margin = Math.Max(0d, page.MarginLeft);
+                double scale = markupContext.WordCompatiblePrintScale;
+                double barX = (margin - Math.Min(margin / 2d,
+                    WordCompatibleAllMarkupRevisionBarMaximumTextDistancePoints)) * scale;
                 graphics.SetFillRgb(0, 0, 0);
                 graphics.FillRectangle(
-                    WordCompatibleAllMarkupRevisionBarXPoints,
+                    barX,
                     barBottom,
-                    WordCompatibleAllMarkupRevisionBarWidthPoints,
+                    WordCompatibleAllMarkupRevisionBarWidthPoints * scale,
                     barHeight);
             }
             bottom = null;

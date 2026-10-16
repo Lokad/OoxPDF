@@ -58,3 +58,9 @@ Explicit markup modes emit approximation diagnostics instead of broad unsupporte
 Explicit automatic marks inside referenced footnote/endnote stories follow the visible main-story numbering and retain their authored run styles. Visible automatic markers in body paragraphs and table cells create internal PDF links to the first placed matching note, including destinations on a later page. Missing or unmeasurable source/target content creates no link. Plain document endnotes that fit above bottom footnotes can remain on the same page at unit print scale; overflow, scaling and complex content retain continuation behavior.
 
 Supported explicit note starts/formats from a single section apply to visible body numbering while the authored settings snapshot remains unchanged. Plain document endnotes at nominal scale follow the last body paragraph after-spacing; a blank separator does not add its own latent padding. Multiple sections, page/section restarts, document-setting precedence, custom markers and back-links remain incomplete. Complex/scaled note flow retains its earlier placement. Some link rectangles still differ from Office; complete parity remains unqualified.
+
+Word-compatible revision bars use the authored left margin and the printed-page
+scale. They remain centered in a narrow margin, with the distance from body text
+capped at 36pt; their 0.72pt nominal thickness scales with the page. Independent
+Word controls cover 36–144pt margins, right-margin changes, landscape and a
+comment-fitted page. Vertical bar extents remain approximate.

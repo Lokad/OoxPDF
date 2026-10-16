@@ -1323,8 +1323,8 @@ internal static class DocxTablesMarkupTests
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
-        TestAssert.Contains("27.925 ", page.Content);
-        TestAssert.Contains(" 0.475 ", page.Content);
+        TestAssert.Contains("36 ", page.Content);
+        TestAssert.Contains(" 0.72 ", page.Content);
     }
 
     public static void DocxSimpleMarkupRendererDrawsTableRowChangeBars()

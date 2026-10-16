@@ -114,8 +114,8 @@ internal sealed partial class DocxRenderer
     private const double WordCompatibleAllMarkupBalloonBottomInsetPoints = 3.4d;
     private const double WordCompatibleAllMarkupLaneBackgroundRightBleedPoints = 0.37d;
     private const double WordCompatibleAllMarkupLaneBackgroundWidthPoints = 199.70d;
-    private const double WordCompatibleAllMarkupRevisionBarXPoints = 27.925d;
-    private const double WordCompatibleAllMarkupRevisionBarWidthPoints = 0.475d;
+    private const double WordCompatibleAllMarkupRevisionBarMaximumTextDistancePoints = 36d;
+    private const double WordCompatibleAllMarkupRevisionBarWidthPoints = 0.72d;
     private const double WordCompatibleAllMarkupRevisionBarBottomOutsetPoints = 7.47d;
     private const double WordCompatibleAllMarkupRevisionBarTopInsetPoints = 0.39d;
     private const double WordCompatibleAllMarkupRevisionDecorationThicknessPoints = 0.475d;

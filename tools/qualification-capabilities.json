@@ -1577,5 +1577,18 @@
     "DocxMarkupModesFilterHyperlinkAndFieldRevisionsBeforeLayout",
     "DocxMarkupModesFilterStaticAndRelatedStoryRevisions",
     "DocxRevisionViewSettingsFilterRevisionsBeforeLayout"
+  ],
+  "docx-revision-bar-frames": [
+    "DocxRevisionBarHorizontalFramesMatchIndependentWord",
+    "PortableRenderingRevisionBarsKeepIndependentPageFrames",
+    "DocxWordCompatibleAllMarkupPaintsPageRevisionBar",
+    "DocxWordCompatibleRevisionBars",
+    "DocxWordCompatibleAllMarkupEmitsOfficeLikeMarkupPrimitiveInventory",
+    "DocxWordCompatiblePrintScale",
+    "DocxWordCompatibleMirroredPagesKeepWrapWidthAndBalloonLane",
+    "DocxMarkupReserveMarginKeepsMirroredGutterInside",
+    "DocxInlineCompositionTextRevisionMathMatchesIndependentWord",
+    "PortableRenderingTextRevisionMathKeepsSourceOwnersAndFallbacks",
+    "DocxSimpleMarkupRendererDrawsChangeBars"
   ]
 }
