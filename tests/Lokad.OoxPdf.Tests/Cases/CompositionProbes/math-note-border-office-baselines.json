@@ -1,0 +1,77 @@
+{
+  "Source": "Independent Word 16 exports; border upper edge to emitted baseline",
+  "Rows": [
+    {
+      "Id": "math-note-border-11-baseline",
+      "Mode": "final-preserve",
+      "InputSha256": "3B87F76ADF03397C9EC4B08F988E3BA5E87979C07197394EDDC19CEECEE220BA",
+      "ReferencePdfSha256": "BBF947750B637D994164F8662FC0919F93C9EB6537AFE930DF12DE306F6EEDD3",
+      "MarkerBelowTop": 15.240000000000009,
+      "PlainPeerBelowTop": 11.879999999999995,
+      "NumeratorBelowTop": 8.159999999999968
+    },
+    {
+      "Id": "math-note-border-11-baseline",
+      "Mode": "all-word-compatible",
+      "InputSha256": "3B87F76ADF03397C9EC4B08F988E3BA5E87979C07197394EDDC19CEECEE220BA",
+      "ReferencePdfSha256": "D8FEC7F5B84831D8291D34D53331269168CD3E49B99EDA59D28109C899E9C647",
+      "MarkerBelowTop": 11.549999999999955,
+      "PlainPeerBelowTop": 9.0,
+      "NumeratorBelowTop": 6.199999999999932
+    },
+    {
+      "Id": "math-note-border-11-superscript",
+      "Mode": "final-preserve",
+      "InputSha256": "28D168DDF9A1F37993F2DF01E13424EE530AE41CAB1FE2573F26B5B02876EB06",
+      "ReferencePdfSha256": "097EDBFA5F4DAB3DDA1F8337E8C2793F1EB245D1CB0736AC972DAC1A325A7268",
+      "MarkerBelowTop": 11.279999999999973,
+      "PlainPeerBelowTop": 11.879999999999995,
+      "NumeratorBelowTop": 8.159999999999968
+    },
+    {
+      "Id": "math-note-border-11-superscript",
+      "Mode": "all-word-compatible",
+      "InputSha256": "28D168DDF9A1F37993F2DF01E13424EE530AE41CAB1FE2573F26B5B02876EB06",
+      "ReferencePdfSha256": "53A13E68DF5F65F4A56B015B6381F52016771EAF443AF91A3DD0F18E7433FCE3",
+      "MarkerBelowTop": 8.549999999999955,
+      "PlainPeerBelowTop": 9.0,
+      "NumeratorBelowTop": 6.199999999999932
+    },
+    {
+      "Id": "math-note-border-12-baseline",
+      "Mode": "final-preserve",
+      "InputSha256": "99559FD7C60B86FB4075865D8E22105496E2C02EA913889B827D113C1AF259CF",
+      "ReferencePdfSha256": "725D13A5C6E33A59393F727B01C02FDF4C8E5D3F56B762D3440E18E3E457431E",
+      "MarkerBelowTop": 15.240000000000009,
+      "PlainPeerBelowTop": 11.879999999999995,
+      "NumeratorBelowTop": 8.160000000000082
+    },
+    {
+      "Id": "math-note-border-12-baseline",
+      "Mode": "all-word-compatible",
+      "InputSha256": "99559FD7C60B86FB4075865D8E22105496E2C02EA913889B827D113C1AF259CF",
+      "ReferencePdfSha256": "57ECE13114007F2F9BE50861FB71A44E92DE87ECE702FAEAE7AD4E227A8E4A7B",
+      "MarkerBelowTop": 11.539999999999964,
+      "PlainPeerBelowTop": 9.0,
+      "NumeratorBelowTop": 6.159999999999968
+    },
+    {
+      "Id": "math-note-border-12-superscript",
+      "Mode": "final-preserve",
+      "InputSha256": "84342323C563AB36A455C46B53556ECE038B654960B625E689CA6300D2E03DD1",
+      "ReferencePdfSha256": "E844F2F29C9CF13D990E92598ADA9383376FB8E6DAE1D7B1B330966A58764DD1",
+      "MarkerBelowTop": 11.280000000000086,
+      "PlainPeerBelowTop": 11.879999999999995,
+      "NumeratorBelowTop": 8.160000000000082
+    },
+    {
+      "Id": "math-note-border-12-superscript",
+      "Mode": "all-word-compatible",
+      "InputSha256": "84342323C563AB36A455C46B53556ECE038B654960B625E689CA6300D2E03DD1",
+      "ReferencePdfSha256": "2BD998EE96F79CA9BC4DBEE732B7B4975A9A32C0DDB05B319B4A18083397FE24",
+      "MarkerBelowTop": 8.539999999999964,
+      "PlainPeerBelowTop": 9.0,
+      "NumeratorBelowTop": 6.159999999999968
+    }
+  ]
+}

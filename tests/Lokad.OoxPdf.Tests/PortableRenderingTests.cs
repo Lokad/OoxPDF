@@ -16,6 +16,38 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingOrderedMathCellRetainsPrintedBorderFrame()
+    {
+        foreach (int size in new[] { 11, 12 })
+        foreach (string script in new[] { "baseline", "superscript" })
+        {
+            double? nominalGap = null;
+            foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+            {
+                var document = DocxTests.ReadDocx(Case($"CompositionProbes/math-note-border-{size}-{script}.docx"), mode);
+                var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                    : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+                var renderer = new DocxRenderer(new PinnedResolver(), mode, geometry);
+                var table = renderer.InspectLayout(document).Pages.Single().Items.Single(item => item.Kind == "TableRow");
+                double gap = table.Y + table.Height - table.TextLines!.Single(line => line.TextLength == 1).Y;
+                if (nominalGap is null) nominalGap = gap;
+                else
+                {
+                    double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document, DocxMarkupContext.FromMode(mode, geometry));
+                    TestAssert.True(Math.Abs(gap - nominalGap.Value * scale) < .1d,
+                        $"The physical math baseline scales once with its table frame: {size}/{script}/gap={gap}/expected={nominalGap.Value * scale}.");
+                }
+                var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+                TestAssert.Equal(1, pages.Length);
+                string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+                TestAssert.Equal(1, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+                TestAssert.Contains("Public calculation note.", text);
+                TestAssert.Equal(1, pages.Single().Annotations.Count(annotation => annotation.Destination is not null));
+                CheckWrittenPages(pages);
+            }
+        }
+    }
+
     public static void PortableRenderingScaledFootnoteSharesPrintedBodyCapacity()
     {
         foreach (string container in new[] { "body", "cell" })

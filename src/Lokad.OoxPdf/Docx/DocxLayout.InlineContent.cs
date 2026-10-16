@@ -69,10 +69,11 @@ internal sealed partial class DocxLayoutEngine
         lines = null;
         if (!DocxMathParagraphPolicy.NeedsOrderedInlineLayout(paragraph, context.MathEquations)) return false;
         double scale = context.ParagraphSpacingScale;
-        double firstInset = ResolveTableCellFirstBaselineInset(paragraphs, context.TextMeasurer);
         double paragraphInset = DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight,
             IsExactLineSpacing(paragraph.EffectiveProperties), paragraphs, paragraph, context.TextMeasurer);
-        double baselineInset = firstInset + (paragraphInset - firstInset) * scale;
+        // Ordered measurements own a physical line frame, including its text
+        // strut. The nominal first-cell inset belongs to the legacy path.
+        double baselineInset = paragraphInset * scale;
         double right = GetParagraphRightInset(paragraph, scale);
         double firstWidth = ResolveTableCellTextWrapWidth(cell, textWidth - right -
             GetParagraphFirstLineTextStartOffset(paragraph, fontSize, context.TextMeasurer, scale));

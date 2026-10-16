@@ -1,0 +1,46 @@
+[
+  {
+    "Id": "math-note-border-11-baseline",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-note-border-11-baseline.docx",
+    "Sha256": "3B87F76ADF03397C9EC4B08F988E3BA5E87979C07197394EDDC19CEECEE220BA",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Observed series.",
+      "Public calculation note."
+    ]
+  },
+  {
+    "Id": "math-note-border-11-superscript",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-note-border-11-superscript.docx",
+    "Sha256": "28D168DDF9A1F37993F2DF01E13424EE530AE41CAB1FE2573F26B5B02876EB06",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Observed series.",
+      "Public calculation note."
+    ]
+  },
+  {
+    "Id": "math-note-border-12-baseline",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-note-border-12-baseline.docx",
+    "Sha256": "99559FD7C60B86FB4075865D8E22105496E2C02EA913889B827D113C1AF259CF",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Observed series.",
+      "Public calculation note."
+    ]
+  },
+  {
+    "Id": "math-note-border-12-superscript",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-note-border-12-superscript.docx",
+    "Sha256": "84342323C563AB36A455C46B53556ECE038B654960B625E689CA6300D2E03DD1",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Observed series.",
+      "Public calculation note."
+    ]
+  }
+]

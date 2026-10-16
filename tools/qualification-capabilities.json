@@ -630,5 +630,27 @@
     "DocxWordCompatiblePrintScale",
     "DocxSuperscriptUnstyledRunScalesFromDocumentDefault",
     "DocxSimpleSectionPagination"
+  ],
+  "docx-ordered-cell-frame": [
+    "DocxTableMath",
+    "PortableRenderingOrderedMathCell",
+    "PortableRenderingAutomaticFootnotesPreserveMixedMathAndLinks",
+    "PortableRenderingCommentsPreserveMixedMathematics",
+    "PortableRenderingBrokenLiteralsSurviveCellAndStaticPlacement",
+    "PortableRenderingIsolatedFractionPreservesCellTextAndFrame",
+    "PortableRenderingAdditionalCellParagraphsPreserveTableOrigin",
+    "PortableRenderingAutofitKeepsMathematicalCellContent",
+    "DocxInlineCompositionFootnoteMarkersMatchIndependentPrintedOffsets",
+    "DocxInlineCompositionAutomaticFootnotesPreserveContentAndDestinations",
+    "DocxInlineCompositionCommentHighlightsMatchIndependentSelectionBounds",
+    "DocxInlineCompositionCommentsPreserveMathematicsAndCaptions",
+    "DocxInlineCompositionLeftTabsMatchIndependentFieldOffsets",
+    "DocxInlineCompositionBrokenLiteralsSurviveCellAndStaticPlacement",
+    "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement",
+    "DocxInlineCompositionEquationOnlyBookmarkResolvesInternalNavigation",
+    "DocxNativeTableInlineMath",
+    "DocxRendererKeepsSplitTableCellHyperlinkAnnotationsOnVisibleFragment",
+    "DocxTableMinimumNoteLinksKeepSlotDuringBaselineCorrection",
+    "DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate"
   ]
 }

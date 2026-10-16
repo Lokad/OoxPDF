@@ -9,6 +9,40 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableMathTests
 {
+    public static void DocxTableMathOrderedFramesMatchIndependentBorderClearance()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the independent bordered controls.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-note-border-office-baselines.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string id = row.GetProperty("Id").GetString()!;
+            if (!id.EndsWith("-baseline", StringComparison.Ordinal)) continue;
+            string input = Path.Combine(cases, id + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var renderer = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            (double Math, double Plain) Gaps(string path)
+            {
+                var table = renderer.InspectLayout(DocxTests.ReadDocx(path, mode)).Pages.Single().Items.Single(item => item.Kind == "TableRow");
+                double top = table.Y + table.Height;
+                return (top - table.TextLines!.Single(line => line.TextLength == 1).Y,
+                    top - table.TextLines!.Single(line => line.TextLength > 1).Y);
+            }
+            var gap = Gaps(input);
+            TestAssert.True(Math.Abs(gap.Math - row.GetProperty("MarkerBelowTop").GetDouble()) < .25d,
+                $"The ordered math frame must retain Word's border clearance: {id}/{mode}/gap={gap.Math}.");
+            TestAssert.True(Math.Abs(gap.Plain - row.GetProperty("PlainPeerBelowTop").GetDouble()) < .25d,
+                "The ordinary peer retains its independently qualified nominal-inset conversion.");
+            var superscript = Gaps(Path.Combine(cases, id.Replace("-baseline", "-superscript", StringComparison.Ordinal) + ".docx"));
+            TestAssert.True(Math.Abs(superscript.Math - gap.Math) < .000001d,
+                "Changing only the note script must preserve the fraction's baseline frame.");
+        }
+    }
+
     public static void DocxTableMathNaturalParagraphFramesMatchIndependentTableOrigins()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

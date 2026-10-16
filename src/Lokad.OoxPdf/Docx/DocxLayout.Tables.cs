@@ -108,11 +108,16 @@ internal sealed partial class DocxLayoutEngine
                 DocxTableCellLayout cell = row.Cells[cellIndex];
                 double baselineCorrection = (fragmentInsetsAlreadyPrinted ? 0d : insets[cellIndex] * (1d - printScale)) -
                     originCorrection + previousBorderAdvanceCorrection;
+                // Ordered inline frames already measure a printed baseline.
+                // Translate their container origin with the row, without applying
+                // the nominal text-inset conversion a second time.
+                double ownedFrameCorrection = -originCorrection + previousBorderAdvanceCorrection;
                 cells[cellIndex] = cell with
                 {
                     Y = cell.Y - originCorrection + previousBorderAdvanceCorrection + borderAdvanceCorrection,
                     Height = cell.Height - borderAdvanceCorrection,
-                    TextLines = cell.TextLines.Select(line => line with { BaselineY = line.BaselineY + baselineCorrection }).ToArray()
+                    TextLines = cell.TextLines.Select(line => line with { BaselineY = line.BaselineY +
+                        (line.InlineFrame is null ? baselineCorrection : ownedFrameCorrection) }).ToArray()
                 };
             }
 
