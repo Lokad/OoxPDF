@@ -1009,3 +1009,23 @@ phrases were corrected to the actual baseline note/text; document bytes and both
 candidate PDFs remain exact, without Office re-export. Evidence:
 `artifacts/composition-c1/composed-fields-evidence.json`. CI through `373c99ad` is
 green on both OSes; workspace traversal now reports 5.379GB with zero errors.
+
+`934c79a1` supports PAGE/NUMPAGES beside equations in page-owned direct headers and
+footers. Four Word controls / eight outcomes cover twelve pages and the 9/10 digit
+boundary; every one of the 96 page outcomes retains the actual page values and
+both fractions. Forty-seven methods pass in one invocation, six Ubuntu checks pass,
+and two rendering regressions fail with the preceding library. Baseline and leading
+field error stay within 0.375/0.120pt. Word's simple-field digits use Calibri while
+cached source formatting retains Arial: count-field advance residual is 1.115pt,
+and cumulative end offset reaches 2.396pt. Four pairs are reviewed; all eight control
+gates remain failed. Complex-field cache ownership now ends at its end marker,
+retaining following authored spaces/numbers; simple placeholders publish source
+items. Shared substitution replaces three copies. Body/cell and related-story
+dynamic math retain fallback; source placeholders cannot qualify without actual
+page inputs. Ten fixed portfolio PDFs are exact, reusing Office comparisons and
+ten passing content/page-local screens; eight DOCX gates still fail and decks pass.
+Frozen `89d9d93a` transfers 17 assets/four exact PDF smokes, including accepted C3
+review and held-out memo, with no root build or suite replay. The generic prose
+audit deliberately leaves dynamic source fields unresolved; independent per-page
+checks qualify this slice. Evidence: `artifacts/composition-c1/static-page-fields-evidence.json`.
+CI through `cce36176` is green on Windows and Ubuntu.
