@@ -425,8 +425,13 @@ internal sealed partial class DocxLayoutEngine
 
     private static bool ShouldScaleExactBodyAdvance(DocxParagraph paragraph, DocxLineHeightProfile profile, double fontSize)
     {
-        return profile.Source == DocxLineHeightSource.ExactLineSpacing && profile.LineHeight > fontSize &&
-            paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
+        if (profile.Source != DocxLineHeightSource.ExactLineSpacing ||
+            paragraph.Images.Count != 0 || paragraph.InlineTextBoxes.Count != 0) return false;
+        // Use the font size actually painted by the shared script metrics.
+        // A superscript's unscaled base size must not change paragraph capacity.
+        double renderedFontSize = paragraph.Runs.Count == 0 ? fontSize : paragraph.Runs.Max(run =>
+            DocxVerticalAlignMetrics.ResolveFontSize(run.EffectiveProperties.FontSize, run));
+        return profile.LineHeight > renderedFontSize;
     }
 
     private static DocxKeepBlockEstimate EstimateKeptParagraphBlock(

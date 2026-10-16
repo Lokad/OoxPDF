@@ -605,5 +605,28 @@
     "DocxMultipleFootnoteNumbersRenderSeparateLabelsAndDestinations",
     "DocxInlineCompositionAutomaticFootnotesPreserveContentAndDestinations",
     "PortableRenderingAutomaticFootnotesPreserveMixedMathAndLinks"
+  ],
+  "docx-scaled-note-admission": [
+    "DocxScaledFootnote",
+    "PortableRenderingScaledFootnote",
+    "DocxAtomicFootnote",
+    "PortableRenderingAtomicFootnote",
+    "DocxFootnoteStoryLaysOutUnscaledDesignSpace",
+    "DocxWordCompatibleContinuationRuleSpansDesignBodyWidth",
+    "DocxLongFootnote",
+    "DocxSharedFootnote",
+    "DocxHeaderFootnoteFrames",
+    "DocxContinuedFootnote",
+    "DocxContinuedPhysicalFootnote",
+    "DocxCompleteFootnoteReserve",
+    "DocxInlineCompositionAutomaticFootnotesPreserveContentAndDestinations",
+    "DocxInlineCompositionFootnoteMarkersMatchIndependentPrintedOffsets",
+    "PortableRenderingAutomaticFootnotesPreserveMixedMathAndLinks",
+    "DocxWordCompatibleExactBody",
+    "DocxWordCompatibleExactKeepChain",
+    "DocxWordCompatibleAllMarkupScalesKeepNextParagraphEstimate",
+    "DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate",
+    "DocxWordCompatiblePrintScale",
+    "DocxSuperscriptUnstyledRunScalesFromDocumentDefault"
   ]
 }

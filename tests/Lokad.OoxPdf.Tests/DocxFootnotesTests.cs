@@ -14,6 +14,44 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxFootnotesTests
 {
+    public static void DocxScaledFootnoteExactAdvanceMatchesIndependentOffice()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("The Word control uses installed Arial metrics.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        string input = Path.Combine(cases, "scaled-note-body.docx");
+        using var reference = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "scaled-note-office-advances.json")));
+        TestAssert.Equal(reference.RootElement.GetProperty("InputSha256").GetString(),
+            Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(input))));
+        var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+        var emission = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            .InspectTextEmission(document).Lines.Where(line => line.ContainerStoryKind == "Body" && line.SourceBlockIndex == 1).ToArray();
+        TestAssert.Equal(3, emission.Length);
+        var gaps = reference.RootElement.GetProperty("FirstParagraphBaselineGapsPoints");
+        for (int index = 0; index < 2; index++)
+            TestAssert.True(Math.Abs(emission[index].Segments[0].BaselineY - emission[index + 1].Segments[0].BaselineY - gaps[index].GetDouble()) < .05d,
+                "An automatic superscript must not change the independently measured printed exact-line advance.");
+    }
+
+    public static void DocxScaledFootnoteAdmissionMatchesIndependentPageMembership()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("The Office controls use installed Arial metrics.");
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+                "CompositionProbes", "scaled-note-" + container + ".docx")), mode);
+            var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, null, default).ToArray();
+            TestAssert.True(pages.Length == 1, $"{container} / {mode}: expected one page, got {pages.Length}.");
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
+            for (int section = 1; section <= 6; section++)
+            for (int line = 1; line <= 3; line++)
+                TestAssert.True(text.Contains($"Section {section} line {line}.", StringComparison.Ordinal), "Body admission preserves all source lines.");
+            TestAssert.True(text.Contains("Public calculation note.", StringComparison.Ordinal), "Note content remains beside its reference page.");
+        }
+    }
+
     public static void DocxAtomicFootnoteHeadIgnoresFutureContinuationRule()
     {
         var story = new DocxRelatedStory(DocxRelatedStoryKind.Footnote, "/word/footnotes.xml", "1", [], [], [], null);

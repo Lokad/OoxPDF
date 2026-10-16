@@ -1,0 +1,9 @@
+{
+  "Source": "Independent Word 16 PDF export; AllMarkup/word-compatible",
+  "InputSha256": "260887C291308FD1C32405841DF8DA1D6957705298E5F5A0C51514E1237B6CD2",
+  "ReferencePdfSha256": "E1CF75AF69FB5773D17216BD9F7642FBBC0ECD16CB137400067804C3A655E006",
+  "FirstParagraphBaselineGapsPoints": [
+    8.736,
+    8.712
+  ]
+}

@@ -16,6 +16,26 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingScaledFootnoteSharesPrintedBodyCapacity()
+    {
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+                "CompositionProbes", "scaled-note-" + container + ".docx")), mode);
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, null, default).ToArray();
+            TestAssert.True(pages.Length == 1, $"{container} / {mode}: expected one page, got {pages.Length}.");
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
+            for (int section = 1; section <= 6; section++)
+            for (int line = 1; line <= 3; line++)
+                TestAssert.True(text.Contains($"Section {section} line {line}.", StringComparison.Ordinal), "Body admission preserves all source lines.");
+            TestAssert.True(text.Contains("Public calculation note.", StringComparison.Ordinal), "Note content remains beside its reference page.");
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingAtomicFootnoteRetainsLastBodyLine()
     {
         foreach (string container in new[] { "body", "cell" })

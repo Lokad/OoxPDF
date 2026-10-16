@@ -452,7 +452,10 @@ internal sealed partial class DocxLayoutEngine
             // their baseline/membership rules share the same measured frame.
             double printedBottom = page.Height - page.MarginTop -
                 (page.Height - page.MarginTop - page.MarginBottom) * paragraphSpacingScale;
-            return Math.Max(bottom, printedBottom + currentPageFootnoteReserveHeight);
+            // Note stories are measured in source points. This paragraph
+            // boundary is in printed points, so convert its reserve once;
+            // CurrentFrameBottom still protects the physical note/footer edge.
+            return Math.Max(bottom, printedBottom + currentPageFootnoteReserveHeight * paragraphSpacingScale);
         }
 
         DocxLayoutPage? GetCurrentPlainFootnoteFooterFrame()
