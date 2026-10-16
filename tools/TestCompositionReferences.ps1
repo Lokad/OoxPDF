@@ -33,6 +33,7 @@ if (@(Get-Content $calls).Count -ne 4) { throw 'Expected one export per source/m
 foreach ($mode in @('final-preserve','all-word-compatible')) {
     $pin=Get-Content (Join-Path $reference ('first-'+$mode+'/source-identity.json')) -Raw | ConvertFrom-Json
     if ($pin.OfficeView.RevisionsMode -ne $(if ($mode -eq 'all-word-compatible') {2} else {0}) -or
+        $pin.OfficeView.MarkupMode -ne $(if ($mode -eq 'all-word-compatible') {2} else {0}) -or
         !$pin.ExportLogSha256 -or !$pin.ExportSettings) { throw 'View and provenance were not pinned' }
 }
 $passed=@('explicit-views')

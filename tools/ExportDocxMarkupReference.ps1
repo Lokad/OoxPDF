@@ -51,11 +51,13 @@ try {
     Write-Output ("Inherited view: MarkupMode=" + $inheritedMarkupMode + " RevisionsMode=" + $inheritedRevisionsMode)
     $doc.ShowRevisions = $ShowRevisions
     $view.RevisionsView = $RevisionsView
-    $view.MarkupMode = $MarkupMode
-    $view.RevisionsMode = $RevisionsMode
     $view.ShowComments = $ShowComments
     $view.ShowFormatChanges = $ShowFormatChanges
     $view.ShowInsertionsAndDeletions = $ShowInsertionsAndDeletions
+    # Visibility setters can reset MarkupMode when the last category is hidden.
+    # Apply the requested display modes last, then verify the entire state.
+    $view.MarkupMode = $MarkupMode
+    $view.RevisionsMode = $RevisionsMode
     # Word 16 accepts mixed mode 2. Verify the actual state rather than trusting
     # an enum label or a setter that could silently retain another session's view.
     $actual = [ordered]@{ShowRevisions=[bool]$doc.ShowRevisions;RevisionsView=[int]$view.RevisionsView;

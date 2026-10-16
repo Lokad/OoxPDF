@@ -238,6 +238,12 @@ comments, formatting changes and insertions/deletions through
 accepts and reads back mixed mode 2 despite older enum documentation describing
 it as unsupported. Mode 1 keeps text edits inline but suppresses formatting
 balloons, so it does not match this profile when formatting changes survive.
+Clean Final exports use `MarkupMode=0`, `RevisionsMode=0` and all visibility
+flags disabled. Word resets `MarkupMode` to 0 when the last visible category is
+hidden, so requesting all-markup mode 2 with those flags cannot pass readback.
+Visibility is applied before display modes; the complete observed state is
+still verified. Retain historical reference provenance and PDF identity rather
+than relabeling old exports or rerunning the corpus.
 
 Verify the view before importing: a mixed reference carries deleted
 text inline at body size with no `Deleted:`/`Inserted:` title operations, while
