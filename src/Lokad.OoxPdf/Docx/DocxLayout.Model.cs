@@ -28,6 +28,9 @@ internal sealed record DocxLayoutPage(
     public IReadOnlyList<DocxInlineTextBoxLayout> StaticInlineTextBoxes { get; init; } = [];
     // The scaled review lane keeps this authored edge when the body mirrors.
     public double? MarkupLaneDesignBodyEnd { get; init; }
+    // Occupied footer frame in physical page coordinates, before emission offset.
+    // Unlike the body keep-out edge, this maps about the page center.
+    public double? StaticFooterFrameTop { get; init; }
 }
 
 // One positioned content item on a laid-out page, emitted in the order the

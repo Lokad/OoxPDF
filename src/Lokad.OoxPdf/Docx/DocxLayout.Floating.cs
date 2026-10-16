@@ -1107,5 +1107,6 @@ internal sealed partial class DocxLayoutEngine
         double EndPendingAfterSpacing)
     {
         public double? MappedFooterContentTop { get; init; }
+        public double? PhysicalFooterFrameTop { get; init; }
     }
 }

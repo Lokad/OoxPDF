@@ -211,7 +211,8 @@ internal sealed partial class DocxLayoutEngine
                 StaticTextLines = headerLayout.TextLines.Concat(footerLayout.TextLines).ToArray(),
                 StaticInlineImages = headerLayout.InlineImages.Concat(footerLayout.InlineImages).ToArray(),
                 StaticTableRows = headerLayout.TableRows.Concat(footerLayout.TableRows).ToArray(),
-                StaticInlineTextBoxes = headerLayout.InlineTextBoxes.Concat(footerLayout.InlineTextBoxes).ToArray()
+                StaticInlineTextBoxes = headerLayout.InlineTextBoxes.Concat(footerLayout.InlineTextBoxes).ToArray(),
+                StaticFooterFrameTop = footerLayout.PhysicalFooterFrameTop
             };
         }
 

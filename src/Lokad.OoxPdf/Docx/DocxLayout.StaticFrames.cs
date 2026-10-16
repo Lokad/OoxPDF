@@ -120,6 +120,8 @@ internal sealed partial class DocxLayoutEngine
                 }).ToArray()
             };
         }
+        double footerTop = isHeader ? double.NegativeInfinity :
+            ResolveStaticFooterContentTop(source, unscaledLineMetrics);
         return source with
         {
             TextLines = source.TextLines.Select(MapLine).ToArray(),
@@ -127,8 +129,8 @@ internal sealed partial class DocxLayoutEngine
             TableRows = source.TableRows.Select(MapRow).ToArray(),
             EndCursorY = frameAnchor + (source.EndCursorY - frameAnchor) * scale,
             EndPendingAfterSpacing = source.EndPendingAfterSpacing * scale,
-            MappedFooterContentTop = isHeader ? null : frameAnchor +
-                (ResolveStaticFooterContentTop(source, unscaledLineMetrics) - frameAnchor) * scale
+            MappedFooterContentTop = isHeader ? null : frameAnchor + (footerTop - frameAnchor) * scale,
+            PhysicalFooterFrameTop = double.IsFinite(footerTop) ? center + (footerTop - center) * scale : null
         };
     }
 

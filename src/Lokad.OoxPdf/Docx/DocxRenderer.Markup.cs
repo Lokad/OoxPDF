@@ -449,7 +449,7 @@ internal sealed partial class DocxRenderer
             var placedBandCandidates = new List<DocxMarkupBalloonCandidate>();
             foreach (DocxMarkupBalloonCandidate candidate in laneBand.Candidates)
             {
-                double anchorY = ResolveMarkupBalloonAnchorY(candidate.AnchorY, page, markupContext);
+                double anchorY = ResolveMarkupBalloonAnchorY(candidate.WordCompatiblePlacementAnchorY ?? candidate.AnchorY, page, markupContext);
                 double connectorAnchorY = ResolveMarkupBalloonAnchorY(candidate.AnchorY, page, markupContext, candidate.WordCompatibleAnchorDepthPoints);
                 double height = ResolveMarkupBalloonHeight(candidate, markupContext, labelEmbedded, bodyEmbedded, area.Width, cancellationToken);
                 double topInset = ResolveMarkupBalloonTopInset(markupContext);
@@ -544,7 +544,7 @@ internal sealed partial class DocxRenderer
 
             foreach (DocxMarkupBalloonCandidate candidate in candidates)
             {
-                double anchorY = ResolveMarkupBalloonAnchorY(candidate.AnchorY, page, markupContext);
+                double anchorY = ResolveMarkupBalloonAnchorY(candidate.WordCompatiblePlacementAnchorY ?? candidate.AnchorY, page, markupContext);
                 double height = ResolveMarkupBalloonHeight(candidate, markupContext, labelEmbedded, bodyEmbedded, area.Width, cancellationToken);
                 double preferredTop = Math.Min(page.Height - page.MarginTop, anchorY + ResolveMarkupBalloonTopInset(markupContext));
                 double preferredBottom = preferredTop - height;
@@ -739,7 +739,18 @@ internal sealed partial class DocxRenderer
                         new DocxMarkupBalloonRgb(0, 0, 0),
                         CandidateCount: 1, CommentCandidateCount: 0, CommentWithDateCount: 0, CommentResolvedCount: 0, CommentOpenCount: 0, CommentReplyCount: 0, RevisionCandidateCount: 1,
                         BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
-                        WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody)));
+                        WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody))
+                    {
+                        // Independent Word footer probes place formatting balloons
+                        // above the complete occupied story, even for a change in a
+                        // later paragraph. Preserve the source connector separately.
+                        WordCompatiblePlacementAnchorY = wordFormatting is not null &&
+                            UsesWordCompatibleAllMarkupTextProfile(markupContext) &&
+                            line.Story?.Kind == DocxStoryKind.Footer && line.StaticStoryUsesPhysicalY &&
+                            page.StaticFooterFrameTop is { } top
+                                ? top + markupContext.WordCompatibleTextYOffset + WordCompatibleAllMarkupBalloonAnchorRowInsetPoints
+                                : null
+                    });
                 }
             }
 
@@ -1101,6 +1112,8 @@ internal sealed partial class DocxRenderer
             WordCompatibleBody = wordCompatibleBody,
             AnchorY = group.Max(candidate => candidate.AnchorY),
             WordCompatibleAnchorDepthPoints = group.MaxBy(candidate => candidate.AnchorY)?.WordCompatibleAnchorDepthPoints,
+            WordCompatiblePlacementAnchorY = group.All(candidate => candidate.WordCompatiblePlacementAnchorY is not null)
+                ? group.Max(candidate => candidate.WordCompatiblePlacementAnchorY) : null,
             AnchorConnectorX = allRevisions
                 ? group.Select(candidate => candidate.AnchorConnectorX).DefaultIfEmpty(group[0].AnchorConnectorX).Average()
                 // Office: connectors attach at the range end, i.e. the last range line (lowest anchor).
