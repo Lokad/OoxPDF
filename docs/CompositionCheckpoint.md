@@ -913,7 +913,7 @@ Evidence: `artifacts/composition-c1/cross-tree-inputs-evidence.json`. CI through
 frame, independently of body margins, and retires two fitted inset constants.
 The same Y mapping preserves floating-textbox emission. Nine independent Word
 controls cover six margin pairs, Letter/A4/landscape and mirrored pages: maximum
-error is 0.427pt, down from a 377.571pt body-margin error. Twenty-six affected
+error is 0.438pt, down from a 377.571pt body-margin error. Twenty-six affected
 methods in one invocation and five Ubuntu checks pass; both parent regressions
 fail. The shared paint change justifies one fixed-corpus run: all ten content/
 page-local screens pass; text operations and non-pane graphics remain exact;
@@ -927,3 +927,20 @@ selects only relevant DOCX outcomes for subsequent control batches. Evidence:
 passed Ubuntu and Windows rendering but exposed a Windows long hard-link path;
 `367656f1` uses extended paths, passing ten tool checks on both OSes and a
 277-character shared-input path without renderer rebuild/requalification.
+
+`3b79ab77` makes comment selections consume the occupied inline frame, including
+its baseline strut, with visible bounds allowed to enlarge it. Eight independent
+Word controls covering body/cell and prose/formula/mixed ranges reduce the height
+deficit to at most 0.119pt; baseline-relative top/bottom error stays below 0.187pt.
+Nineteen capability methods pass in one invocation, four portable Ubuntu checks
+pass, and both new regressions fail with the previous library. All eight control
+text-operation files remain exact; four paired crops are reviewed. No font/size/
+document eligibility branch is added. All eight numerical control gates still
+fail. C2 content and page-local screens pass in both presets; Final PDF and both
+text-operation files are exact, with only five review selection operations changed.
+The image/math selection crop is reviewed; both numerical C2 gates remain failed.
+Connector and balloon attachment remain explicit residuals. Eight older Office
+prose screens for normal-text equation words remain unresolved. Frozen `0d02535c`
+qualifies once; root verifies 17 assets/four PDFs without rebuilding or replaying
+the suite. Evidence: `artifacts/composition-c1/comment-occupied-frame-evidence.json`.
+CI through `881f8871` is green on Windows and Ubuntu.
