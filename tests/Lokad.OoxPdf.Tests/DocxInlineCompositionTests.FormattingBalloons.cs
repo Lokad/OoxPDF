@@ -26,6 +26,9 @@ internal static partial class DocxInlineCompositionTests
             var owners = document.Paragraphs.SelectMany(paragraph => paragraph.Runs).ToArray();
             var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
                 .RenderBlankPages(document, null, default).Single();
+            TestAssert.Equal("g:1", row.GetProperty("FillColor").GetString());
+            TestAssert.Equal("RG:0.82,0.204,0.22", row.GetProperty("StrokeColor").GetString());
+            TestAssert.Contains("1 g\n0.82 0.204 0.22 RG", page.Content.Replace("\r\n", "\n", StringComparison.Ordinal));
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
             var title = shows.Single(show => show.Text.Trim() == row.GetProperty("Title").GetString());
             var body = shows.Single(show => show.Text.Trim() == row.GetProperty("Body").GetString());

@@ -1392,13 +1392,16 @@ internal sealed partial class DocxRenderer
         DocxMarkupBalloonPlacement placement,
         DocxMarkupContext markupContext)
     {
-        // RV06: Word-compatible comment balloons wear the first-seen author fill
-        // carried by the candidate; revision balloons keep the review fill.
+        // Word mixed view prints formatting-only balloons on white; comments
+        // retain their author fill and mixed/overflow summaries keep the review fill.
         if (!placement.IsOverflowSummary && UsesWordCompatibleAllMarkupTextProfile(markupContext))
         {
-            return placement.Kind == DocxMarkupBalloonKind.Comment
-                ? placement.FillRgb
-                : WordCompatibleAllMarkupReviewFillRgb;
+            return placement.Kind switch
+            {
+                DocxMarkupBalloonKind.Comment => placement.FillRgb,
+                DocxMarkupBalloonKind.Revision => new(255, 255, 255),
+                _ => WordCompatibleAllMarkupReviewFillRgb
+            };
         }
 
         return placement.FillRgb;

@@ -1682,5 +1682,36 @@
     "DocxWordCompatibleAllMarkupWrapsLongRevisionBalloonBody",
     "DocxAllMarkupRevisionBalloonPreview",
     "DocxAllMarkupRendererDrawsRevisionBalloons"
+  ],
+  "docx-formatting-balloon-appearance": [
+    "DocxInlineCompositionFormattingBalloonDescriptions",
+    "PortableRenderingFormattingBalloonDescriptions",
+    "DocxInlineCompositionRunFormatting",
+    "PortableRenderingRunFormatting",
+    "DocxWordCompatibleAllMarkupKeepsFormattingRevisionBalloons",
+    "DocxWordCompatibleAllMarkupSkipsVoidPropertyChangeBalloons",
+    "DocxWordCompatibleForeignFormattingBalloonsRetainReviewLane",
+    "DocxReviewCommentAuthorsKeepTextOwnership",
+    "DocxWordCompatibleBalloonsUseFirstSeenAuthorColors",
+    "DocxMarkupModesFilterStaticAndRelatedStoryRevisions",
+    "DocxWordCompatibleAllMarkupEmitsOfficeLikeMarkupPrimitiveInventory",
+    "DocxFormattingRevisionBalloonLabels",
+    "DocxWordCompatibleAllMarkupRendersRevisionBalloonTextWithOfficeFont",
+    "DocxWordCompatibleAllMarkupWrapsLongRevisionBalloonBody",
+    "DocxAllMarkupRevisionBalloonPreview",
+    "DocxAllMarkupRendererDrawsRevisionBalloons",
+    "DocxWordCompatibleAllMarkupRendersBareCommentReferenceMarker",
+    "DocxWordCompatibleAllMarkupRendersCommentRangeBrackets",
+    "DocxWordCompatibleAllMarkupRendersGroupedCommentTextWithOfficeBalloonFont",
+    "DocxWordCompatibleAllMarkupRendersFullLongCommentBalloonBody",
+    "DocxWordCompatibleAllMarkupRendersReaderCommentRangeFill",
+    "DocxAllMarkupRendererPlacesStaticStoryTableRevisionBalloons",
+    "DocxAllMarkupRendererPlacesRelatedStoryRevisionBalloons"
+  ],
+  "docx-formatting-balloon-appearance-portable": [
+    "PortableRenderingFormattingBalloonDescriptionsKeepSourceOwners",
+    "PortableRenderingRunFormattingRetainsAuthoredInk",
+    "PortableRenderingRunFormattingMathKeepsSourceAndMetadata",
+    "PortableRenderingReviewAuthorsShareSourceTextPalette"
   ]
 }

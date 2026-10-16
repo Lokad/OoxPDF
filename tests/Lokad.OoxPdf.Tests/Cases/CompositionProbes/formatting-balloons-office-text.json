@@ -9,7 +9,9 @@
       "Body": "Font: Bold",
       "TitleX": 436.97,
       "BodyX": 474.38,
-      "BaselineY": 632.88
+      "BaselineY": 632.88,
+      "FillColor": "g:1",
+      "StrokeColor": "RG:0.82,0.204,0.22"
     },
     {
       "Id": "math-run-format-cell-bold",
@@ -19,7 +21,9 @@
       "Body": "Font: Bold",
       "TitleX": 436.97,
       "BodyX": 474.38,
-      "BaselineY": 632.88
+      "BaselineY": 632.88,
+      "FillColor": "g:1",
+      "StrokeColor": "RG:0.82,0.204,0.22"
     },
     {
       "Id": "math-run-format-header-bold",
@@ -29,7 +33,9 @@
       "Body": "Font: Bold",
       "TitleX": 436.97,
       "BodyX": 474.38,
-      "BaselineY": 660.19
+      "BaselineY": 660.19,
+      "FillColor": "g:1",
+      "StrokeColor": "RG:0.82,0.204,0.22"
     },
     {
       "Id": "math-run-format-footer-bold",
@@ -39,7 +45,9 @@
       "Body": "Font: Bold",
       "TitleX": 436.97,
       "BodyX": 474.38,
-      "BaselineY": 184.99
+      "BaselineY": 184.99,
+      "FillColor": "g:1",
+      "StrokeColor": "RG:0.82,0.204,0.22"
     },
     {
       "Id": "formatting-balloon-body-not-bold",
@@ -49,7 +57,9 @@
       "Body": "Font: Not Bold",
       "TitleX": 436.97,
       "BodyX": 474.38,
-      "BaselineY": 632.88
+      "BaselineY": 632.88,
+      "FillColor": "g:1",
+      "StrokeColor": "RG:0.82,0.204,0.22"
     },
     {
       "Id": "formatting-balloon-body-italic",
@@ -59,7 +69,9 @@
       "Body": "Font: Italic",
       "TitleX": 436.97,
       "BodyX": 474.38,
-      "BaselineY": 632.88
+      "BaselineY": 632.88,
+      "FillColor": "g:1",
+      "StrokeColor": "RG:0.82,0.204,0.22"
     },
     {
       "Id": "formatting-balloon-body-bold-italic",
@@ -69,7 +81,9 @@
       "Body": "Font: Bold, Italic",
       "TitleX": 436.97,
       "BodyX": 474.38,
-      "BaselineY": 632.88
+      "BaselineY": 632.88,
+      "FillColor": "g:1",
+      "StrokeColor": "RG:0.82,0.204,0.22"
     }
   ]
 }
