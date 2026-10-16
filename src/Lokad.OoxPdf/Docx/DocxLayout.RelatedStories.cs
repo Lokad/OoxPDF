@@ -122,7 +122,7 @@ internal sealed partial class DocxLayoutEngine
             }
 
             storyByKey = storyLookupByWidth[bodyWidth];
-            double footnoteWidth = Math.Max(1d, bodyWidth + page.MarkupMarginReservePoints);
+            double footnoteWidth = ResolveNoteTextWidth(bodyWidth, page.MarkupMarginReservePoints);
             IReadOnlyList<DocxRelatedStoryLayout> footnoteLayouts;
             Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> footnoteByKey;
             if (page.MarkupMarginReservePoints <= 0d)
@@ -242,7 +242,7 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
 
-                IReadOnlyList<DocxRelatedStoryLayout> groupLayouts = resolveRelatedStoryLayouts(ResolvePageBodyWidth(outputPages[sectionEndPageIndex]));
+                IReadOnlyList<DocxRelatedStoryLayout> groupLayouts = resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(outputPages[sectionEndPageIndex]));
                 Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> endnoteStoryByKey = CreateRelatedStoryLookup(groupLayouts);
                 DocxRelatedStoryLayout? endnoteSeparatorLayout = FindSpecialRelatedStoryLayout(groupLayouts, DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
                 var sectionEndStories = new List<DocxReferencedRelatedStoryLayout>();
@@ -265,7 +265,7 @@ internal sealed partial class DocxLayoutEngine
             List<DocxRelatedStoryLayout> documentEndStories = [];
             if (documentEndLocations.Count > 0)
             {
-                Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> endnoteStoryByKey = CreateRelatedStoryLookup(resolveRelatedStoryLayouts(ResolvePageBodyWidth(outputPages[^1])));
+                Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> endnoteStoryByKey = CreateRelatedStoryLookup(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(outputPages[^1])));
                 foreach (DocxInlineReferenceLocation location in documentEndLocations)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -301,8 +301,8 @@ internal sealed partial class DocxLayoutEngine
                 List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
                 double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale);
                 int activePageIndex = documentEndPages.Count - 1;
-                DocxRelatedStoryLayout? documentEndSeparatorLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageBodyWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
-                DocxRelatedStoryLayout? documentEndContinuationLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageBodyWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? documentEndSeparatorLayout;
+                DocxRelatedStoryLayout? documentEndSeparatorLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
+                DocxRelatedStoryLayout? documentEndContinuationLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? documentEndSeparatorLayout;
                 // Plain source/static semantics qualify the same footer edge used
                 // by body flow. Scaled, dynamic and rich frames keep their fallback;
                 // fitting footer edges equal the margin.
@@ -2087,11 +2087,8 @@ internal sealed partial class DocxLayoutEngine
             Math.Max(0d, storyHeight),
             Math.Max(0d, storyLayout.ContentHeight - clampedStoryTopOffset));
         double deltaY = topY + clampedStoryTopOffset;
-        double storyWidthPoints = Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight);
-        if (storyLayout.Story.Kind == DocxRelatedStoryKind.Footnote && page.MarkupMarginReservePoints > 0d)
-        {
-            storyWidthPoints += page.MarkupMarginReservePoints;
-        }
+        double storyWidthPoints = storyLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote
+            ? ResolvePageNoteTextWidth(page) : ResolvePageBodyWidth(page);
 
         return new DocxPlacedRelatedStoryLayout(
             storyLayout,

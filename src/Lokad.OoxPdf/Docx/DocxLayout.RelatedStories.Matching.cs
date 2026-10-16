@@ -119,6 +119,14 @@ internal sealed partial class DocxLayoutEngine
         return Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight);
     }
 
+    // Normal notes retain the owning section's full design text width. The
+    // review lane narrows body flow; printed note content is mapped afterward.
+    private static double ResolveNoteTextWidth(double bodyWidth, double markupMarginReserve) =>
+        Math.Max(1d, bodyWidth + markupMarginReserve);
+
+    private static double ResolvePageNoteTextWidth(DocxLayoutPage page) =>
+        ResolveNoteTextWidth(ResolvePageBodyWidth(page), page.MarkupMarginReservePoints);
+
     private static double ResolvePlacedStoryHeight(DocxRelatedStoryLayout storyLayout, DocxLayoutPage page)
     {
         return Math.Min(Math.Max(0d, storyLayout.ContentHeight), Math.Max(0d, page.Height - page.MarginTop - page.MarginBottom));

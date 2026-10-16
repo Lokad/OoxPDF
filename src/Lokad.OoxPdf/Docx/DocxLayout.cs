@@ -344,13 +344,13 @@ internal sealed partial class DocxLayoutEngine
             return GetRelatedStoryLayouts(FootnoteStoryLayoutWidth(geometry));
         }
 
-        // RV06 interleaving (Word 16.0, edge-footlong-mixed WC): Office keeps footnote
-        // text at the full body width while the review lane shrinks the body, so
-        // footnote takes match Final instead of wrapping to the narrowed lane.
+        // RV06 interleaving (Word 16.0, edge-footlong-mixed WC): Office keeps normal-note
+        // text at the full section width while the review lane narrows body flow.
+        // Footnote reserves and endnote placement share that design width.
 
         static double FootnoteStoryLayoutWidth(DocxPageGeometry geometry)
         {
-            return Math.Max(1d, geometry.BodyWidth + geometry.MarkupMarginReservePoints);
+            return ResolveNoteTextWidth(geometry.BodyWidth, geometry.MarkupMarginReservePoints);
         }
 
         IReadOnlyList<DocxRelatedStoryLayout> GetRelatedStoryLayouts(double bodyWidth)

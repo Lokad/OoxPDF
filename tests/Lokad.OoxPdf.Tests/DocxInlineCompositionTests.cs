@@ -34,6 +34,31 @@ internal static class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxInlineCompositionNormalNotesMatchIndependentPrintedWrapping()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent controls use installed Arial metrics.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-note-content-office-geometry.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        foreach (bool removeMath in new[] { false, true })
+        {
+            string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            string fixture = "CompositionProbes/" + row.GetProperty("Id").GetString();
+            string noteKind = input.Contains("-footnote-", StringComparison.Ordinal) ? "footnote" : "endnote";
+            var document = ReadMutation(fixture, mode, false, false,
+                (xml, w, m) => { if (removeMath) xml.Descendants(m + "oMath").Remove(); }, "word/" + noteKind + "s.xml");
+            var lines = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(document).Lines;
+            string kind = input.Contains("-footnote-", StringComparison.Ordinal) ? "Footnote" : "Endnote";
+            var noteLines = lines.Where(line => line.ContainerStoryKind == kind && line.TextLength > 1).ToArray();
+            TestAssert.True(row.GetProperty("ProseLineCount").GetInt32() == noteLines.Length,
+                $"The normal note inherits its owning section's design width before print scaling: {input}/{mode}.");
+        }
+    }
+
     public static void DocxInlineCompositionNormalNoteSourcesRetainEquationOwners()
     {
         foreach (string kind in new[] { "footnote", "endnote" })

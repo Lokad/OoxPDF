@@ -16,6 +16,22 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingNormalNotesKeepSectionDesignWidth()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/math-note-content-" + kind + "-wrapped.docx"), mode);
+            var page = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .InspectLayout(document).Pages.Single();
+            var note = page.PlacedRelatedStories.Single(story => story.Id == "1" && story.Type is null);
+            double width = page.Width - page.MarginLeft - page.MarginRight + page.MarkupMarginReservePoints;
+            TestAssert.True(Math.Abs(note.Width - width) < .001d,
+                "Normal notes retain the owning section's full design text frame before the shared print transform.");
+        }
+    }
+
     public static void PortableRenderingNormalNoteContentPreservesMixedMath()
     {
         foreach (string kind in new[] { "footnote", "endnote" })

@@ -806,5 +806,11 @@
     "DocxEndnoteContinuationTakeExcludesTrailingAfterSpacing",
     "DocxScaledFootnoteExactAdvanceMatchesIndependentOffice",
     "DocxAtomicFootnotesMatchIndependentPageAdmission"
+  ],
+  "docx-note-design-width": [
+    "DocxInlineCompositionNormalNotesMatchIndependentPrintedWrapping",
+    "PortableRenderingNormalNotesKeepSectionDesignWidth",
+    "DocxLayoutWrapsDocumentEndEndnoteUsingFinalSectionPageWidth",
+    "DocxLayoutWrapsSectEndEndnoteUsingOwningSectionPageWidth"
   ]
 }
