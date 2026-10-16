@@ -17,6 +17,27 @@ internal static class DocxInlineContent
     public static bool RequiresMeasuredSourceRanges(DocxParagraph paragraph) =>
         paragraph.CommentRanges.Count != 0 || paragraph.Hyperlinks.Count != 0;
 
+    public static IReadOnlySet<DocxEquation>? GetHyperlinkedEquations(DocxParagraph paragraph, CancellationToken token)
+    {
+        if (paragraph.Hyperlinks.Count == 0 || paragraph.InlineContent is not { } items) return null;
+        var linked = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
+        int visitedThrough = 0;
+        foreach (var link in paragraph.Hyperlinks.Where(link => link.StartInlineItemIndex is not null && link.EndInlineItemIndex is not null)
+            .OrderBy(link => link.StartInlineItemIndex))
+        {
+            token.ThrowIfCancellationRequested();
+            int start = Math.Max(visitedThrough, Math.Clamp(link.StartInlineItemIndex!.Value, 0, items.Count));
+            int end = Math.Clamp(link.EndInlineItemIndex!.Value, 0, items.Count);
+            for (int index = start; index < end; index++)
+            {
+                token.ThrowIfCancellationRequested();
+                if (items[index] is DocxInlineEquation math) linked.Add(math.Equation);
+            }
+            visitedThrough = Math.Max(visitedThrough, end);
+        }
+        return linked;
+    }
+
     public static bool TryGetAutomaticNoteRun(DocxInlineReference reference, [NotNullWhen(true)] out DocxTextRun? run)
     {
         run = reference.DisplayRun;

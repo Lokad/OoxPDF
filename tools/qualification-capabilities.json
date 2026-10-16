@@ -1265,5 +1265,25 @@
     "DocxNativeStaticMathRetainsStoryFlow",
     "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance",
     "PortableRenderingSingleMathAnnotationsPreserveFrames"
+  ],
+  "docx-explicit-display-links": [
+    "DocxInlineCompositionExplicitDisplayLinks",
+    "DocxInlineCompositionExplicitDisplays",
+    "DocxInlineCompositionMathOnlyGroupsCenterAcrossParagraphAlignment",
+    "DocxInlineCompositionCommentedSoleFormulaRetainsDisplayOwnership",
+    "DocxInlineCompositionGroupedHyperlinks",
+    "DocxInlineCompositionAtomicFormulaHyperlinks",
+    "DocxInlineCompositionLeftTabMathLinks",
+    "DocxInlineCompositionSingleMathLinks",
+    "DocxInlineCompositionHyperlinkPreservesSingleMathFrame",
+    "DocxInlineCompositionCommentHighlightsMatchIndependentSelectionBounds",
+    "DocxNativeIsolatedInlineMath",
+    "DocxNativeDisplayFraction",
+    "DocxNativeStaticMathRetainsStoryFlow",
+    "DocxStaticTableMathCompleteReportMatchesIndependentPrintedFrames",
+    "DocxBodyHyperlink",
+    "DocxRendererMergesMultiRunHyperlinkAnnotationsPerLine",
+    "PortableRenderingSingleMathAnnotationsPreserveFrames",
+    "PortableRenderingNormalNotesPreserveInlineImagesAndMath"
   ]
 }

@@ -343,7 +343,7 @@ internal sealed partial class DocxLayoutEngine
         void AddMeasuredMath(DocxInlineItem source, DocxPreparedMathParagraph prepared)
         {
             var box = prepared.Box;
-            if (prepared.UsesDisplayStyle || prepared.Equation.Display || box.InlineBreakAfterGlyphs.Count == 0)
+            if (prepared.UsesDisplayStyle || box.InlineBreakAfterGlyphs.Count == 0)
             {
                 measured.Add(new(source, box.AdvanceWidth * scale, prepared.BaselineInset * scale,
                     prepared.LineHeight * scale, [], prepared));
@@ -676,7 +676,7 @@ internal sealed partial class DocxLayoutEngine
             if (physicalTextBaselineInset is { } physicalInset && !displayGroup &&
                 current.Any(fragment => fragment.Math is not null) &&
                 current.All(fragment => fragment.Math is { } math
-                    ? !math.UsesDisplayStyle && !math.Equation.Display &&
+                    ? !math.UsesDisplayStyle &&
                       math.Box.AboveBaseline * scale <= physicalInset &&
                       math.Box.BelowBaseline * scale <= lineHeight - physicalInset
                     : fragment.Source is DocxInlineText or DocxInlineTab))

@@ -2,7 +2,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed record DocxPreparedMathParagraph(DocxEquation Equation, DocxMathBox Box, double BaselineInset, double LineHeight)
 {
-    public bool UsesDisplayStyle { get; init; }
+    public bool UsesDisplayStyle { get; init; } = Equation.Display;
 }
 
 internal static class DocxMathParagraphPolicy
@@ -127,10 +127,15 @@ internal static class DocxMathParagraphPolicy
     // Authored breaks delimit source rows. Only rows without another visible
     // inline owner promote their formulas; soft wrapping never changes style.
     public static IReadOnlySet<DocxEquation> GetDisplaySourceEquations(DocxParagraph paragraph,
+        CancellationToken token) => paragraph.Hyperlinks.Count == 0
+            ? GetMathOnlySourceEquations(paragraph, token)
+            : new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
+
+    private static IReadOnlySet<DocxEquation> GetMathOnlySourceEquations(DocxParagraph paragraph,
         CancellationToken token)
     {
         var display = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
-        if (!HasSupportedSourceOwner(paragraph) || paragraph.ListLabel is not null || paragraph.Hyperlinks.Count != 0 ||
+        if (!HasSupportedSourceOwner(paragraph) || paragraph.ListLabel is not null ||
             paragraph.InlineContent is not { } items || !TryGetDisplayLineSpacingFactor(paragraph, out _))
             return display;
         var row = new List<DocxEquation>();
@@ -209,7 +214,7 @@ internal static class DocxMathParagraphPolicy
         // contract. A display formula mixed into visible prose still falls back;
         // centered math-only rows keep display measurement and ordered placement.
         var displayRows = paragraph.Equations.Any(equation => equation.Display)
-            ? GetDisplaySourceEquations(paragraph, token) : null;
+            ? GetMathOnlySourceEquations(paragraph, token) : null;
         foreach (var equation in paragraph.Equations)
         {
             token.ThrowIfCancellationRequested();

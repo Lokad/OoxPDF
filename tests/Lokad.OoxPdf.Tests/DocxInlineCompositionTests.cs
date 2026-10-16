@@ -1972,6 +1972,80 @@ internal static class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxInlineCompositionExplicitDisplayLinksRetainSourceAndResolvedStyleOwnership()
+    {
+        foreach (string kind in new[] { "body", "cell", "footer", "fraction" })
+        {
+            var document = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-explicit-display-linked-" + kind);
+            var paragraph = DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, default)
+                .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Select(owner => owner.Paragraph))
+                .Single(value => value.Equations.Count != 0);
+            var linked = TestAssert.NotNull(DocxInlineContent.GetHyperlinkedEquations(paragraph, default));
+            TestAssert.True(paragraph.Equations.All(equation => equation.Display && linked.Contains(equation)),
+                "Hyperlink ownership retains the actual explicit source equations.");
+            TestAssert.Equal(paragraph.Equations.Count, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
+            TestAssert.Equal(0, DocxMathParagraphPolicy.GetDisplaySourceEquations(paragraph, default).Count);
+            var overlapping = paragraph with { Hyperlinks = paragraph.Hyperlinks.Concat(paragraph.Hyperlinks).ToArray() };
+            TestAssert.Equal(linked.Count, TestAssert.NotNull(DocxInlineContent.GetHyperlinkedEquations(overlapping, default)).Count);
+            var math = paragraph.Equations.ToDictionary(equation => equation,
+                equation => new DocxPreparedMathParagraph(equation, new(10d, 6d, 1d, []), 9d, 16d) { UsesDisplayStyle = false });
+            TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph, math, new TrackingMeasurer(),
+                12d, 600d, 600d, 9d, 16d, 1d, default, out var lines), "Linked display source shares inline measurement.");
+            var measured = TestAssert.NotNull(lines);
+            TestAssert.True(measured.All(line => !line.IsDisplayGroup) &&
+                measured.SelectMany(line => line.Fragments).Count(fragment => fragment.Math is not null) == linked.Count,
+                "Resolved inline style controls placement without losing either source formula.");
+            using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() => DocxInlineContent.GetHyperlinkedEquations(paragraph, cancellation.Token));
+        }
+    }
+
+    public static void DocxInlineCompositionExplicitDisplayLinksMatchIndependentWordAcrossContainers()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for linked display-source controls.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-explicit-display-linked-office-geometry.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string id = row.GetProperty("Id").GetString()!;
+            string input = Path.Combine(cases, id + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            var mode = row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(DocxTests.ReadDocx(input, mode), diagnostics.Add, default).Single();
+            var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
+            var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Where(show => fonts.Contains(show.Font)).ToArray();
+            string expectedText = row.GetProperty("MathText").GetString()!;
+            TestAssert.Equal(expectedText, string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+            TestAssert.Equal(expectedText.Length, math.Length);
+            var anchors = row.GetProperty("Anchors").EnumerateArray().ToArray();
+            var origin = anchors.First(anchor => anchor.GetProperty("Text").GetString() == math[0].Text.Normalize(NormalizationForm.FormKC));
+            TestAssert.True(Math.Abs(math[0].X - origin.GetProperty("X").GetDouble()) < 1d,
+                "Linked math retains source-container placement; the existing cell-origin residual remains explicit.");
+            foreach (var anchor in anchors)
+            {
+                string text = anchor.GetProperty("Text").GetString()!;
+                var glyph = math.Where(show => show.Text.Normalize(NormalizationForm.FormKC) == text)
+                    .ElementAt(anchor.GetProperty("Occurrence").GetInt32());
+                TestAssert.True(Math.Abs((glyph.X - math[0].X) - (anchor.GetProperty("X").GetDouble() - origin.GetProperty("X").GetDouble())) < .5d &&
+                    Math.Abs(glyph.Y - anchor.GetProperty("Y").GetDouble()) < 1d,
+                    "Linked mathematical anchors follow independent Word geometry: " + id + "/" + mode + ".");
+                if (id.EndsWith("-fraction", StringComparison.Ordinal))
+                    TestAssert.True(Math.Abs(glyph.Size - anchor.GetProperty("FontSize").GetDouble()) < .1d,
+                        "A linked explicit fraction uses independently observed inline argument sizing.");
+            }
+            var link = page.Annotations.Single(annotation => annotation.IsDestination);
+            foreach (var glyph in math)
+                TestAssert.True(link.X <= glyph.X + .01d && link.X + link.Width >= glyph.X - .01d &&
+                    link.Y <= glyph.Y + .01d && link.Y + link.Height >= glyph.Y - .01d,
+                    "The source hyperlink covers every final mathematical glyph across containers.");
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "A supported source hyperlink cannot omit explicit formulas.");
+        }
+    }
+
     public static void DocxInlineCompositionMathOnlyGroupsCenterAcrossParagraphAlignment()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

@@ -1,0 +1,42 @@
+[
+  {
+    "Id": "math-explicit-display-linked-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-explicit-display-linked-body.docx",
+    "Sha256": "10DB3255BB2140B297AD4F3B3C70CC079A1FBD4AFE191FA38071FE35BA3B5092",
+    "SourceSha256": "D4B2C8C1365A081E098C9DD472DB61CFB4270A2B258A9AF1C1E61477DEE0042B",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [],
+    "ExpectedMathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6"
+  },
+  {
+    "Id": "math-explicit-display-linked-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-explicit-display-linked-cell.docx",
+    "Sha256": "FBE0D41ADC381AC0149A122A4CC342250AAA45E38F97621651A619D8B549F874",
+    "SourceSha256": "51C5845DE8E93D176C4ED4054D7BADEA28D568BE32796720D671CEAEA94A4708",
+    "HeldOut": true,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [],
+    "ExpectedMathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6"
+  },
+  {
+    "Id": "math-explicit-display-linked-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-explicit-display-linked-footer.docx",
+    "Sha256": "8613E41CF89EA242CB2D7327D51F1E27D689D737D3C58262ADD2207C67864029",
+    "SourceSha256": "C22BE01FF50DBEFAFFB6CE8C39DD96F12E64508F9151FC4FCDAB9E353D65E5F5",
+    "HeldOut": true,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [],
+    "ExpectedMathText": "\u03b1+\u03b2=\u03b3\u03b4+\u03b5=\u03b6"
+  },
+  {
+    "Id": "math-explicit-display-linked-fraction",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-explicit-display-linked-fraction.docx",
+    "Sha256": "CC1B1C4D098468AB38B07EB6BD57711809EC24FBD1090D21D0B6748C29020450",
+    "SourceSha256": "07CC42DAFD24532B756FB75B808102F62AAD8D5E2CDE5B591E5615B433149C0E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [],
+    "ExpectedMathText": "a+bc"
+  }
+]

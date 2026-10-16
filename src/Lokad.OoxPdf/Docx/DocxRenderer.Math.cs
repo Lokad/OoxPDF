@@ -106,10 +106,13 @@ internal sealed partial class DocxRenderer
             if (sourceEquations.Count == 0) { continue; }
             bool standalone = DocxMathParagraphPolicy.GetStandaloneRow(paragraph) is not null;
             var displayRows = DocxMathParagraphPolicy.GetDisplaySourceEquations(paragraph, token);
+            var hyperlinked = DocxInlineContent.GetHyperlinkedEquations(paragraph, token);
             foreach (DocxEquation sourceEquation in sourceEquations)
             {
-                DocxEquation equation = (standalone || displayRows.Contains(sourceEquation)) && !sourceEquation.Display
-                    ? sourceEquation with { Display = true } : sourceEquation;
+                bool displayStyle = hyperlinked?.Contains(sourceEquation) != true &&
+                    (sourceEquation.Display || standalone || displayRows.Contains(sourceEquation));
+                DocxEquation equation = sourceEquation.Display == displayStyle
+                    ? sourceEquation : sourceEquation with { Display = displayStyle };
                 if (!DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
                 OpenTypeFont? parentMetrics = null;
                 List<OpenTypeFont>? controlOwners = null;
