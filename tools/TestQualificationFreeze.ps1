@@ -13,6 +13,8 @@ $script = Join-Path $repo 'tools/FreezeQualificationArtifact.ps1'
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'FreezeQualificationArtifact.ps1') -Destination $script
 $parentScript = Join-Path $repo 'tools/NewParentRegressionRuntime.ps1'
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'NewParentRegressionRuntime.ps1') -Destination $parentScript
+$transferScript = Join-Path $repo 'tools/TransferQualificationArtifact.ps1'
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'TransferQualificationArtifact.ps1') -Destination $transferScript
 function Invoke-Git([string[]] $Arguments) {
     $result = git -C $repo @Arguments 2>&1
     if ($LASTEXITCODE -ne 0) { throw ($result -join "`n") }
@@ -57,6 +59,54 @@ function Reject([string] $Name, [string] $ExpectedMessage) {
 }
 $first = Freeze 'first'
 $second = Freeze 'second'
+$expectedSharedAssets = @($first.Assets.psobject.Properties).Count - @($first.Assets.psobject.Properties.Value | Sort-Object -Unique).Count
+if ($expectedSharedAssets -lt 1 -or $first.SharedAssetFiles -ne $expectedSharedAssets -or $first.SharedAssetBytes -lt 1) {
+    throw 'Frozen duplicate assets were not shared'
+}
+$libraryRelative = 'src/Lokad.OoxPdf/bin/Release/net10.0/Lokad.OoxPdf.dll'
+$cliLibraryRelative = 'src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.dll'
+$firstLibrary = Join-Path $repo ('artifacts/first/' + $libraryRelative)
+$firstCliLibrary = Join-Path $repo ('artifacts/first/' + $cliLibraryRelative)
+$secondLibrary = Join-Path $repo ('artifacts/second/' + $libraryRelative)
+$libraryBytes = [IO.File]::ReadAllBytes($firstLibrary)
+$libraryHash = (Get-FileHash -LiteralPath $firstLibrary).Hash
+# Deliberately mutate only fake, newly created assets to prove sharing and
+# ownership isolation. Historical artifacts and real library outputs are unused.
+[IO.File]::WriteAllText($firstCliLibrary, 'changed shared fake asset')
+if ((Get-Content -LiteralPath $firstLibrary -Raw) -ne 'changed shared fake asset' -or
+    (Get-FileHash -LiteralPath $secondLibrary).Hash -ne $libraryHash -or
+    (Get-FileHash -LiteralPath (Join-Path $repo $libraryRelative)).Hash -ne $libraryHash) {
+    throw 'Frozen asset sharing escaped its own output'
+}
+[IO.File]::WriteAllBytes($firstLibrary, $libraryBytes)
+[IO.File]::WriteAllText((Join-Path $repo $libraryRelative), 'changed writable fake build')
+if ((Get-FileHash -LiteralPath $firstLibrary).Hash -ne $libraryHash) { throw 'A frozen asset aliases a writable build' }
+[IO.File]::WriteAllBytes((Join-Path $repo $libraryRelative), $libraryBytes)
+# Exercise the real transfer's copies with a fake conversion; no library executes.
+$qualification = Join-Path $OutputDirectory 'qualification.json'
+@{LibrarySha256=$first.LibrarySha256;TestAssemblySha256=$first.TestAssemblySha256} |
+    ConvertTo-Json | Set-Content -LiteralPath $qualification
+$smoke = Join-Path $OutputDirectory 'smoke.json'
+$fakePdf = Join-Path $OutputDirectory 'expected-fake.pdf'
+[IO.File]::WriteAllText([IO.Path]::GetFullPath($fakePdf), 'fake transfer smoke')
+@(@{Input=$inputFile;InputSha256=(Get-FileHash -LiteralPath $inputFile).Hash;
+    PdfSha256=(Get-FileHash -LiteralPath $fakePdf).Hash;Arguments=@()}) |
+    ConvertTo-Json -AsArray -Depth 4 | Set-Content -LiteralPath $smoke
+function dotnet {
+    [IO.File]::WriteAllText([IO.Path]::GetFullPath([string]$args[3]), 'fake transfer smoke')
+    $global:LASTEXITCODE = 0
+}
+try {
+    & $transferScript -ArtifactDirectory (Join-Path $repo 'artifacts/first') -QualificationEvidence $qualification `
+        -SmokeManifest $smoke -OutputDirectory (Join-Path $OutputDirectory 'transfer') | Out-Null
+}
+finally { Remove-Item Function:\dotnet }
+[IO.File]::WriteAllText((Join-Path $repo $cliLibraryRelative), 'changed transferred fake asset')
+if ((Get-FileHash -LiteralPath $firstLibrary).Hash -ne $libraryHash -or
+    (Get-FileHash -LiteralPath (Join-Path $repo $libraryRelative)).Hash -ne $libraryHash) {
+    throw 'Transferred outputs alias frozen assets or each other'
+}
+[IO.File]::WriteAllBytes((Join-Path $repo $cliLibraryRelative), $libraryBytes)
 if ($first.ReusedInputSnapshot -or !$second.ReusedInputSnapshot -or
     $first.InputSnapshot -ne $second.InputSnapshot -or $first.InputTree -ne $second.InputTree) { throw 'Unchanged input reuse failed' }
 $link = Get-Item -LiteralPath (Join-Path $repo ('artifacts/second/' + (Split-Path $inputPath)))
@@ -133,8 +183,10 @@ Reject 'mixed' 'Release library copies differ'
     Checks=@('Shared unchanged fixture tree', 'Frozen runner input link', 'Linked worktree reuse', 'Dirty source rejection',
         'Changed fixture isolation', 'Cross-tree immutable file sharing', 'Corrupt alias rejection',
         'Corrupt prior-tree rejection', 'Corrupt snapshot rejection', 'Mixed library rejection',
-        'Owned parent input isolation', 'Owned parent reuse', 'Frozen parent destination rejection')
+        'Owned parent input isolation', 'Owned parent reuse', 'Frozen parent destination rejection',
+        'Duplicate asset sharing', 'Separate frozen output isolation', 'Writable build isolation',
+        'Independent transfer copies')
     LibraryBuilds=0;LibraryTestRuns=0;First=$first;Second=$second;Changed=$changed
     SharedInputPathLength=$changedNested.Length
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json') -Encoding utf8
-Write-Output 'Thirteen fixture-freeze/parent-ownership checks passed; no library build or test-suite replay.'
+Write-Output 'Seventeen fixture-freeze/asset/parent-ownership checks passed; no library build or test-suite replay.'

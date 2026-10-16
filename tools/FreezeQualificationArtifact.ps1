@@ -3,6 +3,14 @@
 param([Parameter(Mandatory=$true)] [string] $OutputDirectory)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
+function New-FrozenHardLink([string] $Path, [string] $Target) {
+    # The Windows provider needs extended paths in deeply nested worktrees.
+    if ($IsWindows) {
+        $Path = if ($Path.StartsWith('\\')) { '\\?\UNC\' + $Path.Substring(2) } else { '\\?\' + $Path }
+        $Target = if ($Target.StartsWith('\\')) { '\\?\UNC\' + $Target.Substring(2) } else { '\\?\' + $Target }
+    }
+    New-Item -ItemType HardLink -Path $Path -Target $Target | Out-Null
+}
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'An immutable artifact requires a fresh directory' }
 $status = @(git -C $repo status --porcelain --untracked-files=normal)
 if ($LASTEXITCODE -ne 0 -or $status.Count) { throw 'Commit source and public inputs before freezing' }
@@ -47,15 +55,7 @@ if (!$reusedInputs) {
             $shared = Join-Path $prior.FullName $name
             if ((Get-FileHash -LiteralPath $shared).Hash -ne $inputs[$name]) { throw 'Prior shared input differs' }
             if (!(Get-Item -LiteralPath $shared).IsReadOnly) { throw 'Prior shared input is writable' }
-            # The Windows hard-link provider needs extended paths for nested
-            # qualification repositories; file hashing/copying already supports them.
-            $linkPath = $target
-            $linkTarget = $shared
-            if ($IsWindows) {
-                $linkPath = if ($target.StartsWith('\\')) { '\\?\UNC\' + $target.Substring(2) } else { '\\?\' + $target }
-                $linkTarget = if ($shared.StartsWith('\\')) { '\\?\UNC\' + $shared.Substring(2) } else { '\\?\' + $shared }
-            }
-            New-Item -ItemType HardLink -Path $linkPath -Target $linkTarget | Out-Null
+            New-FrozenHardLink -Path $target -Target $shared
             $sharedInputFiles++
         }
         else { Copy-Item -LiteralPath (Join-Path $repo $name) -Destination $target }
@@ -83,6 +83,9 @@ foreach ($name in $inputs.Keys) {
 New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
 $output = (Resolve-Path -LiteralPath $OutputDirectory).Path
 $assets = [ordered]@{}
+$assetCopies = @{}
+$sharedAssetFiles = 0
+$sharedAssetBytes = 0L
 foreach ($project in @('src/Lokad.OoxPdf','src/Lokad.OoxPdf.Cli','tests/Lokad.OoxPdf.Tests')) {
     $relative = $project + '/bin/Release/net10.0'
     $source = Join-Path $repo $relative
@@ -92,8 +95,19 @@ foreach ($project in @('src/Lokad.OoxPdf','src/Lokad.OoxPdf.Cli','tests/Lokad.Oo
     foreach ($file in Get-ChildItem -LiteralPath $source -File) {
         $name = $relative + '/' + $file.Name
         $hash = (Get-FileHash -LiteralPath $file.FullName).Hash
-        Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $output $name)
-        if ((Get-FileHash -LiteralPath (Join-Path $output $name)).Hash -ne $hash) { throw 'Frozen asset differs' }
+        $destination = Join-Path $output $name
+        if ($assetCopies.ContainsKey($hash)) {
+            # Share only inside this fresh immutable output. Linking a writable
+            # build or a prior artifact would give it ownership of these bytes.
+            New-FrozenHardLink -Path $destination -Target $assetCopies[$hash]
+            $sharedAssetFiles++
+            $sharedAssetBytes += $file.Length
+        }
+        else {
+            Copy-Item -LiteralPath $file.FullName -Destination $destination
+            $assetCopies[$hash] = $destination
+        }
+        if ((Get-FileHash -LiteralPath $destination).Hash -ne $hash) { throw 'Frozen asset differs' }
         $assets[$name] = $hash
     }
 }
@@ -105,6 +119,7 @@ New-Item -ItemType $linkType -Path $inputLink -Target (Join-Path $snapshot $inpu
     Revision=$revision;Rebuilt=$false;Assets=$assets;Inputs=$inputs
     InputTree=$inputTree;InputSnapshot=$snapshot;ReusedInputSnapshot=$reusedInputs
     SharedInputFiles=$inputPin.SharedInputFiles
+    SharedAssetFiles=$sharedAssetFiles;SharedAssetBytes=$sharedAssetBytes
     InputSnapshotIdentitySha256=(Get-FileHash -LiteralPath $inputIdentity).Hash
     LibrarySha256=(Get-FileHash -LiteralPath (Join-Path $output 'src/Lokad.OoxPdf/bin/Release/net10.0/Lokad.OoxPdf.dll')).Hash
     TestAssemblySha256=(Get-FileHash -LiteralPath (Join-Path $output 'tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll')).Hash
