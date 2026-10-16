@@ -34,8 +34,8 @@ or complete fidelity claim is made for these controls. Evidence: ignored
 C58 consolidates kerning-token parsing and nominal threshold arithmetic across
 qualified plain/wrapped/note frames. Existing size/font/document guards and
 default pair policy remain. Twenty-nine Windows and 29 Ubuntu methods pass;
-four controlled PDFs and four transfer smoke PDFs retain their bytes. One
-controlled visual gate passes and three still fail. Read-only attribution
+four controlled PDFs and four transfer smoke PDFs retain their bytes. All four
+controlled visual gates still fail unchanged thresholds. Read-only attribution
 distinguishes explicit thresholds from omitted values in all fixed documents;
 changing omitted defaults remains unresolved. This maintenance batch claims no
 fidelity or performance gain. Evidence: `kerning-threshold-evidence.json`.
