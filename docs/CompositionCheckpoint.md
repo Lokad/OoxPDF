@@ -1,5 +1,27 @@
 # Composed-document reliability checkpoint
 
+C69 extends the same semantic numbering owner to font families and script slots.
+The level overrides the resolved paragraph mark/styles/defaults; an undeclared
+family uses Word's Times New Roman label fallback. Shared label construction
+keeps absent slots from borrowing first-run formatting. Size, color, underline
+and revision-decoration policies remain independently qualified.
+
+Six source transformations in clean Final and visible Review produce twelve Word
+references and 36 matching emitted label families. Qualification passes 139
+Windows methods in one invocation and 108 Ubuntu methods/31 explicit skips in
+one invocation. Both new checks fail on the parent. All twelve visual gates still
+fail unchanged thresholds. Against six parent Final controls, MAE improves in
+five and stays identical in the explicit-level control; recall decreases in the
+unstyled fallback case, with no new failure components. Two page pairs were
+reviewed. Unthemed non-list prose retains a different fallback from Word there.
+
+All ten fixed/complete corpus PDFs retain their bytes, reusing comparisons.
+List-style manifests now count the inherited unsupported header equation rather
+than declaring zero; its diagnostics and raw measured reports remain. A metadata-
+only repin verifies all seventeen assets unchanged without repeating tests or
+conversions. Evidence: `artifacts/composition-c1/list-font-family-evidence.json`
+and its linked source-count correction, face, visual and preservation reports.
+
 C68 resolves list-label weight and slant from their numbering/paragraph owners.
 Explicit level values take precedence; missing values inherit the already-resolved
 paragraph mark, including styles and defaults. The first text run keeps its own

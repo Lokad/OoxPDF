@@ -122,7 +122,7 @@ Supported:
 - Basic body paragraphs and text runs.
 - Document defaults, paragraph styles, and character styles for common run and paragraph properties, including paragraph spacing inheritance, contextual spacing, line-unit spacing, automatic before/after spacing, and exact/at-least line heights.
 - Simple paragraph page breaking.
-- Simple decimal and bullet list labels from `numbering.xml`, including twip-based left, right, first-line, hanging, and numbering-tab indentation. Label weight/slant follows explicit numbering-level values, then the resolved paragraph mark/style/defaults, independently of first-run formatting. Existing label-size and revision-decoration rules remain separately qualified.
+- Simple decimal and bullet list labels from `numbering.xml`, including twip-based left, right, first-line, hanging, and numbering-tab indentation. Label font family/weight/slant follows explicit numbering-level values, then the resolved paragraph mark/style/defaults, independently of first-run formatting; an undeclared label family falls back to Times New Roman. Existing label-size, color/underline and revision-decoration rules remain separately qualified.
 - Inline JPEG and PNG images.
 - Anchored floating images and text boxes with page/margin/column/paragraph positioning, z-order, behind-document rendering, clipping, and first-pass wrap exclusion geometry.
 - Fixed-width tables with cell fills, common collapsed border styles, conflict resolution, nil/none suppression, inside/outer table borders, repeated headers, split rows, and cell text.
