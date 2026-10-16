@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+C67 keeps supported static content in its frame when the supplied math font lacks
+glyphs. The pinned face has math constants but lacks five mathematical italic
+letters used by these controls. Their equations correctly retain unsupported
+diagnostics; rejecting the entire natural frame also displaced surrounding prose
+and pictures below the page. Static fallback now measures the remaining ordered
+items under the same source-owner rules. Body/cell callers retain their strict
+default; available math boxes, bounds and cancellation remain unchanged.
+
+The portable regression covers eight source controls in both public presets,
+preserving three labels, prose rows, pictures and source runs while retaining the
+unsupported diagnostics. Qualification passes 90 Windows and 74 Ubuntu methods/16
+explicit skips. Expanding the harness to both presets reruns only three affected
+checks on the same production DLL, carrying 87 unchanged results. One new check
+fails on the parent. Independent probes establish the same glyph/frame failure
+on C65 and C66. At footer distance 18, the pinned PDF summary returns from Y −16.61
+to 150.84; both before/after conversions retain the same two diagnostics. Four
+pinned before/after PDFs are inspected and one full page pair is reviewed.
+
+Eight native control PDFs remain byte-identical, reusing their independent Office
+comparisons and eight failed visual gates without inspection/raster/diff replay.
+No new Office exports or corpus conversions. The five retained native portfolio
+outcomes have zero ignored-equation diagnostics, leaving the new missing-math
+branch inactive; this is diagnostic/source-based reuse, not fresh qualification.
+Missing-font equations remain unsupported; list-label style and review geometry
+are separate residuals. Evidence:
+`artifacts/composition-c1/static-missing-math-evidence.json` and linked reports.
+
 C66 restores text-only static list labels through the existing ordered inline
 measurement and placement path. A bounded static-list entry uses shared semantic
 source ownership; other callers keep their existing default. Ordinary paragraphs
