@@ -8037,7 +8037,7 @@ internal static partial class DocxCommentsTests
         => ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false);
 
     internal static IEnumerable<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)> ReadEmbeddedGlyphTextShows(
-        PdfPage page, bool usePageCoordinates)
+        PdfPage page, bool usePageCoordinates, bool includeTextTransforms = false)
     {
         // Only the generated graphics-state operators are needed here. Keep
         // the default raw-Tm view for existing emission-contract assertions.
@@ -8046,8 +8046,11 @@ internal static partial class DocxCommentsTests
         int transformIndex = 0;
         (double A, double B, double C, double D, double E, double F) matrix = (1, 0, 0, 1, 0, 0);
         Stack<(double A, double B, double C, double D, double E, double F)>? saved = null;
+        // A text matrix's linear part (including synthetic slant) leaves its
+        // origin at x/y. Existing callers retain their identity-matrix view.
+        string linearTextMatrix = includeTextTransforms ? @"[-+\d.eE]+(?: [-+\d.eE]+){3}" : "1 0 0 1";
         foreach (Match show in Regex.Matches(page.Content,
-            @"/(?<font>\S+) (?<size>[\d.]+) Tf\s+\S+ Tc\s+1 0 0 1 (?<x>[-\d.]+) (?<y>[-\d.]+) Tm\s*(?<show><[0-9A-F]+> Tj|\[.*?\] TJ)",
+            @"/(?<font>\S+) (?<size>[\d.]+) Tf\s+\S+ Tc\s+" + linearTextMatrix + @" (?<x>[-\d.]+) (?<y>[-\d.]+) Tm\s*(?<show><[0-9A-F]+> Tj|\[.*?\] TJ)",
             RegexOptions.Singleline))
         {
             while (transforms is not null && transformIndex < transforms.Count && transforms[transformIndex].Index < show.Index)
