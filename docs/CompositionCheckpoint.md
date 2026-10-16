@@ -1,5 +1,14 @@
 # Composed-document reliability checkpoint
 
+C70 bounds new qualification-asset duplication within each fresh frozen output.
+Identical assets share files there; writable builds, other artifacts and transfer
+copies remain independent. Seventeen tool checks exercise those ownership rules.
+The real artifact loads its catalogue, verifies all C69 asset/input hashes and
+avoids 11,294,694 duplicate bytes across five aliases. Rendering qualification is
+reused without a build, suite, conversion or root transfer. This prevents growth;
+the existing workspace still exceeds its loose 5GB target. Evidence:
+`artifacts/composition-c1/asset-sharing-evidence.json`.
+
 C69 extends the same semantic numbering owner to font families and script slots.
 The level overrides the resolved paragraph mark/styles/defaults; an undeclared
 family uses Word's Times New Roman label fallback. Shared label construction
