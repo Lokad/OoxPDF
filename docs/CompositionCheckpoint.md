@@ -1,5 +1,25 @@
 # Composed-document reliability checkpoint
 
+C60 corrects mixed-view run-formatting descriptions through resolved before/after
+bold/italic state. Seven independent Word controls establish "Formatted: Font:"
+with Bold, Not Bold, Italic or Bold/Italic descriptions across body, cell, header
+and footer. Unsupported/incomplete, malformed, character-style and unowned changes
+retain generic summaries. Other markup profiles retain their prior labels. The
+same source-owned metadata drives measurement and painting; source runs stay intact.
+Independent title/description X positions retain one-point checks.
+
+The unchanged production DLL qualifies 27 Windows methods in two invocations,
+including two old tests corrected to use deterministic embedded fonts. Ubuntu:
+23 passes/four installed-font skips. Two new content checks fail on the parent;
+the two old font failures also reproduce there. Sixteen frozen control outcomes
+retain 18 mathematical operations; all eight Final PDFs and the void Review PDF
+retain parent bytes. Fourteen existing header equation diagnostics remain, with
+no aggregate content-audit pass claimed. Fixed corpus evidence is reused and four
+integration PDFs match after checked transfer of 17 assets. All sixteen visual
+gates still fail unchanged thresholds. Body/footer visual pairs retain corrected
+text and visible content; footer balloon Y, fill, typography and connector/bar
+geometry remain. Evidence: `formatting-description-evidence.json` and linked reports.
+
 Latest bounded batches, C56–C57: unchanged equations survive adjacent source-owned
 run-formatting revisions in body, cell, header and footer paragraphs. Five public
 controls cover a bold change and an empty change; all ten Final/Review outcomes
