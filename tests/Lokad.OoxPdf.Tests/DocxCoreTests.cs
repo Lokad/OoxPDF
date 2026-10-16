@@ -215,7 +215,17 @@ internal static class DocxCoreTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("TJ", pdf);
-        TestAssert.Contains("-166.667", pdf);
+        var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        var paragraph = document.Paragraphs.Single();
+        var unspaced = paragraph with { Runs = paragraph.Runs.Select(run => run with { CharacterSpacingPoints = 0d }).ToArray() };
+        var baseline = document with { BodyElements = document.BodyElements.Select(element =>
+            element is DocxParagraphElement item ? item with { Paragraph = unspaced } : element).ToArray(),
+            FallbackParagraphs = [unspaced] };
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        double Advance(DocxDocument source) => renderer.InspectTextEmission(source).Lines.SelectMany(line => line.Segments)
+            .Where(segment => !segment.IsTerminalLineSpace).Sum(segment => segment.AdvanceProfile.PlannedEmittedAdvance);
+        TestAssert.True(Math.Abs(Advance(document) - Advance(baseline) - 2d) < .001d,
+            "Two glyphs retain their authored two-point gap after nominal/export-width compensation.");
     }
 
     public static void OfficePdfTextProfileExposesWordNumberedListCharacterSpacing()

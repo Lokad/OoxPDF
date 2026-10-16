@@ -174,9 +174,12 @@ internal static class DocxTextEmissionPlanner
         bool isTerminalLineSpace,
         double fontScale = 1d)
     {
-        return isTerminalLineSpace
+        var plan = isTerminalLineSpace
             ? CreateTerminalLineSpace(style, layoutFontSize, fontScale)
             : Create(style, layoutFontSize, pdfCharacterSpacing, compensatePdfCharacterSpacing, source, fontScale);
+        var advances = DocxTextAdvances.Resolve(style);
+        return plan with { PairKerningEnabled = advances.PairKerningEnabled,
+            NominalAdvanceFontSize = advances.UseLogicalSizeForPdfAdvances ? layoutFontSize : null };
     }
 
     public static double TextStateCharacterSpacingForListLabel(DocxListLabel label, double layoutFontSize)

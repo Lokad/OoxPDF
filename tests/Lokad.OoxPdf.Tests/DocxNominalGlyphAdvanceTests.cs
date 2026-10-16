@@ -33,7 +33,7 @@ internal static class DocxNominalGlyphAdvanceTests
         TestAssert.Equal(embedded.EncodeGlyphPositioningArray("A", 0, 11.04, true, false), embedded.EncodeGlyphPositioningArray("A", 0, 11.04, true, false, 11));
     }
 
-    public static void DocxNominalGlyphAdvanceUsesQualifiedBodyPolicyAndPreservesSource()
+    public static void DocxNominalGlyphAdvanceUsesSourceAdvancesAndPreservesLayoutPurposes()
     {
         foreach (bool notes in new[] { false, true })
         foreach (string? threshold in new string?[] { null, "0", "28", "20" })
@@ -46,13 +46,14 @@ internal static class DocxNominalGlyphAdvanceTests
             var word = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).InspectTextEmission(source);
             var body = word.Lines.Where(l => l.StoryKind == "Body").SelectMany(l => l.Segments).Where(s => !s.IsTerminalLineSpace && s.PdfFontSize == 11.04).ToArray();
             TestAssert.True(body.Length > 0, "The actual body emits its physical 11.04pt font.");
-            if (threshold == "20" && !notes) TestAssert.True(body.All(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal == 0), "Excluded ordinary Calibri met frames retain accepted advances.");
-            else if (threshold == "20") TestAssert.True(body.Any(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal < 0 && s.AdvanceProfile.PairAdvanceAdjustmentTotal > 0), "Qualified met note frames combine logical glyph advances with the authored pair policy.");
-            else TestAssert.True(body.Any(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal < 0), "Only qualified nominal body emission applies logical advances.");
-            TestAssert.True(word.Lines.Where(l => l.StoryKind != "Body").SelectMany(l => l.Segments).All(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal == 0), "Related note stories retain their accepted advance policy.");
+            if (threshold == "20") TestAssert.True(body.Any(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal < 0 && s.AdvanceProfile.PairAdvanceAdjustmentTotal > 0), "Met thresholds combine logical glyph advances with the authored pair policy independently of note layout.");
+            else TestAssert.True(body.Any(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal < 0), "Source baseline text owns nominal advances independently of body-layout correction.");
+            TestAssert.True(word.Lines.Where(l => l.StoryKind != "Body").SelectMany(l => l.Segments).All(s => s.GlyphAdvanceSignature.KerningUnits == 0),
+                "Ordinary note prose shares its absent-threshold rule; marker purposes remain separate.");
             TestAssert.True(word.Lines.SelectMany(l => l.Segments).Where(s => s.PdfFontSize == 6.96).All(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal == 0), "Source-owned body marks keep their superscript policy.");
             var preserve = Renderer(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(source);
-            TestAssert.True(preserve.Lines.SelectMany(l => l.Segments).All(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal == 0), "Preserve applies no logical-advance correction.");
+            TestAssert.True(preserve.Lines.SelectMany(l => l.Segments).Any(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal < 0),
+                "Preserve and Word-compatible painting share authored baseline advances.");
             TestAssert.True(source.Paragraphs.SelectMany(p => p.Runs).All(r => !r.UseLogicalSizeForPdfAdvances && r.PairKerningEnabled), "Rendering retains original metadata and fallback pair policy.");
         }
     }

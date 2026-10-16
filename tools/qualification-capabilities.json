@@ -945,7 +945,7 @@
     "MathFontVerticalVariantsKeepCancellationAndCumulativeFontWork",
     "DocxOrdinaryKerning",
     "DocxPlainFootnoteKerningKeepsMeasurementAndEmissionCoherent",
-    "DocxPlainFootnoteKerningKeepsPreserveAndReviewPairPositioning",
+    "DocxPlainFootnoteKerningUsesSourceThresholdsAcrossPreserveAndReview",
     "PptxSyntheticTextBoxUsesKerningWhenAvailable",
     "PptxSyntheticTextBoxHonorsKerningThreshold",
     "PptxSyntheticTextBoxNoBreakSpaceKeepsBoundaryKerning",
@@ -1608,6 +1608,23 @@
     "DocxMarkupModesFilterStaticAndRelatedStoryRevisions",
     "DocxInlineCompositionExplicitDisplaysRetainSourceRowsAndFallbacks",
     "PortableRenderingStaticCellsPreserveMixedMathImagesAndCounters"
+  ],
+  "docx-source-text-advances": [
+    "DocxInlineCompositionSourceAdvances",
+    "DocxOrdinaryKerning",
+    "DocxPlainFootnoteKerning",
+    "DocxMetGlyphAdvance",
+    "DocxNominalGlyphAdvance",
+    "DocxEmergencyWrapping",
+    "DocxRendererEmitsRunCharacterSpacingAsPositionedGlyphs",
+    "DocxWrappedCalibriKerning",
+    "DocxInlineCompositionRunFormatting",
+    "DocxInlineCompositionTextRevisionMathMatchesIndependentWord",
+    "PortableRenderingRunFormattingMath",
+    "PortableRenderingTextRevisionMath",
+    "DocxInlineCompositionRunSplittingPreservesMeasurementAndSourceOwners",
+    "DocxInlineCompositionMeasurementPreservesSourceTrackingKerningAndHiddenRuns",
+    "DocxWordCompatibleForeignFormattingBalloonsRetainReviewLane"
   ],
   "docx-kerning-threshold-ownership": [
     "DocxOrdinaryKerning",

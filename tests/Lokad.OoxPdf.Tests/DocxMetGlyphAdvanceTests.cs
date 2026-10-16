@@ -66,7 +66,7 @@ internal static class DocxMetGlyphAdvanceTests
         for (int i = 0; i < pages.Length; i++) TestAssert.True(pages[i].Annotations.All(a => a.Destination!.Value.PageIndex == i), "Actual destinations retain the complete owned page.");
     }
 
-    public static void DocxMetGlyphAdvanceRetainsExcludedOrdinaryFacePolicy()
+    public static void DocxMetGlyphAdvanceUsesSourceAdvancesWithoutChangingFrameEligibility()
     {
         foreach (string family in new[] { "Calibri", "Arial" })
         {
@@ -83,7 +83,11 @@ internal static class DocxMetGlyphAdvanceTests
             TestAssert.True(DocxPlainElevenPointBody.IsEligible(source, DocxNominalGlyphAdvanceTests.Layout(source)), "The excluded met face remains inside the accepted 11pt source frame.");
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var word = renderer.InspectTextEmission(source);
-            TestAssert.True(word.Lines.SelectMany(l => l.Segments).All(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal == 0 && s.AdvanceProfile.PairAdvanceAdjustmentTotal == 0), "Excluded ordinary faces keep physical pair/advance emission.");
+            TestAssert.True(word.Lines.SelectMany(l => l.Segments).Any(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal < 0),
+                "Authored baseline advances are independent of a font-specific body-layout correction.");
+            TestAssert.True(!DocxPlainFootnoteKerning.TryCreateDocument(source, DocxNominalGlyphAdvanceTests.Layout(source),
+                out var unchanged, out _) && ReferenceEquals(source, unchanged),
+                "The separately qualified ordinary met-frame admission stays unchanged.");
             TestAssert.True(source.Paragraphs.SelectMany(p => p.Runs).All(r => !r.UseLogicalSizeForPdfAdvances && r.PairKerningEnabled), "The excluded source retains its metadata and pair policy.");
         }
 
@@ -95,7 +99,8 @@ internal static class DocxMetGlyphAdvanceTests
         });
         TestAssert.True(DocxPlainElevenPointBody.IsEligible(mixed, DocxNominalGlyphAdvanceTests.Layout(mixed)), "The mixed positive thresholds retain the accepted complete source frame.");
         var mixedRenderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-        TestAssert.True(mixedRenderer.InspectTextEmission(mixed).Lines.SelectMany(l => l.Segments).All(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal == 0 && s.AdvanceProfile.PairAdvanceAdjustmentTotal == 0), "Mixed met thresholds retain accepted physical advance emission.");
+        TestAssert.True(mixedRenderer.InspectTextEmission(mixed).Lines.SelectMany(l => l.Segments).Any(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal < 0),
+            "Mixed thresholds resolve per source run without changing the complete-note admission policy.");
         TestAssert.True(DocxPlainFootnoteKerning.TryCreateDocument(mixed, DocxNominalGlyphAdvanceTests.Layout(mixed), out var mixedAdjusted, out _), "Existing complete-note policy still applies.");
         TestAssert.True(mixedAdjusted.Paragraphs.SelectMany(p => p.Runs).Where(r => r.VerticalAlignment == DocxRunVerticalAlignment.Superscript).All(r => r.PairKerningEnabled), "Mixed thresholds retain the accepted source-owned marker pair policy.");
     }

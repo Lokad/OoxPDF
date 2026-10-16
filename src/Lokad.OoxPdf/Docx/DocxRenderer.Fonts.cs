@@ -56,7 +56,7 @@ internal sealed partial class DocxRenderer
             resources.AddRange(markResources);
         }
         IDocxTextMeasurer? innerMeasurer = plan.Runs.Any(run => LoadFont(run.Resolution, fontCache, cancellationToken) is not null) || fallback is not null
-            ? new DocxFontPlanTextMeasurer(plan, fallback?.Resolution, cancellationToken, fontResolver, fontCache)
+            ? new DocxFontPlanTextMeasurer(plan, fallback?.Resolution, cancellationToken, fontResolver, fontCache, resolveSourceAdvances: true)
             : null;
         ReportMissingGlyphs(plan, runResources, fallbackChains, fontCache, diagnosticSink, cancellationToken);
         Dictionary<DocxTextRun, PdfFallbackFontResource> fallbackFaces = PrepareMissingFontFallback(bodyPlan, runResources, diagnosticSink, cancellationToken);

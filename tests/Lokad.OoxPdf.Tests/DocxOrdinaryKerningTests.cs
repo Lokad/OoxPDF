@@ -60,7 +60,8 @@ internal static class DocxOrdinaryKerningTests
         TestAssert.True(emission.Lines.SelectMany(l => l.Segments).All(s => Math.Abs(s.AdvanceProfile.KerningAdjustmentTotal) < .00001d), "Measured and emitted pair positioning agree.");
         TestAssert.Equal(0, word.RenderBlankPages(source, null, CancellationToken.None).Sum(p => p.Annotations.Count));
         var preserve = Renderer(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(source);
-        TestAssert.True(preserve.Lines.SelectMany(l => l.Segments).Any(s => s.GlyphAdvanceSignature.KerningUnits < 0), "Preserve retains the authored fallback pair positioning.");
+        TestAssert.True(preserve.Lines.SelectMany(l => l.Segments).All(s => s.GlyphAdvanceSignature.KerningUnits == 0),
+            "Preserve and Word-compatible painting share the authored minimum, independent of layout admission.");
         TestAssert.True(source.Paragraphs[0].Runs[0].PairKerningEnabled, "Rendering leaves source pair policy unchanged.");
     }
 

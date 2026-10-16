@@ -81,16 +81,18 @@ internal static class DocxPlainFootnoteKerningTests
         TestAssert.Equal(string.Empty, malformed.Paragraphs[0].Runs[0].KerningMinimumHalfPointsValue);
     }
 
-    public static void DocxPlainFootnoteKerningKeepsPreserveAndReviewPairPositioning()
+    public static void DocxPlainFootnoteKerningUsesSourceThresholdsAcrossPreserveAndReview()
     {
         var source = ReadFixture();
         var preserve = Renderer(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(source);
-        TestAssert.True(preserve.Lines.SelectMany(l => l.Segments).Any(s => s.GlyphAdvanceSignature.KerningUnits < 0), "Preserve output retains its measured pair positioning.");
+        TestAssert.True(preserve.Lines.SelectMany(l => l.Segments).All(s => s.GlyphAdvanceSignature.KerningUnits == 0),
+            "Preserve emission resolves the authored threshold without requiring a note-layout retry.");
         var review = ReadFixture((xml, _, _) => xml.Descendants(Word + "p").First().Add(new XElement(Word + "ins",
             new XAttribute(Word + "id", "19"), new XAttribute(Word + "author", "Public Author"),
             new XElement(Word + "r", new XElement(Word + "t", " Public revision AB.")))));
         var emission = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).InspectTextEmission(review);
-        TestAssert.True(emission.Lines.SelectMany(l => l.Segments).Any(s => s.GlyphAdvanceSignature.KerningUnits < 0), "The established review-text branch retains its pair positioning.");
+        TestAssert.True(emission.Lines.SelectMany(l => l.Segments).All(s => s.GlyphAdvanceSignature.KerningUnits == 0),
+            "Adding review metadata cannot change the same source threshold's glyph policy.");
         TestAssert.True(source.Paragraphs[0].Runs[0].PairKerningEnabled, "Rendering never mutates the source pair policy.");
     }
 
