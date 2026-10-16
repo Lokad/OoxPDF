@@ -1,0 +1,68 @@
+[
+  {
+    "Id": "footer-distance-18",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/static-frame-footer-distance-18.docx",
+    "Sha256": "25DE337FE408BC0F03CB58A91FE00D4520176DD3A4C93555E3A9BAE4D51F8054",
+    "SourceSha256": "377B83EBD37BAB7A16E493EC8BA725A28C8C7194E998E6547AEF3BA8D61A98CD",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "footer-distance-72",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/static-frame-footer-distance-72.docx",
+    "Sha256": "4BC2BC8A5F01F224ABCD87C1ED3D15EE4338D63A978D434EBBA679BDEB47BC94",
+    "SourceSha256": "377B83EBD37BAB7A16E493EC8BA725A28C8C7194E998E6547AEF3BA8D61A98CD",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "footer-second-paragraph",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/static-frame-footer-second-paragraph.docx",
+    "Sha256": "66070AB92F72D631F44BC11A0F2D4131802E504C94A5FCA976E1F0F32A89932A",
+    "SourceSha256": "377B83EBD37BAB7A16E493EC8BA725A28C8C7194E998E6547AEF3BA8D61A98CD",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "footer-plain-first",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/static-frame-footer-plain-first.docx",
+    "Sha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
+    "SourceSha256": "377B83EBD37BAB7A16E493EC8BA725A28C8C7194E998E6547AEF3BA8D61A98CD",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "footer-plain-second",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/static-frame-footer-plain-second.docx",
+    "Sha256": "363ECFCB4DC9FA2C2D8DD6ED7B3F7C657C27E4BDAC482FBFEBE1DEAE6E4E0732",
+    "SourceSha256": "377B83EBD37BAB7A16E493EC8BA725A28C8C7194E998E6547AEF3BA8D61A98CD",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "header-second-paragraph",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/static-frame-header-second-paragraph.docx",
+    "Sha256": "E3DB901CE2C15DD4022C3554443D224153D2CD16C77481EECF3C56F0253ADDA9",
+    "SourceSha256": "EFBBA4E653CA704936159ED3AA7F8EF68DBCCB5355A505B17888BA3E4C0ED8E2",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]
