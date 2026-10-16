@@ -8,6 +8,10 @@ internal static class DocxFontFallbackRules
 
     private static readonly string[] DefaultLatinTypefaceCandidates =
     [
+        // Word's undeclared Latin typeface, independently checked across body,
+        // cells and static stories. Explicit/theme families and a resolver's
+        // explicit document-default resolution are handled before this fallback.
+        "Times New Roman",
         "Aptos",
         "Calibri",
         "Arial"

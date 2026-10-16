@@ -790,6 +790,21 @@ internal static class DocxCoreTests
         TestAssert.True(resolved.Resolution?.Bold == true && resolved.Resolution?.Italic == true, "Expected run style to flow into the font request.");
     }
 
+    public static void DocxFontPlanUsesWordClassicTypefaceBeforeModernFallbacks()
+    {
+        var run = new DocxTextRun("Undeclared Latin", 11d, null, true, true, false, null, null);
+        DocxDocument document = DocxTests.CreateFontPlanDocument(run, DocxFontCatalog.Empty);
+        var resolver = new MapFontResolver(["Times New Roman", "Aptos", "Calibri", "Arial"], "Resolver Fallback");
+        DocxResolvedRunTypeface resolved = DocxFontPlan.Create(document, resolver, CancellationToken.None).Runs.Single();
+        TestAssert.Equal("Times New Roman", resolved.ResolvedFamily ?? string.Empty);
+        TestAssert.True(resolved.Resolution?.Bold == true && resolved.Resolution?.Italic == true,
+            "The undeclared family fallback preserves the requested face style.");
+
+        resolver = new MapFontResolver([DocxRenderer.DefaultDocumentTypefaceRequest, "Times New Roman", "Aptos"], "Resolver Fallback");
+        resolved = DocxFontPlan.Create(document, resolver, CancellationToken.None).Runs.Single();
+        TestAssert.Equal(DocxRenderer.DefaultDocumentTypefaceRequest, resolved.ResolvedFamily ?? string.Empty);
+    }
+
     public static void DocxFontPlanPrefersOfficeBodyFontForImplicitDefaultTypeface()
     {
         var run = new DocxTextRun("Office default", 11d, null, true, false, false, null, null);

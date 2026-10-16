@@ -1,0 +1,325 @@
+{
+  "Source": "Independent Word 16 clean Final / visible Review font dictionaries and text anchors.",
+  "Rows": [
+    {
+      "Id": "default-typeface-mixed-11",
+      "File": "default-typeface-mixed-11.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "13C130740F3980F012A150599D271DFF27FC3AF6E3FF2025E443F795A43005A7",
+      "ReferencePdfSha256": "787646EB0592A39D1CA660D09148CF40293B2D9E7C079A3537B878333C58E87B",
+      "Anchors": [
+        {
+          "Text": "Header fallback sample.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 745.68
+        },
+        {
+          "Text": "1.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 81.624
+        },
+        {
+          "Text": "Summary:",
+          "Family": "Arial",
+          "WordFont": "Arial-BoldMT",
+          "X": 90.024,
+          "Y": 81.624
+        },
+        {
+          "Text": "2.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 62.904
+        },
+        {
+          "Text": "3.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 44.184
+        },
+        {
+          "Text": "Composed story.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 709.66
+        },
+        {
+          "Text": "Table fallback sample.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 691.06
+        }
+      ]
+    },
+    {
+      "Id": "default-typeface-mixed-11",
+      "File": "default-typeface-mixed-11.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "13C130740F3980F012A150599D271DFF27FC3AF6E3FF2025E443F795A43005A7",
+      "ReferencePdfSha256": "BC2EAEA9798DFDE254EF4B249A486B413C7F8998F78D172BD5ABC87FF2990D55",
+      "Anchors": [
+        {
+          "Text": "Header fallback sample.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 745.68
+        },
+        {
+          "Text": "1.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 81.624
+        },
+        {
+          "Text": "Summary:",
+          "Family": "Arial",
+          "WordFont": "Arial-BoldMT",
+          "X": 90.024,
+          "Y": 81.624
+        },
+        {
+          "Text": "2.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 62.904
+        },
+        {
+          "Text": "3.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 44.184
+        },
+        {
+          "Text": "Composed story.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 709.66
+        },
+        {
+          "Text": "Table fallback sample.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 691.06
+        }
+      ]
+    },
+    {
+      "Id": "default-typeface-mixed-14",
+      "File": "default-typeface-mixed-14.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "AC898C74AA61A8409A35DFEDAC0D2F4E2E3E1F2B679F1E8589FD467B8A2962C4",
+      "ReferencePdfSha256": "EBEB3E537415B3D7426C12D98191181CD00BCEAA34E5F95A7E5FD4C40687E716",
+      "Anchors": [
+        {
+          "Text": "Header fallback sample.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 742.92
+        },
+        {
+          "Text": "1.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 89.064
+        },
+        {
+          "Text": "Summary:",
+          "Family": "Arial",
+          "WordFont": "Arial-BoldMT",
+          "X": 90.024,
+          "Y": 89.064
+        },
+        {
+          "Text": "2.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 66.984
+        },
+        {
+          "Text": "3.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 44.904
+        },
+        {
+          "Text": "Composed story.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 706.9
+        },
+        {
+          "Text": "Table fallback sample.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 684.82
+        }
+      ]
+    },
+    {
+      "Id": "default-typeface-mixed-14",
+      "File": "default-typeface-mixed-14.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "AC898C74AA61A8409A35DFEDAC0D2F4E2E3E1F2B679F1E8589FD467B8A2962C4",
+      "ReferencePdfSha256": "6E03B1FB754AA4B5178985419CDF979A9997F3AFB2193FEF47750885ACDFEBF6",
+      "Anchors": [
+        {
+          "Text": "Header fallback sample.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 742.92
+        },
+        {
+          "Text": "1.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 89.064
+        },
+        {
+          "Text": "Summary:",
+          "Family": "Arial",
+          "WordFont": "Arial-BoldMT",
+          "X": 90.024,
+          "Y": 89.064
+        },
+        {
+          "Text": "2.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 66.984
+        },
+        {
+          "Text": "3.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 44.904
+        },
+        {
+          "Text": "Composed story.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 706.9
+        },
+        {
+          "Text": "Table fallback sample.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 684.82
+        }
+      ]
+    },
+    {
+      "Id": "list-family-no-family-default",
+      "File": "list-family-no-family-default.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "FB4270E7F78721BA27761195C681CEF2E8E39C4CFECA2CD17FF31608D938D042",
+      "ReferencePdfSha256": "FA2E2C4C5FB75F208D10145ECD4E593B4550692C067F3D738B26A1E6E8410C16",
+      "Anchors": [
+        {
+          "Text": "1.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 81.624
+        },
+        {
+          "Text": "Summary:",
+          "Family": "Arial",
+          "WordFont": "Arial-BoldMT",
+          "X": 90.024,
+          "Y": 81.624
+        },
+        {
+          "Text": "2.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 62.904
+        },
+        {
+          "Text": "3.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 44.184
+        },
+        {
+          "Text": "Composed story.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 709.66
+        }
+      ]
+    },
+    {
+      "Id": "list-family-no-family-default",
+      "File": "list-family-no-family-default.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "FB4270E7F78721BA27761195C681CEF2E8E39C4CFECA2CD17FF31608D938D042",
+      "ReferencePdfSha256": "972CD68CA8339667331F79E22A07092B980365B8D592D857102597E7B22E047B",
+      "Anchors": [
+        {
+          "Text": "1.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 81.624
+        },
+        {
+          "Text": "Summary:",
+          "Family": "Arial",
+          "WordFont": "Arial-BoldMT",
+          "X": 90.024,
+          "Y": 81.624
+        },
+        {
+          "Text": "2.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 62.904
+        },
+        {
+          "Text": "3.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 44.184
+        },
+        {
+          "Text": "Composed story.",
+          "Family": "Times New Roman",
+          "WordFont": "TimesNewRomanPSMT",
+          "X": 72.024,
+          "Y": 709.66
+        }
+      ]
+    }
+  ]
+}

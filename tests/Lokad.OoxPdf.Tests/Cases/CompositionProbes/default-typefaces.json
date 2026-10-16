@@ -1,0 +1,30 @@
+[
+  {
+    "Id": "default-typeface-mixed-11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/default-typeface-mixed-11.docx",
+    "Sha256": "13C130740F3980F012A150599D271DFF27FC3AF6E3FF2025E443F795A43005A7",
+    "SourceSha256": "FB4270E7F78721BA27761195C681CEF2E8E39C4CFECA2CD17FF31608D938D042",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "Composed story.",
+      "Table fallback sample.",
+      "Header fallback sample.",
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "default-typeface-mixed-14",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/default-typeface-mixed-14.docx",
+    "Sha256": "AC898C74AA61A8409A35DFEDAC0D2F4E2E3E1F2B679F1E8589FD467B8A2962C4",
+    "SourceSha256": "FB4270E7F78721BA27761195C681CEF2E8E39C4CFECA2CD17FF31608D938D042",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "Composed story.",
+      "Table fallback sample.",
+      "Header fallback sample.",
+      "share the same input series."
+    ]
+  }
+]
