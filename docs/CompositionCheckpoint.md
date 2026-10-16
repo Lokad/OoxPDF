@@ -1,6 +1,6 @@
 # Composed-document reliability checkpoint
 
-Latest bounded batches, C56–C57: unchanged equations survive adjacent source-owned
+Latest bounded batches, C56â€“C57: unchanged equations survive adjacent source-owned
 run-formatting revisions in body, cell, header and footer paragraphs. Five public
 controls cover a bold change and an empty change; all ten Final/Review outcomes
 retain 18 mathematical operations instead of dropping the first fraction in eight
@@ -30,6 +30,15 @@ Formatting-only text and labels now retain authored ink. No aggregate prose audi
 or complete fidelity claim is made for these controls. Evidence: ignored
 `artifacts/composition-c1/math-run-format-evidence.json` and
 `formatting-review-ink-evidence.json`.
+
+C58 consolidates kerning-token parsing and nominal threshold arithmetic across
+qualified plain/wrapped/note frames. Existing size/font/document guards and
+default pair policy remain. Twenty-nine Windows and 29 Ubuntu methods pass;
+four controlled PDFs and four transfer smoke PDFs retain their bytes. One
+controlled visual gate passes and three still fail. Read-only attribution
+distinguishes explicit thresholds from omitted values in all fixed documents;
+changing omitted defaults remains unresolved. This maintenance batch claims no
+fidelity or performance gain. Evidence: `kerning-threshold-evidence.json`.
 
 The fixed [portfolio](../tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json)
 contains four synthetic DOCX documents and two existing composite decks. The
