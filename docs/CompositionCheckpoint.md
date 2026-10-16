@@ -1515,3 +1515,24 @@ Evidence: `artifacts/composition-c1/aligned-inline-fields-evidence.json`.
 A separate independent probe validates the existing sole-fraction hyperlink
 styling guard: Word itself switches that combination to smaller left-aligned
 inline styling. That guard remains; no broad eligibility deletion was made.
+
+
+### Explicit centered display-source groups (C37)
+
+Two supported formulas in explicit `m:oMathPara` source containers no longer
+disappear. Preparation reuses the existing display-source-row ownership and ordered
+layout while retaining original source objects and cancellation. Mixed-prose and
+non-centered explicit groups retain their fallback.
+
+Both modes and same/separate source containers retain all ten mathematical glyphs,
+including bookmarks and unchanged-format run splitting. Independent baseline/origin/
+operator errors are 0.009/0.193/0.248pt. The following-prose pitch residual is 0.599pt;
+no font/size correction was added. Four page pairs share one reviewed raster pair,
+with no observed omission/overlap/clipping. All four visual gates still fail recall/
+SSIM. Raw joined-Greek extraction warnings remain alongside exact glyph/anchor checks.
+
+Frozen d6083a42 passes 17 Windows methods once and seven Ubuntu checks (ten font
+skips); both new methods fail on C35. All twelve fixed/complete PDFs retain bytes,
+Office comparisons, content screens and reviews. Transfer verifies 17 assets/four
+PDFs without a root rebuild or suite replay. Evidence:
+`artifacts/composition-c1/explicit-display-groups-evidence.json`.
