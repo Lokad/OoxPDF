@@ -1419,3 +1419,24 @@ the corrected overwide-word behavior. Frozen c53a6a76 / root 626f1321 passes 93
 Windows methods once and 62 Ubuntu checks (31 font-specific skips). All twelve
 fixed/complete PDFs retain bytes; 17 assets/four smoke PDFs transfer without a root
 build or suite replay. Evidence: `artifacts/composition-c1/emergency-image-ownership-evidence.json`.
+
+### Balanced literal groups and ordered-math links (C31)
+
+Balanced literal groups can break at binary/relation operators, matching independent
+Word controls for parenthesized and nested groups. Previously omitted formulas now
+retain all seven/nine glyphs on Word's two mathematical rows in both presets.
+Matching delimiter kinds are checked; malformed/unary relocation fallbacks remain.
+Hyperlinks retain ordered source ranges and merge mathematical bounds through the
+existing rectangle builder. Tests cover both linked rows, bookmarks, run splitting
+and the printed review transform. The optional test reader now applies graphics
+transforms; production PDF validation is unchanged.
+
+Maximum independent baseline/local-glyph differences are 0.113/0.060pt. Absolute
+first-row X differs by up to 0.742pt; source-run splitting adds a 0.252pt row-origin
+residual. All four new visual gates still fail recall/SSIM. Four preset pairs were
+reviewed without observed omission, overlap or clipping; thresholds remain.
+
+Frozen 14a11946 / root e390f2d7 passes 51 Windows methods once and 31 Ubuntu checks
+(20 font-specific skips). Two new methods fail on the accepted parent. All twelve
+fixed/complete PDFs retain accepted bytes; 17 assets/four exact PDFs transfer without
+a root build or suite replay. Evidence: `artifacts/composition-c1/grouped-literal-math-evidence.json`.
