@@ -1536,3 +1536,27 @@ skips); both new methods fail on C35. All twelve fixed/complete PDFs retain byte
 Office comparisons, content screens and reviews. Transfer verifies 17 assets/four
 PDFs without a root rebuild or suite replay. Evidence:
 `artifacts/composition-c1/explicit-display-groups-evidence.json`.
+
+
+### Hyperlink-owned explicit mathematical style (C39)
+
+Supported formulas inside hyperlinked explicit display containers no longer
+disappear. Ordered source ranges resolve hyperlink ownership once; math style is
+selected before measurement while original source objects remain unchanged.
+Independent fractions establish inline argument sizing even for explicit display
+source. Ordered layout consumes the resolved style, preserving the existing
+implicit-formula hyperlink behavior without a font/size-specific correction.
+
+Four inputs/eight outcomes cover body, cell, printed footer and a single fraction.
+Exact mathematical content, Word anchors/sizing, clickable glyph bounds, source
+identity and cancellation pass. Maximum local-X error is 0.381pt; absolute table-X
+and footer-Y residuals remain 1.147/0.848pt. Eight regions reviewed through six unique
+raster pairs retain formulas without new observed omission/overlap/clipping. All
+numerical visual gates still fail. Six generic joined-Greek extraction warnings
+remain alongside exact glyph checks; both fraction presence screens pass.
+
+Frozen 0327073d passes 25 Windows methods once and nine Ubuntu checks (16 font skips).
+The native regression fails on C37. Twelve fixed/complete PDFs and four earlier
+implicit-style controls retain bytes. Transfer verifies 17 assets/four PDFs without
+a root build or suite replay. Evidence:
+`artifacts/composition-c1/explicit-display-links-evidence.json`.
