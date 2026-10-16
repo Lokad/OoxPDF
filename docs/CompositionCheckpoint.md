@@ -1171,3 +1171,15 @@ twelve-page static-header counter control and held-out memo Final. No root build
 suite/corpus replay or Office re-export; prior comparisons remain reusable with
 unchanged failed numerical gates. Evidence:
 `artifacts/composition-c1/counter-inputs-evidence.json`.
+
+Reusable inline measurement and source-driven wrapping are now separate. Frozen
+9550187c / root 3527ff81 passes 23 exact capability/neighbor methods in one
+invocation and ten Ubuntu checks. A source cursor preserves authored breaks,
+tabs, first-line numbering and wrapping frames; split counters retain the value
+bound when their first digits were placed. Rebinding updates only changed counter
+fragments and keeps canonical source ownership. All ten fixed-portfolio PDFs are
+byte-identical to prior qualified outputs, reusing independent Office comparisons
+and their explicit visual failures. Transfer verifies 17 assets/four exact PDFs
+without a root rebuild or suite replay. This establishes the contract for actual
+page-aware admission; body/table PAGE-math support and measured performance gains
+are not claimed. Evidence: `artifacts/composition-c1/inline-cursors-evidence.json`.
