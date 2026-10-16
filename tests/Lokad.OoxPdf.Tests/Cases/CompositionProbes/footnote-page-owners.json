@@ -1,0 +1,46 @@
+[
+  {
+    "Id": "footnote-page-owners-calibri-12-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/footnote-page-owners-calibri-12-zero.docx",
+    "Sha256": "E70290A5ECB37604406E24BEC90E2210F1BD73DBAC404362C48E9C4E2CA884E8",
+    "SourceSha256": "E70290A5ECB37604406E24BEC90E2210F1BD73DBAC404362C48E9C4E2CA884E8",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "Public destination Alpha."
+    ]
+  },
+  {
+    "Id": "footnote-page-owners-calibri-12-met",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/footnote-page-owners-calibri-12-met.docx",
+    "Sha256": "34B369BFA170AAF908B32D5CE6E4C2891DA34B29585A0854B2E09AD37BD9E94A",
+    "SourceSha256": "E70290A5ECB37604406E24BEC90E2210F1BD73DBAC404362C48E9C4E2CA884E8",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "Public destination Alpha."
+    ]
+  },
+  {
+    "Id": "footnote-page-owners-arial-11-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/footnote-page-owners-arial-11-zero.docx",
+    "Sha256": "18D343F5FB99AD3FC146AE42E1345E3046FF860E66D3F81D2802F7EB291542FB",
+    "SourceSha256": "E70290A5ECB37604406E24BEC90E2210F1BD73DBAC404362C48E9C4E2CA884E8",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "Public destination Alpha."
+    ]
+  },
+  {
+    "Id": "footnote-page-owners-times-14-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/footnote-page-owners-times-14-zero.docx",
+    "Sha256": "2984549C87188ADF6650C130EFDDCBC57905CA8F38F2D9EB5AE5803E7988D10E",
+    "SourceSha256": "E70290A5ECB37604406E24BEC90E2210F1BD73DBAC404362C48E9C4E2CA884E8",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "Public destination Alpha."
+    ]
+  }
+]
