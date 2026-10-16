@@ -287,6 +287,76 @@ internal static class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxFieldTextCounterInputsRemainIndependent()
+    {
+        var template = DocxTests.CreateDocxLayoutParagraph("Source", 12d, 14d).Runs[0];
+        foreach (var kind in new[] { DocxFieldKind.Page, DocxFieldKind.NumPages, DocxFieldKind.Other })
+        foreach (int? number in new int?[] { null, 7 })
+        foreach (int? count in new int?[] { null, 12 })
+        {
+            string source = "Prefix " + (DocxFieldText.Placeholder(kind) ?? "literal") + " suffix";
+            var run = template with { Text = source, FieldKind = kind };
+            int? expected = kind == DocxFieldKind.Page ? number : kind == DocxFieldKind.NumPages ? count : null;
+            TestAssert.Equal(expected is not null, DocxFieldText.CanResolve(kind, number, count));
+            TestAssert.Equal(expected is not null, DocxFieldText.TryResolve(run, source, number, count, out string resolved));
+            string value = expected is { } actual ? "Prefix " + actual + " suffix" : source;
+            TestAssert.Equal(value, resolved);
+            TestAssert.Equal(value, DocxFieldText.Resolve(run, source, number, count));
+            TestAssert.Equal(source, run.Text);
+        }
+    }
+
+    public static void DocxInlineCompositionCounterAtomsMeasureOnlyTheirOwnedInputs()
+    {
+        foreach (string form in new[] { "simple", "packed" })
+        foreach (string container in new[] { "body", "cell" })
+        foreach (string instruction in new[] { "PAGE", "NUMPAGES" })
+        {
+            var document = ReadMutation("CompositionProbes/math-fields-" + form + "-" + container,
+                OoxPdfDocxMarkupMode.Final, false, false, (xml, w, m) =>
+                {
+                    foreach (var field in xml.Descendants(w + "fldSimple"))
+                    {
+                        field.SetAttributeValue(w + "instr", " " + instruction + " ");
+                        foreach (var cache in field.Descendants(w + "t")) cache.Value = "1";
+                    }
+                    foreach (var field in xml.Descendants(w + "instrText"))
+                    {
+                        field.Value = " " + instruction + " ";
+                        foreach (var cache in field.Parent!.Elements(w + "t")) cache.Value = "1";
+                    }
+                });
+            var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(document.BodyElements).Single(p => p.Equations.Count == 2);
+            var equations = paragraph.Equations.ToDictionary(equation => equation,
+                equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
+            bool Measure(int? number, int? count, out IReadOnlyList<DocxMeasuredInlineLine>? lines) =>
+                DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph, equations, new TrackingMeasurer(), 12d,
+                    500d, 500d, 9d, 16d, 1d, default, out lines, pageNumber: number, pageCount: count);
+            TestAssert.True(!Measure(null, null, out _), "A counter cannot measure placeholder letters when its actual value is unavailable.");
+            TestAssert.True(instruction == "PAGE" ? !Measure(null, 12, out _) : !Measure(12, null, out _),
+                "Supplying the unrelated counter input cannot resolve an owned field.");
+            double? firstWidth = null;
+            string canonical = string.Concat(paragraph.Runs.Select(run => run.Text));
+            foreach (int value in new[] { 9, 10, 12 })
+            {
+                bool measured = instruction == "PAGE" ? Measure(value, null, out var lines) : Measure(null, value, out lines);
+                TestAssert.True(measured, $"{form}/{container}/{instruction}/{value}: the counter requires only its owned actual input.");
+                var line = TestAssert.NotNull(lines).Single();
+                string text = string.Concat(line.Fragments.SelectMany(fragment => fragment.Text).Select(span => span.Text));
+                TestAssert.Equal("Start " + value + "  middle " + value + "  End.", text);
+                var fields = line.Fragments.Where(fragment => fragment.Source is DocxInlineText source && source.Run.FieldKind is not null).ToArray();
+                TestAssert.Equal(2, fields.Length);
+                TestAssert.True(fields.All(fragment => fragment.Text.Count == 1 && ReferenceEquals(fragment.Text[0].StyleRun,
+                    ((DocxInlineText)fragment.Source).Run)), "Resolved field atoms retain their canonical run owner and stay atomic.");
+                TestAssert.Equal(canonical, string.Concat(paragraph.Runs.Select(run => run.Text)));
+                if (firstWidth is null) firstWidth = line.Advance;
+                else TestAssert.True(Math.Abs(line.Advance - firstWidth.Value - 10d) < .001d,
+                    "Digit-boundary advances use the resolved values, independently of the unavailable counter.");
+            }
+            TestAssert.True(Measure(12, 12, out _), "Complete static-story field inputs remain supported.");
+        }
+    }
+
     public static void DocxInlineCompositionStaticPageFieldsRequireActualPageInputs()
     {
         foreach (string form in new[] { "simple", "packed" })

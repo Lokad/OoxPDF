@@ -821,5 +821,15 @@
     "DocxFootnoteInlineImageEmitsBetweenSurroundingText",
     "DocxFootnoteInlineImageBottomSitsOnBaseline",
     "DocxPictureLineFrameTravelsWithImagePlacement"
+  ],
+  "docx-counter-input-dependencies": [
+    "DocxFieldTextCounterInputsRemainIndependent",
+    "DocxInlineCompositionCounterAtomsMeasureOnlyTheirOwnedInputs",
+    "DocxInlineCompositionStaticPageFieldsRequireActualPageInputs",
+    "DocxInlineCompositionPageFieldCacheEndsWithItsOwner",
+    "DocxLayoutUsesResolvedBodyPageFieldForLineBreaking",
+    "DocxLayoutUsesCompactBodyNumPagesFieldForLineBreaking",
+    "DocxTableLayoutUsesResolvedPageFieldForCellLineBreaking",
+    "DocxTableLayoutUsesCompactNumPagesFieldForCellLineBreaking"
   ]
 }

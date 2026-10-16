@@ -143,9 +143,14 @@ internal sealed partial class DocxLayoutEngine
         int? pageNumber = null, int? pageCount = null)
     {
         lines = null;
+        bool hasActualFieldInputs = (pageNumber is not null || pageCount is not null) &&
+            paragraph.FieldReferences.All(field => !field.UsesPlaceholder || !field.Kind.IsDynamic() ||
+                DocxFieldText.CanResolve(field.Kind, pageNumber, pageCount)) &&
+            paragraph.Runs.All(run => run.FieldKind is not { } kind || !kind.IsDynamic() ||
+                DocxFieldText.CanResolve(kind, pageNumber, pageCount));
         if (paragraph.InlineContent is not { } items || equations is null ||
             paragraph.Equations.Count == 0 ||
-            DocxMathParagraphPolicy.GetPreparationEquations(paragraph, pageNumber is not null && pageCount is not null).Count != paragraph.Equations.Count) return false;
+            DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasActualFieldInputs).Count != paragraph.Equations.Count) return false;
         bool hasTabs = items.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden);
         // Left/default tabs depend only on the preceding advance. Aligned fields,
         // bar stops and leaders need a separate field-measurement/painting contract.
@@ -177,8 +182,9 @@ internal sealed partial class DocxLayoutEngine
                 case DocxInlineText text when text.Run.FieldKind is { } kind && kind.IsDynamic():
                     // The owned placeholder is atomic. Resolve only with actual
                     // page inputs; retain the original run/item for annotations.
-                    if (pageNumber is null || pageCount is null || !runIndices.TryGetValue(text.Run, out int fieldRunIndex)) return false;
-                    string fieldValue = DocxFieldText.Resolve(text.Run, text.Run.Text.Substring(text.Start, text.Length), pageNumber, pageCount);
+                    if (!runIndices.TryGetValue(text.Run, out int fieldRunIndex) ||
+                        !DocxFieldText.TryResolve(text.Run, text.Run.Text.Substring(text.Start, text.Length),
+                            pageNumber, pageCount, out string fieldValue)) return false;
                     var fieldSpan = CreateTextSpan(fieldValue, text.Run, fieldRunIndex) with
                     { SourceTextOffsetInRun = text.Run.SourceTextOffsetInRun + text.Start, SourceInlineItemIndex = sourceItemIndex };
                     var fieldSegments = CreateTextSegments([fieldSpan], 0d, fontSize, measurer, [], 36d);
