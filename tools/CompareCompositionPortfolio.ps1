@@ -30,9 +30,12 @@ $cached = @(foreach ($directory in $ReuseComparisonDirectory) {
         foreach ($prior in $report.Rows) { [pscustomobject]@{Path=$path;Row=$prior} }
     }
 })
-$rows = @()
-foreach ($row in $outcomes.Rows) {
+$ids = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+# Validate the complete batch before raster/diff stages create any output. A
+# missing late reference must not strand completed early comparisons.
+$jobs = @(foreach ($row in $outcomes.Rows) {
     $id = $row.Id + '-' + $row.Mode
+    if (!$ids.Add($id)) { throw ('Duplicate comparison outcome: ' + $id) }
     $run = Join-Path $candidate $id
     $source = Join-Path $reference $id
     $pdf = Join-Path $run 'candidate.pdf'
@@ -43,6 +46,18 @@ foreach ($row in $outcomes.Rows) {
         $_.Row.Id -eq $row.Id -and $_.Row.Mode -eq $row.Mode -and
         $_.Row.CandidatePdfSha256 -eq $row.PdfSha256 -and $_.Row.ReferencePdfSha256 -eq $referenceHash
     } | Select-Object -First 1)
+    $diff = Join-Path $run 'office-diff'
+    if (!$reuse.Count -and (Test-Path -LiteralPath $diff)) { throw ('Comparison already exists: ' + $id) }
+    [pscustomobject]@{Row=$row;Id=$id;Run=$run;Source=$source;Pdf=$pdf;
+        ReferencePdf=$referencePdf;ReferenceHash=$referenceHash;Reuse=$reuse;Diff=$diff}
+})
+$rows = @()
+foreach ($job in $jobs) {
+    $row = $job.Row; $id = $job.Id; $run = $job.Run; $source = $job.Source
+    $pdf = $job.Pdf; $referencePdf = $job.ReferencePdf; $referenceHash = $job.ReferenceHash
+    $reuse = @($job.Reuse); $diff = $job.Diff
+    if ((Get-FileHash -LiteralPath $pdf).Hash -ne $row.PdfSha256 -or
+        (Get-FileHash -LiteralPath $referencePdf).Hash -ne $referenceHash) { throw ('Comparison input changed: ' + $id) }
     if ($reuse.Count) {
         $prior = $reuse[0].Row
         $rows += [ordered]@{Id=$row.Id;Mode=$row.Mode;HeldOut=$row.HeldOut;
@@ -64,8 +79,6 @@ foreach ($row in $outcomes.Rows) {
             throw ('Rasterization produced no pages: ' + $item.Pdf)
         }
     }
-    $diff = Join-Path $run 'office-diff'
-    if (Test-Path -LiteralPath $diff) { throw ('Comparison already exists: ' + $id) }
     dotnet $VisualDiffPath (Join-Path $source 'raster') (Join-Path $run 'raster') $diff *> (Join-Path $run 'office-diff.log')
     if ($LASTEXITCODE -ne 0) { throw ('Visual comparison failed: ' + $id) }
     $metrics = @(Get-Content (Join-Path $diff 'metrics.json') -Raw | ConvertFrom-Json)
@@ -80,7 +93,8 @@ foreach ($row in $outcomes.Rows) {
         if ($limits.minStructuralSimilarity -and $page.StructuralSimilarity -lt $limits.minStructuralSimilarity) { $failures += 'StructuralSimilarity' }
     }
     $rows += [ordered]@{Id=$row.Id;Mode=$row.Mode;HeldOut=$row.HeldOut;CandidatePdfSha256=$row.PdfSha256;ReferencePdfSha256=$referenceHash;Failures=@($failures | Sort-Object -Unique);Metrics=$metrics;Thresholds=$limits;ContentSeverity=$row.Severity}
-    if ((Get-FileHash $referencePdf).Hash -ne $referenceHash) { throw 'Reference changed during comparison' }
+    if ((Get-FileHash -LiteralPath $pdf).Hash -ne $row.PdfSha256 -or
+        (Get-FileHash -LiteralPath $referencePdf).Hash -ne $referenceHash) { throw ('Comparison input changed: ' + $id) }
     Write-Output ($id + ': ' + ($failures | Sort-Object -Unique) -join ', ')
 }
 [ordered]@{

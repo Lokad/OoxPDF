@@ -80,6 +80,8 @@ jobs:
         run: pwsh -NoProfile -File tools/TestPdfContentTokenization.ps1
       - name: Composition source audit checks
         run: python -B tools/TestCompositionSourceAudit.py
+      - name: Composition comparison orchestration checks
+        run: pwsh -NoProfile -File tools/TestCompositionComparison.ps1
       - name: Chart classifier adversarial checks
         run: pwsh -NoProfile -File tools/TestChartClassifierRobustness.ps1
       - name: VisualDiff metric probe
