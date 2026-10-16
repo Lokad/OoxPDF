@@ -1,0 +1,57 @@
+[
+  {
+    "Id": "math-run-format-body-bold",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-run-format-body-bold.docx",
+    "Sha256": "6C8D5E61DCF547222CBC8373D2F57246D327CA7FE115009EC7FDF684D861C1D5",
+    "SourceSha256": "396DF62C526FF77B985D2A3E91A31AC3CA674DB590636327C1DAB8D753A7E183",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-run-format-cell-bold",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-run-format-cell-bold.docx",
+    "Sha256": "CD154F9695594985FEF82FC5C6F34021AFD07E9D25BE160F34C53E899E3110F4",
+    "SourceSha256": "BF6C08DB053F1A468F51500F5EFFB7975BC9CF0015A42D6DDCEE7864B36B43D5",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-run-format-header-bold",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-run-format-header-bold.docx",
+    "Sha256": "EFBBA4E653CA704936159ED3AA7F8EF68DBCCB5355A505B17888BA3E4C0ED8E2",
+    "SourceSha256": "F3E14A9D03CB6DF8F9D9889C851CF3E1F02A03716721623FCD8FA878790744B8",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-run-format-footer-bold",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-run-format-footer-bold.docx",
+    "Sha256": "377B83EBD37BAB7A16E493EC8BA725A28C8C7194E998E6547AEF3BA8D61A98CD",
+    "SourceSha256": "A355BF23D39DD8E6F59428ADEC85A1CF401DD69580BED41743F2BDEEDAE57040",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-run-format-body-void",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-run-format-body-void.docx",
+    "Sha256": "344418D0BA2922CA80DEAAD7C39E4C58B7E8AAEAFFA8D865EE986B65A80F6176",
+    "SourceSha256": "396DF62C526FF77B985D2A3E91A31AC3CA674DB590636327C1DAB8D753A7E183",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]

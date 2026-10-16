@@ -140,7 +140,7 @@ internal static class DocxInlineContent
         return false;
     }
 
-    public static bool HasSupportedTextRevisionOwners(IReadOnlyList<DocxRevisionInfo> revisions,
+    public static bool HasSupportedRunRevisionOwners(IReadOnlyList<DocxRevisionInfo> revisions,
         IReadOnlyList<DocxTextRun> runs, CancellationToken token)
     {
         if (revisions.Count == 0) return true;
@@ -148,12 +148,13 @@ internal static class DocxInlineContent
         foreach (var revision in revisions)
         {
             token.ThrowIfCancellationRequested();
-            if (revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion)) return false;
+            if (revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion or DocxRevisionKind.RunPropertiesChange)) return false;
             remaining.Add(revision);
         }
-        // Inserted/deleted text owns its inline style and source extent. The
-        // declared Word-compatible view prints both inline; marks/properties,
-        // equation revisions and nontext owners retain their existing fallbacks.
+        // Resolved text owns its inserted/deleted content and run formatting.
+        // Formatting balloons consume the same run's metadata independently of
+        // equation measurement. Paragraph/mark, equation and nontext revisions
+        // retain their existing fallbacks.
         // Resolve actual source ownership in linear work.
         foreach (var run in runs)
         {

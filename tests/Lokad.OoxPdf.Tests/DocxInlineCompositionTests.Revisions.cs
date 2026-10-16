@@ -144,21 +144,21 @@ internal static partial class DocxInlineCompositionTests
         var doc = ReadMutation("CompositionProbes/math-revision-body-ins", OoxPdfDocxMarkupMode.Final, false, false);
         var paragraph = doc.Paragraphs.First(p => p.Equations.Count != 0);
         var revision = paragraph.Revisions.Single();
-        TestAssert.True(DocxInlineContent.HasSupportedTextRevisionOwners(paragraph.Revisions, paragraph.Runs, default),
+        TestAssert.True(DocxInlineContent.HasSupportedRunRevisionOwners(paragraph.Revisions, paragraph.Runs, default),
             "The same parsed insertion object owns its ordinary resolved text run.");
         var deleted = ReadMutation("CompositionProbes/math-revision-body-del", OoxPdfDocxMarkupMode.AllMarkup, false, false)
             .Paragraphs.First(p => p.Equations.Count != 0);
-        TestAssert.True(DocxInlineContent.HasSupportedTextRevisionOwners(deleted.Revisions, deleted.Runs, default),
+        TestAssert.True(DocxInlineContent.HasSupportedRunRevisionOwners(deleted.Revisions, deleted.Runs, default),
             "Materialized deletion text owns its actual revision in the declared inline view.");
         foreach (var unsupported in new[] { revision with { }, revision with { Kind = DocxRevisionKind.Deletion },
             revision with { Kind = DocxRevisionKind.ParagraphPropertiesChange }, revision with { Kind = DocxRevisionKind.MoveTo } })
-            TestAssert.True(!DocxInlineContent.HasSupportedTextRevisionOwners([unsupported], paragraph.Runs, default),
+            TestAssert.True(!DocxInlineContent.HasSupportedRunRevisionOwners([unsupported], paragraph.Runs, default),
                 "Equal-looking metadata without an actual text owner cannot qualify a paragraph mark/property or another revision.");
         var equations = paragraph.Equations.Select(e => e with { Revision = revision }).ToArray();
         TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with { Equations = equations }).Count);
         var unowned = paragraph with { Revisions = [revision with { }] };
         TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(unowned).Count);
         using var canceled = new CancellationTokenSource(); canceled.Cancel();
-        TestAssert.Throws<OperationCanceledException>(() => DocxInlineContent.HasSupportedTextRevisionOwners(paragraph.Revisions, paragraph.Runs, canceled.Token));
+        TestAssert.Throws<OperationCanceledException>(() => DocxInlineContent.HasSupportedRunRevisionOwners(paragraph.Revisions, paragraph.Runs, canceled.Token));
     }
 }

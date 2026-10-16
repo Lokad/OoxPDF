@@ -1591,6 +1591,24 @@
     "PortableRenderingTextRevisionMathKeepsSourceOwnersAndFallbacks",
     "DocxSimpleMarkupRendererDrawsChangeBars"
   ],
+  "docx-math-run-formatting": [
+    "DocxInlineCompositionRunFormatting",
+    "PortableRenderingRunFormattingMath",
+    "DocxInlineCompositionTextRevisionMath",
+    "DocxInlineCompositionTextRevisionOwnershipKeepsNontextFallbacksAndCancellation",
+    "PortableRenderingTextRevisionMath",
+    "DocxInlineCompositionNumberedDisplayRowsMatchIndependentWord",
+    "DocxInlineCompositionListLabelOwnsOnlyTheFirstAuthoredMathRow",
+    "DocxWordCompatiblePrintScaleKeepsFormattingRevisions",
+    "DocxFormattingRevision",
+    "DocxWordCompatibleForeignFormattingBalloonsRetainReviewLane",
+    "DocxWordCompatibleStaticAndNoteCommentsUseNominalCanvas",
+    "DocxWordCompatibleHiddenCommentsPreserveAuthoredBodyFrame",
+    "DocxWordCompatibleMixedStoryCommentsKeepScaledBodyFrame",
+    "DocxMarkupModesFilterStaticAndRelatedStoryRevisions",
+    "DocxInlineCompositionExplicitDisplaysRetainSourceRowsAndFallbacks",
+    "PortableRenderingStaticCellsPreserveMixedMathImagesAndCounters"
+  ],
   "docx-review-author-composition": [
     "DocxReviewCommentAuthors",
     "PortableRenderingReviewAuthors",

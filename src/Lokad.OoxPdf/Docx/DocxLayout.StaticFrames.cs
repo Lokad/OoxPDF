@@ -139,7 +139,9 @@ internal sealed partial class DocxLayoutEngine
         {
             token.ThrowIfCancellationRequested();
             IEnumerable<DocxParagraph> paragraphs;
-            if (element is DocxParagraphElement { Revisions.Count: 0 } direct) { paragraphs = [direct.Paragraph]; }
+            if (element is DocxParagraphElement direct &&
+                DocxInlineContent.HasSupportedRunRevisionOwners(direct.Revisions, direct.Paragraph.Runs, token))
+                { paragraphs = [direct.Paragraph]; }
             else if (element is DocxTableElement table && table.Table.Revisions.Count == 0 &&
                 table.Table.Rows.All(row =>
                 {

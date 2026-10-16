@@ -689,6 +689,14 @@ internal sealed partial class DocxRenderer
 
     private static bool HasNonVoidPropertyChangeRevision(DocxDocument document)
     {
+        // Mixed-view Word controls reserve and fit the same page lane for
+        // formatting balloons anchored in body or direct header/footer text.
+        // Hidden static comments remain governed by their separate visibility rule.
+        if (DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType)
+            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType))
+            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
+            .Any(paragraph => HasNonVoidPropertyChange(paragraph.Revisions))) return true;
+
         foreach (DocxParagraph paragraph in document.Paragraphs)
         {
             if (HasNonVoidPropertyChange(paragraph.Revisions))
@@ -739,7 +747,8 @@ internal sealed partial class DocxRenderer
 
     // Anchor-gating only: formatting revisions balloon from any story (body, static,
     // placed, floating text boxes), so any of them sustains the fitted anchor. The
-    // lane-fit scale trigger stays body-scoped (see HasNonVoidPropertyChangeRevision).
+    // lane-fit scale trigger covers body and direct static paragraphs; other
+    // story/effect combinations retain their previously qualified scale behavior.
     // Section-break revisions never anchor balloons (no anchor line) and stay excluded.
     private static bool HasAnyNonVoidPropertyRevision(DocxDocument document)
     {

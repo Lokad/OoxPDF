@@ -288,7 +288,7 @@ internal static class DocxMathParagraphPolicy
     private static bool HasSupportedSourceOwner(DocxParagraph paragraph, bool hasPageInputs = false,
         CancellationToken token = default) =>
         paragraph.Equations.Count != 0 && paragraph.Equations.All(equation => equation.Revision is null) &&
-        DocxInlineContent.HasSupportedTextRevisionOwners(paragraph.Revisions, paragraph.Runs, token) &&
+        DocxInlineContent.HasSupportedRunRevisionOwners(paragraph.Revisions, paragraph.Runs, token) &&
         paragraph.InlineTextBoxes.Count == 0 &&
         DocxInlineContent.HasSupportedReferences(paragraph.InlineReferences, paragraph.Runs) &&
         // Bookmarks are source metadata with no measured or painted extent.

@@ -25,7 +25,7 @@ internal sealed partial class DocxRenderer
             return true;
         }
 
-        // Declared Word-compatible view (RevisionsMode=1-like): insertions, deletions, and
+        // Declared Word-compatible mixed view (Word16 RevisionsMode=2): insertions, deletions, and
         // moves render inline while property (formatting) revisions and comments balloon.
         // Office paints Deleted:/Inserted: balloons under RevisionsMode=0 instead (dense-revisions
         // reference artifacts/rv06-lane/insp-dense*); that ballooning view needs its own

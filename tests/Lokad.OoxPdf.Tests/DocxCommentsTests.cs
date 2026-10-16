@@ -364,11 +364,13 @@ internal static partial class DocxCommentsTests
         var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         TestAssert.Equal(1, renderer.InspectMarkupBalloons(document).Count);
-        TestAssert.Equal(1d, DocxRenderer.ResolveWordCompatiblePrintScale(document,
-            DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)));
+        TestAssert.True(Math.Abs(DocxRenderer.ResolveWordCompatiblePrintScale(document,
+            DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)) -
+            document.PageWidthPoints / (document.PageWidthPoints - document.MarginRightPoints + 266.5d)) < .000001d,
+            "Independent mixed-view header/footer formatting controls fit the printed page to the balloon lane.");
         TestAssert.True(renderer.RenderBlankPages(document, null, CancellationToken.None)
             .Any(page => page.Content.Contains("0.949 g", StringComparison.Ordinal)),
-            "A surviving formatting balloon retains its lane even when its story does not trigger body print scale.");
+            "A surviving static formatting balloon retains its fitted review lane.");
     }
 
     public static void DocxWordCompatibleStaticAndNoteCommentsUseNominalCanvas()

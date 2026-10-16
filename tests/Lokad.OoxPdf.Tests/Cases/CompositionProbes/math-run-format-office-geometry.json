@@ -1,0 +1,1195 @@
+{
+  "Source": "Independent Word16 exports. Final preserves current formatting; Review pins mixed RevisionsMode=2 and explicitly enables formatting changes, comments and insertions/deletions. Prior mode1 controls suppress formatting balloons and are not used here.",
+  "Rows": [
+    {
+      "Id": "math-run-format-body-bold",
+      "Mode": "final-preserve",
+      "InputSha256": "6C8D5E61DCF547222CBC8373D2F57246D327CA7FE115009EC7FDF684D861C1D5",
+      "PdfSha256": "11A1BA9D860DD7B59724A6FE88CC07F5D8BE5760D93654B026BBCFAAA67E7EE6",
+      "Supported": true,
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 139.1,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 144.02,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 149.9,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 144.14,
+          "Y": 701.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 189.02,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 208.61,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 229.01,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc65",
+          "X": 256.25,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 261.29,
+          "Y": 675.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 338.47,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 358.03,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 378.55,
+          "Y": 649.66,
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-body-bold",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6C8D5E61DCF547222CBC8373D2F57246D327CA7FE115009EC7FDF684D861C1D5",
+      "PdfSha256": "9B0420C32B711420110C9880D4F9834DEFF0FBE9820437E4D3FDAE7044329218",
+      "Supported": true,
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 8.352,
+      "Anchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 105.48,
+          "Y": 636.98,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "+",
+          "X": 109.22,
+          "Y": 636.98,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "2",
+          "X": 113.69,
+          "Y": 636.98,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 109.32,
+          "Y": 627.86,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 143.35,
+          "Y": 612.22,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "+",
+          "X": 150.1,
+          "Y": 612.22,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 158.18,
+          "Y": 612.22,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "=",
+          "X": 165.1,
+          "Y": 612.22,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 173.66,
+          "Y": 612.22,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc65",
+          "X": 194.33,
+          "Y": 617.14,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "+",
+          "X": 198.05,
+          "Y": 617.14,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "2",
+          "X": 202.51,
+          "Y": 617.14,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 198.14,
+          "Y": 608.04,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 256.68,
+          "Y": 588.65,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "+",
+          "X": 263.4,
+          "Y": 588.65,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 271.51,
+          "Y": 588.65,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "=",
+          "X": 278.52,
+          "Y": 588.65,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 287.06,
+          "Y": 588.65,
+          "FontSize": 8.352
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-cell-bold",
+      "Mode": "final-preserve",
+      "InputSha256": "CD154F9695594985FEF82FC5C6F34021AFD07E9D25BE160F34C53E899E3110F4",
+      "PdfSha256": "C16DC50877B5FB71886EED663553A3EFE2F199AD8E51AF3EC68DDE7B040B7988",
+      "Supported": true,
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 139.1,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 144.02,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 149.9,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 144.14,
+          "Y": 701.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 189.02,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 208.61,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 229.01,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc65",
+          "X": 256.25,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 261.29,
+          "Y": 675.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 338.47,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 358.03,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 378.55,
+          "Y": 649.66,
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-cell-bold",
+      "Mode": "all-word-compatible",
+      "InputSha256": "CD154F9695594985FEF82FC5C6F34021AFD07E9D25BE160F34C53E899E3110F4",
+      "PdfSha256": "29294DAD2CD8FC65E2A0C334920F6851400360D8A278769D857F7C0F35A61C30",
+      "Supported": true,
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 8.352,
+      "Anchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 105.48,
+          "Y": 636.98,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "+",
+          "X": 109.22,
+          "Y": 636.98,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "2",
+          "X": 113.69,
+          "Y": 636.98,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 109.32,
+          "Y": 627.86,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 143.35,
+          "Y": 612.22,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "+",
+          "X": 150.1,
+          "Y": 612.22,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 158.18,
+          "Y": 612.22,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "=",
+          "X": 165.1,
+          "Y": 612.22,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 173.66,
+          "Y": 612.22,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc65",
+          "X": 194.33,
+          "Y": 617.14,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "+",
+          "X": 198.05,
+          "Y": 617.14,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "2",
+          "X": 202.51,
+          "Y": 617.14,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 198.14,
+          "Y": 608.04,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 256.68,
+          "Y": 588.65,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "+",
+          "X": 263.4,
+          "Y": 588.65,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 271.51,
+          "Y": 588.65,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "=",
+          "X": 278.52,
+          "Y": 588.65,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 287.06,
+          "Y": 588.65,
+          "FontSize": 8.352
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-header-bold",
+      "Mode": "final-preserve",
+      "InputSha256": "EFBBA4E653CA704936159ED3AA7F8EF68DBCCB5355A505B17888BA3E4C0ED8E2",
+      "PdfSha256": "47314D85F1A3E076B59054EA812CC4E28CA31E6AE58DC8106DB1C38B3ECCCCBA",
+      "Supported": true,
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 139.1,
+          "Y": 749.4,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 144.02,
+          "Y": 749.4,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 149.9,
+          "Y": 749.4,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 144.14,
+          "Y": 737.4,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 189.02,
+          "Y": 716.76,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 716.76,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 208.61,
+          "Y": 716.76,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 716.76,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 229.01,
+          "Y": 716.76,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc65",
+          "X": 256.25,
+          "Y": 723.24,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 723.24,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 723.24,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 261.29,
+          "Y": 711.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 338.47,
+          "Y": 685.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 685.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 358.03,
+          "Y": 685.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 685.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 378.55,
+          "Y": 685.66,
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-header-bold",
+      "Mode": "all-word-compatible",
+      "InputSha256": "EFBBA4E653CA704936159ED3AA7F8EF68DBCCB5355A505B17888BA3E4C0ED8E2",
+      "PdfSha256": "A2BA0280C270FA6E5C716E202B4BFAD5D24A3F8B92A43E9BBA4A7466C3566A0F",
+      "Supported": true,
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 8.352,
+      "Anchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 105.48,
+          "Y": 664.27,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "+",
+          "X": 109.22,
+          "Y": 664.27,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "2",
+          "X": 113.69,
+          "Y": 664.27,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 109.32,
+          "Y": 655.18,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 143.35,
+          "Y": 639.53,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "+",
+          "X": 150.1,
+          "Y": 639.53,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 158.18,
+          "Y": 639.53,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "=",
+          "X": 165.1,
+          "Y": 639.53,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 173.66,
+          "Y": 639.53,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc65",
+          "X": 194.33,
+          "Y": 644.42,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "+",
+          "X": 198.05,
+          "Y": 644.42,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "2",
+          "X": 202.51,
+          "Y": 644.42,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 198.14,
+          "Y": 635.33,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 256.68,
+          "Y": 615.96,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "+",
+          "X": 263.4,
+          "Y": 615.96,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 271.51,
+          "Y": 615.96,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "=",
+          "X": 278.52,
+          "Y": 615.96,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 287.06,
+          "Y": 615.96,
+          "FontSize": 8.352
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-footer-bold",
+      "Mode": "final-preserve",
+      "InputSha256": "377B83EBD37BAB7A16E493EC8BA725A28C8C7194E998E6547AEF3BA8D61A98CD",
+      "PdfSha256": "E1B301847EF6917C1DC900D240336604BDDBD8B6FE36553F5280F6AD96900600",
+      "Supported": true,
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 139.1,
+          "Y": 108.62,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 144.02,
+          "Y": 108.62,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 149.9,
+          "Y": 108.62,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 144.14,
+          "Y": 96.624,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 189.02,
+          "Y": 75.984,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 75.984,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 208.61,
+          "Y": 75.984,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 75.984,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 229.01,
+          "Y": 75.984,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc65",
+          "X": 256.25,
+          "Y": 82.464,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 82.464,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 82.464,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 261.29,
+          "Y": 70.464,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 338.47,
+          "Y": 44.904,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 44.904,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 358.03,
+          "Y": 44.904,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 44.904,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 378.55,
+          "Y": 44.904,
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-footer-bold",
+      "Mode": "all-word-compatible",
+      "InputSha256": "377B83EBD37BAB7A16E493EC8BA725A28C8C7194E998E6547AEF3BA8D61A98CD",
+      "PdfSha256": "33745B345D2D55D15F504D53DCCC78434E8C6B132E33BEFFF18111002C99BA32",
+      "Supported": true,
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 8.352,
+      "Anchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 105.48,
+          "Y": 178.37,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "+",
+          "X": 109.22,
+          "Y": 178.37,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "2",
+          "X": 113.69,
+          "Y": 178.37,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 109.32,
+          "Y": 169.25,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 143.35,
+          "Y": 153.6,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "+",
+          "X": 150.1,
+          "Y": 153.6,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 158.18,
+          "Y": 153.6,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "=",
+          "X": 165.1,
+          "Y": 153.6,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 173.66,
+          "Y": 153.6,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc65",
+          "X": 194.33,
+          "Y": 158.52,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "+",
+          "X": 198.05,
+          "Y": 158.52,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "2",
+          "X": 202.51,
+          "Y": 158.52,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 198.14,
+          "Y": 149.42,
+          "FontSize": 6.096
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 256.68,
+          "Y": 130.03,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "+",
+          "X": 263.4,
+          "Y": 130.03,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 271.51,
+          "Y": 130.03,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "=",
+          "X": 278.52,
+          "Y": 130.03,
+          "FontSize": 8.352
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 287.06,
+          "Y": 130.03,
+          "FontSize": 8.352
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-body-void",
+      "Mode": "final-preserve",
+      "InputSha256": "344418D0BA2922CA80DEAAD7C39E4C58B7E8AAEAFFA8D865EE986B65A80F6176",
+      "PdfSha256": "6704AE762BAD24315E809762FE2EB14E31C72A02D98B303D0F77E2C70EFDDEF7",
+      "Supported": true,
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 137.9,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 142.94,
+          "Y": 701.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 189.02,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 208.61,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 229.01,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc65",
+          "X": 256.25,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 261.29,
+          "Y": 675.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 338.47,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 358.03,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 378.55,
+          "Y": 649.66,
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-body-void",
+      "Mode": "all-word-compatible",
+      "InputSha256": "344418D0BA2922CA80DEAAD7C39E4C58B7E8AAEAFFA8D865EE986B65A80F6176",
+      "PdfSha256": "DB789A8FFB081B2CBD9C5FC9C5EB17FA8F9ECFE109CA21884342FB2399342355",
+      "Supported": true,
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "ProseFontSize": 11.04,
+      "Anchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 137.9,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 713.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 142.94,
+          "Y": 701.38,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 189.02,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 208.61,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 229.01,
+          "Y": 680.74,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc65",
+          "X": 256.25,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 687.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 261.29,
+          "Y": 675.22,
+          "FontSize": 8.04
+        },
+        {
+          "Text": "\ud835\udc4e",
+          "X": 338.47,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 358.03,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 649.66,
+          "FontSize": 11.04
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 378.55,
+          "Y": 649.66,
+          "FontSize": 11.04
+        }
+      ]
+    }
+  ]
+}
