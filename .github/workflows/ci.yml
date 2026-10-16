@@ -85,6 +85,8 @@ jobs:
         run: python -B tools/TestCompositionSourceAudit.py
       - name: Composition comparison orchestration checks
         run: pwsh -NoProfile -File tools/TestCompositionComparison.ps1
+      - name: Composition reference view checks
+        run: pwsh -NoProfile -File tools/TestCompositionReferences.ps1
       - name: Chart classifier adversarial checks
         run: pwsh -NoProfile -File tools/TestChartClassifierRobustness.ps1
       - name: VisualDiff metric probe

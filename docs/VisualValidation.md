@@ -232,7 +232,7 @@ formatting revisions balloon. A reference exported with RevisionsMode=0 instead
 balloons deletions (`Deleted:` title rows) and hides them from body lines, so
 the gate compares different views: body wraps, op pairings, and page flow all
 shift for non-layout reasons. Export word-compatible all-markup references with
-`RevisionsMode=1` (bespoke `ExportDocxMarkupReference.ps1` knobs; the remaining
+`RevisionsMode=1` (explicit `ExportDocxMarkupReference.ps1` knobs; the remaining
 four knobs stay pinned as usual) and record the full ExportSettings string at
 import time; re-import view-mismatched references with `-Force`.
 
@@ -3587,3 +3587,14 @@ coordinates/spacing, fonts and graphics remain exact. Earlier inspection reports
 may repeat the initial character of a sequential astral range. Re-inspect an
 affected retained PDF when its decoded text is needed; existing raster, glyph-
 outline and coordinate evidence does not require a broad corpus replay.
+
+`ExportCompositionReferences.ps1` now selects inline mode 1 explicitly for review
+and pins all six view settings, the observed ExportSettings line and export-log
+hash. It preflights cached inputs/PDFs and observed settings before any Office
+invocation; legacy pins require a retained log proving the requested view. A
+mismatched cache is rejected for inspection, without overwriting references or
+starting a global re-export. Retain historical view-agnostic comparisons by their
+verified input/PDF identities; correct only references affected by the view.
+The meanings of [Word's revision modes](https://learn.microsoft.com/en-us/office/vba/api/word.wdrevisionsmode)
+are documented by Microsoft. Tool regression coverage uses fake inputs, with no
+Office invocation or library build.
