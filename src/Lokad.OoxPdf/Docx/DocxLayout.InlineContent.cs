@@ -134,7 +134,7 @@ internal sealed partial class DocxLayoutEngine
         var style = paragraph.Runs.FirstOrDefault() ?? paragraph.ParagraphMarkRun ??
             new DocxTextRun(string.Empty, fontSize, null, false, false, false, null, null);
         var line = new DocxTextLineLayout(text.ToString(), style, fontSize, x, top - measured.BaselineInset,
-            measured.Advance, segments, sourceBlock, sourceParagraph, sourceLine, story,
+            measured.Advance, CoalesceOrderedTextSegments(segments), sourceBlock, sourceParagraph, sourceLine, story,
             LineHeight: measured.OccupiedHeight, AppliedBeforeSpacing: 0d, IsFirstParagraphLine: sourceLine == 0,
             EndsWithIntraTokenBreak: false, SingleLineHeight: null, ListLabelSingleLineHeight: null,
             BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null,
@@ -145,6 +145,39 @@ internal sealed partial class DocxLayoutEngine
             InlineFrame = new(measured.BaselineInset, measured.OccupiedHeight),
             InlineSourceExtents = sourceExtents is null ? [] : sourceExtents };
         return (line, images);
+    }
+
+    // Wrapping splits a source run into word atoms. Painting retains one glyph
+    // run across adjacent atoms with the same source owner and text state.
+    private static IReadOnlyList<DocxTextSegmentLayout> CoalesceOrderedTextSegments(IReadOnlyList<DocxTextSegmentLayout> segments)
+    {
+        if (segments.Count < 2) { return segments; }
+        var result = new List<DocxTextSegmentLayout>(segments.Count);
+        for (int index = 0; index < segments.Count;)
+        {
+            var first = segments[index++];
+            double width = first.Width;
+            int length = first.Text.Length;
+            System.Text.StringBuilder? text = null;
+            while (index < segments.Count)
+            {
+                var next = segments[index];
+                if (first.Role != DocxTextSegmentRole.Text || next.Role != first.Role || first.SourceTextRunIndex < 0 ||
+                    next.SourceTextRunIndex != first.SourceTextRunIndex ||
+                    next.SourceTextOffsetInRun != first.SourceTextOffsetInRun + length ||
+                    !ReferenceEquals(first.StyleRun, next.StyleRun) || !ReferenceEquals(first.FallbackFace, next.FallbackFace) ||
+                    first.FontSize != next.FontSize || first.BaselineOffsetY != next.BaselineOffsetY ||
+                    first.PdfCharacterSpacing != next.PdfCharacterSpacing || first.PdfCharacterSpacingSource != next.PdfCharacterSpacingSource ||
+                    first.CompensatePdfCharacterSpacing != next.CompensatePdfCharacterSpacing ||
+                    Math.Abs(first.X + width - next.X) > .000001d) { break; }
+                (text ??= new System.Text.StringBuilder(first.Text)).Append(next.Text);
+                length += next.Text.Length;
+                width += next.Width;
+                index++;
+            }
+            result.Add(text is null ? first : first with { Text = text.ToString(), Width = width });
+        }
+        return result;
     }
 
     internal static bool TryMeasureOrderedInlineContent(DocxParagraph paragraph,

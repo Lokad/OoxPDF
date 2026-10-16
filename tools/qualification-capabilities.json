@@ -1033,5 +1033,28 @@
     "DocxInlineCompositionStaticPageFieldsMatchIndependentWordFrames",
     "PortableRenderingReviewPaneIgnoresBodyVerticalMargins",
     "DocxInlineCompositionReviewPaginationRetainsSourcePageCapacity"
+  ],
+  "docx-ordered-glyph-runs": [
+    "DocxNativeInlineMath",
+    "DocxNativeTableInlineMathRetainsProseWrappingAndWholeFallbacks",
+    "DocxInlineCompositionMeasurementPreservesSourceTrackingKerningAndHiddenRuns",
+    "DocxInlineCompositionWordWrappingSharesBreakRulesAcrossRunSplits",
+    "DocxInlineCompositionCachedFields",
+    "DocxInlineCompositionSingleMathLinksTargetMeasuredFormula",
+    "DocxInlineCompositionHyperlinkPreservesSingleMathFrame",
+    "DocxInlineCompositionCommentsPreserveMathematicsAndCaptions",
+    "DocxInlineCompositionBookmarkAndRunSplitting",
+    "DocxInlineCompositionNumberedMathPreservesFourStoryContent",
+    "DocxInlineCompositionBodyPageCounters",
+    "DocxInlineCompositionSourceCursor",
+    "DocxInlineCompositionNoteImagesAndMathSurviveSourceSplitting",
+    "DocxInlineCompositionEndnoteRunSplittingRetainsSingleAndRepeatedMath",
+    "DocxInlineCompositionNormalNoteMathSurvivesRunSplittingAndContinuation",
+    "DocxStaticTableMathCompleteReportMatchesIndependentPrintedFrames",
+    "PortableRenderingSingleMathAnnotationsPreserveFrames",
+    "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance",
+    "PortableRenderingNormalNotesPreserveInlineImagesAndMath",
+    "PortableRenderingFooterTableAdmissionKeepsBodyAboveTheCompleteFrame",
+    "DocxInlineCompositionPrintedMathMatchesIndependentBaselineGaps"
   ]
 }
