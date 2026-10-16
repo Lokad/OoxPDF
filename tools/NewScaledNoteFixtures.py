@@ -15,7 +15,13 @@ for kind in ['body','cell']:
     source=cases/f'complete-note-{kind}.docx'
     assert hashlib.sha256(source.read_bytes()).hexdigest().upper()==base[source.stem]['Sha256']
     with ZipFile(source) as z:data={n:z.read(n) for n in z.namelist()}
-    doc=E.fromstring(data['word/document.xml']);p=doc.find(w+'body').find(w+'p')
+    doc=E.fromstring(data['word/document.xml'])
+    # Word's review exporter centers custom short sheets in a Letter print frame.
+    # Use a standard sheet and the same 300pt body height, keeping all ink in-page.
+    section=doc.find('.//'+w+'sectPr')
+    section.find(w+'pgSz').set(w+'h','15840')
+    section.find(w+'pgMar').set(w+'bottom','9120')
+    p=doc.find(w+'body').find(w+'p')
     p.insert(1,E.Element(w+'commentRangeStart',{w+'id':'0'}))
     E.SubElement(p,w+'commentRangeEnd',{w+'id':'0'})
     E.SubElement(E.SubElement(p,w+'r'),w+'commentReference',{w+'id':'0'})

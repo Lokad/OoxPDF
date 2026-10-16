@@ -2,7 +2,7 @@
   {
     "Id": "scaled-note-body",
     "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/scaled-note-body.docx",
-    "Sha256": "260887C291308FD1C32405841DF8DA1D6957705298E5F5A0C51514E1237B6CD2",
+    "Sha256": "32C1D0B9CA1BFF05F25CA600C38BB26F6CA2A9E206C7FF5E2A640BF8045A03ED",
     "HeldOut": false,
     "ExpectedEquationCount": 0,
     "ExpectedText": [
@@ -13,7 +13,7 @@
   {
     "Id": "scaled-note-cell",
     "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/scaled-note-cell.docx",
-    "Sha256": "E382B48F12235FE767777F76B97D0AB3F167F0CF7EF622F8913C967DB29BA217",
+    "Sha256": "AA32B068D7322A490A2DF7C1725AF72DBB5A58E7228B661368F223D54E233ABC",
     "HeldOut": false,
     "ExpectedEquationCount": 0,
     "ExpectedText": [
