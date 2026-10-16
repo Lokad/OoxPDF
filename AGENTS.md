@@ -29,6 +29,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 
 ## Tools
 
+- `tools/BuildQualificationArtifact.ps1`: build/freeze an explicit committed linked worktree and revision; absolute projects prevent accidental root builds. Reuse the frozen artifact for qualification and transfer.
 - `tools/AuditCompositionContent.py`: screen frozen public portfolio prose and simple math against Office; retain unresolved extraction and visual failures.
 
 - `tools/ExportCompositionReferences.ps1`: export or reuse pinned Office references by manifest and optional DOCX preset.

@@ -1,4 +1,4 @@
-"""Public math/insertion controls and retained deletion-frame fallback controls."""
+"""Public inline text revision and unchanged equation composition controls."""
 from pathlib import Path
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 from xml.etree import ElementTree as E

@@ -69,6 +69,8 @@ jobs:
           pwsh -NoProfile -File tools/TestQualificationFreeze.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pwsh -NoProfile -File tools/TestWorkspaceFootprint.ps1
+      - name: Qualification build workspace checks
+        run: pwsh -NoProfile -File tools/TestQualificationBuild.ps1
       - name: Markup text geometry checks
         run: pwsh -NoProfile -File tools/TestMarkupTextGeometry.ps1
       - name: Markup annotation checks

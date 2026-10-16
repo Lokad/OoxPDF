@@ -3598,3 +3598,13 @@ verified input/PDF identities; correct only references affected by the view.
 The meanings of [Word's revision modes](https://learn.microsoft.com/en-us/office/vba/api/word.wdrevisionsmode)
 are documented by Microsoft. Tool regression coverage uses fake inputs, with no
 Office invocation or library build.
+
+Use `BuildQualificationArtifact.ps1 -WorktreeDirectory <absolute-linked-worktree>
+-Revision <full-commit> -OutputDirectory <absolute-artifact-directory>` to build
+and freeze a committed batch. It rejects the main checkout, dirty/different source
+and reused output directories before building, then uses absolute test/CLI project
+paths regardless of the caller's current directory. Source changes or build
+failures prevent freezing. Existing freeze/transfer commands retain ownership of
+asset/input checks and the small transfer smoke; no tests run during build/freeze.
+`TestQualificationBuild.ps1` exercises these guards using a tiny Git repository
+and fake commands, including paths with spaces, without compiling the library.
