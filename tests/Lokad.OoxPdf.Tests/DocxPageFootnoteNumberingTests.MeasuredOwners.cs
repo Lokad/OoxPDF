@@ -19,14 +19,22 @@ internal static partial class DocxPageFootnoteNumberingTests
             allowWrappedBody: true, ownerScope: DocxFootnoteOwnerScope.AllSourceReferences),
             "An already-correct complete page must not request a font/layout retry.");
         TestAssert.True(ReferenceEquals(source, unchanged), "No-op numbering retains the original source document.");
-        TestAssert.True(DocxPageFootnoteNumbering.TryGetReferencePages(source, layout, out var owners) && owners.Count == 4,
+        // Legacy adjustments retain their independently qualified single-line
+        // body scope; the public no-op control above wraps its long paragraphs.
+        var legacy = ReadFixture();
+        TestAssert.True(DocxPageFootnoteNumbering.TryCreateDocument(legacy, CreateLayout(legacy), out var numbered, out _),
+            "The single-line control initially needs section-owned labels.");
+        var numberedLayout = CreateLayout(numbered);
+        TestAssert.True(!DocxPageFootnoteNumbering.TryCreateDocument(numbered, numberedLayout, out _, out _),
+            "The already-numbered single-line control needs no replacement.");
+        TestAssert.True(DocxPageFootnoteNumbering.TryGetReferencePages(numbered, numberedLayout, out var owners) && owners.Count == 4,
             "Unchanged labels still expose complete ownership to independent layout/font adjustments.");
-        var story = source.RelatedStories.First(item => item.IsNormalStoryType);
+        var story = numbered.RelatedStories.First(item => item.IsNormalStoryType);
         var paragraph = story.Paragraphs[0];
         var mismatched = paragraph with { Runs = [paragraph.Runs[0] with { Text = "wrong source marker" }, .. paragraph.Runs.Skip(1)] };
-        var invalid = source with { RelatedStories = source.RelatedStories.Select(item => ReferenceEquals(item, story)
+        var invalid = numbered with { RelatedStories = numbered.RelatedStories.Select(item => ReferenceEquals(item, story)
             ? item with { FallbackParagraphs = [mismatched], BodyElements = [new DocxParagraphElement(mismatched)] } : item).ToArray() };
-        TestAssert.True(!DocxPageFootnoteNumbering.TryGetReferencePages(invalid, layout, out _),
+        TestAssert.True(!DocxPageFootnoteNumbering.TryGetReferencePages(invalid, numberedLayout, out _),
             "Complete page ownership does not excuse a mismatched note-source marker.");
     }
 
