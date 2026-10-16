@@ -1,0 +1,30 @@
+[
+  {
+    "Id": "composed-page-counter-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/composed-page-counter-report.docx",
+    "Sha256": "14DB94D77E12CB967BE13B6FEB996B595598C54932AAC0EAD794EEEF52F898EA",
+    "HeldOut": true,
+    "ExpectedEquationCount": 8,
+    "ExpectedInlineImageCount": 2,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "See calculation",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative.",
+      "Calculation:"
+    ],
+    "Features": [
+      "image/math/comment/link/bookmark in one paragraph",
+      "math/endnote reference in a table cell",
+      "numbering",
+      "header equation",
+      "footer",
+      "continuous endnote",
+      "wrapped prose",
+      "cached field results beside math/image/comment and inside an internal hyperlink",
+      "two supported fractions and a bookmark inside the endnote",
+      "source PNG also embedded beside the endnote fractions",
+      "simple/packed PAGE fields beside cached fields/math/images, inside an internal hyperlink and in a math/note table cell"
+    ]
+  }
+]

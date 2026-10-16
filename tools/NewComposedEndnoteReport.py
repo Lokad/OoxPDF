@@ -10,7 +10,9 @@ root = Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--include-math', action='store_true', help='Add two supported fractions inside the endnote')
 parser.add_argument('--include-image', action='store_true', help='Add the source PNG beside the two note fractions')
+parser.add_argument('--include-page-fields', action='store_true', help='Add PAGE fields to the complete image/math report body, link and table')
 args = parser.parse_args()
+if args.include_page_fields: args.include_image = True
 if args.include_image: args.include_math = True
 cases = root / 'tests/Lokad.OoxPdf.Tests/Cases/Composition'
 baseline = json.loads((cases / 'composed-fields-report.json').read_text(encoding='utf-8'))[0]
@@ -64,7 +66,37 @@ if args.include_image:
     E.SubElement(rels, package_relationships + 'Relationship',
                  {'Id':'NoteImage', 'Type':image.get('Type'), 'Target':image.get('Target')})
     entries['word/_rels/endnotes.xml.rels'] = E.tostring(rels, encoding='utf-8', xml_declaration=True)
-output = cases / ('composed-note-image-math-report.docx' if args.include_image else
+if args.include_page_fields:
+    simple = next(after.iter(w + 'fldSimple'))
+    parents = {child:parent for parent in after.iter() for child in parent}
+    link = parents[simple]
+    assert link.tag == w + 'hyperlink'
+    body_paragraph = parents[link]
+    table_paragraph = next(p for table in after.iter(w + 'tbl') for p in table.iter(w + 'p')
+                           if next(p.iter(m + 'oMath'), None) is not None)
+    packed = next(run for run in body_paragraph.iter(w + 'r') if run.find(w + 'instrText') is not None)
+    template = simple.find(w + 'r')
+    def page_text(value):
+        run = deepcopy(template)
+        run.find(w + 't').text = value
+        run.find(w + 't').set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+        return run
+    def page_field():
+        field = deepcopy(simple)
+        field.set(w + 'instr', ' PAGE ')
+        field.find('.//' + w + 't').text = '1'
+        return field
+    # Keep existing cached fields and all prose; add page references rather
+    # than replacing a meaningful cached word with a page number.
+    for owner in [link, table_paragraph]:
+        owner.extend([page_text(' on page '), page_field()])
+    packed_page = deepcopy(packed)
+    packed_page.find(w + 'instrText').text = ' PAGE '
+    packed_page.find(w + 't').text = '1'
+    body_paragraph.extend([page_text(' (page '), packed_page, page_text(')')])
+    entries['word/document.xml'] = E.tostring(after, encoding='utf-8', xml_declaration=True)
+output = cases / ('composed-page-counter-report.docx' if args.include_page_fields else
+                  'composed-note-image-math-report.docx' if args.include_image else
                   'composed-note-math-report.docx' if args.include_math else 'composed-endnotes-report.docx')
 with ZipFile(output, 'w', ZIP_DEFLATED) as archive:
     for name,data in sorted(entries.items()):
@@ -78,7 +110,8 @@ manifest = [baseline | dict(Id=output.stem, Input=output.relative_to(root).as_po
     ExpectedText=baseline['ExpectedText'] + (['Calculation:'] if args.include_math else []),
     Features=[item.replace('footnote', 'endnote') for item in baseline['Features']] +
         (['two supported fractions and a bookmark inside the endnote'] if args.include_math else []) +
-        (['source PNG also embedded beside the endnote fractions'] if args.include_image else []))]
+        (['source PNG also embedded beside the endnote fractions'] if args.include_image else []) +
+        (['simple/packed PAGE fields beside cached fields/math/images, inside an internal hyperlink and in a math/note table cell'] if args.include_page_fields else []))]
 (cases / (output.stem + '.json')).write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')
 print('Pinned one held-out endnote report; existing prose, six equations, media and unrelated package parts preserved' +
       ('; two note fractions added' if args.include_math else '') +
