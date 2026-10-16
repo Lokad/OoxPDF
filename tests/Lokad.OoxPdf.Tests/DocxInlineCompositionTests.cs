@@ -1127,11 +1127,12 @@ internal static class DocxInlineCompositionTests
                 TestAssert.True(Math.Abs(height - fills[0].Height) < .001d,
                     "Independent Word controls retain one line selection height when only the annotated source range changes.");
             else heights.Add(container, fills[0].Height);
-            var line = renderer.InspectTextEmission(document).Lines.Single(line =>
-                line.Segments.Count(segment => !segment.IsTerminalLineSpace && segment.TextLength == 5) == 1 &&
-                line.Segments.Count(segment => !segment.IsTerminalLineSpace && segment.TextLength == 6) == 1);
-            double start = line.Segments.Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == 5).X;
-            double baseline = line.Segments.Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == 5).BaselineY;
+            // PDF text-show boundaries may join a word with its authored space.
+            // The independent reference is anchored to visible source text.
+            var startShow = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page)
+                .Single(show => show.Text.TrimStart().StartsWith("Start", StringComparison.Ordinal));
+            double start = VisibleTextStartX(startShow);
+            double baseline = startShow.Y;
             double connectorOffset = renderer.InspectMarkupBalloons(document).Single().AnchorY - baseline;
             TestAssert.True(Math.Abs(connectorOffset - row.GetProperty("ConnectorBaselineOffset").GetDouble()) < .3d,
                 $"Comment connector must consume the independent selected line frame: {input}/{connectorOffset}.");
@@ -1185,12 +1186,11 @@ internal static class DocxInlineCompositionTests
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
             TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Tabs cannot discard the supported formulas.");
-            var fields = renderer.InspectTextEmission(document).Lines.Single(line =>
-                new[] { 5, 6, 4 }.All(length => line.Segments.Count(segment => !segment.IsTerminalLineSpace && segment.TextLength == length) == 1)).Segments;
-            double start = fields.Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == 5).X;
-            foreach (var (length, property) in new[] { (6, "MiddleOffset"), (4, "EndOffset") })
+            var shows = pages.SelectMany(DocxCommentsTests.ReadEmbeddedGlyphTextShows).ToArray();
+            double start = VisibleTextStartX(shows.Single(show => show.Text.TrimStart().StartsWith("Start", StringComparison.Ordinal)));
+            foreach (var (textPrefix, property) in new[] { ("Middle", "MiddleOffset"), ("End.", "EndOffset") })
             {
-                double actual = fields.Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == length).X - start;
+                double actual = VisibleTextStartX(shows.Single(show => show.Text.TrimStart().StartsWith(textPrefix, StringComparison.Ordinal))) - start;
                 TestAssert.True(Math.Abs(actual - row.GetProperty(property).GetDouble()) < .2d,
                     $"Measured tabs must retain independent Word field offsets: {input}/{mode}/{property}={actual}.");
             }
