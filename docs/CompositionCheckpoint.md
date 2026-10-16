@@ -1640,3 +1640,39 @@ comparisons. Transfer verifies 17 assets/four PDFs without a root build or suite
 replay. Eight Office exports were unnecessarily repeated during probe expansion;
 their references are retained, with no subsequent export repetition. Evidence:
 `artifacts/composition-c1/mixed-display-rows-evidence.json`.
+
+### Picture-owned inline formulas and equation boundaries (C43)
+
+Explicit formulas beside visible inline pictures now retain inline argument
+sizing instead of disappearing. The shared source-row classifier accepts visible
+text/pictures while retaining tab-only and unsupported fallbacks. Fraction boxes
+publish Inner atom edges, compound rows preserve their edge roles, and adjacent
+equation boxes reuse the existing mathematical glue. This prevents two fraction
+bars from joining. Source equations and images retain their identities.
+
+Six inputs/twelve outcomes cover body/cell placement, pictures before/between two
+fractions and separate/combined source representations. Word and candidate rasters
+are identical across each before/combined pair. All sixteen mathematical glyphs,
+inline sizing, picture painting/order, bookmarks/run splitting and portable source
+equivalence pass. Maximum local-X error is 0.109pt; the existing table-X residual
+remains below 0.87pt. All source-prose/simple-math screens pass; twelve generic
+fraction-token screens and all twelve numerical visual gates remain failed or
+unresolved at unchanged thresholds.
+
+The printed-cell/table origin remains about 2.6pt high, with its upper border
+crossing the preceding text line. An older C42 implicit control and independent
+Word export reproduce this defect. It remains the next placement blocker; the
+native bound records it without claiming fidelity. Four page pairs cover six
+outcomes through raster identities and show retained images/distinct fraction
+bars alongside that visible defect. Other outcomes retain native checks.
+
+Frozen 61be3e0b passes 42 Windows methods once and 23 Ubuntu checks (19 font skips).
+Two content regressions fail on C42. Twelve fixed/complete PDFs retain accepted
+bytes/comparisons/screens/reviews. Transfer verifies 17 assets/four PDFs without
+a root build or suite replay. Evidence:
+`artifacts/composition-c1/display-image-rows-evidence.json`.
+
+Microsoft documents [adjacent math-zone merging](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oe376/1d77457b-2884-4749-9b4a-c150ca13cc19)
+and [OfficeMath spacing](https://devblogs.microsoft.com/math-in-office/officemath/).
+Using existing atom glue across prepared boxes is an inference confirmed by the
+independent controls here.
