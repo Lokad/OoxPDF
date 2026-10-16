@@ -1,0 +1,75 @@
+{
+  "Source": "Independent Word 16 mixed view; visible text and physical X positions, retained baseline residuals",
+  "Rows": [
+    {
+      "Id": "math-run-format-body-bold",
+      "InputSha256": "6C8D5E61DCF547222CBC8373D2F57246D327CA7FE115009EC7FDF684D861C1D5",
+      "ReferencePdfSha256": "9B0420C32B711420110C9880D4F9834DEFF0FBE9820437E4D3FDAE7044329218",
+      "Title": "Formatted:",
+      "Body": "Font: Bold",
+      "TitleX": 436.97,
+      "BodyX": 474.38,
+      "BaselineY": 632.88
+    },
+    {
+      "Id": "math-run-format-cell-bold",
+      "InputSha256": "CD154F9695594985FEF82FC5C6F34021AFD07E9D25BE160F34C53E899E3110F4",
+      "ReferencePdfSha256": "29294DAD2CD8FC65E2A0C334920F6851400360D8A278769D857F7C0F35A61C30",
+      "Title": "Formatted:",
+      "Body": "Font: Bold",
+      "TitleX": 436.97,
+      "BodyX": 474.38,
+      "BaselineY": 632.88
+    },
+    {
+      "Id": "math-run-format-header-bold",
+      "InputSha256": "EFBBA4E653CA704936159ED3AA7F8EF68DBCCB5355A505B17888BA3E4C0ED8E2",
+      "ReferencePdfSha256": "A2BA0280C270FA6E5C716E202B4BFAD5D24A3F8B92A43E9BBA4A7466C3566A0F",
+      "Title": "Formatted:",
+      "Body": "Font: Bold",
+      "TitleX": 436.97,
+      "BodyX": 474.38,
+      "BaselineY": 660.19
+    },
+    {
+      "Id": "math-run-format-footer-bold",
+      "InputSha256": "377B83EBD37BAB7A16E493EC8BA725A28C8C7194E998E6547AEF3BA8D61A98CD",
+      "ReferencePdfSha256": "33745B345D2D55D15F504D53DCCC78434E8C6B132E33BEFFF18111002C99BA32",
+      "Title": "Formatted:",
+      "Body": "Font: Bold",
+      "TitleX": 436.97,
+      "BodyX": 474.38,
+      "BaselineY": 184.99
+    },
+    {
+      "Id": "formatting-balloon-body-not-bold",
+      "InputSha256": "7030EFF117FEC3058C1DAC40FD550E267785064260A1945A66EFDE7A6F3685E9",
+      "ReferencePdfSha256": "61CEADF39457A78CF62995C8953A067291F7BC6544CA2E8BECBE05AE6119873A",
+      "Title": "Formatted:",
+      "Body": "Font: Not Bold",
+      "TitleX": 436.97,
+      "BodyX": 474.38,
+      "BaselineY": 632.88
+    },
+    {
+      "Id": "formatting-balloon-body-italic",
+      "InputSha256": "FD32DC68D091BE7B2FA7CF20CB7A50DEC32CD5E84984F5F213C96A35F88482B5",
+      "ReferencePdfSha256": "7F1662E0CF8C77CB10B9CEEF22C1216A225B95F503D8F6539C5678671C30A74C",
+      "Title": "Formatted:",
+      "Body": "Font: Italic",
+      "TitleX": 436.97,
+      "BodyX": 474.38,
+      "BaselineY": 632.88
+    },
+    {
+      "Id": "formatting-balloon-body-bold-italic",
+      "InputSha256": "E6FE6A68B2AF1AB124944C9FC5BEE23A70245E1758987AE817ECB61A5905F916",
+      "ReferencePdfSha256": "9094D0FA216696F02A912A441CBF127E8709613C4D680D05E5BA3EE674E9BE01",
+      "Title": "Formatted:",
+      "Body": "Font: Bold, Italic",
+      "TitleX": 436.97,
+      "BodyX": 474.38,
+      "BaselineY": 632.88
+    }
+  ]
+}

@@ -13,6 +13,21 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
+    internal static string? BuildWordCompatibleRunFormattingPreview(DocxParagraph paragraph, CancellationToken token)
+    {
+        if (!DocxInlineContent.HasSupportedRunRevisionOwners(paragraph.Revisions, paragraph.Runs, token)) return null;
+        var labels = new List<string>();
+        foreach (var revision in paragraph.Revisions)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!IsFormattingRevision(revision)) continue;
+            if (revision.RunFormattingChange is not { } change) return null;
+            if (change.Bold is { } bold) labels.Add(bold ? "Bold" : "Not Bold");
+            if (change.Italic is { } italic) labels.Add(italic ? "Italic" : "Not Italic");
+        }
+        return labels.Count == 0 ? null : "Font: " + string.Join(", ", labels.Distinct(StringComparer.Ordinal));
+    }
+
     internal static string BuildRevisionBalloonPreview(IReadOnlyList<DocxRevisionInfo> revisions)
     {
         return BuildRevisionBalloonPreview(revisions, []);

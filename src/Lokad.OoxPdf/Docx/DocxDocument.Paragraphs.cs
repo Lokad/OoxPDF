@@ -555,7 +555,13 @@ internal sealed record DocxRevisionInfo
     public DocxRevisionPropertyFamily? PropertyChangeFamily { get; init; }
 
     public IReadOnlyList<string> PropertyElementNames { get; init; }
+
+    public DocxRunFormattingChange? RunFormattingChange { get; init; }
 }
+
+// Resolved before/after values, independent of source token spelling and layout.
+// Null fields are unchanged; a null record retains the generic revision summary.
+internal readonly record struct DocxRunFormattingChange(bool? Bold, bool? Italic);
 
 internal sealed record DocxTextRunStyle(
     double? FontSize,

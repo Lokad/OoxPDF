@@ -1664,5 +1664,23 @@
     "PortableRenderingTextRevisionMathKeepsSourceOwnersAndFallbacks",
     "DocxWordCompatibleAllMarkupUsesOfficeRevisionDecorationColor",
     "DocxWordCompatibleAllMarkupEmitsOfficeLikeMarkupPrimitiveInventory"
+  ],
+  "docx-formatting-balloon-descriptions": [
+    "DocxInlineCompositionFormattingBalloonDescriptions",
+    "PortableRenderingFormattingBalloonDescriptions",
+    "DocxInlineCompositionRunFormatting",
+    "PortableRenderingRunFormatting",
+    "DocxWordCompatibleAllMarkupKeepsFormattingRevisionBalloons",
+    "DocxWordCompatibleAllMarkupSkipsVoidPropertyChangeBalloons",
+    "DocxWordCompatibleForeignFormattingBalloonsRetainReviewLane",
+    "DocxReviewCommentAuthorsKeepTextOwnership",
+    "DocxWordCompatibleBalloonsUseFirstSeenAuthorColors",
+    "DocxMarkupModesFilterStaticAndRelatedStoryRevisions",
+    "DocxWordCompatibleAllMarkupEmitsOfficeLikeMarkupPrimitiveInventory",
+    "DocxFormattingRevisionBalloonLabels",
+    "DocxWordCompatibleAllMarkupRendersRevisionBalloonTextWithOfficeFont",
+    "DocxWordCompatibleAllMarkupWrapsLongRevisionBalloonBody",
+    "DocxAllMarkupRevisionBalloonPreview",
+    "DocxAllMarkupRendererDrawsRevisionBalloons"
   ]
 }

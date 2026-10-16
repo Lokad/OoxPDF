@@ -721,12 +721,13 @@ internal sealed partial class DocxRenderer
                     DocxRevisionMarkupPalette paragraphRevisionPalette = ResolveRevisionMarkupPalette(paragraph.Revisions);
                     string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(paragraph.Revisions), textWidth);
                     string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(paragraph), textWidth);
+                    string? wordFormatting = BuildWordCompatibleRunFormattingPreview(paragraph, cancellationToken);
                     balloonCandidates.Add(new DocxMarkupBalloonCandidate(
                         DocxMarkupBalloonKind.Revision,
                         revisionTitle,
                         revisionBody,
-                        revisionTitle,
-                        revisionBody,
+                        wordFormatting is null ? revisionTitle : "Formatted: ",
+                        wordFormatting ?? revisionBody,
                         line.BaselineY,
                         line.X + Math.Max(0d, line.Width) * 0.5d,
                         line.X - 2d,

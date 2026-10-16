@@ -509,7 +509,8 @@ internal sealed partial class DocxReader
                 characterStyleId,
                 styles,
                 tableCellStyle?.Run);
-            IReadOnlyList<DocxRevisionInfo> runRevisions = ReadPropertyChangeRevisions(runProperties);
+            IReadOnlyList<DocxRevisionInfo> runRevisions = ReadRunPropertyChangeRevisions(runProperties,
+                paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run, resolvedRun);
             AddRevisions(paragraphRevisions, runRevisions);
             CaptureUnmarkedListTextStyle(text, resolvedRun, runStyleResolution, sourceRunIndex, revision);
             AddResolvedTextRuns(runs, resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text, ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode), runStyleResolution, sourceRunIndex, sourceTextOffsetInRun: 0, revision, MergeRevisionLists(revision, runRevisions), placeholderKind);
@@ -543,7 +544,8 @@ internal sealed partial class DocxReader
                 characterStyleId,
                 styles,
                 tableCellStyle?.Run);
-            IReadOnlyList<DocxRevisionInfo> runRevisions = ReadPropertyChangeRevisions(runProperties);
+            IReadOnlyList<DocxRevisionInfo> runRevisions = ReadRunPropertyChangeRevisions(runProperties,
+                paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run, resolvedRun);
             AddRevisions(paragraphRevisions, runRevisions);
             IReadOnlyList<DocxRevisionInfo> effectiveRevisions = MergeRevisionLists(revision, runRevisions);
             CaptureUnmarkedListTextStyle(text, resolvedRun, runStyleResolution, currentSourceRunIndex, revision);
