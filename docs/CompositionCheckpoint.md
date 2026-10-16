@@ -1156,3 +1156,18 @@ remain failed. All 17 assets of frozen 65b9c4fe were rechecked with no library
 build, suite replay or fitting branch. Further note variants are outside this
 finite acceptance step. Evidence:
 `artifacts/composition-c1/composed-note-image-math-evidence.json`.
+
+Shared inline counter measurement now resolves PAGE from its actual page number
+and NUMPAGES from its actual total, without requiring the unrelated input. Mixed
+counter paragraphs still require both; source ownership and missing/noncanonical
+fallbacks remain. Simple/packed body/cell source controls cover values 9/10/12 and
+resolved advances. This is a dependency prerequisite; body/table page-aware math
+admission remains deferred. Frozen 8fe300f6 / root 6190893d passes 26 capability/
+neighbor methods in one invocation and five Ubuntu checks. The measurement
+regression fails with the preceding library through existing APIs; the new
+resolver-API unit is excluded from that parent check. The 17-asset/four-PDF
+transfer preserves the complete note-image/math report in both presets, the
+twelve-page static-header counter control and held-out memo Final. No root build,
+suite/corpus replay or Office re-export; prior comparisons remain reusable with
+unchanged failed numerical gates. Evidence:
+`artifacts/composition-c1/counter-inputs-evidence.json`.
