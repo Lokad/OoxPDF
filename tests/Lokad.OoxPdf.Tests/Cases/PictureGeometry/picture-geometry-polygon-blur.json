@@ -1,0 +1,28 @@
+[
+  {
+    "name": "pic-rtTriangle-blurred-shadow-transformed",
+    "preset": "rtTriangle",
+    "nonsquare": true,
+    "transformed": true,
+    "shadow": true,
+    "blur": true,
+    "following": true
+  },
+  {
+    "name": "pic-star5-blurred-shadow",
+    "preset": "star5",
+    "nonsquare": true,
+    "shadow": true,
+    "blur": true,
+    "following": true
+  },
+  {
+    "name": "pic-chevron-blurred-shadow-grouped",
+    "preset": "chevron",
+    "nonsquare": true,
+    "grouped": true,
+    "shadow": true,
+    "blur": true,
+    "following": true
+  }
+]

@@ -70,6 +70,13 @@ if '--blur' in sys.argv:
         dict(name='pic-triangle-blurred-shadow-fallback', preset='triangle', nonsquare=True, shadow=True, blur=True, following=True),
     ]
 
+if '--polygon-blur' in sys.argv:
+    controls = [
+        dict(name='pic-rtTriangle-blurred-shadow-transformed', preset='rtTriangle', nonsquare=True, transformed=True, shadow=True, blur=True, following=True),
+        dict(name='pic-star5-blurred-shadow', preset='star5', nonsquare=True, shadow=True, blur=True, following=True),
+        dict(name='pic-chevron-blurred-shadow-grouped', preset='chevron', nonsquare=True, grouped=True, shadow=True, blur=True, following=True),
+    ]
+
 def xml(element):
     return E.tostring(element, encoding='utf-8', xml_declaration=True)
 
@@ -167,7 +174,7 @@ for number, control in enumerate(controls, 1):
 parts['ppt/presentation.xml'] = xml(presentation)
 parts['ppt/_rels/presentation.xml.rels'] = xml(relationships)
 parts['[Content_Types].xml'] = xml(types)
-stem = 'picture-geometry-blur' if '--blur' in sys.argv else 'picture-geometry-effects' if '--effects' in sys.argv else 'picture-geometry-extended' if '--extended' in sys.argv else 'picture-geometry-controls'
+stem = 'picture-geometry-polygon-blur' if '--polygon-blur' in sys.argv else 'picture-geometry-blur' if '--blur' in sys.argv else 'picture-geometry-effects' if '--effects' in sys.argv else 'picture-geometry-extended' if '--extended' in sys.argv else 'picture-geometry-controls'
 with ZipFile(OUT / (stem + '.pptx'), 'w', ZIP_DEFLATED) as archive:
     for name, data in parts.items():
         info = ZipInfo(name, (2026, 10, 16, 0, 0, 0))
