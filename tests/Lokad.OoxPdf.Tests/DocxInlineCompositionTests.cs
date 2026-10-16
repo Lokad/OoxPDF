@@ -287,6 +287,64 @@ internal static class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxInlineCompositionCellPageCountersMatchIndependentWordFrames()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent controls use installed Arial metrics.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        string input = Path.Combine(cases, "math-cell-page-counter-boundary.docx");
+        using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-cell-page-counter-office-geometry.json")));
+        TestAssert.Equal(reference.RootElement.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+        foreach (var group in reference.RootElement.GetProperty("Rows").EnumerateArray().GroupBy(row => row.GetProperty("Mode").GetString()))
+        {
+            bool review = group.Key == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var pages = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).ToArray();
+            TestAssert.Equal(10, pages.Length);
+            foreach (var row in group)
+            {
+                int number = row.GetProperty("Page").GetInt32();
+                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[number - 1]).ToArray();
+                var start = shows.Single(show => show.Text.Trim() == "Start");
+                TestAssert.True(Math.Abs(start.Y - row.GetProperty("BaselineY").GetDouble()) < .15d, "Cell PAGE and math share the independently measured baseline.");
+                var fields = shows.Where(show => show.Text.Trim() == number.ToString(System.Globalization.CultureInfo.InvariantCulture)).OrderBy(show => show.X).ToArray();
+                TestAssert.Equal(2, fields.Length);
+                var offsets = row.GetProperty("FieldOffsets").EnumerateArray().Select(value => value.GetDouble()).ToArray();
+                // Word selects Calibri for simple-field digits while the
+                // canonical source run keeps Arial, as in the static controls.
+                // Retain that measured residual; whole-page gates stay failed.
+                for (int index = 0; index < fields.Length; index++)
+                    TestAssert.True(Math.Abs(fields[index].X - start.X - offsets[index]) < 1.25d, "Counter advances retain the measured Office font-owner residual across the digit boundary.");
+            }
+        }
+    }
+
+    public static void DocxInlineCompositionCellPageCountersPreserveSupportedMath()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Native controls use installed math fonts.");
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string form in new[] { "simple", "packed" })
+        {
+            var document = ReadMutation("CompositionProbes/math-fields-" + form + "-cell", mode, false, true,
+                (xml, w, m) =>
+                {
+                    foreach (var field in xml.Descendants(w + "fldSimple")) field.SetAttributeValue(w + "instr", " PAGE ");
+                    foreach (var instruction in xml.Descendants(w + "instrText")) instruction.Value = " PAGE ";
+                    foreach (var text in xml.Descendants(w + "t").Where(text => text.Value is "North" or "South")) text.Value = "1";
+                });
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            foreach (string value in new[] { "Start", "middle", "End.", "rate", "time" })
+                TestAssert.Contains(value, string.Concat(text.Where(character => !char.IsWhiteSpace(character))));
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "PAGE cannot hide supported cell equations.");
+            TestAssert.Equal(1, pages.Length);
+            TestAssert.True(!text.Contains("{PAGE}", StringComparison.Ordinal), "Actual placement must resolve canonical counters.");
+        }
+    }
+
     public static void DocxInlineCompositionSourceCursorMatchesWholeParagraphWrapping()
     {
         var document = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-page-fields-simple-header");
@@ -366,7 +424,7 @@ internal static class DocxInlineCompositionTests
             var source = document.Paragraphs.First(paragraph => paragraph.Equations.Count != 0);
             var paragraph = source with { InlineContent = source.InlineContent!.Take(1)
                 .Concat(new DocxInlineItem[] { new DocxInlineBreak(source.Runs[0], 0) })
-                .Concat(source.InlineContent.Skip(1)).ToArray() };
+                .Concat(source.InlineContent!.Skip(1)).ToArray() };
             var equations = paragraph.Equations.ToDictionary(equation => equation,
                 equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
             TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, equations, new TrackingMeasurer(),

@@ -1,0 +1,45 @@
+{
+  "InputSha256": "3D31B4F3D95B1240A9E5182CD5FBC1AEB7198F9498B9218A8DB1A4086D136CCD",
+  "Rows": [
+    {
+      "Mode": "final-preserve",
+      "Page": 9,
+      "BaselineY": 690.94,
+      "StartX": 306.53,
+      "FieldOffsets": [
+        28.82000000000005,
+        96.26000000000005
+      ]
+    },
+    {
+      "Mode": "final-preserve",
+      "Page": 10,
+      "BaselineY": 690.94,
+      "StartX": 306.53,
+      "FieldOffsets": [
+        28.82000000000005,
+        102.38000000000005
+      ]
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Page": 9,
+      "BaselineY": 690.94,
+      "StartX": 306.53,
+      "FieldOffsets": [
+        28.82000000000005,
+        96.26000000000005
+      ]
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Page": 10,
+      "BaselineY": 690.94,
+      "StartX": 306.53,
+      "FieldOffsets": [
+        28.82000000000005,
+        102.38000000000005
+      ]
+    }
+  ]
+}

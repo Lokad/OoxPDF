@@ -16,6 +16,29 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingCellPageCountersPreserveMathAcrossDigitBoundary()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/math-cell-page-counter-boundary.docx"), mode);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(10, pages.Length);
+            foreach (int number in new[] { 9, 10 })
+            {
+                string text = Regex.Replace(DocxPageFootnoteNumberingTests.DecodeText(pages[number - 1])
+                    .Normalize(NormalizationForm.FormKC), @"\s", "");
+                TestAssert.Contains("Start" + number + "middle" + number + "End.", text);
+                TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+                TestAssert.True(!text.Contains("{PAGE}", StringComparison.Ordinal), "Cell fields use the actual fragment page.");
+            }
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "PAGE cannot hide supported table math.");
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingNormalNotesPreserveInlineImagesAndMath()
     {
         foreach (string kind in new[] { "footnote", "endnote" })

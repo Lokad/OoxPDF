@@ -91,7 +91,7 @@ internal sealed partial class DocxLayoutEngine
         double nextWidth = ResolveTableCellTextWrapWidth(cell, textWidth - right - GetParagraphTextStartOffset(paragraph, scale));
         return TryMeasureOrderedInlineContent(paragraph, context.MathEquations, context.TextMeasurer, fontSize,
             firstWidth, nextWidth, baselineInset, lineHeight, scale, context.CancellationToken, out lines,
-            defaultTabStopPoints: context.DefaultTabStopPoints);
+            defaultTabStopPoints: context.DefaultTabStopPoints, pageNumber: context.PageNumber, pageCount: context.PageCount);
     }
 
     private static (DocxTextLineLayout Line, IReadOnlyList<DocxInlineImageLayout> Images) PlaceOrderedInlineLine(

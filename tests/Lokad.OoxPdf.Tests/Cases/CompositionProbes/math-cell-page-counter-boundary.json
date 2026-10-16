@@ -1,0 +1,17 @@
+[
+  {
+    "Id": "math-cell-page-counter-boundary",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-cell-page-counter-boundary.docx",
+    "Sha256": "3D31B4F3D95B1240A9E5182CD5FBC1AEB7198F9498B9218A8DB1A4086D136CCD",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Public table counter page 9.",
+      "Public table counter page 10.",
+      "Start",
+      "middle",
+      "End."
+    ]
+  }
+]

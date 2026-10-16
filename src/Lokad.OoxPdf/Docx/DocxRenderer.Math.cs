@@ -97,7 +97,7 @@ internal sealed partial class DocxRenderer
         var controlKeys = new Dictionary<IDocxMathControl, (string StableId, int FaceIndex)>(ReferenceEqualityComparer.Instance);
         var unavailableControlFaces = new HashSet<OpenTypeFont>(ReferenceEqualityComparer.Instance);
         foreach (var owner in DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, token)
-            .Select(paragraph => (Paragraph: paragraph, HasPageInputs: false))
+            .Select(paragraph => (Paragraph: paragraph, HasPageInputs: DocxMathParagraphPolicy.UsesOnlyPageNumberCounters(paragraph)))
             .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, token)))
         {
             token.ThrowIfCancellationRequested();

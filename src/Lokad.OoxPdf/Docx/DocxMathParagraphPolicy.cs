@@ -29,7 +29,7 @@ internal static class DocxMathParagraphPolicy
                         foreach (DocxParagraph source in cell.Paragraphs)
                         {
                             token.ThrowIfCancellationRequested();
-                            if (GetPreparationEquations(source).Count != 0) { yield return source; }
+                            if (GetPreparationEquations(source, UsesOnlyPageNumberCounters(source)).Count != 0) { yield return source; }
                         }
                     }
                 }
@@ -164,6 +164,13 @@ internal static class DocxMathParagraphPolicy
         paragraph.Equations.Count == 1 && (GetInlineRow(paragraph) is null && GetStandaloneRow(paragraph) is null ||
             GetInlineRow(paragraph) is { } inline && prepared is not null &&
             prepared.TryGetValue(inline, out var math) && math.Box.InlineBreakAfterGlyphs.Count != 0);
+
+    // Preparation needs the dependency kind, not a guessed counter value.
+    // Body/cell placement supplies PAGE; total counts remain unavailable there.
+    public static bool UsesOnlyPageNumberCounters(DocxParagraph paragraph) =>
+        paragraph.Runs.Any(run => run.FieldKind == DocxFieldKind.Page) &&
+        paragraph.Runs.All(run => run.FieldKind != DocxFieldKind.NumPages) &&
+        paragraph.FieldReferences.All(field => field.Kind != DocxFieldKind.NumPages);
 
     public static IReadOnlyList<DocxEquation> GetPreparationEquations(DocxParagraph paragraph, bool hasPageInputs = false)
     {

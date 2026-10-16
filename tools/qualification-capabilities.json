@@ -852,5 +852,23 @@
     "PortableRenderingStaticPageFieldsPreserveMathAcrossDigitBoundary",
     "PortableRenderingNormalNotesPreserveInlineImagesAndMath",
     "PortableRenderingOrderedMathCellRetainsPrintedBorderFrame"
+  ],
+  "docx-cell-page-counters": [
+    "DocxInlineCompositionCellPageCounters",
+    "PortableRenderingCellPageCountersPreserveMathAcrossDigitBoundary",
+    "DocxInlineCompositionCounterAtomsMeasureOnlyTheirOwnedInputs",
+    "DocxInlineCompositionCachedFieldsRetainRunSplittingAndFallbacks",
+    "DocxInlineCompositionStaticPageFieldsRequireActualPageInputs",
+    "DocxInlineCompositionStaticPageFieldsMatchIndependentWordFrames",
+    "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement",
+    "PortableRenderingStaticPageFieldsPreserveMathAcrossDigitBoundary",
+    "PortableRenderingOrderedMathCellRetainsPrintedBorderFrame",
+    "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance",
+    "DocxTableCellPageFieldsEvaluatePerFragmentPage",
+    "DocxTableCellTextLinesMemoSharesSplitCells",
+    "MemoTiersPageStaticVsDynamic",
+    "DocxTableMath",
+    "DocxTableAutomaticGridRetainsComplexAndFragmentFallbacks",
+    "DocxRendererKeepsSplitTableCellHyperlinkAnnotationsOnVisibleFragment"
   ]
 }
