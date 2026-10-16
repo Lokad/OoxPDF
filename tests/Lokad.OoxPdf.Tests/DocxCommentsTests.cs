@@ -12,6 +12,39 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxCommentsTests
 {
+    internal static (double X, double Y, double Width, double Height) ReviewLaneBounds(PdfPage page)
+    {
+        Match match = Regex.Match(page.Content, @"0\.949 g\r?\n(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[\d.]+) (?<h>[\d.]+) re f");
+        TestAssert.True(match.Success, "A printed comment page retains its gray paper frame.");
+        double Value(string name) => double.Parse(match.Groups[name].Value, CultureInfo.InvariantCulture);
+        return (Value("x"), Value("y"), Value("w"), Value("h"));
+    }
+
+    public static void DocxWordCompatibleReviewPaneMatchesIndependentPaperFrames()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent Word paper controls use the Windows font environment.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases"));
+        using var references = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "CompositionProbes", "comment-pane-office-bounds.json")));
+        var pagesByCase = new Dictionary<string, PdfPage[]>(StringComparer.Ordinal);
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string relative = row.GetProperty("Case").GetString()!;
+            if (!pagesByCase.TryGetValue(relative, out var pages))
+            {
+                string input = Path.Combine(cases, relative);
+                TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(input))));
+                var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+                pages = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                    .RenderBlankPages(document, null, default).ToArray();
+                pagesByCase.Add(relative, pages);
+            }
+            var bounds = ReviewLaneBounds(pages[row.GetProperty("PageIndex").GetInt32()]);
+            TestAssert.True(Math.Abs(bounds.Y - row.GetProperty("Bottom").GetDouble()) < .5d &&
+                Math.Abs(bounds.Y + bounds.Height - row.GetProperty("Top").GetDouble()) < .5d,
+                $"Printed paper bounds must match the independent reference: {relative}/{bounds}.");
+        }
+    }
+
     public static void DocxWordCompatibleExactBodySpacingKeepsPrintedFollowingText()
     {
         // The cached lane-band case accumulates an unscaled 90pt/72pt advance.

@@ -4,6 +4,7 @@ param(
     [Parameter(Mandatory=$true)] [string] $CliPath,
     [Parameter(Mandatory=$true)] [string] $InspectorPath,
     [Parameter(Mandatory=$true)] [string] $OutputDirectory,
+    [ValidateSet('Both','Final','Review')] [string] $DocxPreset = 'Both',
     [string] $Manifest = (Join-Path $PSScriptRoot '../tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json')
 )
 $ErrorActionPreference = 'Stop'
@@ -26,6 +27,7 @@ foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Js
     if ((Get-FileHash -LiteralPath $inputPath).Hash -ne $document.Sha256) { throw ('Portfolio input differs: ' + $document.Id) }
     $isDocx = $inputPath.EndsWith('.docx', [StringComparison]::OrdinalIgnoreCase)
     $modes = if ($isDocx) { @('final-preserve','all-word-compatible') } else { @('presentation') }
+    if ($isDocx -and $DocxPreset -ne 'Both') { $modes = if ($DocxPreset -eq 'Final') { @('final-preserve') } else { @('all-word-compatible') } }
     foreach ($mode in $modes) {
         $run = Join-Path $output ($document.Id + '-' + $mode)
         New-Item -ItemType Directory -Path $run | Out-Null
@@ -63,7 +65,7 @@ foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Js
 }
 [ordered]@{
     LibrarySha256=$libraryHash;CliSha256=$cliHash;InspectorSha256=$inspectorHash
-    ManifestSha256=(Get-FileHash -LiteralPath $Manifest).Hash;Rebuilt=$false
+    ManifestSha256=(Get-FileHash -LiteralPath $Manifest).Hash;Rebuilt=$false;DocxPreset=$DocxPreset
     MeasurementScope='Cold CLI process wall time includes startup; allocation and stage baselines are separate'
     Rows=$rows
 } | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $output 'outcomes.json') -Encoding utf8

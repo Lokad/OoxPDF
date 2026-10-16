@@ -1872,9 +1872,14 @@ internal static class DocxMarkupTests
         // Office (mirrored/dense/landscape/author COM refs across four print scales): the gray lane hugs
         // balloon bodies at a 22.56pt design inset; the mirrored odd page (s = 612 / 824.5) starts it at
         // balloon-body 437.36 minus 22.56 * s = 420.615 (Office 420.60).
-        TestAssert.Contains("420.615 89.475 191.015 614.25 re f", pages[0].Content);
-        // Even pages keep the right lane too (Office 420.60 on both pages).
-        TestAssert.Contains("420.615 89.475 191.015 614.25 re f", pages[1].Content);
+        foreach (PdfPage page in pages.Take(2))
+        {
+            Match lane = Regex.Match(page.Content, @"0\.949 g\r?\n(?<x>[\d.]+) (?<y>[-\d.]+) (?<w>[\d.]+) (?<h>[\d.]+) re f");
+            TestAssert.True(lane.Success, "Both mirrored pages retain the right review lane.");
+            TestAssert.Equal(420.615d, double.Parse(lane.Groups["x"].Value, CultureInfo.InvariantCulture));
+            TestAssert.Equal(191.015d, double.Parse(lane.Groups["w"].Value, CultureInfo.InvariantCulture));
+        }
+        // Vertical paper bounds have their separate independent Office controls.
     }
 
     public static void DocxWordCompatibleAllMarkupUsesOfficeRevisionDecorationColor()

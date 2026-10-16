@@ -34,7 +34,7 @@ internal sealed partial class DocxRenderer
 
         public double MapEmissionY(double designY)
         {
-            return designY * PrintScale + (PageHeight / 2d) * (1d - PrintScale);
+            return new DocxPrintedPageFrame(PageHeight, PrintScale).MapY(designY);
         }
 
         public double PrecompensateX(double designX)

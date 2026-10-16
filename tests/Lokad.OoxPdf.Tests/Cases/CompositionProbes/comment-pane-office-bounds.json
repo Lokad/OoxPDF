@@ -1,0 +1,95 @@
+{
+  "Source": "Independent Word 16 AllMarkup PDF gray-paper frame bounds",
+  "Rows": [
+    {
+      "Id": "comment-pane-letter-36-36",
+      "Case": "CompositionProbes/comment-pane-letter-36-36.docx",
+      "InputSha256": "D55C0311C916E10F0900002A3440FFFC7B09B5F039DEA8A8CF067F6E393F8C1C",
+      "ReferencePdfSha256": "2FD0B02C1FD7D06738C6FA43B8BCA504E8662D128F5963EA23A023DF8A8CA50E",
+      "PageIndex": 0,
+      "Bottom": 95.904,
+      "Top": 696.574
+    },
+    {
+      "Id": "comment-pane-letter-72-72",
+      "Case": "CompositionProbes/comment-pane-letter-72-72.docx",
+      "InputSha256": "4D17C86212EA7C1BB58CF576A5720A144D4382CC7559B3FF1364293760391FA2",
+      "ReferencePdfSha256": "B08C2C327ED58C43A61537CAD81F0F972DB1DAED33D2CCC9E89B7EA0ECEDD4CA",
+      "PageIndex": 0,
+      "Bottom": 95.904,
+      "Top": 696.574
+    },
+    {
+      "Id": "comment-pane-letter-144-144",
+      "Case": "CompositionProbes/comment-pane-letter-144-144.docx",
+      "InputSha256": "9BCA13CD0EEEE7EC9CB3B9724D86E13EB6415B418477939F77C05CC8B740A1DB",
+      "ReferencePdfSha256": "E4E8D44878D039299924F224EAC07A67E42EB4AB1834714871D64B6708027E76",
+      "PageIndex": 0,
+      "Bottom": 95.904,
+      "Top": 696.574
+    },
+    {
+      "Id": "comment-pane-letter-36-456",
+      "Case": "CompositionProbes/comment-pane-letter-36-456.docx",
+      "InputSha256": "E272C8613CA4AFA52D95F7B55DBB7AD2A25F7BCCC420E58EB7719687FC30BA61",
+      "ReferencePdfSha256": "4A0515E4EF7E133E6ABA30F099CC28DFA758D4206C5F7B1CC37D3B8A04F6EB9C",
+      "PageIndex": 0,
+      "Bottom": 95.904,
+      "Top": 696.574
+    },
+    {
+      "Id": "comment-pane-letter-144-36",
+      "Case": "CompositionProbes/comment-pane-letter-144-36.docx",
+      "InputSha256": "B814F023B9C37410FDFD9F854EEEABB789C1FCD2130881D613F972E8C9C4B108",
+      "ReferencePdfSha256": "0031053FCAEB2717AB6A270A206D9E8AB3F8449F8D2B32FD2361B40B7647EF68",
+      "PageIndex": 0,
+      "Bottom": 95.904,
+      "Top": 696.574
+    },
+    {
+      "Id": "comment-pane-letter-36-144",
+      "Case": "CompositionProbes/comment-pane-letter-36-144.docx",
+      "InputSha256": "2737B5F0E790D8E3707B442FEC346B33B1977E70EEB7E7483B8770C8D5FD5796",
+      "ReferencePdfSha256": "C56B0ED9B718C261C6ECA674AFCFFCCCBBD1AC5224EA92BCA27E2D04124CC825",
+      "PageIndex": 0,
+      "Bottom": 95.904,
+      "Top": 696.574
+    },
+    {
+      "Id": "comment-pane-a4-72-72",
+      "Case": "CompositionProbes/comment-pane-a4-72-72.docx",
+      "InputSha256": "F04FBF68950DBF37F4727E693ACE4FFD00D16E2D81039E565D294B4B4A8530F5",
+      "ReferencePdfSha256": "B0F34B8CD69D08600E4B99ABA8647A3BDDC7C9C5432F2972A60B097B5DF665F6",
+      "PageIndex": 0,
+      "Bottom": 103.9,
+      "Top": 738.22
+    },
+    {
+      "Id": "comment-pane-landscape-72-72",
+      "Case": "CompositionProbes/comment-pane-landscape-72-72.docx",
+      "InputSha256": "1F0595D958911E1165058C733522D7E9A29568825DEEF35D2182F6256677BF3C",
+      "ReferencePdfSha256": "460448A217C1E9125EBE10975148A3FC34A6825E114B51B72E0D37BAC65F3D6F",
+      "PageIndex": 0,
+      "Bottom": 59.904,
+      "Top": 551.644
+    },
+    {
+      "Id": "comment-pane-mirrored",
+      "Case": "docx-markup-margin-mirrored.docx",
+      "InputSha256": "39BCFEA61FFEC4C24F65C11DF2CD5ADA6C18D3CBF57EA29938BAD625F53CBD49",
+      "ReferencePdfSha256": "1FBC5CA64449C1D1CFD86CEA9CD34987F20B3842E1B35E0B1B1711D7B4A08C82",
+      "PageIndex": 0,
+      "Bottom": 102.5,
+      "Top": 689.97
+    },
+    {
+      "Id": "comment-pane-mirrored",
+      "Case": "docx-markup-margin-mirrored.docx",
+      "InputSha256": "39BCFEA61FFEC4C24F65C11DF2CD5ADA6C18D3CBF57EA29938BAD625F53CBD49",
+      "ReferencePdfSha256": "1FBC5CA64449C1D1CFD86CEA9CD34987F20B3842E1B35E0B1B1711D7B4A08C82",
+      "PageIndex": 1,
+      "Bottom": 102.5,
+      "Top": 689.97
+    }
+  ]
+}

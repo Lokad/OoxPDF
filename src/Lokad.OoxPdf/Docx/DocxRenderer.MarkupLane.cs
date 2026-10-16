@@ -24,8 +24,10 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        double bottom = page.MarginBottom + WordCompatibleAllMarkupLaneBackgroundBottomInsetPoints;
-        double top = page.Height - page.MarginTop - WordCompatibleAllMarkupLaneBackgroundTopInsetPoints;
+        // Review chrome follows the printed paper, independently of body margins.
+        var frame = new DocxPrintedPageFrame(page.Height, markupContext.WordCompatiblePrintScale);
+        double bottom = frame.MapY(0d);
+        double top = frame.MapY(page.Height);
         double height = Math.Max(0d, top - bottom);
         if (height <= 0d)
         {

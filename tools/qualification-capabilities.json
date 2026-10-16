@@ -652,5 +652,23 @@
     "DocxRendererKeepsSplitTableCellHyperlinkAnnotationsOnVisibleFragment",
     "DocxTableMinimumNoteLinksKeepSlotDuringBaselineCorrection",
     "DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate"
+  ],
+  "docx-review-paper-frame": [
+    "DocxWordCompatibleReviewPaneMatchesIndependentPaperFrames",
+    "PortableRenderingReviewPaneIgnoresBodyVerticalMargins",
+    "DocxWordCompatibleLaneBackground",
+    "DocxWordCompatibleAllMarkupMirrorsReviewLaneBackground",
+    "DocxWordCompatibleFloatingTextBox",
+    "DocxWordCompatibleInlineTextBox",
+    "DocxWordCompatibleTableCellInlineTextBox",
+    "DocxWordCompatiblePrintScale",
+    "DocxWordCompatibleTextYOffsetTracksTopMarginByPrintScale",
+    "DocxWordCompatibleUnusedCommentParts",
+    "DocxWordCompatibleHiddenBodyComments",
+    "DocxWordCompatibleHiddenComments",
+    "DocxWordCompatibleMixedStoryComments",
+    "DocxWordCompatiblePlainHeader",
+    "PortableRenderingCommentsPreserveMixedMathematics",
+    "DocxWordCompatibleAllMarkupUsesOfficeRevisionDecorationColor"
   ]
 }

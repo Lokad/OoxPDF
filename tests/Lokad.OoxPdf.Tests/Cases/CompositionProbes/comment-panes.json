@@ -1,0 +1,74 @@
+[
+  {
+    "Id": "comment-pane-letter-36-36",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/comment-pane-letter-36-36.docx",
+    "Sha256": "D55C0311C916E10F0900002A3440FFFC7B09B5F039DEA8A8CF067F6E393F8C1C",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": []
+  },
+  {
+    "Id": "comment-pane-letter-72-72",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/comment-pane-letter-72-72.docx",
+    "Sha256": "4D17C86212EA7C1BB58CF576A5720A144D4382CC7559B3FF1364293760391FA2",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": []
+  },
+  {
+    "Id": "comment-pane-letter-144-144",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/comment-pane-letter-144-144.docx",
+    "Sha256": "9BCA13CD0EEEE7EC9CB3B9724D86E13EB6415B418477939F77C05CC8B740A1DB",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": []
+  },
+  {
+    "Id": "comment-pane-letter-36-456",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/comment-pane-letter-36-456.docx",
+    "Sha256": "E272C8613CA4AFA52D95F7B55DBB7AD2A25F7BCCC420E58EB7719687FC30BA61",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": []
+  },
+  {
+    "Id": "comment-pane-letter-144-36",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/comment-pane-letter-144-36.docx",
+    "Sha256": "B814F023B9C37410FDFD9F854EEEABB789C1FCD2130881D613F972E8C9C4B108",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": []
+  },
+  {
+    "Id": "comment-pane-letter-36-144",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/comment-pane-letter-36-144.docx",
+    "Sha256": "2737B5F0E790D8E3707B442FEC346B33B1977E70EEB7E7483B8770C8D5FD5796",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": []
+  },
+  {
+    "Id": "comment-pane-a4-72-72",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/comment-pane-a4-72-72.docx",
+    "Sha256": "F04FBF68950DBF37F4727E693ACE4FFD00D16E2D81039E565D294B4B4A8530F5",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": []
+  },
+  {
+    "Id": "comment-pane-landscape-72-72",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/comment-pane-landscape-72-72.docx",
+    "Sha256": "1F0595D958911E1165058C733522D7E9A29568825DEEF35D2182F6256677BF3C",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": []
+  },
+  {
+    "Id": "comment-pane-mirrored",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/docx-markup-margin-mirrored.docx",
+    "Sha256": "39BCFEA61FFEC4C24F65C11DF2CD5ADA6C18D3CBF57EA29938BAD625F53CBD49",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": []
+  }
+]

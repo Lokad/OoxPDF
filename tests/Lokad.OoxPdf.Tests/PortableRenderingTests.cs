@@ -16,6 +16,22 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingReviewPaneIgnoresBodyVerticalMargins()
+    {
+        (double Y, double Height)? expected = null;
+        foreach (string margins in new[] { "36-36", "72-72", "144-144", "36-456", "144-36", "36-144" })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/comment-pane-letter-" + margins + ".docx"), OoxPdfDocxMarkupMode.AllMarkup);
+            var page = new DocxRenderer(new PinnedResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, null, default).Single();
+            var bounds = DocxCommentsTests.ReviewLaneBounds(page);
+            if (expected is null) expected = (bounds.Y, bounds.Height);
+            else TestAssert.True(Math.Abs(bounds.Y - expected.Value.Y) < .000001d && Math.Abs(bounds.Height - expected.Value.Height) < .000001d,
+                "Changing body margins cannot change the printed review-paper frame.");
+            CheckWrittenPages([page]);
+        }
+    }
+
     public static void PortableRenderingOrderedMathCellRetainsPrintedBorderFrame()
     {
         foreach (int size in new[] { 11, 12 })
