@@ -1766,3 +1766,26 @@ retain accepted bytes/comparisons. DOCX evidence carries forward from unchanged
 rendering source, with only the small transfer smoke repeated. Transfer verifies
 17 assets/four PDFs. Evidence:
 `artifacts/pptx-picture-geometry/vector-effects-evidence.json`.
+
+
+## C47: bounded ellipse and rounded picture blur
+
+The existing bounded shadow raster now measures distance to an ellipse or rounded
+rectangle, retaining its planes, limits, falloff and retained-byte charging.
+Cancellation is checked per row. Rectangle blur retains identical PDF bytes.
+Ellipse blur improves SSIM 0.9612 to 0.9988; all six effects pages and three new
+rounded/transformed/grouped blur controls pass unchanged thresholds. All four
+supported blur pairs were reviewed. Polygon blur retains a diagnosed rectangular
+fallback and fails visibly (SSIM 0.8769); the earlier alpha-color residual remains.
+Across the handoff's four decks/23 pages, 21 numerical page gates pass and two fail.
+This count is independent of the 714 manifests passing integrity checks.
+
+Frozen 7d9b1d77 passes 42 Windows methods once and 42 Ubuntu methods, including
+transparent alpha corners, bounded dimensions, retained/live-image budgets and
+empty output on failure. One parent regression fails on C46. Original thirteen
+mask pages, five vector-effect rasters, two portfolio decks and four image-neighbor
+PDFs retain bytes/comparisons/reviews. DOCX evidence is carried from unchanged
+source; only the four-PDF transfer smoke repeats. Transfer verifies 17 assets.
+Evidence: `artifacts/pptx-picture-geometry/bounded-blur-evidence.json`.
+The bounded picture handoff is complete with explicit unsupported/cosmetic limits;
+main rendering work returns to supported DOCX composition.
