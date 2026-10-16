@@ -211,7 +211,8 @@ internal static class DocxCoreTests
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
-        OoxPdfConverter.Convert(input, output);
+        var resolver = new TestFaceFontResolver();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("TJ", pdf);
@@ -221,7 +222,7 @@ internal static class DocxCoreTests
         var baseline = document with { BodyElements = document.BodyElements.Select(element =>
             element is DocxParagraphElement item ? item with { Paragraph = unspaced } : element).ToArray(),
             FallbackParagraphs = [unspaced] };
-        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var renderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         double Advance(DocxDocument source) => renderer.InspectTextEmission(source).Lines.SelectMany(line => line.Segments)
             .Where(segment => !segment.IsTerminalLineSpace).Sum(segment => segment.AdvanceProfile.PlannedEmittedAdvance);
         TestAssert.True(Math.Abs(Advance(document) - Advance(baseline) - 2d) < .001d,
