@@ -1062,3 +1062,16 @@ without rebuilding or replaying a root suite. Evidence:
 `artifacts/composition-c1/endnote-boundary-evidence.json`. A held-out complete
 endnote report is the next acceptance step; reduced controls alone do not
 establish general related-story composition.
+
+The held-out composed-field report also passes the bounded endnote-composition
+checkpoint after mechanically replacing its footnote with an endnote. Visible
+prose, six equations, image bytes and unrelated package parts are preserved.
+Both presets retain two pages, all source/Office global and page-local prose and
+simple math, and four navigation targets; the note destination moves to page two.
+Four page pairs were reviewed without a visible omission or serious pagination,
+overlap or clipping defect. Note-baseline residual is 0.256pt Final / 0.023pt review.
+Both numerical visual gates remain failed; typography and annotation residuals
+remain explicit. Source 0b8ceeec reuses frozen 2b320cd8 with all 17 asset hashes
+rechecked, no rebuild, suite replay or new fitting branch. The shared authoring
+transformation also regenerates the four reduced controls byte for byte.
+Evidence: `artifacts/composition-c1/composed-endnotes-evidence.json`.
