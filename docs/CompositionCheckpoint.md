@@ -1465,3 +1465,24 @@ unary and changed table pairs show no new omission, overlap or clipping; existin
 indentation differences and failed gates remain. Transfer verifies 17 assets/four
 exact PDFs without a root build or suite replay. Evidence:
 `artifacts/composition-c1/atomic-inline-placement-evidence.json`.
+
+
+### Unchanged-format source-run measurement (C33)
+
+Splitting a source run with unchanged formatting no longer resets ordered-text
+boundary kerning. The confirmed 0.252pt grouped-formula origin drift is corrected;
+source owners, offsets and annotation ranges remain separate. Different states,
+dynamic fields and automatic markers retain their fallback. Global kerning defaults
+and cross-source painting coalescence remain unchanged.
+
+Two source controls, including the held-out nested group, retain absolute glyph
+positions within 0.001pt in both presets. Four independently exported Word rasters
+are identical before/after splitting; all four candidate rasters likewise match
+their accepted unsplit output. The existing absolute Word-origin residual up to
+0.742pt and recall/SSIM failures remain; thresholds are unchanged.
+
+Frozen 16b0c7fe passes 28 Windows methods once and 14 Ubuntu checks (14 font skips).
+Both regression methods fail on C32. All twelve fixed/complete PDFs retain bytes;
+Office comparisons, content screens and visual reviews are reused through checked
+identities. Transfer verifies 17 assets/four exact PDFs without a root build or suite
+replay. Evidence: `artifacts/composition-c1/inline-run-boundaries-evidence.json`.
