@@ -1,0 +1,35 @@
+[
+  {
+    "Id": "formatting-balloon-body-not-bold",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/formatting-balloon-body-not-bold.docx",
+    "Sha256": "7030EFF117FEC3058C1DAC40FD550E267785064260A1945A66EFDE7A6F3685E9",
+    "SourceSha256": "6C8D5E61DCF547222CBC8373D2F57246D327CA7FE115009EC7FDF684D861C1D5",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "formatting-balloon-body-italic",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/formatting-balloon-body-italic.docx",
+    "Sha256": "FD32DC68D091BE7B2FA7CF20CB7A50DEC32CD5E84984F5F213C96A35F88482B5",
+    "SourceSha256": "6C8D5E61DCF547222CBC8373D2F57246D327CA7FE115009EC7FDF684D861C1D5",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "formatting-balloon-body-bold-italic",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/formatting-balloon-body-bold-italic.docx",
+    "Sha256": "E6FE6A68B2AF1AB124944C9FC5BEE23A70245E1758987AE817ECB61A5905F916",
+    "SourceSha256": "6C8D5E61DCF547222CBC8373D2F57246D327CA7FE115009EC7FDF684D861C1D5",
+    "ExpectedEquationCount": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]
