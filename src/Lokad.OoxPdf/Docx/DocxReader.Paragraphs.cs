@@ -474,7 +474,7 @@ internal sealed partial class DocxReader
 
         DocxListLabel? ResolveParagraphListLabel()
         {
-            var label = CreateListLabel(paragraphProperties, numbering, numberingCounters, styles, paragraphStyleId, tableCellStyle);
+            var label = CreateListLabel(paragraphProperties, numbering, numberingCounters, styles, paragraphStyleId, tableCellStyle, paragraphMarkRun);
             return label is not null && runs.Count != 0 &&
                 unmarkedListTextStyle?.SourceRunIndex == runs[0].SourceRunIndex
                 ? label with { UnmarkedTextStyle = unmarkedListTextStyle } : label;

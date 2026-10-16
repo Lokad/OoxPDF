@@ -1,0 +1,90 @@
+[
+  {
+    "Id": "list-style-mark-bold",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-style-mark-bold.docx",
+    "Sha256": "620446F17855597F7926ECFC3A024DC1BA24BE4FA82C772DD29F10C3770E6CD0",
+    "SourceSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "list-style-level-bold",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-style-level-bold.docx",
+    "Sha256": "7C6A5FE96FE47AE83123C26DE826CABF59E34DB68F39BE807A8E0ED7902CC9A3",
+    "SourceSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "list-style-mark-bold-level-off",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-style-mark-bold-level-off.docx",
+    "Sha256": "8F36E2095AB0327D2903704CB18DAD9E8FE0352E905CBAC58015320166BE60FD",
+    "SourceSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "list-style-normal-bold",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-style-normal-bold.docx",
+    "Sha256": "FF96079476D94AEC1AC7B9CC7F890B9E31A3D6535FC27E02CA7369AE9C12EC7D",
+    "SourceSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "list-style-mark-italic",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-style-mark-italic.docx",
+    "Sha256": "106C49174B93EC588EAF05ACD8354B149BE7BE2071364D8E6F1CB0C41F026655",
+    "SourceSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "list-style-level-italic",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-style-level-italic.docx",
+    "Sha256": "1F5682394789DAB6DB16CCC8CA05F8670E40BEEE7FFC48B1E944666715620897",
+    "SourceSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "list-style-run-bold-untracked",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-style-run-bold-untracked.docx",
+    "Sha256": "FA2F656C90D149F1B7E7CF6D2E7112D0DE617076D2F50192C159EE32F35AEAAC",
+    "SourceSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "list-style-run-bold-inserted",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-style-run-bold-inserted.docx",
+    "Sha256": "5E4E15B458BE0E83D491FBAB6E962C8F79C6FC719658590CD0930B3706486713",
+    "SourceSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]

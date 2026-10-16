@@ -1,0 +1,865 @@
+{
+  "Source": "Independent Word 16 font resource dictionaries; explicit level style precedes resolved paragraph mark/style/default; first text run owns its own formatting",
+  "NewFinalExports": 8,
+  "ReusedReferences": 18,
+  "Rows": [
+    {
+      "Id": "list-style-mark-bold",
+      "File": "list-style-mark-bold.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "620446F17855597F7926ECFC3A024DC1BA24BE4FA82C772DD29F10C3770E6CD0",
+      "ReferencePdfSha256": "72C4280048AA3CEAB21800D99AEA43396A65C031898CBCBBEE4CA865C7F9693D",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri-Bold",
+          "Bold": true,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 83.784
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 64.344
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    },
+    {
+      "Id": "list-style-level-bold",
+      "File": "list-style-level-bold.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "7C6A5FE96FE47AE83123C26DE826CABF59E34DB68F39BE807A8E0ED7902CC9A3",
+      "ReferencePdfSha256": "743ABBBE648AB858ADC516ED461E6E4F25912101A0490D79DD34BF968A3B2136",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri-Bold",
+          "Bold": true,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 83.784
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri-Bold",
+          "Bold": true,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 64.344
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri-Bold",
+          "Bold": true,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    },
+    {
+      "Id": "list-style-mark-bold-level-off",
+      "File": "list-style-mark-bold-level-off.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "8F36E2095AB0327D2903704CB18DAD9E8FE0352E905CBAC58015320166BE60FD",
+      "ReferencePdfSha256": "DF6AC13117248C24ADEABE64EB749E63775FEFD03B1174D9F7DD1A997A59C342",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 83.784
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 64.344
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    },
+    {
+      "Id": "list-style-normal-bold",
+      "File": "list-style-normal-bold.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "FF96079476D94AEC1AC7B9CC7F890B9E31A3D6535FC27E02CA7369AE9C12EC7D",
+      "ReferencePdfSha256": "46D271B1703EA14D8244F699489C17F92C51BA1E832410B005CE805B51420FBD",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri-Bold",
+          "Bold": true,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 83.784
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri-Bold",
+          "Bold": true,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 64.344
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri-Bold",
+          "Bold": true,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    },
+    {
+      "Id": "list-style-mark-italic",
+      "File": "list-style-mark-italic.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "106C49174B93EC588EAF05ACD8354B149BE7BE2071364D8E6F1CB0C41F026655",
+      "ReferencePdfSha256": "D3C5C304FF81E98FEB005DDABD8F4854823F3305ABC5AC4A36E9E79B869BBDFA",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri-Italic",
+          "Bold": false,
+          "Italic": true,
+          "X": 72.024,
+          "Y": 83.784
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 64.344
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    },
+    {
+      "Id": "list-style-level-italic",
+      "File": "list-style-level-italic.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "1F5682394789DAB6DB16CCC8CA05F8670E40BEEE7FFC48B1E944666715620897",
+      "ReferencePdfSha256": "3949A661C8653D1132B7CC4E62DDE3B207D5E9DF2331D229A98FE6DA85C0B055",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri-Italic",
+          "Bold": false,
+          "Italic": true,
+          "X": 72.024,
+          "Y": 83.784
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri-Italic",
+          "Bold": false,
+          "Italic": true,
+          "X": 72.024,
+          "Y": 64.344
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri-Italic",
+          "Bold": false,
+          "Italic": true,
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    },
+    {
+      "Id": "list-style-run-bold-untracked",
+      "File": "list-style-run-bold-untracked.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "FA2F656C90D149F1B7E7CF6D2E7112D0DE617076D2F50192C159EE32F35AEAAC",
+      "ReferencePdfSha256": "3AE3B770D5764D9BCAC9E1CC551A7DAF6F75827EF969AAFE5C0AACCB9CC37D37",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 83.784
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 64.344
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    },
+    {
+      "Id": "list-style-run-bold-inserted",
+      "File": "list-style-run-bold-inserted.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "5E4E15B458BE0E83D491FBAB6E962C8F79C6FC719658590CD0930B3706486713",
+      "ReferencePdfSha256": "64893A7118B50CFD85821F0AC95C35E5D87E435903811F0008FD359B4CB7097D",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 83.784
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 64.344
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    },
+    {
+      "Id": "footer-plain-first",
+      "File": "static-frame-footer-plain-first.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
+      "ReferencePdfSha256": "6E9C5606C4D372B02843B5FF6A2FE2508A6D3926CC2EA5ECE329B69695E206D2",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 83.784
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 64.344
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    },
+    {
+      "Id": "footer-plain-first",
+      "File": "static-frame-footer-plain-first.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "0276D1C6CF9896E946FD6D1E3B9F7C258A816EF13F50812C949B8DE97E6FBE8C",
+      "ReferencePdfSha256": "176861502A1648D07DF5B506BC2E69B0C8389F86B999838E39F58D0D67360D6C",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 159.53
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 144.77
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 130.03
+        }
+      ]
+    },
+    {
+      "Id": "footer-plain-second",
+      "File": "static-frame-footer-plain-second.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "363ECFCB4DC9FA2C2D8DD6ED7B3F7C657C27E4BDAC482FBFEBE1DEAE6E4E0732",
+      "ReferencePdfSha256": "EA83163D33825D04FB0BF553D9B63915C177DA3DC0A9D4A40F321A34C798F9C6",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 83.784
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 64.344
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    },
+    {
+      "Id": "footer-plain-second",
+      "File": "static-frame-footer-plain-second.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "363ECFCB4DC9FA2C2D8DD6ED7B3F7C657C27E4BDAC482FBFEBE1DEAE6E4E0732",
+      "ReferencePdfSha256": "4CD98182AB4599D2331293A2B4E40719A031F94E42DFD8A6A404C876A0021324",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 159.53
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 144.77
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 130.03
+        }
+      ]
+    },
+    {
+      "Id": "header-plain-first",
+      "File": "static-frame-header-plain-first.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "9254FF77445E2758C6770E58F7DA0463B611B15D040B82F7BB6EC5C2374202B4",
+      "ReferencePdfSha256": "379A557693070FAC1B9981490375750FCC4B1A5AED080994D75123BA85DD8A5B",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 745.56
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 726.12
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 706.66
+        }
+      ]
+    },
+    {
+      "Id": "header-plain-first",
+      "File": "static-frame-header-plain-first.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "9254FF77445E2758C6770E58F7DA0463B611B15D040B82F7BB6EC5C2374202B4",
+      "ReferencePdfSha256": "08822F3A6C0316D6882C200F40A3DEAB501BD6D53336A1AB064ED1192C0FC460",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 661.37
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 646.61
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 631.87
+        }
+      ]
+    },
+    {
+      "Id": "header-plain-second",
+      "File": "static-frame-header-plain-second.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "42F64B3EC81EEA4B3C907CAC793F60DDA4652841C934EEF8CD3E034597C75B7B",
+      "ReferencePdfSha256": "5DD3A89A16D45EF1A7350E9F09477A18EA9F9CB5FD91F08EF1A880F18F3DF70F",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 745.56
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 726.12
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 706.66
+        }
+      ]
+    },
+    {
+      "Id": "header-plain-second",
+      "File": "static-frame-header-plain-second.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "42F64B3EC81EEA4B3C907CAC793F60DDA4652841C934EEF8CD3E034597C75B7B",
+      "ReferencePdfSha256": "78CBC1B61A5475F081CC975A3BFB48ACEFB9C2E2426C1823AF8516F295A76945",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 661.37
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 646.61
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 631.87
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-body-bold",
+      "File": "math-run-format-body-bold.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "6C8D5E61DCF547222CBC8373D2F57246D327CA7FE115009EC7FDF684D861C1D5",
+      "ReferencePdfSha256": "11A1BA9D860DD7B59724A6FE88CC07F5D8BE5760D93654B026BBCFAAA67E7EE6",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 706.9
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 680.74
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 649.66
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-body-bold",
+      "File": "math-run-format-body-bold.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6C8D5E61DCF547222CBC8373D2F57246D327CA7FE115009EC7FDF684D861C1D5",
+      "ReferencePdfSha256": "9B0420C32B711420110C9880D4F9834DEFF0FBE9820437E4D3FDAE7044329218",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 632.06
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 612.22
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 588.65
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-cell-bold",
+      "File": "math-run-format-cell-bold.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "CD154F9695594985FEF82FC5C6F34021AFD07E9D25BE160F34C53E899E3110F4",
+      "ReferencePdfSha256": "C16DC50877B5FB71886EED663553A3EFE2F199AD8E51AF3EC68DDE7B040B7988",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 706.9
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 680.74
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 649.66
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-cell-bold",
+      "File": "math-run-format-cell-bold.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "CD154F9695594985FEF82FC5C6F34021AFD07E9D25BE160F34C53E899E3110F4",
+      "ReferencePdfSha256": "29294DAD2CD8FC65E2A0C334920F6851400360D8A278769D857F7C0F35A61C30",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 632.06
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 612.22
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 588.65
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-header-bold",
+      "File": "math-run-format-header-bold.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "EFBBA4E653CA704936159ED3AA7F8EF68DBCCB5355A505B17888BA3E4C0ED8E2",
+      "ReferencePdfSha256": "47314D85F1A3E076B59054EA812CC4E28CA31E6AE58DC8106DB1C38B3ECCCCBA",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 742.92
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 716.76
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 685.66
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-header-bold",
+      "File": "math-run-format-header-bold.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "EFBBA4E653CA704936159ED3AA7F8EF68DBCCB5355A505B17888BA3E4C0ED8E2",
+      "ReferencePdfSha256": "A2BA0280C270FA6E5C716E202B4BFAD5D24A3F8B92A43E9BBA4A7466C3566A0F",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 659.35
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 639.53
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 615.96
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-footer-bold",
+      "File": "math-run-format-footer-bold.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "377B83EBD37BAB7A16E493EC8BA725A28C8C7194E998E6547AEF3BA8D61A98CD",
+      "ReferencePdfSha256": "E1B301847EF6917C1DC900D240336604BDDBD8B6FE36553F5280F6AD96900600",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 102.14
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 75.984
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 44.904
+        }
+      ]
+    },
+    {
+      "Id": "math-run-format-footer-bold",
+      "File": "math-run-format-footer-bold.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "377B83EBD37BAB7A16E493EC8BA725A28C8C7194E998E6547AEF3BA8D61A98CD",
+      "ReferencePdfSha256": "33745B345D2D55D15F504D53DCCC78434E8C6B132E33BEFFF18111002C99BA32",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 173.45
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 153.6
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 130.03
+        }
+      ]
+    },
+    {
+      "Id": "formatting-balloon-body-italic",
+      "File": "formatting-balloon-body-italic.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "FD32DC68D091BE7B2FA7CF20CB7A50DEC32CD5E84984F5F213C96A35F88482B5",
+      "ReferencePdfSha256": "4A8D6D33DFB752300AD0594A6DC7BE38BC9B16719616C1857B9D033B4D930A27",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 706.9
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 680.74
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 72.024,
+          "Y": 649.66
+        }
+      ]
+    },
+    {
+      "Id": "formatting-balloon-body-italic",
+      "File": "formatting-balloon-body-italic.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "FD32DC68D091BE7B2FA7CF20CB7A50DEC32CD5E84984F5F213C96A35F88482B5",
+      "ReferencePdfSha256": "7F1662E0CF8C77CB10B9CEEF22C1216A225B95F503D8F6539C5678671C30A74C",
+      "Labels": [
+        {
+          "Text": "1.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 632.06
+        },
+        {
+          "Text": "2.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 612.22
+        },
+        {
+          "Text": "3.",
+          "Font": "Calibri",
+          "Bold": false,
+          "Italic": false,
+          "X": 54.6,
+          "Y": 588.65
+        }
+      ]
+    }
+  ]
+}
