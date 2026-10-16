@@ -17,7 +17,7 @@ namespace Lokad.OoxPdf.Tests;
 internal static class PortableRenderingTests
 {
     public static void PortableRenderingStaticMissingMathKeepsSourceContent() =>
-        DocxInlineCompositionTests.CheckStaticSourceFrames(new PinnedResolver(), includeUnavailableMath: true);
+        DocxInlineCompositionTests.CheckStaticMissingMath(new PinnedResolver());
 
     public static void PortableRenderingStaticListsKeepLabelsAcrossModes() =>
         DocxInlineCompositionTests.CheckStaticListLabels(new PinnedResolver());
