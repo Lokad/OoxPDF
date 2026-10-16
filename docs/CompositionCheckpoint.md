@@ -960,3 +960,24 @@ numerical C2 gates remain failed. Connector X/dash, balloon baseline and typogra
 remain approximate. Transfer checks 17 assets/four PDFs without root rebuild or
 suite replay. Evidence: `artifacts/composition-c1/comment-connector-placement-evidence.json`.
 CI through `6400abec` is green on both OSes.
+
+`1ba76589` retains supported equations beside materialized cached fields. Shared
+semantic source ownership replaces the blanket field exclusion; complex field
+results packed with their control markers now enter the ordered source view even
+after a formula. Eight controls / sixteen Word comparisons cover simple/packed
+REF results in body, cells, headers and footers. Both fractions and source prose
+remain in all outcomes, field advances agree within 0.144pt, and printed baselines
+within 0.375pt. All eight simple/packed PDF pairs are exact. Twenty-nine methods
+pass in one invocation and five portable Ubuntu checks pass; four new regressions
+fail with the preceding library. Four paired crops are reviewed. All sixteen
+numerical visual gates remain failed. The generic audit also retains sixteen
+unresolved field-source/math-token classifications, despite zero source-prose and
+simple-math deficits; these are not relabeled as passes. PAGE/NUMPAGES, unresolved
+fields and revision owners retain their fallback. This adds cached-result display,
+not field evaluation. Frozen `4609b4bb` transfers with 17 assets/four exact PDFs,
+including accepted C2 review and held-out memo review, without root rebuild or
+suite/corpus replay. The reference command adds an optional DOCX preset selector;
+verified cached review references are reused without export. Evidence:
+`artifacts/composition-c1/math-fields-evidence.json`. CI through `4ed093b6` is green
+on both OSes. The latest workspace scan reports 5.365GB with four long-path fixture
+traversal errors; those errors remain explicit pending the bounded tool correction.
