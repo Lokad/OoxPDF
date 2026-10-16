@@ -9,7 +9,9 @@ from DocxFixtureNotes import replace_footnotes_with_endnotes, w
 root = Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--include-math', action='store_true', help='Add two supported fractions inside the endnote')
+parser.add_argument('--include-image', action='store_true', help='Add the source PNG beside the two note fractions')
 args = parser.parse_args()
+if args.include_image: args.include_math = True
 cases = root / 'tests/Lokad.OoxPdf.Tests/Cases/Composition'
 baseline = json.loads((cases / 'composed-fields-report.json').read_text(encoding='utf-8'))[0]
 source = root / baseline['Input']
@@ -41,7 +43,29 @@ if args.include_math:
     text(' and ')
     paragraph.append(deepcopy(next(after.iter(m + 'oMath'))))
     entries['word/endnotes.xml'] = E.tostring(notes, encoding='utf-8', xml_declaration=True)
-output = cases / ('composed-note-math-report.docx' if args.include_math else 'composed-endnotes-report.docx')
+if args.include_image:
+    relationships = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
+    package_relationships = '{http://schemas.openxmlformats.org/package/2006/relationships}'
+    drawing = deepcopy(next(after.iter(w + 'drawing')))
+    for node in drawing.iter():
+        if node.tag.endswith('}docPr'):
+            node.set('id', '55004'); node.set('name', 'NoteCompositionImage')
+    blip = next(node for node in drawing.iter() if node.tag.endswith('}blip'))
+    image_id = blip.get(relationships + 'embed')
+    main_rels = E.fromstring(entries['word/_rels/document.xml.rels'])
+    image = next(node for node in main_rels if node.get('Id') == image_id)
+    assert image.get('Type') == relationships[1:-1] + '/image'
+    blip.set(relationships + 'embed', 'NoteImage')
+    run = E.Element(w + 'r'); run.append(drawing)
+    paragraph.insert(list(paragraph).index(next(paragraph.iter(m + 'oMath'))), run)
+    entries['word/endnotes.xml'] = E.tostring(notes, encoding='utf-8', xml_declaration=True)
+    assert 'word/_rels/endnotes.xml.rels' not in entries
+    rels = E.Element(package_relationships + 'Relationships')
+    E.SubElement(rels, package_relationships + 'Relationship',
+                 {'Id':'NoteImage', 'Type':image.get('Type'), 'Target':image.get('Target')})
+    entries['word/_rels/endnotes.xml.rels'] = E.tostring(rels, encoding='utf-8', xml_declaration=True)
+output = cases / ('composed-note-image-math-report.docx' if args.include_image else
+                  'composed-note-math-report.docx' if args.include_math else 'composed-endnotes-report.docx')
 with ZipFile(output, 'w', ZIP_DEFLATED) as archive:
     for name,data in sorted(entries.items()):
         info = ZipInfo(name, (2026,10,16,0,0,0))
@@ -50,9 +74,12 @@ with ZipFile(output, 'w', ZIP_DEFLATED) as archive:
 manifest = [baseline | dict(Id=output.stem, Input=output.relative_to(root).as_posix(),
     Sha256=hashlib.sha256(output.read_bytes()).hexdigest().upper(),
     ExpectedEquationCount=baseline['ExpectedEquationCount'] + (2 if args.include_math else 0),
+    ExpectedInlineImageCount=baseline['ExpectedInlineImageCount'] + (1 if args.include_image else 0),
     ExpectedText=baseline['ExpectedText'] + (['Calculation:'] if args.include_math else []),
     Features=[item.replace('footnote', 'endnote') for item in baseline['Features']] +
-        (['two supported fractions and a bookmark inside the endnote'] if args.include_math else []))]
+        (['two supported fractions and a bookmark inside the endnote'] if args.include_math else []) +
+        (['source PNG also embedded beside the endnote fractions'] if args.include_image else []))]
 (cases / (output.stem + '.json')).write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')
 print('Pinned one held-out endnote report; existing prose, six equations, media and unrelated package parts preserved' +
-      ('; two note fractions added.' if args.include_math else '.'))
+      ('; two note fractions added' if args.include_math else '') +
+      ('; source PNG also embedded in the note.' if args.include_image else '.'))
