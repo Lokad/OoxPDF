@@ -1363,3 +1363,26 @@ clipping. Its generic dynamic-field/rate-time screens remain unresolved, and bot
 numerical gates fail. Transfer verifies 17 assets/four PDFs with no root build or
 suite replay. No speedup is claimed. Evidence:
 `artifacts/composition-c1/ordered-glyph-run-evidence.json`.
+
+### Prepared occupied frames (C26)
+
+Ordered wrapping no longer substitutes ink bounds for a prepared equation frame
+when the ink fits the ordinary text strut. It unions the complete occupied frame
+with that strut once, preserving leading without a font, size or script exception.
+Two new regressions fail on the parent and pass on frozen 23d10821 / root d72e938d.
+Eight independent Word baseline gaps are within 0.15pt in both presets; all four
+new script page pairs were reviewed without observed omission, overlap or clipping.
+
+All ten fixed portfolio and both complete-report PDFs retain their accepted bytes.
+The eight classic controls keep their failed gate sets. One wrapped literal
+improves MAE by 0.03090; another loses 0.04248 foreground recall and adds 0.02014
+MAE despite a closer formula baseline. Its following-prose line-height mismatch
+remains. Script comparisons also retain cosmetic failures. Thresholds and
+single-equation eligibility are unchanged; marker migration remains deferred.
+
+Qualification runs 33 Windows methods once and 8 Ubuntu checks (25 font-specific
+skips). Transfer verifies 17 assets and four exact PDFs without a root rebuild or
+suite replay. The preceding test-only CI repair uses visible comment/tab text
+anchors, preserving Office bounds and tolerances; Windows and Ubuntu CI are green
+through 1ba9d797. Evidence: `artifacts/composition-c1/inline-occupied-frame-evidence.json`
+and `artifacts/composition-c1/glyph-run-anchor-repair-evidence.json`.
