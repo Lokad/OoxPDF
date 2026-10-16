@@ -895,3 +895,16 @@ letter/memo smokes remain accepted without full-corpus replay. Transfer checks
 is green on Windows and Ubuntu. Workspace was 5.069GB at the last scan; automatic
 review rejected retirement of 48 verified compiled duplicates (blocked by policy),
 so no files were removed and those targets will not be retried.
+
+`17b0e6cb` bounds future fixture growth by sharing verified read-only files between
+published input trees. Checkout files remain independent; corruption is rejected
+both when reusing a tree and when seeding a new one. Ten tool checks pass on
+Windows and Ubuntu. A real snapshot shares 1,271 files / 12.09MB, copies 7.2KB of
+byte-distinct metadata and rechecks all 1,274 input hashes after a temporary-OOXML
+mutation test. All 17 compiled assets and one CLI PDF are exact, without library
+build or suite replay. The footprint command retains its PowerShell interface and
+uses Python standard-library file IDs to count hard links once; both-OS tests also
+reject directory loops. Latest size: 5.159GB unique content / 5.171GB logical file
+lengths, near the loose cap. Historical/denied retirement targets are untouched.
+Evidence: `artifacts/composition-c1/cross-tree-inputs-evidence.json`. CI through
+`3b7b8865` is green on both OSes; resume annotation geometry with existing references.

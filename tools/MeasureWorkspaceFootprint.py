@@ -1,4 +1,4 @@
-"""Count unique file content once, skipping filesystem links to directories/files.
+"""Count unique file content once, skipping symbolic links and reparse points.
 
 The byte count uses file lengths, not allocated clusters, compression or heap use.
 Hard-link aliases count as files, but share one content charge by device/file ID.
@@ -56,7 +56,7 @@ def measure(path):
             errors.append(directory + ": " + str(error))
     for group in groups.values():
         group["GB"] = round(group["Bytes"] / 1e9, 3)
-    return dict(Root=root, CheckedUtc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    return dict(Root=root, CheckedUtc=datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
                 Bytes=total, GB=round(total / 1e9, 3), LogicalBytes=logical,
                 SharedHardLinkBytes=shared, Files=files, Directories=directories,
                 SkippedLinks=links, Errors=errors, ElapsedSeconds=round(time.monotonic()-started, 2),
