@@ -226,21 +226,26 @@ missing/moved lines, inline spaces and undecoded runs without Office or a cache.
 
 ### Reference revision-view matching
 
-Word-compatible all-markup rendering declares a RevisionsMode-1-like view:
+Word-compatible all-markup rendering follows Word 16's mixed view:
 insertions and deletions render inline with revision styling while comments and
 formatting revisions balloon. A reference exported with RevisionsMode=0 instead
 balloons deletions (`Deleted:` title rows) and hides them from body lines, so
 the gate compares different views: body wraps, op pairings, and page flow all
 shift for non-layout reasons. Export word-compatible all-markup references with
-`RevisionsMode=1` (explicit `ExportDocxMarkupReference.ps1` knobs; the remaining
-four knobs stay pinned as usual) and record the full ExportSettings string at
-import time; re-import view-mismatched references with `-Force`.
+`RevisionsMode=2`. Pin and verify revision visibility, revision/markup modes,
+comments, formatting changes and insertions/deletions through
+`ExportDocxMarkupReference.ps1`; record the full ExportSettings string. Word 16
+accepts and reads back mixed mode 2 despite older enum documentation describing
+it as unsupported. Mode 1 keeps text edits inline but suppresses formatting
+balloons, so it does not match this profile when formatting changes survive.
 
-Verify the view before importing: a RevisionsMode-1 reference carries deleted
+Verify the view before importing: a mixed reference carries deleted
 text inline at body size with no `Deleted:`/`Inserted:` title operations, while
-a RevisionsMode-0 reference moves that text into balloon rows. Fixtures without
-revision markup (`w:ins`/`w:del`/moves in `document.xml`) are view-agnostic and
-need no re-export. Precedents: margin-dense-revisions and margin-landscape were re-imported
+a RevisionsMode-0 reference moves that text into balloon rows. Do not re-export
+an entire corpus: retain historical view provenance and reuse comparisons when
+equivalence is demonstrated for the input. Deletion-only and comment/author
+controls without formatting changes have identical mode-1/mode-2 rasters.
+Precedents: margin-dense-revisions and margin-landscape were re-imported
 view-matched (record the full ExportSettings string, back up the replaced entry,
 re-import with `-Force`). Comment-long and comment-unresolved carry no revision
 markup; the all reference already matches the inline-deletion class;

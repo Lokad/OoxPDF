@@ -33,7 +33,8 @@ foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Js
         $pdf = Join-Path $folder 'reference.pdf'
         $review = $mode -eq 'all-word-compatible'
         $view = [ordered]@{ShowRevisions=$review;RevisionsView=0;MarkupMode=2;
-            RevisionsMode=$(if ($review) {1} else {0});ShowComments=$review;RejectAll=$false}
+            RevisionsMode=$(if ($review) {2} else {0});ShowComments=$review;
+            ShowFormatChanges=$review;ShowInsertionsAndDeletions=$review;RejectAll=$false}
         $log = Join-Path $folder 'export.log'
         if (Test-Path -LiteralPath $identity) {
             $pin = Get-Content -LiteralPath $identity -Raw | ConvertFrom-Json -AsHashtable

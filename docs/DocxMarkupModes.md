@@ -17,6 +17,11 @@ By default, markup modes keep the authored DOCX page media box and main text-col
 
 `OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup` is the explicit Office-compatible all-markup profile. It is also opt-in and has no effect outside `AllMarkup`. It uses a reserved review margin and Office-calibrated print scaling, text placement and balloon sizing. Mirrored pages keep equal scaled wrap widths and a fixed right balloon lane. Printed comment threads show the parent text without reply summaries, reply rows or separator strokes, matching Word 16 exports for resolved and open threads. Reply ownership and state remain available in the model and inspection; the other geometry profiles retain their compact reply summaries. Comment balloons and range markers print from the main body and its table cells; header/footer/note/textbox comments are omitted. Hidden-story-only comments retain nominal print scale and omit the gray lane. Surviving formatting balloons retain their lane. When no balloons survive, the authored body frame and nominal text placement are retained; unused comment parts and inline revisions do not reserve an empty margin. Document settings that hide comments also suppress their fitted text shift. Visible-balloon typography and positioning remain approximate. The profile remains approximate: see [DOCX markup fidelity triage](DocxMarkupFidelityTriage.md) for measured residuals.
 
+Independent Word 16 references for this profile use mixed `RevisionsMode=2`,
+with comments, formatting changes and insertions/deletions explicitly enabled.
+Inline mode 1 suppresses formatting balloons and is equivalent only where the
+input has no surviving formatting changes. Export tools verify the observed view.
+
 Dense overflow is still represented by compact margin continuation boxes when the reserved or existing margin cannot fit every balloon on the page.
 
 ## API

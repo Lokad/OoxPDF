@@ -2,6 +2,13 @@
 
 Use this checklist when reviewing cached Office-reference comparisons for DOCX markup cases. Keep private artifacts under ignored directories and commit only anonymized findings.
 
+Current Word-compatible reference exports use Word 16 mixed mode 2: text edits
+inline, comments and formatting changes in balloons. All visibility flags are
+set and read back. Historical inline-mode-1 references below retain their actual
+provenance; reuse requires input-specific equivalence, not a renamed view label.
+The deletion-only and comment/author controls are raster-identical between modes
+1 and 2. Formatting-revision controls require mixed references.
+
 ## Public Reference Snapshot (2026-10-05, RV06-E1)
 
 All 33 public markup manifests have verified cached PDFs at 144 DPI on the

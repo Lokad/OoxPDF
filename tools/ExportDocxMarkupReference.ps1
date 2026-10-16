@@ -1,12 +1,10 @@
 # Exports a DOCX file to PDF through Word COM with every markup-view knob set explicitly.
 # Word persists View.MarkupMode and View.RevisionsMode across sessions, so exports
 # that leave knobs untouched inherit whatever a previous session set. This script always
-# sets ShowRevisions, RevisionsView, MarkupMode, RevisionsMode and ShowComments
-# explicitly and reports the inherited values, so a reference export is reproducible up to
+# sets and verifies revision visibility, revision/markup modes, comments, formatting
+# and insertions/deletions, and reports the inherited modes. References vary by
 # Word-stamped timestamps (CreationDate/ModDate differ on every export; compare references
 # structurally, never by hash).
-# No Word print/export mode suppresses comment balloons while showing markup (only
-# ShowRevisions=false prints clean), so there is no balloon-free markup reference to export.
 # Record the ExportSettings string with tools/ImportDocxMarkupReferenceCache.ps1.
 param(
     [Parameter(Mandatory = $true)]
@@ -18,9 +16,11 @@ param(
     [int] $RevisionsView = 0,
     [ValidateRange(0, 2)]
     [int] $MarkupMode = 2,
-    [ValidateRange(0, 1)]
+    [ValidateRange(0, 2)]
     [int] $RevisionsMode = 0,
     [bool] $ShowComments = $true,
+    [bool] $ShowFormatChanges = $ShowRevisions,
+    [bool] $ShowInsertionsAndDeletions = $ShowRevisions,
     [switch] $RejectAll
 )
 $ErrorActionPreference = "Stop"
@@ -54,6 +54,19 @@ try {
     $view.MarkupMode = $MarkupMode
     $view.RevisionsMode = $RevisionsMode
     $view.ShowComments = $ShowComments
+    $view.ShowFormatChanges = $ShowFormatChanges
+    $view.ShowInsertionsAndDeletions = $ShowInsertionsAndDeletions
+    # Word 16 accepts mixed mode 2. Verify the actual state rather than trusting
+    # an enum label or a setter that could silently retain another session's view.
+    $actual = [ordered]@{ShowRevisions=[bool]$doc.ShowRevisions;RevisionsView=[int]$view.RevisionsView;
+        MarkupMode=[int]$view.MarkupMode;RevisionsMode=[int]$view.RevisionsMode;ShowComments=[bool]$view.ShowComments;
+        ShowFormatChanges=[bool]$view.ShowFormatChanges;ShowInsertionsAndDeletions=[bool]$view.ShowInsertionsAndDeletions}
+    $expected = [ordered]@{ShowRevisions=$ShowRevisions;RevisionsView=$RevisionsView;MarkupMode=$MarkupMode;
+        RevisionsMode=$RevisionsMode;ShowComments=$ShowComments;ShowFormatChanges=$ShowFormatChanges;
+        ShowInsertionsAndDeletions=$ShowInsertionsAndDeletions}
+    foreach ($key in $expected.Keys) {
+        if ($actual[$key] -ne $expected[$key]) { throw ('Word did not apply requested view setting: '+$key) }
+    }
     if ([IO.File]::Exists($outputFull)) {
         [IO.File]::Delete($outputFull)
     }
@@ -62,7 +75,8 @@ try {
     $length = (Get-Item -LiteralPath $outputFull).Length
     $sha = (Get-FileHash -LiteralPath $outputFull -Algorithm SHA256).Hash
     Write-Output ("Exported: " + $outputFull + " (" + $length + " bytes, sha256 " + $sha + ")")
-    Write-Output ("ExportSettings: Word/" + $word.Version + " ShowRevisions=" + $ShowRevisions + " RevisionsView=" + $RevisionsView + " MarkupMode=" + $MarkupMode + " RevisionsMode=" + $RevisionsMode + " ShowComments=" + $ShowComments + " RejectAll=" + [bool]$RejectAll + " (inherited MarkupMode=" + $inheritedMarkupMode + " RevisionsMode=" + $inheritedRevisionsMode + ")")
+    $settings = ($actual.Keys | ForEach-Object { $_+'='+$actual[$_] }) -join ' '
+    Write-Output ("ExportSettings: Word/" + $word.Version + " " + $settings + " RejectAll=" + [bool]$RejectAll + " (inherited MarkupMode=" + $inheritedMarkupMode + " RevisionsMode=" + $inheritedRevisionsMode + ")")
 } finally {
     try { $word.Quit() } catch { }
     try { [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($view) } catch { }

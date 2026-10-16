@@ -13,11 +13,11 @@ New-Item -ItemType Directory -Path $scripts -Force | Out-Null
 $script=Join-Path $scripts 'ExportCompositionReferences.ps1'
 Copy-Item -LiteralPath $ExportScript -Destination $script
 @'
-param($InputDocx,$OutputPdf,[bool]$ShowRevisions,$RevisionsView,$MarkupMode,$RevisionsMode,[bool]$ShowComments,[switch]$RejectAll)
+param($InputDocx,$OutputPdf,[bool]$ShowRevisions,$RevisionsView,$MarkupMode,$RevisionsMode,[bool]$ShowComments,[bool]$ShowFormatChanges,[bool]$ShowInsertionsAndDeletions,[switch]$RejectAll)
 Add-Content -LiteralPath (Join-Path $PSScriptRoot 'calls.txt') $InputDocx
 if (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'wrong-view.txt')) { $RevisionsMode=0 }
 [IO.File]::WriteAllText($OutputPdf,'Fake Word PDF')
-Write-Output "ExportSettings: Word/16.0 ShowRevisions=$ShowRevisions RevisionsView=$RevisionsView MarkupMode=$MarkupMode RevisionsMode=$RevisionsMode ShowComments=$ShowComments RejectAll=$([bool]$RejectAll) (inherited MarkupMode=0 RevisionsMode=0)"
+Write-Output "ExportSettings: Word/16.0 ShowRevisions=$ShowRevisions RevisionsView=$RevisionsView MarkupMode=$MarkupMode RevisionsMode=$RevisionsMode ShowComments=$ShowComments ShowFormatChanges=$ShowFormatChanges ShowInsertionsAndDeletions=$ShowInsertionsAndDeletions RejectAll=$([bool]$RejectAll) (inherited MarkupMode=0 RevisionsMode=0)"
 '@ | Set-Content -LiteralPath (Join-Path $scripts 'ExportDocxMarkupReference.ps1')
 $documents=@(foreach ($id in @('first','second','third')) {
     $inputPath=Join-Path $repo ($id+'.docx')
@@ -32,7 +32,7 @@ $calls=Join-Path $scripts 'calls.txt'
 if (@(Get-Content $calls).Count -ne 4) { throw 'Expected one export per source/mode' }
 foreach ($mode in @('final-preserve','all-word-compatible')) {
     $pin=Get-Content (Join-Path $reference ('first-'+$mode+'/source-identity.json')) -Raw | ConvertFrom-Json
-    if ($pin.OfficeView.RevisionsMode -ne $(if ($mode -eq 'all-word-compatible') {1} else {0}) -or
+    if ($pin.OfficeView.RevisionsMode -ne $(if ($mode -eq 'all-word-compatible') {2} else {0}) -or
         !$pin.ExportLogSha256 -or !$pin.ExportSettings) { throw 'View and provenance were not pinned' }
 }
 $passed=@('explicit-views')
@@ -59,7 +59,7 @@ foreach ($fault in @('cached-view','legacy-view','unknown-view','pdf-hash')) {
             $pin.OfficeView=@{RevisionsMode=0}
             $pin | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $identity
         }
-        'legacy-view' { (Get-Content $log -Raw).Replace('RevisionsMode=1','RevisionsMode=0') | Set-Content -LiteralPath $log }
+        'legacy-view' { (Get-Content $log -Raw).Replace('RevisionsMode=2','RevisionsMode=0') | Set-Content -LiteralPath $log }
         'unknown-view' { 'No observed export settings' | Set-Content -LiteralPath $log }
         'pdf-hash' { 'Changed PDF' | Set-Content -LiteralPath (Join-Path $folder 'reference.pdf') }
     }
