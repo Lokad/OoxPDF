@@ -1745,3 +1745,24 @@ individual thresholds; one cache miss retains the C44 PDF. All twelve fixed/
 complete PDFs retain accepted bytes/comparisons/reviews. Transfer verifies 17
 assets/four PDFs without rebuilding or repeating the root suite. Evidence:
 `artifacts/pptx-picture-geometry/evidence.json`.
+
+
+## C46: shared picture outlines and vector shadows
+
+Picture outlines now reuse preset stroke geometry at Office's external half-width
+centerline extent. Unblurred shadows reuse existing preset fill geometry. Five
+of six independent Word pages pass retained image-family thresholds, with SSIM
+0.9981–0.9999. Five complete pairs were reviewed, including the transformed
+footprint and following marker. The blurred-shadow control still paints visible
+rectangular gray corners and fails SSIM (0.9612); it remains the next high-priority
+blocker. Unknown/custom geometry remains diagnosed.
+
+Accepted test-only freeze 13586991 retains production 632dabf6. The 38-method set
+passes on Windows and Ubuntu; an older CRLF-only assertion was normalized and
+rechecked without rebuilding production or repeating conversions. Ubuntu CI now
+runs the small picture-effects capability. One parent regression fails on C45.
+The original thirteen mask pages, two portfolio decks and four image-neighbor PDFs
+retain accepted bytes/comparisons. DOCX evidence carries forward from unchanged
+rendering source, with only the small transfer smoke repeated. Transfer verifies
+17 assets/four PDFs. Evidence:
+`artifacts/pptx-picture-geometry/vector-effects-evidence.json`.
