@@ -790,5 +790,21 @@
     "DocxDocumentEndnoteSeparatorIsPlacedWithRuleMark",
     "DocxEndnoteSeparatorIgnoresDirectParagraphSpacing",
     "DocxEndnoteSeparatorIgnoresExactLineSpacing"
+  ],
+  "docx-normal-note-math": [
+    "DocxInlineCompositionNormalNoteSourcesRetainEquationOwners",
+    "DocxInlineCompositionNormalNoteMathSurvivesRunSplittingAndContinuation",
+    "DocxInlineCompositionNormalNoteBaselinesMatchIndependentOffice",
+    "PortableRenderingNormalNoteContentPreservesMixedMath",
+    "DocxInlineCompositionUnsupportedEquationRetainsAccuratePartialPartDiagnostics",
+    "DocxNativeStaticMathRetainsStoryFlowAndPerPartDiagnosticScope",
+    "DocxMathReaderUsesTheSameStructureForCellsAndStaticStories",
+    "DocxNativeMathMissingFontsAndUnqualifiedFormattingRetainIgnoredDiagnostics",
+    "DocxWordCompatibleFloatingTextBoxEmissionMapMatchesOfficeProbe",
+    "DocxWordCompatibleFloatingTextBoxPrecompensatedEmissionMatchesCenterScale",
+    "DocxMinimumEndnoteTypographySharesPlainParagraphFlow",
+    "DocxEndnoteContinuationTakeExcludesTrailingAfterSpacing",
+    "DocxScaledFootnoteExactAdvanceMatchesIndependentOffice",
+    "DocxAtomicFootnotesMatchIndependentPageAdmission"
   ]
 }

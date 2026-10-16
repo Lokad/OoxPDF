@@ -10,6 +10,89 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionNormalNoteBaselinesMatchIndependentOffice()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent controls use installed Arial metrics.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-note-content-office-geometry.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var document = DocxTests.ReadDocx(input, mode);
+            var lines = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(document).Lines;
+            string kind = input.Contains("-footnote-", StringComparison.Ordinal) ? "Footnote" : "Endnote";
+            var prose = lines.First(line => line.ContainerStoryKind == kind && line.TextLength > 1)
+                .Segments.First(segment => segment.TextLength > 1);
+            TestAssert.True(Math.Abs(prose.BaselineY - row.GetProperty("FirstProseBaseline").GetDouble()) < .5d,
+                $"Normal-note math retains the independent printed story frame: {input}/{mode}/baseline={prose.BaselineY}.");
+            TestAssert.True(Math.Abs(prose.X - row.GetProperty("FirstProseX").GetDouble()) < .3d,
+                "Math and adjacent note prose share the printed horizontal frame.");
+        }
+    }
+
+    public static void DocxInlineCompositionNormalNoteSourcesRetainEquationOwners()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (string flow in new[] { "inline", "wrapped" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation("CompositionProbes/math-note-content-" + kind + "-" + flow,
+                mode, true, true, partOverride: "word/" + kind + "s.xml");
+            var note = document.RelatedStories.Single(story => story.IsNormalStoryType && story.Id == "1" &&
+                story.Kind == (kind == "footnote" ? DocxRelatedStoryKind.Footnote : DocxRelatedStoryKind.Endnote));
+            var part = document.EquationParts.Single(part => part.PartName == note.PartName);
+            TestAssert.Equal(2, part.SourceCount);
+            var paragraph = note.Paragraphs.Single();
+            TestAssert.True(part.BodyElements.OfType<DocxParagraphElement>().Any(element => ReferenceEquals(element.Paragraph, paragraph)),
+                "Math diagnostics and preparation retain the parsed note paragraph identity.");
+            TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
+            TestAssert.Equal(2, DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default)
+                .Where(owner => ReferenceEquals(owner.Paragraph, paragraph)).SelectMany(owner => owner.Paragraph.Equations).Count());
+        }
+    }
+
+    public static void DocxInlineCompositionNormalNoteMathSurvivesRunSplittingAndContinuation()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Native controls use installed math fonts.");
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (bool continuation in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation("CompositionProbes/math-note-content-" + kind + "-wrapped", mode, true, true,
+                (xml, w, m) =>
+                {
+                    if (!continuation) return;
+                    var paragraph = xml.Root!.Elements(w + kind).Single(note => (string?)note.Attribute(w + "id") == "1").Element(w + "p")!;
+                    paragraph.Add(new XElement(w + "r", new XElement(w + "t", string.Concat(Enumerable.Repeat(" Continued public note content remains present.", 180)) + " Tail.")));
+                }, "word/" + kind + "s.xml");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            string text = System.Text.RegularExpressions.Regex.Replace(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText))
+                .Normalize(NormalizationForm.FormKC), @"\s", "");
+            TestAssert.Equal(4, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            // PDF painting emits each line's prose before its mathematical glyphs.
+            // Content checks do not impose a reading-order contract on that stream.
+            TestAssert.Contains("Endofsupportednote.", text.Replace("ratetime", "", StringComparison.Ordinal));
+            if (continuation)
+            {
+                TestAssert.True(pages.Length > 1, "The long note must exercise real continuation admission.");
+                TestAssert.Contains("Tail.", text);
+                TestAssert.Equal(180, text.Split("Continued", StringSplitOptions.None).Length - 1);
+                TestAssert.Equal(180, text.Split("remainspresent.", StringSplitOptions.None).Length - 1);
+            }
+            TestAssert.Equal(1, pages.Sum(page => page.Annotations.Count(annotation => annotation.Destination is not null)));
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Note fractions remain placed and diagnosed from their real part.");
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION" && d.PartName == "/word/" + kind + "s.xml"),
+                "Painted note math retains its source-part diagnostic.");
+        }
+    }
+
     public static void DocxInlineCompositionEndnotesShareOwnedAutomaticReferenceRules()
     {
         foreach (string position in new[] { "before", "after" })

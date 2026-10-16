@@ -101,7 +101,13 @@ internal sealed partial class DocxReader
         IReadOnlyList<DocxEquationPartSource> ReadEquationParts()
         {
             var parts = new[] { new DocxEquationPartSource(documentPart.Name, equationSourceCount, bodyElements) }
-                .Concat(storyCache.EnumerateEquationParts(cancellationToken)).ToArray();
+                .Concat(storyCache.EnumerateEquationParts(cancellationToken))
+                .Concat(relatedStories.Where(story => story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
+                    .GroupBy(story => story.PartName, StringComparer.Ordinal)
+                    .Where(group => group.Any(story => story.SourceEquationCount != 0))
+                    .Select(group => new DocxEquationPartSource(group.Key, group.Sum(story => story.SourceEquationCount),
+                        group.Where(story => story.IsNormalStoryType).SelectMany(story => story.BodyElements).ToArray())))
+                .ToArray();
             // Sink-less readers retain story-only equation warnings from the
             // already parsed story cache, without enabling unrelated probes.
             var probedParts = equationDiagnostics.Select(d => d.PartName).ToHashSet(StringComparer.Ordinal);

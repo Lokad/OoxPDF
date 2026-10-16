@@ -1063,7 +1063,8 @@ internal sealed partial class DocxRenderer
         document = prepared.Document;
         DocxFontResources fontResources = prepared.FontResources;
         DocxLayout layout = prepared.Layout;
-        ReportEquationDiagnostics(document, EnumeratePaintedEquations(layout.Pages.SelectMany(page => page.Items.Concat(page.StaticTextLines)), cancellationToken), diagnosticSink, cancellationToken);
+        ReportEquationDiagnostics(document, EnumeratePaintedEquations(layout.Pages.SelectMany(page => page.Items.Concat(page.StaticTextLines)
+            .Concat(page.PlacedRelatedStories.SelectMany(story => story.TextLines.Cast<DocxLayoutItem>().Concat(story.TableRows)))), cancellationToken), diagnosticSink, cancellationToken);
         // RV06: comment balloons and range washes wear first-seen author colors;
         // the slots ride the markup context so static emission helpers can resolve
         // them per comment reference without signature changes.

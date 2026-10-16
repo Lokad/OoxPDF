@@ -360,7 +360,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 customNoteTargets ??= DocxCustomNoteMarkerOwners.ResolveTargets(document, cancellationToken);
                 layouts = CreateRelatedStoryLayouts(document.RelatedStories, key, textMeasurer, defaultTabStopPoints,
-                    paragraphSpacingScale, cancellationToken, unscaledTextMeasurer, customNoteTargets);
+                    paragraphSpacingScale, cancellationToken, unscaledTextMeasurer, customNoteTargets, mathEquations);
                 relatedStoryLayoutsByBodyWidth[key] = layouts;
             }
 

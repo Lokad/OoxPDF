@@ -1,0 +1,78 @@
+[
+  {
+    "Id": "math-note-content-footnote-inline",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-note-content-footnote-inline.docx",
+    "Sha256": "48675E584D06A40AABE4323B966B809EF70F033155F00E75D32DA2D76050F70D",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Public calculation note.",
+      "End of supported note."
+    ],
+    "Features": [
+      "footnote content",
+      "inline prose",
+      "two note fractions",
+      "bookmark",
+      "two body fractions"
+    ]
+  },
+  {
+    "Id": "math-note-content-footnote-wrapped",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-note-content-footnote-wrapped.docx",
+    "Sha256": "5056ECC474661A31A312F037CA6C5566E5A14ECE12CFCBE88F4A640191536619",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Public calculation note.",
+      "End of supported note."
+    ],
+    "Features": [
+      "footnote content",
+      "wrapped prose",
+      "two note fractions",
+      "bookmark",
+      "two body fractions"
+    ]
+  },
+  {
+    "Id": "math-note-content-endnote-inline",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-note-content-endnote-inline.docx",
+    "Sha256": "DC7669D300FCAE7ECBA27760803B25C80A8D3C7D96E2DAA1D534A2ED4B305273",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Public calculation note.",
+      "End of supported note."
+    ],
+    "Features": [
+      "endnote content",
+      "inline prose",
+      "two note fractions",
+      "bookmark",
+      "two body fractions"
+    ]
+  },
+  {
+    "Id": "math-note-content-endnote-wrapped",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-note-content-endnote-wrapped.docx",
+    "Sha256": "A853BF5F7DD793B222A9122CC3447089D1294B456593272A00344FF115CD377D",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Public calculation note.",
+      "End of supported note."
+    ],
+    "Features": [
+      "endnote content",
+      "wrapped prose",
+      "two note fractions",
+      "bookmark",
+      "two body fractions"
+    ]
+  }
+]

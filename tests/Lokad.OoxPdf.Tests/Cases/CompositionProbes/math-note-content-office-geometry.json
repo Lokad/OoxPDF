@@ -1,0 +1,69 @@
+{
+  "Source": "Independent Word 16 exports; first normal-note prose baseline and X. Existing whole-page visual thresholds retained.",
+  "Rows": [
+    {
+      "Id": "math-note-content-footnote-inline",
+      "Mode": "final-preserve",
+      "InputSha256": "48675E584D06A40AABE4323B966B809EF70F033155F00E75D32DA2D76050F70D",
+      "ReferencePdfSha256": "1D2AABB70EF755253DFF4408470FE3BBD34D649350300994BB32343495A9E83A",
+      "FirstProseBaseline": 78.024,
+      "FirstProseX": 78.144
+    },
+    {
+      "Id": "math-note-content-footnote-inline",
+      "Mode": "all-word-compatible",
+      "InputSha256": "48675E584D06A40AABE4323B966B809EF70F033155F00E75D32DA2D76050F70D",
+      "ReferencePdfSha256": "8D956B335342C19F3AFD2348DB5961CB8DA5A9633FA376522471D7B690803BDC",
+      "FirstProseBaseline": 155.16,
+      "FirstProseX": 59.256
+    },
+    {
+      "Id": "math-note-content-footnote-wrapped",
+      "Mode": "final-preserve",
+      "InputSha256": "5056ECC474661A31A312F037CA6C5566E5A14ECE12CFCBE88F4A640191536619",
+      "ReferencePdfSha256": "4F063853843880BBD859F3D54247F10B237B4A7023E815A0B9E45E53B1EA757D",
+      "FirstProseBaseline": 125.3,
+      "FirstProseX": 78.144
+    },
+    {
+      "Id": "math-note-content-footnote-wrapped",
+      "Mode": "all-word-compatible",
+      "InputSha256": "5056ECC474661A31A312F037CA6C5566E5A14ECE12CFCBE88F4A640191536619",
+      "ReferencePdfSha256": "190EA5BBB11AFFD5E4DE03E68C73148F4C6B5DF77A0866F7044D055F7246DB0F",
+      "FirstProseBaseline": 191.02,
+      "FirstProseX": 59.256
+    },
+    {
+      "Id": "math-note-content-endnote-inline",
+      "Mode": "final-preserve",
+      "InputSha256": "DC7669D300FCAE7ECBA27760803B25C80A8D3C7D96E2DAA1D534A2ED4B305273",
+      "ReferencePdfSha256": "E37D4A178D5B58C680D19396CEA6F6F7E853C81191EC85F45AC05B8203DCBED1",
+      "FirstProseBaseline": 640.42,
+      "FirstProseX": 74.784
+    },
+    {
+      "Id": "math-note-content-endnote-inline",
+      "Mode": "all-word-compatible",
+      "InputSha256": "DC7669D300FCAE7ECBA27760803B25C80A8D3C7D96E2DAA1D534A2ED4B305273",
+      "ReferencePdfSha256": "32F918941E56C34612E1547B6BD3046085841225CAB13F242E70CB0F06028239",
+      "FirstProseBaseline": 581.64,
+      "FirstProseX": 56.712
+    },
+    {
+      "Id": "math-note-content-endnote-wrapped",
+      "Mode": "final-preserve",
+      "InputSha256": "A853BF5F7DD793B222A9122CC3447089D1294B456593272A00344FF115CD377D",
+      "ReferencePdfSha256": "514923D385D4E7D721810CFB337F9E829757E41692D5BEAF1E63ECFB8A8414B1",
+      "FirstProseBaseline": 643.78,
+      "FirstProseX": 74.784
+    },
+    {
+      "Id": "math-note-content-endnote-wrapped",
+      "Mode": "all-word-compatible",
+      "InputSha256": "A853BF5F7DD793B222A9122CC3447089D1294B456593272A00344FF115CD377D",
+      "ReferencePdfSha256": "7D438B98488D43B816BE8D96E50C14BE98527DB8CA49ABEE17FF5A73D613F4B6",
+      "FirstProseBaseline": 584.18,
+      "FirstProseX": 56.712
+    }
+  ]
+}

@@ -66,6 +66,7 @@ internal sealed record DocxRelatedStory(
     // paragraph resolved through the style cascade). Synthetic stories carry no
     // source revisions or diagnostics provenance; tests exempt them explicitly.
     public bool IsSynthetic { get; init; }
+    public int SourceEquationCount { get; init; }
     public bool IsNormalStoryType => Type is null || Type == DocxRelatedStoryType.Normal;
     public DocxCommentMetadata? CommentMetadata { get; init; }
     public IReadOnlyList<DocxParagraph> Paragraphs => BodyElements.Count == 0

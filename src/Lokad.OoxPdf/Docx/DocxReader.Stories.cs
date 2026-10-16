@@ -420,6 +420,9 @@ internal sealed partial class DocxReader
         DocxCommentThreadMetadata? threadMetadata = paragraphId is not null && commentThreadMetadataByParagraphId is not null && commentThreadMetadataByParagraphId.TryGetValue(paragraphId, out DocxCommentThreadMetadata? metadata)
             ? metadata
             : null;
+        int sourceEquationCount = 0;
+        foreach (XElement equation in story.Descendants(MathNamespace + "oMath"))
+        { cancellationToken.ThrowIfCancellationRequested(); sourceEquationCount++; }
         return new DocxRelatedStory(
             kind,
             partName,
@@ -430,6 +433,7 @@ internal sealed partial class DocxReader
             ParseRelatedStoryType((string?)story.Attribute(WordprocessingNamespace + "type")))
         {
             FloatingDrawings = floatingDrawings,
+            SourceEquationCount = sourceEquationCount,
             CommentMetadata = kind == DocxRelatedStoryKind.Comment
                 ? new DocxCommentMetadata(
                     (string?)story.Attribute(WordprocessingNamespace + "author"),

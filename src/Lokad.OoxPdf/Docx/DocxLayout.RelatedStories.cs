@@ -2146,7 +2146,8 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         CancellationToken cancellationToken,
         IDocxTextMeasurer? unscaledTextMeasurer = null,
-        IReadOnlyDictionary<DocxRelatedStory, DocxTextRun>? customNoteTargets = null)
+        IReadOnlyDictionary<DocxRelatedStory, DocxTextRun>? customNoteTargets = null,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (textMeasurer is null || stories.Count == 0)
@@ -2175,7 +2176,8 @@ internal sealed partial class DocxLayoutEngine
                 pageNumber: null,
                 pageCount: null,
                 cancellationToken: cancellationToken,
-                unscaledTextMeasurer: unscaledTextMeasurer, customNoteMarker: customNoteTargets?.GetValueOrDefault(stories[index]));
+                unscaledTextMeasurer: unscaledTextMeasurer, customNoteMarker: customNoteTargets?.GetValueOrDefault(stories[index]),
+                mathEquations: mathEquations);
         }
 
         return layouts;
@@ -2192,7 +2194,8 @@ internal sealed partial class DocxLayoutEngine
         int? pageCount,
         CancellationToken cancellationToken,
         IDocxTextMeasurer? unscaledTextMeasurer = null,
-        DocxTextRun? customNoteMarker = null)
+        DocxTextRun? customNoteMarker = null,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
     {
         double sourceStoryScale = paragraphSpacingScale;
         // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote and endnote
@@ -2315,6 +2318,48 @@ internal sealed partial class DocxLayoutEngine
 
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
+            // Direct normal-note paragraphs share ordered measurement and retain
+            // their design-space frame until the common note emission mapping.
+            // Rich images/tables and special separator stories keep their path.
+            if (story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
+                paragraph.Equations.Count != 0 && paragraph.Images.Count == 0)
+            {
+                double size = GetParagraphFontSize(paragraph);
+                double lineHeight = ResolveLineHeightProfile(paragraph, size, textMeasurer, selectMaxAcrossRuns: true).LineHeight;
+                double baseline = ResolveRelatedStoryBaselineOffset(paragraph, size, lineHeight, textMeasurer, DocxStoryId.Related(story.Kind).Kind);
+                double firstInset = GetParagraphFirstLineTextStartOffset(paragraph, size, textMeasurer, paragraphSpacingScale);
+                double nextInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
+                double rightInset = GetParagraphRightInset(paragraph, paragraphSpacingScale);
+                if (TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, size,
+                    Math.Max(1d, bodyWidth - firstInset - rightInset), Math.Max(1d, bodyWidth - nextInset - rightInset),
+                    baseline, lineHeight, paragraphSpacingScale, cancellationToken, out var measured,
+                    defaultTabStopPoints: defaultTabStopPoints))
+                {
+                    for (int index = 0; index < measured.Count; index++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var line = measured[index];
+                        double inset = index == 0 ? firstInset : nextInset;
+                        double available = Math.Max(1d, bodyWidth - inset - rightInset);
+                        double align = ResolveOrderedInlineAlignment(line, paragraph.Alignment, available);
+                        var placed = PlaceOrderedInlineLine(paragraph, line, inset + align, 0d, cursorY,
+                            size, paragraphSpacingScale, 0, elementIndex, paragraphIndex, index, DocxStoryId.Related(story.Kind));
+                        textLines.Add(placed.Line with
+                        {
+                            AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
+                            ParagraphBeforeSpacing = index == 0 ? spacingProfile.ParagraphBeforeSpacing : 0d,
+                            ParagraphAfterSpacing = index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
+                            PendingAfterSpacing = null
+                        });
+                        cursorY -= line.OccupiedHeight;
+                    }
+                    if (measured.Count != 0) firstRelatedLineBaselineOffset ??= measured[0].BaselineInset;
+                    pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+                    previousParagraph = paragraph;
+                    paragraphIndex++;
+                    continue;
+                }
+            }
             (IReadOnlyList<DocxTextLineLayout> paragraphLines, IReadOnlyList<DocxInlineImageLayout> placedStoryImages, double paragraphUsedHeight, double paragraphBaselineOffset) = LayoutRelatedStoryParagraphTextLines(
                 paragraph,
                 paragraphSpacingScale,
