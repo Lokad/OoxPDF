@@ -7,7 +7,7 @@ namespace Lokad.OoxPdf.Fonts;
 
 internal sealed partial class OpenTypeFont
 {
-    private static void ReadLegacyKerningPairs(byte[] bytes, Dictionary<string, TableRecord> tables, List<(uint Key, short Value)> pairs)
+    private static void ReadLegacyKerningPairs(byte[] bytes, Dictionary<string, TableRecord> tables, KerningPairBuilder pairs)
     {
         if (!tables.TryGetValue("kern", out TableRecord kern) || kern.Length < 4)
         {
@@ -27,18 +27,17 @@ internal sealed partial class OpenTypeFont
                 ushort pairCount = U16(bytes, subtableOffset + 6);
                 int pairOffset = subtableOffset + 14;
                 int pairEnd = Math.Min(subtableOffset + length, kern.Offset + kern.Length);
-                for (int i = 0; i < pairCount && pairOffset + 6 <= pairEnd; i++)
+                int nonzero = 0;
+                for (int i = 0, candidate = pairOffset; i < pairCount && candidate + 6 <= pairEnd; i++, candidate += 6)
+                    if (I16(bytes, candidate + 4) != 0) nonzero++;
+                pairs.Register(nonzero, writer =>
                 {
-                    ushort left = U16(bytes, pairOffset);
-                    ushort right = U16(bytes, pairOffset + 2);
-                    short value = I16(bytes, pairOffset + 4);
-                    if (value != 0)
+                    for (int i = 0, cursor = pairOffset; i < pairCount && cursor + 6 <= pairEnd; i++, cursor += 6)
                     {
-                        AddKerningPair(pairs, ((uint)left << 16) | right, value);
+                        short value = I16(bytes, cursor + 4);
+                        if (value != 0) writer.Add(((uint)U16(bytes, cursor) << 16) | U16(bytes, cursor + 2), value);
                     }
-
-                    pairOffset += 6;
-                }
+                });
             }
 
             if (length == 0)
@@ -50,7 +49,7 @@ internal sealed partial class OpenTypeFont
         }
     }
 
-    private static void ReadGposPairAdjustments(byte[] bytes, Dictionary<string, TableRecord> tables, List<(uint Key, short Value)> pairs, ref long workRemaining)
+    private static void ReadGposPairAdjustments(byte[] bytes, Dictionary<string, TableRecord> tables, KerningPairBuilder pairs, ref long workRemaining)
     {
         if (!tables.TryGetValue("GPOS", out TableRecord gpos) || gpos.Length < 10)
         {
@@ -124,14 +123,48 @@ internal sealed partial class OpenTypeFont
     // magnitude below this; hostile cross products exhaust it in milliseconds.
     internal const long MaxKerningWorkSteps = 67_108_864;
 
-    private static void AddKerningPair(List<(uint Key, short Value)> pairs, uint key, short value)
+    private sealed class KerningPairBuilder(CancellationToken token)
     {
-        if (pairs.Count >= MaxKerningPairs)
+        private readonly List<Action<KerningPairWriter>> batches = new();
+        private int sourceCount;
+        public void CheckCancellation() => token.ThrowIfCancellationRequested();
+        public void CheckAdditionalCount(long additional)
         {
-            throw new InvalidDataException($"Font declares more kerning pairs than the maximum supported count of {MaxKerningPairs}.");
+            if (additional < 0 || additional > MaxKerningPairs - sourceCount)
+                throw new InvalidDataException($"Font declares more kerning pairs than the maximum supported count of {MaxKerningPairs}.");
         }
+        public void Register(long additional, Action<KerningPairWriter> write)
+        {
+            CheckCancellation();
+            CheckAdditionalCount(additional);
+            sourceCount += (int)additional;
+            if (additional != 0) batches.Add(write);
+        }
+        public IReadOnlyDictionary<uint, short> Build()
+        {
+            CheckCancellation();
+            var writer = new KerningPairWriter(sourceCount, token);
+            foreach (var write in batches) { CheckCancellation(); write(writer); }
+            return writer.Complete();
+        }
+    }
 
-        pairs.Add((key, value));
+    private sealed class KerningPairWriter(int sourceCount, CancellationToken token)
+    {
+        private readonly Dictionary<uint, short> pairs = new(sourceCount);
+        private int written;
+        public void Add(uint key, short value)
+        {
+            if (written >= sourceCount) throw new InvalidDataException("Kerning source contribution count changed during parsing.");
+            if ((written++ & 1023) == 0) token.ThrowIfCancellationRequested();
+            pairs[key] = value;
+        }
+        public IReadOnlyDictionary<uint, short> Complete()
+        {
+            token.ThrowIfCancellationRequested();
+            if (written != sourceCount) throw new InvalidDataException("Kerning source contribution count changed during parsing.");
+            return pairs;
+        }
     }
 
     private static void ConsumeKerningWork(ref long workRemaining, long steps)
@@ -245,7 +278,7 @@ internal sealed partial class OpenTypeFont
         int subtable,
         ushort lookupType,
         int tableEnd,
-        List<(uint Key, short Value)> pairs,
+        KerningPairBuilder pairs,
         ref long workRemaining)
     {
         if (lookupType == 2)
@@ -275,7 +308,7 @@ internal sealed partial class OpenTypeFont
         ReadGposPairAdjustmentSubtable(bytes, extensionSubtable, tableEnd, pairs, ref workRemaining);
     }
 
-    private static void ReadGposPairAdjustmentSubtable(byte[] bytes, int subtable, int tableEnd, List<(uint Key, short Value)> pairs, ref long workRemaining)
+    private static void ReadGposPairAdjustmentSubtable(byte[] bytes, int subtable, int tableEnd, KerningPairBuilder pairs, ref long workRemaining)
     {
         if (subtable + 10 > tableEnd)
         {
@@ -306,17 +339,24 @@ internal sealed partial class OpenTypeFont
 
                 ushort pairValueCount = U16(bytes, pairSet);
                 int pairValue = pairSet + 2;
-                for (int j = 0; j < pairValueCount && pairValue + 2 + valueRecordSize1 + valueRecordSize2 <= tableEnd; j++)
+                int stride = 2 + valueRecordSize1 + valueRecordSize2;
+                int nonzero = 0;
+                for (int j = 0, candidate = pairValue; j < pairValueCount && candidate + stride <= tableEnd; j++, candidate += stride)
                 {
-                    ushort rightGlyph = U16(bytes, pairValue);
-                    short xAdvance = ReadXAdvance(bytes, pairValue + 2, valueFormat1);
-                    if (xAdvance != 0)
-                    {
-                        AddKerningPair(pairs, ((uint)coverageGlyphs[i] << 16) | rightGlyph, xAdvance);
-                    }
-
-                    pairValue += 2 + valueRecordSize1 + valueRecordSize2;
+                    ConsumeKerningWork(ref workRemaining, 1);
+                    if (ReadXAdvance(bytes, candidate + 2, valueFormat1) != 0) nonzero++;
                 }
+                ushort leftGlyph = coverageGlyphs[i];
+                int candidates = Math.Min(pairValueCount, Math.Max(0, (tableEnd - pairValue) / stride));
+                if (nonzero != 0) ConsumeKerningWork(ref workRemaining, candidates);
+                pairs.Register(nonzero, writer =>
+                {
+                    for (int j = 0, cursor = pairValue; j < candidates; j++, cursor += stride)
+                    {
+                        short advance = ReadXAdvance(bytes, cursor + 2, valueFormat1);
+                        if (advance != 0) writer.Add(((uint)leftGlyph << 16) | U16(bytes, cursor), advance);
+                    }
+                });
             }
         }
         else if (positionFormat == 2 && subtable + 16 <= tableEnd)
@@ -333,37 +373,72 @@ internal sealed partial class OpenTypeFont
             }
 
             Dictionary<ushort, ushort[]> rightGlyphsByClass = ReadClassGlyphs(bytes, classDef2, tableEnd);
-            foreach (ushort leftGlyph in coverageGlyphs)
+            var leftClasses = new ushort[coverageGlyphs.Length];
+            var rowBatches = new List<(ushort[] Glyphs, short Advance)>?[class1Count];
+            var rowPairCounts = new long[class1Count];
+            int leftLimit = coverageGlyphs.Length;
+            long contributions = CountClassPairs(ref workRemaining);
+            ConsumeKerningWork(ref workRemaining, contributions);
+            pairs.Register(contributions, writer =>
             {
-                ushort leftClass = ReadGlyphClass(bytes, classDef1, tableEnd, leftGlyph, ref workRemaining);
-                if (leftClass >= class1Count)
+                for (int leftIndex = 0; leftIndex < leftLimit; leftIndex++)
                 {
-                    continue;
+                    pairs.CheckCancellation();
+                    ushort leftClass = leftClasses[leftIndex];
+                    if (leftClass >= class1Count) continue;
+                    foreach (var adjustment in rowBatches[leftClass]!)
+                        foreach (ushort rightGlyph in adjustment.Glyphs)
+                            writer.Add(((uint)coverageGlyphs[leftIndex] << 16) | rightGlyph, adjustment.Advance);
                 }
+            });
 
-                foreach (KeyValuePair<ushort, ushort[]> rightClassGlyphs in rightGlyphsByClass)
+            long CountClassPairs(ref long remaining)
+            {
+                long count = 0;
+                for (int index = 0; index < coverageGlyphs.Length; index++)
                 {
-                    if (rightClassGlyphs.Key == 0 || rightClassGlyphs.Key >= class2Count)
+                    pairs.CheckCancellation();
+                    ushort leftClass = ReadGlyphClass(bytes, classDef1, tableEnd, coverageGlyphs[index], ref remaining);
+                    leftClasses[index] = leftClass;
+                    if (leftClass >= class1Count) continue;
+                    if (rowBatches[leftClass] is null)
                     {
-                        continue;
-                    }
-
-                    int record = classRecord + ((leftClass * class2Count + rightClassGlyphs.Key) * classRecordSize);
-                    if (record + classRecordSize > tableEnd)
-                    {
-                        return;
-                    }
-
-                    short xAdvance = ReadXAdvance(bytes, record, valueFormat1);
-                    if (xAdvance != 0)
-                    {
-                        foreach (ushort rightGlyph in rightClassGlyphs.Value)
+                        // A class row is identical for every covered left glyph.
+                        // Keep its source batches only for this subtable; the
+                        // final representation remains the ordinary pair map.
+                        var batches = new List<(ushort[] Glyphs, short Advance)>();
+                        rowBatches[leftClass] = batches;
+                        long rowCount = 0;
+                        foreach (var right in rightGlyphsByClass)
                         {
-                            ConsumeKerningWork(ref workRemaining, 1);
-                            AddKerningPair(pairs, ((uint)leftGlyph << 16) | rightGlyph, xAdvance);
+                            ConsumeKerningWork(ref remaining, 1);
+                            if (right.Key == 0 || right.Key >= class2Count) continue;
+                            if (!TryGetClassRecord(leftClass, right.Key, out int record))
+                            {
+                                // Retain only the exact valid source prefix.
+                                leftLimit = index + 1;
+                                return count + rowCount;
+                            }
+                            short advance = ReadXAdvance(bytes, record, valueFormat1);
+                            if (advance == 0) continue;
+                            batches.Add((right.Value, advance));
+                            rowCount += right.Value.Length;
+                            pairs.CheckAdditionalCount(count + rowCount);
                         }
+                        rowPairCounts[leftClass] = rowCount;
                     }
+                    count += rowPairCounts[leftClass];
+                    pairs.CheckAdditionalCount(count);
                 }
+                return count;
+            }
+
+            bool TryGetClassRecord(ushort leftClass, ushort rightClass, out int record)
+            {
+                long offset = classRecord + ((long)leftClass * class2Count + rightClass) * classRecordSize;
+                if (offset < classRecord || offset > tableEnd - classRecordSize) { record = 0; return false; }
+                record = (int)offset;
+                return true;
             }
         }
     }

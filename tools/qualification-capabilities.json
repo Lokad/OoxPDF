@@ -932,5 +932,30 @@
     "PortableRenderingAuthoredWhitespaceSurvivesMixedMathContainers",
     "DocxParagraphLayoutPreservesAuthoredSpaces",
     "DocxLayoutStageSplitsPreservedLeadingSpaceFromFollowingWord"
+  ],
+  "font-kerning-materialization": [
+    "ClassKerning",
+    "CoverageExpansionBeyondCapThrows",
+    "OpenTypeParserReadsGpos",
+    "OpenTypeParserIgnoresInactiveGpos",
+    "OpenTypeParserIgnoresNonLatinScriptGpos",
+    "SyntheticGposPairAdjustmentIsRead",
+    "SyntheticKerningAdjustsMeasuredAdvance",
+    "FontProgramLoaderPropagatesParseCancellation",
+    "MathFontVerticalVariantsKeepCancellationAndCumulativeFontWork",
+    "DocxOrdinaryKerning",
+    "DocxPlainFootnoteKerningKeepsMeasurementAndEmissionCoherent",
+    "DocxPlainFootnoteKerningKeepsPreserveAndReviewPairPositioning",
+    "PptxSyntheticTextBoxUsesKerningWhenAvailable",
+    "PptxSyntheticTextBoxHonorsKerningThreshold",
+    "PptxSyntheticTextBoxNoBreakSpaceKeepsBoundaryKerning",
+    "PptxMissingKerningUsesIndependentOfficeThresholdBelowAndAtEquality",
+    "PptxNoWrapDistributionKeepsNominalTextAndActiveKerning",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "PortableRenderingBodyPageCountersFollowLineAdmission",
+    "PortableRenderingAuthoredWhitespaceSurvivesMixedMathContainers",
+    "PortableRenderingNormalNotesPreserveInlineImagesAndMath",
+    "PortableRenderingOrderedMathCellRetainsPrintedBorderFrame",
+    "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance"
   ]
 }

@@ -1107,22 +1107,16 @@ internal sealed partial class OpenTypeFont
 
     private static IReadOnlyDictionary<uint, short> ReadKerningPairs(byte[] bytes, Dictionary<string, TableRecord> tables, CancellationToken cancellationToken)
     {
-        // Collect first so the map below allocates exactly once: kern-pair
-        // expansion (especially class-based GPOS format 2) otherwise regrows the
-        // dictionary ~18 times on big faces. Insertion order is preserved, so
-        // duplicate keys keep last-wins semantics.
-        var collected = new List<(uint Key, short Value)>();
-        ReadLegacyKerningPairs(bytes, tables, collected);
+        // Count source batches without expanding a tuple list, then allocate
+        // the final map once. Counts include overwritten keys; insertion
+        // order and last-wins values remain the same as the original stream.
+        var pairs = new KerningPairBuilder(cancellationToken);
+        ReadLegacyKerningPairs(bytes, tables, pairs);
         cancellationToken.ThrowIfCancellationRequested();
         long workRemaining = MaxKerningWorkSteps;
-        ReadGposPairAdjustments(bytes, tables, collected, ref workRemaining);
-        var pairs = new Dictionary<uint, short>(collected.Count);
-        foreach ((uint key, short value) in collected)
-        {
-            pairs[key] = value;
-        }
-
-        return pairs;
+        ReadGposPairAdjustments(bytes, tables, pairs, ref workRemaining);
+        cancellationToken.ThrowIfCancellationRequested();
+        return pairs.Build();
     }
 
     private readonly record struct TableRecord(int Offset, int Length);

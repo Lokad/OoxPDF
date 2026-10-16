@@ -1343,6 +1343,78 @@ internal static class OoxLimitsTests
         }
     }
 
+    public static void ClassKerningLaterSubtableRetainsLastWinsValues()
+    {
+        byte[] gpos = BuildAliasedClassKernGpos(2, 2, 2);
+        int lookupList = System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(8, 2));
+        int lookup = lookupList + System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(lookupList + 2, 2));
+        int subtable = lookup + System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(lookup + 6, 2));
+        byte[] second = gpos[subtable..];
+        System.Buffers.Binary.BinaryPrimitives.WriteInt16BigEndian(second.AsSpan(22, 2), -75);
+        int secondOffset = gpos.Length - lookup;
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(gpos.AsSpan(lookup + 8, 2), (ushort)secondOffset);
+        gpos = gpos.Concat(second).ToArray();
+        OpenTypeFont loaded = OpenTypeFont.Load(TestFontBuilder.ReplaceTable(TestFontBuilder.CreateTestFont(), "GPOS", gpos), 0);
+        TestAssert.Equal((short)-75, loaded.GetKerning(0, 0));
+        TestAssert.Equal((short)-75, loaded.GetKerning(1, 1));
+    }
+
+    public static void ClassKerningDuplicateSourcePairsStillConsumeThePairLimit()
+    {
+        // Each subtable aliases the same 256 pairs. The source contribution
+        // limit still applies even though the final map has only 256 keys.
+        byte[] gpos = BuildAliasedClassKernGpos(16, 16, 8193);
+        TestAssert.Throws<InvalidDataException>(() => OpenTypeFont.Load(
+            TestFontBuilder.ReplaceTable(TestFontBuilder.CreateTestFont(), "GPOS", gpos), 0));
+    }
+
+    public static void ClassKerningTruncatedLaterRowPreservesValidPrefix()
+    {
+        byte[] gpos = BuildClassKernGpos(2, 2, rangeCoverage: false);
+        int lookupList = System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(8, 2));
+        int lookup = lookupList + System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(lookupList + 2, 2));
+        int subtable = lookup + System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(lookup + 6, 2));
+        int classDef1 = subtable + System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(subtable + 8, 2));
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(gpos.AsSpan(subtable + 12, 2), 512);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(gpos.AsSpan(classDef1 + 8, 2), 511);
+        OpenTypeFont loaded = OpenTypeFont.Load(TestFontBuilder.ReplaceTable(TestFontBuilder.CreateTestFont(), "GPOS", gpos), 0);
+        TestAssert.Equal((short)-50, loaded.GetKerning(0, 0));
+        TestAssert.Equal((short)0, loaded.GetKerning(1, 0));
+    }
+
+    public static void ClassKerningOutOfRangeMatrixRetainsValidPrefix()
+    {
+        byte[] gpos = BuildClassKernGpos(2, 2, rangeCoverage: false);
+        int lookupList = System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(8, 2));
+        int lookup = lookupList + System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(lookupList + 2, 2));
+        int subtable = lookup + System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(lookup + 6, 2));
+        int classDef1 = subtable + System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(subtable + 8, 2));
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(gpos.AsSpan(subtable + 12, 2), 65535);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(gpos.AsSpan(subtable + 14, 2), 65535);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(gpos.AsSpan(classDef1 + 6, 2), 0);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(gpos.AsSpan(classDef1 + 8, 2), 65534);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt16BigEndian(gpos.AsSpan(subtable + 18, 2), -50);
+        OpenTypeFont loaded = OpenTypeFont.Load(TestFontBuilder.ReplaceTable(TestFontBuilder.CreateTestFont(), "GPOS", gpos), 0);
+        TestAssert.Equal((short)-50, loaded.GetKerning(0, 0));
+        TestAssert.Equal((short)0, loaded.GetKerning(1, 0));
+    }
+
+    private static byte[] BuildAliasedClassKernGpos(int coverageSize, int classSize, int aliases)
+    {
+        byte[] source = BuildClassKernGpos(coverageSize, classSize, rangeCoverage: false);
+        int lookupList = System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(source.AsSpan(8, 2));
+        int lookup = lookupList + System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(source.AsSpan(lookupList + 2, 2));
+        int subtable = lookup + System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(source.AsSpan(lookup + 6, 2));
+        int relative = checked(6 + aliases * 2);
+        byte[] result = new byte[lookup + relative + source.Length - subtable];
+        source.AsSpan(0, lookup + 6).CopyTo(result);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(result.AsSpan(lookup + 4, 2), checked((ushort)aliases));
+        for (int index = 0; index < aliases; index++)
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(result.AsSpan(lookup + 6 + index * 2, 2), checked((ushort)relative));
+        source.AsSpan(subtable).CopyTo(result.AsSpan(lookup + relative));
+        return result;
+    }
+
     public static void ClassKerningBelowCapLoads()
     {
         // probe scale: two 512-glyph sets densify to 262,144 pairs and must
