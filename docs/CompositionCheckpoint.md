@@ -1886,3 +1886,25 @@ Only four affected review outputs were converted. Five fixed/complete inputs are
 verified to contain no deletion elements, so their C50 comparisons/reviews carry
 forward. Complete-report modes, memo and deck retain transfer-smoke PDF hashes.
 No root rebuild or broad suite/corpus replay. Evidence: deletion-inline-evidence.json.
+
+
+Revision bars now use the authored margin and printed-page scale. Their distance
+from text is capped at 36pt, with centered placement in narrower margins and
+scaled 0.72pt nominal thickness. Eight independent controls cover 36–144pt left
+margins, right-margin/orientation changes and a fitted two-page report. Maximum
+horizontal/thickness residuals are 0.024/0.018pt; vertical extents remain approximate.
+
+One artifact passes 23 Windows methods once, 21 Ubuntu checks/two native-font
+skips, two causal parent regressions and 17-asset/four-PDF transfer. Twelve text
+inspections retain C52 bytes. Eight prose/simple-math screens have no deficits;
+generic revision/unused-part warnings remain unresolved. Five representative
+page pairs were reviewed. All twelve outcome gates still fail unchanged
+thresholds. The composite report retains inherited comment-color and gray-lane
+differences, along with typography/geometry residuals. Fixed revision-free
+documents carry accepted comparisons after a source audit and transfer smoke.
+
+An initial unqualified probe built root CLI once and selected the old worktree
+binary. Accepted root assets were restored by SHA with four smoke PDFs; the
+intended worktree was rebuilt using an absolute project path. The wrong-stage
+output is verified as C52 baseline only. No root suite replay. Evidence:
+revision-bar-evidence.json and initial-prototype-correction.json.
