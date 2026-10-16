@@ -989,3 +989,23 @@ link and loop behavior. The complete scan reports 5.379GB with zero errors. The
 Ubuntu PowerShell wrapper remains a CI check; local Ubuntu has no PowerShell.
 No library build or rendering suite is replayed. Evidence:
 `artifacts/composition-c1/footprint-longpath-evidence.json`.
+
+The bounded C3 cached-field checkpoint reuses frozen `4609b4bb` for a mechanical
+held-out report variation: visible prose, six equations, one image and all package
+parts except main XML remain unchanged. Simple/packed cached results coexist with
+math, the image/comment range and an internal link. Both presets retain two pages
+and pass all source/Office prose, simple-math and page-local screens. Existing four
+link targets survive; review link end differs by 0.114pt. Merged text geometry has
+zero failures (88 Final / 90 review lines), and graphics operations are exact
+against accepted C2. Candidate and Office second-page rasters are exact; changed
+first-page regions are inspected. Both numerical gates remain failed. Source
+commit `43339a3d` and tool `b583a8d7` pin the independent input/audit work; all 17
+runtime assets are unchanged, with no build or rendering-suite/corpus replay.
+Twelve source-audit adversarial controls pass on Windows/Ubuntu; cached fields
+resolve their old classification failures while dynamic/malformed/cross-paragraph
+fields remain unresolved. Ten C1 audit screens still pass. Sixteen fraction probes
+retain rate/time token deficits and all their visual failures. Initial acceptance
+phrases were corrected to the actual baseline note/text; document bytes and both
+candidate PDFs remain exact, without Office re-export. Evidence:
+`artifacts/composition-c1/composed-fields-evidence.json`. CI through `373c99ad` is
+green on both OSes; workspace traversal now reports 5.379GB with zero errors.
