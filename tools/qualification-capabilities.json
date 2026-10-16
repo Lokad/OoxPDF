@@ -1609,6 +1609,18 @@
     "DocxInlineCompositionExplicitDisplaysRetainSourceRowsAndFallbacks",
     "PortableRenderingStaticCellsPreserveMixedMathImagesAndCounters"
   ],
+  "docx-kerning-threshold-ownership": [
+    "DocxOrdinaryKerning",
+    "DocxPlainFootnoteKerning",
+    "DocxElevenPoint",
+    "DocxWrappedCalibriKerning",
+    "DocxMetGlyphAdvance",
+    "DocxMetWrappedFootnoteNumbers",
+    "DocxCompleteEndnoteKerningResolvesThresholdsWithoutRewritingOwners",
+    "DocxPlainFootnoteKerningSharesContentThresholdsAndCompleteOwners",
+    "DocxInlineCompositionMeasurementPreservesSourceTrackingKerningAndHiddenRuns",
+    "PortableRenderingTextRevisionMathKeepsSourceOwnersAndFallbacks"
+  ],
   "docx-formatting-review-ink": [
     "DocxInlineCompositionRunFormatting",
     "PortableRenderingRunFormatting",

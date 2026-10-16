@@ -18,7 +18,7 @@ internal static class DocxWrappedCalibriKerning
                 var run = runs[i];
                 if (!DocxWrappedFootnoteFrame.TryGetMinimum(run, out ushort minimum)) return false;
                 if (run.Text.Length == 0 || run.FontSize != 12d || run.VerticalAlignment != DocxRunVerticalAlignment.Baseline) continue;
-                bool enabled = minimum is > 0 and <= 24;
+                bool enabled = DocxKerningThreshold.IsMet(minimum, run.FontSize);
                 if (run.PairKerningEnabled == enabled) continue;
                 runs[i] = run with { PairKerningEnabled = enabled };changed = true;
             }

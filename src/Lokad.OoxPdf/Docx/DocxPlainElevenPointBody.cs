@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxPlainElevenPointBody
@@ -26,15 +24,13 @@ internal static class DocxPlainElevenPointBody
             {
                 if (!DocxMinimumBodyLineLeading.IsQualifiedParagraphRun(paragraph, run, 11d) ||
                     !string.Equals(run.FontFamily, family, StringComparison.OrdinalIgnoreCase) ||
-                    run.KerningMinimumHalfPointsValue is { } value &&
-                    (!ushort.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out ushort minimum) || minimum > 32767)) return false;
+                    !DocxKerningThreshold.TryGetMinimum(run, out _)) return false;
             }
         }
         foreach (var paragraph in document.RelatedStories.SelectMany(s => s.Paragraphs))
         foreach (var run in paragraph.Runs)
         {
-            if (run.KerningMinimumHalfPointsValue is { } value &&
-                (!ushort.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out ushort minimum) || minimum > 32767) ||
+            if (!DocxKerningThreshold.TryGetMinimum(run, out _) ||
                 run.Text.Any(char.IsLetter) && (!DocxMinimumBodyLineLeading.IsQualifiedParagraphRun(paragraph, run) ||
                     !string.Equals(run.FontFamily, family, StringComparison.OrdinalIgnoreCase))) return false;
         }

@@ -4,6 +4,9 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxKerningThreshold
 {
+    internal static bool IsMet(ushort minimum, double nominalFontSize) =>
+        minimum > 0 && nominalFontSize * 2d >= minimum;
+
     internal static bool TryGetMinimum(DocxTextRun run, out ushort minimum)
     {
         minimum = 0;
@@ -15,7 +18,7 @@ internal static class DocxKerningThreshold
     {
         enabled = false;
         if (!TryGetMinimum(run, out ushort minimum) || !double.IsFinite(run.FontSize) || run.FontSize <= 0d) return false;
-        enabled = minimum > 0 && run.FontSize * 2d >= minimum;
+        enabled = IsMet(minimum, run.FontSize);
         return true;
     }
 }

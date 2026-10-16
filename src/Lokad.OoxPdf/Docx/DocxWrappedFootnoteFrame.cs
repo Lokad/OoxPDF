@@ -28,7 +28,9 @@ internal static class DocxWrappedFootnoteFrame
             .Where(r => r.Text.Length != 0 && r.VerticalAlignment == DocxRunVerticalAlignment.Baseline))
         {
             if (!TryGetMinimum(run, out ushort minimum)) return new(DocxBodyKerningKind.Invalid, false, false);
-            bool met = minimum is > 0 and <= 24;
+            // This classifier describes the existing regular-12pt frame;
+            // source-size eligibility remains below, independent of pair state.
+            bool met = DocxKerningThreshold.IsMet(minimum, 12d);
             matches &= run.PairKerningEnabled == met;
             disabled &= !run.PairKerningEnabled;
             if (!met) nominal = true;

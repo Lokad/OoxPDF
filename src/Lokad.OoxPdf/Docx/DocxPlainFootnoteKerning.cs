@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxPlainFootnoteKerning
@@ -19,17 +17,16 @@ internal static class DocxPlainFootnoteKerning
             ? new HashSet<DocxParagraph>(source.Paragraphs, ReferenceEqualityComparer.Instance) : null;
         var baselineRuns = source.Paragraphs.SelectMany(p => p.Runs)
             .Where(r => r.Text.Length != 0 && r.VerticalAlignment == DocxRunVerticalAlignment.Baseline).ToArray();
-        bool nominalElevenPointFrame = elevenPointBody && baselineRuns.All(r => r.KerningMinimumHalfPointsValue is null ||
-            ushort.TryParse(r.KerningMinimumHalfPointsValue, NumberStyles.None, CultureInfo.InvariantCulture, out ushort minimum) &&
-            (minimum == 0 || minimum > 22));
+        bool nominalElevenPointFrame = elevenPointBody && baselineRuns.All(r =>
+            DocxKerningThreshold.TryGetMinimum(r, out ushort minimum) && !DocxKerningThreshold.IsMet(minimum, 11d));
         // Independent pair controls admit ordinary Times and complete Calibri/
         // Arial note flow. Other met or mixed-threshold frames keep fallback.
         bool metElevenPointFrame = elevenPointBody && baselineRuns.Length > 0 &&
             (ordinary ? string.Equals(baselineRuns[0].FontFamily, "Times New Roman", StringComparison.OrdinalIgnoreCase) :
                 new[] { "Calibri", "Arial" }.Contains(baselineRuns[0].FontFamily, StringComparer.OrdinalIgnoreCase)) &&
-            ushort.TryParse(baselineRuns[0].KerningMinimumHalfPointsValue, NumberStyles.None, CultureInfo.InvariantCulture, out ushort firstMinimum) &&
-            firstMinimum is > 0 and <= 22 && baselineRuns.All(r =>
-                ushort.TryParse(r.KerningMinimumHalfPointsValue, NumberStyles.None, CultureInfo.InvariantCulture, out ushort minimum) && minimum == firstMinimum);
+            DocxKerningThreshold.TryGetMinimum(baselineRuns[0], out ushort firstMinimum) &&
+            DocxKerningThreshold.IsMet(firstMinimum, 11d) && baselineRuns.All(r =>
+                DocxKerningThreshold.TryGetMinimum(r, out ushort minimum) && minimum == firstMinimum);
         var replacements = new Dictionary<DocxParagraph, DocxParagraph>(ReferenceEqualityComparer.Instance);
         foreach (DocxParagraph p in source.Paragraphs.Concat(source.RelatedStories.SelectMany(s => s.Paragraphs)))
         {
@@ -38,9 +35,7 @@ internal static class DocxPlainFootnoteKerning
             for (int i = 0; i < runs.Length; i++)
             {
                 var run = runs[i];
-                ushort minimum = 0;
-                if (run.KerningMinimumHalfPointsValue is { } value &&
-                    (!ushort.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out minimum) || minimum > 32767)) return false;
+                if (!DocxKerningThreshold.TryGetMinimum(run, out ushort minimum)) return false;
                 // Independent Word controls keep automatic superscript note
                 // numbers unkerned, including positive marker thresholds.
                 if ((nominalElevenPointFrame || metElevenPointFrame) && run.FontSize == 11d && elevenPointParagraphs?.Contains(p) == true &&
@@ -68,7 +63,7 @@ internal static class DocxPlainFootnoteKerning
                     !new[] { "Calibri", "Arial", "Times New Roman" }.Contains(run.FontFamily, StringComparer.OrdinalIgnoreCase)) return false;
                 // Measured Word output treats absent/zero as disabled and a
                 // positive threshold as enabled only when the nominal size meets it.
-                bool enabled = minimum > 0 && run.FontSize * 2d >= minimum;
+                bool enabled = DocxKerningThreshold.IsMet(minimum, run.FontSize);
                 bool logicalAdvances = nominalBody && (!enabled || metElevenPointFrame);
                 if (enabled == run.PairKerningEnabled && logicalAdvances == run.UseLogicalSizeForPdfAdvances) continue;
                 runs[i] = run with { PairKerningEnabled = enabled, UseLogicalSizeForPdfAdvances = logicalAdvances };
