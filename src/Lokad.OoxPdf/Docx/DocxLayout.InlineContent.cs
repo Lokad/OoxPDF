@@ -219,16 +219,22 @@ internal sealed partial class DocxLayoutEngine
                 DocxFieldText.CanResolve(field.Kind, pageNumber, pageCount)) &&
             paragraph.Runs.All(run => run.FieldKind is not { } kind || !kind.IsDynamic() ||
                 DocxFieldText.CanResolve(kind, pageNumber, pageCount));
-        if (paragraph.InlineContent is not { } items) return false;
+        var items = paragraph.InlineContent;
         if (paragraph.Equations.Count != 0)
         {
-            if (equations is null ||
+            if (items is null || equations is null ||
                 DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasActualFieldInputs, token).Count != paragraph.Equations.Count) return false;
         }
-        else if (!allowTextOnly || paragraph.Images.Count != 0 ||
-            !DocxInlineContent.HasSupportedSourceOwner(paragraph, hasActualFieldInputs, token) ||
-            !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
-            paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right)) return false;
+        else
+        {
+            if (!allowTextOnly || paragraph.Images.Count != 0 ||
+                !DocxInlineContent.HasSupportedSourceOwner(paragraph, hasActualFieldInputs, token) ||
+                !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
+                paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right)) return false;
+            // Ordinary text paragraphs need no parser-side mixed-content view.
+            // Reuse the same source-run affinity without mutating their model.
+            items ??= DocxInlineContent.FromPrefix(paragraph.Runs, paragraph.Images, token);
+        }
         bool hasTabs = items.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden);
         // Right/center tabs measure a complete following field. Decimal/bar
         // stops and leaders retain their explicit measurement/painting fallback.
