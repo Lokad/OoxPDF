@@ -2037,7 +2037,7 @@ internal static class DocxMarkupTests
         };
 
         PdfPage page = new DocxRenderer(
-                fontResolver: null,
+                fontResolver: new TestFaceFontResolver(),
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
             .RenderBlankPages(document, null, CancellationToken.None)
@@ -2102,7 +2102,7 @@ internal static class DocxMarkupTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
         var renderer = new DocxRenderer(
-            fontResolver: null,
+            fontResolver: new TestFaceFontResolver(),
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
