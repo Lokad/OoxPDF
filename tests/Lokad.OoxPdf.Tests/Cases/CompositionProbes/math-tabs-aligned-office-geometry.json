@@ -1,0 +1,261 @@
+{
+  "Source": "Independent Word 16 PDFs; text and math offsets relative to Start. Existing visual thresholds retained.",
+  "Rows": [
+    {
+      "Id": "math-tabs-right108-body",
+      "Mode": "final-preserve",
+      "InputSha256": "0D23CF8DC85AAB7C59CFAF3707F2E725151419468E31507BF709B43FED0BDDF2",
+      "ReferencePdfSha256": "9BC1F99EF824D41BA4C43DB68D31E72C6F7C4E3AF28208D9B4FFDD592EE9739B",
+      "StartX": 72.024,
+      "StartY": 690.58,
+      "MiddleOffsetX": 53.275999999999996,
+      "EndOffsetX": 191.30599999999998,
+      "MathAnchors": [
+        {
+          "Text": "rate",
+          "OffsetX": 29.396,
+          "OffsetY": 7.079999999999927
+        },
+        {
+          "Text": "time",
+          "OffsetX": 28.676000000000002,
+          "OffsetY": -6.0
+        },
+        {
+          "Text": "rate",
+          "OffsetX": 92.636,
+          "OffsetY": 7.079999999999927
+        },
+        {
+          "Text": "time",
+          "OffsetX": 91.916,
+          "OffsetY": -6.0
+        }
+      ]
+    },
+    {
+      "Id": "math-tabs-right108-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "0D23CF8DC85AAB7C59CFAF3707F2E725151419468E31507BF709B43FED0BDDF2",
+      "ReferencePdfSha256": "BE198E1BA0521DF716F75D416B8552F762EC36F71790B8DE7BAE866CE2E0646A",
+      "StartX": 54.6,
+      "StartY": 619.68,
+      "MiddleOffsetX": 40.416000000000004,
+      "EndOffsetX": 145.08,
+      "MathAnchors": [
+        {
+          "Text": "rate",
+          "OffsetX": 22.32,
+          "OffsetY": 5.3799999999999955
+        },
+        {
+          "Text": "time",
+          "OffsetX": 21.767999999999994,
+          "OffsetY": -4.559999999999945
+        },
+        {
+          "Text": "rate",
+          "OffsetX": 70.27000000000001,
+          "OffsetY": 5.3799999999999955
+        },
+        {
+          "Text": "time",
+          "OffsetX": 69.72,
+          "OffsetY": -4.559999999999945
+        }
+      ]
+    },
+    {
+      "Id": "math-tabs-right108-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "51C5845DE8E93D176C4ED4054D7BADEA28D568BE32796720D671CEAEA94A4708",
+      "ReferencePdfSha256": "87CCCE21CEFCA2C99F6466BBBAF7A44E4AA7C3F877395F1766233A966128B03C",
+      "StartX": 305.69,
+      "StartY": 690.1,
+      "MiddleOffsetX": 53.30000000000001,
+      "EndOffsetX": 191.32999999999998,
+      "MathAnchors": [
+        {
+          "Text": "rate",
+          "OffsetX": 29.420000000000016,
+          "OffsetY": 7.079999999999927
+        },
+        {
+          "Text": "time",
+          "OffsetX": 28.69999999999999,
+          "OffsetY": -6.0
+        },
+        {
+          "Text": "rate",
+          "OffsetX": 92.66000000000003,
+          "OffsetY": 7.079999999999927
+        },
+        {
+          "Text": "time",
+          "OffsetX": 91.94,
+          "OffsetY": -6.0
+        }
+      ]
+    },
+    {
+      "Id": "math-tabs-right108-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "51C5845DE8E93D176C4ED4054D7BADEA28D568BE32796720D671CEAEA94A4708",
+      "ReferencePdfSha256": "CA8168CE3C502399DE723F3D778E0D3B48D6D14E13874AE36AF5CE5C6EFBAA80",
+      "StartX": 231.82,
+      "StartY": 619.32,
+      "MiddleOffsetX": 40.410000000000025,
+      "EndOffsetX": 145.07999999999998,
+      "MathAnchors": [
+        {
+          "Text": "rate",
+          "OffsetX": 22.29000000000002,
+          "OffsetY": 5.3799999999999955
+        },
+        {
+          "Text": "time",
+          "OffsetX": 21.76000000000002,
+          "OffsetY": -4.560000000000059
+        },
+        {
+          "Text": "rate",
+          "OffsetX": 70.26999999999998,
+          "OffsetY": 5.3799999999999955
+        },
+        {
+          "Text": "time",
+          "OffsetX": 69.72000000000003,
+          "OffsetY": -4.560000000000059
+        }
+      ]
+    },
+    {
+      "Id": "math-tabs-center108-body",
+      "Mode": "final-preserve",
+      "InputSha256": "622223AE6915255A5EC97EE3C39F7F618BC446C080637DAAD219D480AB3203AF",
+      "ReferencePdfSha256": "060085A902C4BA819FB7F5C03438B4123A514D5FF1D26860D733341767211277",
+      "StartX": 72.024,
+      "StartY": 690.58,
+      "MiddleOffsetX": 80.636,
+      "EndOffsetX": 203.666,
+      "MathAnchors": [
+        {
+          "Text": "rate",
+          "OffsetX": 29.396,
+          "OffsetY": 7.079999999999927
+        },
+        {
+          "Text": "time",
+          "OffsetX": 28.676000000000002,
+          "OffsetY": -6.0
+        },
+        {
+          "Text": "rate",
+          "OffsetX": 120.02600000000001,
+          "OffsetY": 7.079999999999927
+        },
+        {
+          "Text": "time",
+          "OffsetX": 119.30600000000001,
+          "OffsetY": -6.0
+        }
+      ]
+    },
+    {
+      "Id": "math-tabs-center108-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "622223AE6915255A5EC97EE3C39F7F618BC446C080637DAAD219D480AB3203AF",
+      "ReferencePdfSha256": "30AF7C893EC8803CB3A7F663E0D042D3C597310417711E8257DD0B1955406F65",
+      "StartX": 54.6,
+      "StartY": 619.68,
+      "MiddleOffsetX": 61.18,
+      "EndOffsetX": 154.46,
+      "MathAnchors": [
+        {
+          "Text": "rate",
+          "OffsetX": 22.32,
+          "OffsetY": 5.3799999999999955
+        },
+        {
+          "Text": "time",
+          "OffsetX": 21.767999999999994,
+          "OffsetY": -4.559999999999945
+        },
+        {
+          "Text": "rate",
+          "OffsetX": 91.03,
+          "OffsetY": 5.3799999999999955
+        },
+        {
+          "Text": "time",
+          "OffsetX": 90.48000000000002,
+          "OffsetY": -4.559999999999945
+        }
+      ]
+    },
+    {
+      "Id": "math-tabs-center108-footer",
+      "Mode": "final-preserve",
+      "InputSha256": "C22BE01FF50DBEFAFFB6CE8C39DD96F12E64508F9151FC4FCDAB9E353D65E5F5",
+      "ReferencePdfSha256": "D894973596C79C29B7A4FE8B43AA3BB5BE0740DD85F6610663CB820C44A20AD0",
+      "StartX": 72.024,
+      "StartY": 42,
+      "MiddleOffsetX": 80.636,
+      "EndOffsetX": 203.666,
+      "MathAnchors": [
+        {
+          "Text": "rate",
+          "OffsetX": 29.396,
+          "OffsetY": 7.103999999999999
+        },
+        {
+          "Text": "time",
+          "OffsetX": 28.676000000000002,
+          "OffsetY": -6
+        },
+        {
+          "Text": "rate",
+          "OffsetX": 120.02600000000001,
+          "OffsetY": 7.103999999999999
+        },
+        {
+          "Text": "time",
+          "OffsetX": 119.30600000000001,
+          "OffsetY": -6
+        }
+      ]
+    },
+    {
+      "Id": "math-tabs-center108-footer",
+      "Mode": "all-word-compatible",
+      "InputSha256": "C22BE01FF50DBEFAFFB6CE8C39DD96F12E64508F9151FC4FCDAB9E353D65E5F5",
+      "ReferencePdfSha256": "C40EC4B6B3899EA3DE488180D9DD46463D24D3631117D21110394847C5EF6B4D",
+      "StartX": 54.6,
+      "StartY": 127.85,
+      "MiddleOffsetX": 61.18,
+      "EndOffsetX": 154.46,
+      "MathAnchors": [
+        {
+          "Text": "rate",
+          "OffsetX": 22.32,
+          "OffsetY": 5.3700000000000045
+        },
+        {
+          "Text": "time",
+          "OffsetX": 21.767999999999994,
+          "OffsetY": -4.559999999999988
+        },
+        {
+          "Text": "rate",
+          "OffsetX": 91.03,
+          "OffsetY": 5.3700000000000045
+        },
+        {
+          "Text": "time",
+          "OffsetX": 90.48000000000002,
+          "OffsetY": -4.559999999999988
+        }
+      ]
+    }
+  ]
+}

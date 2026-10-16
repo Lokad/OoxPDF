@@ -61,6 +61,11 @@ internal sealed partial class DocxLayoutEngine
                 }).ToArray(),
                 InlineFrame = line.InlineFrame is { } frame ? new(frame.BaselineInset * scale, frame.Height * scale) : null,
                 InlineObjectEndOffsetX = line.InlineObjectEndOffsetX * scale,
+                InlineSourceExtents = line.InlineSourceExtents.Select(extent =>
+                {
+                    token.ThrowIfCancellationRequested();
+                    return extent.Scale(scale);
+                }).ToArray(),
                 StaticStoryUsesPhysicalY = true
             };
         }

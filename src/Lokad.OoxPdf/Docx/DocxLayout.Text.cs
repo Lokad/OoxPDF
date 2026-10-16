@@ -95,22 +95,7 @@ internal sealed partial class DocxLayoutEngine
 
         return segments;
 
-        double GetAlignedTabFieldStart(DocxResolvedTabStop tabStop, double fieldWidth, double? decimalAlignmentWidth)
-        {
-            if (string.Equals(tabStop.Value, "right", StringComparison.OrdinalIgnoreCase))
-            {
-                return tabStop.PositionPoints - fieldWidth;
-            }
 
-            if (decimalAlignmentWidth is not null)
-            {
-                return tabStop.PositionPoints - decimalAlignmentWidth.Value;
-            }
-
-            return string.Equals(tabStop.Value, "center", StringComparison.OrdinalIgnoreCase)
-                ? tabStop.PositionPoints - (fieldWidth / 2d)
-                : tabStop.PositionPoints;
-        }
     }
 
     private static double MeasureTextSpans(
@@ -625,6 +610,23 @@ internal sealed partial class DocxLayoutEngine
 
             return -1;
         }
+    }
+
+    private static double GetAlignedTabFieldStart(DocxResolvedTabStop tabStop, double fieldWidth, double? decimalAlignmentWidth)
+    {
+        if (string.Equals(tabStop.Value, "right", StringComparison.OrdinalIgnoreCase))
+        {
+            return tabStop.PositionPoints - fieldWidth;
+        }
+
+        if (decimalAlignmentWidth is not null)
+        {
+            return tabStop.PositionPoints - decimalAlignmentWidth.Value;
+        }
+
+        return string.Equals(tabStop.Value, "center", StringComparison.OrdinalIgnoreCase)
+            ? tabStop.PositionPoints - (fieldWidth / 2d)
+            : tabStop.PositionPoints;
     }
 
     private static double GetAlignedTabFieldEnd(DocxResolvedTabStop tabStop, double fieldWidth, double? decimalAlignmentWidth)

@@ -1379,6 +1379,7 @@ internal sealed partial class DocxRenderer
             List<(DocxHyperlinkSpan Link, double MinX, double MaxX)>? previousLineLinks = null;
             double previousLineTop = 0d;
             double previousLineBottomFallback = 0d;
+            double previousPaintedMathBottom = double.PositiveInfinity;
             double? previousDelta = null;
             bool previousUsesBodyLineBox = false;
             foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(drawingPages, page, pageIndex, markupContext, page.Height))
@@ -1407,7 +1408,7 @@ internal sealed partial class DocxRenderer
                         : flushNextTop < previousLineTop
                             ? Math.Max(flushNextTop, previousLineBottomFallback)
                             : previousLineBottomFallback;
-                    EmitLineLinkRects(previousLineLinks, previousLineTop, flushBottom);
+                    EmitLineLinkRects(previousLineLinks, previousLineTop, Math.Min(flushBottom, previousPaintedMathBottom));
                     previousLineLinks = null;
                 }
 
@@ -1425,6 +1426,7 @@ internal sealed partial class DocxRenderer
                     ? BodyHyperlinkRectHorizontalPadPoints * textEmissionFontScale
                     : HyperlinkRectHorizontalPadEm * line.FontSize;
                 var mergedLinkRects = new List<(DocxHyperlinkSpan Link, double MinX, double MaxX, double Top, double BaseBl, double BaseFs)>();
+                double paintedMathBottom = double.PositiveInfinity;
                 foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, useWordCompatibleTextProfile, cancellationToken))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -1466,6 +1468,9 @@ internal sealed partial class DocxRenderer
                         candidate.EndInlineItemIndex is int end && extent.ItemIndex >= start && extent.ItemIndex < end);
                     if (link is null) continue;
                     double baseline = line.BaselineY - textEmissionBaselineOffset;
+                    // A text line slot can be shallower than a fraction's final
+                    // painted extent, especially after printed table placement.
+                    paintedMathBottom = Math.Min(paintedMathBottom, baseline - extent.BelowBaseline);
                     AddLinkFragment(link, line.X + extent.StartOffset + textEmissionXOffset,
                         line.X + extent.EndOffset + textEmissionXOffset,
                         baseline + Math.Max(extent.AboveBaseline, line.InlineFrame?.BaselineInset ?? 0d),
@@ -1526,6 +1531,7 @@ internal sealed partial class DocxRenderer
                     }
 
                     previousLineTop = heldTop;
+                    previousPaintedMathBottom = paintedMathBottom;
                     // RV06: a page-last rectangle covers its line slot plus trailing paragraph space.
                     double heldSlotHeight = line.BodyLineBoxHeightPoints ?? line.LineHeight ?? ((HyperlinkRectTopEm + HyperlinkRectBottomEm) * heldFs);
                     double heldAfterSpacing = line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d;
@@ -1537,7 +1543,7 @@ internal sealed partial class DocxRenderer
 
             if (previousLineLinks is not null)
             {
-                EmitLineLinkRects(previousLineLinks, previousLineTop, previousLineBottomFallback);
+                EmitLineLinkRects(previousLineLinks, previousLineTop, Math.Min(previousLineBottomFallback, previousPaintedMathBottom));
             }
 
             annotations.AddRange(CreateNoteReferenceAnnotations(page, pageNumber, pageCount, fontResources,

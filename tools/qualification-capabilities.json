@@ -1225,5 +1225,30 @@
     "PortableRenderingSingleMathAnnotationsPreserveFrames",
     "DocxRendererUsesSourceRunIndexesForHyperlinkAnnotations",
     "DocxRendererUsesSourceRunIndexesForBookmarkDestinations"
+  ],
+  "docx-aligned-inline-fields": [
+    "DocxInlineCompositionAlignedTabs",
+    "DocxInlineCompositionLeftTab",
+    "DocxInlineCompositionSourceCursorRetainsBreakTabsAndFirstLineLabel",
+    "DocxInlineCompositionRunSplittingPreservesMeasurementAndSourceOwners",
+    "DocxInlineCompositionGroupedLiteralsRetainBookmarksAndRunSplitting",
+    "DocxInlineCompositionCommentHighlightsMatchIndependentSelectionBounds",
+    "DocxInlineCompositionAtomicFormulaHyperlinksCoverPaintedGlyphs",
+    "DocxInlineCompositionGroupedHyperlinksFollowPrintedReviewRows",
+    "DocxInlineCompositionSingleMathLinksTargetMeasuredFormula",
+    "DocxInlineCompositionHyperlinkPreservesSingleMathFrame",
+    "DocxInlineCompositionCommentsPreserveMathematicsAndCaptions",
+    "DocxStaticTableMathCompleteReportMatchesIndependentPrintedFrames",
+    "DocxBodyHyperlink",
+    "DocxRendererMergesMultiRunHyperlinkAnnotationsPerLine",
+    "DocxParagraphLayoutUsesAuthoredLeftTabStops",
+    "DocxParagraphLayoutUsesAuthoredRightTabStops",
+    "DocxParagraphLayoutUsesAuthoredCenterTabStops",
+    "DocxParagraphLayoutUsesAuthoredDecimalTabStops",
+    "DocxParagraphLayoutRightAlignsDecimalTabsWithoutDecimalSeparator",
+    "DocxWordCompatibleAllMarkupScalesTabStopPositions",
+    "PortableRenderingSingleMathAnnotationsPreserveFrames",
+    "PortableRenderingNormalNotesPreserveInlineImagesAndMath",
+    "DocxInlineCompositionNormalNoteMathSurvivesRunSplittingAndContinuation"
   ]
 }

@@ -219,10 +219,12 @@ internal sealed partial class DocxLayoutEngine
             paragraph.Equations.Count == 0 ||
             DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasActualFieldInputs).Count != paragraph.Equations.Count) return false;
         bool hasTabs = items.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden);
-        // Left/default tabs depend only on the preceding advance. Aligned fields,
-        // bar stops and leaders need a separate field-measurement/painting contract.
+        // Right/center tabs measure a complete following field. Decimal/bar
+        // stops and leaders retain their explicit measurement/painting fallback.
         if (hasTabs && paragraph.TabStops.Any(stop =>
             stop.Value is not null && !string.Equals(stop.Value, "left", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(stop.Value, "right", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(stop.Value, "center", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(stop.Value, "clear", StringComparison.OrdinalIgnoreCase) ||
             stop.LeaderValue is not null && !string.Equals(stop.LeaderValue, "none", StringComparison.OrdinalIgnoreCase))) return false;
         if (!double.IsFinite(scale) || scale <= 0d) return false;
@@ -472,8 +474,28 @@ internal sealed partial class DocxLayoutEngine
             }
             if (Atom(index).Source is DocxInlineTab)
             {
-                double stop = ResolveNextTabStop(advance, tabStops, defaultTabStopPoints * scale).PositionPoints;
+                var tabStop = ResolveNextTabStop(advance, tabStops, defaultTabStopPoints * scale);
+                double stop = tabStop.PositionPoints;
                 double available = output.Count == 0 ? firstWidth : nextWidth;
+                if (string.Equals(tabStop.Value, "right", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(tabStop.Value, "center", StringComparison.OrdinalIgnoreCase))
+                {
+                    double fieldWidth = 0d;
+                    for (int field = index + 1; field < measured.Count && Atom(field).Source is not (DocxInlineTab or DocxInlineBreak); field++)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (field > index + 1) fieldWidth += InlineTextBoundaryAdvance(Atom(field - 1), Atom(field));
+                        fieldWidth += Atom(field).Advance;
+                    }
+                    double start = GetAlignedTabFieldStart(tabStop, fieldWidth, null);
+                    // The complete aligned field must fit without overlap. Its
+                    // wrapping/leader/decimal variants remain staged fallbacks.
+                    if (!double.IsFinite(start) || start < advance || start + fieldWidth > available) return false;
+                    current.Add(Atom(index) with { Advance = start - advance });
+                    advance = start;
+                    index++;
+                    continue;
+                }
                 if (stop > available && current.Count != 0)
                 {
                     Flush(new(index));

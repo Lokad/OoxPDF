@@ -68,13 +68,7 @@ internal sealed partial class DocxRenderer
                 InlineMath = line.InlineMath.Select(math => math with { OffsetX = math.OffsetX * self.PrintScale }).ToArray(),
                 InlineFrame = line.InlineFrame is { } frame
                     ? new(frame.BaselineInset * self.PrintScale, frame.Height * self.PrintScale) : null,
-                InlineSourceExtents = line.InlineSourceExtents.Select(extent => extent with
-                {
-                    StartOffset = extent.StartOffset * self.PrintScale,
-                    EndOffset = extent.EndOffset * self.PrintScale,
-                    AboveBaseline = extent.AboveBaseline * self.PrintScale,
-                    BelowBaseline = extent.BelowBaseline * self.PrintScale
-                }).ToArray(),
+                InlineSourceExtents = line.InlineSourceExtents.Select(extent => extent.Scale(self.PrintScale)).ToArray(),
                 Segments = line.Segments
                     .Select(segment => segment with
                     {

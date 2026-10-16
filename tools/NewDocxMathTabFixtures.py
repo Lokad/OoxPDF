@@ -3,7 +3,11 @@ from copy import deepcopy
 from pathlib import Path
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 from xml.etree import ElementTree as E
-import hashlib, json
+import hashlib, json, argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--aligned-only", action="store_true", help="Generate bounded right/center controls without rewriting accepted left/default cases")
+args = parser.parse_args()
 
 root = Path(__file__).resolve().parent.parent
 cases = root / 'tests/Lokad.OoxPdf.Tests/Cases'
@@ -27,8 +31,9 @@ def run(parent, value=None):
     return node
 
 manifest = []
-for stop in ['default18', 'left72']:
-    for container in ['body', 'cell', 'header', 'footer']:
+for stop in (['right108', 'center108'] if args.aligned_only else ['default18', 'left72']):
+    containers = (['body', 'cell'] if stop == 'right108' else ['body', 'footer']) if args.aligned_only else ['body', 'cell', 'header', 'footer']
+    for container in containers:
         with ZipFile(source) as archive:
             entries = {name:archive.read(name) for name in archive.namelist()}
         document = E.fromstring(entries['word/document.xml'])
@@ -43,6 +48,9 @@ for stop in ['default18', 'left72']:
         if stop == 'left72':
             for position in ['1440', '2880']:
                 E.SubElement(tabs, w+'tab', {w+'val':'left', w+'pos':position})
+        if stop in ['right108', 'center108']:
+            for position in ['2160', '4320']:
+                E.SubElement(tabs, w+'tab', {w+'val':stop[:-3], w+'pos':position})
         run(paragraph, 'Start ')
         paragraph.append(equations[0])
         E.SubElement(run(paragraph), w+'tab')
@@ -96,6 +104,6 @@ for stop in ['default18', 'left72']:
             for name, data in sorted(entries.items()):
                 info = ZipInfo(name, (2026,10,16,0,0,0)); info.compress_type = ZIP_DEFLATED
                 archive.writestr(info, data)
-        manifest.append(dict(Id=output.stem,Input=output.relative_to(root).as_posix(),Sha256=hashlib.sha256(output.read_bytes()).hexdigest().upper(),HeldOut=False,ExpectedEquationCount=2,ExpectedText=['Start','Middle','End.','Following prose.']))
-(cases/'CompositionProbes/math-tabs.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
+        manifest.append(dict(Id=output.stem,Input=output.relative_to(root).as_posix(),Sha256=hashlib.sha256(output.read_bytes()).hexdigest().upper(),HeldOut=args.aligned_only and container != 'body',ExpectedEquationCount=2,ExpectedText=['Start','Middle','End.','Following prose.']))
+(cases/('CompositionProbes/math-tabs-aligned.json' if args.aligned_only else 'CompositionProbes/math-tabs.json')).write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
 print('Pinned',len(manifest),'mixed-math tab controls')

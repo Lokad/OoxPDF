@@ -253,7 +253,7 @@ internal static class DocxInlineCompositionTests
             {
                 int number = row.GetProperty("Page").GetInt32();
                 var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[number - 1]).ToArray();
-                var start = shows.Single(show => show.Text.Trim() == "Start");
+                var start = shows.Single(show => show.Text.TrimStart().StartsWith("Sta", StringComparison.Ordinal));
                 TestAssert.True(Math.Abs(start.Y - row.GetProperty("BaselineY").GetDouble()) < .5d,
                     $"Page-owned field/math baseline retains its independent Word frame: {group.Key}/{number}/{start.Y}.");
                 var fields = shows.Where(show => Math.Abs(show.Y - start.Y) < .1d &&
@@ -340,7 +340,7 @@ internal static class DocxInlineCompositionTests
             {
                 int number = row.GetProperty("Page").GetInt32();
                 var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[number - 1]).ToArray();
-                var start = shows.Single(show => show.Text.Trim() == "Start");
+                var start = shows.Single(show => show.Text.TrimStart().StartsWith("Sta", StringComparison.Ordinal));
                 TestAssert.True(Math.Abs(start.Y - row.GetProperty("BaselineY").GetDouble()) < .15d, "Cell PAGE and math share the independently measured baseline.");
                 var fields = shows.Where(show => show.Text.Trim() == number.ToString(System.Globalization.CultureInfo.InvariantCulture)).OrderBy(show => show.X).ToArray();
                 TestAssert.Equal(2, fields.Length);
@@ -817,7 +817,7 @@ internal static class DocxInlineCompositionTests
             var page = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                 : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, default).Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).ToArray();
-            var start = shows.Single(show => show.Text.Trim() == "Start");
+            var start = shows.Single(show => show.Text.TrimStart().StartsWith("Sta", StringComparison.Ordinal));
             TestAssert.True(Math.Abs(start.Y - row.GetProperty("BaselineY").GetDouble()) < .5d,
                 $"Cached results preserve the independently printed paragraph frame: {input}/{mode}/{start.Y}.");
             foreach (string value in new[] { "North", "South" })
@@ -1230,12 +1230,140 @@ internal static class DocxInlineCompositionTests
         }
         foreach (var stop in new[] { new DocxTabStop(72d, null, "right", null), new(72d, null, "center", null),
             new(72d, null, "decimal", null), new(72d, null, "bar", null), new(72d, null, "left", "dot") })
-            TestAssert.True(!Measure(paragraph with { TabStops = [stop] }, 300d, 1d, out _), "Unmigrated alignment and leaders retain explicit fallback.");
+            TestAssert.True(!Measure(paragraph with { TabStops = [stop] }, 300d, 1d, out _), "Overlapping aligned fields, decimal/bar stops and leaders retain explicit fallback.");
         TestAssert.True(!Measure(paragraph with { TabStops = [new(400d, null, "left", null)] }, 100d, 1d, out _), "An out-of-frame stop retains fallback.");
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph,
             equations, new TrackingMeasurer(), 12d, 300d, 300d, 9d, 16d, 1d, cancellation.Token, out _));
+    }
+
+    public static void DocxInlineCompositionAlignedTabsMeasureCompleteFieldsAndKeepFallbacks()
+    {
+        var source = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-tabs-default18-body")
+            .Paragraphs.Single(paragraph => paragraph.Equations.Count != 0);
+        var equations = source.Equations.ToDictionary(equation => equation,
+            equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 11d, 16d));
+        foreach (string alignment in new[] { "right", "center" })
+        foreach (double scale in new[] { 1d, .5d })
+        {
+            var paragraph = source with { TabStops = [new(216d, null, alignment, null), new(432d, null, alignment, null)] };
+            bool Measure(double width, out IReadOnlyList<DocxMeasuredInlineLine>? lines) =>
+                DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph, equations, new TrackingMeasurer(),
+                    12d, width, width, 9d, 16d, scale, default, out lines, defaultTabStopPoints: 18d);
+            TestAssert.True(Measure(600d, out var lines), "Complete right/center fields must measure.");
+            var line = TestAssert.NotNull(lines).Single();
+            TestAssert.Equal(2, line.Fragments.Count(fragment => fragment.Math is not null));
+            double offset = 0d;
+            int tab = 0;
+            foreach (var fragment in line.Fragments)
+            {
+                offset += fragment.LeadingAdvance + fragment.Advance;
+                if (fragment.Source is not DocxInlineTab) continue;
+                double width = tab == 0 ? 35d + 18d * scale : 20d;
+                double expected = (++tab * 216d * scale) - width / (alignment == "right" ? 1d : 2d);
+                TestAssert.True(Math.Abs(offset - expected) < .000001d,
+                    "The tab positions the complete field, including following mathematics.");
+            }
+            TestAssert.True(!Measure(100d, out lines) && lines is null,
+                "An aligned field that exceeds the frame keeps the whole-owner fallback.");
+            var overlap = paragraph with { TabStops = [new((35d + 18d * scale) / scale, null, alignment, null)] };
+            TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineContent(overlap, equations,
+                new TrackingMeasurer(), 12d, 600d, 600d, 9d, 16d, scale, default, out _),
+                "An aligned field cannot overlap already placed inline content.");
+        }
+    }
+
+    public static void DocxInlineCompositionAlignedTabsMatchIndependentWordAndSourceTransforms()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed math fonts are required for aligned mixed fields.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-tabs-aligned-office-geometry.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        foreach (bool annotated in new[] { false, true })
+        {
+            string id = row.GetProperty("Id").GetString()!;
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(),
+                Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(Path.Combine(cases, id + ".docx")))));
+            var mode = row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
+            var document = ReadMutation("CompositionProbes/" + id, mode, annotated, annotated, (xml, w, m) =>
+            {
+                if (!annotated) return;
+                foreach (var equation in xml.Descendants(m + "oMath").ToArray())
+                    equation.ReplaceWith(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PublicCalculation"), new XElement(equation)));
+            }, partOverride: id.EndsWith("-footer", StringComparison.Ordinal) ? "word/math-tabs-footer.xml" : null);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).Single();
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
+            var start = shows.Single(show => show.Text.TrimStart().StartsWith("Sta", StringComparison.Ordinal));
+            double startX = VisibleTextStartX(start);
+            TestAssert.True(Math.Abs(start.Y - row.GetProperty("StartY").GetDouble()) < .5d,
+                "Aligned fields retain the independent body/cell/static baseline within the existing frame residual.");
+            foreach (var name in new[] { "Middle", "End." })
+            {
+                string prefix = name == "Middle" ? "Mid" : "En";
+                var text = shows.Single(show => show.Text.TrimStart().StartsWith(prefix, StringComparison.Ordinal));
+                double expected = row.GetProperty(name.TrimEnd('.') + "OffsetX").GetDouble();
+                TestAssert.True(Math.Abs(VisibleTextStartX(text) - startX - expected) < .2d,
+                    "Text consumes the complete independently aligned field: " + id + "/" + name + ".");
+            }
+            var mathFonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
+                .Select(resource => resource.Font).ToHashSet();
+            var math = shows.Where(show => mathFonts.Contains(show.Font)).ToArray();
+            TestAssert.Equal("ratetimeratetime", string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+            TestAssert.Equal(16, math.Length);
+            var anchors = row.GetProperty("MathAnchors").EnumerateArray().ToArray();
+            for (int anchor = 0; anchor < anchors.Length; anchor++)
+            {
+                var glyph = math[anchor * 4];
+                TestAssert.True(Math.Abs(glyph.X - startX - anchors[anchor].GetProperty("OffsetX").GetDouble()) < .25d &&
+                    Math.Abs(glyph.Y - start.Y - anchors[anchor].GetProperty("OffsetY").GetDouble()) < .3d,
+                    "Mathematical numerator/denominator anchors follow the independent tab field: " + id + ".");
+            }
+            if (annotated) AssertTwoFormulaLinksCoverGlyphs(page, math, id + "/" + mode);
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Supported aligned fields cannot discard their formulas.");
+        }
+    }
+
+    public static void DocxInlineCompositionLeftTabMathLinksCoverCellAndStaticGlyphs()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed math fonts are required for mathematical link frames.");
+        foreach (string container in new[] { "cell", "footer" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string fixture = "CompositionProbes/math-tabs-default18-" + container;
+            var document = ReadMutation(fixture, mode, true, false, (xml, w, m) =>
+            {
+                foreach (var equation in xml.Descendants(m + "oMath").ToArray())
+                    equation.ReplaceWith(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PublicCalculation"), new XElement(equation)));
+            }, partOverride: container == "footer" ? "word/math-tabs-footer.xml" : null);
+            var page = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, null, default).Single();
+            var mathFonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
+                .Select(resource => resource.Font).ToHashSet();
+            var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
+                .Where(show => mathFonts.Contains(show.Font)).ToArray();
+            TestAssert.Equal("ratetimeratetime", string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+            AssertTwoFormulaLinksCoverGlyphs(page, math, fixture + "/" + mode);
+        }
+    }
+
+    private static void AssertTwoFormulaLinksCoverGlyphs(PdfPage page,
+        IEnumerable<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)> glyphs, string context)
+    {
+        var links = page.Annotations.Where(annotation => annotation.IsDestination).ToArray();
+        TestAssert.Equal(2, links.Length);
+        foreach (var glyph in glyphs)
+            TestAssert.True(links.Any(link => link.X <= glyph.X + .01d && link.X + link.Width >= glyph.X - .01d &&
+                link.Y <= glyph.Y + .01d && link.Y + link.Height >= glyph.Y - .01d),
+                "Source-backed links cover painted mathematical glyphs: " + context + " at " + glyph.X + "," + glyph.Y + "; " +
+                string.Join(";", links.Select(link => $"{link.X},{link.Y},{link.Width},{link.Height}")));
     }
 
     public static void DocxInlineCompositionContainedInkRetainsPreparedOccupiedFrames()

@@ -48,7 +48,14 @@ internal sealed record DocxEquationLayout(DocxPreparedMathParagraph Math, double
 internal sealed record DocxInlineMathPlacement(DocxPreparedMathParagraph Math, double OffsetX);
 internal readonly record struct DocxInlineLineFrame(double BaselineInset, double Height);
 internal readonly record struct DocxInlineSourceExtent(int ItemIndex, double StartOffset, double EndOffset,
-    double AboveBaseline = 0d, double BelowBaseline = 0d, bool IsMath = false);
+    double AboveBaseline = 0d, double BelowBaseline = 0d, bool IsMath = false)
+{
+    public DocxInlineSourceExtent Scale(double scale) => this with
+    {
+        StartOffset = StartOffset * scale, EndOffset = EndOffset * scale,
+        AboveBaseline = AboveBaseline * scale, BelowBaseline = BelowBaseline * scale
+    };
+}
 
 internal sealed record DocxTextLineLayout(
     string Text,
