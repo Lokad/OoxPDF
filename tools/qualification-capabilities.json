@@ -831,5 +831,26 @@
     "DocxLayoutUsesCompactBodyNumPagesFieldForLineBreaking",
     "DocxTableLayoutUsesResolvedPageFieldForCellLineBreaking",
     "DocxTableLayoutUsesCompactNumPagesFieldForCellLineBreaking"
+  ],
+  "docx-inline-measured-cursors": [
+    "DocxInlineCompositionSourceCursor",
+    "DocxInlineCompositionMeasuredAtomsRebindOnlyCounters",
+    "DocxInlineCompositionCounterAtomsMeasureOnlyTheirOwnedInputs",
+    "DocxFieldTextCounterInputsRemainIndependent",
+    "DocxInlineCompositionWordWrappingSharesBreakRulesAcrossRunSplits",
+    "DocxInlineCompositionLeftTabMeasurementRetainsWrapAndFallbackContracts",
+    "DocxInlineCompositionMeasurementKeepsMultipleEquationsAndPicturesInSourceOrder",
+    "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement",
+    "DocxInlineCompositionLiteral",
+    "DocxInlineCompositionBrokenLiteralsSurviveCellAndStaticPlacement",
+    "DocxInlineCompositionNumberedMathPreservesFourStoryContent",
+    "DocxInlineCompositionStaticPageFieldsRequireActualPageInputs",
+    "DocxInlineCompositionStaticPageFieldsMatchIndependentWordFrames",
+    "DocxInlineCompositionNoteImagesAndMathSurviveSourceSplitting",
+    "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance",
+    "PortableRenderingHardBreakMathRowsPreserveDisplayFramesAcrossStories",
+    "PortableRenderingStaticPageFieldsPreserveMathAcrossDigitBoundary",
+    "PortableRenderingNormalNotesPreserveInlineImagesAndMath",
+    "PortableRenderingOrderedMathCellRetainsPrintedBorderFrame"
   ]
 }

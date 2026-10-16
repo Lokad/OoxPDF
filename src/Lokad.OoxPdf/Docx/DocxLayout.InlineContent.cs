@@ -19,8 +19,19 @@ internal sealed record DocxMeasuredInlineLine(IReadOnlyList<DocxMeasuredInlineFr
 {
     public bool IsDisplayGroup { get; init; }
     public double TextBaselineInset { get; init; }
+    public DocxInlineSourceCursor EndCursor { get; init; }
     public IReadOnlyList<DocxTextSegmentLayout> ListLabelSegments { get; init; } = [];
 }
+// A cursor commits consumed source only after its container admits the line.
+// A split counter retains the value bound when its first digits were placed.
+internal readonly record struct DocxInlineSourceCursor(int AtomIndex, int TextOffset = 0,
+    string? BoundFieldValue = null, int LineIndex = 0)
+{
+    public bool IsComplete(DocxMeasuredInlineAtoms atoms) => AtomIndex == atoms.Fragments.Count && TextOffset == 0;
+}
+internal sealed record DocxMeasuredInlineAtoms(DocxParagraph Paragraph,
+    IReadOnlyList<DocxMeasuredInlineFragment> Fragments, IDocxTextMeasurer Measurer,
+    double FontSize, double BaselineInset, double LineHeight, double Scale, double DefaultTabStopPoints);
 internal readonly record struct DocxInlineParagraphFrame(double OccupiedHeight, DocxTextLineLayout LastLine);
 
 internal sealed partial class DocxLayoutEngine
@@ -143,6 +154,19 @@ internal sealed partial class DocxLayoutEngine
         int? pageNumber = null, int? pageCount = null)
     {
         lines = null;
+        return double.IsFinite(firstWidth) && double.IsFinite(nextWidth) && firstWidth > 0d && nextWidth > 0d &&
+            TryMeasureOrderedInlineAtoms(paragraph, equations, measurer, fontSize, baselineInset, lineHeight, scale,
+                token, out var atoms, defaultTabStopPoints, pageNumber, pageCount) &&
+            TryWrapOrderedInlineAtoms(atoms, firstWidth, nextWidth, token, out lines, physicalTextBaselineInset);
+    }
+
+    internal static bool TryMeasureOrderedInlineAtoms(DocxParagraph paragraph,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? equations,
+        IDocxTextMeasurer measurer, double fontSize, double baselineInset, double lineHeight, double scale,
+        CancellationToken token, [NotNullWhen(true)] out DocxMeasuredInlineAtoms? atoms,
+        double defaultTabStopPoints = WordDefaultTabStopPoints, int? pageNumber = null, int? pageCount = null)
+    {
+        atoms = null;
         bool hasActualFieldInputs = (pageNumber is not null || pageCount is not null) &&
             paragraph.FieldReferences.All(field => !field.UsesPlaceholder || !field.Kind.IsDynamic() ||
                 DocxFieldText.CanResolve(field.Kind, pageNumber, pageCount)) &&
@@ -158,10 +182,8 @@ internal sealed partial class DocxLayoutEngine
             stop.Value is not null && !string.Equals(stop.Value, "left", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(stop.Value, "clear", StringComparison.OrdinalIgnoreCase) ||
             stop.LeaderValue is not null && !string.Equals(stop.LeaderValue, "none", StringComparison.OrdinalIgnoreCase))) return false;
-        if (!double.IsFinite(firstWidth) || !double.IsFinite(nextWidth) || firstWidth <= 0d || nextWidth <= 0d ||
-            !double.IsFinite(scale) || scale <= 0d) return false;
+        if (!double.IsFinite(scale) || scale <= 0d) return false;
         var runIndices = new Dictionary<DocxTextRun, int>(ReferenceEqualityComparer.Instance);
-        var tabStops = hasTabs ? ScaleTabStopPositions(paragraph.TabStops, scale) : [];
         for (int index = 0; index < paragraph.Runs.Count; index++)
         {
             token.ThrowIfCancellationRequested();
@@ -265,115 +287,9 @@ internal sealed partial class DocxLayoutEngine
             !double.IsFinite(fragment.BaselineInset) || fragment.BaselineInset < 0d ||
             !double.IsFinite(fragment.OccupiedHeight) || fragment.OccupiedHeight < fragment.BaselineInset)) return false;
 
-        var output = new List<DocxMeasuredInlineLine>();
-        var current = new List<DocxMeasuredInlineFragment>();
-        double advance = 0d, above = baselineInset, below = Math.Max(0d, lineHeight - baselineInset);
-        for (int index = 0; index < measured.Count;)
-        {
-            token.ThrowIfCancellationRequested();
-            if (measured[index].Source is DocxInlineBreak) { Flush(); index++; continue; }
-            if (measured[index].Source is DocxInlineTab)
-            {
-                double stop = ResolveNextTabStop(advance, tabStops, defaultTabStopPoints * scale).PositionPoints;
-                double available = output.Count == 0 ? firstWidth : nextWidth;
-                if (stop > available && current.Count != 0)
-                {
-                    Flush();
-                    stop = ResolveNextTabStop(0d, tabStops, defaultTabStopPoints * scale).PositionPoints;
-                    available = nextWidth;
-                }
-                if (!double.IsFinite(stop) || stop < advance || stop > available) return false;
-                current.Add(measured[index] with { Advance = stop - advance });
-                advance = stop;
-                index++;
-                continue;
-            }
-            int end = index + 1;
-            bool space = IsSpace(measured[index]);
-            // A formatting/run boundary is not a word-break opportunity.
-            if (!space && measured[index].Source is DocxInlineText)
-                while (end < measured.Count && measured[end].Source is DocxInlineText && !IsSpace(measured[end])) end++;
-            double groupWidth = 0d;
-            for (int offset = index; offset < end; offset++)
-            {
-                if (offset > index) groupWidth += InlineTextBoundaryAdvance(measured[offset - 1], measured[offset]);
-                groupWidth += measured[offset].Advance;
-            }
-            double width = output.Count == 0 ? firstWidth : nextWidth;
-            if (groupWidth > Math.Max(firstWidth, nextWidth))
-            {
-                if (measured[index].Source is not DocxInlineText) return false;
-                if (current.Count != 0) Flush();
-                var spans = measured.Skip(index).Take(end - index).SelectMany(fragment => fragment.Text).ToArray();
-                // Reuse the existing bounded break search, Unicode rules and
-                // authored character-wrap policy for an overwide text word.
-                var wrapped = WrapTextLines(spans, output.Count == 0 ? firstWidth : nextWidth, nextWidth,
-                    fontSize, measurer, [], 36d, ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: null,
-                    cancellationToken: token).ToArray();
-                if (wrapped.Length == 0) return false;
-                for (int lineIndex = 0; lineIndex < wrapped.Length; lineIndex++)
-                {
-                    token.ThrowIfCancellationRequested();
-                    foreach (var span in wrapped[lineIndex].Spans)
-                    {
-                        int offset = span.SourceTextOffsetInRun - Math.Max(0, span.StyleRun.SourceTextOffsetInRun);
-                        if (offset < 0 || offset > span.StyleRun.Text.Length) return false;
-                        var source = new DocxInlineText(span.StyleRun, offset, Math.Min(span.Text.Length, span.StyleRun.Text.Length - offset));
-                        var segments = CreateTextSegments([span], 0d, fontSize, measurer, [], 36d);
-                        double partWidth = segments.Count == 0 ? 0d : segments[^1].X + segments[^1].Width;
-                        if (!double.IsFinite(partWidth) || partWidth < 0d) return false;
-                        var part = new DocxMeasuredInlineFragment(source, partWidth, baselineInset, Math.Max(lineHeight, baselineInset), [span])
-                            { TextSegments = segments, SourceItemIndex = span.SourceInlineItemIndex };
-                        part = part with { LeadingAdvance = current.Count == 0 ? 0d : InlineTextBoundaryAdvance(current[^1], part) };
-                        current.Add(part);
-                        advance += part.LeadingAdvance + partWidth;
-                    }
-                    if (lineIndex + 1 < wrapped.Length) Flush();
-                }
-                index = end;
-                continue;
-            }
-            double boundary = current.Count == 0 ? 0d : InlineTextBoundaryAdvance(current[^1], measured[index]);
-            if (current.Count != 0 && advance + boundary + groupWidth > width) Flush();
-            if (current.Count == 0 && groupWidth > (output.Count == 0 ? firstWidth : nextWidth))
-            {
-                if (output.Count == 0 && groupWidth <= nextWidth) Flush();
-                else return false;
-            }
-            if (space && current.Count == 0) { index = end; continue; }
-            for (; index < end; index++)
-            {
-                var fragment = measured[index] with
-                    { LeadingAdvance = current.Count == 0 ? 0d : InlineTextBoundaryAdvance(current[^1], measured[index]) };
-                current.Add(fragment); advance += fragment.LeadingAdvance + fragment.Advance;
-                above = Math.Max(above, fragment.BaselineInset);
-                below = Math.Max(below, fragment.OccupiedHeight - fragment.BaselineInset);
-            }
-        }
-        if (current.Count != 0 || output.Count == 0) Flush();
-        lines = output; return true;
+        atoms = new(paragraph, measured, measurer, fontSize, baselineInset, lineHeight, scale, defaultTabStopPoints);
+        return true;
 
-        static bool IsSpace(DocxMeasuredInlineFragment fragment) => fragment.Source is DocxInlineText { Length: > 0 } text &&
-            DocxTextBreakRules.IsBreakableWhitespaceChar(text.Run.Text[text.Start]);
-        double InlineTextBoundaryAdvance(DocxMeasuredInlineFragment left, DocxMeasuredInlineFragment right)
-        {
-            if (ReferenceEquals(left.Source, right.Source) && right.MathContinuationAdvance is { } mathGap)
-                return mathGap;
-            if (left.Text.Count == 0 || right.Text.Count == 0) return 0d;
-            var before = left.Text[^1];
-            var after = right.Text[0];
-            if (!ReferenceEquals(before.StyleRun, after.StyleRun))
-                return DocxTextSpacing.BoundarySpacing(before.StyleRun, before.Text, after.Text);
-            // Tokenization must preserve pair kerning and character spacing
-            // within an authored run. Decode complete Unicode scalars, including
-            // replacement scalars for malformed input, as the text measurer does.
-            System.Text.Rune.DecodeLastFromUtf16(before.Text, out var last, out _);
-            System.Text.Rune.DecodeFromUtf16(after.Text, out var first, out _);
-            string lastText = last.ToString(), firstText = first.ToString();
-            double Measure(string value) => MeasureTextSpansForLayout([before with { Text = value }],
-                fontSize, measurer, [], 36d, null);
-            return Measure(lastText + firstText) - Measure(lastText) - Measure(firstText);
-        }
         void AddMeasuredMath(DocxInlineItem source, DocxPreparedMathParagraph prepared)
         {
             var box = prepared.Box;
@@ -411,7 +327,252 @@ internal sealed partial class DocxLayoutEngine
                 start = end;
             }
         }
-        void Flush()
+    }
+
+    internal static bool TryRebindInlineCounters(DocxMeasuredInlineAtoms atoms, int? pageNumber, int? pageCount,
+        CancellationToken token, [NotNullWhen(true)] out DocxMeasuredInlineAtoms? rebound)
+    {
+        rebound = null;
+        DocxMeasuredInlineFragment[]? changed = null;
+        for (int index = 0; index < atoms.Fragments.Count; index++)
+        {
+            token.ThrowIfCancellationRequested();
+            var fragment = atoms.Fragments[index];
+            if (fragment.Source is not DocxInlineText { Run.FieldKind: { } kind } source || !kind.IsDynamic()) continue;
+            if (fragment.Text.Count != 1 || !DocxFieldText.TryResolve(source.Run,
+                source.Run.Text.Substring(source.Start, source.Length), pageNumber, pageCount, out string value)) return false;
+            var span = fragment.Text[0];
+            if (span.Text == value) continue;
+            span = span with { Text = value };
+            var segments = CreateTextSegments([span], 0d, atoms.FontSize, atoms.Measurer, [], 36d);
+            double width = segments.Count == 0 ? 0d : segments[^1].X + segments[^1].Width;
+            if (!double.IsFinite(width) || width < 0d) return false;
+            changed ??= atoms.Fragments.ToArray();
+            changed[index] = fragment with { Advance = width, Text = [span], TextSegments = segments };
+        }
+        rebound = changed is null ? atoms : atoms with { Fragments = changed };
+        return true;
+    }
+
+    internal static bool TryWrapOrderedInlineAtoms(DocxMeasuredInlineAtoms atoms, double firstWidth, double nextWidth,
+        CancellationToken token, [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines,
+        double? physicalTextBaselineInset = null)
+        => TryWrapOrderedInlineAtomsCore(atoms, firstWidth, nextWidth, token, out lines, physicalTextBaselineInset,
+            default, stopAfterFirstLine: false);
+
+    internal static bool TryGetNextOrderedInlineLine(DocxMeasuredInlineAtoms atoms, DocxInlineSourceCursor cursor,
+        double firstWidth, double nextWidth, CancellationToken token,
+        [NotNullWhen(true)] out DocxMeasuredInlineLine? line, double? physicalTextBaselineInset = null)
+    {
+        line = null;
+        if (cursor.IsComplete(atoms)) return false;
+        if (!TryWrapOrderedInlineAtomsCore(atoms, firstWidth, nextWidth, token, out var lines,
+            physicalTextBaselineInset, cursor, stopAfterFirstLine: true)) return false;
+        line = lines[0];
+        return true;
+    }
+
+    private static bool TryWrapOrderedInlineAtomsCore(DocxMeasuredInlineAtoms atoms, double firstWidth, double nextWidth,
+        CancellationToken token, [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines,
+        double? physicalTextBaselineInset, DocxInlineSourceCursor cursor, bool stopAfterFirstLine)
+    {
+        lines = null;
+        if (!double.IsFinite(firstWidth) || !double.IsFinite(nextWidth) || firstWidth <= 0d || nextWidth <= 0d) return false;
+        var paragraph = atoms.Paragraph;
+        var measured = atoms.Fragments;
+        var measurer = atoms.Measurer;
+        double fontSize = atoms.FontSize, baselineInset = atoms.BaselineInset, lineHeight = atoms.LineHeight,
+            scale = atoms.Scale, defaultTabStopPoints = atoms.DefaultTabStopPoints;
+        var tabStops = paragraph.InlineContent!.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden)
+            ? ScaleTabStopPositions(paragraph.TabStops, scale) : [];
+        if (cursor.AtomIndex < 0 || cursor.AtomIndex > measured.Count || cursor.TextOffset < 0 || cursor.LineIndex < 0 ||
+            cursor.AtomIndex == measured.Count && cursor.TextOffset != 0) return false;
+        DocxMeasuredInlineFragment? partial = null;
+        if (cursor.TextOffset != 0)
+        {
+            var original = measured[cursor.AtomIndex];
+            if (original.Source is not DocxInlineText source || original.Text.Count != 1) return false;
+            bool field = source.Run.FieldKind is { } kind && kind.IsDynamic();
+            string fullValue = field ? cursor.BoundFieldValue ?? original.Text[0].Text : original.Text[0].Text;
+            if (cursor.TextOffset >= fullValue.Length || !field && cursor.BoundFieldValue is not null) return false;
+            var span = original.Text[0] with { Text = fullValue[cursor.TextOffset..],
+                SourceTextOffsetInRun = original.Text[0].SourceTextOffsetInRun + cursor.TextOffset };
+            var segments = CreateTextSegments([span], 0d, fontSize, measurer, [], 36d);
+            double partWidth = segments.Count == 0 ? 0d : segments[^1].X + segments[^1].Width;
+            if (!double.IsFinite(partWidth) || partWidth < 0d) return false;
+            partial = original with
+            {
+                Source = field ? source : source with { Start = source.Start + cursor.TextOffset, Length = source.Length - cursor.TextOffset },
+                Advance = partWidth, Text = [span], TextSegments = segments
+            };
+        }
+        DocxMeasuredInlineFragment Atom(int index) => index == cursor.AtomIndex && partial is not null ? partial : measured[index];
+        var output = new List<DocxMeasuredInlineLine>();
+        var current = new List<DocxMeasuredInlineFragment>();
+        double advance = 0d, above = baselineInset, below = Math.Max(0d, lineHeight - baselineInset);
+        for (int index = cursor.AtomIndex; index < measured.Count;)
+        {
+            token.ThrowIfCancellationRequested();
+            if (Atom(index).Source is DocxInlineBreak)
+            {
+                Flush(new(index + 1));
+                if (stopAfterFirstLine) { lines = output; return true; }
+                index++; continue;
+            }
+            if (Atom(index).Source is DocxInlineTab)
+            {
+                double stop = ResolveNextTabStop(advance, tabStops, defaultTabStopPoints * scale).PositionPoints;
+                double available = output.Count == 0 ? firstWidth : nextWidth;
+                if (stop > available && current.Count != 0)
+                {
+                    Flush(new(index));
+                    if (stopAfterFirstLine) { lines = output; return true; }
+                    stop = ResolveNextTabStop(0d, tabStops, defaultTabStopPoints * scale).PositionPoints;
+                    available = nextWidth;
+                }
+                if (!double.IsFinite(stop) || stop < advance || stop > available) return false;
+                current.Add(Atom(index) with { Advance = stop - advance });
+                advance = stop;
+                index++;
+                continue;
+            }
+            int end = index + 1;
+            bool space = IsSpace(Atom(index));
+            // A formatting/run boundary is not a word-break opportunity.
+            if (!space && Atom(index).Source is DocxInlineText)
+                while (end < measured.Count && Atom(end).Source is DocxInlineText && !IsSpace(Atom(end))) end++;
+            double groupWidth = 0d;
+            for (int offset = index; offset < end; offset++)
+            {
+                if (offset > index) groupWidth += InlineTextBoundaryAdvance(measured[offset - 1], Atom(offset));
+                groupWidth += Atom(offset).Advance;
+            }
+            double width = output.Count == 0 ? firstWidth : nextWidth;
+            if (groupWidth > Math.Max(firstWidth, nextWidth))
+            {
+                if (Atom(index).Source is not DocxInlineText) return false;
+                if (current.Count != 0)
+                {
+                    Flush(new(index));
+                    if (stopAfterFirstLine) { lines = output; return true; }
+                }
+                var spans = Enumerable.Range(index, end - index).SelectMany(atom => Atom(atom).Text).ToArray();
+                // Reuse the existing bounded break search, Unicode rules and
+                // authored character-wrap policy for an overwide text word.
+                var wrapped = WrapTextLines(spans, output.Count == 0 ? firstWidth : nextWidth, nextWidth,
+                    fontSize, measurer, [], 36d, ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: null,
+                    cancellationToken: token).ToArray();
+                if (wrapped.Length == 0) return false;
+                for (int lineIndex = 0; lineIndex < wrapped.Length; lineIndex++)
+                {
+                    token.ThrowIfCancellationRequested();
+                    foreach (var span in wrapped[lineIndex].Spans)
+                    {
+                        DocxInlineText source;
+                        if (span.StyleRun.FieldKind is { } fieldKind && fieldKind.IsDynamic())
+                        {
+                            // A resolved counter may have more digits than its
+                            // canonical placeholder. Its source stays canonical;
+                            // the cursor carries a partially consumed value.
+                            source = measured.Skip(index).Take(end - index)
+                                .Select(fragment => fragment.Source).OfType<DocxInlineText>()
+                                .First(item => ReferenceEquals(item.Run, span.StyleRun));
+                        }
+                        else
+                        {
+                            int offset = span.SourceTextOffsetInRun - Math.Max(0, span.StyleRun.SourceTextOffsetInRun);
+                            if (offset < 0 || offset > span.StyleRun.Text.Length) return false;
+                            source = new(span.StyleRun, offset, Math.Min(span.Text.Length, span.StyleRun.Text.Length - offset));
+                        }
+                        var segments = CreateTextSegments([span], 0d, fontSize, measurer, [], 36d);
+                        double partWidth = segments.Count == 0 ? 0d : segments[^1].X + segments[^1].Width;
+                        if (!double.IsFinite(partWidth) || partWidth < 0d) return false;
+                        var part = new DocxMeasuredInlineFragment(source, partWidth, baselineInset, Math.Max(lineHeight, baselineInset), [span])
+                            { TextSegments = segments, SourceItemIndex = span.SourceInlineItemIndex };
+                        part = part with { LeadingAdvance = current.Count == 0 ? 0d : InlineTextBoundaryAdvance(current[^1], part) };
+                        current.Add(part);
+                        advance += part.LeadingAdvance + partWidth;
+                    }
+                    if (lineIndex + 1 < wrapped.Length)
+                    {
+                        var endCursor = wrapped[lineIndex].Spans.Count == 0 ? new DocxInlineSourceCursor(end) :
+                            CursorAfterSpan(wrapped[lineIndex].Spans[^1], index, end);
+                        if (endCursor is null) return false;
+                        Flush(endCursor.Value);
+                        if (stopAfterFirstLine) { lines = output; return true; }
+                    }
+                }
+                index = end;
+                continue;
+            }
+            double boundary = current.Count == 0 ? 0d : InlineTextBoundaryAdvance(current[^1], Atom(index));
+            if (current.Count != 0 && advance + boundary + groupWidth > width)
+            {
+                Flush(new(index));
+                if (stopAfterFirstLine) { lines = output; return true; }
+            }
+            if (current.Count == 0 && groupWidth > (output.Count == 0 ? firstWidth : nextWidth))
+            {
+                if (output.Count == 0 && groupWidth <= nextWidth)
+                {
+                    Flush(new(index));
+                    if (stopAfterFirstLine) { lines = output; return true; }
+                }
+                else return false;
+            }
+            if (space && current.Count == 0) { index = end; continue; }
+            for (; index < end; index++)
+            {
+                var fragment = Atom(index) with
+                    { LeadingAdvance = current.Count == 0 ? 0d : InlineTextBoundaryAdvance(current[^1], Atom(index)) };
+                current.Add(fragment); advance += fragment.LeadingAdvance + fragment.Advance;
+                above = Math.Max(above, fragment.BaselineInset);
+                below = Math.Max(below, fragment.OccupiedHeight - fragment.BaselineInset);
+            }
+        }
+        if (current.Count != 0 || output.Count == 0) Flush(new(measured.Count));
+        lines = output; return true;
+
+        DocxInlineSourceCursor? CursorAfterSpan(DocxTextSpan span, int begin, int end)
+        {
+            for (int index = begin; index < end; index++)
+            {
+                var original = measured[index];
+                if (original.Source is not DocxInlineText source || original.Text.Count != 1 ||
+                    !ReferenceEquals(source.Run, span.StyleRun)) continue;
+                bool field = source.Run.FieldKind is { } kind && kind.IsDynamic();
+                string value = field && index == cursor.AtomIndex && cursor.BoundFieldValue is { } bound
+                    ? bound : original.Text[0].Text;
+                int offset = span.SourceTextOffsetInRun - original.Text[0].SourceTextOffsetInRun;
+                if (offset < 0 || offset >= value.Length) continue;
+                int consumed = offset + span.Text.Length;
+                return consumed >= value.Length ? new(index + 1) : new(index, consumed, field ? value : null);
+            }
+            return null;
+        }
+
+        static bool IsSpace(DocxMeasuredInlineFragment fragment) => fragment.Source is DocxInlineText { Length: > 0 } text &&
+            DocxTextBreakRules.IsBreakableWhitespaceChar(text.Run.Text[text.Start]);
+        double InlineTextBoundaryAdvance(DocxMeasuredInlineFragment left, DocxMeasuredInlineFragment right)
+        {
+            if (ReferenceEquals(left.Source, right.Source) && right.MathContinuationAdvance is { } mathGap)
+                return mathGap;
+            if (left.Text.Count == 0 || right.Text.Count == 0) return 0d;
+            var before = left.Text[^1];
+            var after = right.Text[0];
+            if (!ReferenceEquals(before.StyleRun, after.StyleRun))
+                return DocxTextSpacing.BoundarySpacing(before.StyleRun, before.Text, after.Text);
+            // Tokenization must preserve pair kerning and character spacing
+            // within an authored run. Decode complete Unicode scalars, including
+            // replacement scalars for malformed input, as the text measurer does.
+            System.Text.Rune.DecodeLastFromUtf16(before.Text, out var last, out _);
+            System.Text.Rune.DecodeFromUtf16(after.Text, out var first, out _);
+            string lastText = last.ToString(), firstText = first.ToString();
+            double Measure(string value) => MeasureTextSpansForLayout([before with { Text = value }],
+                fontSize, measurer, [], 36d, null);
+            return Measure(lastText + firstText) - Measure(lastText) - Measure(firstText);
+        }
+        void Flush(DocxInlineSourceCursor endCursor)
         {
             while (current.Count != 0 && IsSpace(current[^1]))
             {
@@ -443,7 +604,7 @@ internal sealed partial class DocxLayoutEngine
                             OccupiedHeight = (math.Box.AboveBaseline + math.Box.BelowBaseline) * scale };
             }
             IReadOnlyList<DocxTextSegmentLayout> labelSegments = [];
-            if (output.Count == 0 && paragraph.ListLabel is { } label)
+            if (cursor.LineIndex == 0 && output.Count == 0 && paragraph.ListLabel is { } label)
             {
                 var style = paragraph.Runs.FirstOrDefault() ?? paragraph.ParagraphMarkRun ??
                     new DocxTextRun(string.Empty, fontSize, null, false, false, false, null, null);
@@ -452,7 +613,8 @@ internal sealed partial class DocxLayoutEngine
                 above += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, measurer);
             }
             output.Add(new(current.ToArray(), advance, above, above + below)
-                { IsDisplayGroup = displayGroup, ListLabelSegments = labelSegments, TextBaselineInset = textInset });
+                { IsDisplayGroup = displayGroup, ListLabelSegments = labelSegments, TextBaselineInset = textInset,
+                    EndCursor = endCursor with { LineIndex = cursor.LineIndex + output.Count + 1 } });
             current.Clear(); advance = 0d; above = baselineInset; below = Math.Max(0d, lineHeight - baselineInset);
         }
     }

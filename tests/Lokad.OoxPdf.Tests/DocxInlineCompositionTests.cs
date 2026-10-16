@@ -287,6 +287,198 @@ internal static class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxInlineCompositionSourceCursorMatchesWholeParagraphWrapping()
+    {
+        var document = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-page-fields-simple-header");
+        var paragraph = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Single().Paragraph;
+        var equations = paragraph.Equations.ToDictionary(equation => equation,
+            equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
+        TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, equations, new TrackingMeasurer(),
+            12d, 9d, 16d, 1d, default, out var measured, pageNumber: 9, pageCount: 123456), "Counter atoms must measure.");
+        var atoms = TestAssert.NotNull(measured);
+        foreach (double width in new[] { 500d, 90d, 20d })
+        {
+            TestAssert.True(DocxLayoutEngine.TryWrapOrderedInlineAtoms(atoms, width, width, default, out var all), "The control must wrap.");
+            var expected = TestAssert.NotNull(all);
+            var cursor = new DocxInlineSourceCursor();
+            for (int index = 0; index < expected.Count; index++)
+            {
+                TestAssert.True(DocxLayoutEngine.TryGetNextOrderedInlineLine(atoms, cursor, width, width, default, out var next),
+                    "A source cursor must reproduce each qualified line.");
+                var actual = TestAssert.NotNull(next);
+                string Text(DocxMeasuredInlineLine line) => string.Concat(line.Fragments.SelectMany(fragment => fragment.Text).Select(span => span.Text));
+                TestAssert.Equal(Text(expected[index]), Text(actual));
+                TestAssert.True(Math.Abs(expected[index].Advance - actual.Advance) < .001d &&
+                    Math.Abs(expected[index].BaselineInset - actual.BaselineInset) < .001d &&
+                    Math.Abs(expected[index].OccupiedHeight - actual.OccupiedHeight) < .001d,
+                    "Incremental wrapping retains the measured line frame.");
+                TestAssert.Equal(expected[index].EndCursor, actual.EndCursor);
+                TestAssert.True(actual.EndCursor.LineIndex == cursor.LineIndex + 1 &&
+                    (actual.EndCursor.AtomIndex > cursor.AtomIndex || actual.EndCursor.TextOffset > cursor.TextOffset),
+                    "This control must consume source content on every line.");
+                cursor = actual.EndCursor;
+            }
+            TestAssert.True(cursor.IsComplete(atoms) &&
+                !DocxLayoutEngine.TryGetNextOrderedInlineLine(atoms, cursor, width, width, default, out _),
+                "Completion cannot duplicate the final source item.");
+        }
+    }
+
+    public static void DocxInlineCompositionSourceCursorRebindsUnplacedPageCounters()
+    {
+        var document = ReadMutation("CompositionProbes/math-page-fields-simple-header", OoxPdfDocxMarkupMode.Final,
+            false, false, (xml, w, m) =>
+            {
+                foreach (var field in xml.Descendants(w + "fldSimple")) field.SetAttributeValue(w + "instr", " PAGE ");
+            }, "word/math-fields-header.xml");
+        var paragraph = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Single().Paragraph;
+        var equations = paragraph.Equations.ToDictionary(equation => equation,
+            equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
+        TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, equations, new TrackingMeasurer(),
+            12d, 9d, 16d, 1d, default, out var measured, pageNumber: 9), "PAGE does not depend on the total count.");
+        var atoms = TestAssert.NotNull(measured);
+        var cursor = new DocxInlineSourceCursor();
+        var values = new List<string>();
+        int steps = 0, math = 0;
+        while (!cursor.IsComplete(atoms))
+        {
+            TestAssert.True(++steps < 20, "The source cursor must make bounded progress.");
+            int number = cursor.LineIndex == 0 ? 9 : 10;
+            TestAssert.True(DocxLayoutEngine.TryRebindInlineCounters(atoms, number, null, default, out var bound), "The current page owns unplaced counters.");
+            TestAssert.True(DocxLayoutEngine.TryGetNextOrderedInlineLine(TestAssert.NotNull(bound), cursor, 90d, 90d, default, out var next), "The next line must wrap.");
+            var line = TestAssert.NotNull(next);
+            values.AddRange(line.Fragments.Where(fragment => fragment.Source is DocxInlineText { Run.FieldKind: DocxFieldKind.Page })
+                .SelectMany(fragment => fragment.Text).Select(span => span.Text));
+            math += line.Fragments.Count(fragment => fragment.Math is not null);
+            cursor = line.EndCursor;
+        }
+        TestAssert.Equal("9|10", string.Join("|", values));
+        TestAssert.Equal(2, math);
+        TestAssert.True(paragraph.Runs.Where(run => run.FieldKind == DocxFieldKind.Page).All(run => run.Text == "{PAGE}"),
+            "Page-specific values never overwrite canonical source runs.");
+    }
+
+    public static void DocxInlineCompositionSourceCursorRetainsBreakTabsAndFirstLineLabel()
+    {
+        foreach (string fixture in new[] { "math-tabs-default18-body", "math-composition-numbered" })
+        {
+            var document = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, fixture);
+            var source = document.Paragraphs.First(paragraph => paragraph.Equations.Count != 0);
+            var paragraph = source with { InlineContent = source.InlineContent!.Take(1)
+                .Concat(new DocxInlineItem[] { new DocxInlineBreak(source.Runs[0], 0) })
+                .Concat(source.InlineContent.Skip(1)).ToArray() };
+            var equations = paragraph.Equations.ToDictionary(equation => equation,
+                equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
+            TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, equations, new TrackingMeasurer(),
+                12d, 9d, 16d, 1d, default, out var measured, defaultTabStopPoints: 18d), "The mixed source must measure.");
+            var atoms = TestAssert.NotNull(measured);
+            TestAssert.True(DocxLayoutEngine.TryWrapOrderedInlineAtoms(atoms, 1d, 90d, default, out var whole), "A narrow first line must wrap.");
+            var expected = TestAssert.NotNull(whole);
+            var cursor = new DocxInlineSourceCursor();
+            for (int index = 0; index < expected.Count; index++)
+            {
+                double width = cursor.LineIndex == 0 ? 1d : 90d;
+                TestAssert.True(DocxLayoutEngine.TryGetNextOrderedInlineLine(atoms, cursor, width, 90d, default, out var next), "The cursor must retain authored controls.");
+                var line = TestAssert.NotNull(next);
+                TestAssert.Equal(expected[index].EndCursor, line.EndCursor);
+                TestAssert.True(Math.Abs(expected[index].Advance - line.Advance) < .001d, "Control advances must match.");
+                TestAssert.Equal(expected[index].ListLabelSegments.Count, line.ListLabelSegments.Count);
+                if (index != 0) TestAssert.Equal(0, line.ListLabelSegments.Count);
+                cursor = line.EndCursor;
+            }
+            TestAssert.True(cursor.IsComplete(atoms), "Empty first lines and authored breaks must retain progress.");
+            foreach (var invalid in new[] { new DocxInlineSourceCursor(-1), new(atoms.Fragments.Count + 1), new(0, -1), new(0, LineIndex: -1) })
+                TestAssert.True(!DocxLayoutEngine.TryGetNextOrderedInlineLine(atoms, invalid, 90d, 90d, default, out _), "Invalid cursors retain explicit fallback.");
+            using var cancellation = new CancellationTokenSource();
+            cancellation.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() => DocxLayoutEngine.TryGetNextOrderedInlineLine(atoms, default,
+                90d, 90d, cancellation.Token, out _));
+        }
+    }
+
+    public static void DocxInlineCompositionSourceCursorKeepsSplitCounterValue()
+    {
+        var document = ReadMutation("CompositionProbes/math-page-fields-simple-header", OoxPdfDocxMarkupMode.Final,
+            false, false, (xml, w, m) =>
+            {
+                foreach (var field in xml.Descendants(w + "fldSimple")) field.SetAttributeValue(w + "instr", " PAGE ");
+            }, "word/math-fields-header.xml");
+        var paragraph = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Single().Paragraph;
+        var equations = paragraph.Equations.ToDictionary(equation => equation,
+            equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
+        TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, equations, new TrackingMeasurer(),
+            12d, 9d, 16d, 1d, default, out var measured, pageNumber: 123456789), "Counter digits may exceed the source placeholder.");
+        var atoms = TestAssert.NotNull(measured);
+        var cursor = new DocxInlineSourceCursor();
+        var values = new List<string>();
+        int steps = 0;
+        while (!cursor.IsComplete(atoms))
+        {
+            TestAssert.True(++steps < 40, "Partial counters must make bounded progress.");
+            int page = values.Count == 0 ? 123456789 : 10;
+            TestAssert.True(DocxLayoutEngine.TryRebindInlineCounters(atoms, page, null, default, out var rebound), "Rebinding must succeed.");
+            TestAssert.True(DocxLayoutEngine.TryGetNextOrderedInlineLine(TestAssert.NotNull(rebound), cursor, 20d, 20d,
+                default, out var next), "A counter can wrap beyond its placeholder length.");
+            var line = TestAssert.NotNull(next);
+            values.AddRange(line.Fragments.Where(fragment => fragment.Source is DocxInlineText { Run.FieldKind: DocxFieldKind.Page })
+                .SelectMany(fragment => fragment.Text).Select(span => span.Text));
+            cursor = line.EndCursor;
+        }
+        TestAssert.Equal("12345678910", string.Concat(values));
+        TestAssert.True(paragraph.Runs.Where(run => run.FieldKind == DocxFieldKind.Page).All(run => run.Text == "{PAGE}"),
+            "Resolved slices retain their canonical source owner.");
+    }
+
+    public static void DocxInlineCompositionMeasuredAtomsRebindOnlyCounters()
+    {
+        var document = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-page-fields-simple-header");
+        var paragraph = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Single().Paragraph;
+        var equations = paragraph.Equations.ToDictionary(equation => equation,
+            equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
+        var measurer = new CountingMeasurer();
+        TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, equations, measurer, 12d, 9d, 16d, 1d,
+            default, out var measured, pageNumber: 9, pageCount: 12), "The initial values own a reusable measured sequence.");
+        var atoms = TestAssert.NotNull(measured);
+        int startCalls = measurer.Calls.GetValueOrDefault("Start");
+        int middleCalls = measurer.Calls.GetValueOrDefault("middle");
+        TestAssert.True(startCalls > 0 && middleCalls > 0, "The fixed-content measurement control must be exercised.");
+        TestAssert.True(DocxLayoutEngine.TryRebindInlineCounters(atoms, 9, 12, default, out var unchanged) &&
+            ReferenceEquals(atoms, unchanged), "Unchanged inputs reuse the measured sequence.");
+        TestAssert.True(DocxLayoutEngine.TryRebindInlineCounters(atoms, 10, 12, default, out var rebound),
+            "A page-number change can refresh its source-owned field.");
+        var changed = TestAssert.NotNull(rebound);
+        TestAssert.Equal(atoms.Fragments.Count, changed.Fragments.Count);
+        for (int index = 0; index < atoms.Fragments.Count; index++)
+        {
+            var before = atoms.Fragments[index];
+            var after = changed.Fragments[index];
+            if (before.Source is DocxInlineText { Run.FieldKind: DocxFieldKind.Page })
+            {
+                TestAssert.Equal("9", before.Text.Single().Text);
+                TestAssert.Equal("10", after.Text.Single().Text);
+                TestAssert.True(ReferenceEquals(before.Source, after.Source), "Counter binding keeps the source item.");
+                TestAssert.True(Math.Abs(after.Advance - before.Advance - 5d) < .001d, "Binding measures the extra digit.");
+            }
+            else TestAssert.True(ReferenceEquals(before, after), "Fixed text, images, math and unchanged counters retain their measurements.");
+        }
+        TestAssert.Equal(startCalls, measurer.Calls.GetValueOrDefault("Start"));
+        TestAssert.Equal(middleCalls, measurer.Calls.GetValueOrDefault("middle"));
+        foreach (double width in new[] { 500d, 90d })
+        {
+            TestAssert.True(DocxLayoutEngine.TryWrapOrderedInlineAtoms(changed, width, width, default, out var lines),
+                "The measured sequence can wrap under different container constraints.");
+            string text = System.Text.RegularExpressions.Regex.Replace(string.Concat(TestAssert.NotNull(lines)
+                .SelectMany(line => line.Fragments).SelectMany(fragment => fragment.Text).Select(span => span.Text)), @"\s", "");
+            TestAssert.Equal("Start10middle12End.", text);
+            TestAssert.Equal(2, lines!.SelectMany(line => line.Fragments).Count(fragment => fragment.Math is not null));
+        }
+        TestAssert.True(!DocxLayoutEngine.TryRebindInlineCounters(atoms, null, 12, default, out _) &&
+            !DocxLayoutEngine.TryRebindInlineCounters(atoms, 10, null, default, out _),
+            "A failed rebind publishes no partial sequence and retains missing-input fallback.");
+        TestAssert.Equal("9", atoms.Fragments.Single(fragment => fragment.Source is DocxInlineText
+            { Run.FieldKind: DocxFieldKind.Page }).Text.Single().Text);
+    }
+
     public static void DocxFieldTextCounterInputsRemainIndependent()
     {
         var template = DocxTests.CreateDocxLayoutParagraph("Source", 12d, 14d).Runs[0];
@@ -1490,6 +1682,16 @@ internal static class DocxInlineCompositionTests
     private static DocxDocument ReadPlacedComposition(OoxPdfDocxMarkupMode mode, string placement) =>
         DocxTests.ReadDocx(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
             "CompositionProbes", placement + ".docx")), mode);
+
+    private sealed class CountingMeasurer : IDocxTextMeasurer
+    {
+        public Dictionary<string, int> Calls { get; } = new(StringComparer.Ordinal);
+        public double MeasureText(DocxTextRun? run, string text, double fontSize)
+        {
+            Calls[text] = Calls.GetValueOrDefault(text) + 1;
+            return DocxTextSpacing.AddCharacterSpacing(text.Length * 5d, run, text);
+        }
+    }
 
     private sealed class TrackingMeasurer : IDocxTextMeasurer
     {
