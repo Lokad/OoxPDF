@@ -1,0 +1,73 @@
+[
+  {
+    "Id": "overwide-word-default",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/overwide-word-default.docx",
+    "Sha256": "CEA541521F291F89AAAC1506898404D7B5DC49F9F33D3ED2FDD3EC91D5C8EB97",
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [],
+    "HeldOut": false
+  },
+  {
+    "Id": "word-kern-0",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/word-kern-0.docx",
+    "Sha256": "2E1044F1C575ADA1F77F4DDD754CA21C54D30680EA66304DD4E2F018DD7A7E2F",
+    "SourceSha256": "CEA541521F291F89AAAC1506898404D7B5DC49F9F33D3ED2FDD3EC91D5C8EB97",
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [],
+    "HeldOut": false
+  },
+  {
+    "Id": "word-kern-16",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/word-kern-16.docx",
+    "Sha256": "58F060FB47CF224700A1182B6D5A13D99DC57B83F2499DF20D189DD3DE3BABB9",
+    "SourceSha256": "CEA541521F291F89AAAC1506898404D7B5DC49F9F33D3ED2FDD3EC91D5C8EB97",
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [],
+    "HeldOut": false
+  },
+  {
+    "Id": "word-kern-28",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/word-kern-28.docx",
+    "Sha256": "F05A13AE20725086C0D7C8B71CA9592F3FC18F9B974CF810F2E20090C9EC0064",
+    "SourceSha256": "CEA541521F291F89AAAC1506898404D7B5DC49F9F33D3ED2FDD3EC91D5C8EB97",
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [],
+    "HeldOut": false
+  },
+  {
+    "Id": "word-kern-calibri-11-met",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/word-kern-calibri-11-met.docx",
+    "Sha256": "294763296173412A29DEE2F752C924BBA2AAE72C953A35A9477FB2D161AE3B3C",
+    "SourceSha256": "CEA541521F291F89AAAC1506898404D7B5DC49F9F33D3ED2FDD3EC91D5C8EB97",
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [],
+    "HeldOut": false
+  },
+  {
+    "Id": "word-kern-arial-11-met",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/word-kern-arial-11-met.docx",
+    "Sha256": "35C3E56CC9BFF6F8DD5EAEB297C50FFFACF7674181CB77ECC51188A6183067B8",
+    "SourceSha256": "CEA541521F291F89AAAC1506898404D7B5DC49F9F33D3ED2FDD3EC91D5C8EB97",
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [],
+    "HeldOut": false
+  },
+  {
+    "Id": "word-kern-times-11-met",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/word-kern-times-11-met.docx",
+    "Sha256": "6F4FE08B80BF5B929DE43ED20500090A11A025F70FE50E37080A0990826B5E76",
+    "SourceSha256": "CEA541521F291F89AAAC1506898404D7B5DC49F9F33D3ED2FDD3EC91D5C8EB97",
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [],
+    "HeldOut": false
+  },
+  {
+    "Id": "word-kern-calibri-14-met",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/word-kern-calibri-14-met.docx",
+    "Sha256": "570832DB3F70A4EAF8EBB3A777F73B3E8A6A3FD800D5DF1535DC70C8C3E37B16",
+    "SourceSha256": "CEA541521F291F89AAAC1506898404D7B5DC49F9F33D3ED2FDD3EC91D5C8EB97",
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [],
+    "HeldOut": false
+  }
+]
