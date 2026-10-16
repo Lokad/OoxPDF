@@ -30,16 +30,31 @@ if ($LASTEXITCODE -ne 0 -or !$inputs.Count) { throw 'Public inputs are unavailab
 # Subsequent freezes still hash every input; reuse never trusts a directory name.
 $reusedInputs = Test-Path -LiteralPath $snapshot
 if (!$reusedInputs) {
+    # Seed only from a published immutable snapshot. A writable checkout must
+    # never share file ownership with a frozen input, even if its hash matches.
+    $prior = Get-ChildItem -LiteralPath (Split-Path $snapshot) -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match '^(?:[0-9a-f]{40}|[0-9a-f]{64})$' -and $_.FullName -ne $snapshot } |
+        Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
+    $priorPin = if ($prior) { Get-Content (Join-Path $prior.FullName 'identity.json') -Raw | ConvertFrom-Json -AsHashtable }
+    if ($prior -and $priorPin.Tree -ne $prior.Name) { throw 'Prior shared input identity differs' }
+    $sharedInputFiles = 0
     $staging = $snapshot + '.staging-' + [Guid]::NewGuid().ToString('N')
     New-Item -ItemType Directory -Path $staging -Force | Out-Null
     foreach ($name in $inputs.Keys) {
         $target = Join-Path $staging $name
         New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
-        Copy-Item -LiteralPath (Join-Path $repo $name) -Destination $target
+        if ($prior -and $priorPin.Inputs[$name] -eq $inputs[$name]) {
+            $shared = Join-Path $prior.FullName $name
+            if ((Get-FileHash -LiteralPath $shared).Hash -ne $inputs[$name]) { throw 'Prior shared input differs' }
+            if (!(Get-Item -LiteralPath $shared).IsReadOnly) { throw 'Prior shared input is writable' }
+            New-Item -ItemType HardLink -Path $target -Target $shared | Out-Null
+            $sharedInputFiles++
+        }
+        else { Copy-Item -LiteralPath (Join-Path $repo $name) -Destination $target }
         if ((Get-FileHash -LiteralPath $target).Hash -ne $inputs[$name]) { throw 'Public input changed during snapshot' }
         (Get-Item -LiteralPath $target).IsReadOnly = $true
     }
-    [ordered]@{Tree=$inputTree;Inputs=$inputs} | ConvertTo-Json -Depth 5 |
+    [ordered]@{Tree=$inputTree;Inputs=$inputs;SharedInputFiles=$sharedInputFiles} | ConvertTo-Json -Depth 5 |
         Set-Content -LiteralPath (Join-Path $staging 'identity.json') -Encoding utf8
     # Directory.Move cannot accidentally nest staging inside a concurrent snapshot.
     try { [IO.Directory]::Move($staging, $snapshot) }
@@ -81,6 +96,7 @@ New-Item -ItemType $linkType -Path $inputLink -Target (Join-Path $snapshot $inpu
 [ordered]@{
     Revision=$revision;Rebuilt=$false;Assets=$assets;Inputs=$inputs
     InputTree=$inputTree;InputSnapshot=$snapshot;ReusedInputSnapshot=$reusedInputs
+    SharedInputFiles=$inputPin.SharedInputFiles
     InputSnapshotIdentitySha256=(Get-FileHash -LiteralPath $inputIdentity).Hash
     LibrarySha256=(Get-FileHash -LiteralPath (Join-Path $output 'src/Lokad.OoxPdf/bin/Release/net10.0/Lokad.OoxPdf.dll')).Hash
     TestAssemblySha256=(Get-FileHash -LiteralPath (Join-Path $output 'tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll')).Hash

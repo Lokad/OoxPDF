@@ -1,0 +1,24 @@
+# Composition controls
+
+These public synthetic probes isolate source ownership, measurement and placement.
+Keep complete C1/C2 acceptance documents in `../Composition/` outside derivation.
+
+`math-note-borders.json` pins four one-fraction cells with automatic footnotes.
+Nominal marker sizes 11/12 and baseline/superscript variants challenge shared
+printed-line ownership. `math-note-border-office-baselines.json` records independent
+Word PDF hashes and border-relative baselines in both DOCX presets. The plain peer
+must retain its established baseline while ordered math receives the container
+origin translation once. Source prose and simple-math checks agree; Office's prose
+font for normal-text equation words leaves the generic prose-token audit unresolved.
+Keep those extraction failures and the numerical raster failures explicit.
+
+`complete-notes.json` isolates unused continuation reservation for one-line heads.
+`scaled-notes.json` adds a comment lane and retains a 300pt body on a standard
+Letter page. Custom short-page Word review exports place ink outside the PDF page
+and are rejected as visual references. Other control families retain their source
+manifests and independent Office evidence.
+
+Frozen fixtures are read-only. Tests that mutate OOXML must copy the input and
+clear read-only only on that temporary copy; never alter a frozen input or its
+hard-link aliases. The freezer reuses matching immutable files across input trees
+and verifies every published input hash.

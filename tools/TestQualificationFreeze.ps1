@@ -75,7 +75,28 @@ Invoke-Git @('commit', '--quiet', '-m', 'Changed fixture')
 $changed = Freeze 'changed'
 if ($changed.ReusedInputSnapshot -or $changed.InputTree -eq $first.InputTree -or
     (Get-Content -LiteralPath (Join-Path $first.InputSnapshot $inputPath) -Raw) -notmatch 'first fixture') { throw 'Changed input isolation failed' }
-$damaged = Join-Path $changed.InputSnapshot $inputPath
+$firstNested = Join-Path $first.InputSnapshot 'tests/Lokad.OoxPdf.Tests/Cases/nested/second.txt'
+$changedNested = Join-Path $changed.InputSnapshot 'tests/Lokad.OoxPdf.Tests/Cases/nested/second.txt'
+if ($changed.SharedInputFiles -ne 1 -or (Get-Item $changedNested).LinkType -ne 'HardLink') { throw 'Unchanged file sharing failed' }
+# Deliberate corruption proves actual shared ownership, not just equal bytes.
+$nestedBytes = [IO.File]::ReadAllBytes($firstNested)
+(Get-Item $changedNested).IsReadOnly = $false
+[IO.File]::WriteAllText($changedNested, 'corrupt alias')
+if ((Get-Content $firstNested -Raw) -ne 'corrupt alias') { throw 'Fixture aliases are not shared' }
+(Get-Item $changedNested).IsReadOnly = $true
+Reject 'corrupt-alias' 'Shared public input differs'
+# A different input tree must not propagate a corrupted prior alias.
+(Get-Item $inputFile).IsReadOnly = $false
+'new tree fixture' | Set-Content -LiteralPath $inputFile
+Invoke-Git @('add', $inputPath)
+Invoke-Git @('commit', '--quiet', '-m', 'Third fixture tree')
+Reject 'corrupt-prior' 'Prior shared input differs'
+(Get-Item $changedNested).IsReadOnly = $false
+[IO.File]::WriteAllBytes($changedNested, $nestedBytes)
+(Get-Item $changedNested).IsReadOnly = $true
+$repaired = Freeze 'repaired'
+if ($repaired.SharedInputFiles -ne 1) { throw 'Restored shared input was not reused' }
+$damaged = Join-Path $repaired.InputSnapshot $inputPath
 (Get-Item -LiteralPath $damaged).IsReadOnly = $false
 'corrupted shared copy' | Set-Content -LiteralPath $damaged
 Reject 'corrupt' 'Shared public input differs'
@@ -85,7 +106,8 @@ Copy-Item -LiteralPath $inputFile -Destination $damaged -Force
 Reject 'mixed' 'Release library copies differ'
 [ordered]@{
     Checks=@('Shared unchanged fixture tree', 'Frozen runner input link', 'Linked worktree reuse', 'Dirty source rejection',
-        'Changed fixture isolation', 'Corrupt snapshot rejection', 'Mixed library rejection')
+        'Changed fixture isolation', 'Cross-tree immutable file sharing', 'Corrupt alias rejection',
+        'Corrupt prior-tree rejection', 'Corrupt snapshot rejection', 'Mixed library rejection')
     LibraryBuilds=0;LibraryTestRuns=0;First=$first;Second=$second;Changed=$changed
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json') -Encoding utf8
-Write-Output 'Seven fixture-freeze checks passed; no library build or test-suite replay.'
+Write-Output 'Ten fixture-freeze checks passed; no library build or test-suite replay.'
