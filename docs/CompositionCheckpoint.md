@@ -1,5 +1,35 @@
 # Composed-document reliability checkpoint
 
+C65 restores text-only footer prose that fell below the page when removing math
+and pictures left bookmarks, links, numbering and formatting metadata. Natural
+static frames now share the existing inline source-owner rules; math eligibility
+keeps its equation requirement and legacy note guards remain unchanged. Footer
+formatting placement consumes the measured physical story top, independently of
+the body keep-out edge and the changed line's connector. No fitted displacement
+or font/size-specific branch was added.
+
+Eight source-identified Word controls cover footer distances, first/second changed
+paragraphs, text-only transformations and the original header/footer combination.
+The two plain footer baselines return from below the page to within 0.33pt of Word;
+their balloon baselines differ by 0.007pt. Four complex footer balloons differ by
+at most 0.57pt. Header paragraph translation and the source connector's horizontal
+path remain unchanged. The original header balloon retains its 1.152pt residual.
+
+Qualification covers 81 Windows passes and 67 Ubuntu passes/14 explicit skips.
+Harness-only corrections retain the production DLL: two frame checks rerun after
+accounting for faux-bold paint; two comment checks rerun after making their font
+requirements explicit. Two new checks fail causally on the parent; two old Linux
+font assumptions also fail on the parent. The portable frame check covers the two
+text-only controls; compound pinned-font math keeps its unsupported-frame fallback.
+Eight visual gates still fail unchanged thresholds, and twelve diagnostics remain,
+including six ignored header-equation diagnostics. Two full page pairs were
+reviewed. Four fixed Review PDFs and the complete composed Review report retain
+their prior bytes/comparisons; no Final corpus replay or new Office exports.
+Plain static list labels are still missing and are the next content priority.
+Evidence: `artifacts/composition-c1/static-source-frames-evidence.json` and linked
+reports; the portfolio preservation report records a corrected manifest equation
+count without repeating conversions.
+
 C64 skips the font-resource/layout retry when complete measured footnote owners
 already have the requested labels. On a public one-page control, three warm
 calling-thread allocation samples fall from a 19.54 MB median to 10.46 MB, saving
