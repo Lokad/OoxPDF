@@ -168,7 +168,8 @@ internal sealed partial class DocxLayoutEngine
                         paragraph.Images.Any(image => image.WidthPoints > width))) { return false; }
                 }
                 else if (paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right) ||
-                    !HasNaturalStaticParagraphContent(paragraph)) { return false; }
+                    paragraph.Images.Count != 0 || !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
+                    !DocxInlineContent.HasSupportedSourceOwner(paragraph, token: token)) { return false; }
             }
         }
         return true;

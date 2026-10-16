@@ -14,6 +14,18 @@ internal sealed record DocxInlineEquation(DocxEquation Equation) : DocxInlineIte
 
 internal static class DocxInlineContent
 {
+    // Source ownership is independent of whether a paragraph contains math.
+    // Containers retain their own supported measurement and line-flow rules.
+    public static bool HasSupportedSourceOwner(DocxParagraph paragraph, bool hasPageInputs = false,
+        CancellationToken token = default) =>
+        paragraph.Equations.All(equation => equation.Revision is null) &&
+        HasSupportedRunRevisionOwners(paragraph.Revisions, paragraph.Runs, token) &&
+        paragraph.InlineTextBoxes.Count == 0 &&
+        HasSupportedReferences(paragraph.InlineReferences, paragraph.Runs) &&
+        (hasPageInputs ? HasSourceFieldResults(paragraph.FieldReferences, paragraph.Runs)
+            : HasMaterializedFieldResults(paragraph.FieldReferences, paragraph.Runs)) &&
+        paragraph.RevisionRanges.Count == 0;
+
     public static bool RequiresMeasuredSourceRanges(DocxParagraph paragraph) =>
         paragraph.CommentRanges.Count != 0 || paragraph.Hyperlinks.Count != 0;
 
