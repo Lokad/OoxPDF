@@ -31,14 +31,35 @@ or complete fidelity claim is made for these controls. Evidence: ignored
 `artifacts/composition-c1/math-run-format-evidence.json` and
 `formatting-review-ink-evidence.json`.
 
-C58 consolidates kerning-token parsing and nominal threshold arithmetic across
-qualified plain/wrapped/note frames. Existing size/font/document guards and
-default pair policy remain. Twenty-nine Windows and 29 Ubuntu methods pass;
-four controlled PDFs and four transfer smoke PDFs retain their bytes. All four
-controlled visual gates still fail unchanged thresholds. Read-only attribution
-distinguishes explicit thresholds from omitted values in all fixed documents;
-changing omitted defaults remains unresolved. This maintenance batch claims no
-fidelity or performance gain. Evidence: `kerning-threshold-evidence.json`.
+C58 consolidates bounded kerning-token parsing while retaining qualified frame
+eligibility. C59 gives ordinary source baseline runs one advance purpose shared by
+measurement and emission, without rewriting source runs or legacy note/numbering
+state. Omitted or zero thresholds disable pairs, positive thresholds use authored
+size, and glyph advances use nominal size while export glyph sizes stay rounded.
+Generated, shifted, malformed and automatic-marker runs retain existing purposes.
+The [Open XML kerning definition](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.kern?view=openxml-3.0.1)
+establishes threshold/inheritance semantics; independent Word exports establish
+the observed nominal-advance behavior. Eight controls span three font families,
+11/12/14pt and omitted/zero/met/unmet thresholds. Both renderer presets retain exact
+line text, 0.15pt relative line-gap and 0.1pt first-line endpoint checks.
+
+One unchanged production library qualifies 1,641 Windows milestone methods. Two
+harness-only corrections use a 1e-9pt roundoff tolerance and deterministic tracking
+font; three runner invocations total, with no full suite replay. Ubuntu qualifies
+32 methods with six installed-font skips; two regressions fail on the parent.
+Seventeen assets/four smoke PDFs transfer without root builds. All fourteen fixed
+DOCX page comparisons and four complete-report comparisons improve MAE and
+foreground recall. Twelve comparisons are reused by candidate/reference/threshold
+identity; eight new control comparisons retain their failures. All eight fixed
+DOCX, two complete-report and eight control gates still fail unchanged thresholds;
+the two unchanged decks pass. Ten fixed content audits have zero deficit/unresolved
+screens. Both complete-report audits retain field extraction uncertainty and
+prose/math-token differences; expected simple math is present.
+
+Single warm samples on report/memo Final show allocation rising 1.1–1.2%, while
+explicit advance compensation adds 22–29KB per PDF (28–35%). Stage and whole PDFs
+match. Timings are noisy and stages overlap; no speedup is claimed. Evidence:
+`source-advances-evidence.json` and linked reports under the ignored evidence root.
 
 The fixed [portfolio](../tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json)
 contains four synthetic DOCX documents and two existing composite decks. The
