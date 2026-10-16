@@ -1486,3 +1486,32 @@ Both regression methods fail on C32. All twelve fixed/complete PDFs retain bytes
 Office comparisons, content screens and visual reviews are reused through checked
 identities. Transfer verifies 17 assets/four exact PDFs without a root build or suite
 replay. Evidence: `artifacts/composition-c1/inline-run-boundaries-evidence.json`.
+
+
+### Fitting aligned mathematical fields (C35)
+
+Right/center tab fields now measure complete text/math content through the shared
+ordinary tab-start rule. Previously omitted fractions survive. Overlapping or
+out-of-frame fields, decimal/bar tabs and leaders retain explicit fallbacks.
+Source extents scale with painted static/note geometry, and mathematical link
+rectangles include denominator bounds even when a printed cell's text slot is
+shallower. Default-tab regressions isolate those annotation defects separately.
+
+Four public controls produce eight mode outcomes across body/cell/footer placement,
+including bookmarks, unchanged-format run splitting and formula links. Independent
+maximum text-field X error is 0.096pt; mathematical anchor X/relative-Y errors are
+0.049/0.073pt. The absolute footer baseline residual is 0.375pt. All eight reviewed
+mixed-field regions retain visible contents without new observed overlap/clipping;
+this does not establish full-page clipping coverage. All eight numerical gates
+still fail. Generic rate/time extraction warnings remain recorded alongside exact
+native glyph/geometry checks; thresholds are unchanged.
+
+Frozen 924eb51a / root cf4bf629 passes 28 Windows methods once and 16 Ubuntu checks
+(12 font skips). Three new methods fail on the accepted parent. All twelve fixed
+and complete-report PDFs retain bytes, comparisons, content screens and reviews.
+Transfer verifies 17 assets/four PDFs without a root build or suite replay.
+Evidence: `artifacts/composition-c1/aligned-inline-fields-evidence.json`.
+
+A separate independent probe validates the existing sole-fraction hyperlink
+styling guard: Word itself switches that combination to smaller left-aligned
+inline styling. That guard remains; no broad eligibility deletion was made.
