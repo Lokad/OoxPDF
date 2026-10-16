@@ -1,0 +1,42 @@
+[
+  {
+    "Id": "picture-geometry-controls",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureGeometry/picture-geometry-controls.pptx",
+    "Sha256": "E6130C6E1BF4382CDDDB1201866154EF7ACE0E053713288270BE927E1FE6DFD6",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": []
+  },
+  {
+    "Id": "picture-geometry-extended",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureGeometry/picture-geometry-extended.pptx",
+    "Sha256": "E8B5F83B7BA5F97CE059B54B1843BF1DB643C8174C653CE916B22C59C60CA3C5",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": []
+  },
+  {
+    "Id": "picture-geometry-effects",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureGeometry/picture-geometry-effects.pptx",
+    "Sha256": "6B9C09B6A98DA8EFB170C8C234FC739DDBD9A470B58BA25AF166157C7622D019",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": []
+  },
+  {
+    "Id": "picture-geometry-blur",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureGeometry/picture-geometry-blur.pptx",
+    "Sha256": "225AC157224AB746087222B5EBB27CA6D05E6D51B8092B9EA0FB517174A89C83",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": []
+  },
+  {
+    "Id": "picture-geometry-polygon-blur",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureGeometry/picture-geometry-polygon-blur.pptx",
+    "Sha256": "3E19E0261C1298E1B8543137667E5D81E165EDCC45A985D576B8CB1F1AC4ED78",
+    "ExpectedEquationCount": 0,
+    "HeldOut": false,
+    "ExpectedText": []
+  }
+]

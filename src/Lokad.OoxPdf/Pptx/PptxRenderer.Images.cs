@@ -95,11 +95,6 @@ internal sealed partial class PptxRenderer
                 SlideIndex: slideIndex, Feature: "picture geometry", Fallback: "Rectangular frame"));
             preset = "rect";
         }
-        if (preset is not ("rect" or "ellipse" or "roundRect") && outerShadow is { BlurRadius: > 0d })
-            diagnosticSink?.Invoke(new OoxPdfDiagnostic("PPTX_PICTURE_GEOMETRY_EFFECT_FALLBACK", OoxPdfSeverity.Warning,
-                "Picture paint and vector effects use their shape geometry; its blurred shadow retains rectangular geometry.", targetPartName,
-                SlideIndex: slideIndex, Feature: "picture geometry effects", Fallback: "Rectangular blurred shadow"));
-
         ShapeBounds transformedBounds = transform.Apply(rawBounds);
         double x = OoxUnits.EmuToPoints(transformedBounds.X);
         double yTop = OoxUnits.EmuToPoints(transformedBounds.Y);
@@ -283,10 +278,9 @@ internal sealed partial class PptxRenderer
 
         if (shadow.BlurRadius > 0d)
         {
-            string shadowPreset = preset is "ellipse" or "roundRect" ? preset : "rect";
-            double radius = shadowPreset == "roundRect" ? ReadRoundRectangleRadius(null, adjustments, width, height) : 0d;
+            double radius = preset == "roundRect" ? ReadRoundRectangleRadius(null, adjustments, width, height) : 0d;
             DrawRasterOuterShadow(graphics, x, y, width, height, shadow, images, ref imageIndex,
-                shadowPreset, radius, cancellationToken);
+                preset, radius, cancellationToken);
         }
         else
         {

@@ -76,6 +76,10 @@ internal sealed partial class PptxRenderer
         double scaleX = pixelWidth / shadowWidth;
         OoxConversionBudget.Current?.ChargeImagesDecoded(1);
         double scaleY = pixelHeight / shadowHeight;
+        // The existing preset walker supplies a bounded closed polygon, shared
+        // with picture masks and vector shadows. PDF Y points upward; image rows
+        // run downward, so samples map back into that same geometry.
+        TryCreatePresetPolygonPoints(preset, 0d, 0d, width, height, out var polygon);
 
         // R02: effect rasters hold decoded-size planes plus compression scratch; reserve across rasterization and PDF compression.
         using var effectReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(checked((long)pixelWidth * pixelHeight * 4L));
@@ -114,6 +118,8 @@ internal sealed partial class PptxRenderer
                     double ox = Math.Max(qx, 0d), oy = Math.Max(qy, 0d);
                     distance = Math.Max(0d, Math.Sqrt(ox * ox + oy * oy) + Math.Min(Math.Max(qx, qy), 0d) - cornerRadius);
                 }
+                else if (polygon.Length != 0)
+                    distance = DistanceToShadowPolygon(localX, height - localY, polygon);
                 else distance = Math.Sqrt(dx * dx + dy * dy);
                 double t = Math.Clamp(distance / shadow.BlurRadius, 0d, 1d);
                 double falloff = (1d - t) * (1d - t);
@@ -130,6 +136,25 @@ internal sealed partial class PptxRenderer
         graphics.DrawImage(name, shadowX, shadowY, shadowWidth, shadowHeight);
         graphics.RestoreState();
         images.Add(new PdfImageResource(name, image));
+    }
+
+    private static double DistanceToShadowPolygon(double x, double y, ReadOnlySpan<(double X, double Y)> points)
+    {
+        bool inside = false;
+        double nearestSquared = double.PositiveInfinity;
+        var start = points[^1];
+        foreach (var end in points)
+        {
+            double dx = end.X - start.X, dy = end.Y - start.Y;
+            double lengthSquared = dx * dx + dy * dy;
+            double t = lengthSquared == 0d ? 0d : Math.Clamp(((x - start.X) * dx + (y - start.Y) * dy) / lengthSquared, 0d, 1d);
+            double gapX = x - (start.X + t * dx), gapY = y - (start.Y + t * dy);
+            nearestSquared = Math.Min(nearestSquared, gapX * gapX + gapY * gapY);
+            if ((start.Y > y) != (end.Y > y) && x < start.X + (y - start.Y) * dx / dy)
+                inside = !inside;
+            start = end;
+        }
+        return inside ? 0d : Math.Sqrt(nearestSquared);
     }
 
     private static void DrawPresetFill(

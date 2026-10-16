@@ -96,7 +96,7 @@ internal static partial class PptxImagesTests
         }
     }
 
-    public static void PptxPictureGeometryUnknownCustomAndBlurFallbacksRemainExplicit()
+    public static void PptxPictureGeometryKeepsUnknownAndCustomFallbacks()
     {
         XNamespace p = "http://schemas.openxmlformats.org/presentationml/2006/main";
         XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -126,8 +126,8 @@ internal static partial class PptxImagesTests
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var pages = RenderGeometryPages(path, diagnostics, 1);
                 var relevant = diagnostics.Where(d => d.SlideIndex == 1).ToArray();
-                string expected = variant == "polygon-blur" ? "PPTX_PICTURE_GEOMETRY_EFFECT_FALLBACK" : "PPTX_PICTURE_GEOMETRY_UNSUPPORTED";
-                TestAssert.Equal(variant is "missing" or "outline" or "shadow" or "blur" ? 0 : 1, relevant.Length);
+                string expected = "PPTX_PICTURE_GEOMETRY_UNSUPPORTED";
+                TestAssert.Equal(variant is "missing" or "outline" or "shadow" or "blur" or "polygon-blur" ? 0 : 1, relevant.Length);
                 if (relevant.Length != 0) TestAssert.Equal(expected, relevant[0].Id);
                 bool hasEllipse = NormalizeGeometryContent(pages[0].Content).Contains("360 288 m", StringComparison.Ordinal);
                 TestAssert.Equal(variant is "outline" or "shadow" or "blur", hasEllipse);
@@ -173,10 +173,8 @@ internal static partial class PptxImagesTests
         var effects = RenderGeometryPages(PictureGeometryCase("picture-geometry-effects"), diagnostics);
         TestAssert.Equal(0, diagnostics.Count);
         var extra = RenderGeometryPages(PictureGeometryCase("picture-geometry-blur"), diagnostics);
-        TestAssert.Equal(1, diagnostics.Count);
-        TestAssert.Equal("PPTX_PICTURE_GEOMETRY_EFFECT_FALLBACK", diagnostics[0].Id);
-        TestAssert.Equal(4, diagnostics[0].SlideIndex!.Value);
-        foreach (var page in new[] { effects[5], extra[0], extra[1], extra[2] })
+        TestAssert.Equal(0, diagnostics.Count);
+        foreach (var page in new[] { effects[5], extra[0], extra[1], extra[2], extra[3] })
         {
             var shadow = page.Images[0].Image;
             TestAssert.True(shadow.Alpha is not null && shadow.Width <= 2048 && shadow.Height <= 2048,
@@ -215,6 +213,45 @@ internal static partial class PptxImagesTests
         foreach (string invalid in new[] { "#GG0000", "#xyz", "nocolor" })
             TestAssert.True(!RgbColor.TryParseCssColor(invalid, out _), "Malformed CSS paint retains the explicit unsupported-paint path.");
         TestAssert.True(RgbColor.TryParseCssColor("#fF0", out var shortColor) && shortColor == new RgbColor(255, 255, 0), "Safe hex parsing preserves supported shorthand.");
+    }
+
+    public static void PptxPictureGeometryPolygonBlurPreservesImageRowsAndConcaveMasks()
+    {
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var triangle = RenderGeometryPages(PictureGeometryCase("picture-geometry-blur"), diagnostics)[3].Images[0].Image;
+        byte[] triangleAlpha = InflateShadowAlpha(triangle);
+        TestAssert.Equal((byte)0, Sample(triangle, triangleAlpha, .25d, .2d));
+        TestAssert.Equal((byte)255, Sample(triangle, triangleAlpha, .25d, .8d));
+        TestAssert.Equal((byte)255, Sample(triangle, triangleAlpha, .5d, .5d));
+        var pages = RenderGeometryPages(PictureGeometryCase("picture-geometry-polygon-blur"), diagnostics);
+        TestAssert.Equal(0, diagnostics.Count);
+        TestAssert.Equal(3, pages.Length);
+        foreach (var page in pages)
+        {
+            var shadow = page.Images[0].Image;
+            byte[] alpha = InflateShadowAlpha(shadow);
+            TestAssert.True(shadow.Width <= 2048 && shadow.Height <= 2048, "Polygon shadows retain existing raster bounds.");
+            TestAssert.Equal((byte)255, Sample(shadow, alpha, .5d, .5d));
+            TestAssert.Contains("144 376 20 20 re f*", NormalizeGeometryContent(page.Content));
+        }
+        var asymmetric = pages[0].Images[0].Image;
+        var asymmetricAlpha = InflateShadowAlpha(asymmetric);
+        TestAssert.Equal((byte)255, Sample(asymmetric, asymmetricAlpha, .1d, .2d));
+        TestAssert.Equal((byte)0, Sample(asymmetric, asymmetricAlpha, .9d, .2d));
+
+        static byte Sample(PdfImageXObject image, byte[] alpha, double x, double y) =>
+            alpha[(int)(image.Height * y) * image.Width + (int)(image.Width * x)];
+    }
+
+    private static byte[] InflateShadowAlpha(PdfImageXObject image)
+    {
+        TestAssert.True(image.Alpha is not null, "An outer shadow retains its soft mask.");
+        using var bytes = new MemoryStream(image.Alpha!);
+        using var inflater = new ZLibStream(bytes, CompressionMode.Decompress);
+        using var pixels = new MemoryStream(); inflater.CopyTo(pixels);
+        byte[] alpha = pixels.ToArray();
+        TestAssert.Equal(image.Width * image.Height, alpha.Length);
+        return alpha;
     }
 
     private static PdfPage[] RenderGeometryPages(string path, List<OoxPdfDiagnostic> diagnostics, int count = int.MaxValue)
