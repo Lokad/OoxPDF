@@ -26,8 +26,12 @@ internal sealed record DocxMathBox(
     public DocxMathMetricOwner? ParentMetrics { get; init; }
     public DocxMathRowLayout.RowEdges? Edges { get; init; }
     public IReadOnlyList<DocxMathRulePlacement> Rules { get; init; } = [];
-    // Top-level literal binary/relation boundaries; structured boxes stay atomic.
+    // Literal binary/relation boundaries, including balanced groups;
+    // structured boxes stay atomic.
     public IReadOnlyList<int> InlineBreakAfterGlyphs { get; init; } = [];
+    // Complete supported boxes may move as a whole. Malformed literal groups
+    // retain their source-line fallback until their placement is qualified.
+    public bool AllowsInlineRelocation { get; init; } = true;
 }
 
 internal sealed record DocxMathMetricOwner(Lokad.OoxPdf.Fonts.OpenTypeFont Font, double Size)

@@ -1,0 +1,15 @@
+[
+  {
+    "Id": "atomic-math-unary",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/atomic-math-unary.docx",
+    "Sha256": "50210BC92BFCCF094638DDB09376DBAD3EFA7A63D7098DBAEAA492A14F0EDB34",
+    "SourceSha256": "45F27A6285C1A065D5F4BE435AD335FC9F96E8341AB3BDC1D880BBD6DE2D8867",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Following prose."
+    ]
+  }
+]

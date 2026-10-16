@@ -172,8 +172,8 @@ internal static class DocxMathParagraphPolicy
         }
     }
 
-    // Retain qualified single-prose breaking. Bookmarks/links do not select a
-    // different engine; comment ranges consume ordered visible source extents.
+    // Qualified complete inline boxes share ordered placement; sole display
+    // rows and unsupported alignment retain their existing container paths.
     public static bool NeedsOrderedInlineLayout(DocxParagraph paragraph,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? prepared = null) =>
         paragraph.Equations.Count > 1 || paragraph.Images.Count != 0 ||
@@ -182,7 +182,11 @@ internal static class DocxMathParagraphPolicy
         paragraph.Equations.Count != 0 && paragraph.Runs.Any(run => run.FieldKind is { } kind && kind.IsDynamic()) ||
         paragraph.Equations.Count == 1 && (GetInlineRow(paragraph) is null && GetStandaloneRow(paragraph) is null ||
             GetInlineRow(paragraph) is { } inline && prepared is not null &&
-            prepared.TryGetValue(inline, out var math) && math.Box.InlineBreakAfterGlyphs.Count != 0);
+            prepared.TryGetValue(inline, out var math) && (math.Box.InlineBreakAfterGlyphs.Count != 0 ||
+                math.Box.AllowsInlineRelocation && HasSupportedOrderedAlignment(paragraph)));
+
+    private static bool HasSupportedOrderedAlignment(DocxParagraph paragraph) =>
+        paragraph.Alignment is DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right;
 
     // Preparation needs the dependency kind, not a guessed counter value.
     // Body/cell placement supplies PAGE; total counts remain unavailable there.
@@ -197,7 +201,7 @@ internal static class DocxMathParagraphPolicy
         if (GetInlineRow(paragraph) is { } inline) return [inline];
         return NeedsOrderedInlineLayout(paragraph) && HasSupportedSourceOwner(paragraph, hasPageInputs) && paragraph.InlineContent is not null &&
             paragraph.Equations.All(equation => !equation.Display) &&
-            paragraph.Alignment is DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right &&
+            HasSupportedOrderedAlignment(paragraph) &&
             paragraph.Spacing.LineRuleValue is null or "auto" && paragraph.LineSpacingPoints is null
             ? paragraph.Equations : [];
     }

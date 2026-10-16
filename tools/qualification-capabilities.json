@@ -1042,7 +1042,7 @@
     "DocxInlineCompositionMeasurementKeepsMultipleEquationsAndPicturesInSourceOrder",
     "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement",
     "DocxInlineCompositionBrokenLiteralsSurviveCellAndStaticPlacement",
-    "DocxInlineCompositionLiteralBreakKeepsMalformedAndUnaryFallbacks",
+    "DocxInlineCompositionLiteralBreakKeepsMalformedFallbacks",
     "DocxInlineCompositionReviewPaginationRetainsSourcePageCapacity",
     "DocxInlineCompositionAuthoredWhitespaceFramesMatchIndependentWord",
     "DocxInlineCompositionCommentHighlightsMatchIndependentSelectionBounds",
@@ -1149,7 +1149,7 @@
   "docx-grouped-literal-math": [
     "DocxInlineCompositionGroupedLiterals",
     "DocxInlineCompositionGroupedHyperlinks",
-    "DocxInlineCompositionLiteralBreakKeepsMalformedAndUnaryFallbacks",
+    "DocxInlineCompositionLiteralBreakKeepsMalformedFallbacks",
     "DocxNativeInlineMath",
     "DocxNativeMixedDelimiterRowsKeepLiteralMeaningAndMultipleControls",
     "DocxNativeLiteralDelimitersKeepVisibleCharactersAndEmptySides",
@@ -1193,5 +1193,16 @@
     "DocxRendererEmitsStaticFloatingTextBoxInternalHyperlinkDestinations",
     "DocxStaticStoryRendererEmitsInternalHyperlinkDestinations",
     "DocxRendererMergesMultiRunHyperlinkAnnotationsPerLine"
+  ],
+  "docx-atomic-inline-placement": [
+    "DocxInlineCompositionAtomic",
+    "DocxInlineCompositionLiteralBreakKeepsMalformedFallbacks",
+    "DocxInlineCompositionNoteImageDimensionsAndVerticalFrameMatchOffice",
+    "DocxInlineCompositionNormalNoteMathSurvivesRunSplittingAndContinuation",
+    "DocxInlineCompositionEndnoteRunSplittingRetainsSingleAndRepeatedMath",
+    "DocxNativeTableInlineMathRetainsProseWrappingAndWholeFallbacks",
+    "DocxNativeAlignedStaticFrames",
+    "DocxNativeScaledStaticFrames",
+    "PortableRenderingSingleMathAnnotationsPreserveFrames"
   ]
 }

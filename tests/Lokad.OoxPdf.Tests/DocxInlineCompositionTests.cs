@@ -1463,11 +1463,90 @@ internal static class DocxInlineCompositionTests
                 "Review transforms must move hyperlink bounds with their painted mathematical rows.");
     }
 
-    public static void DocxInlineCompositionLiteralBreakKeepsMalformedAndUnaryFallbacks()
+    public static void DocxInlineCompositionAtomicPlacementRetainsSourceBoundAndOverwidthFallbacks()
+    {
+        var paragraph = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "atomic-math-unary")
+            .Paragraphs.Single(value => value.Equations.Count != 0);
+        var equation = paragraph.Equations.Single();
+        bool Measure(bool relocation, double width, out IReadOnlyList<DocxMeasuredInlineLine>? lines) =>
+            DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph,
+                new Dictionary<DocxEquation, DocxPreparedMathParagraph> { [equation] = new(equation,
+                    new(width, 6d, 1d, []) { AllowsInlineRelocation = relocation }, 9d, 16d) },
+                new TrackingMeasurer(), 12d, 96d, 96d, 9d, 16d, 1d, default, out lines);
+        TestAssert.True(!Measure(false, 30d, out var rejected) && rejected is null,
+            "A source-bound box cannot move to the following line or publish a partial result.");
+        TestAssert.True(Measure(true, 30d, out var moved) && TestAssert.NotNull(moved).Count > 1,
+            "A complete supported box can move without changing the text owner.");
+        TestAssert.Equal(1, TestAssert.NotNull(moved).SelectMany(line => line.Fragments).Count(fragment => fragment.Math is not null));
+        TestAssert.True(!Measure(true, 130d, out rejected) && rejected is null,
+            "Relocation never permits a box wider than every available line.");
+    }
+
+    public static void DocxInlineCompositionAtomicUnaryMatchesIndependentWordPlacement()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for independent atomic placement.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-atomic-literal-office-geometry.json")));
+        var expected = reference.RootElement;
+        string input = Path.Combine(cases, "atomic-math-unary.docx");
+        TestAssert.Equal(expected.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = renderer.RenderBlankPages(DocxTests.ReadDocx(input, mode), diagnostics.Add, default).Single();
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
+            var mathFonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
+                .Select(resource => resource.Font).ToHashSet();
+            var math = shows.Where(show => mathFonts.Contains(show.Font)).ToArray();
+            TestAssert.Equal(expected.GetProperty("MathText").GetString(), string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(math.All(show => Math.Abs(show.Y - expected.GetProperty("MathBaselineY").GetDouble()) < .15d) &&
+                Math.Abs(math[0].X - expected.GetProperty("MathOriginX").GetDouble()) < .15d,
+                "The complete unary row must move to Word's independently measured origin and baseline.");
+            var after = shows.Single(show => show.Text.TrimStart().StartsWith("after", StringComparison.Ordinal));
+            TestAssert.True(Math.Abs(VisibleTextStartX(after) - expected.GetProperty("AfterX").GetDouble()) < .2d &&
+                Math.Abs(after.Y - expected.GetProperty("AfterBaselineY").GetDouble()) < .15d &&
+                Math.Abs(shows.Single(show => show.Text.StartsWith("Following prose.", StringComparison.Ordinal)).Y -
+                    expected.GetProperty("FollowingBaselineY").GetDouble()) < .15d,
+                "Following prose retains independently measured placement after atomic relocation.");
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Qualified relocation cannot omit the unary formula.");
+        }
+    }
+
+    public static void DocxInlineCompositionAtomicFormulaHyperlinksCoverPaintedGlyphs()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for atomic formula hyperlinks.");
+        foreach (string fixture in new[] { "docx-omml-inline-fraction-middle12", "docx-omml-inline-script-middle12", "CompositionProbes/atomic-math-unary" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation(fixture, mode, true, false, (xml, w, m) =>
+            {
+                var equation = xml.Descendants(m + "oMath").First();
+                equation.ReplaceWith(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PublicCalculation"), new XElement(equation)));
+            });
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var page = renderer.RenderBlankPages(document, null, default).Single();
+            var mathFonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
+                .Select(resource => resource.Font).ToHashSet();
+            var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
+                .Where(show => mathFonts.Contains(show.Font)).ToArray();
+            TestAssert.True(math.Length != 0, "The complete atomic formula must remain visible.");
+            var annotation = page.Annotations.Single(item => item.IsDestination);
+            TestAssert.True(math.All(show => annotation.X <= show.X + .01d && annotation.X + annotation.Width >= show.X - .01d &&
+                annotation.Y <= show.Y + .01d && annotation.Y + annotation.Height >= show.Y - .01d),
+                "A complete atomic formula's hyperlink must include every painted glyph in both presets.");
+        }
+    }
+
+    public static void DocxInlineCompositionLiteralBreakKeepsMalformedFallbacks()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
             TestAssert.Skip("Installed Cambria Math is required for the literal fallback control.");
-        foreach (string literal in new[] { "(α+β=γ", "([α+β)=γ]", "+αβγαβγ" })
+        foreach (string literal in new[] { "(α+β=γ", "([α+β)=γ]" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             var document = ReadMutation("docx-omml-inline-overfull12", mode, false, false, (xml, w, m) =>
@@ -1481,7 +1560,7 @@ internal static class DocxInlineCompositionTests
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
                 .RenderBlankPages(document, diagnostics.Add, default).ToArray();
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"),
-                "Malformed grouping and unary-only relocation retain their whole-formula fallback.");
+                "Malformed grouping retains its source-line fallback.");
             TestAssert.True(pages.All(page => page.Fonts.All(font => !font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))),
                 "No partial or unused equation resource may escape the fallback.");
         }

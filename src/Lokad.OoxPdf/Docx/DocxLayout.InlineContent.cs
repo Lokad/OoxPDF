@@ -551,6 +551,7 @@ internal sealed partial class DocxLayoutEngine
             double boundary = current.Count == 0 ? 0d : InlineTextBoundaryAdvance(current[^1], Atom(index));
             if (current.Count != 0 && advance + boundary + groupWidth > width)
             {
+                if (Atom(index).Math is { Box.AllowsInlineRelocation: false }) return false;
                 Flush(new(index));
                 if (stopAfterFirstLine) { lines = output; return true; }
             }
@@ -558,6 +559,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 if (output.Count == 0 && groupWidth <= nextWidth)
                 {
+                    if (Atom(index).Math is { Box.AllowsInlineRelocation: false }) return false;
                     Flush(new(index));
                     if (stopAfterFirstLine) { lines = output; return true; }
                 }

@@ -100,6 +100,7 @@ internal static class DocxMathRowLayout
         box = new DocxMathBox(x, above, below, glyphs)
         { LogicalAdvance = advanceWidth == x ? null : advanceWidth,
             InlineBreakAfterGlyphs = balancedDelimiters && (delimiters is null || delimiters.Count == 0) ? inlineBreaks : [],
+            AllowsInlineRelocation = balancedDelimiters && (delimiters is null || delimiters.Count == 0),
             Edges = atoms.Count == 0 ? null : new(firstKind, previous, atoms[0].Run.NormalText) };
         fallback = null;
         return true;
