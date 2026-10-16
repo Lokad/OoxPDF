@@ -477,6 +477,52 @@ static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSh
         }
     }
 
+    object? docxPreparation = null;
+    if (isDocx)
+    {
+        // These independent diagnostic stages overlap. They identify where
+        // allocations occur; they are not an additive decomposition of render.
+        var detailPackage = BuildPackage();
+        var detailDocument = new DocxReader().Read(detailPackage, null, CancellationToken.None, markupMode);
+        IFontResolver detailResolver = probeFont ?? (IFontResolver)new WindowsFontResolver();
+        var detailRenderer = new DocxRenderer(detailResolver, markupMode, geometryMode);
+        var contextMethod = typeof(DocxRenderer).GetMethod("ResolveEffectiveMarkupContext", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("DOCX context preparation method is unavailable.");
+        var contextFactory = contextMethod.CreateDelegate<Func<DocxRenderer, DocxDocument, CancellationToken, DocxMarkupContext>>();
+        var context = contextFactory(detailRenderer, detailDocument, CancellationToken.None);
+        IFontResolver planResolver = probeFont ?? (IFontResolver)new WindowsFontResolver();
+        (_, object initialPlanMetrics) = MeasureStep(() => DocxFontPlan.Create(detailDocument, planResolver,
+            CancellationToken.None, context.CommentMarkerLabels is not null),
+            "standalone initial font-plan construction; source/context and resolver construction excluded");
+        var fontMethod = typeof(DocxRenderer).GetMethod("PrepareFontResources", BindingFlags.Static | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("DOCX font preparation method is unavailable.");
+        var prepareFonts = fontMethod.CreateDelegate<Func<DocxDocument, IFontResolver, Action<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>?, CancellationToken, bool, DocxFontResources>>();
+        (DocxFontResources preparedFonts, object initialFontMetrics) = MeasureStep(() => prepareFonts(detailDocument, detailResolver, null,
+            CancellationToken.None, context.CommentMarkerLabels is not null),
+            "standalone initial font-resource preparation; parsed source/context, resolver construction and delegate setup excluded");
+        var parsedFaceMetrics = new List<object>();
+        foreach (OpenTypeFont font in preparedFonts.Resources.Select(resource => resource.Font.Font).Distinct())
+        {
+            (_, object metrics) = MeasureStep(() => OpenTypeFont.Load(font.Bytes.ToArray(), 0, CancellationToken.None),
+                "standalone reparse of one prepared SFNT, including its owned byte copy; excludes source discovery and collection extraction");
+            var tableField = typeof(OpenTypeFont).GetField("tables", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Font table directory is unavailable.");
+            var kerningMethod = typeof(OpenTypeFont).GetMethod("ReadKerningPairs", BindingFlags.Static | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Font kerning preparation method is unavailable.");
+            object?[] kerningArguments = [font.Bytes.ToArray(), tableField.GetValue(font), CancellationToken.None];
+            (IReadOnlyDictionary<uint, short> pairs, object kerningMetrics) = MeasureStep(() =>
+                (IReadOnlyDictionary<uint, short>)kerningMethod.Invoke(null, kerningArguments)!,
+                "standalone legacy kern/GPOS preparation; SFNT bytes/table directory excluded; reflection invocation included");
+            parsedFaceMetrics.Add(new { family = font.FamilyName, programBytes = font.Bytes.Length, glyphCount = font.GlyphCount,
+                metrics, kerningPairCount = pairs.Count, kerning = kerningMetrics });
+        }
+        var layoutRenderer = new DocxRenderer(probeFont, markupMode, geometryMode);
+        (_, object coordinatedLayoutMetrics) = MeasureStep(() => layoutRenderer.InspectLayout(detailDocument),
+            "inclusive font resources, conditional coordinated layouts and inspection snapshot; renderer construction excluded; no PDF painting");
+        docxPreparation = new { initialFontPlan = initialPlanMetrics, initialFontResources = initialFontMetrics, preparedSfntReparses = parsedFaceMetrics, coordinatedLayoutSnapshot = coordinatedLayoutMetrics,
+            scope = "Independent overlapping diagnostic stages, not additive. Snapshot allocation is included; this does not count layout invocations." };
+    }
+
     (byte[] stagedBytes, object writeMetrics) = MeasureStep(() =>
     {
         using var output = new MemoryStream();
@@ -493,6 +539,7 @@ static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSh
         read = readMetrics,
         scene = sceneMetrics,
         render = renderMetrics,
+        docxPreparation,
         write = writeMetrics,
         stagedOutputBytes = stagedBytes.Length,
         stagedMatchesWhole = string.Equals(stagedSha, wholeOutputSha, StringComparison.Ordinal),

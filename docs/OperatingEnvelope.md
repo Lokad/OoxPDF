@@ -54,6 +54,40 @@ The coordinator can repeat work for note kerning/numbering, footnote reservation
 
 Use the existing allocation probe with `--docx-review` for the review preset, including stage, isolated and concurrent runs; `MeasureAllocation.ps1 -DocxReview` forwards it. The default remains Final/preserved layout. Reports record both modes and the loaded library hash. Measure against a qualified runtime, keeping tool builds separate from the library. Retained local reports and mode-propagation checks are under `artifacts/composition-c1/current-frame-*-allocations.json`.
 
+## Mixed-document attribution, 2026-10-16
+
+The current qualified library is `a08dcfa6`, SHA-256
+`CC6630ADF1A965CB9D2CEAF3BFCE8C48CF187F2501BE4B70A6CE0360460556E2`.
+The same ten portfolio outcomes remain byte-identical, and the updated allocation
+probe loads this artifact without rebuilding the library. The normal cold/warm
+baseline retains three warm samples; additional DOCX detail probes cover the four
+mixed documents in both presets. They use prebuilt source/context and warmed
+process caches. Diagnostic stages overlap and must not be added together.
+
+| Diagnostic stage | Calling-thread allocation (decimal MB) |
+|---|---:|
+| Initial font-family plan | 0.058–0.079 |
+| Initial complete font resources | 39.85–40.43 |
+| Coordinated font/layout preparation plus inspection snapshot | 43.03–46.96 |
+| Reparse the three prepared embedded SFNT faces | 37.28 |
+| Their isolated legacy kern/GPOS pair materialization | 32.32 |
+
+The three faces are Calibri (1,615,616 program bytes, 248,759 kerning pairs),
+Calibri (1,650,632 bytes, 259,942 pairs) and Cambria Math (1,574,876 bytes, 207,042
+pairs). Their isolated kern/GPOS allocation is respectively 9.67MB, 13.87MB and
+8.78MB. Reparse figures include an owned SFNT copy and exclude discovery/collection
+extraction; isolated kerning excludes prepared bytes/table-directory construction
+and includes reflection invocation. The detail probes neither count coordinator
+passes nor establish a speedup. Font preparation is the demonstrated allocation
+cost; repeated layout is not established as the main cause on this portfolio.
+
+The next bounded investigation is kerning-pair accumulation: retain lookup values,
+last-wins behavior, pair/work bounds, cancellation and owned buffers while avoiding
+avoidable intermediate pair lists. Do not add a cache, class-layout framework or
+production quota knob for this experiment. Existing failed visual thresholds and
+independent Office comparisons remain unchanged. Evidence:
+`artifacts/composition-c1/layout-attribution-evidence.json`.
+
 ## Linux forced-break workload, 2026-10-05
 
 Measured renderer/tool revision: `cef195d77e4e8b116002dd8dcdb985eed4e30fd8`,

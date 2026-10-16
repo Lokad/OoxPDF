@@ -116,6 +116,17 @@ foreach ($entry in @($report.inputs)) {
                 Write-Host ("    {0,-8} {1,12} {2,9}" -f $stageName, ([math]::Round($stage.allocatedBytes / 1MB, 2)), ([math]::Round($stage.elapsedMilliseconds, 1)))
             }
         }
+        if ($null -ne $entry.stages.docxPreparation) {
+            Write-Host "  DOCX preparation: independent overlapping diagnostics, not additive"
+            foreach ($name in @("initialFontPlan", "initialFontResources", "coordinatedLayoutSnapshot")) {
+                $detail = $entry.stages.docxPreparation.$name
+                Write-Host ("    {0,-28} {1,10} MB {2,9} ms" -f $name, ([math]::Round($detail.allocatedBytes / 1MB, 2)), ([math]::Round($detail.elapsedMilliseconds, 1)))
+            }
+            foreach ($face in $entry.stages.docxPreparation.preparedSfntReparses) {
+                Write-Host ("    {0}: {1} pairs; reparse {2} MB, kern/GPOS {3} MB" -f $face.family, $face.kerningPairCount,
+                    ([math]::Round($face.metrics.allocatedBytes / 1MB, 2)), ([math]::Round($face.kerning.allocatedBytes / 1MB, 2)))
+            }
+        }
     }
 }
 
