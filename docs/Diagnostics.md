@@ -43,6 +43,8 @@ Unsupported feature warnings:
 - `PPTX_UNSUPPORTED_HYPERLINK`: a shape, frame, text-run, or chart title hyperlink pointed at an unresolvable, empty, unknown-slide, or unsupported-typed relationship and was ignored. Repeated uses of the same relationship on one slide report once.
 - `PPTX_UNSUPPORTED_HYPERLINK_ACTION`: a hyperlink carried only an action (no relationship target) and was ignored. Repeated uses of the same action on one slide report once.
 - `PPTX_NODE_RENDER_FAILED`: a slide node failed to render.
+- `PPTX_PICTURE_GEOMETRY_UNSUPPORTED`: an ordinary picture has custom or unsupported preset geometry; paint retains its rectangular frame.
+- `PPTX_PICTURE_GEOMETRY_EFFECT_FALLBACK`: picture paint uses a supported nonrectangular mask, but its outline or outer shadow retains rectangular geometry.
 
 These warnings are slide-scoped when a slide index is available. Duplicate occurrences of the same unsupported feature on one slide are aggregated into one warning for that slide.
 

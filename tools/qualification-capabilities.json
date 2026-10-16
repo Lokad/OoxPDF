@@ -1417,5 +1417,25 @@
     "DocxTableCellTextLinesMemoSharesSplitCells",
     "DocxInlineCompositionMathOnlyGroupsCenterAcrossParagraphAlignment",
     "PortableRenderingMathOnlyGroupsPreserveDisplayMeasurementAndAlignment"
+  ],
+  "pptx-picture-geometry": [
+    "PptxPictureGeometry",
+    "PptxSyntheticPngPicture",
+    "PptxSyntheticTransformedPngPictureUsesSlideClip",
+    "PptxSyntheticCroppedPictureUsesClipping",
+    "PptxSyntheticShapePictureFillRendersImageXObject",
+    "PptxSyntheticEllipsePictureFillClipsImage",
+    "PptxSyntheticSvgPictureRendersVectorPath",
+    "PptxSyntheticSvgPictureAppliesSourceCropBeforeScaling",
+    "PptxSvgPictureQuarterTurnClip",
+    "PptxSvgPictureObliqueClip",
+    "PptxSvgCombinedPaintViewportPreservesStrokeWidthsAndAlpha",
+    "PptxImageAlphaPreservesRawOoxmlTokens",
+    "PptxImageRecolorPreservesRawOoxmlTokens",
+    "PptxImageTilePreservesRawOoxmlTokens",
+    "PptxSvgUnusedDefinitionsDoNotPaintOrActivateGradients",
+    "PptxSyntheticSvgUnsupportedContentEmitsDiagnostic",
+    "DocxInlineImageClipTravelsWithScaledStoryPlacement",
+    "DocxPictureLineFrameTravelsWithImagePlacement"
   ]
 }

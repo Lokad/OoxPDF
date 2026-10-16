@@ -10,13 +10,14 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName, CancellationToken cancellationToken)
+    private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName, CancellationToken cancellationToken,
+        string picturePreset, IReadOnlyDictionary<string, double> pictureAdjustments)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double width = OoxUnits.EmuToPoints(bounds.Width);
         double height = OoxUnits.EmuToPoints(bounds.Height);
         double y = document.SlideHeightPoints - OoxUnits.EmuToPoints(bounds.Y) - height;
-        RenderSvgPictureCore(graphics, x, y, width, height, bounds, bytes, crop, fillRect, diagnosticSink, slideIndex, partName, cancellationToken);
+        RenderSvgPictureCore(graphics, x, y, width, height, bounds, bytes, crop, fillRect, diagnosticSink, slideIndex, partName, cancellationToken, picturePreset, pictureAdjustments);
     }
 
     // The vector paint pipeline owns no presentation state. DOCX supplies its
@@ -38,7 +39,8 @@ internal sealed partial class PptxRenderer
 
     private static bool RenderSvgPictureCore(PdfGraphicsBuilder graphics, double x, double y, double width, double height,
         ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect, Action<OoxPdfDiagnostic>? diagnosticSink,
-        int slideIndex, string? partName, CancellationToken cancellationToken)
+        int slideIndex, string? partName, CancellationToken cancellationToken,
+        string picturePreset = "rect", IReadOnlyDictionary<string, double>? pictureAdjustments = null)
     {
         XDocument svg;
         try
@@ -116,6 +118,9 @@ internal sealed partial class PptxRenderer
         {
             ApplyShapeTransform(graphics, x, y, width, height, bounds);
         }
+
+        if (picturePreset != "rect")
+            ClipToPresetShape(graphics, null, picturePreset, x, y, width, height, pictureAdjustments);
 
         if (!crop.IsEmpty || Math.Abs(bounds.RotationDegrees) > 0.001d || bounds.FlipHorizontal || bounds.FlipVertical)
         {

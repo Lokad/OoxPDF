@@ -14,7 +14,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxImagesTests
+internal static partial class PptxImagesTests
 {
     public static void PptxImageRecolorPreservesRawOoxmlTokens()
     {

@@ -73,15 +73,8 @@ internal sealed partial class PptxSceneBuilder
                 ReadLineJoin(shapeProperties),
                 ReadLineJoinValue(shapeProperties), true)
             : default;
-        string ReadShapePreset()
-        {
-            return (string?)shapeProperties
-                ?.Element(DrawingNamespace + "prstGeom")
-                ?.Attribute("prst") ?? "rect";
-        }
-
         return new PptxSceneShape(
-            ReadShapePreset(),
+            ReadPresetGeometry(shapeProperties),
             ReadPresetAdjustments(shapeProperties),
             shapeProperties?.Element(DrawingNamespace + "custGeom") is not null,
             ReadCustomGeometry(shapeProperties),
@@ -167,6 +160,9 @@ internal sealed partial class PptxSceneBuilder
                 PptxColorResolver.HasSupportedGradientStopAlpha(stops);
         }
     }
+
+    private static string ReadPresetGeometry(XElement? shapeProperties) =>
+        (string?)shapeProperties?.Element(DrawingNamespace + "prstGeom")?.Attribute("prst") ?? "rect";
 
     private static IReadOnlyDictionary<string, double> ReadPresetAdjustments(XElement? shapeProperties)
     {

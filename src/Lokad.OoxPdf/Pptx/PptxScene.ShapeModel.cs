@@ -358,7 +358,10 @@ internal sealed record PptxScenePicture(
     bool HasAudio,
     PptxScenePictureTile Tile,
     PptxSceneLineStyle Line,
-    PptxSceneOuterShadow OuterShadow);
+    PptxSceneOuterShadow OuterShadow,
+    string Preset,
+    IReadOnlyDictionary<string, double> PresetAdjustments,
+    bool HasCustomGeometry);
 
 internal sealed record PptxSceneImageResource(
     string PartName,

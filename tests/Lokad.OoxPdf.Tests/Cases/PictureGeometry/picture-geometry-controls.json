@@ -1,0 +1,44 @@
+[
+  {
+    "name": "pic-rect",
+    "preset": "rect"
+  },
+  {
+    "name": "pic-ellipse",
+    "preset": "ellipse"
+  },
+  {
+    "name": "pic-roundRect",
+    "preset": "roundRect"
+  },
+  {
+    "name": "pic-roundRect-adjusted",
+    "preset": "roundRect",
+    "adjustment": 40000
+  },
+  {
+    "name": "pic-triangle",
+    "preset": "triangle"
+  },
+  {
+    "name": "pic-ellipse-sourcecrop",
+    "preset": "ellipse",
+    "crop": true
+  },
+  {
+    "name": "pic-ellipse-rotated-flipped",
+    "preset": "ellipse",
+    "transformed": true
+  },
+  {
+    "name": "shape-ellipse-picture-fill",
+    "preset": "ellipse",
+    "shape": true
+  },
+  {
+    "name": "shape-roundRect-adjusted-picture-fill",
+    "preset": "roundRect",
+    "shape": true,
+    "adjustment": 40000
+  }
+]

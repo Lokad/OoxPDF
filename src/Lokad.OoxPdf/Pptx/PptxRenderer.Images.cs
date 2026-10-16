@@ -41,6 +41,7 @@ internal sealed partial class PptxRenderer
             picture.Picture.Recolor,
             ToLineStyle(picture.Picture.Line),
             ToOuterShadow(picture.Picture.OuterShadow),
+            picture.Picture,
             context.CancellationToken);
     }
 
@@ -62,6 +63,7 @@ internal sealed partial class PptxRenderer
         PptxSceneImageRecolor recolor,
         LineStyle line,
         OuterShadow? outerShadow,
+        PptxScenePicture geometry,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -84,6 +86,20 @@ internal sealed partial class PptxRenderer
             return;
         }
 
+        string preset = geometry.Preset;
+        bool supportedGeometry = !geometry.HasCustomGeometry && CanRenderPictureFillPreset(preset);
+        if (!supportedGeometry)
+        {
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic("PPTX_PICTURE_GEOMETRY_UNSUPPORTED", OoxPdfSeverity.Warning,
+                "Picture shape geometry is unsupported; its rectangular frame is retained.", targetPartName,
+                SlideIndex: slideIndex, Feature: "picture geometry", Fallback: "Rectangular frame"));
+            preset = "rect";
+        }
+        if (preset != "rect" && (line.HasLine || outerShadow is not null))
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic("PPTX_PICTURE_GEOMETRY_EFFECT_FALLBACK", OoxPdfSeverity.Warning,
+                "Picture paint uses its shape mask; its outline or shadow retains rectangular geometry.", targetPartName,
+                SlideIndex: slideIndex, Feature: "picture geometry effects", Fallback: "Rectangular outline/shadow"));
+
         ShapeBounds transformedBounds = transform.Apply(rawBounds);
         double x = OoxUnits.EmuToPoints(transformedBounds.X);
         double yTop = OoxUnits.EmuToPoints(transformedBounds.Y);
@@ -94,7 +110,7 @@ internal sealed partial class PptxRenderer
         RenderPictureOuterShadow(document, graphics, transformedBounds, x, y, width, height, hasTransform, outerShadow, images, ref index);
         if (imageResource.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
         {
-            RenderSvgPicture(graphics, document, transformedBounds, imageResource.Bytes, crop, fillRect, diagnosticSink, slideIndex, targetPartName, cancellationToken);
+            RenderSvgPicture(graphics, document, transformedBounds, imageResource.Bytes, crop, fillRect, diagnosticSink, slideIndex, targetPartName, cancellationToken, preset, geometry.PresetAdjustments);
             StrokePictureFrame(document, graphics, transformedBounds, x, y, width, height, line, hasTransform);
             return;
         }
@@ -206,6 +222,10 @@ internal sealed partial class PptxRenderer
             return;
         }
 
+        // Source crop/fill controls image sampling. The authored mask belongs
+        // to the picture frame, in the same transformed coordinate system.
+        if (preset != "rect")
+            ClipToPresetShape(graphics, null, preset, x, y, width, height, geometry.PresetAdjustments);
         graphics.ClipRectangleEvenOdd(clipX, clipY, clipWidth, clipHeight);
         if (crop.IsEmpty)
         {
@@ -723,7 +743,7 @@ internal sealed partial class PptxRenderer
 
     private static void ClipToPresetShape(
         PdfGraphicsBuilder graphics,
-        XElement shapeProperties,
+        XElement? shapeProperties,
         string preset,
         double x,
         double y,

@@ -445,7 +445,7 @@ internal sealed partial class PptxRenderer
     }
 
     private static double ReadPresetGeometryGuide(
-        XElement shapeProperties,
+        XElement? shapeProperties,
         IReadOnlyDictionary<string, double>? presetAdjustmentsOverride,
         string name,
         double fallback)
@@ -456,7 +456,7 @@ internal sealed partial class PptxRenderer
         }
 
         XElement? guide = shapeProperties
-            .Element(DrawingNamespace + "prstGeom")
+            ?.Element(DrawingNamespace + "prstGeom")
             ?.Element(DrawingNamespace + "avLst")
             ?.Elements(DrawingNamespace + "gd")
             .FirstOrDefault(element => string.Equals((string?)element.Attribute("name"), name, StringComparison.Ordinal));
@@ -472,7 +472,7 @@ internal sealed partial class PptxRenderer
     }
 
     private static double ReadRoundRectangleRadius(
-        XElement shapeProperties,
+        XElement? shapeProperties,
         IReadOnlyDictionary<string, double>? presetAdjustmentsOverride,
         double width,
         double height)

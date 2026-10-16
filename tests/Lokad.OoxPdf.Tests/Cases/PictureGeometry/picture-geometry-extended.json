@@ -1,0 +1,30 @@
+[
+  {
+    "name": "pic-ellipse-nonsquare-following",
+    "preset": "ellipse",
+    "nonsquare": true,
+    "following": true
+  },
+  {
+    "name": "pic-ellipse-grouped-following",
+    "preset": "ellipse",
+    "nonsquare": true,
+    "grouped": true,
+    "following": true
+  },
+  {
+    "name": "pic-svg-ellipse-following",
+    "preset": "ellipse",
+    "nonsquare": true,
+    "svg": true,
+    "following": true
+  },
+  {
+    "name": "pic-ellipse-fill-alpha-crop",
+    "preset": "ellipse",
+    "nonsquare": true,
+    "crop": true,
+    "fillalpha": true,
+    "following": true
+  }
+]

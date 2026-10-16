@@ -12,10 +12,14 @@ internal readonly record struct RgbColor(byte Red, byte Green, byte Blue)
             return false;
         }
 
-        color = new RgbColor(
-            byte.Parse(hex.AsSpan(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
-            byte.Parse(hex.AsSpan(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
-            byte.Parse(hex.AsSpan(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture));
+        if (!byte.TryParse(hex.AsSpan(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte red) ||
+            !byte.TryParse(hex.AsSpan(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte green) ||
+            !byte.TryParse(hex.AsSpan(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte blue))
+        {
+            color = default;
+            return false;
+        }
+        color = new RgbColor(red, green, blue);
         return true;
     }
     // RV07: CSS paint covers #rgb/#rrggbb plus the 148 SVG color keywords
