@@ -1,0 +1,15 @@
+[
+  {
+    "Id": "composed-fields-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/composed-fields-report.docx",
+    "Sha256": "7C6A3C28D57D56DD76494C5416917700F36DFEB9B09C903E7D05E3CC2B5F59F8",
+    "HeldOut": true,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "The trend marker",
+      "See calculation.",
+      "Public calculation note."
+    ]
+  }
+]
