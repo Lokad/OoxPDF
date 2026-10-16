@@ -197,12 +197,12 @@ internal sealed partial class DocxLayoutEngine
         double baselineInset, double lineHeight, double scale, CancellationToken token,
         [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines,
         double? physicalTextBaselineInset = null, double defaultTabStopPoints = WordDefaultTabStopPoints,
-        int? pageNumber = null, int? pageCount = null, bool allowTextOnly = false)
+        int? pageNumber = null, int? pageCount = null, bool allowStaticFallback = false)
     {
         lines = null;
         return double.IsFinite(firstWidth) && double.IsFinite(nextWidth) && firstWidth > 0d && nextWidth > 0d &&
             TryMeasureOrderedInlineAtoms(paragraph, equations, measurer, fontSize, baselineInset, lineHeight, scale,
-                token, out var atoms, defaultTabStopPoints, pageNumber, pageCount, allowTextOnly) &&
+                token, out var atoms, defaultTabStopPoints, pageNumber, pageCount, allowStaticFallback) &&
             TryWrapOrderedInlineAtoms(atoms, firstWidth, nextWidth, token, out lines, physicalTextBaselineInset);
     }
 
@@ -211,7 +211,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer measurer, double fontSize, double baselineInset, double lineHeight, double scale,
         CancellationToken token, [NotNullWhen(true)] out DocxMeasuredInlineAtoms? atoms,
         double defaultTabStopPoints = WordDefaultTabStopPoints, int? pageNumber = null, int? pageCount = null,
-        bool allowTextOnly = false)
+        bool allowStaticFallback = false)
     {
         atoms = null;
         bool hasActualFieldInputs = (pageNumber is not null || pageCount is not null) &&
@@ -227,7 +227,7 @@ internal sealed partial class DocxLayoutEngine
         }
         else
         {
-            if (!allowTextOnly || paragraph.Images.Count != 0 ||
+            if (!allowStaticFallback || paragraph.Images.Count != 0 ||
                 !DocxInlineContent.HasSupportedSourceOwner(paragraph, hasActualFieldInputs, token) ||
                 !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
                 paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right)) return false;
@@ -306,7 +306,14 @@ internal sealed partial class DocxLayoutEngine
                     }
                     break;
                 case DocxInlineEquation math:
-                    if (equations is null || !equations.TryGetValue(math.Equation, out var prepared)) return false;
+                    if (equations is null || !equations.TryGetValue(math.Equation, out var prepared))
+                    {
+                        // The static fallback keeps other supported source items
+                        // measurable. Missing math retains the renderer's existing
+                        // unsupported diagnostic rather than disabling the story.
+                        if (allowStaticFallback) break;
+                        return false;
+                    }
                     AddMeasuredMath(item, prepared);
                     break;
                 case DocxInlinePicture picture:

@@ -164,7 +164,9 @@ internal sealed partial class DocxLayoutEngine
                     if (!TryGetStandaloneMath(paragraph, width, 1d, mathEquations, out _) &&
                         (mathEquations is null || paragraph.InlineContent is null ||
                         DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasPageInputs: true).Count != paragraph.Equations.Count ||
-                        paragraph.Equations.Any(equation => !mathEquations.TryGetValue(equation, out var math) || math.Box.AdvanceWidth > width) ||
+                        // Unavailable math keeps its diagnosed fallback; the
+                        // remaining ordered source items still own a static frame.
+                        paragraph.Equations.Any(equation => mathEquations.TryGetValue(equation, out var math) && math.Box.AdvanceWidth > width) ||
                         paragraph.Images.Any(image => image.WidthPoints > width))) { return false; }
                 }
                 else if (paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right) ||
