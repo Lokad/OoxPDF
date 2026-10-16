@@ -1,0 +1,102 @@
+{
+  "InputSha256": "98980EB43EA8B9662666C026B7DD467F40D79A34E4A96F5805D032C192C8CEB3",
+  "Provenance": "Independent Word 16 PDF effective coordinates; reference and source hashes pinned",
+  "Rows": [
+    {
+      "Mode": "final-preserve",
+      "Page": 1,
+      "Prefix": "Quarterly operations report",
+      "X": 72.504,
+      "BaselineY": 745.56,
+      "ReferencePdfSha256": "4FCF69607DA0C259EBB2DE06533791FD43FF7499F09C614AD9D91566A5BB0476"
+    },
+    {
+      "Mode": "final-preserve",
+      "Page": 1,
+      "Prefix": "Public synthetic composition portfolio",
+      "X": 72.504,
+      "BaselineY": 93.984,
+      "ReferencePdfSha256": "4FCF69607DA0C259EBB2DE06533791FD43FF7499F09C614AD9D91566A5BB0476"
+    },
+    {
+      "Mode": "final-preserve",
+      "Page": 1,
+      "Prefix": "Footer:",
+      "X": 72.504,
+      "BaselineY": 66.984,
+      "ReferencePdfSha256": "4FCF69607DA0C259EBB2DE06533791FD43FF7499F09C614AD9D91566A5BB0476"
+    },
+    {
+      "Mode": "final-preserve",
+      "Page": 2,
+      "Prefix": "Quarterly operations report",
+      "X": 72.504,
+      "BaselineY": 745.56,
+      "ReferencePdfSha256": "4FCF69607DA0C259EBB2DE06533791FD43FF7499F09C614AD9D91566A5BB0476"
+    },
+    {
+      "Mode": "final-preserve",
+      "Page": 2,
+      "Prefix": "Public synthetic composition portfolio",
+      "X": 72.504,
+      "BaselineY": 93.984,
+      "ReferencePdfSha256": "4FCF69607DA0C259EBB2DE06533791FD43FF7499F09C614AD9D91566A5BB0476"
+    },
+    {
+      "Mode": "final-preserve",
+      "Page": 2,
+      "Prefix": "Footer:",
+      "X": 72.504,
+      "BaselineY": 66.984,
+      "ReferencePdfSha256": "4FCF69607DA0C259EBB2DE06533791FD43FF7499F09C614AD9D91566A5BB0476"
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Page": 1,
+      "Prefix": "Quarterly operations report",
+      "X": 54.984,
+      "BaselineY": 661.37,
+      "ReferencePdfSha256": "07DA6EAB64A5ED75F9D93FB320278CCF4B170FB985F64FE31EF15E64DF6010AA"
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Page": 1,
+      "Prefix": "Public synthetic composition portfolio",
+      "X": 54.984,
+      "BaselineY": 167.26,
+      "ReferencePdfSha256": "07DA6EAB64A5ED75F9D93FB320278CCF4B170FB985F64FE31EF15E64DF6010AA"
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Page": 1,
+      "Prefix": "Footer:",
+      "X": 54.984,
+      "BaselineY": 146.78,
+      "ReferencePdfSha256": "07DA6EAB64A5ED75F9D93FB320278CCF4B170FB985F64FE31EF15E64DF6010AA"
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Page": 2,
+      "Prefix": "Quarterly operations report",
+      "X": 54.984,
+      "BaselineY": 661.37,
+      "ReferencePdfSha256": "07DA6EAB64A5ED75F9D93FB320278CCF4B170FB985F64FE31EF15E64DF6010AA"
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Page": 2,
+      "Prefix": "Public synthetic composition portfolio",
+      "X": 54.984,
+      "BaselineY": 167.26,
+      "ReferencePdfSha256": "07DA6EAB64A5ED75F9D93FB320278CCF4B170FB985F64FE31EF15E64DF6010AA"
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Page": 2,
+      "Prefix": "Footer:",
+      "X": 54.984,
+      "BaselineY": 146.78,
+      "ReferencePdfSha256": "07DA6EAB64A5ED75F9D93FB320278CCF4B170FB985F64FE31EF15E64DF6010AA"
+    }
+  ]
+}

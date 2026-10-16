@@ -34,11 +34,10 @@ internal sealed partial class DocxLayoutEngine
         if (!HasVisibleStaticContent(source)) { return source; }
         double center = page.Height / 2d;
         double frameAnchor = isHeader ? page.Height - page.MarginTop : page.MarginBottom;
-        var lines = new List<DocxTextLineLayout>(source.TextLines.Count);
-        foreach (var line in source.TextLines)
+        DocxTextLineLayout MapLine(DocxTextLineLayout line)
         {
             token.ThrowIfCancellationRequested();
-            lines.Add(line with
+            return line with
             {
                 X = x + (line.X - x) * scale,
                 BaselineY = center + (line.BaselineY - center) * scale,
@@ -63,20 +62,64 @@ internal sealed partial class DocxLayoutEngine
                 InlineFrame = line.InlineFrame is { } frame ? new(frame.BaselineInset * scale, frame.Height * scale) : null,
                 InlineObjectEndOffsetX = line.InlineObjectEndOffsetX * scale,
                 StaticStoryUsesPhysicalY = true
-            });
+            };
+        }
+        DocxInlineImageLayout MapImage(DocxInlineImageLayout image)
+        {
+            token.ThrowIfCancellationRequested();
+            return image with
+            {
+                X = x + (image.X - x) * scale, Y = center + (image.Y - center) * scale,
+                Width = image.Width * scale, Height = image.Height * scale, StaticStoryUsesPhysicalY = true,
+                ClipBounds = image.ClipBounds is { } clip ? clip with
+                {
+                    X = x + (clip.X - x) * scale, Y = center + (clip.Y - center) * scale,
+                    Width = clip.Width * scale, Height = clip.Height * scale
+                } : null,
+                LineFrame = image.LineFrame is { } frame ? new(center + (frame.Bottom - center) * scale, frame.Height * scale) : null
+            };
+        }
+        var mappedTables = new Dictionary<DocxTableLayoutContext, DocxTableLayoutContext>(ReferenceEqualityComparer.Instance);
+        DocxTableRowLayout MapRow(DocxTableRowLayout row)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!mappedTables.TryGetValue(row.Table, out var table))
+            {
+                table = row.Table with
+                {
+                    TableX = x + (row.Table.TableX - x) * scale,
+                    GridColumnsWidthSum = row.Table.GridColumnsWidthSum * scale,
+                    ResolvedTableWidth = row.Table.ResolvedTableWidth * scale,
+                    ResolvedColumnWidths = row.Table.ResolvedColumnWidths.Select(value => value * scale).ToArray(),
+                    AlignedMinimumRowBottomMargins = row.Table.AlignedMinimumRowBottomMargins.Select(value => value * scale).ToArray()
+                };
+                mappedTables.Add(row.Table, table);
+            }
+            return row with
+            {
+                Y = center + (row.Y - center) * scale, Height = row.Height * scale,
+                FullRowHeight = row.FullRowHeight * scale, FragmentOffsetFromRowTop = row.FragmentOffsetFromRowTop * scale,
+                StaticStoryUsesPhysicalY = true, ReviewBorderPrintScale = scale,
+                Table = table,
+                Cells = row.Cells.Select(cell =>
+                {
+                    token.ThrowIfCancellationRequested();
+                    return cell with
+                    {
+                        X = x + (cell.X - x) * scale, Y = center + (cell.Y - center) * scale,
+                        Width = cell.Width * scale, Height = cell.Height * scale,
+                        ContentPaddingLeft = cell.ContentPaddingLeft * scale, ContentPaddingRight = cell.ContentPaddingRight * scale,
+                        ContentPaddingTop = cell.ContentPaddingTop * scale, ContentPaddingBottom = cell.ContentPaddingBottom * scale,
+                        TextLines = cell.TextLines.Select(MapLine).ToArray(), InlineImages = cell.InlineImages.Select(MapImage).ToArray()
+                    };
+                }).ToArray()
+            };
         }
         return source with
         {
-            TextLines = lines,
-            InlineImages = source.InlineImages.Select(image =>
-            {
-                token.ThrowIfCancellationRequested();
-                return image with
-                {
-                    X = x + (image.X - x) * scale, Y = center + (image.Y - center) * scale,
-                    Width = image.Width * scale, Height = image.Height * scale, StaticStoryUsesPhysicalY = true
-                };
-            }).ToArray(),
+            TextLines = source.TextLines.Select(MapLine).ToArray(),
+            InlineImages = source.InlineImages.Select(MapImage).ToArray(),
+            TableRows = source.TableRows.Select(MapRow).ToArray(),
             EndCursorY = frameAnchor + (source.EndCursorY - frameAnchor) * scale,
             EndPendingAfterSpacing = source.EndPendingAfterSpacing * scale,
             MappedFooterContentTop = isHeader ? null : frameAnchor +
@@ -90,17 +133,34 @@ internal sealed partial class DocxLayoutEngine
         foreach (var element in story.BodyElements)
         {
             token.ThrowIfCancellationRequested();
-            if (element is not DocxParagraphElement { Revisions.Count: 0, Paragraph: var paragraph }) { return false; }
-            if (paragraph.Equations.Count != 0)
+            IEnumerable<DocxParagraph> paragraphs;
+            if (element is DocxParagraphElement { Revisions.Count: 0 } direct) { paragraphs = [direct.Paragraph]; }
+            else if (element is DocxTableElement table && table.Table.Revisions.Count == 0 &&
+                table.Table.Rows.All(row =>
+                {
+                    token.ThrowIfCancellationRequested();
+                    return DocxMathParagraphPolicy.IsSupportedSimpleRow(row) && row.Cells.All(cell =>
+                    {
+                        token.ThrowIfCancellationRequested();
+                        return DocxMathParagraphPolicy.IsSupportedSimpleCell(cell);
+                    });
+                }))
+                paragraphs = table.Table.Rows.SelectMany(row => row.Cells).SelectMany(cell => cell.Paragraphs);
+            else { return false; }
+            foreach (DocxParagraph paragraph in paragraphs)
             {
-                if (!TryGetStandaloneMath(paragraph, width, 1d, mathEquations, out _) &&
-                    (mathEquations is null || paragraph.InlineContent is null ||
-                    DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasPageInputs: true).Count != paragraph.Equations.Count ||
-                    paragraph.Equations.Any(equation => !mathEquations.TryGetValue(equation, out var math) || math.Box.AdvanceWidth > width) ||
-                    paragraph.Images.Any(image => image.WidthPoints > width))) { return false; }
+                token.ThrowIfCancellationRequested();
+                if (paragraph.Equations.Count != 0)
+                {
+                    if (!TryGetStandaloneMath(paragraph, width, 1d, mathEquations, out _) &&
+                        (mathEquations is null || paragraph.InlineContent is null ||
+                        DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasPageInputs: true).Count != paragraph.Equations.Count ||
+                        paragraph.Equations.Any(equation => !mathEquations.TryGetValue(equation, out var math) || math.Box.AdvanceWidth > width) ||
+                        paragraph.Images.Any(image => image.WidthPoints > width))) { return false; }
+                }
+                else if (paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right) ||
+                    !HasNaturalStaticParagraphContent(paragraph)) { return false; }
             }
-            else if (paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right) ||
-                !HasNaturalStaticParagraphContent(paragraph)) { return false; }
         }
         return true;
     }

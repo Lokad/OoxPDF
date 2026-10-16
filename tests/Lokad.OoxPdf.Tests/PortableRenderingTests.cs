@@ -20,7 +20,9 @@ internal static class PortableRenderingTests
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            var source = DocxTests.ReadDocx(Case("Composition/composed-static-cell-report.docx"), mode);
+            // The pinned face has ordinary math letters, not Cambria's italic
+            // mathematical alphabet. Keep this portable geometry control normal.
+            var source = ReadPortableNormalMath("Composition/composed-static-cell-report.docx", mode);
             var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             foreach (var page in renderer.InspectLayout(source).Pages)
@@ -30,7 +32,18 @@ internal static class PortableRenderingTests
                 double footerTop = rows.Max(row => row.Y + row.Height);
                 var bodyLines = page.Items.Where(item => item.Kind == "TextLine").ToArray();
                 TestAssert.True(bodyLines.Length != 0 && bodyLines.All(line => line.Y > footerTop),
-                    "Body admission reserves the complete static table, including its first paragraph.");
+                    $"Body admission reserves the complete static table: {mode}, body={bodyLines.Min(line => line.Y)}, footer={footerTop}, margin={page.MarginBottom}.");
+            }
+            foreach (var page in renderer.InspectTextEmission(source).Lines.GroupBy(line => line.PageIndex))
+            {
+                var staticSegments = page.Where(line => line.IsStaticStory).SelectMany(line => line.Segments).ToArray();
+                TestAssert.True(staticSegments.Length != 0 && staticSegments.All(segment => segment.BaselineY > 0d && segment.BaselineY < source.PageHeightPoints),
+                    $"Static content must remain on the printed page: {mode}, page={page.Key}, min={staticSegments.Min(segment => segment.BaselineY)}, max={staticSegments.Max(segment => segment.BaselineY)}.");
+                var footer = staticSegments.Where(segment => segment.BaselineY < source.PageHeightPoints / 2d).ToArray();
+                var body = page.Where(line => !line.IsStaticStory && line.ContainerStoryKind == "Body").SelectMany(line => line.Segments).ToArray();
+                TestAssert.True(footer.Length != 0 && body.Length != 0 &&
+                    body.Min(segment => segment.BaselineY) > footer.Max(segment => segment.BaselineY + segment.PdfFontSize),
+                    "Printed body baselines clear the visible footer block after both frames are transformed.");
             }
         }
     }
@@ -956,6 +969,38 @@ internal static class PortableRenderingTests
         TestAssert.Contains("/FontFile2", pdf);
         TestAssert.Contains("/ToUnicode", pdf);
         TestAssert.Contains("%%EOF", pdf);
+    }
+
+    private static DocxDocument ReadPortableNormalMath(string relative, OoxPdfDocxMarkupMode mode)
+    {
+        using var bytes = new MemoryStream();
+        using (var source = ZipFile.OpenRead(Case(relative)))
+        using (var target = new ZipArchive(bytes, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            XNamespace math = "http://schemas.openxmlformats.org/officeDocument/2006/math";
+            foreach (var entry in source.Entries)
+            {
+                using var input = entry.Open();
+                using var output = target.CreateEntry(entry.FullName).Open();
+                if (entry.FullName.StartsWith("word/", StringComparison.Ordinal) && entry.FullName.EndsWith(".xml", StringComparison.Ordinal))
+                {
+                    var xml = XDocument.Load(input);
+                    foreach (var run in xml.Descendants(math + "r"))
+                    {
+                        var properties = run.Element(math + "rPr");
+                        if (properties is null) { properties = new XElement(math + "rPr"); run.AddFirst(properties); }
+                        var normal = properties.Element(math + "nor");
+                        if (normal is null) { normal = new XElement(math + "nor"); properties.Add(normal); }
+                        normal.SetAttributeValue(math + "val", "1");
+                    }
+                    xml.Save(output);
+                }
+                else { input.CopyTo(output); }
+            }
+        }
+        bytes.Position = 0;
+        var package = OoxPackage.Open(bytes, default);
+        return new DocxReader().Read(package, null, default, markupMode: mode);
     }
 
     private static string Case(string relative) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,

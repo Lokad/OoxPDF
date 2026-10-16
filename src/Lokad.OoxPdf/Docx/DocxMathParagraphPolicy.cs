@@ -28,18 +28,23 @@ internal static class DocxMathParagraphPolicy
         foreach (DocxTableRow row in table.Rows)
         {
             token.ThrowIfCancellationRequested();
-            if (!row.HasSupportedHeight || row.Revisions.Count != 0) { continue; }
+            if (!IsSupportedSimpleRow(row)) { continue; }
             foreach (DocxTableCell cell in row.Cells)
             {
                 token.ThrowIfCancellationRequested();
-                if (cell.HasVerticalMerge || cell.FitText || cell.Revisions.Count != 0 ||
-                    cell.TextDirectionValue is not (null or "lrTb") ||
-                    cell.BodyElements.Any(child => child is not DocxParagraphElement)) { continue; }
+                if (!IsSupportedSimpleCell(cell)) { continue; }
                 foreach (DocxParagraph paragraph in cell.Paragraphs)
                 { token.ThrowIfCancellationRequested(); yield return paragraph; }
             }
         }
     }
+
+    public static bool IsSupportedSimpleRow(DocxTableRow row) => row.HasSupportedHeight && row.Revisions.Count == 0;
+
+    public static bool IsSupportedSimpleCell(DocxTableCell cell) =>
+        !cell.HasVerticalMerge && !cell.FitText && cell.Revisions.Count == 0 &&
+        cell.TextDirectionValue is null or "lrTb" &&
+        cell.BodyElements.All(child => child is DocxParagraphElement);
 
     public static IEnumerable<(DocxParagraph Paragraph, bool HasPageInputs)> EnumerateStaticPreparationCandidates(DocxDocument document, CancellationToken token)
     {

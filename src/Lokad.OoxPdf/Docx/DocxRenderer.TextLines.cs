@@ -304,7 +304,8 @@ internal sealed partial class DocxRenderer
             .Cast<DocxLayoutItem>()
             .Concat(page.StaticInlineImages)
             .Concat(page.StaticInlineTextBoxes)
-            .Concat(page.StaticTableRows)
+            .Concat(page.StaticTableRows.Select(row => row.StaticStoryUsesPhysicalY
+                ? TranslateTableRow(row, 0d, markupContext.WordCompatibleTextYOffset) : row))
             .OrderByDescending(item => item switch
             {
                 DocxTextLineLayout textLine => textLine.BaselineY,
@@ -346,7 +347,7 @@ internal sealed partial class DocxRenderer
         {
             foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
             {
-                yield return cellLine;
+                yield return cellLine.StaticStoryUsesPhysicalY ? AdjustStaticTextLine(cellLine, markupContext) : cellLine;
             }
         }
     }

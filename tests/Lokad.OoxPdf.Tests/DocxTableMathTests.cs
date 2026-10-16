@@ -451,6 +451,36 @@ internal static class DocxTableMathTests
         }
     }
 
+    public static void DocxStaticTableMathCompleteReportMatchesIndependentPrintedFrames()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent anchors use installed Windows font metrics.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "Composition"));
+        string input = Path.Combine(cases, "composed-static-cell-report.docx");
+        using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "composed-static-cell-office-geometry.json")));
+        TestAssert.Equal(reference.RootElement.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+        foreach (var group in reference.RootElement.GetProperty("Rows").EnumerateArray().GroupBy(row => row.GetProperty("Mode").GetString()))
+        {
+            bool review = group.Key == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var pages = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).ToArray();
+            TestAssert.Equal(2, pages.Length);
+            TestAssert.True(!DocxPageFootnoteNumberingTests.DecodeText(pages[0]).Contains("Review section 7.", StringComparison.Ordinal) &&
+                DocxPageFootnoteNumberingTests.DecodeText(pages[1]).Contains("Review section 7.", StringComparison.Ordinal),
+                "The independent complete report admits section seven after the footer boundary on page two.");
+            foreach (var row in group)
+            {
+                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[row.GetProperty("Page").GetInt32() - 1]);
+                string prefix = row.GetProperty("Prefix").GetString()!;
+                var show = shows.Where(item => item.Text.StartsWith(prefix, StringComparison.Ordinal)).MaxBy(item => item.Y);
+                TestAssert.True(Math.Abs(show.X - row.GetProperty("X").GetDouble()) < .2d &&
+                    Math.Abs(show.Y - row.GetProperty("BaselineY").GetDouble()) < .6d,
+                    "Header/footer tables retain independent physical print anchors: " + group.Key + "/" + prefix);
+            }
+        }
+    }
+
     public static void DocxStaticTableMathPreparationSharesCellEligibilityAndSourceIdentity()
     {
         var (paragraph, _) = Prepared(20d);
