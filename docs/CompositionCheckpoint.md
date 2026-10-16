@@ -1704,3 +1704,17 @@ PDFs retain accepted bytes/comparisons/reviews; no root build or suite replay.
 C43 CI caught two older assertions assuming zero inter-formula spacing. Their
 replacement checks exact spacing/centering and belongs to both capability sets.
 Evidence: `artifacts/composition-c1/owned-picture-frames-evidence.json`.
+
+
+## Next high-priority maintenance: PPTX picture masks
+
+Reviewed synthetic evidence confirms that ordinary `p:pic` loses preset geometry
+while shape picture fills retain it. Ellipse, rounded-rectangle and polygon pictures
+therefore paint rectangular corners, independently of working source crop. The
+next bounded batch preserves geometry/adjustments and reuses the existing shape
+picture-fill masks. Acceptance covers ellipse/non-square, crop, transforms/grouping,
+state restoration and adjustment guides against independent Office output. SVG,
+outlines, shadows and unsupported/custom geometry require explicit scope and tests;
+raster controls alone do not qualify them. Safe managed/dependency-free constraints
+and existing visual thresholds remain. Detailed tasks are in `PLAN.md`; retained
+public synthetic evidence is under `artifacts/pptx-picture-geometry/`.
