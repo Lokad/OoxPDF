@@ -6,6 +6,7 @@ import hashlib, json, argparse
 from copy import deepcopy
 parser = argparse.ArgumentParser()
 parser.add_argument("--multiple", action="store_true")
+parser.add_argument("--script-only", action="store_true", help="Generate script-frame controls without rewriting other fixture families")
 parser.add_argument("--cell-context", choices=["sole", "flow"])
 parser.add_argument("--leading-content", choices=["math", "image"])
 args = parser.parse_args()
@@ -23,6 +24,8 @@ manifest = []
 sources = [('literal', 'docx-omml-literal-inline.docx', '16CFF81A67E2EBC2DDE05873CE789C8FB79901563F8EB0A51D09F9846894F18D'),
            ('fraction', 'docx-omml-normal-fraction-inline-arial-normal.docx', 'DD4907536AF7C2EFCF99A0B0EEB6AB877A453229AB4E57313E17270790F97871'),
            ('root-fraction', 'docx-omml-root-fraction-inline-bar-square.docx', '54DF93237B68A46DA4AE66455848EC9B01E729CFEC63BDA380102628923DDBF3')]
+if args.script_only:
+    sources = [("script", "docx-omml-inline-script-middle12.docx", "9EA3F9FE29911876A39983D2222C824A0B27E75883B19074B7EA654F20EB8769")]
 for kind, filename, expected_sha in sources:
     if args.leading_content and kind != "fraction":
         continue
@@ -142,5 +145,5 @@ for kind, filename, expected_sha in sources:
                 info = ZipInfo(name, (2026,10,15,0,0,0)); info.compress_type = ZIP_DEFLATED
                 archive.writestr(info, data)
         manifest.append({"Id":identifier, "Input":output.relative_to(root).as_posix(), "Sha256":hashlib.sha256(output.read_bytes()).hexdigest().upper(), "SourceSha256":expected_sha, "HeldOut":False, "ExpectedText":["Leading paragraph.", "Observed series." if args.cell_context else "Before formula:", "Following prose."]})
-(cases / ("CompositionProbes/math-printed-frame" + ("-multiple" if args.multiple else "") + ("-cell-" + args.cell_context if args.cell_context else "") + ("-leading-" + args.leading_content if args.leading_content else "") + ".json")).write_text(json.dumps(manifest,indent=2)+"\n",encoding="utf-8")
+(cases / ("CompositionProbes/math-printed-frame" + ("-script" if args.script_only else "") + ("-multiple" if args.multiple else "") + ("-cell-" + args.cell_context if args.cell_context else "") + ("-leading-" + args.leading_content if args.leading_content else "") + ".json")).write_text(json.dumps(manifest,indent=2)+"\n",encoding="utf-8")
 print(str(len(manifest)) + " source controls pinned")

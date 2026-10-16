@@ -1,0 +1,69 @@
+{
+  "Provenance": "Independent Word 16 PDF text coordinates; relative baseline gaps isolate the occupied frame from the first-body origin",
+  "Rows": [
+    {
+      "Id": "math-printed-frame-script-anchor12-multiple",
+      "InputSha256": "2FCE3306DAD8729152172DE4CECD7CF6B22D65F59BBA205EEDC475CDA6BD4A2F",
+      "Mode": "final-preserve",
+      "Prefix": "Before formula:",
+      "LeadingToBaseline": 15.120000000000005,
+      "ReferencePdfSha256": "2F9E8EDD7EFF4B1376D23022580B52B866F30B3303470BDBD9004E7887BC886F"
+    },
+    {
+      "Id": "math-printed-frame-script-anchor12-multiple",
+      "InputSha256": "2FCE3306DAD8729152172DE4CECD7CF6B22D65F59BBA205EEDC475CDA6BD4A2F",
+      "Mode": "final-preserve",
+      "Prefix": "Following prose.",
+      "LeadingToBaseline": 29.75999999999999,
+      "ReferencePdfSha256": "2F9E8EDD7EFF4B1376D23022580B52B866F30B3303470BDBD9004E7887BC886F"
+    },
+    {
+      "Id": "math-printed-frame-script-anchor12-multiple",
+      "InputSha256": "2FCE3306DAD8729152172DE4CECD7CF6B22D65F59BBA205EEDC475CDA6BD4A2F",
+      "Mode": "all-word-compatible",
+      "Prefix": "Before formula:",
+      "LeadingToBaseline": 11.480000000000018,
+      "ReferencePdfSha256": "F1BD3B76B3750070750D2CD9098A80D0C8AB87A538A8F203BF705D8779082752"
+    },
+    {
+      "Id": "math-printed-frame-script-anchor12-multiple",
+      "InputSha256": "2FCE3306DAD8729152172DE4CECD7CF6B22D65F59BBA205EEDC475CDA6BD4A2F",
+      "Mode": "all-word-compatible",
+      "Prefix": "Following prose.",
+      "LeadingToBaseline": 22.590000000000032,
+      "ReferencePdfSha256": "F1BD3B76B3750070750D2CD9098A80D0C8AB87A538A8F203BF705D8779082752"
+    },
+    {
+      "Id": "math-printed-frame-script-anchor18-multiple",
+      "InputSha256": "F871CBCA0785D72B5BB39E2EA1A6AB2D1C3AAFFC21A0C5C88BAE12E0F734CFED",
+      "Mode": "final-preserve",
+      "Prefix": "Before formula:",
+      "LeadingToBaseline": 16.680000000000064,
+      "ReferencePdfSha256": "B7BBD6F88D32F00A0AC90A8A154A414685F369F2FAB1D65AF2FB0C0875AA910C"
+    },
+    {
+      "Id": "math-printed-frame-script-anchor18-multiple",
+      "InputSha256": "F871CBCA0785D72B5BB39E2EA1A6AB2D1C3AAFFC21A0C5C88BAE12E0F734CFED",
+      "Mode": "final-preserve",
+      "Prefix": "Following prose.",
+      "LeadingToBaseline": 31.32000000000005,
+      "ReferencePdfSha256": "B7BBD6F88D32F00A0AC90A8A154A414685F369F2FAB1D65AF2FB0C0875AA910C"
+    },
+    {
+      "Id": "math-printed-frame-script-anchor18-multiple",
+      "InputSha256": "F871CBCA0785D72B5BB39E2EA1A6AB2D1C3AAFFC21A0C5C88BAE12E0F734CFED",
+      "Mode": "all-word-compatible",
+      "Prefix": "Before formula:",
+      "LeadingToBaseline": 12.649999999999977,
+      "ReferencePdfSha256": "0CD605E424499B1E3583C1C6DA2DF7169704BB1EC9A67DE84B87ACE11010739B"
+    },
+    {
+      "Id": "math-printed-frame-script-anchor18-multiple",
+      "InputSha256": "F871CBCA0785D72B5BB39E2EA1A6AB2D1C3AAFFC21A0C5C88BAE12E0F734CFED",
+      "Mode": "all-word-compatible",
+      "Prefix": "Following prose.",
+      "LeadingToBaseline": 23.75999999999999,
+      "ReferencePdfSha256": "0CD605E424499B1E3583C1C6DA2DF7169704BB1EC9A67DE84B87ACE11010739B"
+    }
+  ]
+}

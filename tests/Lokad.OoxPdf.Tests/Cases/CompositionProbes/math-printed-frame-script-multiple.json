@@ -1,0 +1,26 @@
+[
+  {
+    "Id": "math-printed-frame-script-anchor12-multiple",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-printed-frame-script-anchor12-multiple.docx",
+    "Sha256": "2FCE3306DAD8729152172DE4CECD7CF6B22D65F59BBA205EEDC475CDA6BD4A2F",
+    "SourceSha256": "9EA3F9FE29911876A39983D2222C824A0B27E75883B19074B7EA654F20EB8769",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Before formula:",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-printed-frame-script-anchor18-multiple",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-printed-frame-script-anchor18-multiple.docx",
+    "Sha256": "F871CBCA0785D72B5BB39E2EA1A6AB2D1C3AAFFC21A0C5C88BAE12E0F734CFED",
+    "SourceSha256": "9EA3F9FE29911876A39983D2222C824A0B27E75883B19074B7EA654F20EB8769",
+    "HeldOut": false,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Before formula:",
+      "Following prose."
+    ]
+  }
+]

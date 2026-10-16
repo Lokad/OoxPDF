@@ -646,16 +646,18 @@ internal sealed partial class DocxLayoutEngine
                       math.Box.BelowBaseline * scale <= lineHeight - physicalInset
                     : fragment.Source is DocxInlineText or DocxInlineTab))
             {
-                // An inline object entirely inside the ordinary text strut must
-                // not add a second font line frame. Taller objects keep their
-                // independently qualified occupied extent.
+                // Contained ink shares the ordinary physical text strut, but
+                // its prepared occupied frame still contributes leading once.
                 textInset = physicalInset;
                 above = physicalInset;
                 below = Math.Max(0d, lineHeight - physicalInset);
-                for (int index = 0; index < current.Count; index++)
-                    if (current[index].Math is { } math)
-                        current[index] = current[index] with { BaselineInset = math.Box.AboveBaseline * scale,
-                            OccupiedHeight = (math.Box.AboveBaseline + math.Box.BelowBaseline) * scale };
+                foreach (var fragment in current)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (fragment.Math is null) { continue; }
+                    above = Math.Max(above, fragment.BaselineInset);
+                    below = Math.Max(below, fragment.OccupiedHeight - fragment.BaselineInset);
+                }
             }
             IReadOnlyList<DocxTextSegmentLayout> labelSegments = [];
             if (cursor.LineIndex == 0 && output.Count == 0 && paragraph.ListLabel is { } label)

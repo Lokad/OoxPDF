@@ -1238,6 +1238,53 @@ internal static class DocxInlineCompositionTests
             equations, new TrackingMeasurer(), 12d, 300d, 300d, 9d, 16d, 1d, cancellation.Token, out _));
     }
 
+    public static void DocxInlineCompositionContainedInkRetainsPreparedOccupiedFrames()
+    {
+        var paragraph = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final,
+            "math-printed-frame-script-anchor12-multiple").Paragraphs.Single(p => p.Equations.Count != 0);
+        TestAssert.Equal(2, paragraph.Equations.Count);
+        var equations = paragraph.Equations.ToDictionary(equation => equation,
+            equation => new DocxPreparedMathParagraph(equation, new(10d, 6d, 1d, []), 14d, 18d));
+        TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph, equations,
+            new TrackingMeasurer(), 12d, 500d, 500d, 12d, 13d, .75d, default, out var lines,
+            physicalTextBaselineInset: 9d), "Contained ink must retain a complete measured line.");
+        var line = TestAssert.NotNull(lines).Single();
+        TestAssert.Equal(10.5d, line.BaselineInset);
+        TestAssert.Equal(14.5d, line.OccupiedHeight);
+        TestAssert.Equal(9d, line.TextBaselineInset);
+        TestAssert.True(line.Fragments.Where(fragment => fragment.Math is not null).All(fragment =>
+            fragment.BaselineInset == 10.5d && fragment.OccupiedHeight == 13.5d),
+            "Prepared leading contributes once to the shared frame and remains owned by each formula.");
+    }
+
+    public static void DocxInlineCompositionScriptFramesMatchIndependentPrintedGaps()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the independent printed script controls.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-printed-frame-script-office-geometry.json")));
+        foreach (var group in references.RootElement.GetProperty("Rows").EnumerateArray()
+            .GroupBy(row => (Id: row.GetProperty("Id").GetString()!, Mode: row.GetProperty("Mode").GetString())))
+        {
+            string input = Path.Combine(cases, group.Key.Id + ".docx");
+            TestAssert.Equal(group.First().GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            bool review = group.Key.Mode == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var document = DocxTests.ReadDocx(input, mode);
+            var renderer = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, default).Single());
+            double leading = shows.Single(show => show.Text.StartsWith("Leading paragraph.", StringComparison.Ordinal)).Y;
+            foreach (var row in group)
+            {
+                string prefix = row.GetProperty("Prefix").GetString()!;
+                double gap = leading - shows.Single(show => show.Text.StartsWith(prefix, StringComparison.Ordinal)).Y;
+                TestAssert.True(Math.Abs(gap - row.GetProperty("LeadingToBaseline").GetDouble()) < .15d,
+                    $"Prepared script frames retain independent Word baseline gaps: {group.Key}/{prefix}/{gap}.");
+            }
+        }
+    }
+
     public static void DocxInlineCompositionPrintedMathMatchesIndependentBaselineGaps()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
