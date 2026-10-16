@@ -1560,3 +1560,24 @@ The native regression fails on C37. Twelve fixed/complete PDFs and four earlier
 implicit-style controls retain bytes. Transfer verifies 17 assets/four PDFs without
 a root build or suite replay. Evidence:
 `artifacts/composition-c1/explicit-display-links-evidence.json`.
+
+
+### Authored display-group alignment (C40)
+
+Uniform left/right explicit display groups no longer lose their formulas. Each
+measured line owns one nullable display alignment; its display-role flag is derived.
+Math-only paragraphs use that owner even when paragraph alignment is justified.
+Unknown/mixed alignment and unsupported prose contexts retain explicit fallback.
+
+Four inputs/eight modes retain ten mathematical glyphs, independent Word anchors,
+bookmarks and unchanged-format run splitting across body/cell/footer placement.
+Existing table/footer geometry and following-prose pitch residuals remain. Eight
+reviewed regions show no new observed omission/overlap/clipping; all eight visual
+gates and joined-Greek extraction warnings remain failed/unresolved. Numerical
+thresholds are unchanged; exact native glyph/anchor checks cover those contents.
+
+Frozen 0e3aa24c passes 18 Windows methods once and seven Ubuntu checks (11 font skips).
+Two causal regressions fail on C39. Twelve fixed/complete PDFs retain accepted
+bytes, comparisons, screens and reviews. Transfer verifies 17 assets/four PDFs
+without a root build or suite replay. Evidence:
+`artifacts/composition-c1/authored-display-alignment-evidence.json`.
