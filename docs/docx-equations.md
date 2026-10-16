@@ -14,12 +14,16 @@ negative or unresolved heights, vertical merges, nested/nonparagraph cell
 content, fit/vertical text and revisions retain fallback. Fitting inline cell
 equations with plain prose share body wrapping. Multiple fitting inline equations
 and inline pictures now use shared ordered-fragment measurement and placement in
-body, cell and direct header/footer paragraphs. Wider display combinations and
+body, cell and direct header/footer paragraphs. Explicit formulas beside prose
+use the same inline source-row sizing while math-only rows retain display style.
+Source flags stay unchanged, including across bookmarks and run splitting.
+Wider display combinations and
 unfit objects retain fallback. Painted math-bearing rows are atomic, with wider fragmentation still
 unqualified.
 Ordinary default/left tabs now share measured text/math/image advances across
-these containers. Right/center/decimal tabs, leaders and out-of-frame stops retain
-explicit fallback. Closed comment ranges can coexist with supported inline math
+these containers. Fitting right/center tab fields also measure their complete
+text/math advance. Decimal tabs, leaders and wrapping/out-of-frame aligned fields
+retain explicit fallback. Closed comment ranges can coexist with supported inline math
 in body paragraphs and cells: source boundaries survive bookmarks and unchanged-
 format run splitting. Highlights and connectors consume placed source extents,
 including formula bounds; selection height belongs to the line. Final output

@@ -1611,3 +1611,32 @@ and four PDFs without a root build or suite replay. Focused warm allocation is
 27.99–28.47MB Final and 31.47–31.90MB review; overlapping stages are not additive,
 and no speedup is claimed. Evidence:
 `artifacts/composition-c1/total-page-math-evidence.json`.
+
+### Explicit formulas beside ordinary prose (C42)
+
+An explicit display flag no longer discards supported formulas sharing a source
+row with prose. One authored-row classifier distinguishes prose and math-only
+roles; preparation resolves inline argument sizing before measurement while
+preserving source objects. Body, simple cells and footers use the existing ordered
+path. Math-only rows retain their display role across authored breaks; unknown or
+mixed alignment and unsupported paragraph contexts retain fallback. Counter
+availability belongs to measurement rather than source-row classification.
+
+Six inputs/twelve modes cover one or both formulas marked explicit, literals and
+fractions, bookmarks/run splitting and cell/footer placement. Both source flags
+produce identical Word rasters and candidate rasters for each body pair. Exact
+mathematical text, independent sizing and anchors pass; maximum absolute X/Y and
+local-X errors are 1.094/0.367/0.274pt. Four complete page pairs were reviewed,
+covering six outcomes through raster identities, with no new observed content
+loss or serious overlap/clipping. Other outcomes retain native checks. All twelve
+visual gates still fail; all source-prose/simple-math presence checks pass, while
+eight generic mathematical extraction screens remain unresolved.
+
+Frozen c972b1b3 passes 26 Windows methods once and 14 Ubuntu checks (twelve native
+font skips); two causal regressions fail on C41. Portable tests use identically
+upright Greek on both sides of the source transformation and preserve explicit
+NUMPAGES composition. Twelve fixed/complete PDFs retain accepted identities and
+comparisons. Transfer verifies 17 assets/four PDFs without a root build or suite
+replay. Eight Office exports were unnecessarily repeated during probe expansion;
+their references are retained, with no subsequent export repetition. Evidence:
+`artifacts/composition-c1/mixed-display-rows-evidence.json`.
