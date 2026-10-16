@@ -789,3 +789,42 @@ The fixed portfolio has no paragraphs combining comments and equations; retain
 its prior full qualification and severity review, with exact letter and held-out
 memo review integration PDFs. The held-out document remains outside derivation.
 Evidence: `artifacts/composition-c1/math-comments-evidence.json`.
+
+
+Continuous automatic footnote references now retain explicit resolved marker
+owners in the ordered paragraph source. Equations and note glyphs coexist before
+or after each other in body paragraphs and cells, with or without comment parts.
+Shared authored runs and starts 1/9/12/103 retain ownership. Custom/unowned labels,
+page/section/unknown restart requests and equation/endnote combinations retain
+staged fallback. Plain-text correction eligibility now excludes equations, a
+semantic ownership rule instead of another font/size/document-shape exception.
+The prior predicate demonstrably accepted equation paragraphs; no separate
+visible regression from that misclassification is asserted.
+
+Ordered placement also scales source vertical run offsets once, preserving
+superscript marker raises in physical review frames. Sixteen independent Word
+mode controls retain both formulas, note text and destinations; relative marker
+raises differ by at most 0.040pt. An earlier prototype fails this assertion by
+about one point. Review cell baselines still differ by about 2.5pt, and all sixteen
+original numerical control gates remain failed. Four reviewed review crops retain
+visible equations and note content. The previous library omits both equations in
+all sixteen mode probes; native/portable content regressions fail there.
+
+Base 951e1370 / root eb790419 passes 54 selected methods in one invocation and
+five Ubuntu methods. A rendered shared-run control exposed an additional link
+ownership defect: an authored digit identical to the automatic label acquired a
+second link. Follow-up 5ec7ac65 / root 41f224c8 retains the marker role through
+formatting/emission and links only that owner. Its regression fails on the base;
+14 focused methods and two Ubuntu methods pass. The controls cover paragraphs
+with and without equations, plus existing page numbering, custom marks and
+endnote behavior.
+
+The base sixteen source/mode outputs and Office evidence are reused: canonical
+reference runs contain no colliding authored digit. No full control/corpus replay
+was needed for the role follow-up. Seventeen assets/four exact integration PDFs
+transfer, including two canonical footnote controls and the portfolio letter/
+held-out memo. The 1,258-input snapshot is reused. No root rebuild or suite replay
+is performed. Portfolio paragraphs do not combine equations and footnote
+references, and their tables/static stories/comments already exclude plain-text
+corrections; prior complete qualification remains. Evidence:
+`artifacts/composition-c1/math-footnotes-evidence.json`.

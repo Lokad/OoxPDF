@@ -23,7 +23,10 @@ explicit fallback. Closed comment ranges can coexist with supported inline math
 in body paragraphs and cells: source boundaries survive bookmarks and unchanged-
 format run splitting. Highlights and connectors consume placed source extents,
 including formula bounds; selection height belongs to the line. Final output
-retains the equations while hiding comments. Note references, fields, revisions
+retains the equations while hiding comments. Continuous automatic footnote references with owned display runs also compose
+with equations in body paragraphs and cells; superscript offsets share the
+container scale and source marker roles delimit note links. Custom/unowned marks,
+page/section-dependent numbering, equation/endnote combinations, fields, revisions
 and wider related/floating-story combinations remain staged. Independent Word
 controls preserve the original visual thresholds; significant typography and
 annotation-height residuals remain.
