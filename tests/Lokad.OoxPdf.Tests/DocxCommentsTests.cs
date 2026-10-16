@@ -8030,7 +8030,7 @@ internal static class DocxCommentsTests
             new MemoryFontProgramSource("test:balloon:" + request.FamilyName, Bytes), IsFallback: false);
     }
 
-    private static IEnumerable<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)> ReadEmbeddedGlyphTextShows(PdfPage page)
+    internal static IEnumerable<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)> ReadEmbeddedGlyphTextShows(PdfPage page)
     {
         foreach (Match show in Regex.Matches(page.Content,
             @"/(?<font>\S+) (?<size>[\d.]+) Tf\s+\S+ Tc\s+1 0 0 1 (?<x>[-\d.]+) (?<y>[-\d.]+) Tm\s*(?<show><[0-9A-F]+> Tj|\[.*?\] TJ)",

@@ -168,6 +168,23 @@ internal sealed partial class DocxRenderer
         return true;
     }
 
+    private static double? ResolveCommentAnchorDepth(
+        DocxTextLineLayout line, DocxParagraph paragraph, DocxInlineReference reference,
+        DocxMarkupContext markupContext)
+    {
+        if (line.InlineFrame is null || !UsesWordCompatibleAllMarkupTextProfile(markupContext))
+            return null;
+        DocxCommentRange? range = paragraph.CommentRanges.FirstOrDefault(range =>
+            string.Equals(range.Id, reference.Id, StringComparison.Ordinal));
+        if (range is null || !TryResolveWordCompatibleCommentRangeBounds(line, range,
+                ResolveTextEmissionXOffset(markupContext), out _, out _))
+            return null;
+        // A measured range attaches at its selection bottom. Legacy plain-text
+        // and bare-reference anchors retain their established baseline inset.
+        return Math.Max(-WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints,
+            ResolveCommentRangeVerticalExtents(line).Below);
+    }
+
     private static double ResolveCommentAnchorX(
         DocxTextLineLayout line,
         IReadOnlyList<DocxTextLineLayout> anchorTextLines,

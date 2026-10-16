@@ -213,6 +213,16 @@ internal static class DocxInlineCompositionTests
                 line.Segments.Count(segment => !segment.IsTerminalLineSpace && segment.TextLength == 5) == 1 &&
                 line.Segments.Count(segment => !segment.IsTerminalLineSpace && segment.TextLength == 6) == 1);
             double start = line.Segments.Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == 5).X;
+            double baseline = line.Segments.Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == 5).BaselineY;
+            double connectorOffset = renderer.InspectMarkupBalloons(document).Single().AnchorY - baseline;
+            TestAssert.True(Math.Abs(connectorOffset - row.GetProperty("ConnectorBaselineOffset").GetDouble()) < .3d,
+                $"Comment connector must consume the independent selected line frame: {input}/{connectorOffset}.");
+            double titleOffset = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page)
+                .Single(show => show.Text.StartsWith("Commented ", StringComparison.Ordinal)).Y - baseline;
+            // The accepted balloon baseline remains approximate; connector depth
+            // must not make its independent Office residual worse.
+            TestAssert.True(Math.Abs(titleOffset - row.GetProperty("BalloonTitleBaselineOffset").GetDouble()) < 3d,
+                $"Selection depth cannot displace the balloon title: {input}/{titleOffset}.");
             foreach (var (value, property) in new[] { (fills[0].X - start, "StartOffset"), (fills[0].X + fills[0].Width - start, "EndOffset") })
                 TestAssert.True(Math.Abs(value - row.GetProperty(property).GetDouble()) < .4d,
                     $"Comment fill must follow the independent selected source range: {input}/{property}={value}.");

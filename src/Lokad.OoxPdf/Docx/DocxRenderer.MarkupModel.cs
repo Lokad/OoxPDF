@@ -57,6 +57,7 @@ internal sealed partial class DocxRenderer
         int BodySummaryPartCount,
         int WordCompatibleBodySummaryPartCount)
     {
+        public double? WordCompatibleAnchorDepthPoints { get; init; }
         public DocxRunFontResource? WordCompatibleBodyResource { get; init; }
         public double? WordCompatibleBodyLineHeightEm { get; init; }
         public DocxRunFontResource? WordCompatibleTerminalResource { get; init; }

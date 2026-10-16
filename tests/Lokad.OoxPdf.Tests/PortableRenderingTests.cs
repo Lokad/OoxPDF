@@ -35,6 +35,10 @@ internal static class PortableRenderingTests
             double height = double.Parse(fills[0].Groups["h"].Value, System.Globalization.CultureInfo.InvariantCulture);
             TestAssert.True(occupied > 0d && height >= occupied - .002d && height <= occupied + .2d,
                 $"Selection must contain the occupied frame while allowing visible bounds to enlarge it: {container}/{height}/{occupied}.");
+            double bottom = double.Parse(fills[0].Groups["y"].Value, System.Globalization.CultureInfo.InvariantCulture);
+            double connector = renderer.InspectMarkupBalloons(document).Single().AnchorY;
+            TestAssert.True(Math.Abs(connector - bottom) < .002d,
+                $"Range selection and connector must share their measured bottom edge: {container}/{connector}/{bottom}.");
             CheckWrittenPages([page]);
         }
     }

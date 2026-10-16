@@ -544,7 +544,13 @@
     "DocxWordCompatibleStaticAndNoteCommentsUseNominalCanvas",
     "DocxCommentsPreserveAuthoredWhitespace",
     "PortableRenderingCommentsPreserveAuthoredWhitespace",
-    "DocxTableCellTextLinesMemoSharesSplitCells"
+    "DocxTableCellTextLinesMemoSharesSplitCells",
+    "DocxWordCompatibleAllMarkupRendersGroupedCommentTextWithOfficeBalloonFont",
+    "DocxWordCompatibleThreadPrintMatchesParentOnlyWithoutDroppingMetadata",
+    "DocxMarkupBalloonLayoutPrioritizesCommentsOverNearbyRevisions",
+    "DocxMarkupBalloonLayoutGroupsNearbyRevisionAnchors",
+    "DocxWordCompatibleMixedStoryCommentsKeepScaledBodyFrame",
+    "DocxAllMarkupRendererPlacesRelatedStoryCommentBalloons"
   ],
   "docx-math-continuous-footnotes": [
     "DocxInlineCompositionAutomaticFootnotes",

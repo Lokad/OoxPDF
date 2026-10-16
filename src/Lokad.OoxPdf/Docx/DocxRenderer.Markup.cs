@@ -450,6 +450,7 @@ internal sealed partial class DocxRenderer
             foreach (DocxMarkupBalloonCandidate candidate in laneBand.Candidates)
             {
                 double anchorY = ResolveMarkupBalloonAnchorY(candidate.AnchorY, page, markupContext);
+                double connectorAnchorY = ResolveMarkupBalloonAnchorY(candidate.AnchorY, page, markupContext, candidate.WordCompatibleAnchorDepthPoints);
                 double height = ResolveMarkupBalloonHeight(candidate, markupContext, labelEmbedded, bodyEmbedded, area.Width, cancellationToken);
                 double topInset = ResolveMarkupBalloonTopInset(markupContext);
                 double desiredTop = Math.Min(nextTop, anchorY + topInset);
@@ -468,7 +469,7 @@ internal sealed partial class DocxRenderer
                 int nearbyAnchorConnectorCount = placements.Count(placement =>
                     !placement.IsOverflowSummary &&
                     placement.LaneBandIndex == laneBand.Index &&
-                    Math.Abs(placement.AnchorY - anchorY) < MarkupBalloonConnectorCollisionAnchorYThresholdPoints);
+                    Math.Abs(placement.AnchorY - connectorAnchorY) < MarkupBalloonConnectorCollisionAnchorYThresholdPoints);
                 double connectorAnchorX = candidate.AnchorConnectorX;
                 connectorAnchorX += area.Side == "Left"
                     ? -nearbyAnchorConnectorCount * 1.5d
@@ -487,7 +488,7 @@ internal sealed partial class DocxRenderer
                     y,
                     area.Width,
                     height,
-                    anchorY,
+                    connectorAnchorY,
                     connectorAnchorX,
                     area.ConnectorX,
                     anchorConnectorClamped,
@@ -696,6 +697,7 @@ internal sealed partial class DocxRenderer
                         {
                             WordCompatibleBodyResource = ReferenceEquals(qualifiedBody?.Embedded.Font, bodyEmbedded?.Font)
                                 ? null : qualifiedBody,
+                            WordCompatibleAnchorDepthPoints = ResolveCommentAnchorDepth(anchorLine, paragraph, reference, markupContext),
                             WordCompatibleBodyLineHeightEm = qualifiedBody is not null && qualifiedBody.Embedded.Font.UnitsPerEm > 0
                                 ? DocxLineMetrics.MeasureHheaLineHeight(qualifiedBody.Embedded.Font, 1d) : null,
                             WordCompatibleTerminalResource = ResolveCommentBalloonTerminalResource(storyLayout, qualifiedBody, qualifiedParts, fontResources),
@@ -938,7 +940,8 @@ internal sealed partial class DocxRenderer
     private static double ResolveMarkupBalloonAnchorY(
         double anchorY,
         DocxLayoutPage page,
-        DocxMarkupContext markupContext)
+        DocxMarkupContext markupContext,
+        double? measuredDepthPoints = null)
     {
         if (markupContext.Mode != OoxPdfDocxMarkupMode.AllMarkup ||
             markupContext.GeometryMode != OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ||
@@ -947,7 +950,8 @@ internal sealed partial class DocxRenderer
             return anchorY;
         }
 
-        double resolved = anchorY - (markupContext.WordCompatibleTextYOffset + WordCompatibleAllMarkupBalloonAnchorRowInsetPoints);
+        double resolved = anchorY - (markupContext.WordCompatibleTextYOffset +
+            (measuredDepthPoints ?? WordCompatibleAllMarkupBalloonAnchorRowInsetPoints));
         return Math.Min(page.Height - page.MarginTop, Math.Max(page.MarginBottom, resolved));
     }
 
@@ -1095,6 +1099,7 @@ internal sealed partial class DocxRenderer
             WordCompatibleTitle = wordCompatibleTitle,
             WordCompatibleBody = wordCompatibleBody,
             AnchorY = group.Max(candidate => candidate.AnchorY),
+            WordCompatibleAnchorDepthPoints = group.MaxBy(candidate => candidate.AnchorY)?.WordCompatibleAnchorDepthPoints,
             AnchorConnectorX = allRevisions
                 ? group.Select(candidate => candidate.AnchorConnectorX).DefaultIfEmpty(group[0].AnchorConnectorX).Average()
                 // Office: connectors attach at the range end, i.e. the last range line (lowest anchor).
