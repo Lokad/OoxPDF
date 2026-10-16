@@ -1,5 +1,28 @@
 # Composed-document reliability checkpoint
 
+C66 restores text-only static list labels through the existing ordered inline
+measurement and placement path. A bounded static-list entry uses shared semantic
+source ownership; other callers keep their existing default. Ordinary paragraphs
+without a parser-side mixed-content view derive items from their original source
+runs, without rewriting the parsed model. Pictures, exact/minimum spacing and
+unsupported owners/tabs retain their explicit legacy fallbacks.
+
+Four footer/header controls cover first/second formatting changes in both public
+presets. All 24 expected labels render; independent Word coordinate differences
+stay below 0.33pt. Six clean Final/mixed references are exported with view read-back
+and two footer Review references are reused. Qualification passes 83 Windows and
+68 Ubuntu methods/15 explicit skips, once per platform; two new checks fail on the
+parent. The same production/CLI bytes qualify the source-pinned measurements and
+the final harness, without repeating eight conversions. Five fixed/complete inputs
+have no static or inherited-style numbering requests, so retain their corpus
+evidence. The tested header Final body text operations match the parent exactly.
+
+All eight visual gates still fail unchanged thresholds. Two full page pairs were
+reviewed; list-label weight in revised paragraphs, typography and review connector/
+bar geometry remain approximate. The compound pinned-font math frame fallback is
+separate from this text-only migration. Evidence:
+`artifacts/composition-c1/static-list-labels-evidence.json` and linked reports.
+
 C65 restores text-only footer prose that fell below the page when removing math
 and pictures left bookmarks, links, numbering and formatting metadata. Natural
 static frames now share the existing inline source-owner rules; math eligibility
