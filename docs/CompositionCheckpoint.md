@@ -1075,3 +1075,22 @@ remain explicit. Source 0b8ceeec reuses frozen 2b320cd8 with all 17 asset hashes
 rechecked, no rebuild, suite replay or new fitting branch. The shared authoring
 transformation also regenerates the four reduced controls byte for byte.
 Evidence: `artifacts/composition-c1/composed-endnotes-evidence.json`.
+
+Direct normal footnote/endnote paragraphs now retain supported mixed equations.
+Preparation and diagnostics preserve their note-part source identity; ordered
+measurement supplies occupied line boxes, and the common printed note map scales
+math and annotation extents together. After-spacing belongs to the final line.
+Frozen c57f2dd2 (compiled fd6abcfe) / root c24c1249 passes 56 affected methods in
+one invocation and six Ubuntu checks; three regressions fail with the previous
+library. Bookmarks, run splitting, repeated formulas, wrapping and real multipage
+continuations retain source content and destinations. Eight independent Word
+outcomes retain all four body/note fractions and prose, with first-note baseline/X
+errors below 0.367pt / 0.062pt. Five crops were reviewed. All eight numerical gates
+and generic rate/time token screens remain failed; source prose/simple-math
+screens have zero deficits. A significant review-endnote width defect remains:
+the wrapped note adds a line, shifting numerators 24.645pt horizontally / 11.439pt
+vertically. Broader note-content placement acceptance waits for that correction.
+Images, note tables and special-separator equations retain staged fallbacks.
+The 17-asset/four-PDF transfer preserves held-out endnote-report review and memo
+Final without rebuilding or replaying a suite. Evidence:
+`artifacts/composition-c1/note-content-evidence.json`.
