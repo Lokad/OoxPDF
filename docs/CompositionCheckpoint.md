@@ -1831,3 +1831,21 @@ screens have no deficits, while generic revision flags and unused-part warnings
 remain unresolved. Four deletion-markup controls retain actual deficits.
 Eight fixed DOCX/two complete-report PDFs retain accepted bytes and comparisons;
 no root rebuild or suite replay. Evidence: math-insertion-evidence.json.
+
+
+Unchanged list labels and separators now inherit the first text run's formatting
+before its inline revision decoration. Numbering-level overrides and runtime
+font/spacing decisions remain intact; paragraph/mark revision owners keep their
+existing path. Source tests cover four containers, both modes, bookmarks/run
+splitting, authored formatting and level overrides.
+
+One artifact passes 20 Windows methods once, 15 Ubuntu checks/five native-font
+skips, two causal parent regressions and 17-asset/four-PDF transfer. All sixteen
+math/text geometry controls retain C49 values; four Final insertion rasters are
+identical despite separator coalescing in the PDF. Four markup insertion pages
+were reviewed against Word and label styling improves. All sixteen numerical
+gates still fail; change-bar position and deletion balloon/content defects remain.
+Eight fixed DOCX/two complete-report PDFs retain accepted bytes/comparisons. A
+wrong historical manifest also ran fourteen unnecessary spacing conversions;
+those are excluded from acceptance and recorded. No root rebuild or suite replay.
+Evidence: list-label-owner-evidence.json.
