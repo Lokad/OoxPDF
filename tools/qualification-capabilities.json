@@ -769,5 +769,26 @@
     "DocxCompleteEndnoteKerningResolvesThresholdsWithoutRewritingOwners",
     "DocxSectionNoteNumbersKeepIndependentFootnoteAndEndnoteAdmission",
     "DocxLayoutSplitsSingleSectEndEndnoteStoryBeforeFollowingSection"
+  ],
+  "docx-endnote-start-boundary": [
+    "DocxInlineCompositionEndnoteStartMatchesIndependentParagraphBoundary",
+    "PortableRenderingEndnoteStartUsesLocalParagraphSpacing",
+    "DocxDocumentEndnotesFollowTrailingBodySpacingAtNominalScale",
+    "DocxDocumentEndnoteBoundariesCollapseNumericParagraphSpacing",
+    "DocxDocumentEndnoteBoundariesRetainUnqualifiedStoryFallbacks",
+    "DocxDocumentEndnoteBoundariesEmitActualDestinationTops",
+    "DocxDocumentEndnoteDestinationsUseNeighborSpacingWithoutMovingContent",
+    "DocxDocumentEndnoteDestinationsRetainUnqualifiedFrameTargets",
+    "DocxDocumentEndnoteWrappedBoundariesUseCompleteParagraphFlow",
+    "DocxDocumentEndnoteWrappedBoundariesOwnFirstSliceDestinations",
+    "DocxContinuedEndnoteWidowHeadsMakeProgressOnOneLineContinuationFrames",
+    "DocxMixedEndnoteCapacityExcludesLatentSeparatorSpaceWithoutMovingInk",
+    "DocxDeferredMixedEndnoteUsesResolvedSeparatorFirstLineOrigin",
+    "DocxDeferredMixedEndnoteConsumesSeparatorDeficitOnce",
+    "DocxFittingMixedEndnoteSharesOwnedSeparatorDeficit",
+    "DocxFittingMixedEndnoteKeepsUnownedBearingAndFrameFallbacks",
+    "DocxDocumentEndnoteSeparatorIsPlacedWithRuleMark",
+    "DocxEndnoteSeparatorIgnoresDirectParagraphSpacing",
+    "DocxEndnoteSeparatorIgnoresExactLineSpacing"
   ]
 }

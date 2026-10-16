@@ -37,6 +37,33 @@ internal static class PortableRenderingTests
         }
     }
 
+    public static void PortableRenderingEndnoteStartUsesLocalParagraphSpacing()
+    {
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var source = DocxTests.ReadDocx(Case("CompositionProbes/math-endnote-before-" + container + ".docx"), mode);
+            var trailing = source.Paragraphs.Last();
+            var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            double Gap(int after)
+            {
+                var paragraph = trailing with { SpacingAfterPoints = after,
+                    Spacing = trailing.Spacing with { AfterValue = (after * 20).ToString(System.Globalization.CultureInfo.InvariantCulture) } };
+                var document = source with { BodyElements = source.BodyElements.Select(element =>
+                    element is DocxParagraphElement p && ReferenceEquals(p.Paragraph, trailing)
+                        ? new DocxParagraphElement(paragraph) : element).ToArray() };
+                var lines = renderer.InspectTextEmission(document).Lines;
+                var body = lines.Last(line => line.ContainerStoryKind == "Body");
+                var note = lines.Single(line => line.ContainerStoryKind == "Endnote" && line.TextLength > 1);
+                return body.Segments[0].BaselineY - note.Segments.MaxBy(segment => segment.TextLength)!.BaselineY;
+            }
+            double zero = Gap(0), eight = Gap(8), twentyFour = Gap(24);
+            TestAssert.True(eight > zero && Math.Abs((twentyFour - zero) - 3d * (eight - zero)) < .001d,
+                "Numeric trailing spacing is charged once in the printed frame, independently of earlier tables.");
+        }
+    }
+
     public static void PortableRenderingStaticPageFieldsPreserveMathAcrossDigitBoundary()
     {
         foreach (string form in new[] { "simple", "packed" })

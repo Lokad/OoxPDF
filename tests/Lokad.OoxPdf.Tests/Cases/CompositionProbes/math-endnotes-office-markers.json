@@ -1,5 +1,5 @@
 {
-  "Source": "Independent Word 16 PDF exports; default lower-Roman endnote marker raise/font ratio relative to surrounding prose. Whole-page visual thresholds remain unchanged.",
+  "Source": "Independent Word 16 PDF exports; default lower-Roman endnote marker raise/font ratio relative to surrounding prose. Whole-page visual thresholds remain unchanged. StoryBaselineGap measures following-body prose to endnote prose baselines in those same independent exports.",
   "Rows": [
     {
       "Id": "math-endnote-before-body",
@@ -7,7 +7,8 @@
       "InputSha256": "129338958A0320D450ACFBB8708BEEDAFA40D1220048CDD5A4020FD628C3C047",
       "ReferencePdfSha256": "6E76079D5299F882C9D4702860F94A78ADEB21C168863FE6FA8AEDE19F90F5CC",
       "MarkerRaise": 3.9599999999999227,
-      "MarkerFontRatio": 0.6699999999999999
+      "MarkerFontRatio": 0.6699999999999999,
+      "StoryBaselineGap": 29.279999999999973
     },
     {
       "Id": "math-endnote-before-body",
@@ -15,7 +16,8 @@
       "InputSha256": "129338958A0320D450ACFBB8708BEEDAFA40D1220048CDD5A4020FD628C3C047",
       "ReferencePdfSha256": "BEC9514DA2ED1B92E6CEAF8703B659EC6F7AE6395A1B878044FADE3C7B370AF6",
       "MarkerRaise": 3.0,
-      "MarkerFontRatio": 0.6701846965699209
+      "MarkerFontRatio": 0.6701846965699209,
+      "StoryBaselineGap": 22.200000000000045
     },
     {
       "Id": "math-endnote-before-cell",
@@ -23,7 +25,8 @@
       "InputSha256": "77188225538B67E18FE897BAE9AE6F773276647506F21AF78FC559D05530F27E",
       "ReferencePdfSha256": "773BF629A9FA2A9223AF49D411DA989EE3FE8263C90457E4CA3C960544747998",
       "MarkerRaise": 3.9599999999999227,
-      "MarkerFontRatio": 0.6699999999999999
+      "MarkerFontRatio": 0.6699999999999999,
+      "StoryBaselineGap": 29.279999999999973
     },
     {
       "Id": "math-endnote-before-cell",
@@ -31,7 +34,8 @@
       "InputSha256": "77188225538B67E18FE897BAE9AE6F773276647506F21AF78FC559D05530F27E",
       "ReferencePdfSha256": "3046FAC21FEB07670A4EB130F6BF1B5B7C52021056337C82EC42C6CCF51B7871",
       "MarkerRaise": 3.0,
-      "MarkerFontRatio": 0.6701846965699209
+      "MarkerFontRatio": 0.6701846965699209,
+      "StoryBaselineGap": 22.200000000000045
     },
     {
       "Id": "math-endnote-after-body",
@@ -39,7 +43,8 @@
       "InputSha256": "3722D7DE335390BF55E5CEB508C9263B8816FF319A7B972B67EFC66BF61B3C94",
       "ReferencePdfSha256": "0E85CB2A4135FF3F287F670672E41CB9ED47BDD3F61206CABF6593EA1FFF68EC",
       "MarkerRaise": 3.9599999999999227,
-      "MarkerFontRatio": 0.6699999999999999
+      "MarkerFontRatio": 0.6699999999999999,
+      "StoryBaselineGap": 29.279999999999973
     },
     {
       "Id": "math-endnote-after-body",
@@ -47,7 +52,8 @@
       "InputSha256": "3722D7DE335390BF55E5CEB508C9263B8816FF319A7B972B67EFC66BF61B3C94",
       "ReferencePdfSha256": "8B489CE66FBD66E4C487C085CFE9114096A6B5810057584A519D6A77E0864E68",
       "MarkerRaise": 3.0,
-      "MarkerFontRatio": 0.6701846965699209
+      "MarkerFontRatio": 0.6701846965699209,
+      "StoryBaselineGap": 22.200000000000045
     },
     {
       "Id": "math-endnote-after-cell",
@@ -55,7 +61,8 @@
       "InputSha256": "25EF1BA3FC3999EA3B0D602EADC0632D58C06F6ABC8D4695B8EA7A6E21CBD02E",
       "ReferencePdfSha256": "8D5D60FCE860B92B06F91791EDE119CF32A7DE4E951E4A32BB76C3D3CB2B4A2B",
       "MarkerRaise": 3.9599999999999227,
-      "MarkerFontRatio": 0.6699999999999999
+      "MarkerFontRatio": 0.6699999999999999,
+      "StoryBaselineGap": 29.279999999999973
     },
     {
       "Id": "math-endnote-after-cell",
@@ -63,7 +70,8 @@
       "InputSha256": "25EF1BA3FC3999EA3B0D602EADC0632D58C06F6ABC8D4695B8EA7A6E21CBD02E",
       "ReferencePdfSha256": "585F5404231FF14204BD44AEC7835E760C9FDFFE8555981E3290F2A16E3FEF96",
       "MarkerRaise": 3.0,
-      "MarkerFontRatio": 0.6701846965699209
+      "MarkerFontRatio": 0.6701846965699209,
+      "StoryBaselineGap": 22.200000000000045
     }
   ]
 }

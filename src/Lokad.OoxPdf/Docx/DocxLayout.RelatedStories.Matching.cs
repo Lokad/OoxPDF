@@ -271,22 +271,32 @@ internal sealed partial class DocxLayoutEngine
         DocxLayoutPage page, DocxRelatedStoryLayout? separator, double printScale,
         IReadOnlyList<DocxRelatedStoryLayout> contentStories)
     {
-        if (Math.Abs(printScale - 1d) > 0.000000001d || separator is null ||
-            separator.TextLines.Count != 1 || !string.IsNullOrWhiteSpace(separator.TextLines[0].Text) || separator.TableRows.Count != 0 ||
-            separator.InlineImages.Count != 0 || separator.FloatingDrawings.Count != 0 ||
-            separator.Story.BodyElements.Count != 1 ||
-            contentStories.Any(story => story.TableRows.Count != 0 || story.InlineImages.Count != 0 || story.FloatingDrawings.Count != 0) ||
-            page.ColumnFrames.Count > 1 ||
-            page.Items.Count == 0 || page.Items.Any(item => item is not DocxTextLineLayout))
-        {
-            return false;
-        }
+        return Math.Abs(printScale - 1d) <= 0.000000001d &&
+            HasEmptyNoteSeparatorFlow(separator, contentStories) && page.ColumnFrames.Count <= 1 &&
+            page.Items.Count != 0 && page.Items.All(item => item is DocxTextLineLayout) &&
+            HasNumericTrailingBodyAfterSpacing(page);
+    }
 
-        return page.Items.MinBy(item => GetVerticalBounds(item).Y) is DocxTextLineLayout
+    private static bool HasEmptyNoteSeparatorFlow(DocxRelatedStoryLayout? separator,
+        IReadOnlyList<DocxRelatedStoryLayout> contentStories) =>
+        separator is not null && separator.TextLines.Count == 1 &&
+        string.IsNullOrWhiteSpace(separator.TextLines[0].Text) && separator.TableRows.Count == 0 &&
+        separator.InlineImages.Count == 0 && separator.FloatingDrawings.Count == 0 && separator.Story.BodyElements.Count == 1 &&
+        contentStories.All(story => story.TableRows.Count == 0 && story.InlineImages.Count == 0 && story.FloatingDrawings.Count == 0);
+
+    private static bool CanUseTrailingParagraphEndnoteStart(DocxLayoutPage page,
+        IReadOnlyList<DocxPlacedRelatedStoryLayout> placedStories, DocxRelatedStoryLayout? separator,
+        double printScale, IReadOnlyList<DocxRelatedStoryLayout> contentStories) =>
+        double.IsFinite(printScale) && printScale > 0d && page.ColumnFrames.Count <= 1 && page.Items.Count != 0 &&
+        !placedStories.Any(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote) &&
+        HasEmptyNoteSeparatorFlow(separator, contentStories) && contentStories.Count != 0 &&
+        contentStories.All(HasPlainNoteFlowStory) && HasNumericTrailingBodyAfterSpacing(page);
+
+    private static bool HasNumericTrailingBodyAfterSpacing(DocxLayoutPage page) =>
+        page.Items.MinBy(item => GetVerticalBounds(item).Y) is DocxTextLineLayout
             { SourceParagraph: { } paragraph } &&
             paragraph.Spacing.AfterLinesValue is null && paragraph.Spacing.AfterAutoSpacingValue is null &&
             double.IsFinite(paragraph.EffectiveProperties.SpacingAfterPoints);
-    }
 
     private static double ResolveTrailingBodyAfterSpacing(DocxLayoutPage page) =>
         page.Items.MinBy(item => GetVerticalBounds(item).Y) is DocxTextLineLayout { SourceParagraph: { } paragraph }
@@ -459,6 +469,11 @@ internal sealed partial class DocxLayoutEngine
         return CanUseNominalNoteSeparatorFlow(page, separator, printScale, contentStories)
             ? Math.Max(0d, height - DocxDefaults.DefaultParagraphAfterSpacingPoints) : height;
     }
+
+    private static double ResolveParagraphBoundarySeparatorHeight(DocxRelatedStoryLayout separator,
+        DocxLayoutPage page, IDocxTextMeasurer? measurer, IReadOnlyList<DocxRelatedStoryLayout> contentStories) =>
+        Math.Max(0d, ResolveSizeDrivenSeparatorHeight(separator, page, measurer, contentStories) -
+            DocxDefaults.DefaultParagraphAfterSpacingPoints);
 
     private static IEnumerable<int> EnumeratePageSourceBlockIndexes(DocxLayoutPage page)
     {

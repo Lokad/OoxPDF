@@ -323,7 +323,12 @@ internal sealed partial class DocxLayoutEngine
                     CanUsePlainDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale,
                         documentEndStories, cancellationToken, out _)) endnoteFrameBottom = footerKeepOut;
                 double FrameBottom() => endnoteFrameBottom?.Invoke(activePage, activePageIndex + 1, documentEndPages.Count) ?? activePage.MarginBottom;
-                if (CanUseNominalNoteSeparatorFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories))
+                // A trailing paragraph owns this start boundary independently
+                // of earlier tables or print scaling. Complete note-flow and
+                // mixed-footnote admission retain their existing qualification.
+                bool FollowsBodyParagraph() => CanUseTrailingParagraphEndnoteStart(activePage,
+                    activePlacedStories, documentEndSeparatorLayout, printScale, documentEndStories);
+                if (FollowsBodyParagraph() || CanUseNominalNoteSeparatorFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories))
                 {
                     cursorTop -= ResolveTrailingBodyAfterSpacing(activePage);
                 }
@@ -363,7 +368,9 @@ internal sealed partial class DocxLayoutEngine
                     deferredMixedEndnoteSource = mixedEndnoteSourceFrame is not null && activePageIndex != endnoteSourcePageIndex;
                     double? nominalSeparatorHeight = deferredMixedEndnoteSource
                         ? ResolvePlainNoteSeparatorHeight(documentEndSeparatorLayout, mixedEndnoteSourceFrame!, separatorMeasurer, documentEndStories, printScale)
-                        : CanUseNominalNoteSeparatorFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories)
+                        : FollowsBodyParagraph()
+                            ? ResolveParagraphBoundarySeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories)
+                            : CanUseNominalNoteSeparatorFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories)
                             ? ResolvePlainNoteSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories, printScale) : null;
                     double separatorTop = cursorTop + FootnoteSeparatorGapPoints;
                     bool ownsSeparatorFirstBearing = false;

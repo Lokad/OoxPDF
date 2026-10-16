@@ -352,6 +352,28 @@ internal static class DocxInlineCompositionTests
     public static void DocxInlineCompositionEndnoteMarkersMatchIndependentPrintedOffsets() =>
         CheckAutomaticNoteMarkerGeometry("math-endnotes-office-markers.json");
 
+    public static void DocxInlineCompositionEndnoteStartMatchesIndependentParagraphBoundary()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent controls use installed Arial metrics.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-endnotes-office-markers.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var document = DocxTests.ReadDocx(input, mode);
+            var lines = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(document).Lines;
+            var body = lines.Last(line => line.ContainerStoryKind == "Body");
+            var note = lines.Single(line => line.ContainerStoryKind == "Endnote" && line.TextLength > 1);
+            double gap = body.Segments[0].BaselineY - note.Segments.MaxBy(segment => segment.TextLength)!.BaselineY;
+            TestAssert.True(Math.Abs(gap - row.GetProperty("StoryBaselineGap").GetDouble()) < .25d,
+                $"The trailing paragraph owns the printed endnote start, including earlier tables and print scaling: {input}/{mode}/gap={gap}.");
+        }
+    }
+
     private static void CheckAutomaticNoteMarkerGeometry(string referenceFile)
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
