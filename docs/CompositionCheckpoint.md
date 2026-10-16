@@ -841,3 +841,20 @@ boundaries remain checked. Legacy ten-outcome compatibility and three negative
 input controls pass without new conversions or library builds. Evidence is in
 `artifacts/composition-c1/supplemental-audit-tool-evidence.json` and
 `composed-report-content-audit.json`. CI through `be411f37` is green on both OSes.
+
+An independent atomic-footnote reduction confirms unused future continuation
+reserve can cause a spurious second page. `d2c5dde6` reserves only the complete
+head for a new one-line note; split notes and continued tails keep their existing
+reserve. Thirty-nine affected methods and five Ubuntu checks pass. The source-only
+control-width follow-up `99991423` reuses all build assets and repeats only two
+fixture-dependent methods (one on Ubuntu); all three new regressions fail with
+the parent library. Four Word controls now match one-page membership and retain
+all content, while their numerical gates still fail (note/separator Y about 6pt).
+All ten original portfolio PDFs are exact, so Office comparisons and page reviews
+are reused. Transfer verifies 17 assets and four PDFs, without root build/replay.
+C2 Final now matches Word's page-local prose and its two page pairs show no serious
+placement defect. Review remains unchanged and still moves section 7 to page 2;
+both modes retain all equations/prose, but both numerical gates fail. C2 stays
+open for an independent scaled-admission reduction. Evidence:
+`artifacts/composition-c1/atomic-note-evidence.json` and
+`composed-report-atomic-note-content.json`. Workspace is 4.941GB at the latest scan.
