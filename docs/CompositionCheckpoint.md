@@ -1183,3 +1183,20 @@ and their explicit visual failures. Transfer verifies 17 assets/four exact PDFs
 without a root rebuild or suite replay. This establishes the contract for actual
 page-aware admission; body/table PAGE-math support and measured performance gains
 are not claimed. Evidence: `artifacts/composition-c1/inline-cursors-evidence.json`.
+
+Simple table cells now preserve supported equations beside PAGE counters. The
+shared preparation policy distinguishes PAGE dependencies from an unavailable
+total count; measurement and painting use actual placement inputs. Existing cell
+height calculation and dynamic memo keys already carry those inputs, so no new
+layout flag or cache policy was added. Frozen 2086a381 / root 05dff46f passes 25
+capability/neighbor methods in one invocation, six Ubuntu checks and two genuine
+parent-library rendering regressions. The independent Word control preserves four
+fractions and actual values across pages nine and ten in both presets. Relevant
+page pairs were reviewed through exact preset raster reuse, with no visible
+omission or serious overlap/clipping. Baseline error is 0.029pt; counter/equation X
+residuals reach 1.041pt / 2.349pt, including Word's Calibri field digits versus
+canonical Arial. Both visual gates and the generic dynamic-field source screens
+remain failed/unresolved; no simple-math deficit is observed. Transfer verifies
+17 assets/four exact PDFs without a root build or suite replay. Body PAGE and
+unknown total-count composition remain deferred. Evidence:
+`artifacts/composition-c1/cell-page-counters-evidence.json`.
