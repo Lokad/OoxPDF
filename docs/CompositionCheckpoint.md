@@ -59,7 +59,7 @@ Twenty-seven selected methods pass in one invocation; six portable source/bookma
 methods also pass on the exact artifact in Ubuntu. Seventeen assets and four
 integration PDFs transfer without root rebuild. All ten portfolio PDFs
 retain their baseline bytes, so their Office comparisons are reused. Mixed-document
-warm allocation medians rise by approximately 11–25KB for the DOCX sources; deck
+warm allocation medians rise by approximately 11â€“25KB for the DOCX sources; deck
 allocation medians are unchanged. Three-iteration timings are noisy and establish
 no speedup. These measurements precede any repeated-layout optimization.
 
@@ -410,7 +410,7 @@ A numbering-only transformation previously removed four equations from three
 mixed paragraphs in both modes, while preserving prose. The candidate retains
 four equations and three labels across body/cell/header/footer controls. Native
 unchanged-format run splitting and pinned-font source transformations also retain
-content. The body control's recall improves 0.141→0.671 and MAE 1.464→0.821;
+content. The body control's recall improves 0.141â†’0.671 and MAE 1.464â†’0.821;
 all eight independent numbered-story visual gates still fail. Raster review shows
 the labels, fractions, literals and illustration together.
 
@@ -444,7 +444,7 @@ pieces, drops inter-piece glue at a line boundary and preserves source equation
 identity. Structured boxes, display rows, nested and unary-only literals retain
 their qualified fallbacks. No font/size/document-shape rule is added.
 
-Word 16 keeps `α+` on the first line and `β=γ` on the next for default, before,
+Word 16 keeps `Î±+` on the first line and `Î²=Î³` on the next for default, before,
 after and repeat settings in the independent inline control. This observed inline
 behavior differs from the general default described in [Microsoft's brkBin
 documentation](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.breakbinary?view=openxml-2.10.0);
@@ -453,7 +453,7 @@ glyphs now paint in a two-line source paragraph, including with bookmarks and ru
 splitting. The portable regression fails on the previous library.
 
 Forty selected methods pass in one invocation; fourteen portable methods pass on
-Ubuntu. The overfull control's recall improves 0.375→0.480 and MAE 0.290→0.280.
+Ubuntu. The overfull control's recall improves 0.375â†’0.480 and MAE 0.290â†’0.280.
 All eight setting/mode controls still fail foreground/MAE/SSIM gates. Its body
 auto line height remains 16.968pt versus Word's 14.64pt; font/measurement ownership
 needs separate evidence before changing it. Eight fitting literal/fraction/script
@@ -496,8 +496,8 @@ added or indiscriminately removed.
 
 The seven-source ownership matrix separates absent, run-only, empty/nonempty
 paragraph defaults and explicit Normal inheritance. Its fourteen mode outcomes
-preserve explicit Normal PDF bytes while affected recall improves 0.222→0.773 and
-MAE 9.173→3.981. The source controls still fail their original visual gates. Plain
+preserve explicit Normal PDF bytes while affected recall improves 0.222â†’0.773 and
+MAE 9.173â†’3.981. The source controls still fail their original visual gates. Plain
 cell/header/footer controls improve recall from 0.377/0.286/0.353 to
 0.836/0.850/0.831; MAE and changed-pixel gates pass, with foreground/SSIM failures
 remaining. These controls disprove a global fallback replacement and do not
@@ -590,7 +590,7 @@ object bounds and label leading.
 The independent Word regression fails on the prior accepted library by 2.219pt.
 Across twenty mode controls, the largest following-paragraph gap error is now
 0.199pt (previous literal cases reached 2.297pt). All preserve their mathematical
-text. Literal review MAE improves about 0.258–0.261; SSIM failures remain. The native
+text. Literal review MAE improves about 0.258â€“0.261; SSIM failures remain. The native
 assertion now checks both the mathematical baseline and following advance. A
 pinned-font ordinary-text substitution exercises the same line-box contract on
 Windows/Ubuntu; it already passed with the prior library, so it is integration
@@ -1266,7 +1266,7 @@ pinned hashes/protection and the six current parent inputs have independent file
 ownership. Ownership repair/rejection evidence remains beside the delivery report.
 
 The measured font-maintenance batch reduces warm portfolio allocation to
-28.75–33.83MB for Final DOCX and 32.34–37.36MB for review, with unchanged PDFs.
+28.75â€“33.83MB for Final DOCX and 32.34â€“37.36MB for review, with unchanged PDFs.
 Counted kerning source batches replace the expanded pair list, retaining bounded
 source contributions, last-wins lookup values and cancellation. All 715,743 map
 entries across the three actual faces match. Frozen f35fa653 / root 993543d6 passes
@@ -1278,3 +1278,27 @@ wide offsets now preserve the valid prefix. This is not evidence of corruption.
 Matched sustained-warm timings overlap, so no speedup is claimed. Office output
 and existing failed visual gates remain unchanged. See
 `docs/OperatingEnvelope.md` and `artifacts/composition-c1/kerning-stream-evidence.json`.
+
+Simple header/footer table cells now share body-cell math preparation and consume
+prepared boxes and actual PAGE/NUMPAGES inputs in grid/height/painting. A confirmed
+unchanged-content transformation omitted every header equation before this change.
+Static table rows also join painted-equation diagnostic enumeration. Existing
+simple-cell exclusions still apply to merged, fit-text, vertical, nested/rich and
+note-table owners; no font/size/document guard was added.
+
+The independent mixed/plain controls also exposed a footer table 38.664pt too low.
+The complete measured block now shares bottom anchoring and existing row/image
+translation; table top edges participate in the footer keep-out. Sixteen Word
+anchors have maximum X/Y errors 0.024pt/0.140pt. All eight source equations, four
+image placements and page fields survive both presets; the twelve-page portable
+control verifies actual counters across 9/10. All four page pairs were reviewed
+through exact preset raster reuse, with no visible omission or serious
+pagination/overlap/clipping. Four numerical visual gates remain failed, and the
+generic dynamic-field screens remain explicitly unresolved; prose/simple-math
+deficits are zero.
+
+Frozen f684dc29 / root 8bf5354e passes 32 exact Windows methods in one invocation,
+15 Ubuntu methods and five genuine parent behavior regressions. Eight affected
+fixed DOCX PDFs retain bytes; PPTX production is unchanged and the held-out deck
+passes transfer smoke. Transfer verifies 17 assets/four PDFs with no root rebuild
+or suite replay. Evidence: `artifacts/composition-c1/static-cell-evidence.json`.
