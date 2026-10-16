@@ -76,6 +76,7 @@ internal sealed partial class DocxRenderer
                     DocxTextEmissionSegment marker = segment;
                     if (reference.DisplayText is { } automatic)
                     {
+                        if (reference.DisplayRun is not null && !segment.StyleRun.IsAutomaticNoteReferenceMarker) continue;
                         if (segment.Text != automatic) continue;
                     }
                     else if (reference.CustomMarkText is { } custom && segment.Text.StartsWith(custom, StringComparison.Ordinal) &&

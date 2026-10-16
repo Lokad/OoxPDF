@@ -562,5 +562,21 @@
     "DocxPlainFootnoteKerning",
     "DocxCustomNoteMarksLinkOnlyTheirFirstVisibleCharacter",
     "DocxTableMinimumNoteLinksKeepSlotDuringBaselineCorrection"
+  ],
+  "docx-owned-footnote-links": [
+    "DocxInlineCompositionFootnoteLinksExcludeAdjacentIdenticalAuthoredDigits",
+    "PortableRenderingFootnoteLinksIgnoreIdenticalAuthoredDigits",
+    "DocxInlineCompositionAutomaticFootnotesPreserveContentAndDestinations",
+    "DocxInlineCompositionAutomaticFootnotesRetainOwnedMarkerRuns",
+    "DocxInlineCompositionFootnoteOwnershipSurvivesSharedRunsAndNumberStarts",
+    "DocxInlineCompositionFootnoteMarkersMatchIndependentPrintedOffsets",
+    "DocxPageFootnoteNumbersRenderLabelsAndDistinctDestinationsTogether",
+    "DocxMultipleFootnoteNumbersRenderSeparateLabelsAndDestinations",
+    "DocxCustomNoteMarksLinkOnlyTheirFirstVisibleCharacter",
+    "DocxTableMinimumNoteLinksKeepSlotDuringBaselineCorrection",
+    "DocxPlainFootnoteKerningKeepsMeasurementAndEmissionCoherent",
+    "DocxReaderEmitsAutomaticFootnoteAndEndnoteMarkersWithCascadeAlignment",
+    "DocxDocumentEndnotesFollowTrailingBodySpacingAtNominalScale",
+    "DocxRendererEmitsPlacedEndnoteInternalHyperlinkDestinations"
   ]
 }

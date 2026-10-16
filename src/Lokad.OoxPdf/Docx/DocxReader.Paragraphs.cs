@@ -1279,7 +1279,10 @@ internal sealed partial class DocxReader
             int firstRun = runs.Count;
             AddInlineReferenceDisplayRun(displayText, currentSourceRunIndex, textOffset, resolvedRun, runStyleResolution, revision);
             if (runs.Count == firstRun + 1)
+            {
+                runs[firstRun] = runs[firstRun] with { IsAutomaticNoteReferenceMarker = true };
                 inlineReferences[^1] = inlineReferences[^1] with { DisplayRun = runs[firstRun] };
+            }
         }
 
         void AddCommentReferenceRange(string? id, int currentSourceRunIndex, int textOffset)

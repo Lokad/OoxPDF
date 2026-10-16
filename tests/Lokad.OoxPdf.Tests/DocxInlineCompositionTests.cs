@@ -61,6 +61,27 @@ internal static class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxInlineCompositionFootnoteLinksExcludeAdjacentIdenticalAuthoredDigits()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the rendered marker-owner control.");
+        foreach (bool includeMath in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = ReadMutation("CompositionProbes/math-footnote-before-body-plain", mode, false, false, (xml, w, m) =>
+            {
+                xml.Descendants(w + "footnoteReference").Single().AddAfterSelf(new XElement(w + "t", "1"));
+                if (!includeMath) xml.Descendants(m + "oMath").Remove();
+            });
+            var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, null, default).ToArray();
+            TestAssert.Equal(1, pages.Single().Annotations.Count(annotation => annotation.Destination is not null));
+            TestAssert.Equal(includeMath ? 2 : 0, string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC)
+                .Split("ratetime", StringSplitOptions.None).Length - 1);
+        }
+    }
+
     public static void DocxInlineCompositionAutomaticFootnotesPreserveContentAndDestinations()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

@@ -16,6 +16,35 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingFootnoteLinksIgnoreIdenticalAuthoredDigits()
+    {
+        foreach (bool includeMath in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var source = DocxTests.ReadDocx(Case("CompositionProbes/math-footnote-before-body-plain.docx"), mode);
+            var paragraph = source.Paragraphs.Single(p => p.Equations.Count != 0);
+            var owner = paragraph.InlineReferences.Single().DisplayRun!;
+            var authored = owner with { IsAutomaticNoteReferenceMarker = false };
+            var runs = paragraph.Runs.ToList();
+            runs.Insert(runs.FindIndex(run => ReferenceEquals(run, owner)) + 1, authored);
+            var items = paragraph.InlineContent!.ToList();
+            items.Insert(items.FindIndex(item => item is DocxInlineText text && ReferenceEquals(text.Run, owner)) + 1,
+                new DocxInlineText(authored, 0, authored.Text.Length));
+            var changed = paragraph with { Runs = runs, Equations = includeMath ? paragraph.Equations : [],
+                InlineContent = includeMath ? items : items.Where(item => item is not DocxInlineEquation).ToArray() };
+            var document = source with { BodyElements = source.BodyElements.Select(element =>
+                element is DocxParagraphElement p && ReferenceEquals(p.Paragraph, paragraph)
+                    ? new DocxParagraphElement(changed) : element).ToArray() };
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, null, default).ToArray();
+            TestAssert.Equal(1, pages.Single().Annotations.Count(annotation => annotation.Destination is not null));
+            TestAssert.Equal(includeMath ? 2 : 0, string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC)
+                .Split("ratetime", StringSplitOptions.None).Length - 1);
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingAutomaticFootnotesPreserveMixedMathAndLinks()
     {
         foreach (string position in new[] { "before", "after" })

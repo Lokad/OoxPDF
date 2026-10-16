@@ -399,6 +399,7 @@ internal sealed record DocxTextRun(
     // Retained from an explicit footnoteRef/endnoteRef in the related story;
     // ordinary text and custom marks never acquire this role from their value/style.
     public bool IsAutomaticNoteStoryMarker { get; init; }
+    public bool IsAutomaticNoteReferenceMarker { get; init; }
     // Set only on a qualified Word-compatible body clone; source metadata stays unchanged.
     public bool UseLogicalSizeForPdfAdvances { get; init; }
 
@@ -621,6 +622,7 @@ internal sealed record DocxTextRunStyle(
             Fonts = source.Fonts.Merge(Fonts),
             KerningMinimumHalfPointsValue = KerningMinimumHalfPointsValue ?? source.KerningMinimumHalfPointsValue,
             PairKerningEnabled = source.PairKerningEnabled,
+            IsAutomaticNoteReferenceMarker = source.IsAutomaticNoteReferenceMarker,
             UseLogicalSizeForPdfAdvances = source.UseLogicalSizeForPdfAdvances,
             StyleResolution = source.StyleResolution,
             SourceRunIndex = source.SourceRunIndex,

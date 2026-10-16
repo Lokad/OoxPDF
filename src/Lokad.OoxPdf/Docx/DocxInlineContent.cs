@@ -20,7 +20,7 @@ internal static class DocxInlineContent
         return references.All(reference => reference.Kind == DocxRelatedStoryKind.Comment ||
             reference.Kind == DocxRelatedStoryKind.Footnote && reference.DisplayRun is { } run &&
             reference.NoteNumberRestartValue is null or "continuous" &&
-            run.Text == reference.DisplayText && owners.Contains(run));
+            run.IsAutomaticNoteReferenceMarker && run.Text == reference.DisplayText && owners.Contains(run));
     }
 
     public static List<DocxInlineItem> FromPrefix(IReadOnlyList<DocxTextRun> runs,
