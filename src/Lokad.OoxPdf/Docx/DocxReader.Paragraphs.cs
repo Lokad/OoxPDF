@@ -86,7 +86,7 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "hyperlink")
             {
-                AddHyperlinkContainer(child, inheritedRevision, AddInlineContainerChild, ref sourceRunIndex, runs, hyperlinkSpans, relationships);
+                AddHyperlinkContainer(child, inheritedRevision, AddInlineContainerChild, GetInlineItemCount, ref sourceRunIndex, runs, hyperlinkSpans, relationships);
             }
             else if (child.Name == WordprocessingNamespace + "sdt")
             {
@@ -136,7 +136,7 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "hyperlink")
             {
-                AddHyperlinkContainer(child, revision, AddInlineContainerChild, ref sourceRunIndex, runs, hyperlinkSpans, relationships);
+                AddHyperlinkContainer(child, revision, AddInlineContainerChild, GetInlineItemCount, ref sourceRunIndex, runs, hyperlinkSpans, relationships);
             }
             else if (child.Name == WordprocessingNamespace + "sdt")
             {
@@ -351,6 +351,12 @@ internal sealed partial class DocxReader
         {
             if (inlineItems is not null)
                 DocxInlineContent.AppendRun(inlineItems, runs.Skip(firstRun), images.Skip(firstImage), cancellationToken);
+        }
+
+        int GetInlineItemCount()
+        {
+            EnsureInlineContent();
+            return inlineItems!.Count;
         }
 
         void AddEquation(XElement container, DocxRevisionInfo? revision)
@@ -1176,6 +1182,8 @@ internal sealed partial class DocxReader
         int textRunStartIndex,
         int textRunCount,
         int textLength,
+        int inlineStart,
+        int inlineEnd,
         List<DocxHyperlinkSpan> hyperlinkSpans,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
@@ -1193,13 +1201,14 @@ internal sealed partial class DocxReader
             sourceRunCount,
             textRunStartIndex,
             textRunCount,
-            textLength));
+            textLength) { StartInlineItemIndex = inlineStart, EndInlineItemIndex = inlineEnd });
     }
 
     private static void AddHyperlinkContainer(
         XElement hyperlink,
         DocxRevisionInfo? revision,
         Action<XElement, DocxRevisionInfo?> addInlineChild,
+        Func<int> getInlineItemCount,
         ref int sourceRunIndex,
         List<DocxTextRun> runs,
         List<DocxHyperlinkSpan> hyperlinkSpans,
@@ -1208,6 +1217,7 @@ internal sealed partial class DocxReader
         int sourceRunStartIndex = sourceRunIndex;
         int textRunStartIndex = runs.Count;
         int textLengthStart = runs.Sum(run => run.Text.Length);
+        int inlineStart = getInlineItemCount();
         foreach (XElement hyperlinkChild in hyperlink.Elements())
         {
             addInlineChild(hyperlinkChild, revision);
@@ -1220,6 +1230,8 @@ internal sealed partial class DocxReader
             textRunStartIndex,
             runs.Count - textRunStartIndex,
             runs.Sum(run => run.Text.Length) - textLengthStart,
+            inlineStart,
+            getInlineItemCount(),
             hyperlinkSpans,
             relationships);
     }

@@ -14,6 +14,9 @@ internal sealed record DocxInlineEquation(DocxEquation Equation) : DocxInlineIte
 
 internal static class DocxInlineContent
 {
+    public static bool RequiresMeasuredSourceRanges(DocxParagraph paragraph) =>
+        paragraph.CommentRanges.Count != 0 || paragraph.Hyperlinks.Count != 0;
+
     public static bool TryGetAutomaticNoteRun(DocxInlineReference reference, [NotNullWhen(true)] out DocxTextRun? run)
     {
         run = reference.DisplayRun;

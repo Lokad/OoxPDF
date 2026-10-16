@@ -105,7 +105,7 @@ internal sealed partial class DocxLayoutEngine
         segments.AddRange(measured.ListLabelSegments.Select(segment => segment with { X = frameOriginX + segment.X }));
         var images = new List<DocxInlineImageLayout>();
         var equations = new List<DocxInlineMathPlacement>();
-        List<DocxInlineSourceExtent>? sourceExtents = paragraph.CommentRanges.Count == 0 ? null : new();
+        List<DocxInlineSourceExtent>? sourceExtents = DocxInlineContent.RequiresMeasuredSourceRanges(paragraph) ? new() : null;
         var text = new System.Text.StringBuilder();
         if (measured.ListLabelSegments.Count != 0 && paragraph.ListLabel is { } label)
             text.Append(label.Text).Append(label.SuffixValue switch { "nothing" => string.Empty, "space" => " ", _ => "\t" });
@@ -225,6 +225,7 @@ internal sealed partial class DocxLayoutEngine
             if (!runIndices.TryAdd(paragraph.Runs[index], index)) return false;
         }
         var measured = new List<DocxMeasuredInlineFragment>();
+        bool sourceRanges = DocxInlineContent.RequiresMeasuredSourceRanges(paragraph);
         int sourceItemIndex = 0;
         foreach (DocxInlineItem item in items)
         {
@@ -292,7 +293,7 @@ internal sealed partial class DocxLayoutEngine
                     break;
                 default: return false;
             }
-            for (int fragmentIndex = firstFragment; paragraph.CommentRanges.Count != 0 && fragmentIndex < measured.Count; fragmentIndex++)
+            for (int fragmentIndex = firstFragment; sourceRanges && fragmentIndex < measured.Count; fragmentIndex++)
             {
                 var fragment = measured[fragmentIndex] with { SourceItemIndex = sourceItemIndex };
                 if (fragment.Math is { } math)

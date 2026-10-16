@@ -1454,11 +1454,32 @@ internal sealed partial class DocxRenderer
                         : segment.BaselineY + HyperlinkRectTopEm * segment.FontSize;
                     double fragmentBl = usesBodyLineBox ? line.BaselineY - textEmissionBaselineOffset : segment.BaselineY;
                     double fragmentFs = segment.FontSize;
+                    AddLinkFragment(link, fragmentMinX, fragmentMaxX, fragmentTop, fragmentBl, fragmentFs);
+                }
+                // Ordered source ranges include mathematical fragments without
+                // inventing a text run for them. Use their final placed bounds.
+                foreach (var extent in line.InlineSourceExtents)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!extent.IsMath || extent.EndOffset <= extent.StartOffset) continue;
+                    var link = links.FirstOrDefault(candidate => candidate.StartInlineItemIndex is int start &&
+                        candidate.EndInlineItemIndex is int end && extent.ItemIndex >= start && extent.ItemIndex < end);
+                    if (link is null) continue;
+                    double baseline = line.BaselineY - textEmissionBaselineOffset;
+                    AddLinkFragment(link, line.X + extent.StartOffset + textEmissionXOffset,
+                        line.X + extent.EndOffset + textEmissionXOffset,
+                        baseline + Math.Max(extent.AboveBaseline, line.InlineFrame?.BaselineInset ?? 0d),
+                        baseline, line.FontSize * textEmissionFontScale);
+                }
+
+                void AddLinkFragment(DocxHyperlinkSpan link, double fragmentMinX, double fragmentMaxX,
+                    double fragmentTop, double fragmentBl, double fragmentFs)
+                {
                     bool linkTargetEmittable = IsExternalHyperlink(link) ||
                         (!string.IsNullOrEmpty(link.Anchor) && bookmarkDestinations.ContainsKey(link.Anchor));
                     if (!linkTargetEmittable)
                     {
-                        continue;
+                        return;
                     }
                     bool fragmentAbsorbed = false;
                     for (int mergedIndex = 0; mergedIndex < mergedLinkRects.Count; mergedIndex++)

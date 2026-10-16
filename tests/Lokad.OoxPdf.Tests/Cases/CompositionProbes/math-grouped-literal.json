@@ -1,0 +1,28 @@
+[
+  {
+    "Id": "atomic-math-parenthesized",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/atomic-math-parenthesized.docx",
+    "Sha256": "D67672688D6A1C2E5D6955FE48D94E79B3D0FA6EF82D361790A0E817632F0434",
+    "SourceSha256": "45F27A6285C1A065D5F4BE435AD335FC9F96E8341AB3BDC1D880BBD6DE2D8867",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "math-grouped-nested",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-grouped-nested.docx",
+    "Sha256": "B65CBA953DE174ADD376DABE448D4EAAAE26E1A19655C54A61C1D6334EDB529F",
+    "SourceSha256": "45F27A6285C1A065D5F4BE435AD335FC9F96E8341AB3BDC1D880BBD6DE2D8867",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Following prose."
+    ]
+  }
+]

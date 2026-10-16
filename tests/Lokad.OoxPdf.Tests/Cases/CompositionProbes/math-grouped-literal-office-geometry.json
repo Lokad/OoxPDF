@@ -1,0 +1,87 @@
+{
+  "Source": "Independent Word 16 exports in both presets; source-pinned mathematical row content, baselines and local glyph offsets. Existing visual thresholds retained.",
+  "Rows": [
+    {
+      "Id": "atomic-math-parenthesized",
+      "InputSha256": "D67672688D6A1C2E5D6955FE48D94E79B3D0FA6EF82D361790A0E817632F0434",
+      "References": [
+        {
+          "Mode": "final-preserve",
+          "PdfSha256": "CAB46CB4507512BCBD9487F1F34E9FE859B7FD8153820DF576F05F2A596EA099",
+          "RasterSha256": "8DB7713B6B15969D1B9054B893DD889ABB1418FBB42D570BDCB4524C0FF430C8"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "PdfSha256": "1985C2D19ADA7AF6BF008EC5548D6FB805CEE1DFFE4292C60DD991A6AA81E8CF",
+          "RasterSha256": "8DB7713B6B15969D1B9054B893DD889ABB1418FBB42D570BDCB4524C0FF430C8"
+        }
+      ],
+      "MathRows": [
+        {
+          "Text": "(α+",
+          "BaselineY": 708.58,
+          "OriginX": 151.82,
+          "GlyphOffsets": [
+            0.0,
+            5.0400000000000205,
+            15.240000000000009
+          ]
+        },
+        {
+          "Text": "β=γ)",
+          "BaselineY": 693.94,
+          "OriginX": 72.024,
+          "GlyphOffsets": [
+            0.0,
+            10.920000000000002,
+            23.28,
+            29.876000000000005
+          ]
+        }
+      ],
+      "FollowingBaselineY": 679.3
+    },
+    {
+      "Id": "math-grouped-nested",
+      "InputSha256": "B65CBA953DE174ADD376DABE448D4EAAAE26E1A19655C54A61C1D6334EDB529F",
+      "References": [
+        {
+          "Mode": "final-preserve",
+          "PdfSha256": "22E99AF9D809C7BDC504680ADB75E9BBD8CED035DB5B4EB04A63D3CD62A511E7",
+          "RasterSha256": "B6574738A54E2FD066AC88FE0CB0F6A2759D3324B214DD0BDC79B62BD6DA46C4"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "PdfSha256": "FFE456C7A2FF31E3418FD175C423D1DE5B7EF206B1424150E94FA4B28D23E6C5",
+          "RasterSha256": "B6574738A54E2FD066AC88FE0CB0F6A2759D3324B214DD0BDC79B62BD6DA46C4"
+        }
+      ],
+      "MathRows": [
+        {
+          "Text": "(α+",
+          "BaselineY": 708.58,
+          "OriginX": 151.82,
+          "GlyphOffsets": [
+            0.0,
+            5.0400000000000205,
+            15.240000000000009
+          ]
+        },
+        {
+          "Text": "[β=γ])",
+          "BaselineY": 693.94,
+          "OriginX": 72.024,
+          "GlyphOffsets": [
+            0.0,
+            4.200000000000003,
+            15.120000000000005,
+            27.480000000000004,
+            34.07599999999999,
+            38.275999999999996
+          ]
+        }
+      ],
+      "FollowingBaselineY": 664.66
+    }
+  ]
+}

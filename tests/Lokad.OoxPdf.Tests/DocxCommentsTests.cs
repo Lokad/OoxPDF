@@ -8031,11 +8031,36 @@ internal static class DocxCommentsTests
     }
 
     internal static IEnumerable<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)> ReadEmbeddedGlyphTextShows(PdfPage page)
+        => ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false);
+
+    internal static IEnumerable<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)> ReadEmbeddedGlyphTextShows(
+        PdfPage page, bool usePageCoordinates)
     {
+        // Only the generated graphics-state operators are needed here. Keep
+        // the default raw-Tm view for existing emission-contract assertions.
+        MatchCollection? transforms = usePageCoordinates ? Regex.Matches(page.Content,
+            @"(?m)^(?:(?<save>q)|(?<restore>Q)|(?<matrix>[-+\d.eE]+(?: [-+\d.eE]+){5}) cm)\r?$") : null;
+        int transformIndex = 0;
+        (double A, double B, double C, double D, double E, double F) matrix = (1, 0, 0, 1, 0, 0);
+        Stack<(double A, double B, double C, double D, double E, double F)>? saved = null;
         foreach (Match show in Regex.Matches(page.Content,
             @"/(?<font>\S+) (?<size>[\d.]+) Tf\s+\S+ Tc\s+1 0 0 1 (?<x>[-\d.]+) (?<y>[-\d.]+) Tm\s*(?<show><[0-9A-F]+> Tj|\[.*?\] TJ)",
             RegexOptions.Singleline))
         {
+            while (transforms is not null && transformIndex < transforms.Count && transforms[transformIndex].Index < show.Index)
+            {
+                var operation = transforms[transformIndex++];
+                if (operation.Groups["save"].Success) (saved ??= new()).Push(matrix);
+                else if (operation.Groups["restore"].Success) matrix = saved!.Pop();
+                else
+                {
+                    var values = operation.Groups["matrix"].Value.Split(' ')
+                        .Select(value => double.Parse(value, CultureInfo.InvariantCulture)).ToArray();
+                    matrix = (matrix.A * values[0] + matrix.C * values[1], matrix.B * values[0] + matrix.D * values[1],
+                        matrix.A * values[2] + matrix.C * values[3], matrix.B * values[2] + matrix.D * values[3],
+                        matrix.A * values[4] + matrix.C * values[5] + matrix.E, matrix.B * values[4] + matrix.D * values[5] + matrix.F);
+                }
+            }
             PdfEmbeddedFont font = page.Fonts.Single(resource => resource.ResourceName == show.Groups["font"].Value).Font;
             var text = new StringBuilder();
             foreach (Match chunk in Regex.Matches(show.Groups["show"].Value, @"<(?<hex>[0-9A-F]+)>"))
@@ -8048,9 +8073,10 @@ internal static class DocxCommentsTests
                     text.Append(char.ConvertFromUtf32(codePoint));
                 }
             }
+            double x = double.Parse(show.Groups["x"].Value, CultureInfo.InvariantCulture);
+            double y = double.Parse(show.Groups["y"].Value, CultureInfo.InvariantCulture);
             yield return (font, text.ToString(), double.Parse(show.Groups["size"].Value, CultureInfo.InvariantCulture),
-                double.Parse(show.Groups["x"].Value, CultureInfo.InvariantCulture),
-                double.Parse(show.Groups["y"].Value, CultureInfo.InvariantCulture));
+                matrix.A * x + matrix.C * y + matrix.E, matrix.B * x + matrix.D * y + matrix.F);
         }
     }
 

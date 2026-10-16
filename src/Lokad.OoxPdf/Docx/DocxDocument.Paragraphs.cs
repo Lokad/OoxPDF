@@ -199,7 +199,11 @@ internal sealed record DocxHyperlinkSpan(
     int SourceRunCount,
     int TextRunStartIndex,
     int TextRunCount,
-    int TextLength);
+    int TextLength)
+{
+    public int? StartInlineItemIndex { get; init; }
+    public int? EndInlineItemIndex { get; init; }
+}
 
 internal sealed record DocxTabStop(
     double? PositionPoints,

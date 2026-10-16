@@ -1332,11 +1332,142 @@ internal static class DocxInlineCompositionTests
         }
     }
 
-    public static void DocxInlineCompositionLiteralBreakKeepsParenthesizedAndUnaryFallbacks()
+    public static void DocxInlineCompositionGroupedLiteralsMatchIndependentOperatorRows()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for the independent grouped literal controls.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-grouped-literal-office-geometry.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = renderer.RenderBlankPages(DocxTests.ReadDocx(input, mode), diagnostics.Add, default).Single();
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
+            var mathFonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
+                .Select(resource => resource.Font).ToHashSet();
+            var lines = shows.Where(show => mathFonts.Contains(show.Font)).GroupBy(show => show.Y)
+                .OrderByDescending(group => group.Key).Select(group => group.ToArray()).ToArray();
+            var expected = row.GetProperty("MathRows").EnumerateArray().ToArray();
+            TestAssert.True(expected.Length == lines.Length, input + "/" + mode + ": " +
+                string.Join("; ", lines.Select(line => line[0].Y + ":" + string.Concat(line.Select(show => show.Text)))));
+            for (int line = 0; line < expected.Length; line++)
+            {
+                TestAssert.Equal(expected[line].GetProperty("Text").GetString(),
+                    string.Concat(lines[line].Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+                TestAssert.True(Math.Abs(lines[line][0].Y - expected[line].GetProperty("BaselineY").GetDouble()) < .3d,
+                    "Grouped rows retain independent Word baselines.");
+                var offsets = expected[line].GetProperty("GlyphOffsets").EnumerateArray().ToArray();
+                TestAssert.Equal(offsets.Length, lines[line].Length);
+                for (int glyph = 0; glyph < offsets.Length; glyph++)
+                    TestAssert.True(Math.Abs(lines[line][glyph].X - lines[line][0].X - offsets[glyph].GetDouble()) < .15d,
+                        "Operator breaks retain independently measured local mathematical glyph geometry.");
+            }
+            TestAssert.True(Math.Abs(shows.Single(show => show.Text.StartsWith("Following prose.", StringComparison.Ordinal)).Y -
+                row.GetProperty("FollowingBaselineY").GetDouble()) < .3d, "Following prose must consume the complete grouped frame.");
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Balanced literal groups cannot lose their formula.");
+        }
+    }
+
+    public static void DocxInlineCompositionGroupedLiteralsRetainBookmarksAndRunSplitting()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for grouped source transformations.");
+        foreach (string fixture in new[] { "atomic-math-parenthesized", "math-grouped-nested" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            (string Text, double X, double Y)[]? baseline = null;
+            foreach (var (bookmark, split, link) in new[] { (false, false, false), (true, false, false), (true, true, false), (true, false, true) })
+            {
+                var document = ReadMutation("CompositionProbes/" + fixture, mode, bookmark, split, (xml, w, m) =>
+                {
+                    if (!link) return;
+                    var equation = xml.Descendants(m + "oMath").First();
+                    equation.ReplaceWith(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PublicCalculation"), new XElement(equation)));
+                });
+                var page = renderer.RenderBlankPages(document, null, default).Single();
+                var mathFonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
+                    .Select(resource => resource.Font).ToHashSet();
+                var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Where(show => mathFonts.Contains(show.Font))
+                    .Select(show => (show.Text, show.X, show.Y)).ToArray();
+                TestAssert.True(math.Length != 0, "The source formula must remain visible.");
+                if (link)
+                {
+                    var annotations = page.Annotations.Where(annotation => annotation.IsDestination).ToArray();
+                    var rows = math.GroupBy(show => show.Y).ToArray();
+                    TestAssert.Equal(rows.Length, annotations.Length);
+                    foreach (var row in rows)
+                        TestAssert.True(annotations.Any(annotation => annotation.Y <= row.Key && annotation.Y + annotation.Height >= row.Key &&
+                            annotation.X <= row.Min(show => show.X) + .01d && annotation.X + annotation.Width >= row.Max(show => show.X) - .01d),
+                            "A formula hyperlink must cover every painted mathematical row in page coordinates.");
+                }
+                if (baseline is null) baseline = math;
+                else
+                {
+                    TestAssert.Equal(baseline.Length, math.Length);
+                    foreach (var (before, after) in baseline.Zip(math))
+                    {
+                        TestAssert.True(before.Text == after.Text && before.Y == after.Y,
+                            "Bookmarks and unchanged-format run splitting retain every glyph and mathematical row baseline.");
+                        // Source owners still have separate kerning state. Keep
+                        // the observed row-origin residual outside this local
+                        // math-geometry contract instead of adding a correction.
+                        double beforeOrigin = baseline.First(show => show.Y == before.Y).X;
+                        double afterOrigin = math.First(show => show.Y == after.Y).X;
+                        TestAssert.True(Math.Abs((before.X - beforeOrigin) - (after.X - afterOrigin)) < .001d,
+                            "Source transformations preserve local grouped glyph geometry.");
+                    }
+                }
+            }
+        }
+    }
+
+    public static void DocxInlineCompositionGroupedHyperlinksFollowPrintedReviewRows()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Installed Cambria Math is required for printed grouped links.");
+        var document = ReadMutation("CompositionProbes/math-printed-frame-script-anchor12-multiple",
+            OoxPdfDocxMarkupMode.AllMarkup, true, false, (xml, w, m) =>
+            {
+                var equation = xml.Descendants(m + "oMath").First();
+                var paragraph = equation.Ancestors(w + "p").First();
+                var properties = paragraph.Element(w + "pPr");
+                if (properties is null) { properties = new XElement(w + "pPr"); paragraph.AddFirst(properties); }
+                properties.Add(new XElement(w + "ind", new XAttribute(w + "right", "7160")));
+                equation.ReplaceNodes(new XElement(m + "r", new XElement(w + "rPr", new XElement(w + "rFonts",
+                    new XAttribute(w + "ascii", "Cambria Math"), new XAttribute(w + "hAnsi", "Cambria Math"))),
+                    new XElement(m + "t", "(α+β=γ)")));
+                equation.ReplaceWith(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PublicCalculation"), new XElement(equation)));
+            });
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        var page = renderer.RenderBlankPages(document, null, default).Single();
+        var mathFonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
+            .Select(resource => resource.Font).ToHashSet();
+        var glyphs = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
+            .Where(show => mathFonts.Contains(show.Font) && "(α+β=γ)".Contains(show.Text.Normalize(NormalizationForm.FormKC), StringComparison.Ordinal)).ToArray();
+        TestAssert.Equal("(α+β=γ)", string.Concat(glyphs.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+        var rows = glyphs.GroupBy(show => show.Y).ToArray();
+        TestAssert.Equal(2, rows.Length);
+        var annotations = page.Annotations.Where(annotation => annotation.IsDestination).ToArray();
+        TestAssert.Equal(rows.Length, annotations.Length);
+        foreach (var row in rows)
+            TestAssert.True(annotations.Any(annotation => annotation.Y <= row.Key && annotation.Y + annotation.Height >= row.Key &&
+                annotation.X <= row.Min(show => show.X) + .01d && annotation.X + annotation.Width >= row.Max(show => show.X) - .01d),
+                "Review transforms must move hyperlink bounds with their painted mathematical rows.");
+    }
+
+    public static void DocxInlineCompositionLiteralBreakKeepsMalformedAndUnaryFallbacks()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
             TestAssert.Skip("Installed Cambria Math is required for the literal fallback control.");
-        foreach (string literal in new[] { "(α+β=γ)", "+αβγαβγ" })
+        foreach (string literal in new[] { "(α+β=γ", "([α+β)=γ]", "+αβγαβγ" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             var document = ReadMutation("docx-omml-inline-overfull12", mode, false, false, (xml, w, m) =>
@@ -1350,7 +1481,7 @@ internal static class DocxInlineCompositionTests
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
                 .RenderBlankPages(document, diagnostics.Add, default).ToArray();
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"),
-                "Nested or unary-only breaking retains its qualified whole-formula fallback.");
+                "Malformed grouping and unary-only relocation retain their whole-formula fallback.");
             TestAssert.True(pages.All(page => page.Fonts.All(font => !font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))),
                 "No partial or unused equation resource may escape the fallback.");
         }

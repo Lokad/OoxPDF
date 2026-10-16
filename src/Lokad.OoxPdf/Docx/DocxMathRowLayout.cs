@@ -26,7 +26,7 @@ internal static class DocxMathRowLayout
         if (!TryGetAtoms(row, token, out List<Atom> atoms, out fallback, allowArgumentSize)) { return false; }
         var glyphs = new List<DocxMathGlyphPlacement>(atoms.Count);
         var inlineBreaks = new List<int>();
-        int delimiterDepth = 0;
+        Stack<int>? delimiters = null;
         bool balancedDelimiters = true;
         double x = 0d, above = 0d, below = 0d, previousCorrection = 0d, slantedInkRight = 0d;
         AtomKind previous = neighbors.Before ?? AtomKind.Open, firstKind = AtomKind.Ordinary;
@@ -64,9 +64,14 @@ internal static class DocxMathRowLayout
                 next is null or AtomKind.Close or AtomKind.Relation or AtomKind.Punctuation))
             { kind = AtomKind.Ordinary; }
             if (i == 0) { firstKind = kind; }
-            if (kind == AtomKind.Open) delimiterDepth++;
-            if (kind == AtomKind.Close && --delimiterDepth < 0) balancedDelimiters = false;
-            if (scriptLevel == 0 && !atom.Run.NormalText && delimiterDepth == 0 &&
+            if (kind == AtomKind.Open) (delimiters ??= new()).Push(atom.Source.Value);
+            if (kind == AtomKind.Close)
+            {
+                int expected = atom.Source.Value switch { ')' => '(', ']' => '[', '}' => '{', _ => -1 };
+                if (delimiters is null || !delimiters.TryPop(out int opening) || opening != expected)
+                    balancedDelimiters = false;
+            }
+            if (scriptLevel == 0 && !atom.Run.NormalText &&
                 kind is AtomKind.Binary or AtomKind.Relation && i > 0 && i + 1 < atoms.Count)
                 inlineBreaks.Add(i + 1);
             if (i != 0)
@@ -94,7 +99,7 @@ internal static class DocxMathRowLayout
         { fallback = "InvalidMathExtent"; return false; }
         box = new DocxMathBox(x, above, below, glyphs)
         { LogicalAdvance = advanceWidth == x ? null : advanceWidth,
-            InlineBreakAfterGlyphs = balancedDelimiters && delimiterDepth == 0 ? inlineBreaks : [],
+            InlineBreakAfterGlyphs = balancedDelimiters && (delimiters is null || delimiters.Count == 0) ? inlineBreaks : [],
             Edges = atoms.Count == 0 ? null : new(firstKind, previous, atoms[0].Run.NormalText) };
         fallback = null;
         return true;
