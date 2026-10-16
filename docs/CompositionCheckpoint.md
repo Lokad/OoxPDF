@@ -1,5 +1,21 @@
 # Composed-document reliability checkpoint
 
+C61 matches white formatting-balloon fill in seven independently inspected Word
+paths, retaining comment-author colors, mixed summaries and other profiles.
+Thirty-five Windows checks and four pinned-font Ubuntu checks pass once each;
+two new color checks fail on the parent. Eight Review conversions retain identical
+text operations, path geometry and strokes. Seven fills change; the void PDF and
+four transfer smoke PDFs stay identical. No Office exports or fixed corpus replay.
+All eight visual gates still fail unchanged thresholds: MAE improves but foreground
+recall decreases in seven nonvoid cases, with new cell/footer component failures.
+The native fill correction is accepted with these metric residuals explicit.
+Evidence: `formatting-white-fill-evidence.json` and linked raw reports.
+
+Six independent header/footer transformations distinguish footer story anchoring
+from header paragraph anchoring. Exact occupied-frame placement remains unresolved;
+no fixed per-story offset was accepted. These findings guide subsequent placement
+work and do not qualify new geometry.
+
 C60 corrects mixed-view run-formatting descriptions through resolved before/after
 bold/italic state. Seven independent Word controls establish "Formatted: Font:"
 with Bold, Not Bold, Italic or Bold/Italic descriptions across body, cell, header
