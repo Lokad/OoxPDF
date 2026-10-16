@@ -16,6 +16,25 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingFooterTableAdmissionKeepsBodyAboveTheCompleteFrame()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var source = DocxTests.ReadDocx(Case("Composition/composed-static-cell-report.docx"), mode);
+            var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            foreach (var page in renderer.InspectLayout(source).Pages)
+            {
+                var rows = page.StaticStories.Single(story => story.Kind == "Footer").Items.Where(item => item.Kind.EndsWith("TableRow", StringComparison.Ordinal)).ToArray();
+                TestAssert.Equal(1, rows.Length);
+                double footerTop = rows.Max(row => row.Y + row.Height);
+                var bodyLines = page.Items.Where(item => item.Kind == "TextLine").ToArray();
+                TestAssert.True(bodyLines.Length != 0 && bodyLines.All(line => line.Y > footerTop),
+                    "Body admission reserves the complete static table, including its first paragraph.");
+            }
+        }
+    }
+
     public static void PortableRenderingStaticCellsPreserveMixedMathImagesAndCounters()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

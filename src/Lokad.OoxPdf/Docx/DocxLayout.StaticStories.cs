@@ -120,7 +120,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         foreach (DocxTableRowLayout row in footerLayout.TableRows)
-            footerContentTop = Math.Max(footerContentTop, row.Y);
+            footerContentTop = Math.Max(footerContentTop, row.Y + row.Height);
 
         return footerContentTop;
     }

@@ -522,6 +522,12 @@ internal static class DocxTableMathTests
                 ReferenceEquals(placed.Equation, math.Equation), "Static cells consume their original prepared box.");
             TestAssert.True(Math.Abs(expanded.Height - first.Height - 20d) < .000001,
                 "Grid measurement and cell painting reserve the same prepared height.");
+            if (!header)
+            {
+                TestAssert.True(Math.Abs(a.FooterContentTopByPage[0] - first.Y - first.Height) < .000001 &&
+                    Math.Abs(b.FooterContentTopByPage[0] - expanded.Y - expanded.Height) < .000001,
+                    "The footer keep-out is the row's top edge; its stored Y is the bottom.");
+            }
         }
     }
 
