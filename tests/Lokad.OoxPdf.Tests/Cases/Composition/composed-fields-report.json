@@ -5,11 +5,22 @@
     "Sha256": "7C6A3C28D57D56DD76494C5416917700F36DFEB9B09C903E7D05E3CC2B5F59F8",
     "HeldOut": true,
     "ExpectedEquationCount": 6,
+    "ExpectedInlineImageCount": 1,
     "ExpectedText": [
       "Quarterly operations report",
-      "The trend marker",
-      "See calculation.",
-      "Public calculation note."
+      "See calculation",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "Features": [
+      "image/math/comment/link/bookmark in one paragraph",
+      "math/footnote reference in a table cell",
+      "numbering",
+      "header equation",
+      "footer",
+      "continuous footnote",
+      "wrapped prose",
+      "cached field results beside math/image/comment and inside an internal hyperlink"
     ]
   }
 ]

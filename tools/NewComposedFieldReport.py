@@ -67,7 +67,10 @@ output = cases / 'composed-fields-report.docx'
 with ZipFile(output,'w',ZIP_DEFLATED) as archive:
     for name,data in sorted(entries.items()):
         info=ZipInfo(name,(2026,10,16,0,0,0));info.compress_type=ZIP_DEFLATED;archive.writestr(info,data)
-manifest = [dict(Id=output.stem,Input=output.relative_to(root).as_posix(),Sha256=hashlib.sha256(output.read_bytes()).hexdigest().upper(),
-                 HeldOut=True,ExpectedEquationCount=6,ExpectedText=['Quarterly operations report','The trend marker','See calculation.','Public calculation note.'])]
+baseline = json.loads((cases/'composed-annotations-report.json').read_text(encoding='utf-8'))[0]
+manifest = [baseline | dict(Id=output.stem,Input=output.relative_to(root).as_posix(),
+    Sha256=hashlib.sha256(output.read_bytes()).hexdigest().upper(),
+    ExpectedText=[text.removesuffix('.') if text == 'See calculation.' else text for text in baseline['ExpectedText']],
+    Features=baseline['Features']+['cached field results beside math/image/comment and inside an internal hyperlink'])]
 (cases/'composed-fields-report.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
 print('Pinned one held-out cached-field report; visible prose, equations and other package parts preserved.')
