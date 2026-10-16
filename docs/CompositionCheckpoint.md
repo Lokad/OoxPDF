@@ -944,3 +944,19 @@ prose screens for normal-text equation words remain unresolved. Frozen `0d02535c
 qualifies once; root verifies 17 assets/four PDFs without rebuilding or replaying
 the suite. Evidence: `artifacts/composition-c1/comment-occupied-frame-evidence.json`.
 CI through `881f8871` is green on Windows and Ubuntu.
+
+`9a14f5ac` shares measured selection depth with comment connectors while retaining
+independent balloon placement. Eight Word controls reduce baseline-relative
+connector error from 2.22pt to at most 0.112pt. Twenty-five methods pass in one
+invocation and four portable Ubuntu checks pass; both new connector regressions
+fail with the preceding library. All eight text-operation files, including balloon
+text, stay exact; only two connector strokes change per control. A first prototype
+coupled the two coordinates and displaced balloon titles; an independent title
+guard demonstrates the rejected regression. Only corrected frozen `8a9db635`
+transfers to root. Four control pairs are inspected; all eight numerical gates
+still fail. C2 passes both content/page-local screens, retains exact Final PDF and
+both text-operation files, and changes only two review connector strokes. Both
+numerical C2 gates remain failed. Connector X/dash, balloon baseline and typography
+remain approximate. Transfer checks 17 assets/four PDFs without root rebuild or
+suite replay. Evidence: `artifacts/composition-c1/comment-connector-placement-evidence.json`.
+CI through `6400abec` is green on both OSes.
