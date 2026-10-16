@@ -876,3 +876,22 @@ test now retains the two-column frame and verifies all four note destinations on
 the admitted page. Ubuntu was green; the next push is under CI. Evidence:
 `artifacts/composition-c1/scaled-note-evidence.json`. C2 is accepted for bounded
 composition with the numerical/geometry residuals; release preparation stays deferred.
+
+`256ca0a4` corrects the shared review table-fraction clearance. Ordered cell frames
+measure printed text struts and receive the row-origin translation without a
+second nominal-inset conversion. Eight independent controls vary note-marker size
+11/12 and script alignment; maximum review border-relative error falls from
+2.652pt to 0.149pt. Four Final PDFs are exact. Twenty-eight focused methods in
+one invocation and five Ubuntu checks pass; the parent fails both new regressions.
+C2 retains all source/page-local content; its Final PDF and review page-2 raster
+are exact, while the corrected review page 1 is reviewed. Both numerical C2 gates
+and all eight control gates remain failed. Eight Office prose-token screens remain
+unresolved because normal-text math words use Office's prose font; source prose,
+simple math, direct glyph geometry and reviewed crops retain the content. The
+fixed portfolio excludes changed ordered cells; prior Office reviews plus exact
+letter/memo smokes remain accepted without full-corpus replay. Transfer checks
+17 assets/four PDFs without root build or suite replay. Evidence:
+`artifacts/composition-c1/ordered-cell-frame-evidence.json`. CI through `ed9566a9`
+is green on Windows and Ubuntu. Workspace was 5.069GB at the last scan; automatic
+review rejected retirement of 48 verified compiled duplicates (blocked by policy),
+so no files were removed and those targets will not be retried.
