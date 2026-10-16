@@ -336,7 +336,7 @@ internal sealed partial class DocxLayoutEngine
                 paragraphIndex++;
                 continue;
             }
-            if (paragraph.Equations.Count != 0)
+            if (paragraph.Equations.Count != 0 || paragraph.ListLabel is not null)
             {
                 double size = GetParagraphFontSize(paragraph);
                 var profile = ResolveLineHeightProfile(paragraph, size, textMeasurer);
@@ -352,7 +352,7 @@ internal sealed partial class DocxLayoutEngine
                     Math.Max(1d, width - firstInset - rightInset), Math.Max(1d, width - nextInset - rightInset),
                     sourceInset * paragraphSpacingScale, sourceHeight * factor * paragraphSpacingScale,
                     paragraphSpacingScale, cancellationToken, out var measured, defaultTabStopPoints: defaultTabStopPoints,
-                    pageNumber: pageNumber, pageCount: pageCount))
+                    pageNumber: pageNumber, pageCount: pageCount, allowTextOnly: true))
                 {
                     for (int index = 0; index < measured.Count; index++)
                     {

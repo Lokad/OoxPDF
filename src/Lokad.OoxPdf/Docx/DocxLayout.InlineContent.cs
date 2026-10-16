@@ -197,12 +197,12 @@ internal sealed partial class DocxLayoutEngine
         double baselineInset, double lineHeight, double scale, CancellationToken token,
         [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines,
         double? physicalTextBaselineInset = null, double defaultTabStopPoints = WordDefaultTabStopPoints,
-        int? pageNumber = null, int? pageCount = null)
+        int? pageNumber = null, int? pageCount = null, bool allowTextOnly = false)
     {
         lines = null;
         return double.IsFinite(firstWidth) && double.IsFinite(nextWidth) && firstWidth > 0d && nextWidth > 0d &&
             TryMeasureOrderedInlineAtoms(paragraph, equations, measurer, fontSize, baselineInset, lineHeight, scale,
-                token, out var atoms, defaultTabStopPoints, pageNumber, pageCount) &&
+                token, out var atoms, defaultTabStopPoints, pageNumber, pageCount, allowTextOnly) &&
             TryWrapOrderedInlineAtoms(atoms, firstWidth, nextWidth, token, out lines, physicalTextBaselineInset);
     }
 
@@ -210,7 +210,8 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? equations,
         IDocxTextMeasurer measurer, double fontSize, double baselineInset, double lineHeight, double scale,
         CancellationToken token, [NotNullWhen(true)] out DocxMeasuredInlineAtoms? atoms,
-        double defaultTabStopPoints = WordDefaultTabStopPoints, int? pageNumber = null, int? pageCount = null)
+        double defaultTabStopPoints = WordDefaultTabStopPoints, int? pageNumber = null, int? pageCount = null,
+        bool allowTextOnly = false)
     {
         atoms = null;
         bool hasActualFieldInputs = (pageNumber is not null || pageCount is not null) &&
@@ -218,9 +219,16 @@ internal sealed partial class DocxLayoutEngine
                 DocxFieldText.CanResolve(field.Kind, pageNumber, pageCount)) &&
             paragraph.Runs.All(run => run.FieldKind is not { } kind || !kind.IsDynamic() ||
                 DocxFieldText.CanResolve(kind, pageNumber, pageCount));
-        if (paragraph.InlineContent is not { } items || equations is null ||
-            paragraph.Equations.Count == 0 ||
-            DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasActualFieldInputs, token).Count != paragraph.Equations.Count) return false;
+        if (paragraph.InlineContent is not { } items) return false;
+        if (paragraph.Equations.Count != 0)
+        {
+            if (equations is null ||
+                DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasActualFieldInputs, token).Count != paragraph.Equations.Count) return false;
+        }
+        else if (!allowTextOnly || paragraph.Images.Count != 0 ||
+            !DocxInlineContent.HasSupportedSourceOwner(paragraph, hasActualFieldInputs, token) ||
+            !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
+            paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right)) return false;
         bool hasTabs = items.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden);
         // Right/center tabs measure a complete following field. Decimal/bar
         // stops and leaders retain their explicit measurement/painting fallback.
@@ -292,7 +300,7 @@ internal sealed partial class DocxLayoutEngine
                     }
                     break;
                 case DocxInlineEquation math:
-                    if (!equations.TryGetValue(math.Equation, out var prepared)) return false;
+                    if (equations is null || !equations.TryGetValue(math.Equation, out var prepared)) return false;
                     AddMeasuredMath(item, prepared);
                     break;
                 case DocxInlinePicture picture:
