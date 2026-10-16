@@ -15,6 +15,10 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed partial class DocxRenderer
 {
     private static DocxFontResources PrepareFontResources(DocxDocument document, IFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken, bool includeReviewAutofitMarks = false)
+        => PrepareFontResourcesCore(document, fontResolver, diagnosticSink, cancellationToken, includeReviewAutofitMarks, null);
+
+    private static DocxFontResources PrepareFontResourcesCore(DocxDocument document, IFontResolver fontResolver,
+        Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken, bool includeReviewAutofitMarks, int? pageCount)
     {
         cancellationToken.ThrowIfCancellationRequested();
         DocxFontPlan plan = DocxFontPlan.Create(document, fontResolver, cancellationToken, includeReviewAutofitMarks);
@@ -68,9 +72,12 @@ internal sealed partial class DocxRenderer
 
         ReportComplexScriptApproximation(plan, diagnosticSink, cancellationToken);
 
+        var deferredPageCountEquations = new List<DocxEquation>();
+        var mathEquations = PrepareMathEquations(document, fontResolver, fontCache, resources, cancellationToken, pageCount, deferredPageCountEquations);
         return new DocxFontResources(plan, measurer, resources, runResources, fallback, fallbackChains, fallbackFaces, fallbackFontResources)
         {
-            MathEquations = PrepareMathEquations(document, fontResolver, fontCache, resources, cancellationToken)
+            MathEquations = mathEquations,
+            DeferredPageCountEquations = deferredPageCountEquations
         };
     }
 

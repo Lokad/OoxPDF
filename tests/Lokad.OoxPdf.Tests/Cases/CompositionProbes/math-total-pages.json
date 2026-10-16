@@ -1,0 +1,58 @@
+[
+  {
+    "Id": "math-total-pages-simple-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-total-pages-simple-body.docx",
+    "Sha256": "894BB83DB4D6E6682C824FB470394AF0E66200F10C1E0DB7AB392513A51291FC",
+    "SourceSha256": "F813CAE3479B3BBA4B11D8E3361DE08698804481270C0AF3E00301B3C915DEE4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Following prose.",
+      "Start",
+      "middle",
+      "End."
+    ]
+  },
+  {
+    "Id": "math-total-pages-simple-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-total-pages-simple-cell.docx",
+    "Sha256": "5A3A80D02BA3929AEFC50A02ADC689D76FCAB2511326B552F3AA840D386DA308",
+    "SourceSha256": "77C1EADDE402F2C9B20B51CB3B5530D975930EF76EDBFCD51B377197828B4DC6",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Following prose.",
+      "Start",
+      "middle",
+      "End."
+    ]
+  },
+  {
+    "Id": "math-total-pages-packed-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-total-pages-packed-body.docx",
+    "Sha256": "04F7C8974BD40F2BE28366CE8664FFE596DD72EED0A82D62251E8D6CB47B3491",
+    "SourceSha256": "66F32D82A4AA0A5802FB1710D3E72625FA9B0BEA1AAAEC416669E5FF09972D1E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Following prose.",
+      "Start",
+      "middle",
+      "End."
+    ]
+  },
+  {
+    "Id": "math-total-pages-packed-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-total-pages-packed-cell.docx",
+    "Sha256": "C58B493EFCDF8319012975DBE9E2D037A50D17BEF499F42B4E9112F28C6DA03C",
+    "SourceSha256": "174B689299A801815DCC298D9B140BF6B7D6E22DAD950E02E0977B46DA94FE11",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Following prose.",
+      "Start",
+      "middle",
+      "End."
+    ]
+  }
+]

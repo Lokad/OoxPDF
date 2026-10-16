@@ -1,0 +1,381 @@
+{
+  "Source": "Independent Word 16 PDFs; actual NUMPAGES=2, PAGE=1, stale source cache=777. Existing visual thresholds retained.",
+  "Rows": [
+    {
+      "Id": "math-total-pages-packed-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "04F7C8974BD40F2BE28366CE8664FFE596DD72EED0A82D62251E8D6CB47B3491",
+      "PdfSha256": "4530EFC0DBC7CFD82EF54869F264692B2AFEC8085E7C0D230668E19F3D698C83",
+      "MathText": "ratetimeratetime",
+      "Anchors": [
+        {
+          "Word": "rate",
+          "Occurrence": 0,
+          "X": 84.456,
+          "Y": 625.68
+        },
+        {
+          "Word": "rate",
+          "Occurrence": 1,
+          "X": 136.15,
+          "Y": 625.68
+        },
+        {
+          "Word": "time",
+          "Occurrence": 0,
+          "X": 83.928,
+          "Y": 615.77
+        },
+        {
+          "Word": "time",
+          "Occurrence": 1,
+          "X": 135.62,
+          "Y": 615.77
+        }
+      ],
+      "Counters": [
+        {
+          "X": 76.464,
+          "Y": 620.33
+        },
+        {
+          "X": 128.06,
+          "Y": 620.33
+        }
+      ],
+      "Start": {
+        "X": 54.6,
+        "Y": 620.33
+      }
+    },
+    {
+      "Id": "math-total-pages-packed-body",
+      "Mode": "final-preserve",
+      "InputSha256": "04F7C8974BD40F2BE28366CE8664FFE596DD72EED0A82D62251E8D6CB47B3491",
+      "PdfSha256": "53BA113960E12AEC9FDA78B797895AB02775E27F03B2CB568A058A4CB519A832",
+      "MathText": "ratetimeratetime",
+      "Anchors": [
+        {
+          "Word": "rate",
+          "Occurrence": 0,
+          "X": 111.38,
+          "Y": 698.5
+        },
+        {
+          "Word": "rate",
+          "Occurrence": 1,
+          "X": 179.54,
+          "Y": 698.5
+        },
+        {
+          "Word": "time",
+          "Occurrence": 0,
+          "X": 110.66,
+          "Y": 685.42
+        },
+        {
+          "Word": "time",
+          "Occurrence": 1,
+          "X": 178.82,
+          "Y": 685.42
+        }
+      ],
+      "Counters": [
+        {
+          "X": 100.82,
+          "Y": 691.42
+        },
+        {
+          "X": 168.86,
+          "Y": 691.42
+        }
+      ],
+      "Start": {
+        "X": 72.024,
+        "Y": 691.42
+      }
+    },
+    {
+      "Id": "math-total-pages-packed-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "C58B493EFCDF8319012975DBE9E2D037A50D17BEF499F42B4E9112F28C6DA03C",
+      "PdfSha256": "638A3A9B46DD2833036BA66E320E95A1C8FE46D4D0D5A08092E1C00ECC9ACD05",
+      "MathText": "ratetimeratetime",
+      "Anchors": [
+        {
+          "Word": "rate",
+          "Occurrence": 0,
+          "X": 261.67,
+          "Y": 625.32
+        },
+        {
+          "Word": "rate",
+          "Occurrence": 1,
+          "X": 313.37,
+          "Y": 625.32
+        },
+        {
+          "Word": "time",
+          "Occurrence": 0,
+          "X": 261.12,
+          "Y": 615.41
+        },
+        {
+          "Word": "time",
+          "Occurrence": 1,
+          "X": 312.82,
+          "Y": 615.41
+        }
+      ],
+      "Counters": [
+        {
+          "X": 253.66,
+          "Y": 619.94
+        },
+        {
+          "X": 305.28,
+          "Y": 619.94
+        }
+      ],
+      "Start": {
+        "X": 231.82,
+        "Y": 619.94
+      }
+    },
+    {
+      "Id": "math-total-pages-packed-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "C58B493EFCDF8319012975DBE9E2D037A50D17BEF499F42B4E9112F28C6DA03C",
+      "PdfSha256": "5E9A9B70B6452F890532E09BA5C53B9A921AA97F6ECC9CAFB1D3F9E444C49B99",
+      "MathText": "ratetimeratetime",
+      "Anchors": [
+        {
+          "Word": "rate",
+          "Occurrence": 0,
+          "X": 345.07,
+          "Y": 698.02
+        },
+        {
+          "Word": "rate",
+          "Occurrence": 1,
+          "X": 413.23,
+          "Y": 698.02
+        },
+        {
+          "Word": "time",
+          "Occurrence": 0,
+          "X": 344.35,
+          "Y": 684.94
+        },
+        {
+          "Word": "time",
+          "Occurrence": 1,
+          "X": 412.51,
+          "Y": 684.94
+        }
+      ],
+      "Counters": [
+        {
+          "X": 334.51,
+          "Y": 690.94
+        },
+        {
+          "X": 402.55,
+          "Y": 690.94
+        }
+      ],
+      "Start": {
+        "X": 305.69,
+        "Y": 690.94
+      }
+    },
+    {
+      "Id": "math-total-pages-simple-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "894BB83DB4D6E6682C824FB470394AF0E66200F10C1E0DB7AB392513A51291FC",
+      "PdfSha256": "A4A1E58C6E4B0D8E6129A4BBE8A035ECB838A424AAFED381B0C05C68765D8986",
+      "MathText": "ratetimeratetime",
+      "Anchors": [
+        {
+          "Word": "rate",
+          "Occurrence": 0,
+          "X": 84,
+          "Y": 625.68
+        },
+        {
+          "Word": "rate",
+          "Occurrence": 1,
+          "X": 135.24,
+          "Y": 625.68
+        },
+        {
+          "Word": "time",
+          "Occurrence": 0,
+          "X": 83.472,
+          "Y": 615.77
+        },
+        {
+          "Word": "time",
+          "Occurrence": 1,
+          "X": 134.71,
+          "Y": 615.77
+        }
+      ],
+      "Counters": [
+        {
+          "X": 76.464,
+          "Y": 620.33
+        },
+        {
+          "X": 127.61,
+          "Y": 620.33
+        }
+      ],
+      "Start": {
+        "X": 54.6,
+        "Y": 620.33
+      }
+    },
+    {
+      "Id": "math-total-pages-simple-body",
+      "Mode": "final-preserve",
+      "InputSha256": "894BB83DB4D6E6682C824FB470394AF0E66200F10C1E0DB7AB392513A51291FC",
+      "PdfSha256": "8235387DDA064BF0081957101CC6FE56258D676D5B8174DBA29B0B425CE95E4A",
+      "MathText": "ratetimeratetime",
+      "Anchors": [
+        {
+          "Word": "rate",
+          "Occurrence": 0,
+          "X": 110.78,
+          "Y": 698.5
+        },
+        {
+          "Word": "rate",
+          "Occurrence": 1,
+          "X": 178.34,
+          "Y": 698.5
+        },
+        {
+          "Word": "time",
+          "Occurrence": 0,
+          "X": 110.06,
+          "Y": 685.42
+        },
+        {
+          "Word": "time",
+          "Occurrence": 1,
+          "X": 177.62,
+          "Y": 685.42
+        }
+      ],
+      "Counters": [
+        {
+          "X": 100.82,
+          "Y": 691.42
+        },
+        {
+          "X": 168.26,
+          "Y": 691.42
+        }
+      ],
+      "Start": {
+        "X": 72.024,
+        "Y": 691.42
+      }
+    },
+    {
+      "Id": "math-total-pages-simple-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "5A3A80D02BA3929AEFC50A02ADC689D76FCAB2511326B552F3AA840D386DA308",
+      "PdfSha256": "ABDCC4D1A4ADFB0FD3EF1A80480E014E2860D4E69719561B9ECF9C3D3D792C43",
+      "MathText": "ratetimeratetime",
+      "Anchors": [
+        {
+          "Word": "rate",
+          "Occurrence": 0,
+          "X": 261.22,
+          "Y": 625.32
+        },
+        {
+          "Word": "rate",
+          "Occurrence": 1,
+          "X": 312.46,
+          "Y": 625.32
+        },
+        {
+          "Word": "time",
+          "Occurrence": 0,
+          "X": 260.66,
+          "Y": 615.41
+        },
+        {
+          "Word": "time",
+          "Occurrence": 1,
+          "X": 311.9,
+          "Y": 615.41
+        }
+      ],
+      "Counters": [
+        {
+          "X": 253.66,
+          "Y": 619.94
+        },
+        {
+          "X": 304.82,
+          "Y": 619.94
+        }
+      ],
+      "Start": {
+        "X": 231.82,
+        "Y": 619.94
+      }
+    },
+    {
+      "Id": "math-total-pages-simple-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "5A3A80D02BA3929AEFC50A02ADC689D76FCAB2511326B552F3AA840D386DA308",
+      "PdfSha256": "C570613CEA71ACAD1A369F1F2BB30A11084515EF60EEFE2D9C4D3E64C214AAC7",
+      "MathText": "ratetimeratetime",
+      "Anchors": [
+        {
+          "Word": "rate",
+          "Occurrence": 0,
+          "X": 344.47,
+          "Y": 698.02
+        },
+        {
+          "Word": "rate",
+          "Occurrence": 1,
+          "X": 412.03,
+          "Y": 698.02
+        },
+        {
+          "Word": "time",
+          "Occurrence": 0,
+          "X": 343.75,
+          "Y": 684.94
+        },
+        {
+          "Word": "time",
+          "Occurrence": 1,
+          "X": 411.31,
+          "Y": 684.94
+        }
+      ],
+      "Counters": [
+        {
+          "X": 334.51,
+          "Y": 690.94
+        },
+        {
+          "X": 401.95,
+          "Y": 690.94
+        }
+      ],
+      "Start": {
+        "X": 305.69,
+        "Y": 690.94
+      }
+    }
+  ]
+}

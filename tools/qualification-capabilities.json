@@ -1302,5 +1302,28 @@
     "DocxStaticTableMathCompleteReportMatchesIndependentPrintedFrames",
     "PortableRenderingSingleMathAnnotationsPreserveFrames",
     "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance"
+  ],
+  "docx-total-page-math": [
+    "DocxInlineCompositionTotalPage",
+    "PortableRenderingTotalPageMath",
+    "DocxFieldTextCounterInputsRemainIndependent",
+    "DocxInlineCompositionCounterAtomsMeasureOnlyTheirOwnedInputs",
+    "DocxInlineCompositionBodyPageCountersMatchIndependentWordFrames",
+    "DocxInlineCompositionCellPageCountersMatchIndependentWordFrames",
+    "DocxInlineCompositionStaticPageFieldsRequireActualPageInputs",
+    "DocxInlineCompositionStaticPageFieldsMatchIndependentWordFrames",
+    "DocxInlineCompositionMeasuredAtomsRebindOnlyCounters",
+    "DocxLayoutUsesResolvedBodyPageFieldForLineBreaking",
+    "DocxLayoutUsesCompactBodyNumPagesFieldForLineBreaking",
+    "DocxTableLayoutUsesResolvedPageFieldForCellLineBreaking",
+    "DocxTableLayoutUsesCompactNumPagesFieldForCellLineBreaking",
+    "DocxTableCellPageFieldsEvaluatePerFragmentPage",
+    "DocxTableCellTextLinesMemoSharesSplitCells",
+    "PortableRenderingBodyPageCountersFollowLineAdmission",
+    "PortableRenderingCellPageCountersPreserveMathAcrossDigitBoundary",
+    "PortableRenderingStaticPageFieldsPreserveMathAcrossDigitBoundary",
+    "PortableRenderingNormalNotesPreserveInlineImagesAndMath",
+    "DocxStaticTableMathCompleteReportMatchesIndependentPrintedFrames",
+    "DocxNativeMathUsesItsOccupiedBodyFrameBeforeFollowingProseTurnsPage"
   ]
 }

@@ -88,7 +88,7 @@ internal sealed partial class DocxRenderer
 
     private static IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph> PrepareMathEquations(
         DocxDocument document, IFontResolver resolver, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
-        List<PdfFontResource> resources, CancellationToken token)
+        List<PdfFontResource> resources, CancellationToken token, int? pageCount, List<DocxEquation> deferredPageCountEquations)
     {
         var candidates = new List<(DocxParagraph Paragraph, DocxEquation Equation, DocxEquation SourceEquation, OpenTypeFont? ParentMetrics, IReadOnlyList<OpenTypeFont> ControlFaces)>();
         var groups = new Dictionary<(string StableId, int FaceIndex), (OpenTypeFont Font, Dictionary<ushort, int> Glyphs)>();
@@ -96,14 +96,24 @@ internal sealed partial class DocxRenderer
         var controlFaces = new Dictionary<OpenTypeFont, (Dictionary<ushort, int> Glyphs, Dictionary<ushort, int> Operators, HashSet<int> Characters)>(ReferenceEqualityComparer.Instance);
         var controlKeys = new Dictionary<IDocxMathControl, (string StableId, int FaceIndex)>(ReferenceEqualityComparer.Instance);
         var unavailableControlFaces = new HashSet<OpenTypeFont>(ReferenceEqualityComparer.Instance);
-        foreach (var owner in DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, token)
-            .Select(paragraph => (Paragraph: paragraph, HasPageInputs: DocxMathParagraphPolicy.UsesOnlyPageNumberCounters(paragraph)))
-            .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, token)))
+        foreach (var owner in DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, token, includePageCountDependencies: true)
+            .Select(paragraph => (Paragraph: paragraph, HasPageInputs: true, NeedsFinalCount: true))
+            .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, token)
+                .Select(owner => (owner.Paragraph, owner.HasPageInputs, NeedsFinalCount: false))))
         {
             token.ThrowIfCancellationRequested();
             DocxParagraph paragraph = owner.Paragraph;
             var sourceEquations = DocxMathParagraphPolicy.GetPreparationEquations(paragraph, owner.HasPageInputs, token);
             if (sourceEquations.Count == 0) { continue; }
+            // Body/cell NUMPAGES needs finalized pagination. Discover it while
+            // traversing the existing candidates, without loading unused math fonts.
+            if (pageCount is null && owner.NeedsFinalCount &&
+                (paragraph.Runs.Any(run => run.FieldKind == DocxFieldKind.NumPages) ||
+                 paragraph.FieldReferences.Any(field => field.Kind == DocxFieldKind.NumPages)))
+            {
+                deferredPageCountEquations.AddRange(sourceEquations);
+                continue;
+            }
             bool standalone = DocxMathParagraphPolicy.GetStandaloneRow(paragraph) is not null;
             var displayRows = DocxMathParagraphPolicy.GetDisplaySourceEquations(paragraph, token);
             var hyperlinked = DocxInlineContent.GetHyperlinkedEquations(paragraph, token);

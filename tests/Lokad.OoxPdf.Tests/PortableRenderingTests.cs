@@ -16,6 +16,38 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingTotalPageMathUsesFinalizedCountAndPreservesSource() =>
+        DocxInlineCompositionTests.CheckTotalPageMath(new PinnedResolver());
+
+    public static void PortableRenderingTotalPageMathRetainsUnstableCountFallback() =>
+        DocxInlineCompositionTests.CheckUnstableTotalPageMath(new PinnedResolver());
+
+    public static void PortableRenderingTotalPageMathRecomputesNormalNotePlacement()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var source = DocxTests.ReadDocx(Case("CompositionProbes/math-total-pages-simple-body.docx"), mode);
+            var notes = DocxTests.ReadDocx(Case("CompositionProbes/math-note-content-" + kind + "-wrapped.docx"), mode);
+            var document = source with
+            {
+                BodyElements = source.BodyElements.Take(2).Concat(notes.BodyElements).Concat(source.BodyElements.Skip(2)).ToArray(),
+                RelatedStories = notes.RelatedStories
+            };
+            var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            TestAssert.Equal(2, pages.Length);
+            string text = Regex.Replace(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)), @"\s", "");
+            TestAssert.Contains("Endofsupportednote.", text);
+            TestAssert.Equal(6, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            var first = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[0], usePageCoordinates: true).ToArray();
+            TestAssert.Equal(2, first.Count(show => show.Text.Trim() == "2"));
+            TestAssert.True(first.Any(show => show.Text == "r"), "The total-page retry must restore the fractions while retaining normal-note contents.");
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingFooterTableAdmissionKeepsBodyAboveTheCompleteFrame()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

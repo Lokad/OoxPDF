@@ -234,6 +234,7 @@ internal sealed partial class DocxLayoutEngine
     private readonly double reservePrintScale;
     private readonly IReadOnlyDictionary<string, string>? commentMarkerLabels;
     private readonly bool useCompleteFootnoteReserve;
+    private readonly int? knownPageCount;
 
     private sealed record DocxPageGeometry(
         double Width,
@@ -274,7 +275,7 @@ internal sealed partial class DocxLayoutEngine
         double Scale,
         IReadOnlyList<double> ResolvedColumnWidths);
 
-    public DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode markupGeometryMode, double wordCompatiblePrintScale = WordCompatibleAllMarkupParagraphSpacingScale, IReadOnlyDictionary<string, string>? commentMarkerLabels = null, bool useCompleteFootnoteReserve = false, OoxPdfDocxMarkupGeometryMode? requestedGeometryMode = null)
+    public DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode markupGeometryMode, double wordCompatiblePrintScale = WordCompatibleAllMarkupParagraphSpacingScale, IReadOnlyDictionary<string, string>? commentMarkerLabels = null, bool useCompleteFootnoteReserve = false, OoxPdfDocxMarkupGeometryMode? requestedGeometryMode = null, int? knownPageCount = null)
     {
         this.requestedGeometryMode = requestedGeometryMode ?? markupGeometryMode;
         reserveMarkupMargin = markupGeometryMode is OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin or OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
@@ -286,6 +287,7 @@ internal sealed partial class DocxLayoutEngine
         reservePrintScale = wordCompatiblePrintScale;
         this.commentMarkerLabels = commentMarkerLabels;
         this.useCompleteFootnoteReserve = useCompleteFootnoteReserve;
+        this.knownPageCount = knownPageCount;
     }
 
     public DocxLayout Create(DocxDocument document, PdfEmbeddedFont? embedded, CancellationToken cancellationToken)
@@ -1258,7 +1260,7 @@ internal sealed partial class DocxLayoutEngine
                         defaultTabStopPoints,
                         cancellationToken,
                         pageNumber: pages.Count + 1,
-                        pageCount: null,
+                        pageCount: knownPageCount,
                         paragraphSpacingScale: paragraphSpacingScale,
                         commentMarkerLabels: commentMarkerLabels,
                         adjustAlignedMinimumMargins: true,
@@ -1356,7 +1358,7 @@ internal sealed partial class DocxLayoutEngine
                     width, textMeasurer, defaultTabStopPoints, pages.Count + 1, paragraphSpacingScale,
                     scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1,
                     availableHeight: cursorY - keepBottom, allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1,
-                    cancellationToken, mathEquations);
+                    cancellationToken, mathEquations, knownPageCount);
                 if (cursorY - keepEstimate.Height <= keepBottom)
                 {
                     AdvanceColumnOrPage();
@@ -1404,7 +1406,7 @@ internal sealed partial class DocxLayoutEngine
                 }
                 if (TryMeasureOrderedInlineAtoms(paragraph, mathEquations, textMeasurer, paragraphFontSize,
                     baseInset, lineHeight, paragraphSpacingScale, cancellationToken, out var atoms,
-                    defaultTabStopPoints: defaultTabStopPoints, pageNumber: pages.Count + 1) &&
+                    defaultTabStopPoints: defaultTabStopPoints, pageNumber: pages.Count + 1, pageCount: knownPageCount) &&
                     TryWrapOrderedInlineAtoms(atoms, Math.Max(1d, width - firstInset - rightInset),
                         Math.Max(1d, width - nextInset - rightInset), cancellationToken, out var measured,
                         physicalTextBaselineInset: baseInset * paragraphSpacingScale) &&
@@ -1424,7 +1426,7 @@ internal sealed partial class DocxLayoutEngine
                         // available here. Losing one is an internal invariant.
                         if (boundPage != pages.Count + 1)
                         {
-                            if (!TryRebindInlineCounters(atoms, pages.Count + 1, null, cancellationToken, out var rebound))
+                            if (!TryRebindInlineCounters(atoms, pages.Count + 1, knownPageCount, cancellationToken, out var rebound))
                                 throw new InvalidOperationException("An admitted body counter has no page input.");
                             bound = rebound;
                             boundPage = pages.Count + 1;

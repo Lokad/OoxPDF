@@ -446,7 +446,7 @@ internal sealed partial class DocxLayoutEngine
         double availableHeight,
         bool allowAutomaticMinimumGridPlacement,
         CancellationToken cancellationToken,
-        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null, int? pageCount = null)
     {
         if (elements[elementIndex] is not DocxParagraphElement paragraphElement)
         {
@@ -501,7 +501,7 @@ internal sealed partial class DocxLayoutEngine
                 double next = Math.Max(1d, availableWidth - right - GetParagraphTextStartOffset(value, paragraphSpacingScale));
                 if (TryMeasureOrderedInlineContent(value, mathEquations, textMeasurer, inlineSize, first, next,
                     inlineInset, inlineHeight, paragraphSpacingScale, cancellationToken, out var measured,
-                    defaultTabStopPoints: defaultTabStopPoints))
+                    defaultTabStopPoints: defaultTabStopPoints, pageNumber: pageNumber, pageCount: pageCount))
                     return measured.Sum(line => line.OccupiedHeight);
             }
             double regular = EstimateParagraphContentHeight(value, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale, scaleExactBodyAdvances);
@@ -536,7 +536,7 @@ internal sealed partial class DocxLayoutEngine
             DocxTableLayoutFrame frame = CreateTableLayoutFrame(table,
                 tableIndex: -1, sourceBlockIndex: -1, x: 0d, availableWidth,
                 pageContentHeight: double.MaxValue / 4d, textMeasurer, defaultTabStopPoints,
-                cancellationToken, pageNumber, pageCount: null, paragraphSpacingScale,
+                cancellationToken, pageNumber, pageCount: pageCount, paragraphSpacingScale,
                 adjustAlignedMinimumMargins: true, alignedMinimumAvailableHeight: Math.Max(0d, remainingHeight),
                 allowAutomaticMinimumGridPlacement: allowAutomaticMinimumGridPlacement,
                 mathEquations: mathEquations);

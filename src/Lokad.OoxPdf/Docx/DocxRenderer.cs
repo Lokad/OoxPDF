@@ -379,8 +379,37 @@ internal sealed partial class DocxRenderer
         DocxDocument document, IFontResolver resolver, DocxMarkupContext context, OoxPdfDocxMarkupGeometryMode geometry,
         Action<OoxPdfDiagnostic>? diagnostics, CancellationToken cancellationToken)
     {
-        var fonts = PrepareFontResources(document, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null);
-        var first = CreatePlainFootnoteTextLayout(document, fonts, context, geometry, cancellationToken);
+        List<OoxPdfDiagnostic>? messages = diagnostics is null ? null : [];
+        var first = PrepareNoteAdjustedLayout(document, resolver, context, geometry, messages is null ? null : messages.Add, cancellationToken);
+        if (first.FontResources.DeferredPageCountEquations.Count != 0)
+        {
+            List<OoxPdfDiagnostic>? retryMessages = diagnostics is null ? null : [];
+            // Recompute note-dependent purposes too: accepting a stable count
+            // must not leave numbering or kerning derived from the omitted math.
+            var retry = PrepareNoteAdjustedLayout(document, resolver, context, geometry, retryMessages is null ? null : retryMessages.Add,
+                cancellationToken, first.Layout.Pages.Count);
+            if (retry.Layout.Pages.Count == first.Layout.Pages.Count)
+            {
+                var painted = new HashSet<DocxEquation>(EnumeratePaintedEquations(
+                    retry.Layout.Pages.SelectMany(page => page.Items), cancellationToken), ReferenceEqualityComparer.Instance);
+                if (first.FontResources.DeferredPageCountEquations.All(painted.Contains))
+                {
+                    first = retry;
+                    messages = retryMessages;
+                }
+            }
+        }
+        if (diagnostics is not null && messages is not null)
+            foreach (var message in messages) { cancellationToken.ThrowIfCancellationRequested(); diagnostics(message); }
+        return first;
+    }
+
+    private static (DocxDocument Document, DocxFontResources FontResources, DocxLayout Layout) PrepareNoteAdjustedLayout(
+        DocxDocument document, IFontResolver resolver, DocxMarkupContext context, OoxPdfDocxMarkupGeometryMode geometry,
+        Action<OoxPdfDiagnostic>? diagnostics, CancellationToken cancellationToken, int? pageCount = null)
+    {
+        var fonts = PrepareFontResourcesCore(document, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount);
+        var first = CreatePlainFootnoteTextLayout(document, fonts, context, geometry, cancellationToken, pageCount);
         DocxDocument adjusted = document;
         IReadOnlyDictionary<string, int> originalPages = new Dictionary<string, int>();
         IReadOnlyDictionary<string, DocxNoteKerning.PageRange> notePages = new Dictionary<string, DocxNoteKerning.PageRange>();
@@ -411,8 +440,8 @@ internal sealed partial class DocxRenderer
                 DocxWrappedCalibriKerning.TryCreateDocument(document, first, out adjusted, out originalPages,
                     DocxWrappedCalibriPolicy.SourceThresholds, DocxFootnoteOwnerScope.AllSourceReferences)))
         {
-            var adjustedFonts = PrepareFontResources(adjusted, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null);
-            var adjustedLayout = CreatePlainFootnoteTextLayout(adjusted, adjustedFonts, context, geometry, cancellationToken);
+            var adjustedFonts = PrepareFontResourcesCore(adjusted, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount);
+            var adjustedLayout = CreatePlainFootnoteTextLayout(adjusted, adjustedFonts, context, geometry, cancellationToken, pageCount);
             bool wrappedCalibri = !DocxPlainFootnoteKerning.HasSingleLineBody(first) &&
                 DocxWrappedFootnoteFrame.IsEligible(adjusted, DocxWrappedCalibriPolicy.NormalizedThresholds, DocxFootnoteOwnerScope.AllSourceReferences);
             bool stableOwners = plainNotes
@@ -444,8 +473,8 @@ internal sealed partial class DocxRenderer
         // Corrected labels need their own glyph subset and measured advances.
         // One bounded retry is accepted only when body and complete note pages
         // remain stable; otherwise the original resources/layout retain fallback.
-        var numberedFonts = PrepareFontResources(numbered, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null);
-        var final = CreatePlainFootnoteTextLayout(numbered, numberedFonts, context, geometry, cancellationToken);
+        var numberedFonts = PrepareFontResourcesCore(numbered, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount);
+        var final = CreatePlainFootnoteTextLayout(numbered, numberedFonts, context, geometry, cancellationToken, pageCount);
         return final.Pages.Count == first.Pages.Count && DocxPageFootnoteNumbering.HasStablePages(numbered, final, pages,
             allowWrappedBody: context.WordCompatiblePrintScale == 1d,
             calibriPolicy: numberingPolicy, ownerScope: DocxFootnoteOwnerScope.AllSourceReferences)
@@ -453,18 +482,18 @@ internal sealed partial class DocxRenderer
     }
 
     private static DocxLayout CreatePlainFootnoteTextLayout(DocxDocument document, DocxFontResources fonts,
-        DocxMarkupContext context, OoxPdfDocxMarkupGeometryMode geometry, CancellationToken cancellationToken)
+        DocxMarkupContext context, OoxPdfDocxMarkupGeometryMode geometry, CancellationToken cancellationToken, int? pageCount = null)
     {
-        var layout = CreateCompleteNoteReservedLayout(document, fonts, context, geometry, cancellationToken);
+        var layout = CreateCompleteNoteReservedLayout(document, fonts, context, geometry, cancellationToken, pageCount);
         return context.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
             context.WordCompatiblePrintScale == 1d && fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
             DocxMinimumBodyLineLeading.TryCreateLayout(document, layout, out var adjusted) ? adjusted : layout;
     }
 
     private static DocxLayout CreateCompleteNoteReservedLayout(DocxDocument document, DocxFontResources fonts,
-        DocxMarkupContext context, OoxPdfDocxMarkupGeometryMode geometry, CancellationToken cancellationToken)
+        DocxMarkupContext context, OoxPdfDocxMarkupGeometryMode geometry, CancellationToken cancellationToken, int? pageCount = null)
     {
-        var first = CreateHeaderDisplacedLayout(document, fonts, context, geometry, cancellationToken);
+        var first = CreateHeaderDisplacedLayout(document, fonts, context, geometry, cancellationToken, pageCount: pageCount);
         if (context.GeometryMode != OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup || context.WordCompatiblePrintScale != 1d ||
             fonts.TextMeasurer is null || fonts.FallbackFaces.Count != 0 ||
             !DocxPageFootnoteNumbering.IsEligibleDocument(document, includeContinuousRestart: true) ||
@@ -476,7 +505,7 @@ internal sealed partial class DocxRenderer
             !head[0].TextLines[0].Text.All(char.IsWhiteSpace)) return first;
         // A single bounded retry can reclaim only unused reserve. A moved or
         // split note must keep the original layout and its numbering admission.
-        var complete = CreateHeaderDisplacedLayout(document, fonts, context, geometry, cancellationToken, useCompleteFootnoteReserve: true);
+        var complete = CreateHeaderDisplacedLayout(document, fonts, context, geometry, cancellationToken, useCompleteFootnoteReserve: true, pageCount: pageCount);
         return DocxPageFootnoteNumbering.HasStableCompleteNoteOwners(document, first, complete) ? complete : first;
     }
 
@@ -486,7 +515,7 @@ internal sealed partial class DocxRenderer
         DocxMarkupContext markupContext,
         OoxPdfDocxMarkupGeometryMode geometryMode,
         CancellationToken cancellationToken,
-        bool useCompleteFootnoteReserve = false)
+        bool useCompleteFootnoteReserve = false, int? pageCount = null)
     {
         // Office A/B (w37/w39 multi-paragraph headers plus w47 cross-story spacing,
         // Word-COM rendered): body starts below overflowing header content, with the
@@ -502,7 +531,7 @@ internal sealed partial class DocxRenderer
         // plus one conditional displaced pass; no loop), and page/content charges apply
         // once per emitted final page in RenderParagraphs, never per pass.
         DocxLayoutEngine engine = new(geometryMode, markupContext.WordCompatiblePrintScale, markupContext.CommentMarkerLabels,
-            useCompleteFootnoteReserve, requestedGeometryMode: markupContext.GeometryMode);
+            useCompleteFootnoteReserve, requestedGeometryMode: markupContext.GeometryMode, knownPageCount: pageCount);
         IDocxTextMeasurer? scaledTextMeasurer = ResolveLayoutTextMeasurer(fontResources, markupContext);
         DocxLayout first = engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer, mathEquations: fontResources.MathEquations);
         // Maps stay dense: explicitly unconstrained pages record zero so the

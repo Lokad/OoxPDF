@@ -11,6 +11,120 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionTotalPageMathRetainsIndependentWordGeometry()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent controls use installed Arial metrics.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-total-pages-office-geometry.json")));
+        foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            var mode = row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
+            var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).ToArray();
+            TestAssert.Equal(2, pages.Length);
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[0], usePageCoordinates: true).ToArray();
+            var fonts = pages[0].Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
+            var math = shows.Where(show => fonts.Contains(show.Font)).ToArray();
+            TestAssert.Equal(row.GetProperty("MathText").GetString(), string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+            TestAssert.Equal(16, math.Length);
+            var anchors = row.GetProperty("Anchors").EnumerateArray().ToArray();
+            double originX = anchors[0].GetProperty("X").GetDouble();
+            // The existing cell-origin and simple-field Calibri/Arial advance
+            // residuals accumulate to about two points; retain the failed visual
+            // gates and check fraction geometry independently of that offset.
+            TestAssert.True(Math.Abs(math[0].X - originX) < 2.1d, "Retain the measured Office field/cell-origin residual.");
+            foreach (var anchor in anchors)
+            {
+                int index = anchor.GetProperty("Occurrence").GetInt32() * 8 + (anchor.GetProperty("Word").GetString() == "rate" ? 0 : 4);
+                TestAssert.True(Math.Abs(math[index].Y - anchor.GetProperty("Y").GetDouble()) < .2d &&
+                    Math.Abs(math[index].X - math[0].X - (anchor.GetProperty("X").GetDouble() - originX)) < .75d,
+                    "Resolved total-page fields retain Word's fraction baselines and local geometry.");
+            }
+            var counters = shows.Where(show => show.Text.Trim() == "2").ToArray();
+            TestAssert.Equal(2, counters.Length);
+            foreach (var counter in counters)
+                TestAssert.True(Math.Abs(counter.Y - row.GetProperty("Start").GetProperty("Y").GetDouble()) < .2d,
+                    "Actual count digits retain the prose baseline.");
+        }
+    }
+
+    public static void DocxInlineCompositionTotalPageMathKeepsCanonicalCountersAndSourceTransformations()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent native controls use installed Arial metrics.");
+        CheckTotalPageMath(null);
+    }
+
+    internal static void CheckTotalPageMath(Lokad.OoxPdf.Fonts.IFontResolver? resolver)
+    {
+        foreach (string form in new[] { "simple", "packed" })
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool transformed in new[] { false, true })
+        {
+            var document = ReadMutation($"CompositionProbes/math-total-pages-{form}-{container}", mode, transformed, transformed);
+            var owner = DocxBlockTraversal.EnumerateBodyParagraphs(document.BodyElements).Single(p => p.Equations.Count != 0);
+            var counters = owner.Runs.Where(run => run.FieldKind == DocxFieldKind.NumPages).ToArray();
+            TestAssert.Equal(2, counters.Length);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(2, pages.Length);
+            string text = DocxPageFootnoteNumberingTests.DecodeText(pages[0]);
+            TestAssert.True(!text.Contains("777", StringComparison.Ordinal) && !text.Contains("NUMPAGES", StringComparison.Ordinal),
+                "Actual total pages must replace neither current-page identity nor the stale cached result.");
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[0], usePageCoordinates: true).ToArray();
+            TestAssert.Equal(2, shows.Count(show => show.Text.Trim() == "2"));
+            var fonts = pages[0].Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
+            string math = string.Concat(shows.Where(show => fonts.Contains(show.Font)).Select(show => show.Text)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal("ratetimeratetime", math);
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Resolvable total-page fields cannot discard supported equations.");
+            TestAssert.Contains("Following prose.", DocxPageFootnoteNumberingTests.DecodeText(pages[1]));
+            TestAssert.True(counters.All(run => run.Text == "{NUMPAGES}"), "The retry must preserve canonical source run identity.");
+            if (transformed) TestAssert.True(owner.BookmarkAnchors.Count != 0,
+                "Bookmarks remain attached to the supported equation's source owner.");
+        }
+    }
+
+    public static void DocxInlineCompositionTotalPageRetryRetainsUnstableCountFallback()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("The native control uses installed Arial metrics.");
+        CheckUnstableTotalPageMath(null);
+    }
+
+    internal static void CheckUnstableTotalPageMath(Lokad.OoxPdf.Fonts.IFontResolver? resolver)
+    {
+        var renderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        DocxDocument Boundary(string instruction)
+        {
+            var document = ReadMutation("CompositionProbes/math-total-pages-simple-body", OoxPdfDocxMarkupMode.Final,
+                false, false, (xml, w, m) =>
+                {
+                    foreach (var field in xml.Descendants(w + "fldSimple")) field.SetAttributeValue(w + "instr", " " + instruction + " ");
+                });
+            var math = document.Paragraphs.Single(paragraph => paragraph.Equations.Count != 0);
+            return document with { BodyElements = [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Spacer", 12d, 633d)),
+                new DocxParagraphElement(math)] };
+        }
+        // The plain field line fits after the spacer; restoring its fractions
+        // moves it to page two. A PAGE control proves that actual placement.
+        TestAssert.Equal(2, renderer.RenderBlankPages(Boundary("PAGE"), null, default).Count());
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var source = Boundary("NUMPAGES");
+        var pages = renderer.RenderBlankPages(source, diagnostics.Add, default).ToArray();
+        TestAssert.Equal(1, pages.Length);
+        TestAssert.True(diagnostics.Any(item => item.Id == "DOCX_UNSUPPORTED_EQUATION"),
+            "A changed total cannot publish math measured with a stale count or start an unbounded fixed-point loop.");
+        TestAssert.True(pages[0].Fonts.All(resource => !resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
+            "Rejected retry subsets must not leak into the original fallback.");
+        using var canceled = new CancellationTokenSource();
+        canceled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => renderer.RenderBlankPages(source, null, canceled.Token).ToArray());
+    }
+
     public static void DocxInlineCompositionNoteImageDimensionsAndVerticalFrameMatchOffice()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent controls use installed Arial metrics.");

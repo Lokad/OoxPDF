@@ -241,6 +241,7 @@ internal sealed record DocxTableLayoutContext(
     string? LayoutValue,
     IReadOnlyList<DocxRevisionInfo>? Revisions)
 {
+    public int? PageCount { get; init; }
     public IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? MathEquations { get; init; }
     public CancellationToken CancellationToken { get; init; }
     public IReadOnlyList<double> AlignedMinimumRowBottomMargins { get; init; } = [];
@@ -299,6 +300,7 @@ internal sealed record DocxFontResources(
     IReadOnlyDictionary<DocxTextRun, PdfFallbackFontResource> FallbackFaces,
     IReadOnlyList<PdfFallbackFontResource> FallbackFontResources)
 {
+    public IReadOnlyList<DocxEquation> DeferredPageCountEquations { get; init; } = [];
     public IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph> MathEquations { get; init; } =
         new Dictionary<DocxEquation, DocxPreparedMathParagraph>();
 }

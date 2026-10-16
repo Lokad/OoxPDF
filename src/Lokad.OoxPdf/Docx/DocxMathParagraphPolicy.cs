@@ -8,6 +8,10 @@ internal sealed record DocxPreparedMathParagraph(DocxEquation Equation, DocxMath
 internal static class DocxMathParagraphPolicy
 {
     public static IEnumerable<DocxParagraph> EnumeratePreparationCandidates(DocxDocument document, CancellationToken token)
+        => EnumeratePreparationCandidates(document, token, includePageCountDependencies: false);
+
+    public static IEnumerable<DocxParagraph> EnumeratePreparationCandidates(DocxDocument document, CancellationToken token,
+        bool includePageCountDependencies)
     {
         foreach (DocxBodyElement element in document.BodyElements)
         {
@@ -16,7 +20,7 @@ internal static class DocxMathParagraphPolicy
             else if (element is DocxTableElement table)
             {
                 foreach (DocxParagraph source in EnumerateSupportedTableParagraphs(table.Table, token))
-                    if (GetPreparationEquations(source, UsesOnlyPageNumberCounters(source), token).Count != 0) { yield return source; }
+                    if (GetPreparationEquations(source, includePageCountDependencies || UsesOnlyPageNumberCounters(source), token).Count != 0) { yield return source; }
             }
         }
     }

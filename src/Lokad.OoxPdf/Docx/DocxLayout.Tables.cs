@@ -174,7 +174,7 @@ internal sealed partial class DocxLayoutEngine
             double flowBottom = marginBottom;
             double remainingPageHeight = Math.Max(0d, cursorY - flowBottom);
             if (!row.CantSplit &&
-                TryResolveExplicitTableCellPageBreakBoundaries(row, frame.EffectiveColumns, frame.Scale, rowHeight, textMeasurer, defaultTabStopPoints, getPageNumber(), pageCount: null, out IReadOnlyList<double> explicitBreakBoundaries, paragraphSpacingScale: paragraphSpacingScale))
+                TryResolveExplicitTableCellPageBreakBoundaries(row, frame.EffectiveColumns, frame.Scale, rowHeight, textMeasurer, defaultTabStopPoints, getPageNumber(), pageCount: frame.Context.PageCount, out IReadOnlyList<double> explicitBreakBoundaries, paragraphSpacingScale: paragraphSpacingScale))
             {
                 double explicitBreakFragmentHeight = explicitBreakBoundaries[0];
                 if (explicitBreakFragmentHeight > remainingPageHeight && hasPageContent())
@@ -424,7 +424,7 @@ internal sealed partial class DocxLayoutEngine
             table.IndentPoints,
             table.CellSpacingPoints,
             table.LayoutValue,
-            table.Revisions) { MathEquations = mathEquations, CancellationToken = cancellationToken };
+            table.Revisions) { PageCount = pageCount, MathEquations = mathEquations, CancellationToken = cancellationToken };
         var rowHeights = new double[table.Rows.Count];
         var rowBottomMargins = new double[table.Rows.Count];
         var boundaryMinimumRowHeights = new double[table.Rows.Count];
@@ -1173,7 +1173,7 @@ internal sealed partial class DocxLayoutEngine
             FragmentCount: 1,
             FragmentReason: "None",
             Story: null,
-            pageCount: null,
+            pageCount: tableContext.PageCount,
             paragraphSpacingScale: paragraphSpacingScale,
             cellMemo: cellMemo,
             adjustAtLeastBodySpacing: true));
@@ -1273,7 +1273,7 @@ internal sealed partial class DocxLayoutEngine
                 FragmentCount: fragmentHeights.Count,
                 FragmentReason: fragmentReason,
                 Story: null,
-                pageCount: null,
+                pageCount: frame.Context.PageCount,
                 paragraphSpacingScale: paragraphSpacingScale,
                 cellMemo: cellMemo,
                 adjustAtLeastBodySpacing: true));
