@@ -7,16 +7,25 @@ calling-thread allocation samples fall from a 19.54 MB median to 10.46 MB, savin
 correction still retries and retains C63 PDF bytes; allocation changes by 72 bytes.
 Stage measurements overlap and timings are noisy, so no timing speedup is claimed.
 
-The expanded numbering capability covers 57 Windows methods and 55 Ubuntu passes
-with two native-font skips. After C63 CI exposed a stale mixed-threshold assertion,
-only eight newly selected mixed/spacing neighbors run on the corrected harness;
-49 unchanged results are reused with source/library identity proof. One new check
-fails on the parent. The tracked generator reproduces the no-op fixture exactly.
-Four typography PDFs retain their independent Office comparisons, including all
-four failed visual gates and approximation warnings. Seventeen frozen assets and
-four integration PDFs transfer without root rebuild or corpus replay. Evidence:
-`artifacts/composition-c1/footnote-noop-evidence.json` and
-`artifacts/composition-c1/footnote-noop-transfer/evidence.json`.
+Ownership validation is independent of replacement: minimum-leading and font
+adjustments now request the complete source-marker/page map without constructing
+a numbered document. The initial no-op exit disabled those callers and CI caught
+nine geometry/link regressions. The correction restores all nine, retaining the
+single-line eligibility and matching note-source prefix checks. C63's stale
+mixed-threshold expectation was also corrected; neighboring selections now include
+mixed thresholds, spacing, minimum leading and contextual note links.
+
+Final qualification covers 73 Windows passes and 71 Ubuntu passes/two native-font
+skips. One new harness check initially used a wrapped fixture outside the legacy
+single-line scope; only that corrected method reruns on the same library, reusing
+72 unchanged results. Both allocation medians and PDF hashes remain identical to
+the initial C64 measurements. Four typography PDFs retain their independent Office
+comparisons, including all four failed gates and approximation warnings. Seventeen
+assets/four affected Final/Review/deck smoke PDFs transfer without root rebuild or
+corpus replay. The tracked generator reproduces the no-op fixture exactly. Evidence:
+`artifacts/composition-c1/note-owner-validation-evidence.json` and
+`artifacts/composition-c1/note-owner-validation-transfer/evidence.json`; the initial
+qualification and CI failures remain alongside them.
 
 C63 fixes default each-page footnote numbering through complete measured owners.
 The old default path retained document labels 105–108 while Word and the review
