@@ -1142,3 +1142,17 @@ are unchanged. The 17-asset/four-PDF transfer preserves complete note-math repor
 review and held-out memo Final without a root rebuild or suite/corpus replay.
 Complete-document note-image acceptance remains the next finite step. Evidence:
 `artifacts/composition-c1/note-images-evidence.json`.
+
+The finite normal-note composition checkpoint is also accepted on the complete
+held-out report with a note image beside its equations. Source 258b3328 adds only
+the note drawing and its relationship, reusing the original PNG bytes. Eight
+source equations, two image placements, prose and four navigation targets survive
+both presets on two pages, with zero global/page-local content deficits. Both
+first-page rasters are exact for candidate and Word, reusing their prior reviews;
+the two new second-page pairs were reviewed without visible omission or serious
+pagination, overlap or clipping defects. Note-image dimensions agree in the
+sampled raster; top/X residuals reach 0.5pt / 1.5pt. Both numerical visual gates
+remain failed. All 17 assets of frozen 65b9c4fe were rechecked with no library
+build, suite replay or fitting branch. Further note variants are outside this
+finite acceptance step. Evidence:
+`artifacts/composition-c1/composed-note-image-math-evidence.json`.
