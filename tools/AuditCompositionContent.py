@@ -180,6 +180,21 @@ def inspect_reference(pdf, inspector, cache):
     return read(operations), sha(operations)
 
 
+def validate_outcome_modes(cases, outcomes, comparisons):
+    modes = {"Both": ("final-preserve", "all-word-compatible"),
+             "Final": ("final-preserve",), "Review": ("all-word-compatible",)}
+    preset = outcomes.get("DocxPreset", "Both")
+    if preset not in modes:
+        raise ValueError("Unknown measured DOCX preset")
+    expected = {(case["Id"], mode) for case in cases.values() for mode in (
+        modes[preset] if case["Input"].endswith(".docx") else ("presentation",))}
+    actual = [(row["Id"], row["Mode"]) for row in outcomes["Rows"]]
+    compared = [(row["Id"], row["Mode"]) for row in comparisons["Rows"]]
+    if (set(actual) != expected or len(actual) != len(expected) or
+            set(compared) != expected or len(compared) != len(expected)):
+        raise ValueError("Portfolio outcomes/comparisons are missing or duplicated")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("artifact", "candidate", "references", "inspector", "cache", "output"):
@@ -223,11 +238,7 @@ def main():
         raise ValueError("Use the same qualified PDF inspector")
     cases = {case["Id"]: case for case in read(manifest)}
     compared = {(row["Id"], row["Mode"]): row for row in comparisons["Rows"]}
-    expected_modes = {(case["Id"], mode) for case in cases.values() for mode in (
-        ("final-preserve", "all-word-compatible") if case["Input"].endswith(".docx") else ("presentation",))}
-    actual_modes = [(row["Id"], row["Mode"]) for row in outcomes["Rows"]]
-    if set(actual_modes) != expected_modes or len(actual_modes) != len(expected_modes) or set(compared) != expected_modes:
-        raise ValueError("Portfolio outcomes/comparisons are missing or duplicated")
+    validate_outcome_modes(cases, outcomes, comparisons)
     if comparisons["CandidateLibrarySha256"] != pin["LibrarySha256"]:
         raise ValueError("Comparison library identity differs")
     rows = []

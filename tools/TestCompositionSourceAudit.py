@@ -3,7 +3,7 @@ import sys
 sys.dont_write_bytecode = True
 from xml.etree import ElementTree as E
 import unittest
-from AuditCompositionContent import unresolved_fields
+from AuditCompositionContent import unresolved_fields, validate_outcome_modes
 
 W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 
@@ -16,6 +16,28 @@ def complex_field(instruction=' REF Target ', result='North', packed=False):
     return '<w:r>'+''.join(children)+'</w:r>' if packed else ''.join('<w:r>'+child+'</w:r>' for child in children)
 
 class CachedFieldAuditTests(unittest.TestCase):
+    def test_selected_presets_preserve_presentation_and_default_both(self):
+        cases = {'doc': {'Id': 'doc', 'Input': 'report.docx'},
+                 'deck': {'Id': 'deck', 'Input': 'briefing.pptx'}}
+        for preset, modes in [('Both', ['final-preserve', 'all-word-compatible']),
+                              ('Final', ['final-preserve']), ('Review', ['all-word-compatible'])]:
+            rows = [{'Id': 'doc', 'Mode': mode} for mode in modes] + [{'Id': 'deck', 'Mode': 'presentation'}]
+            validate_outcome_modes(cases, {'DocxPreset': preset, 'Rows': rows}, {'Rows': rows})
+            if preset == 'Both':
+                validate_outcome_modes(cases, {'Rows': rows}, {'Rows': rows})
+
+    def test_preset_selection_does_not_accept_missing_extra_or_duplicate_rows(self):
+        cases = {'doc': {'Id': 'doc', 'Input': 'report.docx'}}
+        review = {'Id': 'doc', 'Mode': 'all-word-compatible'}
+        final = {'Id': 'doc', 'Mode': 'final-preserve'}
+        for actual, compared in [([], [review]), ([review], []), ([review, review], [review]),
+                                 ([review], [review, review]), ([review, final], [review]),
+                                 ([review], [review, final])]:
+            with self.assertRaises(ValueError):
+                validate_outcome_modes(cases, {'DocxPreset': 'Review', 'Rows': actual}, {'Rows': compared})
+        with self.assertRaises(ValueError):
+            validate_outcome_modes(cases, {'DocxPreset': 'Unknown', 'Rows': []}, {'Rows': []})
+
     def test_nested_paragraphs_without_fields_are_unchanged(self):
         self.assertEqual([], unresolved_fields(document('<w:p><w:r><w:t>Outer</w:t><w:txbxContent><w:p><w:r><w:t>Inner</w:t></w:r></w:p></w:txbxContent></w:r></w:p>')))
 
