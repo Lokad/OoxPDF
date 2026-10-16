@@ -1386,3 +1386,27 @@ suite replay. The preceding test-only CI repair uses visible comment/tab text
 anchors, preserving Office bounds and tolerances; Windows and Ubuntu CI are green
 through 1ba9d797. Evidence: `artifacts/composition-c1/inline-occupied-frame-evidence.json`
 and `artifacts/composition-c1/glyph-run-anchor-repair-evidence.json`.
+
+### Ordinary-word emergency wrapping (C28)
+
+Default/on paragraphs now emergency-break ordinary words wider than their text
+frame, using the existing bounded Unicode-safe search. Protected spans retain
+their existing fallback. Independent Word controls cover default/on/off in both
+presets: default/on recall improves from 0.377 to 0.828 and MAE from 0.278 to 0.094;
+explicit-off metrics remain unchanged. Relative line gaps are within 0.15pt.
+Candidate `formu/la` versus Word `form/ula` remains a character-break residual.
+All six visual gates still fail recall/SSIM; thresholds remain unchanged.
+
+All ten fixed portfolio and both complete-report PDFs retain accepted bytes.
+A formerly omitted narrow-column script now survives, as in Word, but sits one
+line too high because of differing text breaks. This significant geometry gap
+remains open; broad single-equation migration is rejected and remains deferred.
+No observed omission, overlap or clipping in reviewed new page pairs; identical
+rasters reuse reviews across presets/settings.
+
+Frozen a6f1c557 / root d4bb5b02 passes 81 selected Windows methods once and 54 Ubuntu
+checks (27 font-specific skips). Two new regressions fail on the accepted parent.
+The test-only correction retains the qualified production DLL and tests the
+actual whole-formula fallback boundary at an 8pt frame. Transfer checks 17 assets
+and four exact PDFs without a root build or suite replay. Evidence:
+`artifacts/composition-c1/emergency-word-wrap-evidence.json`.
