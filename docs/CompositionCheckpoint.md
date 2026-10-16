@@ -1046,3 +1046,19 @@ is added. Frozen `3b79f164` transfers 17 assets/four exact PDFs, including C3 re
 and held-out memo Final, without root build or suite/corpus replay. Evidence:
 `artifacts/composition-c1/math-endnotes-evidence.json`. CI through `500cdacf` is
 green on Windows and Ubuntu.
+
+The document-endnote start boundary now belongs to its trailing body paragraph,
+with numeric after-spacing and empty-separator flow resolved locally. Earlier
+tables and review print scaling no longer add 8.163pt / 6.213pt of excess gap.
+Whole-note typography, continuation, mixed-footnote and between-note guards remain.
+Frozen 2b320cd8 / root 4b811739 passes 42 affected methods in one invocation and
+six Ubuntu checks; both new regressions fail with the preceding library. Eight
+independent Word control outcomes agree within 0.163pt on the story-baseline gap.
+Body text operations are exact and only note/separator baselines move; four visual
+pairs were reviewed. All eight numerical visual gates and generic rate/time token
+screens remain failed; source prose/simple-math deficits are zero. The checked
+17-asset/four-PDF transfer preserves C3 review and held-out memo Final output,
+without rebuilding or replaying a root suite. Evidence:
+`artifacts/composition-c1/endnote-boundary-evidence.json`. A held-out complete
+endnote report is the next acceptance step; reduced controls alone do not
+establish general related-story composition.
