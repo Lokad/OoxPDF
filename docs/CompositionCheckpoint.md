@@ -1440,3 +1440,28 @@ Frozen 14a11946 / root e390f2d7 passes 51 Windows methods once and 31 Ubuntu che
 (20 font-specific skips). Two new methods fail on the accepted parent. All twelve
 fixed/complete PDFs retain accepted bytes; 17 assets/four exact PDFs transfer without
 a root build or suite replay. Evidence: `artifacts/composition-c1/grouped-literal-math-evidence.json`.
+
+
+### Qualified complete inline-box placement (C32)
+
+Complete supported unary, fraction and script boxes share ordered placement and
+source-backed mathematical hyperlink bounds. A fitting unary formula previously
+omitted at its source-line boundary now moves to Word's next row. Measurement
+marks relocation eligibility; malformed literal groups remain source-bound.
+Alignment, whole-width and richer-content fallbacks remain explicit.
+
+Independent unary origin/baseline differences are within 0.15pt; following visible
+text X differs by less than 0.2pt, in both presets. Both new native regressions fail
+on C31. All source prose survives; raw extraction warnings for a phrase split over
+lines and mathematical Greek remain recorded. Native glyph/geometry checks cover
+the corresponding visible content. Both new visual gates still fail recall/SSIM.
+
+Frozen cab3445b / root 18aba4d0 passes 78 Windows methods once and 37 Ubuntu checks
+(41 font-specific skips). Ten fixed outcomes pass prose/simple-math screens.
+Changed DOCX PDFs receive new comparisons: first-page MAE changes are below 0.001,
+confined to text beside a fraction; page counts and later pages remain unchanged.
+The complete report retains its generic field/math extraction warnings. Reviewed
+unary and changed table pairs show no new omission, overlap or clipping; existing
+indentation differences and failed gates remain. Transfer verifies 17 assets/four
+exact PDFs without a root build or suite replay. Evidence:
+`artifacts/composition-c1/atomic-inline-placement-evidence.json`.
