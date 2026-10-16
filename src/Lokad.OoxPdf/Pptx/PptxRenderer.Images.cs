@@ -95,7 +95,7 @@ internal sealed partial class PptxRenderer
                 SlideIndex: slideIndex, Feature: "picture geometry", Fallback: "Rectangular frame"));
             preset = "rect";
         }
-        if (preset != "rect" && outerShadow is { BlurRadius: > 0d })
+        if (preset is not ("rect" or "ellipse" or "roundRect") && outerShadow is { BlurRadius: > 0d })
             diagnosticSink?.Invoke(new OoxPdfDiagnostic("PPTX_PICTURE_GEOMETRY_EFFECT_FALLBACK", OoxPdfSeverity.Warning,
                 "Picture paint and vector effects use their shape geometry; its blurred shadow retains rectangular geometry.", targetPartName,
                 SlideIndex: slideIndex, Feature: "picture geometry effects", Fallback: "Rectangular blurred shadow"));
@@ -107,7 +107,7 @@ internal sealed partial class PptxRenderer
         double height = OoxUnits.EmuToPoints(transformedBounds.Height);
         double y = document.SlideHeightPoints - yTop - height;
         bool hasTransform = Math.Abs(transformedBounds.RotationDegrees) > 0.001d || transformedBounds.FlipHorizontal || transformedBounds.FlipVertical;
-        RenderPictureOuterShadow(document, graphics, transformedBounds, x, y, width, height, hasTransform, outerShadow, images, ref index, preset, geometry.PresetAdjustments);
+        RenderPictureOuterShadow(document, graphics, transformedBounds, x, y, width, height, hasTransform, outerShadow, images, ref index, preset, geometry.PresetAdjustments, cancellationToken);
         if (imageResource.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
         {
             RenderSvgPicture(graphics, document, transformedBounds, imageResource.Bytes, crop, fillRect, diagnosticSink, slideIndex, targetPartName, cancellationToken, preset, geometry.PresetAdjustments);
@@ -266,7 +266,8 @@ internal sealed partial class PptxRenderer
         List<PdfImageResource> images,
         ref int imageIndex,
         string preset,
-        IReadOnlyDictionary<string, double> adjustments)
+        IReadOnlyDictionary<string, double> adjustments,
+        CancellationToken cancellationToken)
     {
         if (outerShadow is not { } shadow)
         {
@@ -282,7 +283,10 @@ internal sealed partial class PptxRenderer
 
         if (shadow.BlurRadius > 0d)
         {
-            DrawRasterOuterShadow(graphics, x, y, width, height, shadow, images, ref imageIndex);
+            string shadowPreset = preset is "ellipse" or "roundRect" ? preset : "rect";
+            double radius = shadowPreset == "roundRect" ? ReadRoundRectangleRadius(null, adjustments, width, height) : 0d;
+            DrawRasterOuterShadow(graphics, x, y, width, height, shadow, images, ref imageIndex,
+                shadowPreset, radius, cancellationToken);
         }
         else
         {

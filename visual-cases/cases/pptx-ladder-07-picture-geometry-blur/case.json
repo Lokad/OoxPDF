@@ -1,0 +1,26 @@
+{
+  "id": "pptx-ladder-07-picture-geometry-blur",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/PictureGeometry/picture-geometry-blur.pptx",
+  "dpi": 144,
+  "tags": [
+    "pptx",
+    "ladder",
+    "images",
+    "picture-geometry",
+    "effects",
+    "blur",
+    "needs-review"
+  ],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": false,
+    "minStructuralSimilarity": 0.995,
+    "minForegroundColorHistogramCorrelation": 0.98
+  },
+  "allowedUnsupportedFeatures": [
+    "picture geometry effects"
+  ]
+}

@@ -100,7 +100,7 @@ internal static partial class PptxImagesTests
     {
         XNamespace p = "http://schemas.openxmlformats.org/presentationml/2006/main";
         XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
-        foreach (string variant in new[] { "missing", "unknown", "custom", "outline", "shadow", "blur" })
+        foreach (string variant in new[] { "missing", "unknown", "custom", "outline", "shadow", "blur", "polygon-blur" })
         {
             var entries = new Dictionary<string, byte[]>();
             using (var archive = ZipFile.OpenRead(PictureGeometryCase("picture-geometry-controls")))
@@ -112,10 +112,10 @@ internal static partial class PptxImagesTests
             if (variant == "missing") preset.Remove();
             else if (variant == "custom") { preset.Remove(); props.Add(new XElement(a + "custGeom")); }
             else if (variant == "unknown") preset.SetAttributeValue("prst", "unimplementedPictureMask");
-            else if (variant is "shadow" or "blur")
+            else if (variant is "shadow" or "blur" or "polygon-blur")
             {
-                preset.SetAttributeValue("prst", "ellipse");
-                props.Add(new XElement(a + "effectLst", new XElement(a + "outerShdw", new XAttribute("blurRad", variant == "blur" ? 12700 : 0),
+                preset.SetAttributeValue("prst", variant == "polygon-blur" ? "triangle" : "ellipse");
+                props.Add(new XElement(a + "effectLst", new XElement(a + "outerShdw", new XAttribute("blurRad", variant is "blur" or "polygon-blur" ? 12700 : 0),
                     new XAttribute("dist", 12700), new XAttribute("dir", 5400000), new XElement(a + "srgbClr", new XAttribute("val", "000000")))));
             }
             else { preset.SetAttributeValue("prst", "ellipse"); props.Element(a + "ln")!.ReplaceWith(new XElement(a + "ln", new XAttribute("w", 12700), new XElement(a + "solidFill", new XElement(a + "srgbClr", new XAttribute("val", "000000"))))); }
@@ -124,10 +124,10 @@ internal static partial class PptxImagesTests
             try
             {
                 var diagnostics = new List<OoxPdfDiagnostic>();
-                var pages = RenderGeometryPages(path, diagnostics);
+                var pages = RenderGeometryPages(path, diagnostics, 1);
                 var relevant = diagnostics.Where(d => d.SlideIndex == 1).ToArray();
-                string expected = variant == "blur" ? "PPTX_PICTURE_GEOMETRY_EFFECT_FALLBACK" : "PPTX_PICTURE_GEOMETRY_UNSUPPORTED";
-                TestAssert.Equal(variant is "missing" or "outline" or "shadow" ? 0 : 1, relevant.Length);
+                string expected = variant == "polygon-blur" ? "PPTX_PICTURE_GEOMETRY_EFFECT_FALLBACK" : "PPTX_PICTURE_GEOMETRY_UNSUPPORTED";
+                TestAssert.Equal(variant is "missing" or "outline" or "shadow" or "blur" ? 0 : 1, relevant.Length);
                 if (relevant.Length != 0) TestAssert.Equal(expected, relevant[0].Id);
                 bool hasEllipse = NormalizeGeometryContent(pages[0].Content).Contains("360 288 m", StringComparison.Ordinal);
                 TestAssert.Equal(variant is "outline" or "shadow" or "blur", hasEllipse);
@@ -144,9 +144,7 @@ internal static partial class PptxImagesTests
         var diagnostics = new List<OoxPdfDiagnostic>();
         var pages = RenderGeometryPages(PictureGeometryCase("picture-geometry-effects"), diagnostics);
         TestAssert.Equal(6, pages.Length);
-        TestAssert.Equal(1, diagnostics.Count);
-        TestAssert.Equal("PPTX_PICTURE_GEOMETRY_EFFECT_FALLBACK", diagnostics[0].Id);
-        TestAssert.Equal(6, diagnostics[0].SlideIndex!.Value);
+        TestAssert.Equal(0, diagnostics.Count);
         // Independent Word outline centerline bounds: x=142..434, y=250..398,
         // 4pt stroke around the authored x=144..432, y=252..396 image frame.
         string outline = NormalizeGeometryContent(pages[0].Content);
@@ -169,6 +167,41 @@ internal static partial class PptxImagesTests
             "Following corner markers remain painted after outlines, transforms and shadows.");
     }
 
+    public static void PptxPictureGeometryBlurMasksKeepCornersTransparentAndRespectBudgets()
+    {
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var effects = RenderGeometryPages(PictureGeometryCase("picture-geometry-effects"), diagnostics);
+        TestAssert.Equal(0, diagnostics.Count);
+        var extra = RenderGeometryPages(PictureGeometryCase("picture-geometry-blur"), diagnostics);
+        TestAssert.Equal(1, diagnostics.Count);
+        TestAssert.Equal("PPTX_PICTURE_GEOMETRY_EFFECT_FALLBACK", diagnostics[0].Id);
+        TestAssert.Equal(4, diagnostics[0].SlideIndex!.Value);
+        foreach (var page in new[] { effects[5], extra[0], extra[1], extra[2] })
+        {
+            var shadow = page.Images[0].Image;
+            TestAssert.True(shadow.Alpha is not null && shadow.Width <= 2048 && shadow.Height <= 2048,
+                "The shape shadow uses the existing bounded effect raster and soft mask.");
+            using var bytes = new MemoryStream(shadow.Alpha!);
+            using var inflater = new ZLibStream(bytes, CompressionMode.Decompress);
+            using var pixels = new MemoryStream(); inflater.CopyTo(pixels);
+            byte[] alpha = pixels.ToArray();
+            TestAssert.Equal(shadow.Width * shadow.Height, alpha.Length);
+            TestAssert.Equal((byte)0, alpha[shadow.Height / 20 * shadow.Width + shadow.Width / 20]);
+            TestAssert.Equal((byte)255, alpha[shadow.Height / 2 * shadow.Width + shadow.Width / 2]);
+            TestAssert.Contains("144 376 20 20 re f*", NormalizeGeometryContent(page.Content));
+        }
+        foreach (var limits in new[] {
+            new OoxConversionLimits { MaxRetainedImageBytesPerConversion = 0 },
+            new OoxConversionLimits { MaxLiveImageBytesPerConversion = 0 } })
+        {
+            using var input = File.OpenRead(PictureGeometryCase("picture-geometry-blur"));
+            using var output = new MemoryStream();
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output,
+                new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, ConversionLimits = limits }));
+            TestAssert.Equal(0L, output.Length);
+        }
+    }
+
     public static void PptxPictureGeometryCssKeywordsAndInvalidHexNeverThrow()
     {
         foreach (var pair in new[] { ("yellow", new RgbColor(255, 255, 0)), ("orange", new RgbColor(255, 165, 0)),
@@ -184,12 +217,12 @@ internal static partial class PptxImagesTests
         TestAssert.True(RgbColor.TryParseCssColor("#fF0", out var shortColor) && shortColor == new RgbColor(255, 255, 0), "Safe hex parsing preserves supported shorthand.");
     }
 
-    private static PdfPage[] RenderGeometryPages(string path, List<OoxPdfDiagnostic> diagnostics)
+    private static PdfPage[] RenderGeometryPages(string path, List<OoxPdfDiagnostic> diagnostics, int count = int.MaxValue)
     {
         using var stream = File.OpenRead(path);
         var package = OoxPackage.Open(stream, default);
         var document = new PptxReader().Read(package, default);
-        return new PptxRenderer(null).RenderPages(document, package, diagnostics.Add, default).ToArray();
+        return new PptxRenderer(null).RenderPages(document, package, diagnostics.Add, default).Take(count).ToArray();
     }
 
     private static string NormalizeGeometryContent(string content) => Regex.Replace(content, @"\s+", " ").Trim();

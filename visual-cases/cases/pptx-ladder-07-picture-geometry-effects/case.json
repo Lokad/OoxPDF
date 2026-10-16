@@ -9,17 +9,15 @@
     "images",
     "picture-geometry",
     "effects",
-    "needs-review"
+    "approximate"
   ],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": false,
+    "diagnosticsMustBeEmpty": true,
     "minStructuralSimilarity": 0.995,
     "minForegroundColorHistogramCorrelation": 0.98
   },
-  "allowedUnsupportedFeatures": [
-    "picture geometry effects"
-  ]
+  "allowedUnsupportedFeatures": []
 }

@@ -1,0 +1,37 @@
+[
+  {
+    "name": "pic-roundRect-blurred-shadow-adjusted",
+    "preset": "roundRect",
+    "nonsquare": true,
+    "adjustment": 40000,
+    "shadow": true,
+    "blur": true,
+    "following": true
+  },
+  {
+    "name": "pic-ellipse-blurred-shadow-transformed",
+    "preset": "ellipse",
+    "nonsquare": true,
+    "transformed": true,
+    "shadow": true,
+    "blur": true,
+    "following": true
+  },
+  {
+    "name": "pic-ellipse-blurred-shadow-grouped",
+    "preset": "ellipse",
+    "nonsquare": true,
+    "grouped": true,
+    "shadow": true,
+    "blur": true,
+    "following": true
+  },
+  {
+    "name": "pic-triangle-blurred-shadow-fallback",
+    "preset": "triangle",
+    "nonsquare": true,
+    "shadow": true,
+    "blur": true,
+    "following": true
+  }
+]

@@ -52,8 +52,12 @@ internal sealed partial class PptxRenderer
         double height,
         OuterShadow shadow,
         List<PdfImageResource> images,
-        ref int imageIndex)
+        ref int imageIndex,
+        string preset = "rect",
+        double cornerRadius = 0d,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (shadow.BlurRadius <= 0d ||
             shadow.Alpha <= 0d ||
             width <= 0d ||
@@ -79,6 +83,7 @@ internal sealed partial class PptxRenderer
         byte[] alpha = new byte[pixelWidth * pixelHeight];
         for (int pixelY = 0; pixelY < pixelHeight; pixelY++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             double localY = (pixelY + 0.5d) / scaleY - shadowExtent;
             double dy = localY < 0d ? -localY : localY > height ? localY - height : 0d;
             for (int pixelX = 0; pixelX < pixelWidth; pixelX++)
@@ -91,7 +96,25 @@ internal sealed partial class PptxRenderer
                 rgb[rgbOffset + 1] = shadow.Color.Green;
                 rgb[rgbOffset + 2] = shadow.Color.Blue;
 
-                double distance = Math.Sqrt(dx * dx + dy * dy);
+                double distance;
+                if (preset == "ellipse")
+                {
+                    double px = (localX - width / 2d) / (width / 2d);
+                    double py = (localY - height / 2d) / (height / 2d);
+                    double normalized = Math.Sqrt(px * px + py * py);
+                    // First-order distance along the ellipse normal. Exact on
+                    // both axes and at its boundary; no additional effect planes.
+                    double gradient = Math.Sqrt(px * px / (width * width / 4d) + py * py / (height * height / 4d));
+                    distance = normalized <= 1d ? 0d : normalized * (normalized - 1d) / gradient;
+                }
+                else if (preset == "roundRect")
+                {
+                    double qx = Math.Abs(localX - width / 2d) - (width / 2d - cornerRadius);
+                    double qy = Math.Abs(localY - height / 2d) - (height / 2d - cornerRadius);
+                    double ox = Math.Max(qx, 0d), oy = Math.Max(qy, 0d);
+                    distance = Math.Max(0d, Math.Sqrt(ox * ox + oy * oy) + Math.Min(Math.Max(qx, qy), 0d) - cornerRadius);
+                }
+                else distance = Math.Sqrt(dx * dx + dy * dy);
                 double t = Math.Clamp(distance / shadow.BlurRadius, 0d, 1d);
                 double falloff = (1d - t) * (1d - t);
                 alpha[pixel] = (byte)Math.Clamp((int)Math.Round(255d * falloff), 0, 255);
