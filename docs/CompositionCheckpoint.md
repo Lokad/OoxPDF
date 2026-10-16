@@ -1,5 +1,26 @@
 # Composed-document reliability checkpoint
 
+C63 fixes default each-page footnote numbering through complete measured owners.
+The old default path retained document labels 105–108 while Word and the review
+path printed section labels 09/10 on each page. The existing source-marker/actual-
+segment/same-page-note map now drives numbering independently of font adjustment.
+Legacy adjustment, leading and reserve guards remain; known settings/full fonts,
+same-page wrapped paragraphs, complete one-line notes and one stable-page retry
+remain required. No font/size-specific numbering branch was added.
+
+Four independent Word controls cover Calibri 12 zero/met thresholds, Arial 11 and
+Times 14. Both presets retain correct labels, authored 105/108, original source runs
+and 32 distinct same-page destinations. 48 Windows methods and 46 Ubuntu methods/two
+native-font skips pass once; two new checks fail on the parent. The existing
+correct Review PDF and four transfer smoke PDFs stay identical; 17 assets transfer
+without root rebuild/suite replay. Direct body tables exclude the five fixed/
+complete DOCX inputs, so their corpus qualification is reused. All four default
+visual gates still fail unchanged thresholds and their footnote approximation
+warnings remain. First-page Calibri 12-zero and Times 14 pairs were reviewed;
+typography/geometry remain approximate. The default view now uses the existing
+bounded retry; no speedup or unchanged-runtime-cost claim. Evidence:
+`artifacts/composition-c1/measured-footnote-owners-evidence.json` and linked reports.
+
 C62 closes the supported-polygon picture blur fallback from the geometry handoff.
 Picture masks, vector shadows and blurred shadows now share the existing fixed
 preset vertices. A safe span-based distance query handles convex/concave polygons
