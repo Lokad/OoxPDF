@@ -245,8 +245,7 @@ internal sealed partial class DocxLayoutEngine
             cancellationToken.ThrowIfCancellationRequested();
             TextToken token = tokens[tokenIndex];
             int candidateLength = token.Start + token.Length - lineStart;
-            if (lineLength > 0 &&
-                lineHasNonWhitespace &&
+            if ((lineLength > 0 && lineHasNonWhitespace || lineLength == 0 && imageOffsets.Length != 0) &&
                 !token.IsBreakableWhitespace &&
                 MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, lineStart, candidateLength, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts) + ImageWidthInRange(imageWrapIndex, lineStart, lineStart + candidateLength) > maxWidth(lineIndex))
             {
@@ -254,8 +253,11 @@ internal sealed partial class DocxLayoutEngine
                 // breaks onto the next line at its own offset (words stay whole); overwide images
                 // that fit no line keep the overwide-text convention and overflow.
                 int imageBreakOffset = -1;
-                for (int imageBreakIndex = 0; imageBreakIndex < imageOffsets.Length; imageBreakIndex++)
+                int firstImage = Array.BinarySearch(imageOffsets, lineStart);
+                if (firstImage < 0) firstImage = ~firstImage;
+                for (int imageBreakIndex = firstImage; imageBreakIndex < imageOffsets.Length; imageBreakIndex++)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     int imageOffset = imageOffsets[imageBreakIndex];
                     if (imageOffset <= lineStart)
                     {
@@ -283,34 +285,40 @@ internal sealed partial class DocxLayoutEngine
                     lineStart = imageBreakOffset;
                     lineLength = 0;
                     lineHasNonWhitespace = false;
+                    if (imageBreakOffset > token.Start)
+                        tokens[tokenIndex] = token with { Start = imageBreakOffset,
+                            Length = token.Start + token.Length - imageBreakOffset };
                     tokenIndex--;
                     continue;
                 }
 
-                // Word also breaks an overlong token after a hyphen (or slash) when the prefix fits the remaining width; previously only line-leading overwide tokens used preferred breaks.
-                double usedWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, lineStart, lineLength, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts) + ImageWidthInRange(imageWrapIndex, lineStart, lineStart + lineLength);
-                double remainingWidth = maxWidth(lineIndex) - usedWidth;
-                if (remainingWidth > 0d &&
-                    TryFindPreferredTokenBreak(text, spans, token, remainingWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, counters, breakOpportunities, out int preferredBreakLength))
+                if (lineLength > 0)
                 {
-                    yield return CreateWrappedTextLine(text, spans, lineStart, lineLength + preferredBreakLength, endsWithIntraTokenBreak: true, spanStarts);
+                    // Word also breaks an overlong token after a hyphen (or slash) when the prefix fits the remaining width; previously only line-leading overwide tokens used preferred breaks.
+                    double usedWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, lineStart, lineLength, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts) + ImageWidthInRange(imageWrapIndex, lineStart, lineStart + lineLength);
+                    double remainingWidth = maxWidth(lineIndex) - usedWidth;
+                    if (remainingWidth > 0d &&
+                        TryFindPreferredTokenBreak(text, spans, token, remainingWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, counters, breakOpportunities, out int preferredBreakLength))
+                    {
+                        yield return CreateWrappedTextLine(text, spans, lineStart, lineLength + preferredBreakLength, endsWithIntraTokenBreak: true, spanStarts);
+                        lineIndex++;
+                        lineStart = token.Start + preferredBreakLength;
+                        lineLength = 0;
+                        lineHasNonWhitespace = false;
+                        // R07.2: remainder stays a range over the original text; no suffix copy.
+                        tokens[tokenIndex] = new TextToken(lineStart, token.Length - preferredBreakLength, false);
+                        tokenIndex--;
+                        continue;
+                    }
+
+                    yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false, spanStarts);
                     lineIndex++;
-                    lineStart = token.Start + preferredBreakLength;
+                    lineStart = token.Start;
                     lineLength = 0;
                     lineHasNonWhitespace = false;
-                    // R07.2: remainder stays a range over the original text; no suffix copy.
-                    tokens[tokenIndex] = new TextToken(lineStart, token.Length - preferredBreakLength, false);
                     tokenIndex--;
                     continue;
                 }
-
-                yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false, spanStarts);
-                lineIndex++;
-                lineStart = token.Start;
-                lineLength = 0;
-                lineHasNonWhitespace = false;
-                tokenIndex--;
-                continue;
             }
 
             if (lineLength == 0 &&

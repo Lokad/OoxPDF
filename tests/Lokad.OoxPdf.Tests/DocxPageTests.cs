@@ -1840,7 +1840,12 @@ internal static class DocxPageTests
 
         TestAssert.Equal(2, layout.Pages.Count);
         TestAssert.Equal(3, layout.Pages[0].Items.OfType<DocxTextLineLayout>().Count());
-        TestAssert.Equal(2, layout.Pages[1].Items.OfType<DocxTextLineLayout>().Count());
+        var keptLines = layout.Pages[1].Items.OfType<DocxTextLineLayout>().ToArray();
+        // Second is wider than the 34pt frame and needs an emergency break.
+        // KeepLines must still move the complete three-line owner together.
+        TestAssert.Equal(3, keptLines.Length);
+        TestAssert.True(keptLines.All(line => line.SourceBlockIndex == 3), "The kept owner must remain whole on page two.");
+        TestAssert.Equal("FirstSecond", string.Concat(keptLines.Select(line => line.Text)).Replace(" ", ""));
     }
 
     public static void DocxSyntheticParagraphKeepNextMovesPairToNextPage()

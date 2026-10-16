@@ -1132,6 +1132,18 @@
     "EmergencyWrapOpportunityIndexPreservesBreaks",
     "DocxInlineCompositionWordWrappingSharesBreakRulesAcrossRunSplits",
     "DocxInlineCompositionSourceCursor",
-    "PortableRenderingDocumentDefaultOwnerPreservesInheritedLineSlots"
+    "PortableRenderingDocumentDefaultOwnerPreservesInheritedLineSlots",
+    "DocxMidLineImageForcesBreakBeforeItself",
+    "DocxInlineImageEmitsBetweenSurroundingText",
+    "DocxInlineImageAdvancesFollowingText",
+    "DocxTableCellInlineImageEmitsBetweenSurroundingText",
+    "DocxFootnoteInlineImageEmitsBetweenSurroundingText",
+    "DocxHeaderInlineImageEmitsBetweenSurroundingText",
+    "DocxJustifiedInlineImageUsesImageAwareStretch",
+    "DocxJustifiedInlineImageAlignsWithStretchedText",
+    "DocxTallInlineImageShiftsLineDownKeepingAdvance",
+    "DocxSyntheticParagraphKeepLinesStartsBlockOnNextPage",
+    "DocxSyntheticParagraphKeepNextMovesPairToNextPage",
+    "DocxSyntheticParagraphKeepNextChainsAcrossConsecutiveParagraphsToNextPage"
   ]
 }

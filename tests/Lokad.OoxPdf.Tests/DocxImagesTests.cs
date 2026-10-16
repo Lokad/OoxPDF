@@ -1848,7 +1848,11 @@ internal static class DocxImagesTests
         var breakImage = new DocxInlineImage(24d, 18d, "image/png", new byte[] { 0x89, 0x50, 0x4E, 0x47 }, "word/media/image1.png") { SourceRunIndex = 1 };
         DocxParagraph paragraph = DocxTests.CreateDocxLayoutParagraph("AAAA", 10d, 10d) with { Runs = new[] { wideRun, tailRun }, Images = new[] { breakImage }, LineSpacingPoints = null };
         DocxDocument document = DocxTests.CreateLayoutTestDocument(new DocxBodyElement[] { new DocxParagraphElement(paragraph) }, new DocxTable[0]);
-        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), System.Threading.CancellationToken.None));
+        var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
+        TestAssert.Equal(string.Concat(paragraph.Runs.Select(run => run.Text)).Replace(" ", ""),
+            string.Concat(layout.Pages.SelectMany(page => page.Items).OfType<DocxTextLineLayout>().Select(line => line.Text)).Replace(" ", ""));
         DocxLayoutItemSnapshot[] textLines = snapshot.Pages[0].Items.Where(item => item.Kind == "TextLine").ToArray();
         TestAssert.True(textLines.Length >= 2, "Expected wrapped lines, found " + textLines.Length);
         TestAssert.Equal(4, textLines[0].TextLength);
