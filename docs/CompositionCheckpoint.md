@@ -1,5 +1,30 @@
 # Composed-document reliability checkpoint
 
+C68 resolves list-label weight and slant from their numbering/paragraph owners.
+Explicit level values take precedence; missing values inherit the already-resolved
+paragraph mark, including styles and defaults. The first text run keeps its own
+formatting. Independently validated label-size precedence and existing color,
+underline and revision-decoration policies remain. The parser reuses its resolved
+mark instead of adding font-, size- or document-shape qualifications.
+
+Ten independent Word exports and eighteen retained references cover level, mark,
+Normal, ordinary/inserted bold text and body/cell/header/footer combinations. All
+84 emitted label faces match Word across 28 outcomes, verified through embedded
+TrueType weight/italic tables and Word font dictionaries. Qualification passes
+126 Windows and 99 Ubuntu methods/27 explicit skips. A test reader omitted
+synthetic italic matrices; an explicit reader option corrects it. Only the two
+affected style methods rerun on the same library, carrying 124 Windows results;
+Ubuntu runs once. Two new checks fail on the parent. The old authored-bold
+assertion is corrected using the independent ordinary/inserted controls.
+
+All 28 visual gates still fail unchanged thresholds. Among eighteen retained
+comparisons, MAE improves in seventeen and worsens by 0.000074 in the second-
+paragraph footer Review control; recall decreases in eight. No new failure
+component appears. Two page pairs were reviewed. All ten fixed/complete Final/
+Review PDFs retain parent bytes, reusing their comparisons without raster replay.
+The font-face result is not a claim of complete Office fidelity. Evidence:
+`artifacts/composition-c1/list-font-style-evidence.json` and linked reports.
+
 C67 keeps supported static content in its frame when the supplied math font lacks
 glyphs. The pinned face has math constants but lacks five mathematical italic
 letters used by these controls. Their equations correctly retain unsupported
