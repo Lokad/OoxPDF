@@ -119,6 +119,9 @@ internal sealed partial class DocxLayoutEngine
             footerContentTop = Math.Max(footerContentTop, visibleTop);
         }
 
+        foreach (DocxTableRowLayout row in footerLayout.TableRows)
+            footerContentTop = Math.Max(footerContentTop, row.Y);
+
         return footerContentTop;
     }
 
@@ -270,8 +273,9 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints,
                     cancellationToken,
                     pageNumber,
-                    pageCount: null,
-                    paragraphSpacingScale: paragraphSpacingScale);
+                    pageCount: pageCount,
+                    paragraphSpacingScale: paragraphSpacingScale,
+                    mathEquations: mathEquations);
                 for (int rowIndex = 0; rowIndex < tableElement.Table.Rows.Count; rowIndex++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -637,7 +641,6 @@ internal sealed partial class DocxLayoutEngine
         if (!isHeader &&
             (images.Count == 0 || canAnchorInlineImages) &&
             boxes.Count == 0 &&
-            tableRows.Count == 0 &&
             lines.Any(line => line.SingleLineHeight.HasValue || line.LineHeightSource == DocxLineHeightSource.ExactLineSpacing))
         {
             // Office A/B (w38 default multi-line footer at distance 36, w39 tokened
@@ -648,7 +651,8 @@ internal sealed partial class DocxLayoutEngine
             // minus 0.11, minus 0.02). The shift preserves every internal pitch (all
             // proven above) and only translates the block. Measured natural and
             // declared frames share this owner, including affined pictures and
-            // their clips. Standalone images, textboxes, tables and frames without
+            // their clips. Cell frames join the same block translation, including
+            // nested geometry. Standalone images, textboxes and frames without
             // resolved metrics retain their separate placement.
             double footerShift = startY - (cursorY - pendingSpacingAfter);
             for (int lineIndex = 0; lineIndex < lines.Count; lineIndex++)
@@ -660,6 +664,7 @@ internal sealed partial class DocxLayoutEngine
                 DocxInlineImageLayout image = images[imageIndex];
                 images[imageIndex] = image.Translate(0d, footerShift);
             }
+            tableRows = ShiftTableRows(tableRows, footerShift, 0d).ToList();
         }
 
         return new DocxStaticStoryLayoutResult(lines.ToArray(), images.ToArray(), tableRows.ToArray(), boxes.ToArray(), cursorY, pendingSpacingAfter);

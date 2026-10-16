@@ -1,0 +1,149 @@
+{
+  "Provenance": "Independent Word 16 COM PDF export; effective PDF text coordinates; source and reference hashes pinned",
+  "Rows": [
+    {
+      "Id": "math-static-cell-composition",
+      "InputSha256": "4A3BFC92282618F52BFB9B62070A4FBD8BA6AEA11C69EAF5E49714413D5B7696",
+      "Mode": "final-preserve",
+      "Container": "Body",
+      "X": 72.024,
+      "BaselineY": 699.22,
+      "ReferencePdfSha256": "A90D1DE88354A88AAA955CB08793C60BA170D71C0B0E301EE6C7E73FAA5EDAE3"
+    },
+    {
+      "Id": "math-static-cell-composition",
+      "InputSha256": "4A3BFC92282618F52BFB9B62070A4FBD8BA6AEA11C69EAF5E49714413D5B7696",
+      "Mode": "final-preserve",
+      "Container": "Cell",
+      "X": 72.504,
+      "BaselineY": 675.1,
+      "ReferencePdfSha256": "A90D1DE88354A88AAA955CB08793C60BA170D71C0B0E301EE6C7E73FAA5EDAE3"
+    },
+    {
+      "Id": "math-static-cell-composition",
+      "InputSha256": "4A3BFC92282618F52BFB9B62070A4FBD8BA6AEA11C69EAF5E49714413D5B7696",
+      "Mode": "final-preserve",
+      "Container": "Header",
+      "X": 72.504,
+      "BaselineY": 738,
+      "ReferencePdfSha256": "A90D1DE88354A88AAA955CB08793C60BA170D71C0B0E301EE6C7E73FAA5EDAE3"
+    },
+    {
+      "Id": "math-static-cell-composition",
+      "InputSha256": "4A3BFC92282618F52BFB9B62070A4FBD8BA6AEA11C69EAF5E49714413D5B7696",
+      "Mode": "final-preserve",
+      "Container": "Footer",
+      "X": 72.504,
+      "BaselineY": 56.664,
+      "ReferencePdfSha256": "A90D1DE88354A88AAA955CB08793C60BA170D71C0B0E301EE6C7E73FAA5EDAE3"
+    },
+    {
+      "Id": "math-static-cell-composition",
+      "InputSha256": "4A3BFC92282618F52BFB9B62070A4FBD8BA6AEA11C69EAF5E49714413D5B7696",
+      "Mode": "all-word-compatible",
+      "Container": "Body",
+      "X": 72.024,
+      "BaselineY": 699.22,
+      "ReferencePdfSha256": "CAA515EB2F4BC991CB40F9809B8304A372A107B91F4EA9BA473F9EA19DD0E2B1"
+    },
+    {
+      "Id": "math-static-cell-composition",
+      "InputSha256": "4A3BFC92282618F52BFB9B62070A4FBD8BA6AEA11C69EAF5E49714413D5B7696",
+      "Mode": "all-word-compatible",
+      "Container": "Cell",
+      "X": 72.504,
+      "BaselineY": 675.1,
+      "ReferencePdfSha256": "CAA515EB2F4BC991CB40F9809B8304A372A107B91F4EA9BA473F9EA19DD0E2B1"
+    },
+    {
+      "Id": "math-static-cell-composition",
+      "InputSha256": "4A3BFC92282618F52BFB9B62070A4FBD8BA6AEA11C69EAF5E49714413D5B7696",
+      "Mode": "all-word-compatible",
+      "Container": "Header",
+      "X": 72.504,
+      "BaselineY": 738,
+      "ReferencePdfSha256": "CAA515EB2F4BC991CB40F9809B8304A372A107B91F4EA9BA473F9EA19DD0E2B1"
+    },
+    {
+      "Id": "math-static-cell-composition",
+      "InputSha256": "4A3BFC92282618F52BFB9B62070A4FBD8BA6AEA11C69EAF5E49714413D5B7696",
+      "Mode": "all-word-compatible",
+      "Container": "Footer",
+      "X": 72.504,
+      "BaselineY": 56.664,
+      "ReferencePdfSha256": "CAA515EB2F4BC991CB40F9809B8304A372A107B91F4EA9BA473F9EA19DD0E2B1"
+    },
+    {
+      "Id": "static-cell-plain-frame",
+      "InputSha256": "84820D68F2F8806D7DA009C9E663833505B893BD7BBEFA074737059E0BFCA0F9",
+      "Mode": "final-preserve",
+      "Container": "Body",
+      "X": 72.024,
+      "BaselineY": 708.58,
+      "ReferencePdfSha256": "F4D1DDFC356A4E07E63DE9D34B99C7E58FAF8EE10B1F7D502CC8DAF53410D9E3"
+    },
+    {
+      "Id": "static-cell-plain-frame",
+      "InputSha256": "84820D68F2F8806D7DA009C9E663833505B893BD7BBEFA074737059E0BFCA0F9",
+      "Mode": "final-preserve",
+      "Container": "Cell",
+      "X": 72.504,
+      "BaselineY": 693.94,
+      "ReferencePdfSha256": "F4D1DDFC356A4E07E63DE9D34B99C7E58FAF8EE10B1F7D502CC8DAF53410D9E3"
+    },
+    {
+      "Id": "static-cell-plain-frame",
+      "InputSha256": "84820D68F2F8806D7DA009C9E663833505B893BD7BBEFA074737059E0BFCA0F9",
+      "Mode": "final-preserve",
+      "Container": "Header",
+      "X": 72.504,
+      "BaselineY": 744.6,
+      "ReferencePdfSha256": "F4D1DDFC356A4E07E63DE9D34B99C7E58FAF8EE10B1F7D502CC8DAF53410D9E3"
+    },
+    {
+      "Id": "static-cell-plain-frame",
+      "InputSha256": "84820D68F2F8806D7DA009C9E663833505B893BD7BBEFA074737059E0BFCA0F9",
+      "Mode": "final-preserve",
+      "Container": "Footer",
+      "X": 72.504,
+      "BaselineY": 53.784,
+      "ReferencePdfSha256": "F4D1DDFC356A4E07E63DE9D34B99C7E58FAF8EE10B1F7D502CC8DAF53410D9E3"
+    },
+    {
+      "Id": "static-cell-plain-frame",
+      "InputSha256": "84820D68F2F8806D7DA009C9E663833505B893BD7BBEFA074737059E0BFCA0F9",
+      "Mode": "all-word-compatible",
+      "Container": "Body",
+      "X": 72.024,
+      "BaselineY": 708.58,
+      "ReferencePdfSha256": "3D87852E063ED0285587E9967C3B02AC7203B79B20A90ED1ED8003C1D75417A9"
+    },
+    {
+      "Id": "static-cell-plain-frame",
+      "InputSha256": "84820D68F2F8806D7DA009C9E663833505B893BD7BBEFA074737059E0BFCA0F9",
+      "Mode": "all-word-compatible",
+      "Container": "Cell",
+      "X": 72.504,
+      "BaselineY": 693.94,
+      "ReferencePdfSha256": "3D87852E063ED0285587E9967C3B02AC7203B79B20A90ED1ED8003C1D75417A9"
+    },
+    {
+      "Id": "static-cell-plain-frame",
+      "InputSha256": "84820D68F2F8806D7DA009C9E663833505B893BD7BBEFA074737059E0BFCA0F9",
+      "Mode": "all-word-compatible",
+      "Container": "Header",
+      "X": 72.504,
+      "BaselineY": 744.6,
+      "ReferencePdfSha256": "3D87852E063ED0285587E9967C3B02AC7203B79B20A90ED1ED8003C1D75417A9"
+    },
+    {
+      "Id": "static-cell-plain-frame",
+      "InputSha256": "84820D68F2F8806D7DA009C9E663833505B893BD7BBEFA074737059E0BFCA0F9",
+      "Mode": "all-word-compatible",
+      "Container": "Footer",
+      "X": 72.504,
+      "BaselineY": 53.784,
+      "ReferencePdfSha256": "3D87852E063ED0285587E9967C3B02AC7203B79B20A90ED1ED8003C1D75417A9"
+    }
+  ]
+}

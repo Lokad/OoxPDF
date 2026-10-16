@@ -957,5 +957,32 @@
     "PortableRenderingNormalNotesPreserveInlineImagesAndMath",
     "PortableRenderingOrderedMathCellRetainsPrintedBorderFrame",
     "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance"
+  ],
+  "docx-static-cell-composition": [
+    "DocxStaticTableMath",
+    "PortableRenderingStaticCell",
+    "DocxTableMathCandidatesShareStandalonePolicyAndKeepUnsupportedOwners",
+    "DocxTableMathMeasurementMemoAndFollowingFlowUseOneBoxAdvance",
+    "DocxTableMathInlineMeasurementAndWrappingRetainSourceOwnership",
+    "DocxStaticMathFramesSharePreparedAdvanceAndFooterBlockTranslation",
+    "DocxStaticFrameMapping",
+    "DocxStaticFooterAutoAdvanceBottomAnchorsBlock",
+    "DocxStaticFooterFollowerLinesUseBodyRuleOffsets",
+    "DocxLayoutStageSelectsStaticHeaderBodyElements",
+    "DocxRendererTreatsStaticHeaderBodyElementsAsRenderableContent",
+    "DocxLayoutStageOwnsSelectedStaticHeaderFooterLines",
+    "DocxLayoutStageResolvesStaticHeaderFloatingTextBoxNumPagesFieldFromPageCount",
+    "DocxLayoutStageAddsStaticHeaderAfterEndnoteContinuationPages",
+    "DocxOverflowingHeaderBottomIsExposedOnLayout",
+    "DocxBodyStartsBelowOverflowingHeaderContent",
+    "DocxNativeStaticMathRetainsStoryFlowAndPerPartDiagnosticScope",
+    "DocxStaticMathSourcesRetainPartCountsAndSharedIdentityWithoutAReaderSink",
+    "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement",
+    "DocxInlineCompositionStaticPageFields",
+    "DocxInlineCompositionAuthoredWhitespace",
+    "PortableRenderingAuthoredWhitespaceSurvivesMixedMathContainers",
+    "PortableRenderingStaticPageFieldsPreserveMathAcrossDigitBoundary",
+    "PortableRenderingOrderedMathCellRetainsPrintedBorderFrame",
+    "PortableRenderingNormalNotesPreserveInlineImagesAndMath"
   ]
 }

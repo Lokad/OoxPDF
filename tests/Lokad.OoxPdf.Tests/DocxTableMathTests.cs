@@ -423,6 +423,108 @@ internal static class DocxTableMathTests
             "Already supported left/center/right placement shares one source rule while body/note eligibility remains left-only.");
     }
 
+    public static void DocxStaticTableMathAndPlainFramesMatchIndependentWordAnchors()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent anchors use installed Windows font metrics.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-static-cell-office-geometry.json")));
+        foreach (var group in reference.RootElement.GetProperty("Rows").EnumerateArray()
+            .GroupBy(row => (Id: row.GetProperty("Id").GetString()!, Mode: row.GetProperty("Mode").GetString())))
+        {
+            string input = Path.Combine(cases, group.Key.Id + ".docx");
+            TestAssert.Equal(group.First().GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            bool review = group.Key.Mode == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var pages = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).ToArray();
+            TestAssert.Equal(1, pages.Length);
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages.Single()).ToArray();
+            foreach (var row in group)
+            {
+                string prefix = row.GetProperty("Container").GetString() + ":";
+                var show = shows.Single(item => item.Text.StartsWith(prefix, StringComparison.Ordinal));
+                TestAssert.True(Math.Abs(show.X - row.GetProperty("X").GetDouble()) < .2d &&
+                    Math.Abs(show.Y - row.GetProperty("BaselineY").GetDouble()) < .2d,
+                    "Source-backed body/cell/static placement retains the independent Word anchor: " + group.Key + "/" + prefix);
+            }
+        }
+    }
+
+    public static void DocxStaticTableMathPreparationSharesCellEligibilityAndSourceIdentity()
+    {
+        var (paragraph, _) = Prepared(20d);
+        var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var row = new DocxTableRow([cell], null);
+        foreach (bool header in new[] { true, false })
+        foreach (string guard in new[] { "plain", "exact", "merge", "fit", "vertical", "nested", "height", "note" })
+        {
+            DocxTableCell source = guard switch
+            {
+                "merge" => cell with { HasVerticalMerge = true },
+                "fit" => cell with { FitText = true },
+                "vertical" => cell with { TextDirectionValue = "tbRl" },
+                "nested" => cell with { BodyElements = [new DocxTableElement(new DocxTable(null, [100d], [row]))] },
+                _ => cell
+            };
+            var table = new DocxTable(null, [100d], [row with
+            {
+                Cells = [source], HeightPoints = guard == "exact" ? 50d : null,
+                HeightRuleValue = guard == "height" ? "unknown" : guard == "exact" ? "exact" : null
+            }]);
+            IReadOnlyList<DocxBodyElement> elements = [new DocxTableElement(table)];
+            var stories = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = elements, ["first"] = elements };
+            var settings = DocxPageSettings.Empty with
+            {
+                HeaderBodyElementsByType = header ? stories : new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
+                FooterBodyElementsByType = header ? new Dictionary<string, IReadOnlyList<DocxBodyElement>>() : stories
+            };
+            var document = DocxTests.CreateLayoutTestDocument([], []) with
+            {
+                PageSettings = guard == "note" ? DocxPageSettings.Empty : settings,
+                EquationParts = [new DocxEquationPartSource(guard == "note" ? "/word/footnotes.xml" : "/word/static.xml", 1, elements)]
+            };
+            var candidates = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).ToArray();
+            TestAssert.Equal(guard is "plain" or "exact" ? 1 : 0, candidates.Length);
+            if (candidates.Length != 0)
+                TestAssert.True(ReferenceEquals(paragraph, candidates[0].Paragraph) && candidates[0].HasPageInputs,
+                    "Shared variants prepare one original source owner with actual page inputs.");
+            using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() =>
+                DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, cancelled.Token).ToArray());
+        }
+    }
+
+    public static void DocxStaticTableMathOccupiedHeightUsesPreparedCellFrames()
+    {
+        var (paragraph, math) = Prepared(20d);
+        var cell = new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+        var table = new DocxTable(null, [100d], [new DocxTableRow([cell], null)]) { PreferredWidthPoints = 100d };
+        var stories = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = [new DocxTableElement(table)] };
+        foreach (bool header in new[] { true, false })
+        {
+            var document = DocxTests.CreateLayoutTestDocument(
+                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []) with
+            {
+                PageSettings = DocxPageSettings.Empty with
+                {
+                    HeaderBodyElementsByType = header ? stories : new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
+                    FooterBodyElementsByType = header ? new Dictionary<string, IReadOnlyList<DocxBodyElement>>() : stories
+                }
+            };
+            DocxLayout Layout(double height) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default, mathEquations:
+                    new Dictionary<DocxEquation, DocxPreparedMathParagraph> { [math.Equation] = math with { LineHeight = height } });
+            var a = Layout(20d); var b = Layout(40d);
+            var first = a.Pages.Single().StaticTableRows.Single();
+            var expanded = b.Pages.Single().StaticTableRows.Single();
+            TestAssert.True(first.Cells.Single().TextLines.Single().Math is { } placed &&
+                ReferenceEquals(placed.Equation, math.Equation), "Static cells consume their original prepared box.");
+            TestAssert.True(Math.Abs(expanded.Height - first.Height - 20d) < .000001,
+                "Grid measurement and cell painting reserve the same prepared height.");
+        }
+    }
+
     private static (DocxParagraph Paragraph, DocxPreparedMathParagraph Math) Prepared(double height)
     {
         var run = new DocxTextRun("A+B", 10d, null, false, false, false, null, "TestFont");

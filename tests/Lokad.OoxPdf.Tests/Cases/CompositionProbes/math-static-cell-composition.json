@@ -1,0 +1,30 @@
+[
+  {
+    "Id": "math-static-cell-composition",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-static-cell-composition.docx",
+    "Sha256": "4A3BFC92282618F52BFB9B62070A4FBD8BA6AEA11C69EAF5E49714413D5B7696",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedInlineImageCount": 4,
+    "ExpectedText": [
+      "Body:",
+      "Cell:",
+      "Header:",
+      "Footer:"
+    ]
+  },
+  {
+    "Id": "static-cell-plain-frame",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/static-cell-plain-frame.docx",
+    "Sha256": "84820D68F2F8806D7DA009C9E663833505B893BD7BBEFA074737059E0BFCA0F9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Body:",
+      "Cell:",
+      "Header:",
+      "Footer:"
+    ]
+  }
+]

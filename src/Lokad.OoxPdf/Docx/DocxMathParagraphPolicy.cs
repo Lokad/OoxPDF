@@ -15,24 +15,28 @@ internal static class DocxMathParagraphPolicy
             if (element is DocxParagraphElement paragraph) { yield return paragraph.Paragraph; }
             else if (element is DocxTableElement table)
             {
-                foreach (DocxTableRow row in table.Table.Rows)
-                {
-                    token.ThrowIfCancellationRequested();
-                    if (!row.HasSupportedHeight || row.Revisions.Count != 0)
-                        continue;
-                    foreach (DocxTableCell cell in row.Cells)
-                    {
-                        token.ThrowIfCancellationRequested();
-                        if (cell.HasVerticalMerge || cell.FitText || cell.Revisions.Count != 0 ||
-                            cell.TextDirectionValue is not (null or "lrTb") ||
-                            cell.BodyElements.Any(child => child is not DocxParagraphElement)) { continue; }
-                        foreach (DocxParagraph source in cell.Paragraphs)
-                        {
-                            token.ThrowIfCancellationRequested();
-                            if (GetPreparationEquations(source, UsesOnlyPageNumberCounters(source)).Count != 0) { yield return source; }
-                        }
-                    }
-                }
+                foreach (DocxParagraph source in EnumerateSupportedTableParagraphs(table.Table, token))
+                    if (GetPreparationEquations(source, UsesOnlyPageNumberCounters(source)).Count != 0) { yield return source; }
+            }
+        }
+    }
+
+    // The same simple cell contract applies in body and page-owned static stories.
+    // Nested/rich cells retain their existing whole-owner fallback.
+    private static IEnumerable<DocxParagraph> EnumerateSupportedTableParagraphs(DocxTable table, CancellationToken token)
+    {
+        foreach (DocxTableRow row in table.Rows)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!row.HasSupportedHeight || row.Revisions.Count != 0) { continue; }
+            foreach (DocxTableCell cell in row.Cells)
+            {
+                token.ThrowIfCancellationRequested();
+                if (cell.HasVerticalMerge || cell.FitText || cell.Revisions.Count != 0 ||
+                    cell.TextDirectionValue is not (null or "lrTb") ||
+                    cell.BodyElements.Any(child => child is not DocxParagraphElement)) { continue; }
+                foreach (DocxParagraph paragraph in cell.Paragraphs)
+                { token.ThrowIfCancellationRequested(); yield return paragraph; }
             }
         }
     }
@@ -56,12 +60,22 @@ internal static class DocxMathParagraphPolicy
         {
             token.ThrowIfCancellationRequested();
             if (part.PartName == document.MainPartName) { continue; }
-            foreach (DocxParagraphElement element in part.BodyElements.OfType<DocxParagraphElement>())
+            foreach (DocxBodyElement element in part.BodyElements)
             {
                 token.ThrowIfCancellationRequested();
-                bool hasPageInputs = pageOwners.Contains(element.Paragraph);
-                if (GetPreparationEquations(element.Paragraph, hasPageInputs).Count != 0 && seen.Add(element.Paragraph))
-                    yield return (element.Paragraph, hasPageInputs);
+                IEnumerable<DocxParagraph> paragraphs = element switch
+                {
+                    DocxParagraphElement direct => [direct.Paragraph],
+                    DocxTableElement table => EnumerateSupportedTableParagraphs(table.Table, token).Where(pageOwners.Contains),
+                    _ => []
+                };
+                foreach (DocxParagraph paragraph in paragraphs)
+                {
+                    token.ThrowIfCancellationRequested();
+                    bool hasPageInputs = pageOwners.Contains(paragraph);
+                    if (GetPreparationEquations(paragraph, hasPageInputs).Count != 0 && seen.Add(paragraph))
+                        yield return (paragraph, hasPageInputs);
+                }
             }
         }
     }

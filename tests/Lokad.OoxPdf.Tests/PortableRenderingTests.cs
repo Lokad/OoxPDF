@@ -16,6 +16,58 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingStaticCellsPreserveMixedMathImagesAndCounters()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/math-static-cell-composition.docx"), mode);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(1, pages.Length);
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
+            foreach (string owner in new[] { "Body", "Cell", "Header", "Footer" })
+                TestAssert.Contains(owner + ":", text);
+            string compact = Regex.Replace(text, @"\s", "");
+            TestAssert.Equal(8, compact.Split("ratetime", StringSplitOptions.None).Length - 1);
+            TestAssert.Equal(4, compact.Split("Page1", StringSplitOptions.None).Length - 1);
+            TestAssert.Equal(2, compact.Split("Page1of1", StringSplitOptions.None).Length - 1);
+            TestAssert.True(pages[0].Images.Count > 0, "Shared images retain their PDF resources.");
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Moving a supported mixed paragraph into a simple page-owned cell cannot omit its equations.");
+            foreach (string part in new[] { "/word/static-cell-header.xml", "/word/static-cell-footer.xml" })
+                TestAssert.Equal(1, diagnostics.Count(item => item.Id == "DOCX_APPROXIMATED_EQUATION" && item.PartName == part));
+            CheckWrittenPages(pages);
+        }
+    }
+
+    public static void PortableRenderingStaticCellCountersUseActualPageAndTotalAcrossDigitBoundary()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var source = DocxTests.ReadDocx(Case("CompositionProbes/math-static-cell-composition.docx"), mode);
+            var body = new List<DocxBodyElement>(source.BodyElements);
+            for (int index = 1; index < 12; index++)
+            {
+                body.Add(new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, null, null));
+                body.Add(new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Continuation.", 12d, 12d)));
+            }
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(source with { BodyElements = body }, null, default).ToArray();
+            TestAssert.Equal(12, pages.Length);
+            foreach (int number in new[] { 9, 10, 12 })
+            {
+                string text = Regex.Replace(DocxPageFootnoteNumberingTests.DecodeText(pages[number - 1])
+                    .Normalize(NormalizationForm.FormKC), @"\s", "");
+                TestAssert.Equal(2, text.Split("Page" + number + "of12", StringSplitOptions.None).Length - 1);
+                TestAssert.Equal(4, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            }
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingAuthoredWhitespaceSurvivesMixedMathContainers()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
