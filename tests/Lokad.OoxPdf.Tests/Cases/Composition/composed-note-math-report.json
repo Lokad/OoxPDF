@@ -1,0 +1,28 @@
+[
+  {
+    "Id": "composed-note-math-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/composed-note-math-report.docx",
+    "Sha256": "E3152A7285CFF4D28ED392F95FC85A0DF503EDEADBEF66B324FBCC84E372F828",
+    "HeldOut": true,
+    "ExpectedEquationCount": 8,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "See calculation",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative.",
+      "Calculation:"
+    ],
+    "Features": [
+      "image/math/comment/link/bookmark in one paragraph",
+      "math/endnote reference in a table cell",
+      "numbering",
+      "header equation",
+      "footer",
+      "continuous endnote",
+      "wrapped prose",
+      "cached field results beside math/image/comment and inside an internal hyperlink",
+      "two supported fractions and a bookmark inside the endnote"
+    ]
+  }
+]
