@@ -1536,5 +1536,23 @@
     "DocxSimpleMarkupRendererDrawsChangeBarsForRunRevisions",
     "DocxWordCompatibleRevisionRunsChainWithoutInventedOffsets",
     "DocxInlineCompositionMeasurementKeepsMultipleEquationsAndPicturesInSourceOrder"
+  ],
+  "docx-list-label-revision-owners": [
+    "DocxInlineCompositionListLabel",
+    "DocxInlineCompositionInsertedTextMath",
+    "PortableRenderingInsertedTextMath",
+    "DocxInlineCompositionNumberedDisplayRowsMatchIndependentWord",
+    "PortableRenderingNumberedExplicitMath",
+    "DocxFontPlanIncludesNumberingMarkerTypeface",
+    "DocxReaderSizesListLabelFromNumberingThenParagraphStyle",
+    "DocxReaderPreservesNumberingFormatTokens",
+    "DocxReaderNumberingLevelOverrideReplacesAbstractLevel",
+    "DocxNumberingSeparatorUsesBodyRunStyle",
+    "DocxLayoutEmitsListLabelAtResolvedSize",
+    "DocxSyntheticNumberingWrapsContinuationLinesWithHangingWidth",
+    "DocxWordCompatibleAllMarkupPositionsNumberingInNarrowedBodyFrame",
+    "DocxWordCompatibleAllMarkupUsesOfficeRevisionDecorationColor",
+    "DocxWordCompatibleRevisionRunsChainWithoutInventedOffsets",
+    "DocxSimpleMarkupRendererDrawsChangeBarsForRunRevisions"
   ]
 }

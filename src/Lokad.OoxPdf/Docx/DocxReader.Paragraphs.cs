@@ -42,6 +42,7 @@ internal sealed partial class DocxReader
             styles,
             tableCellStyle?.Paragraph);
         var runs = new List<DocxTextRun>();
+        DocxTextRun? unmarkedListTextStyle = null;
         var images = new List<DocxInlineImage>();
         var equations = new List<DocxEquation>();
         List<DocxInlineItem>? inlineItems = null;
@@ -300,7 +301,7 @@ internal sealed partial class DocxReader
             resolvedParagraph.LineSpacingPoints,
             resolvedParagraph.Spacing,
             resolvedParagraph.KeepRules,
-            CreateListLabel(paragraphProperties, numbering, numberingCounters, styles, paragraphStyleId, tableCellStyle))
+            ResolveParagraphListLabel())
         {
             Indent = resolvedParagraph.Indent,
             TabStops = resolvedParagraph.TabStops,
@@ -471,6 +472,27 @@ internal sealed partial class DocxReader
                 runs: runs);
         }
 
+        DocxListLabel? ResolveParagraphListLabel()
+        {
+            var label = CreateListLabel(paragraphProperties, numbering, numberingCounters, styles, paragraphStyleId, tableCellStyle);
+            return label is not null && runs.Count != 0 &&
+                unmarkedListTextStyle?.SourceRunIndex == runs[0].SourceRunIndex
+                ? label with { UnmarkedTextStyle = unmarkedListTextStyle } : label;
+        }
+
+        void CaptureUnmarkedListTextStyle(string text, DocxResolvedRunProperties properties,
+            DocxRunStyleResolution resolution, int index, DocxRevisionInfo? revision)
+        {
+            // An enclosing paragraph revision also owns its marker. Only text-
+            // scoped decoration is excluded from an otherwise unchanged label.
+            if (runs.Count != 0 || text.Length == 0 || revision is null || paragraphMarkRevisions.Count != 0 ||
+                ReferenceEquals(revision, inheritedRevision))
+                return;
+            bool complexScript = DocxScriptClassifier.IsComplexScriptRune(text.EnumerateRunes().First().Value);
+            unmarkedListTextStyle = CreateResolvedTextRun(string.Empty, properties, resolution,
+                complexScript, index, 0, null, null);
+        }
+
         void AddFieldPlaceholderRun(XElement run, string text, int sourceRunIndex, DocxRevisionInfo? revision, DocxFieldKind? placeholderKind = null)
         {
             XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
@@ -489,6 +511,7 @@ internal sealed partial class DocxReader
                 tableCellStyle?.Run);
             IReadOnlyList<DocxRevisionInfo> runRevisions = ReadPropertyChangeRevisions(runProperties);
             AddRevisions(paragraphRevisions, runRevisions);
+            CaptureUnmarkedListTextStyle(text, resolvedRun, runStyleResolution, sourceRunIndex, revision);
             AddResolvedTextRuns(runs, resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text, ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode), runStyleResolution, sourceRunIndex, sourceTextOffsetInRun: 0, revision, MergeRevisionLists(revision, runRevisions), placeholderKind);
         }
 
@@ -523,6 +546,7 @@ internal sealed partial class DocxReader
             IReadOnlyList<DocxRevisionInfo> runRevisions = ReadPropertyChangeRevisions(runProperties);
             AddRevisions(paragraphRevisions, runRevisions);
             IReadOnlyList<DocxRevisionInfo> effectiveRevisions = MergeRevisionLists(revision, runRevisions);
+            CaptureUnmarkedListTextStyle(text, resolvedRun, runStyleResolution, currentSourceRunIndex, revision);
             resolvedRun = ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode);
 
             if (run.Elements().Any(IsComplexFieldMarkupElement))

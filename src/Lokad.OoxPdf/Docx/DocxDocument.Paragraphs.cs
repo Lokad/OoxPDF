@@ -314,7 +314,12 @@ internal sealed record DocxListLabel(
     string NumberId,
     int Level,
     DocxNumberingIndent Indent,
-    DocxTextRunStyle Style);
+    DocxTextRunStyle Style)
+{
+    // The first text run supplies inherited formatting, but its inline revision
+    // decoration belongs to that text, not to an unchanged numbering marker.
+    public DocxTextRun? UnmarkedTextStyle { get; init; }
+}
 
 internal sealed record DocxNumberingIndent(
     double? LeftPoints,

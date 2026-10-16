@@ -7,6 +7,84 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionListLabelsKeepTextRevisionFormattingOwners()
+    {
+        foreach (string story in new[] { "body", "cell", "header", "footer" })
+        foreach (string kind in new[] { "ins", "del" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool annotated in new[] { false, true })
+        {
+            string? part = story == "header" ? "word/header1.xml" : story == "footer" ? "word/footer1.xml" : null;
+            var document = ReadMutation("CompositionProbes/math-revision-" + story + "-" + kind,
+                mode, annotated, annotated, partOverride: part);
+            var paragraph = story == "header" ? document.HeaderParagraphs.First(p => p.Equations.Count != 0) :
+                story == "footer" ? document.FooterParagraphs.First(p => p.Equations.Count != 0) :
+                DocxBlockTraversal.EnumerateBodyParagraphs(document.BodyElements).First(p => p.Equations.Count != 0);
+            var text = paragraph.Runs[0];
+            var label = DocxLayoutEngine.CreateListLabelRun(paragraph.ListLabel!, text, 11d);
+            TestAssert.True(!label.Underline && !label.Strike && !label.DoubleStrike &&
+                label.Revision is null && label.Revisions.Count == 0,
+                "Unchanged labels do not acquire the first text run's revision decorations: " + story + "/" + kind + "/" + mode + "/" + annotated);
+            TestAssert.Equal(text.FontFamily, label.FontFamily);
+            if (mode == OoxPdfDocxMarkupMode.AllMarkup)
+                TestAssert.True(text.Revision is not null && (kind == "ins" ? text.Underline : text.Strike),
+                    "Restoring label inheritance must leave revised source text and its provenance intact.");
+        }
+    }
+
+    public static void DocxInlineCompositionListLabelsRetainParagraphRevisionOwners()
+    {
+        foreach (bool paragraphMark in new[] { false, true })
+        {
+            var document = ReadMutation("CompositionProbes/math-revision-body-ins", OoxPdfDocxMarkupMode.AllMarkup,
+                false, false, (xml, w, m) =>
+                {
+                    var paragraph = xml.Descendants(w + "p").First(p => p.Descendants(m + "oMath").Any());
+                    if (paragraphMark)
+                    {
+                        var mark = new XElement(w + "rPr", new XElement(w + "ins", new XAttribute(w + "id", "93")));
+                        paragraph.Element(w + "pPr")!.Add(mark);
+                    }
+                    else
+                    {
+                        var insertion = paragraph.Element(w + "ins")!;
+                        insertion.ReplaceWith(insertion.Nodes().ToArray());
+                        paragraph.ReplaceWith(new XElement(w + "ins", new XAttribute(w + "id", "94"), new XElement(paragraph)));
+                    }
+                });
+            var paragraph = document.Paragraphs.First(p => p.Equations.Count != 0);
+            var label = DocxLayoutEngine.CreateListLabelRun(paragraph.ListLabel!, paragraph.Runs[0], 11d);
+            TestAssert.True(paragraph.ListLabel!.UnmarkedTextStyle is null && label.Revision is not null && label.Underline,
+                "A paragraph/mark revision can own the label; retain that existing path rather than borrowing text-only ownership.");
+        }
+    }
+
+    public static void DocxInlineCompositionListLabelOverridesKeepAuthoredFormattingAndScaledMetrics()
+    {
+        var document = ReadMutation("CompositionProbes/math-revision-body-ins", OoxPdfDocxMarkupMode.AllMarkup,
+            false, false, (xml, w, m) =>
+            {
+                var run = xml.Descendants(w + "ins").First().Element(w + "r")!;
+                var properties = run.Element(w + "rPr");
+                if (properties is null) { properties = new XElement(w + "rPr"); run.AddFirst(properties); }
+                properties.Add(new XElement(w + "color", new XAttribute(w + "val", "1964AE")),
+                    new XElement(w + "u", new XAttribute(w + "val", "double")), new XElement(w + "b"));
+            });
+        var paragraph = document.Paragraphs.First(p => p.Equations.Count != 0);
+        var text = paragraph.Runs[0] with { FontSize = 7d, CharacterSpacingPoints = .25d, PairKerningEnabled = false };
+        var label = DocxLayoutEngine.CreateListLabelRun(paragraph.ListLabel!, text, 7d);
+        TestAssert.Equal("1964AE", label.ColorHex);
+        TestAssert.True(label.Underline && label.UnderlineValue == "double" && label.Bold && label.Revision is null,
+            "Authored formatting survives independently of the added review decoration.");
+        TestAssert.Equal(.25d, label.CharacterSpacingPoints);
+        TestAssert.True(!label.PairKerningEnabled, "Placement-time spacing/kerning decisions remain on the actual base run.");
+        var overridden = paragraph.ListLabel! with { Style = paragraph.ListLabel.Style with { ColorHex = "008844", Underline = false, UnderlineValue = "none", FontSize = 16d } };
+        label = DocxLayoutEngine.CreateListLabelRun(overridden, text, 7d);
+        TestAssert.Equal("008844", label.ColorHex);
+        TestAssert.Equal(16d, label.FontSize);
+        TestAssert.True(!label.Underline && label.UnderlineValue == "none", "Numbering-level formatting keeps precedence.");
+    }
+
     public static void DocxInlineCompositionInsertedTextMathMatchesIndependentWord() =>
         AssertNumberedWordFrames("math-revisions-office-geometry.json");
 

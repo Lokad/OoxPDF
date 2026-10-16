@@ -1084,3 +1084,9 @@ the aligned static-frame slice; it does not establish broad mixed-content suppor
 Adding a bookmark around a supported equation still suppresses it in both default
 and Word-compatible modes. Composition and document-level outcomes take priority
 over further small static typography corrections.
+
+Numbered paragraphs keep the first text run's authored formatting separately from
+its inline revision decoration. Unchanged labels and their separators inherit
+that source formatting, while numbering-level overrides and placement-time font
+metrics retain precedence. Paragraph/mark revision ownership stays on its existing
+path. This does not add support for deletion balloons or revised equations.

@@ -857,7 +857,7 @@ internal sealed partial class DocxLayoutEngine
         string separator = GetListLabelPdfSeparator(label);
         if (separator.Length != 0)
         {
-            DocxTextRun separatorRun = styleRun;
+            DocxTextRun separatorRun = ResolveListLabelBaseRun(label, styleRun)!;
             double separatorFontSize = separatorRun.EffectiveProperties.FontSize;
             double separatorX = labelX + labelWidth;
             double separatorWidth = textMeasurer.MeasureText(separatorRun, separator, separatorFontSize);
@@ -875,7 +875,26 @@ internal sealed partial class DocxLayoutEngine
 
     internal static DocxTextRun CreateListLabelRun(DocxListLabel label, DocxTextRun? baseRun, double fontSize)
     {
-        return label.Style.ApplyTo(baseRun, label.Text, fontSize);
+        return label.Style.ApplyTo(ResolveListLabelBaseRun(label, baseRun), label.Text, fontSize);
+    }
+
+    private static DocxTextRun? ResolveListLabelBaseRun(DocxListLabel label, DocxTextRun? baseRun)
+    {
+        if (baseRun is null || label.UnmarkedTextStyle is not { } source) return baseRun;
+        // Keep placement-time font/size/spacing decisions. Restore only the
+        // formatting changed by ApplyMarkupRevisionStyle, including null color.
+        return baseRun with
+        {
+            ColorHex = source.ColorHex,
+            Underline = source.Underline,
+            UnderlineValue = source.UnderlineValue,
+            Strike = source.Strike,
+            StrikeValue = source.StrikeValue,
+            DoubleStrike = source.DoubleStrike,
+            DoubleStrikeValue = source.DoubleStrikeValue,
+            Revision = null,
+            Revisions = []
+        };
     }
 
 }
