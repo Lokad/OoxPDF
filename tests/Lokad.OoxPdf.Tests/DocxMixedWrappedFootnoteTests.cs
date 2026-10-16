@@ -81,7 +81,7 @@ internal static class DocxMixedWrappedFootnoteTests
         }
     }
 
-    public static void DocxMixedWrappedThresholdsRenderWordAndPreserveSeparately()
+    public static void DocxMixedWrappedThresholdsShareSourceNumberingAcrossModes()
     {
         var source = Read("0", "24");
         foreach (var geometry in new[] { OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout })
@@ -90,7 +90,7 @@ internal static class DocxMixedWrappedFootnoteTests
             var pages = renderer.RenderBlankPages(source, null, default).ToArray();
             TestAssert.Equal(2, pages.Length);
             string text = string.Join('|', pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
-            TestAssert.Contains(geometry == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ? "09 Public destination" : "105 Public destination", text);
+            TestAssert.Contains("09 Public destination", text);
             TestAssert.Equal(4, pages.Sum(p => p.Annotations.Count));
             for (int i = 0; i < pages.Length; i++) TestAssert.True(pages[i].Annotations.All(a => a.Destination!.Value.PageIndex == i), "Actual destinations retain complete source owner pages.");
         }

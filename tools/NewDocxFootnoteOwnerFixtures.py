@@ -42,3 +42,25 @@ for name, family, size, threshold in variants:
         ExpectedEquationCount=0, HeldOut=False, ExpectedText=['Public destination Alpha.']))
 (cases / 'footnote-page-owners.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')
 print('Pinned', len(rows), 'complete marker/note-owner controls')
+
+# One-page control whose parsed labels already match the complete measured page.
+# Keep it outside the four independent Word typography comparisons above.
+with ZipFile(source) as z:
+    entries = {name: z.read(name) for name in z.namelist()}
+document = E.fromstring(entries['word/document.xml'])
+for parent in document.iter():
+    for child in list(parent):
+        if child.tag == w + 'br' and child.get(w + 'type') == 'page':
+            parent.remove(child)
+entries['word/document.xml'] = E.tostring(document, encoding='utf-8', xml_declaration=True)
+settings = E.fromstring(entries['word/settings.xml'])
+settings.find(w + 'footnotePr/' + w + 'numFmt').set(w + 'val', 'decimalZero')
+settings.find(w + 'footnotePr/' + w + 'numStart').set(w + 'val', '9')
+entries['word/settings.xml'] = E.tostring(settings, encoding='utf-8', xml_declaration=True)
+target = cases / 'footnote-page-owners-single-page-unchanged.docx'
+with ZipFile(target, 'w', ZIP_DEFLATED) as z:
+    for part, data in entries.items():
+        info = ZipInfo(part, (2026, 10, 16, 0, 0, 0))
+        info.compress_type = ZIP_DEFLATED
+        z.writestr(info, data)
+print('Pinned already-correct single-page control', hashlib.sha256(target.read_bytes()).hexdigest().upper())

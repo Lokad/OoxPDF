@@ -1727,6 +1727,8 @@
     "DocxMetWrappedFootnoteNumbers",
     "DocxInlineCompositionAutomaticFootnotes",
     "PortableRenderingAutomaticFootnotes",
-    "DocxWrappedFootnoteNumbers"
+    "DocxWrappedFootnoteNumbers",
+    "DocxMixedWrappedThresholds",
+    "DocxSpacedWrappedAfter"
   ]
 }
