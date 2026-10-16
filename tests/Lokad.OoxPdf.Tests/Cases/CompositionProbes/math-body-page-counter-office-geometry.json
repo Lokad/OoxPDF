@@ -1,0 +1,37 @@
+{
+  "InputSha256": "2F25581E5A008009AB244ED689A24DF572C70B46D40173C1966DE309A43DBDED",
+  "Rows": [
+    {
+      "Mode": "final-preserve",
+      "Page": 9,
+      "Anchor": "Start",
+      "BaselineY": 91.344,
+      "AnchorX": 72.024,
+      "FieldOffset": 28.795999999999992
+    },
+    {
+      "Mode": "final-preserve",
+      "Page": 10,
+      "Anchor": "middle",
+      "BaselineY": 705.22,
+      "AnchorX": 75.384,
+      "FieldOffset": 38.756
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Page": 9,
+      "Anchor": "Start",
+      "BaselineY": 91.344,
+      "AnchorX": 72.024,
+      "FieldOffset": 28.795999999999992
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Page": 10,
+      "Anchor": "middle",
+      "BaselineY": 705.22,
+      "AnchorX": 75.384,
+      "FieldOffset": 38.756
+    }
+  ]
+}

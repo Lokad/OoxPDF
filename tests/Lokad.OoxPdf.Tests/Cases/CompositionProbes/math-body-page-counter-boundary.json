@@ -1,0 +1,17 @@
+[
+  {
+    "Id": "math-body-page-counter-boundary",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-body-page-counter-boundary.docx",
+    "Sha256": "2F25581E5A008009AB244ED689A24DF572C70B46D40173C1966DE309A43DBDED",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Public table counter page 9.",
+      "Public body counter page 10.",
+      "Start",
+      "middle",
+      "End."
+    ]
+  }
+]

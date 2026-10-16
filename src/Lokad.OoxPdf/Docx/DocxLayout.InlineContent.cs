@@ -31,7 +31,8 @@ internal readonly record struct DocxInlineSourceCursor(int AtomIndex, int TextOf
 }
 internal sealed record DocxMeasuredInlineAtoms(DocxParagraph Paragraph,
     IReadOnlyList<DocxMeasuredInlineFragment> Fragments, IDocxTextMeasurer Measurer,
-    double FontSize, double BaselineInset, double LineHeight, double Scale, double DefaultTabStopPoints);
+    double FontSize, double BaselineInset, double LineHeight, double Scale, double DefaultTabStopPoints,
+    IReadOnlyList<DocxTabStop> TabStops, IReadOnlyList<int> CounterFragmentIndices);
 internal readonly record struct DocxInlineParagraphFrame(double OccupiedHeight, DocxTextLineLayout LastLine);
 
 internal sealed partial class DocxLayoutEngine
@@ -287,7 +288,11 @@ internal sealed partial class DocxLayoutEngine
             !double.IsFinite(fragment.BaselineInset) || fragment.BaselineInset < 0d ||
             !double.IsFinite(fragment.OccupiedHeight) || fragment.OccupiedHeight < fragment.BaselineInset)) return false;
 
-        atoms = new(paragraph, measured, measurer, fontSize, baselineInset, lineHeight, scale, defaultTabStopPoints);
+        atoms = new(paragraph, measured, measurer, fontSize, baselineInset, lineHeight, scale, defaultTabStopPoints,
+            hasTabs ? ScaleTabStopPositions(paragraph.TabStops, scale) : [],
+            measured.Select((fragment, index) => (fragment, index))
+                .Where(item => item.fragment.Source is DocxInlineText { Run.FieldKind: { } kind } && kind.IsDynamic())
+                .Select(item => item.index).ToArray());
         return true;
 
         void AddMeasuredMath(DocxInlineItem source, DocxPreparedMathParagraph prepared)
@@ -333,8 +338,9 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken token, [NotNullWhen(true)] out DocxMeasuredInlineAtoms? rebound)
     {
         rebound = null;
+        token.ThrowIfCancellationRequested();
         DocxMeasuredInlineFragment[]? changed = null;
-        for (int index = 0; index < atoms.Fragments.Count; index++)
+        foreach (int index in atoms.CounterFragmentIndices)
         {
             token.ThrowIfCancellationRequested();
             var fragment = atoms.Fragments[index];
@@ -383,8 +389,7 @@ internal sealed partial class DocxLayoutEngine
         var measurer = atoms.Measurer;
         double fontSize = atoms.FontSize, baselineInset = atoms.BaselineInset, lineHeight = atoms.LineHeight,
             scale = atoms.Scale, defaultTabStopPoints = atoms.DefaultTabStopPoints;
-        var tabStops = paragraph.InlineContent!.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden)
-            ? ScaleTabStopPositions(paragraph.TabStops, scale) : [];
+        var tabStops = atoms.TabStops;
         if (cursor.AtomIndex < 0 || cursor.AtomIndex > measured.Count || cursor.TextOffset < 0 || cursor.LineIndex < 0 ||
             cursor.AtomIndex == measured.Count && cursor.TextOffset != 0) return false;
         DocxMeasuredInlineFragment? partial = null;
@@ -574,6 +579,12 @@ internal sealed partial class DocxLayoutEngine
         }
         void Flush(DocxInlineSourceCursor endCursor)
         {
+            // Whitespace discarded at the next line start is consumed source,
+            // including the tail after an authored break. It must not leave an
+            // extra incremental line after whole-paragraph wrapping completes.
+            if (endCursor.TextOffset == 0)
+                while (endCursor.AtomIndex < measured.Count && IsSpace(measured[endCursor.AtomIndex]))
+                    endCursor = endCursor with { AtomIndex = endCursor.AtomIndex + 1 };
             while (current.Count != 0 && IsSpace(current[^1]))
             {
                 var removed = current[^1];

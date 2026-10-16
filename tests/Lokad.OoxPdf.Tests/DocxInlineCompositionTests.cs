@@ -287,6 +287,38 @@ internal static class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxInlineCompositionBodyPageCountersMatchIndependentWordFrames()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent controls use installed Arial metrics.");
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        string input = Path.Combine(cases, "math-body-page-counter-boundary.docx");
+        using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-body-page-counter-office-geometry.json")));
+        TestAssert.Equal(reference.RootElement.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+        foreach (var group in reference.RootElement.GetProperty("Rows").EnumerateArray().GroupBy(row => row.GetProperty("Mode").GetString()))
+        {
+            bool review = group.Key == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var document = DocxTests.ReadDocx(input, mode);
+            var pages = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, default).ToArray();
+            TestAssert.Equal(10, pages.Length);
+            foreach (var row in group)
+            {
+                int number = row.GetProperty("Page").GetInt32();
+                string anchor = row.GetProperty("Anchor").GetString()!;
+                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[number - 1]).ToArray();
+                var prose = shows.Single(show => show.Text.Trim() == anchor);
+                TestAssert.True(Math.Abs(prose.Y - row.GetProperty("BaselineY").GetDouble()) < .15d,
+                    "A source line admitted to the next page retains its independent Word baseline.");
+                var field = shows.Single(show => show.Text.Trim() == number.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                TestAssert.True(Math.Abs(field.X - prose.X - row.GetProperty("FieldOffset").GetDouble()) < .3d,
+                    "Actual digits retain their advance relative to the same prose owner.");
+            }
+            TestAssert.True(document.Paragraphs.SelectMany(paragraph => paragraph.Runs).Where(run => run.FieldKind == DocxFieldKind.Page)
+                .All(run => run.Text == "{PAGE}"), "Pagination must not replace canonical source runs.");
+        }
+    }
+
     public static void DocxInlineCompositionCellPageCountersMatchIndependentWordFrames()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent controls use installed Arial metrics.");
@@ -319,13 +351,46 @@ internal static class DocxInlineCompositionTests
         }
     }
 
-    public static void DocxInlineCompositionCellPageCountersPreserveSupportedMath()
+    public static void DocxInlineCompositionCellPageCountersPreserveSupportedMath() => AssertPageCounterMath("cell");
+
+    public static void DocxInlineCompositionBodyPageCountersPreserveSupportedMath() => AssertPageCounterMath("body");
+
+    public static void DocxInlineCompositionBodyCursorSkipsUnfitContinuationColumns()
+    {
+        var source = ReadMutation("CompositionProbes/math-fields-simple-body", OoxPdfDocxMarkupMode.Final,
+            false, false, (xml, w, m) =>
+            {
+                foreach (var field in xml.Descendants(w + "fldSimple")) field.SetAttributeValue(w + "instr", " PAGE ");
+            });
+        var original = source.Paragraphs.Single(paragraph => paragraph.Equations.Count != 0);
+        var paragraph = original with { InlineContent = original.InlineContent!.SelectMany(item =>
+            new DocxInlineItem[] { item, new DocxInlineBreak(original.Runs[0], 0) }).ToArray() };
+        var equations = paragraph.Equations.ToDictionary(equation => equation,
+            equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
+        var document = new DocxDocument(120d, 60d, 10d, 10d, 10d, 10d, DocxPageSettings.Empty,
+            [], [], [], [new DocxParagraphElement(paragraph)], [], [])
+        {
+            FinalSectionBreak = new(DocxPageSettings.Empty, null, "2", "0", "200", [new("1600", "200"), new("200", null)])
+        };
+        var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new TrackingMeasurer(), default, mathEquations: equations);
+        TestAssert.True(layout.Pages.Count > 1 && layout.Pages.Count < 10, "An unfit column must retain bounded source progress.");
+        var mathLines = layout.Pages.SelectMany(page => page.Items.OfType<DocxTextLineLayout>()).Where(line => line.InlineMath.Count != 0).ToArray();
+        TestAssert.Equal(2, mathLines.Sum(line => line.InlineMath.Count));
+        TestAssert.True(mathLines.All(line => line.X < 90d), "Atomic math must move to the fitting wide column.");
+        foreach (var page in layout.Pages.Select((value, index) => (Value: value, Number: index + 1)))
+            foreach (var segment in page.Value.Items.OfType<DocxTextLineLayout>().SelectMany(line => line.Segments)
+                .Where(segment => segment.StyleRun.FieldKind == DocxFieldKind.Page))
+                TestAssert.Equal(page.Number.ToString(System.Globalization.CultureInfo.InvariantCulture), segment.Text);
+    }
+
+    private static void AssertPageCounterMath(string container)
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Native controls use installed math fonts.");
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         foreach (string form in new[] { "simple", "packed" })
         {
-            var document = ReadMutation("CompositionProbes/math-fields-" + form + "-cell", mode, false, true,
+            var document = ReadMutation("CompositionProbes/math-fields-" + form + "-" + container, mode, true, true,
                 (xml, w, m) =>
                 {
                     foreach (var field in xml.Descendants(w + "fldSimple")) field.SetAttributeValue(w + "instr", " PAGE ");
@@ -339,10 +404,34 @@ internal static class DocxInlineCompositionTests
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             foreach (string value in new[] { "Start", "middle", "End.", "rate", "time" })
                 TestAssert.Contains(value, string.Concat(text.Where(character => !char.IsWhiteSpace(character))));
-            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "PAGE cannot hide supported cell equations.");
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "PAGE cannot hide supported " + container + " equations.");
             TestAssert.Equal(1, pages.Length);
             TestAssert.True(!text.Contains("{PAGE}", StringComparison.Ordinal), "Actual placement must resolve canonical counters.");
         }
+    }
+
+    public static void DocxInlineCompositionSourceCursorConsumesTrailingWhitespace()
+    {
+        var document = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-tabs-default18-body");
+        var original = document.Paragraphs.Single(paragraph => paragraph.Equations.Count != 0);
+        var whitespace = new DocxTextRun("   ", 12d, null, false, false, false, null, null);
+        var paragraph = original with { Runs = original.Runs.Append(whitespace).ToArray() };
+        paragraph = paragraph with { InlineContent = original.InlineContent!.Concat(new DocxInlineItem[]
+            { new DocxInlineBreak(original.Runs[0], 0), new DocxInlineText(whitespace, 0, 3) }).ToArray() };
+        var equations = paragraph.Equations.ToDictionary(equation => equation,
+            equation => new DocxPreparedMathParagraph(equation, new(18d, 10d, 4d, []), 10d, 16d));
+        TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, equations, new TrackingMeasurer(),
+            12d, 9d, 16d, 1d, default, out var measured, defaultTabStopPoints: 18d), "Trailing source whitespace must measure.");
+        var atoms = TestAssert.NotNull(measured);
+        TestAssert.True(DocxLayoutEngine.TryWrapOrderedInlineAtoms(atoms, 300d, 300d, default, out var whole), "The control must wrap.");
+        var lines = TestAssert.NotNull(whole);
+        var cursor = new DocxInlineSourceCursor();
+        foreach (var expected in lines)
+        {
+            TestAssert.True(DocxLayoutEngine.TryGetNextOrderedInlineLine(atoms, cursor, 300d, 300d, default, out var next), "The expected line must remain.");
+            cursor = TestAssert.NotNull(next).EndCursor;
+        }
+        TestAssert.True(cursor.IsComplete(atoms), "Discarded trailing whitespace cannot create another line or leave source unconsumed.");
     }
 
     public static void DocxInlineCompositionSourceCursorMatchesWholeParagraphWrapping()

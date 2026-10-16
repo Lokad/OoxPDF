@@ -1402,18 +1402,54 @@ internal sealed partial class DocxLayoutEngine
                 {
                     anchorInset = (firstBodyLineBaselineOffset ?? baseInset) * (1d - paragraphSpacingScale);
                 }
-                if (TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, paragraphFontSize,
-                    Math.Max(1d, width - firstInset - rightInset), Math.Max(1d, width - nextInset - rightInset),
-                    baseInset, lineHeight, paragraphSpacingScale, cancellationToken, out var measured,
-                    physicalTextBaselineInset: baseInset * paragraphSpacingScale, defaultTabStopPoints: defaultTabStopPoints) &&
+                if (TryMeasureOrderedInlineAtoms(paragraph, mathEquations, textMeasurer, paragraphFontSize,
+                    baseInset, lineHeight, paragraphSpacingScale, cancellationToken, out var atoms,
+                    defaultTabStopPoints: defaultTabStopPoints, pageNumber: pages.Count + 1) &&
+                    TryWrapOrderedInlineAtoms(atoms, Math.Max(1d, width - firstInset - rightInset),
+                        Math.Max(1d, width - nextInset - rightInset), cancellationToken, out var measured,
+                        physicalTextBaselineInset: baseInset * paragraphSpacingScale) &&
                     measured.All(line => line.OccupiedHeight <= page.Height - page.MarginTop - page.MarginBottom))
                 {
                     firstBodyLineBaselineOffset ??= baseInset;
                     firstDocumentBodyBaselineOffset ??= baseInset;
-                    for (int index = 0; index < measured.Count; index++)
+                    var sourceCursor = new DocxInlineSourceCursor();
+                    var bound = atoms;
+                    int boundPage = pages.Count + 1;
+                    while (!sourceCursor.IsComplete(atoms))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var line = measured[index];
+                        int index = sourceCursor.LineIndex;
+                        double textInset = index == 0 ? firstInset : nextInset;
+                        // Preparation admitted only fields whose inputs are
+                        // available here. Losing one is an internal invariant.
+                        if (boundPage != pages.Count + 1)
+                        {
+                            if (!TryRebindInlineCounters(atoms, pages.Count + 1, null, cancellationToken, out var rebound))
+                                throw new InvalidOperationException("An admitted body counter has no page input.");
+                            bound = rebound;
+                            boundPage = pages.Count + 1;
+                        }
+                        DocxMeasuredInlineLine? line;
+                        bool hasLine;
+                        if (atoms.CounterFragmentIndices.Count == 0)
+                        {
+                            // Fixed content keeps its already qualified wrap;
+                            // only counters need page-dependent source resumption.
+                            line = measured[index];
+                            hasLine = true;
+                        }
+                        else hasLine = TryGetNextOrderedInlineLine(bound, sourceCursor,
+                            Math.Max(1d, width - textInset - rightInset), Math.Max(1d, width - nextInset - rightInset),
+                            cancellationToken, out line, physicalTextBaselineInset: baseInset * paragraphSpacingScale);
+                        if (!hasLine || line is null)
+                        {
+                            // An atomic item may fit the paragraph's initial
+                            // column but not a narrower continuation column.
+                            // Keep its source unconsumed and seek the next frame.
+                            AdvanceColumnOrPage();
+                            RegisterInFlightFootnotesForSourceBlock(elementIndex);
+                            continue;
+                        }
                         double objectInset = 0d;
                         foreach (var fragment in line.Fragments)
                             if (fragment.Math is not null || fragment.Source is DocxInlinePicture)
@@ -1424,7 +1460,10 @@ internal sealed partial class DocxLayoutEngine
                         line = line with { BaselineInset = Math.Max(baseInset * paragraphSpacingScale, objectInset) + labelLeading };
                         if (cursorY - line.OccupiedHeight < CurrentParagraphFrameBottom() &&
                             (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(line.OccupiedHeight)))
+                        {
                             AdvanceForOverflowingItem(line.OccupiedHeight, elementIndex);
+                            continue; // Admission did not consume any source or bind its counters.
+                        }
                         double inset = index == 0 ? firstInset : nextInset;
                         double available = Math.Max(1d, width - inset - rightInset);
                         double align = ResolveOrderedInlineAlignment(line, effective.Alignment, available);
@@ -1441,6 +1480,7 @@ internal sealed partial class DocxLayoutEngine
                             BodyLineBoxHeightPoints = line.OccupiedHeight
                         });
                         currentItems.AddRange(placed.Images);
+                        sourceCursor = line.EndCursor;
                         cursorY -= line.OccupiedHeight;
                         activeColumnHasContent = true;
                     }

@@ -16,6 +16,36 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingBodyPageCountersFollowLineAdmission()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var source = DocxTests.ReadDocx(Case("CompositionProbes/math-body-page-counter-boundary.docx"), mode);
+            // The pinned portable font has a shorter math strut than Arial.
+            // Give this test's spacer a fixed slot that leaves one line on page 9.
+            var spacer = source.Paragraphs.Single(paragraph => paragraph.LineSpacingPoints == 600d);
+            var taller = spacer with { LineSpacingPoints = 608d, Spacing = spacer.Spacing with { LineValue = "12160" } };
+            var document = source with { BodyElements = source.BodyElements.Select(element =>
+                element is DocxParagraphElement paragraph && ReferenceEquals(paragraph.Paragraph, spacer)
+                    ? new DocxParagraphElement(taller) : element).ToArray() };
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            TestAssert.Equal(10, pages.Length);
+            foreach (int number in new[] { 9, 10 })
+            {
+                string text = Regex.Replace(DocxPageFootnoteNumberingTests.DecodeText(pages[number - 1])
+                    .Normalize(NormalizationForm.FormKC), @"\s", "");
+                TestAssert.Contains(number == 9 ? "Start9" : "middle10End.", text);
+                TestAssert.Equal(1, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+                TestAssert.True(!text.Contains("{PAGE}", StringComparison.Ordinal), "Body counters bind after line admission.");
+            }
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Pagination cannot remove supported mixed math.");
+            CheckWrittenPages(pages);
+        }
+    }
+
     public static void PortableRenderingCellPageCountersPreserveMathAcrossDigitBoundary()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
