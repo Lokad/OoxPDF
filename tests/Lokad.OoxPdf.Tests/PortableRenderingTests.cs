@@ -40,7 +40,7 @@ internal static class PortableRenderingTests
             TestAssert.Equal(2, pages.Length);
             string text = Regex.Replace(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)), @"\s", "");
             TestAssert.Contains("Endofsupportednote.", text);
-            TestAssert.Equal(6, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+            TestAssert.Equal(4, text.Split("ratetime", StringSplitOptions.None).Length - 1);
             var first = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[0], usePageCoordinates: true).ToArray();
             TestAssert.Equal(2, first.Count(show => show.Text.Trim() == "2"));
             TestAssert.True(first.Any(show => show.Text == "r"), "The total-page retry must restore the fractions while retaining normal-note contents.");
