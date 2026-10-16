@@ -1899,7 +1899,7 @@ skips, two causal parent regressions and 17-asset/four-PDF transfer. Twelve text
 inspections retain C52 bytes. Eight prose/simple-math screens have no deficits;
 generic revision/unused-part warnings remain unresolved. Five representative
 page pairs were reviewed. All twelve outcome gates still fail unchanged
-thresholds. The composite report retains inherited comment-color and gray-lane
+thresholds. The composite report retains inherited comment-color and typography/geometry
 differences, along with typography/geometry residuals. Fixed revision-free
 documents carry accepted comparisons after a source audit and transfer smoke.
 
@@ -1908,3 +1908,20 @@ binary. Accepted root assets were restored by SHA with four smoke PDFs; the
 intended worktree was rebuilt using an absolute project path. The wrong-stage
 output is verified as C52 baseline only. No root suite replay. Evidence:
 revision-bar-evidence.json and initial-prototype-correction.json.
+
+
+Qualification builds now require an explicit committed linked worktree, full
+revision and fresh artifact path. The reusable command builds absolute test/CLI
+project paths, checks source identity between builds and delegates snapshot
+publication to the existing freeze command. Ten fake-command checks cover main
+checkout/subdirectory rejection, paths with spaces, revision/dirty source, output
+reuse/location, build failure, source changes and successful publication. A real
+main-checkout preflight rejects before builds and retains all seventeen accepted
+assets. The C53 library artifact is reused; no library builds/tests were repeated.
+The next rendering batch will exercise the real guarded build.
+
+The composite author probe has identical Word rasters under revision modes0/1.
+Both Word and candidate gray-lane samples are RGB242: the earlier gray-color
+difference wording is withdrawn. The pink/blue comment author-color discrepancy
+remains confirmed; source uses differently cased insertion/comment reviewer
+names. Evidence: build-workspace-guard-evidence.json and review-author-view-probe.json.
