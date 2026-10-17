@@ -36,6 +36,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/ExportCompositionReferences.ps1`: export or reuse pinned Office references by manifest and optional DOCX preset.
 - `tools/NewParentRegressionRuntime.ps1`: prepare parent regressions with independent owned public-input copies; reject unowned or linked output directories.
 - `tools/RunDocxAffectedTests.ps1`: run a manifest capability (`-Capability`) or specific selectors as one exact method set on a frozen assembly; use `-AllDocx` at broader milestones.
+- `tools/JoinCompositionPortfolio.ps1`: join measured outcomes from one runtime using a manifest; copy independent PDFs/inspection summaries and reuse source comparisons instead of copying raster/diff trees.
 - `tools/SummarizeDocxTableCellGeometry.ps1`: supplement raw graphics gates with source-backed table-cell clip mapping and unresolved counts.
 - `tools/CheckVisualCase.ps1`: run a public visual case.
 - `tools/CheckVisualFamily.ps1`: run or list a public visual capability family.
