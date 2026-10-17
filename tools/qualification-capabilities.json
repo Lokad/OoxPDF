@@ -4646,5 +4646,27 @@
     "DocxTableRowHeightFlowsSpacingAcrossInCellBreak",
     "DocxTableRowHeightIncludesListLabelFirstLineExtraLeading",
     "DocxTableVerticalAlignmentKeepsMinimumLeadingHeadroom"
+  ],
+  "docx-cell-connectors": [
+    "DocxInlineCompositionCellStructure",
+    "PortableRenderingCellStructure",
+    "DocxInlineCompositionCellPlacement",
+    "PortableRenderingCellPlacement",
+    "DocxAllMarkupRendererPlacesStaticStoryCommentBalloons",
+    "DocxAllMarkupRendererPlacesStaticStoryTableRevisionBalloons",
+    "DocxAllMarkupRendererPlacesStaticFloatingTextBoxTableRevisionBalloons",
+    "DocxAllMarkupRendererPlacesRelatedStoryRevisionBalloons",
+    "DocxWordCompatibleBalloonsStayRightOnMirroredEvenPages",
+    "DocxStackedBalloonsKeepOfficePackingGap",
+    "DocxMarkupBalloonLayoutSelectsSideStacksAnchorsAndHandlesOverflow",
+    "DocxMarkupBalloonLayoutOverfullLaneAccountsEveryCandidate",
+    "DocxMarkupBalloonLayoutGroupsNearbyRevisionAnchors",
+    "DocxWordCompatibleForeignFormattingBalloonsRetainReviewLane",
+    "PortableRenderingFormattingBalloonDescriptionsKeepSourceOwners",
+    "DocxInlineCompositionFormatting",
+    "DocxInlineCompositionMinimumRows",
+    "PortableRenderingMinimumRows",
+    "DocxInlineCompositionCellConnectors",
+    "PortableRenderingCellConnectors"
   ]
 }

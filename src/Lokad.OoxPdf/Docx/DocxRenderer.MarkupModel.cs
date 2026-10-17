@@ -61,6 +61,7 @@ internal sealed partial class DocxRenderer
         // An explicit printed frame top can own placement independently of
         // the changed source line or cell center retained by the connector.
         public double? WordCompatiblePlacementTopY { get; init; }
+        public DocxMarkupBalloonRgb? WordCompatibleStrokeRgb { get; init; }
         public DocxRunFontResource? WordCompatibleBodyResource { get; init; }
         public double? WordCompatibleBodyLineHeightEm { get; init; }
         public DocxRunFontResource? WordCompatibleTerminalResource { get; init; }
@@ -114,6 +115,7 @@ internal sealed partial class DocxRenderer
         int LaneBandIndex,
         int LaneBandCandidateCount)
     {
+        public DocxMarkupBalloonRgb? WordCompatibleStrokeRgb { get; init; }
         public DocxRunFontResource? WordCompatibleBodyResource { get; init; }
         public double? WordCompatibleBodyLineHeightEm { get; init; }
         public DocxRunFontResource? WordCompatibleTerminalResource { get; init; }

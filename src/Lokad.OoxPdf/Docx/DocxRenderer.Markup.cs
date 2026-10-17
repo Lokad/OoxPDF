@@ -519,6 +519,7 @@ internal sealed partial class DocxRenderer
                     OverflowStartIndex: null, OverflowEndIndex: null, LaneBandIndex: laneBand.Index,
                     LaneBandCandidateCount: laneBand.CandidateCount)
                 {
+                    WordCompatibleStrokeRgb = candidate.WordCompatibleStrokeRgb,
                     WordCompatibleBodyResource = candidate.WordCompatibleBodyResource,
                     WordCompatibleBodyLineHeightEm = candidate.WordCompatibleBodyLineHeightEm,
                     WordCompatibleTerminalResource = candidate.WordCompatibleTerminalResource,
@@ -851,14 +852,17 @@ internal sealed partial class DocxRenderer
                         string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(cellRevisions), textWidth);
                         string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(cellRevisions), textWidth);
                         bool cellStructureOnly = cellRevisions.All(revision => revision.Kind.IsCellStructureRevision());
+                        DocxTextLineLayout? structuralAnchor = cellStructureOnly && UsesWordCompatibleAllMarkupTextProfile(markupContext)
+                            ? cell.TextLines.FirstOrDefault() : null;
                         balloonCandidates.Add(new DocxMarkupBalloonCandidate(
                             DocxMarkupBalloonKind.Revision,
                             revisionTitle,
                             revisionBody,
                             cellStructureOnly ? revisionBody : revisionTitle,
                             cellStructureOnly ? string.Empty : revisionBody,
-                            cell.Y + Math.Max(0d, cell.Height) * 0.5d,
-                            cell.X + Math.Max(0d, cell.Width) * 0.5d,
+                            structuralAnchor?.BaselineY ?? cell.Y + Math.Max(0d, cell.Height) * 0.5d,
+                            structuralAnchor is null ? cell.X + Math.Max(0d, cell.Width) * 0.5d :
+                                structuralAnchor.X + ResolveTextEmissionXOffset(markupContext),
                             cell.X - 2d,
                             cell.X + Math.Max(0d, cell.Width) + 2d,
                             sequence++,
@@ -872,6 +876,9 @@ internal sealed partial class DocxRenderer
                         {
                             // A structural cell label belongs to the changed cell's
                             // top frame, independently of its height and connector.
+                            WordCompatibleStrokeRgb = ResolveCellStructureStrokeRgb(cellRevisions),
+                            WordCompatibleAnchorDepthPoints = structuralAnchor?.InlineFrame is null ? null :
+                                ResolveInlineLineVerticalExtents(structuralAnchor).Below,
                             WordCompatiblePlacementTopY = cellStructureOnly && UsesWordCompatibleAllMarkupTextProfile(markupContext)
                                 ? cell.Y + cell.Height - ResolveTextEmissionBaselineOffset(markupContext)
                                 : null
@@ -1142,6 +1149,8 @@ internal sealed partial class DocxRenderer
             WordCompatibleBody = wordCompatibleBody,
             AnchorY = group.Max(candidate => candidate.AnchorY),
             WordCompatibleAnchorDepthPoints = group.MaxBy(candidate => candidate.AnchorY)?.WordCompatibleAnchorDepthPoints,
+            WordCompatibleStrokeRgb = group.All(candidate => candidate.WordCompatibleStrokeRgb == group[0].WordCompatibleStrokeRgb)
+                ? group[0].WordCompatibleStrokeRgb : null,
             WordCompatiblePlacementTopY = group.All(candidate => candidate.WordCompatiblePlacementTopY is not null)
                 ? group.Max(candidate => candidate.WordCompatiblePlacementTopY) : null,
             AnchorConnectorX = allRevisions
@@ -1450,6 +1459,16 @@ internal sealed partial class DocxRenderer
         return placement.FillRgb;
     }
 
+    private static DocxMarkupBalloonRgb? ResolveCellStructureStrokeRgb(IReadOnlyList<DocxRevisionInfo> revisions)
+    {
+        // Independent same/different-author controls retain type-owned cell
+        // colors. Mixed owners keep the established review stroke fallback.
+        if (revisions.Count == 0) return null;
+        if (revisions.All(revision => revision.Kind == DocxRevisionKind.TableCellInsertion)) return new(112, 183, 237);
+        if (revisions.All(revision => revision.Kind == DocxRevisionKind.TableCellDeletion)) return new(239, 112, 188);
+        return null;
+    }
+
     private static DocxMarkupBalloonRgb ResolveMarkupBalloonBodyStrokeRgb(
         DocxMarkupBalloonPlacement placement,
         DocxMarkupContext markupContext)
@@ -1458,9 +1477,9 @@ internal sealed partial class DocxRenderer
         // carried by the candidate; revision balloons keep the review stroke.
         if (!placement.IsOverflowSummary && UsesWordCompatibleAllMarkupTextProfile(markupContext))
         {
-            return placement.Kind == DocxMarkupBalloonKind.Comment
+            return placement.WordCompatibleStrokeRgb ?? (placement.Kind == DocxMarkupBalloonKind.Comment
                 ? placement.StrokeRgb
-                : WordCompatibleAllMarkupReviewStrokeRgb;
+                : WordCompatibleAllMarkupReviewStrokeRgb);
         }
 
         return placement.StrokeRgb;

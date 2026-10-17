@@ -182,7 +182,7 @@ internal sealed partial class DocxRenderer
         // A measured range attaches at its selection bottom. Legacy plain-text
         // and bare-reference anchors retain their established baseline inset.
         return Math.Max(-WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints,
-            ResolveCommentRangeVerticalExtents(line).Below);
+            ResolveInlineLineVerticalExtents(line).Below);
     }
 
     private static double ResolveCommentAnchorX(

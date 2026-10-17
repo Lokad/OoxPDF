@@ -1,0 +1,93 @@
+{
+  "Scope": "First actual cell source anchor/color; all raw counts retained, same-author range coalescing remains a separate gap.",
+  "Rows": [
+    {
+      "Id": "table-math-revision-cell-ins",
+      "InputSha256": "8866EFF08FE42ECAC6C6E605DD274B80B52E92DF782FC06E9B5B9B70E1323417",
+      "Shape": "original",
+      "Kind": "ins",
+      "FirstAnchorX": 68.256,
+      "FirstAnchorY": 617.59,
+      "StrokeColor": "RG:0.439,0.718,0.929",
+      "ExpectedWordConnectorCount": 1,
+      "KnownSameAuthorCoalescingGap": false
+    },
+    {
+      "Id": "cell-connector-narrow-ins",
+      "InputSha256": "FB8B8615D35C3760327B821D034BF2BA8C8965BA3123ACAB2FB7EDA72D0B484B",
+      "Shape": "narrow",
+      "Kind": "ins",
+      "FirstAnchorX": 68.256,
+      "FirstAnchorY": 617.59,
+      "StrokeColor": "RG:0.439,0.718,0.929",
+      "ExpectedWordConnectorCount": 1,
+      "KnownSameAuthorCoalescingGap": false
+    },
+    {
+      "Id": "cell-connector-same-author-ins",
+      "InputSha256": "5A421C04FAE938D6FD9400A2B443DD12CEAC8CA3B9D12798302840251AA91BDA",
+      "Shape": "same-author",
+      "Kind": "ins",
+      "FirstAnchorX": 68.256,
+      "FirstAnchorY": 617.59,
+      "StrokeColor": "RG:0.439,0.718,0.929",
+      "ExpectedWordConnectorCount": 1,
+      "KnownSameAuthorCoalescingGap": true
+    },
+    {
+      "Id": "cell-connector-second-author-ins",
+      "InputSha256": "83954BC7C7E386F433630741E555C5D8B52B4444752F1F77A2143AB921166F3C",
+      "Shape": "second-author",
+      "Kind": "ins",
+      "FirstAnchorX": 68.256,
+      "FirstAnchorY": 617.59,
+      "StrokeColor": "RG:0.439,0.718,0.929",
+      "ExpectedWordConnectorCount": 2,
+      "KnownSameAuthorCoalescingGap": false
+    },
+    {
+      "Id": "table-math-revision-cell-del",
+      "InputSha256": "2D5023D163FC5C0D9F0E088F3B33958C5D9074B0298D8F365D3EFCE0A3822105",
+      "Shape": "original",
+      "Kind": "del",
+      "FirstAnchorX": 68.256,
+      "FirstAnchorY": 617.59,
+      "StrokeColor": "RG:0.937,0.439,0.737",
+      "ExpectedWordConnectorCount": 1,
+      "KnownSameAuthorCoalescingGap": false
+    },
+    {
+      "Id": "cell-connector-narrow-del",
+      "InputSha256": "D0584DB4AC5879A9E0003516B9F1EA7917E4AAE741A0B52F10F861455897A26F",
+      "Shape": "narrow",
+      "Kind": "del",
+      "FirstAnchorX": 68.256,
+      "FirstAnchorY": 617.59,
+      "StrokeColor": "RG:0.937,0.439,0.737",
+      "ExpectedWordConnectorCount": 1,
+      "KnownSameAuthorCoalescingGap": false
+    },
+    {
+      "Id": "cell-connector-same-author-del",
+      "InputSha256": "21BFB1B2E39BB9740F554081CE5EBB71F356F65B2243AC63BAAE0C06D68EA217",
+      "Shape": "same-author",
+      "Kind": "del",
+      "FirstAnchorX": 68.256,
+      "FirstAnchorY": 617.59,
+      "StrokeColor": "RG:0.937,0.439,0.737",
+      "ExpectedWordConnectorCount": 1,
+      "KnownSameAuthorCoalescingGap": true
+    },
+    {
+      "Id": "cell-connector-second-author-del",
+      "InputSha256": "5A167E198090C8C9F221183BE37FB59101B53F1C9C2ACED49651F0533035429D",
+      "Shape": "second-author",
+      "Kind": "del",
+      "FirstAnchorX": 68.256,
+      "FirstAnchorY": 617.59,
+      "StrokeColor": "RG:0.937,0.439,0.737",
+      "ExpectedWordConnectorCount": 2,
+      "KnownSameAuthorCoalescingGap": false
+    }
+  ]
+}
