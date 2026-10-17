@@ -58,9 +58,9 @@ internal sealed partial class DocxRenderer
         int WordCompatibleBodySummaryPartCount)
     {
         public double? WordCompatibleAnchorDepthPoints { get; init; }
-        // Placement can belong to the story frame while the connector retains
-        // the changed source line's AnchorY.
-        public double? WordCompatiblePlacementAnchorY { get; init; }
+        // An explicit printed frame top can own placement independently of
+        // the changed source line or cell center retained by the connector.
+        public double? WordCompatiblePlacementTopY { get; init; }
         public DocxRunFontResource? WordCompatibleBodyResource { get; init; }
         public double? WordCompatibleBodyLineHeightEm { get; init; }
         public DocxRunFontResource? WordCompatibleTerminalResource { get; init; }

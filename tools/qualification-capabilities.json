@@ -4558,5 +4558,23 @@
     "DocxFormattingRevisionBalloonLabels",
     "DocxMarkupInspectionSnapshotsExposeFormattingRevisionProvenance",
     "DocxMarkupInspectionSnapshotsCountStoryFormattingRevisions"
+  ],
+  "docx-cell-label-placement": [
+    "DocxInlineCompositionCellStructure",
+    "PortableRenderingCellStructure",
+    "DocxInlineCompositionCellPlacement",
+    "PortableRenderingCellPlacement",
+    "DocxAllMarkupRendererPlacesStaticStoryCommentBalloons",
+    "DocxAllMarkupRendererPlacesStaticStoryTableRevisionBalloons",
+    "DocxAllMarkupRendererPlacesStaticFloatingTextBoxTableRevisionBalloons",
+    "DocxAllMarkupRendererPlacesRelatedStoryRevisionBalloons",
+    "DocxWordCompatibleBalloonsStayRightOnMirroredEvenPages",
+    "DocxStackedBalloonsKeepOfficePackingGap",
+    "DocxMarkupBalloonLayoutSelectsSideStacksAnchorsAndHandlesOverflow",
+    "DocxMarkupBalloonLayoutOverfullLaneAccountsEveryCandidate",
+    "DocxMarkupBalloonLayoutGroupsNearbyRevisionAnchors",
+    "DocxWordCompatibleForeignFormattingBalloonsRetainReviewLane",
+    "PortableRenderingFormattingBalloonDescriptionsKeepSourceOwners",
+    "DocxInlineCompositionFormatting"
   ]
 }

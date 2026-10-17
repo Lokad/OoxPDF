@@ -1036,6 +1036,7 @@ internal static partial class DocxCommentsTests
 
     public static void DocxStackedBalloonsKeepOfficePackingGap()
     {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Office packing positions require installed Windows text faces.");
         string input = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..",

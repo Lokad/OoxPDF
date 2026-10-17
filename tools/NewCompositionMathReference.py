@@ -1,6 +1,6 @@
 """Pin math-run anchors from existing independently exported and inspected PDFs.
 
-Usage: python tools/NewCompositionMathReference.py MANIFEST REFERENCES OUTPUT
+Usage: python tools/NewCompositionMathReference.py MANIFEST REFERENCES OUTPUT [Both|Final|Review]
 Uses Cambria Math runs; mixed normal-font formulas need their own source audit.
 Does not export Office, inspect PDFs or build the library.
 ExpectedByMode can overlay expected metadata; ExpectedMathGlyphCount=0 pins a
@@ -22,12 +22,16 @@ def sha(path):
 
 
 def main():
-    manifest, references, output = map(Path, sys.argv[1:])
+    manifest, references, output = map(Path, sys.argv[1:4])
+    preset = sys.argv[4] if len(sys.argv) > 4 else "Both"
+    assert preset in ["Both", "Final", "Review"], "Expected Both, Final or Review"
+    modes = ["final-preserve", "all-word-compatible"] if preset == "Both" else [
+        "final-preserve" if preset == "Final" else "all-word-compatible"]
     root = Path(__file__).resolve().parent.parent
     rows = []
     for source in read(manifest):
         assert sha(root / source["Input"]) == source["Sha256"], "Source identity differs"
-        for mode in ["final-preserve", "all-word-compatible"]:
+        for mode in modes:
             outcome = source | source.get("ExpectedByMode", {}).get(mode, {})
             run = references / (source["Id"] + "-" + mode)
             pin = read(run / "source-identity.json")
