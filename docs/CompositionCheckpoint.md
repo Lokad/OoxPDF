@@ -1,5 +1,17 @@
 # Composed-document reliability checkpoint
 
+C131 refreshes all twelve fixed-portfolio outcomes with the accepted C130
+artifact, without a library rebuild or test replay. Seven source documents and
+twenty inspected pages retain their accepted PDF bytes and reference identities.
+All twelve comparisons and twenty previously reviewed page pairs carry by identity;
+no Office exports, rasterization or metrics repeat. Ten DOCX visual gates still
+fail; both decks pass. Ten earlier prose/math screens and the complete report's
+two unresolved dynamic-field/math-tokenization flags carry; this is no new content
+audit pass. No new ignored equations or missing expected strings are observed.
+Compound allocation evidence remains C124; no performance claim. Evidence:
+`artifacts/composition-c1/checkpoint-131-evidence.json`. Next bounded work is
+source-backed structural-label placement, retaining the25.545pt residual.
+
 C130 represents cell insertion/deletion as distinct structure owners read from
 actual cell properties. They preserve child content and ink. Main-story markers
 share the printed review lane, bar and balloon selection; Word omits these markers
