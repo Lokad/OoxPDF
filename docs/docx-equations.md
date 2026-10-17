@@ -27,8 +27,10 @@ metric-only placeholder geometry and the remaining source glyphs. Independent
 Word profiles with omitted, disabled or enabled matrix placeholder visibility
 produce identical printed rasters. The same known profiles now share one PDF
 layout rule. Empty script bases, wholly empty grids and unknown properties retain
-fallback. Revision-role body controls cover literals, scripts, roots and matrices;
-new empty-role placement combinations remain a separate qualification step.
+fallback. Revision-role body controls cover literals, scripts, roots and matrices. Additional
+mixed controls qualify empty script/matrix roles with prose, images, numbering and
+links across body/cells/direct headers/footers in both presets. Geometry remains
+approximate; strict visual gates stay failed.
 
 Numbered paragraphs retain supported explicit math zones alongside prose and
 inline pictures. The list label owns only the first authored row: its formulas

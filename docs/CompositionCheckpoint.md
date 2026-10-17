@@ -1,5 +1,29 @@
 # Composed-document reliability checkpoint
 
+C91 qualifies empty script/matrix roles beside prose, links, numbering and pictures
+across body, simple cells and direct headers/footers. Sixteen strict Word outcomes
+retain every expected mathematical glyph and source ink in both presets. Group-start
+X/Y residuals stay within 0.521/0.620pt. Bookmarks and prose/math-run splitting retain
+geometry; four same-scale crop pairs reviewed. All sixteen strict visual gates
+remain failed unchanged, with typography/review differences explicit.
+
+The C90 production binary handles these placements unchanged. Two new methods pass
+once on Windows; Ubuntu passes the portable method and explicitly skips native
+geometry once. No production build, speculative container correction or repeated
+corpus/suite. C90's 36 checks and twelve portfolio outcomes carry by unchanged
+production/CLI and relevant test/helper identities.
+
+C90 CI39009124734 failed one older font-group matrix test on both platforms; raw
+logs remain retained. Its visibility-exclusion expectation conflicts with the strict
+Word counterprobes. The corrected test verifies identical known-profile slots and
+retains unknown/wholly-empty/missing-metric fallbacks, cancellation and work limits.
+It passes once on each platform. MathFontMatrix joins future affected selections.
+Only this corrected check is rerun through the unchanged library; the placement
+checks carry through unchanged source/helpers. Seventeen assets/four smoke PDFs
+transfer without root build/suite replay. Root bbccd55a; font fix c4d4c458; evidence:
+`artifacts/composition-c1/empty-role-placement-evidence.json`.
+The next scoped push repairs CI; work continues while it runs.
+
 C90 shares literal-argument measurement across fractions and scripts, retaining
 metric-only empty sub/sup slots. Matrix discovery uses the same semantic emptiness
 rule. Independent Word counterprobes show deleted/authored-empty script and matrix
