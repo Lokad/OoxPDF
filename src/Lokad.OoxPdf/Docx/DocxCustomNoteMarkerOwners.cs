@@ -1,8 +1,40 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Lokad.OoxPdf.Docx;
 
 // Exact body character ownership is shared by note advances and line metrics.
 internal static class DocxCustomNoteMarkerOwners
 {
+    internal static Dictionary<(int Run, int Offset), DocxTextRun?> IndexSourceRuns(
+        IReadOnlyList<DocxTextRun> runs, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var owners = new Dictionary<(int Run, int Offset), DocxTextRun?>();
+        foreach (var run in runs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var key = (run.SourceRunIndex, run.SourceTextOffsetInRun);
+            if (!owners.TryAdd(key, run)) owners[key] = null;
+        }
+        return owners;
+    }
+
+    internal static bool TryGetSourceRun(DocxInlineReference reference,
+        IReadOnlyDictionary<(int Run, int Offset), DocxTextRun?> owners,
+        [NotNullWhen(true)] out DocxTextRun? run)
+    {
+        run = null;
+        if (reference.Kind is not (DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote) ||
+            reference.CustomMarkText is not { Length: 1 } custom || char.IsWhiteSpace(custom[0]) ||
+            char.IsSurrogate(custom[0]) || reference.Revision is not null || reference.Revisions.Count != 0 ||
+            reference.SourceRunIndex < 0 || reference.TextOffsetInRun < 0 ||
+            !owners.TryGetValue((reference.SourceRunIndex, reference.TextOffsetInRun), out var owner) ||
+            owner is null || owner.Revision is not null || owner.Revisions.Count != 0 ||
+            !owner.Text.StartsWith(custom, StringComparison.Ordinal)) return false;
+        run = owner;
+        return true;
+    }
+
     internal static IReadOnlyDictionary<DocxRelatedStory, DocxTextRun> ResolveTargets(
         DocxDocument source, CancellationToken cancellationToken)
     {
@@ -48,23 +80,9 @@ internal static class DocxCustomNoteMarkerOwners
                 cancellationToken.ThrowIfCancellationRequested();
                 if (reference.Kind != kind || reference.Id is null) continue;
                 string? mark = null;
-                if (reference.CustomMarkText is { Length: 1 } custom && !char.IsWhiteSpace(custom[0]) &&
-                    !char.IsSurrogate(custom[0]) && reference.Revision is null && reference.Revisions.Count == 0 &&
-                    reference.SourceRunIndex >= 0 && reference.TextOffsetInRun >= 0 && plain)
-                {
-                    if (runOwners is null)
-                    {
-                        runOwners = new();
-                        foreach (DocxTextRun run in paragraph.Runs)
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
-                            var key = (run.SourceRunIndex, run.SourceTextOffsetInRun);
-                            if (!runOwners.TryAdd(key, run)) runOwners[key] = null;
-                        }
-                    }
-                    if (runOwners.TryGetValue((reference.SourceRunIndex, reference.TextOffsetInRun), out DocxTextRun? owner) &&
-                        owner is not null && owner.Text.StartsWith(custom, StringComparison.Ordinal)) mark = custom;
-                }
+                if (reference.CustomMarkText is not null && plain &&
+                    TryGetSourceRun(reference, runOwners ??= IndexSourceRuns(paragraph.Runs, cancellationToken), out _))
+                    mark = reference.CustomMarkText;
                 if (!marks.TryAdd(reference.Id, mark)) marks[reference.Id] = null;
             }
         }

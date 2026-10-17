@@ -20,7 +20,7 @@ internal static class DocxInlineContent
         CancellationToken token = default) =>
         HasSupportedParagraphRevisionOwners(paragraph, token) &&
         paragraph.InlineTextBoxes.Count == 0 &&
-        HasSupportedReferences(paragraph.InlineReferences, paragraph.Runs) &&
+        HasSupportedReferences(paragraph.InlineReferences, paragraph.Runs, token) &&
         (hasPageInputs ? HasSourceFieldResults(paragraph.FieldReferences, paragraph.Runs)
             : HasMaterializedFieldResults(paragraph.FieldReferences, paragraph.Runs)) &&
         paragraph.RevisionRanges.Count == 0;
@@ -77,12 +77,15 @@ internal static class DocxInlineContent
         runs.All(run => run.FieldKind is null);
 
     public static bool HasSupportedReferences(IReadOnlyList<DocxInlineReference> references,
-        IReadOnlyList<DocxTextRun> runs)
+        IReadOnlyList<DocxTextRun> runs, CancellationToken token = default)
     {
         if (references.All(reference => reference.Kind == DocxRelatedStoryKind.Comment)) return true;
         var owners = new HashSet<DocxTextRun>(runs, ReferenceEqualityComparer.Instance);
+        Dictionary<(int Run, int Offset), DocxTextRun?>? customOwners = null;
         return references.All(reference => reference.Kind == DocxRelatedStoryKind.Comment ||
-            TryGetAutomaticNoteRun(reference, out var run) && owners.Contains(run));
+            TryGetAutomaticNoteRun(reference, out var run) && owners.Contains(run) ||
+            reference.CustomMarkText is not null && DocxCustomNoteMarkerOwners.TryGetSourceRun(reference,
+                customOwners ??= DocxCustomNoteMarkerOwners.IndexSourceRuns(runs, token), out _));
     }
 
     public static List<DocxInlineItem> FromPrefix(IReadOnlyList<DocxTextRun> runs,

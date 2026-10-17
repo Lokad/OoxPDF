@@ -1,0 +1,54 @@
+[
+  {
+    "Id": "math-custom-note-footnote-1",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-custom-note-footnote-1.docx",
+    "Sha256": "DE2AB5E4689CF117541D9880311C3DD6170AFA416EEC5FCB981597C027FFD160",
+    "SourceSha256": "D99DF58E0383504BD8AC33FF0D893AEB0539BD61CC546EA1C6AE7E0EEE8B6BBD",
+    "Kind": "footnote",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "math-custom-note-footnote-2",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-custom-note-footnote-2.docx",
+    "Sha256": "BA5B9DC21B42A5A817D7FFF79AFBBA67F5B41ED4CA6374110543F4C36BD26BD9",
+    "SourceSha256": "D99DF58E0383504BD8AC33FF0D893AEB0539BD61CC546EA1C6AE7E0EEE8B6BBD",
+    "Kind": "footnote",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "math-custom-note-endnote-1",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-custom-note-endnote-1.docx",
+    "Sha256": "E23DA7ACCC1252C70B6DAFF1CD43A3CAD709DDEB29300E2868C45364ABD14C81",
+    "SourceSha256": "BD0F7BE2640553AA381E472DE6E4F94CB6479222284B09ABE249F6FABA50303F",
+    "Kind": "endnote",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "math-custom-note-endnote-2",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-custom-note-endnote-2.docx",
+    "Sha256": "64BE679D931C827F91C0E974E28277D664F1CED75AFB5415F7505C6D790D311A",
+    "SourceSha256": "BD0F7BE2640553AA381E472DE6E4F94CB6479222284B09ABE249F6FABA50303F",
+    "Kind": "endnote",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  }
+]

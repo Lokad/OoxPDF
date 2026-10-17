@@ -367,7 +367,7 @@ internal sealed partial class DocxReader
             Equations = equations,
             // Page fields retain their canonical source placeholders. Layout
             // eligibility separately requires the actual page inputs.
-            InlineContent = inlineItems is not null && DocxInlineContent.HasSourceFieldResults(fieldReferences, runs) && DocxInlineContent.HasSupportedReferences(inlineReferences, runs) &&
+            InlineContent = inlineItems is not null && DocxInlineContent.HasSourceFieldResults(fieldReferences, runs) && DocxInlineContent.HasSupportedReferences(inlineReferences, runs, cancellationToken) &&
                 inlineTextBoxes.Count == 0 && DocxInlineContent.HasSupportedRunRevisionOwners(paragraphRevisions, runs, cancellationToken,
                     listLabel is null ? null : retainedMark, images, nonRenderingRunOwners, equations)
                 ? inlineItems : null,

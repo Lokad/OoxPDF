@@ -1,0 +1,157 @@
+{
+  "Source": "Independent Word exports: one/two normal-font fractions and a supported custom note mark enclosed by a bookmark. Exact link source/first-character behavior remains separately checked.",
+  "Rows": [
+    {
+      "Id": "math-custom-note-footnote-1",
+      "Mode": "final-preserve",
+      "InputSha256": "DE2AB5E4689CF117541D9880311C3DD6170AFA416EEC5FCB981597C027FFD160",
+      "ReferencePdfSha256": "D5E2FB7A554779F387FCB13222A1FB92499CB45EB43BDBF2D86161DABBB3160F",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "ExpectedEquations": 1,
+      "ExpectedCustomMarks": 2,
+      "ExpectedPages": 2
+    },
+    {
+      "Id": "math-custom-note-footnote-1",
+      "Mode": "all-word-compatible",
+      "InputSha256": "DE2AB5E4689CF117541D9880311C3DD6170AFA416EEC5FCB981597C027FFD160",
+      "ReferencePdfSha256": "D5288AE14E95481976B694CD6FC29A469AE46DBA2AC0A7D54001D1713310D75E",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ExpectedEquations": 1,
+      "ExpectedCustomMarks": 2,
+      "ExpectedPages": 2
+    },
+    {
+      "Id": "math-custom-note-footnote-2",
+      "Mode": "final-preserve",
+      "InputSha256": "BA5B9DC21B42A5A817D7FFF79AFBBA67F5B41ED4CA6374110543F4C36BD26BD9",
+      "ReferencePdfSha256": "22ED202832D0FB2EAF7DB567B82035A120D38D229A29C5702C4BF8EB25452F50",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "ExpectedEquations": 2,
+      "ExpectedCustomMarks": 2,
+      "ExpectedPages": 2
+    },
+    {
+      "Id": "math-custom-note-footnote-2",
+      "Mode": "all-word-compatible",
+      "InputSha256": "BA5B9DC21B42A5A817D7FFF79AFBBA67F5B41ED4CA6374110543F4C36BD26BD9",
+      "ReferencePdfSha256": "5A099CAAB777419073E0F288613BDA2D868B13E03D64CF5893C5CB0C2D63A8B4",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ExpectedEquations": 2,
+      "ExpectedCustomMarks": 2,
+      "ExpectedPages": 2
+    },
+    {
+      "Id": "math-custom-note-endnote-1",
+      "Mode": "final-preserve",
+      "InputSha256": "E23DA7ACCC1252C70B6DAFF1CD43A3CAD709DDEB29300E2868C45364ABD14C81",
+      "ReferencePdfSha256": "A3D14B888AD0B0D1630233E55077D5E9F306889B81D714B89EA4FAE19472C6CD",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "ExpectedEquations": 1,
+      "ExpectedCustomMarks": 2,
+      "ExpectedPages": 2
+    },
+    {
+      "Id": "math-custom-note-endnote-1",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E23DA7ACCC1252C70B6DAFF1CD43A3CAD709DDEB29300E2868C45364ABD14C81",
+      "ReferencePdfSha256": "4959958A8D72254C460B7F42E6EA8295FCAD31487C0D6A6FC3B4E7C2755A0F5E",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ExpectedEquations": 1,
+      "ExpectedCustomMarks": 2,
+      "ExpectedPages": 2
+    },
+    {
+      "Id": "math-custom-note-endnote-2",
+      "Mode": "final-preserve",
+      "InputSha256": "64BE679D931C827F91C0E974E28277D664F1CED75AFB5415F7505C6D790D311A",
+      "ReferencePdfSha256": "E47988AF23D17C133448C619A105584DDA01FA25959E73104003BF493FB88684",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "ExpectedEquations": 2,
+      "ExpectedCustomMarks": 2,
+      "ExpectedPages": 2
+    },
+    {
+      "Id": "math-custom-note-endnote-2",
+      "Mode": "all-word-compatible",
+      "InputSha256": "64BE679D931C827F91C0E974E28277D664F1CED75AFB5415F7505C6D790D311A",
+      "ReferencePdfSha256": "96C90BEF47943D06D7EB3E8A8624D80FAA97860805CD3D124B15D7828C932007",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ExpectedEquations": 2,
+      "ExpectedCustomMarks": 2,
+      "ExpectedPages": 2
+    }
+  ]
+}
