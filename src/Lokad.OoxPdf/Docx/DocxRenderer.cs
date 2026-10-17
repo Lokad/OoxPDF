@@ -698,6 +698,14 @@ internal sealed partial class DocxRenderer
             .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType))
             .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
             .Any(paragraph => HasNonVoidPropertyChange(paragraph.Revisions))) return true;
+        // A printed formatting balloon owns the same page lane when its source
+        // is a static table, row or cell. Reuse the revision-owner traversal
+        // already used to select the fitted anchor.
+        if (StaticStoryTables(document.HeaderBodyElementsByType)
+            .Concat(StaticStoryTables(document.FooterBodyElementsByType))
+            .Concat(StaticStoryTables(document.PageSettings.HeaderBodyElementsByType))
+            .Concat(StaticStoryTables(document.PageSettings.FooterBodyElementsByType))
+            .Any(TableSubtreeHasNonVoidPropertyChange)) return true;
 
         foreach (DocxParagraph paragraph in document.Paragraphs)
         {
@@ -749,8 +757,8 @@ internal sealed partial class DocxRenderer
 
     // Anchor-gating only: formatting revisions balloon from any story (body, static,
     // placed, floating text boxes), so any of them sustains the fitted anchor. The
-    // lane-fit scale trigger covers body and direct static paragraphs; other
-    // story/effect combinations retain their previously qualified scale behavior.
+    // lane-fit scale trigger covers body and static paragraph/table owners;
+    // other story/effect combinations retain their qualified scale behavior.
     // Section-break revisions never anchor balloons (no anchor line) and stay excluded.
     private static bool HasAnyNonVoidPropertyRevision(DocxDocument document)
     {
@@ -879,59 +887,59 @@ internal sealed partial class DocxRenderer
                 }
             }
         }
+    }
 
-        IEnumerable<DocxTable> StaticStoryTables(IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType)
+    private static IEnumerable<DocxTable> StaticStoryTables(IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType)
+    {
+        foreach (IReadOnlyList<DocxBodyElement> elements in bodyElementsByType.Values)
         {
-            foreach (IReadOnlyList<DocxBodyElement> elements in bodyElementsByType.Values)
+            foreach (DocxTable table in DocxBlockTraversal.EnumerateBodyTables(elements))
             {
-                foreach (DocxTable table in DocxBlockTraversal.EnumerateBodyTables(elements))
-                {
-                    yield return table;
-                }
+                yield return table;
             }
         }
+    }
 
-        bool TableSubtreeHasNonVoidPropertyChange(DocxTable table)
+    private static bool TableSubtreeHasNonVoidPropertyChange(DocxTable table)
+    {
+        if (HasNonVoidPropertyChange(table.Revisions))
         {
-            if (HasNonVoidPropertyChange(table.Revisions))
+            return true;
+        }
+
+        foreach (DocxTableRow row in table.Rows)
+        {
+            if (HasNonVoidPropertyChange(row.Revisions))
             {
                 return true;
             }
 
-            foreach (DocxTableRow row in table.Rows)
+            foreach (DocxTableCell cell in row.Cells)
             {
-                if (HasNonVoidPropertyChange(row.Revisions))
+                if (HasNonVoidPropertyChange(cell.Revisions))
                 {
                     return true;
                 }
 
-                foreach (DocxTableCell cell in row.Cells)
+                foreach (DocxParagraph paragraph in cell.Paragraphs)
                 {
-                    if (HasNonVoidPropertyChange(cell.Revisions))
+                    if (HasNonVoidPropertyChange(paragraph.Revisions))
                     {
                         return true;
                     }
+                }
 
-                    foreach (DocxParagraph paragraph in cell.Paragraphs)
+                foreach (DocxTable nested in DocxBlockTraversal.EnumerateBodyTables(DocxTableCellContent.GetBodyElements(cell)))
+                {
+                    if (TableSubtreeHasNonVoidPropertyChange(nested))
                     {
-                        if (HasNonVoidPropertyChange(paragraph.Revisions))
-                        {
-                            return true;
-                        }
-                    }
-
-                    foreach (DocxTable nested in DocxBlockTraversal.EnumerateBodyTables(DocxTableCellContent.GetBodyElements(cell)))
-                    {
-                        if (TableSubtreeHasNonVoidPropertyChange(nested))
-                        {
-                            return true;
-                        }
+                        return true;
                     }
                 }
             }
-
-            return false;
         }
+
+        return false;
     }
 
     private static IDocxTextMeasurer? ResolveLayoutTextMeasurer(DocxFontResources fontResources, DocxMarkupContext markupContext)

@@ -544,3 +544,74 @@ for story in ["cell", "header", "footer"]:
             explicit_placement_rows[-1].update(RuleRegion=[120, 0, 210, 792], RuleFillColor="g:0")
 (output / "explicit-control-placement.json").write_text(json.dumps(explicit_placement_rows, indent=2) + "\n", encoding="utf-8")
 print("Pinned six authored-control cell/static-story placements")
+
+# Table revision metadata must be distinguished from child content ownership.
+table_revision_rows = []
+source = output / "explicit-placement-cell-fraction.docx"
+with ZipFile(source) as z:
+    original = {name: z.read(name) for name in z.namelist()}
+for role in ["row-ins", "row-del", "row-format", "cell-format", "cell-ins", "cell-del"]:
+    entries = dict(original)
+    xml = E.fromstring(entries["word/document.xml"])
+    table = next(xml.iter(w + "tbl"))
+    row = table.find(w + "tr")
+    cell = row.find(w + "tc")
+    owner = row if role.startswith("row-") else cell
+    name = "trPr" if role.startswith("row-") else "tcPr"
+    properties = owner.find(w + name)
+    if properties is None:
+        properties = E.Element(w + name)
+        owner.insert(0, properties)
+    attributes = {w + "id": "711", w + "author": "Table Editor", w + "date": "2026-10-17T00:00:00Z"}
+    if role == "row-format":
+        E.SubElement(properties, w + "cantSplit")
+        E.SubElement(E.SubElement(properties, w + "trPrChange", attributes), w + "trPr")
+    elif role == "cell-format":
+        E.SubElement(properties, w + "shd", {w + "val": "clear", w + "fill": "FFFFCC"})
+        old = E.SubElement(E.SubElement(properties, w + "tcPrChange", attributes), w + "tcPr")
+        E.SubElement(old, w + "shd", {w + "val": "clear", w + "fill": "FFFFFF"})
+    else:
+        E.SubElement(properties, w + ({"cell-ins": "cellIns", "cell-del": "cellDel"}.get(role, role.split("-")[1])), attributes)
+    entries["word/document.xml"] = E.tostring(xml, encoding="utf-8", xml_declaration=True)
+    target = output / ("table-math-revision-" + role + ".docx")
+    with ZipFile(target, "w", ZIP_DEFLATED) as z:
+        for name, data in sorted(entries.items()):
+            info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+            info.compress_type = ZIP_DEFLATED
+            z.writestr(info, data)
+    table_revision_rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
+        Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
+        SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(), Role=role,
+        HeldOut=False, ExpectedEquationCount=4, ExpectedText=["share the same input series."],
+        ProsePrefixes=["Summary:", "governs"], RuleRegion=[120, 0, 210, 792], RuleFillColor="g:0"))
+for story in ["header", "footer"]:
+    for role in ["row-ins", "cell-format"]:
+        source = output / ("explicit-placement-" + story + "-fraction.docx")
+        content_source = output / ("table-math-revision-" + role + ".docx")
+        with ZipFile(source) as z:
+            entries = {name: z.read(name) for name in z.namelist()}
+        with ZipFile(content_source) as z:
+            table = next(E.fromstring(z.read("word/document.xml")).iter(w + "tbl"))
+        part = "word/" + story + "1.xml"
+        xml = E.fromstring(entries[part])
+        xml.clear()
+        xml.append(deepcopy(table))
+        E.SubElement(xml, w + "p")
+        entries[part] = E.tostring(xml, encoding="utf-8", xml_declaration=True)
+        target = output / ("table-math-revision-" + story + "-" + role + ".docx")
+        with ZipFile(target, "w", ZIP_DEFLATED) as z:
+            for name, data in sorted(entries.items()):
+                info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+                info.compress_type = ZIP_DEFLATED
+                z.writestr(info, data)
+        table_revision_rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
+            Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
+            SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(),
+            ContentSourceSha256=hashlib.sha256(content_source.read_bytes()).hexdigest().upper(),
+            Story=story, Role=role, HeldOut=False, ExpectedEquationCount=4,
+            ExpectedText=["share the same input series."], ProsePrefixes=["Summary:", "governs"],
+            RuleRegion=[120, 0, 210, 792], RuleFillColor="g:0"))
+(output / "table-math-revisions.json").write_text(json.dumps(table_revision_rows, indent=2) + "\n", encoding="utf-8")
+(output / "table-math-metadata.json").write_text(json.dumps(
+    [row for row in table_revision_rows if row["Role"] != "row-del"], indent=2) + "\n", encoding="utf-8")
+print("Pinned ten table-owner revision composition probes; nine retain visible equations in both presets")

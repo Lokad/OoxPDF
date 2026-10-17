@@ -1,0 +1,240 @@
+[
+  {
+    "Id": "table-math-revision-row-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/table-math-revision-row-ins.docx",
+    "Sha256": "EA58C3C86A380EE037F47785C3E4FFDEC51B978E8C626E7EF95A380EDE2E0A52",
+    "SourceSha256": "46ACCC0891E77CDC721BD6585587969B99500A003939A9E41631E92F7DFCA3A5",
+    "Role": "row-ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "table-math-revision-row-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/table-math-revision-row-del.docx",
+    "Sha256": "4B1CEB3B062A3DAD3B6C9FD753368B50A9224264B9284692FC0D482CB8CC0162",
+    "SourceSha256": "46ACCC0891E77CDC721BD6585587969B99500A003939A9E41631E92F7DFCA3A5",
+    "Role": "row-del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "table-math-revision-row-format",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/table-math-revision-row-format.docx",
+    "Sha256": "9453C2979893DA3D03EC548F82C036A84E24F2F3BCA9F7BB1890839EB364795E",
+    "SourceSha256": "46ACCC0891E77CDC721BD6585587969B99500A003939A9E41631E92F7DFCA3A5",
+    "Role": "row-format",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "table-math-revision-cell-format",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/table-math-revision-cell-format.docx",
+    "Sha256": "34CFFDEBA35B01D20E747EE04392E66A0DAA9FDA4FBC793251EC7B9C56C4E84E",
+    "SourceSha256": "46ACCC0891E77CDC721BD6585587969B99500A003939A9E41631E92F7DFCA3A5",
+    "Role": "cell-format",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "table-math-revision-cell-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/table-math-revision-cell-ins.docx",
+    "Sha256": "8866EFF08FE42ECAC6C6E605DD274B80B52E92DF782FC06E9B5B9B70E1323417",
+    "SourceSha256": "46ACCC0891E77CDC721BD6585587969B99500A003939A9E41631E92F7DFCA3A5",
+    "Role": "cell-ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "table-math-revision-cell-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/table-math-revision-cell-del.docx",
+    "Sha256": "2D5023D163FC5C0D9F0E088F3B33958C5D9074B0298D8F365D3EFCE0A3822105",
+    "SourceSha256": "46ACCC0891E77CDC721BD6585587969B99500A003939A9E41631E92F7DFCA3A5",
+    "Role": "cell-del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "table-math-revision-header-row-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/table-math-revision-header-row-ins.docx",
+    "Sha256": "8656546E9E91F561D9DD4AD9A61854CBC11443FCABECEE81DCB788CDEA143202",
+    "SourceSha256": "601CFAEB5BD4D50B52AF17AEBD7757740BF5817EDB205F682426337D920F56A0",
+    "ContentSourceSha256": "EA58C3C86A380EE037F47785C3E4FFDEC51B978E8C626E7EF95A380EDE2E0A52",
+    "Story": "header",
+    "Role": "row-ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "table-math-revision-header-cell-format",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/table-math-revision-header-cell-format.docx",
+    "Sha256": "087B55F3E04FBC88784D09F47990E3E36FC18EA99C66D2FE44B45E463D181319",
+    "SourceSha256": "601CFAEB5BD4D50B52AF17AEBD7757740BF5817EDB205F682426337D920F56A0",
+    "ContentSourceSha256": "34CFFDEBA35B01D20E747EE04392E66A0DAA9FDA4FBC793251EC7B9C56C4E84E",
+    "Story": "header",
+    "Role": "cell-format",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "table-math-revision-footer-row-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/table-math-revision-footer-row-ins.docx",
+    "Sha256": "758FDE4FC66D4B07FEEE5ED47580AC03A8CB7CB6C74E69B9D28D6D07EFA436A4",
+    "SourceSha256": "DE6E9D3FE94CF439EB5E03E1D9B21B91998492A152AA5F5361561A63352054F3",
+    "ContentSourceSha256": "EA58C3C86A380EE037F47785C3E4FFDEC51B978E8C626E7EF95A380EDE2E0A52",
+    "Story": "footer",
+    "Role": "row-ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "table-math-revision-footer-cell-format",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/table-math-revision-footer-cell-format.docx",
+    "Sha256": "8CCF7A487800C23587B8AF739943D238F27F24FEC49C32DEC9A6670F8367117F",
+    "SourceSha256": "DE6E9D3FE94CF439EB5E03E1D9B21B91998492A152AA5F5361561A63352054F3",
+    "ContentSourceSha256": "34CFFDEBA35B01D20E747EE04392E66A0DAA9FDA4FBC793251EC7B9C56C4E84E",
+    "Story": "footer",
+    "Role": "cell-format",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  }
+]

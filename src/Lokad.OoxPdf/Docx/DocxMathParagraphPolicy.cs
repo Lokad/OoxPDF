@@ -43,12 +43,21 @@ internal static class DocxMathParagraphPolicy
         }
     }
 
-    public static bool IsSupportedSimpleRow(DocxTableRow row) => row.HasSupportedHeight && row.Revisions.Count == 0;
+    public static bool IsSupportedSimpleRow(DocxTableRow row) => row.HasSupportedHeight &&
+        HasSupportedTableContentRevisions(row.Revisions, DocxRevisionKind.TableRowPropertiesChange);
 
     public static bool IsSupportedSimpleCell(DocxTableCell cell) =>
-        !cell.HasVerticalMerge && !cell.FitText && cell.Revisions.Count == 0 &&
+        !cell.HasVerticalMerge && !cell.FitText &&
+        HasSupportedTableContentRevisions(cell.Revisions, DocxRevisionKind.TableCellPropertiesChange) &&
         cell.TextDirectionValue is null or "lrTb" &&
         cell.BodyElements.All(child => child is DocxParagraphElement);
+
+    // An insertion or a change to the resolved container properties does not
+    // replace the child paragraph's source owner. Paragraph eligibility still
+    // checks its actual revisions; deleting/moving table owners stay staged.
+    private static bool HasSupportedTableContentRevisions(IReadOnlyList<DocxRevisionInfo> revisions,
+        DocxRevisionKind propertiesKind) => revisions.All(revision =>
+            revision.Kind == DocxRevisionKind.Insertion || revision.Kind == propertiesKind);
 
     public static IEnumerable<(DocxParagraph Paragraph, bool HasPageInputs)> EnumerateStaticPreparationCandidates(DocxDocument document, CancellationToken token)
     {
