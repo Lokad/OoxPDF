@@ -15,7 +15,7 @@ internal sealed partial class DocxRenderer
 {
     internal static string? BuildWordCompatibleRunFormattingPreview(DocxParagraph paragraph, CancellationToken token)
     {
-        if (!DocxInlineContent.HasSupportedRunRevisionOwners(paragraph.Revisions, paragraph.Runs, token)) return null;
+        if (!DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, token)) return null;
         var labels = new List<string>();
         foreach (var revision in paragraph.Revisions)
         {

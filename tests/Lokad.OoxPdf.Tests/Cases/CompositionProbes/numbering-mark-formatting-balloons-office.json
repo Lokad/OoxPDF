@@ -1,0 +1,53 @@
+{
+  "Source": "Four retained independent Word 16 visible-Review references; run formatting remains a formatting balloon beside an inserted numbering mark.",
+  "Rows": [
+    {
+      "Id": "numbering-mark-math-body",
+      "File": "numbering-mark-math-body.docx",
+      "Story": "body",
+      "InputSha256": "68FA15BAC620CCAF8900B80D49C32AF2CABE159DB87ED942EFE91E506F481DC5",
+      "ReferencePdfSha256": "2659A42F048C55EB76D8C0C0E8E893AAD0537A9B475AA7A8F0DE9268CE009CB1",
+      "Title": "Formatted:",
+      "Body": "Font: Bold",
+      "TitleX": 436.97,
+      "BodyX": 474.38,
+      "Y": 632.88
+    },
+    {
+      "Id": "numbering-mark-math-cell",
+      "File": "numbering-mark-math-cell.docx",
+      "Story": "cell",
+      "InputSha256": "6E2C63D8C99903BA5CE4D2E93F5D53A633E6996D0D9E6E347A495CAF05C8C5EF",
+      "ReferencePdfSha256": "71B532F731E70C88D2D068DE15327431C1AF115C359DEDF039D4AC698415E557",
+      "Title": "Formatted:",
+      "Body": "Font: Bold",
+      "TitleX": 436.97,
+      "BodyX": 474.38,
+      "Y": 632.88
+    },
+    {
+      "Id": "numbering-mark-math-header",
+      "File": "numbering-mark-math-header.docx",
+      "Story": "header",
+      "InputSha256": "6F00A4FCBC2204AEB333A2A7B80B3D0D74A4E063163614861BB9EDF19623D569",
+      "ReferencePdfSha256": "42609831B48763A8988C9360F69026BCE221F33B308A5A11CE1BF69BD3FC098D",
+      "Title": "Formatted:",
+      "Body": "Font: Bold",
+      "TitleX": 436.97,
+      "BodyX": 474.38,
+      "Y": 660.19
+    },
+    {
+      "Id": "numbering-mark-math-footer",
+      "File": "numbering-mark-math-footer.docx",
+      "Story": "footer",
+      "InputSha256": "7A7625608D331940F59B6E073D4E93BD818761844CBE269B1F2B3FD0A17DB2A1",
+      "ReferencePdfSha256": "4AD8E272FEB6726BCA903B6440212D48E46BC41FBBE937775ECDAB3FB730102E",
+      "Title": "Formatted:",
+      "Body": "Font: Bold",
+      "TitleX": 436.97,
+      "BodyX": 474.38,
+      "Y": 184.99
+    }
+  ]
+}
