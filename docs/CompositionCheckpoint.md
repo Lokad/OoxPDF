@@ -1,5 +1,23 @@
 # Composed-document reliability checkpoint
 
+C138 adds manifest-driven outcome joining for one frozen runtime. It validates
+input/runtime/PDF identities and missing/conflicting outcomes before publishing,
+copies independent PDFs and inspection summaries, and retains source provenance
+and raw classifications. Raster and comparison evidence stays at its original
+path. Twelve actual parent outcomes join with twelve comparisons reused and an
+identical geometry report: no build, conversion, Office export or metric replay.
+Focused orchestration checks pass; CI now exercises them on both platforms.
+Root1a8c7700; `artifacts/composition-c1/checkpoint-138-evidence.json`.
+
+The bounded inventory measures10.927GB in artifacts, including7.434GB composition,
+2.011GB earlier plan work and0.145GB shared input snapshots. Compiled outputs
+remain independently owned across frozen artifacts. No cache redesign or protected
+retirement is attempted and no space reclaimed is claimed. Avoiding about4.8MB of
+prospective report copies does not meet the loose5GB workspace target. All66 known
+protected frozen names remain preserved. C137 CI39053583094 is green on Windows
+and Ubuntu. Next, investigate restarted-note/equation composition with a reproducer
+before classifying any suspected content loss.
+
 C137 admits exact-row projection only when complete occupied/visible inline
 frames fit the prospective cell after border advance. Tight source clips,
 incomplete/overflowing frames and complex/fragmented rows retain fallback. Every
@@ -45,7 +63,7 @@ portable, package and tool checks; local suites are not duplicated. C124 compoun
 allocation evidence stays unchanged; no new performance claim. Workspace remains
 11.134GB/556,727 files with zero scan errors, above the loose5GB target. No protected
 retirement is attempted. Evidence `artifacts/composition-c1/checkpoint-136-evidence.json`.
-Next bounded rendering work investigates exact-height occupied-frame fit and clips.
+Exact-height occupied-frame fit and clips are addressed by C137 above.
 
 C135 coalesces actual structural cell owners before packing: consecutive rows
 share a range only for the same table/column span, revision kind and known author.
