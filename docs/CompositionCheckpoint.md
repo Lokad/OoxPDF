@@ -1,5 +1,34 @@
 # Composed-document reliability checkpoint
 
+C119 retains an entirely empty script argument beside a visible fraction sibling.
+Shared script-argument recognition publishes the actual fraction/child owners in
+order within the admitted bounded grammar. Existing metric-only preparation then
+resolves the child's font without recursive discovery, dummy glyphs or extra subsets.
+
+Four sources/eight Word outcomes restore one or three omitted sibling glyphs each.
+All eight math/prose anchor gates pass (math max0.107pt X /0.911pt Y). Four full
+rule/anchor gates pass; four raw width failures retain0.108-0.110pt residuals against
+the unchanged0.1pt threshold. All eight MAEs improve without new components; all
+strict raster gates stay failed. Four crop pairs reviewed, with the other four
+carried by identical Final/Review rasters. Structural bars and visible siblings are
+present; no arbitrary-document fidelity is claimed.
+
+Qualification111 Windows passes and70 Ubuntu passes/41 native skips. The initial
+build catches an omitted test-constructor preset before any immutable output/test
+run. The isolated publication assertion then needs the existing mathematical-
+Unicode NFKC normalization. Test-only correction carries109 Windows/69 Ubuntu
+passes and reruns only two/one methods; two invocations each. Production/CLI/all
+1,857 inputs remain exact. Failed build/reports retained; no geometry threshold or
+skip-guard change. Both parent checks fail expected15 versus14 glyphs.
+
+The exact C118 seven-source audit carries C111's twelve actual accepted portfolio
+comparisons after current source SHA checks. Seventeen assets/four integration
+PDFs transfer without root build/suite replay. Rootd16f1aca; evidence
+`artifacts/composition-c1/nested-metric-evidence.json`. C118 CI39032927411 is green
+on Windows/Ubuntu. Workspace12:42Z10.629GB/522,968 files, no errors; loose5GB target
+remains unmet and rejected retirements stay untouched. Next: fully glyphless
+fraction arguments, using independent structural-rule/frame evidence.
+
 C118 composes a supported literal script in a fraction numerator or denominator,
 inline or display. Shared discovery and nominal math styles publish text/script/
 script-script variants before measurement. Existing boxes consume those roles;
