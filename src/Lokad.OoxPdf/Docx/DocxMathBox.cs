@@ -45,7 +45,7 @@ internal sealed record DocxMathRulePlacement(double X, double Y, double Width, d
 
 internal static class DocxMathBoxPainter
 {
-    public static void Paint(DocxMathBox box, PdfGraphicsBuilder graphics, double x, double baselineY, CancellationToken token)
+    public static void Paint(DocxMathBox box, PdfGraphicsBuilder graphics, double x, double baselineY, CancellationToken token, RgbColor? revisionColor = null, bool strike = false)
     {
         foreach (DocxMathRulePlacement rule in box.Rules)
         {
@@ -63,11 +63,21 @@ internal static class DocxMathBoxPainter
                 graphics.Transform(1d, 0d, glyph.TextShear, 1d, glyphX, glyphY);
                 glyphX = glyphY = 0d;
             }
+            var color = revisionColor ?? glyph.Color;
             graphics.DrawGlyphText(glyph.Font.ResourceName, glyph.FontSize, glyphX, glyphY,
-                glyph.Color.Red, glyph.Color.Green, glyph.Color.Blue, glyph.EncodedGlyph,
+                color.Red, color.Green, color.Blue, glyph.EncodedGlyph,
                 italic: false, characterSpacing: 0d, textRenderingMode: 0,
                 strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
             if (glyph.TextShear != 0d) { graphics.RestoreState(); }
+            if (strike)
+            {
+                var font = glyph.Font.Font.Font;
+                double thickness = Math.Abs(font.Os2.StrikeoutSize) * glyph.FontSize / font.UnitsPerEm;
+                double position = font.Os2.StrikeoutPosition * glyph.FontSize / font.UnitsPerEm;
+                graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+                graphics.FillRectangle(x + glyph.X, baselineY + glyph.BaselineY + position,
+                    glyph.Advance, Math.Max(.1d, thickness));
+            }
         }
     }
 }

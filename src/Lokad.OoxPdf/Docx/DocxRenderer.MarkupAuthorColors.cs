@@ -101,6 +101,14 @@ internal sealed partial class DocxRenderer
 
                 IEnumerable<(int SourceRunIndex, DocxRevisionInfo Revision)> InlineRevisionOwners()
                 {
+                    // Equations use the next prose source index. Enumerate them
+                    // first so a tied following run cannot reverse author order.
+                    foreach (var equation in paragraph.Equations)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (equation.Revision is { } revision && DocxInlineContent.HasSupportedEquationRevisionOwner(equation, token))
+                            yield return (equation.SourceRunIndex, revision);
+                    }
                     foreach (var run in paragraph.Runs)
                     {
                         token.ThrowIfCancellationRequested();

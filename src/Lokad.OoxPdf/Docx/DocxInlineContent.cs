@@ -18,7 +18,6 @@ internal static class DocxInlineContent
     // Containers retain their own supported measurement and line-flow rules.
     public static bool HasSupportedSourceOwner(DocxParagraph paragraph, bool hasPageInputs = false,
         CancellationToken token = default) =>
-        paragraph.Equations.All(equation => equation.Revision is null) &&
         HasSupportedParagraphRevisionOwners(paragraph, token) &&
         paragraph.InlineTextBoxes.Count == 0 &&
         HasSupportedReferences(paragraph.InlineReferences, paragraph.Runs) &&
@@ -170,12 +169,31 @@ internal static class DocxInlineContent
     public static bool HasSupportedParagraphRevisionOwners(DocxParagraph paragraph, CancellationToken token,
         IReadOnlyList<DocxRevisionInfo>? revisions = null) =>
         HasSupportedRunRevisionOwners(revisions ?? paragraph.Revisions, paragraph.Runs, token,
-            paragraph.ListLabel is null ? null : paragraph.ParagraphMarkRun, paragraph.Images, paragraph.NonRenderingRunOwners);
+            paragraph.ListLabel is null ? null : paragraph.ParagraphMarkRun, paragraph.Images, paragraph.NonRenderingRunOwners, paragraph.Equations);
+
+    // The equation and all measured source runs must share the actual wrapper
+    // revision. Aggregate/value-equal metadata cannot invent a revised owner.
+    internal static bool HasSupportedEquationRevisionOwner(DocxEquation equation, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        return equation.SourceRunIndex >= 0 &&
+            equation.Revision is { Kind: DocxRevisionKind.Insertion or DocxRevisionKind.Deletion } revision &&
+            DocxMathLayout.TryGetRuns(equation, token, out var runs) && runs.Count != 0 &&
+            runs.All(run => run.Run.Text.SourceRunIndex == equation.SourceRunIndex &&
+                ReferenceEquals(run.Run.Text.Revision, revision) &&
+                run.Run.Text.Revisions.All(owner => ReferenceEquals(owner, revision)));
+    }
 
     public static bool HasSupportedRunRevisionOwners(IReadOnlyList<DocxRevisionInfo> revisions,
         IReadOnlyList<DocxTextRun> runs, CancellationToken token, DocxTextRun? numberingMark = null, IReadOnlyList<DocxInlineImage>? images = null,
-        IReadOnlyList<DocxNonRenderingRunOwner>? nonRenderingRunOwners = null)
+        IReadOnlyList<DocxNonRenderingRunOwner>? nonRenderingRunOwners = null, IReadOnlyList<DocxEquation>? equations = null)
     {
+        if (equations is not null)
+            foreach (var equation in equations)
+            {
+                token.ThrowIfCancellationRequested();
+                if (equation.Revision is not null && !HasSupportedEquationRevisionOwner(equation, token)) return false;
+            }
         if (revisions.Count == 0) return true;
         var remaining = new HashSet<DocxRevisionInfo>(ReferenceEqualityComparer.Instance);
         foreach (var revision in revisions)
@@ -187,7 +205,7 @@ internal static class DocxInlineContent
         // Resolved text owns its inserted/deleted content and run formatting.
         // Formatting balloons consume the same run's metadata independently of
         // equation measurement. A numbered inserted mark has its separate owner
-        // below; other paragraph/mark, equation and nontext revisions retain
+        // below; other paragraph/mark, unsupported equation and nontext revisions retain
         // their existing fallbacks.
         // Resolve actual source ownership in linear work.
         foreach (var run in runs)
@@ -221,6 +239,12 @@ internal static class DocxInlineContent
                         (ReferenceEquals(owner.Revision, revision) || owner.Revisions.Any(item => ReferenceEquals(item, revision))))
                         remaining.Remove(revision);
                 }
+            }
+        if (equations is not null)
+            foreach (var equation in equations)
+            {
+                token.ThrowIfCancellationRequested();
+                if (equation.Revision is not null) remaining.Remove(equation.Revision);
             }
         // A parsed paragraph mark owns an inserted numbering prefix even when
         // none of its visible text runs is revised. Keep other mark kinds and

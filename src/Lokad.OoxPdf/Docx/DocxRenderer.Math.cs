@@ -1,3 +1,4 @@
+using Lokad.OoxPdf.Pptx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Pdf;
@@ -82,7 +83,15 @@ internal sealed partial class DocxRenderer
         graphics.SaveState();
         graphics.Transform(scale, 0d, 0d, scale, x + ResolveTextEmissionXOffset(context),
             baseline - ResolveTextEmissionBaselineOffset(context));
-        DocxMathBoxPainter.Paint(math.Box, graphics, 0d, 0d, token);
+        RgbColor? revisionColor = null;
+        bool strike = false;
+        if (UsesWordCompatibleAllMarkupTextProfile(context) && math.Equation.Revision is { } revision &&
+            TryResolveReviewAuthorColor(revision, context, out var color))
+        {
+            revisionColor = color;
+            strike = revision.Kind == DocxRevisionKind.Deletion;
+        }
+        DocxMathBoxPainter.Paint(math.Box, graphics, 0d, 0d, token, revisionColor, strike);
         graphics.RestoreState();
     }
 

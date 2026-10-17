@@ -360,7 +360,7 @@ internal sealed partial class DocxReader
             // eligibility separately requires the actual page inputs.
             InlineContent = inlineItems is not null && DocxInlineContent.HasSourceFieldResults(fieldReferences, runs) && DocxInlineContent.HasSupportedReferences(inlineReferences, runs) &&
                 inlineTextBoxes.Count == 0 && DocxInlineContent.HasSupportedRunRevisionOwners(paragraphRevisions, runs, cancellationToken,
-                    listLabel is null ? null : retainedMark, images, nonRenderingRunOwners)
+                    listLabel is null ? null : retainedMark, images, nonRenderingRunOwners, equations)
                 ? inlineItems : null,
             InlineReferences = inlineReferences,
             CommentRanges = commentRanges,
