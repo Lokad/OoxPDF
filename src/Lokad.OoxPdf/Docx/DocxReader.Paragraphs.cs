@@ -255,6 +255,7 @@ internal sealed partial class DocxReader
         double lineSpacingFactor = resolvedParagraph.LineSpacingFactor ??
             (styles.HasParagraphDefaultOwner ? 1d : WordImplicitNormalAutoLineSpacingFactor);
         double paragraphLineHeight = resolvedParagraph.LineSpacingPoints ?? paragraphFontSize * lineSpacingFactor;
+        DocxListLabel? listLabel = ResolveParagraphListLabel();
 
         DocxTextRun? firstCommentRun = retainBalloonParagraphMark
             ? runs.FirstOrDefault(run => !string.IsNullOrWhiteSpace(run.Text)) : null;
@@ -278,7 +279,9 @@ internal sealed partial class DocxReader
                         (string.Equals(run.FontFamily, firstCommentRun.FontFamily, StringComparison.OrdinalIgnoreCase) &&
                             Equals(run.EffectiveProperties.Fonts, firstCommentRun.EffectiveProperties.Fonts)));
             });
-        DocxTextRun? retainedMark = retainCommentMark || inlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment)
+        DocxTextRun? retainedMark = retainCommentMark || inlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment) ||
+            listLabel is not null && paragraphMarkRevisions.Any(revision =>
+                revision.Kind == DocxRevisionKind.Insertion && revision.SourceElement == "ins")
             ? CreateResolvedTextRun(retainCommentMark ? " " : string.Empty, paragraphMarkRun,
                 CreateRunStyleResolution(paragraphMarkRunProperties, paragraphStyleId, null, styles, tableCellStyle?.Run),
                 false, -1, 0, inheritedRevision, MergeRevisionLists(inheritedRevision, paragraphMarkRevisions))
@@ -301,7 +304,7 @@ internal sealed partial class DocxReader
             resolvedParagraph.LineSpacingPoints,
             resolvedParagraph.Spacing,
             resolvedParagraph.KeepRules,
-            ResolveParagraphListLabel())
+            listLabel)
         {
             Indent = resolvedParagraph.Indent,
             TabStops = resolvedParagraph.TabStops,
@@ -317,7 +320,8 @@ internal sealed partial class DocxReader
             // Page fields retain their canonical source placeholders. Layout
             // eligibility separately requires the actual page inputs.
             InlineContent = inlineItems is not null && DocxInlineContent.HasSourceFieldResults(fieldReferences, runs) && DocxInlineContent.HasSupportedReferences(inlineReferences, runs) &&
-                inlineTextBoxes.Count == 0 && DocxInlineContent.HasSupportedRunRevisionOwners(paragraphRevisions, runs, cancellationToken)
+                inlineTextBoxes.Count == 0 && DocxInlineContent.HasSupportedRunRevisionOwners(paragraphRevisions, runs, cancellationToken,
+                    listLabel is null ? null : retainedMark)
                 ? inlineItems : null,
             InlineReferences = inlineReferences,
             CommentRanges = commentRanges,

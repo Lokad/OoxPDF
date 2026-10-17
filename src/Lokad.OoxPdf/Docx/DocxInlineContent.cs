@@ -19,7 +19,7 @@ internal static class DocxInlineContent
     public static bool HasSupportedSourceOwner(DocxParagraph paragraph, bool hasPageInputs = false,
         CancellationToken token = default) =>
         paragraph.Equations.All(equation => equation.Revision is null) &&
-        HasSupportedRunRevisionOwners(paragraph.Revisions, paragraph.Runs, token) &&
+        HasSupportedParagraphRevisionOwners(paragraph, token) &&
         paragraph.InlineTextBoxes.Count == 0 &&
         HasSupportedReferences(paragraph.InlineReferences, paragraph.Runs) &&
         (hasPageInputs ? HasSourceFieldResults(paragraph.FieldReferences, paragraph.Runs)
@@ -152,8 +152,13 @@ internal static class DocxInlineContent
         return false;
     }
 
+    public static bool HasSupportedParagraphRevisionOwners(DocxParagraph paragraph, CancellationToken token,
+        IReadOnlyList<DocxRevisionInfo>? revisions = null) =>
+        HasSupportedRunRevisionOwners(revisions ?? paragraph.Revisions, paragraph.Runs, token,
+            paragraph.ListLabel is null ? null : paragraph.ParagraphMarkRun);
+
     public static bool HasSupportedRunRevisionOwners(IReadOnlyList<DocxRevisionInfo> revisions,
-        IReadOnlyList<DocxTextRun> runs, CancellationToken token)
+        IReadOnlyList<DocxTextRun> runs, CancellationToken token, DocxTextRun? numberingMark = null)
     {
         if (revisions.Count == 0) return true;
         var remaining = new HashSet<DocxRevisionInfo>(ReferenceEqualityComparer.Instance);
@@ -165,8 +170,9 @@ internal static class DocxInlineContent
         }
         // Resolved text owns its inserted/deleted content and run formatting.
         // Formatting balloons consume the same run's metadata independently of
-        // equation measurement. Paragraph/mark, equation and nontext revisions
-        // retain their existing fallbacks.
+        // equation measurement. A numbered inserted mark has its separate owner
+        // below; other paragraph/mark, equation and nontext revisions retain
+        // their existing fallbacks.
         // Resolve actual source ownership in linear work.
         foreach (var run in runs)
         {
@@ -176,6 +182,16 @@ internal static class DocxInlineContent
             foreach (var item in run.Revisions)
             { token.ThrowIfCancellationRequested(); remaining.Remove(item); }
         }
+        // A parsed paragraph mark owns an inserted numbering prefix even when
+        // none of its visible text runs is revised. Keep other mark kinds and
+        // unrelated/value-equal metadata on their existing fallback paths.
+        if (numberingMark is { SourceRunIndex: -1 } && string.IsNullOrWhiteSpace(numberingMark.Text))
+            foreach (var revision in numberingMark.Revisions)
+            {
+                token.ThrowIfCancellationRequested();
+                if (revision.Kind == DocxRevisionKind.Insertion && revision.SourceElement == "ins")
+                    remaining.Remove(revision);
+            }
         return remaining.Count == 0;
     }
 }

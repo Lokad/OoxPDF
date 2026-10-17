@@ -1,0 +1,149 @@
+{
+  "Source": "Independent Word 16 clean Final and visible Review; first-marker geometry only. Original/current counter pairs and revision decoration remain separate residuals.",
+  "Rows": [
+    {
+      "Id": "numbering-mark-plain-body",
+      "Mode": "final-preserve",
+      "InputSha256": "0EBD724796782501956C5A8062541C4EB61600A04C7A9C1B2E286FFAB4D6EA53",
+      "ReferencePdfSha256": "C3EA144F78759F203A72999E4BD527A3C55676734A2A6D6E34433644FDC75A9E",
+      "FirstMarkerX": 72.024,
+      "FirstMarkerY": 690.1,
+      "WordNumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-plain-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "0EBD724796782501956C5A8062541C4EB61600A04C7A9C1B2E286FFAB4D6EA53",
+      "ReferencePdfSha256": "157D1664A91536E688FDD674122484C906816F649C9E7051EA6973F5B8CBB317",
+      "FirstMarkerX": 72.024,
+      "FirstMarkerY": 690.1,
+      "WordNumericPaints": 5
+    },
+    {
+      "Id": "numbering-mark-plain-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "793CAB9C98FCFF98A3A00C6CE8202A6C8FCCA4E5DEC318E7C1221D92CDC69641",
+      "ReferencePdfSha256": "504CF54F150EF92324BC19EFF68A97FCE905C0817B2C0AA465C0783F247A58A4",
+      "FirstMarkerX": 72.024,
+      "FirstMarkerY": 690.1,
+      "WordNumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-plain-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "793CAB9C98FCFF98A3A00C6CE8202A6C8FCCA4E5DEC318E7C1221D92CDC69641",
+      "ReferencePdfSha256": "70D7D7CB0778FAF343C1E730B9B6D0990EACC80C8B19E739E0ACC4F01AA8A240",
+      "FirstMarkerX": 72.024,
+      "FirstMarkerY": 690.1,
+      "WordNumericPaints": 5
+    },
+    {
+      "Id": "numbering-mark-plain-header",
+      "Mode": "final-preserve",
+      "InputSha256": "3CADEDED5191FA6CA2FD845BBF29960C8AB516DACBCBCC9E75E6029B1F101695",
+      "ReferencePdfSha256": "92A589E4DBBF3B6368410884A0C79298030E6274E1FCBF7BBCF5FD1E6483A802",
+      "FirstMarkerX": 72.024,
+      "FirstMarkerY": 745.56,
+      "WordNumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-plain-header",
+      "Mode": "all-word-compatible",
+      "InputSha256": "3CADEDED5191FA6CA2FD845BBF29960C8AB516DACBCBCC9E75E6029B1F101695",
+      "ReferencePdfSha256": "B2D5CB7AEE4848F41642B10F2E4077DD93AE3C616F15EF63A61BD19F5BB3371C",
+      "FirstMarkerX": 72.024,
+      "FirstMarkerY": 745.56,
+      "WordNumericPaints": 5
+    },
+    {
+      "Id": "list-decoration-mark-inserted",
+      "Mode": "final-preserve",
+      "InputSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+      "ReferencePdfSha256": "D0CFA443B8D6079F2B4395228EA5B680574DF636EF7530B6C7DA1AE6516941BD",
+      "FirstMarkerX": 72.024,
+      "FirstMarkerY": 83.784,
+      "WordNumericPaints": 3
+    },
+    {
+      "Id": "list-decoration-mark-inserted",
+      "Mode": "all-word-compatible",
+      "InputSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+      "ReferencePdfSha256": "70BF1D4A2FB3C43DFA7C57A62D2D61A16F32A0AC9870BE0F1F9F1951E9160CC8",
+      "FirstMarkerX": 72.024,
+      "FirstMarkerY": 83.784,
+      "WordNumericPaints": 5
+    },
+    {
+      "Id": "numbering-mark-math-body",
+      "Mode": "final-preserve",
+      "InputSha256": "68FA15BAC620CCAF8900B80D49C32AF2CABE159DB87ED942EFE91E506F481DC5",
+      "ReferencePdfSha256": "FC34AA4CC9C9B45B263415D3A3600FF6539B7C8CE80A2AF67790BECD99E19B2A",
+      "FirstMarkerX": 72.024,
+      "FirstMarkerY": 706.9,
+      "WordNumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-math-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "68FA15BAC620CCAF8900B80D49C32AF2CABE159DB87ED942EFE91E506F481DC5",
+      "ReferencePdfSha256": "2659A42F048C55EB76D8C0C0E8E893AAD0537A9B475AA7A8F0DE9268CE009CB1",
+      "FirstMarkerX": 54.6,
+      "FirstMarkerY": 632.06,
+      "WordNumericPaints": 5
+    },
+    {
+      "Id": "numbering-mark-math-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "6E2C63D8C99903BA5CE4D2E93F5D53A633E6996D0D9E6E347A495CAF05C8C5EF",
+      "ReferencePdfSha256": "F48FC602F9BFAB78E47F00C044E89836C19CA555AB967A8BBD20BE2DDD4402DF",
+      "FirstMarkerX": 72.024,
+      "FirstMarkerY": 706.9,
+      "WordNumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-math-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6E2C63D8C99903BA5CE4D2E93F5D53A633E6996D0D9E6E347A495CAF05C8C5EF",
+      "ReferencePdfSha256": "71B532F731E70C88D2D068DE15327431C1AF115C359DEDF039D4AC698415E557",
+      "FirstMarkerX": 54.6,
+      "FirstMarkerY": 632.06,
+      "WordNumericPaints": 5
+    },
+    {
+      "Id": "numbering-mark-math-header",
+      "Mode": "final-preserve",
+      "InputSha256": "6F00A4FCBC2204AEB333A2A7B80B3D0D74A4E063163614861BB9EDF19623D569",
+      "ReferencePdfSha256": "8594AB38578C46A9E3665673F22C6C99B99A9A820632E58F049BB29AE0B28142",
+      "FirstMarkerX": 72.024,
+      "FirstMarkerY": 742.92,
+      "WordNumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-math-header",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6F00A4FCBC2204AEB333A2A7B80B3D0D74A4E063163614861BB9EDF19623D569",
+      "ReferencePdfSha256": "42609831B48763A8988C9360F69026BCE221F33B308A5A11CE1BF69BD3FC098D",
+      "FirstMarkerX": 54.6,
+      "FirstMarkerY": 659.35,
+      "WordNumericPaints": 5
+    },
+    {
+      "Id": "numbering-mark-math-footer",
+      "Mode": "final-preserve",
+      "InputSha256": "7A7625608D331940F59B6E073D4E93BD818761844CBE269B1F2B3FD0A17DB2A1",
+      "ReferencePdfSha256": "6361FDE775FB833930D47ACE77E6C8CAE4AAD845D990382E8C9F6311A2A02B31",
+      "FirstMarkerX": 72.024,
+      "FirstMarkerY": 102.14,
+      "WordNumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-math-footer",
+      "Mode": "all-word-compatible",
+      "InputSha256": "7A7625608D331940F59B6E073D4E93BD818761844CBE269B1F2B3FD0A17DB2A1",
+      "ReferencePdfSha256": "4AD8E272FEB6726BCA903B6440212D48E46BC41FBBE937775ECDAB3FB730102E",
+      "FirstMarkerX": 54.6,
+      "FirstMarkerY": 173.45,
+      "WordNumericPaints": 5
+    }
+  ]
+}
