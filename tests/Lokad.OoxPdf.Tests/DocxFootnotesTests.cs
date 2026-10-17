@@ -7162,7 +7162,7 @@ internal static class DocxFootnotesTests
     {
         // RV06 p1-clamp probes (Word 16.0, h1/b-sweep): the head page takes 24 note
         // lines (2 mixed-size plus long 0..21) with full-width rules below the body,
-        // while the renderer takes 23 (long 0..20) with the rule 3.73 low. Synthetic
+        // with its document-default resolver explicitly pinned to Aptos. Synthetic
         // metrics take frame-exact counts that cannot see the real-advance shortfall,
         // so this pins the Office take with installed Aptos advances and skips without
         // a usable Aptos face like other font-environmental tests.
@@ -7171,35 +7171,7 @@ internal static class DocxFootnotesTests
             TestAssert.Skip("Environmental precondition not met: Aptos is not installed.");
         }
 
-        var footnoteParas = new StringBuilder();
-        footnoteParas.Append("<w:p><w:r><w:t xml:space=\"preserve\">Footnote twelve opening words</w:t></w:r></w:p>");
-        footnoteParas.Append("<w:p><w:r><w:rPr><w:b/><w:sz w:val=\"30\"/><w:szCs w:val=\"30\"/></w:rPr><w:t xml:space=\"preserve\">Footnote fifteen second line</w:t></w:r></w:p>");
-        for (int line = 0; line < 60; line++)
-        {
-            footnoteParas.Append("<w:p><w:r><w:t>Long note line " + line.ToString(CultureInfo.InvariantCulture) + " with words to fill pages.</w:t></w:r></w:p>");
-        }
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/><Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/></Types>""",
-            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
-            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/></Relationships>""",
-            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body text with a footnote reference</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="2"/></w:r><w:r><w:t xml:space="preserve"> and </w:t></w:r><w:commentRangeStart w:id="1"/><w:r><w:t xml:space="preserve">a review note</w:t></w:r><w:commentRangeEnd w:id="1"/><w:r><w:commentReference w:id="1"/></w:r><w:r><w:t xml:space="preserve"> trailing words.</w:t></w:r></w:p><w:sectPr><w:headerReference w:type="default" r:id="rIdHeader1"/><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
-            ["word/header1.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t xml:space="preserve">Header twelve opening words</w:t></w:r></w:p></w:hdr>""",
-            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p><w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote><w:footnote w:id="2">""" + footnoteParas.ToString() + """</w:footnote></w:footnotes>""",
-            ["word/comments.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="1" w:author="Reviewer" w:date="2026-06-01T00:00:00Z"><w:p><w:r><w:t>Note</w:t></w:r></w:p></w:comment></w:comments>"""
-        });
-        DocxDocument document;
-        using (FileStream stream = File.OpenRead(input))
-        {
-            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-        }
-
-        var resolver = new WindowsFontResolver();
-        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("Aptos")), CancellationToken.None, resolver);
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, measurer, CancellationToken.None);
+        DocxLayout layout = CreateAptosContinuationHeadLayout();
         var headLines = layout.Pages[0].PlacedRelatedStories
             .Where(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote &&
                 (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal))
@@ -7219,42 +7191,14 @@ internal static class DocxFootnotesTests
     {
         // RV06 p1-position probes (Word 16.0, h1/b-sweep): with takes exact, the head
         // block must also sit at Office absolute positions (h1-Final rule 682.54 with
-        // mixed1 at 664.18), while the renderer seats the whole block ~8 high on
-        // capacity slack. Windows-only Aptos pins this like the take test.
+        // mixed1 at 664.18). Fresh C153 exports retain both positions. Windows-only
+        // Aptos pins this like the take test; the numerical thresholds stay unchanged.
         if (!HasUsableAptosFootnoteFace())
         {
             TestAssert.Skip("Environmental precondition not met: Aptos is not installed.");
         }
 
-        var footnoteParas = new StringBuilder();
-        footnoteParas.Append("<w:p><w:r><w:t xml:space=\"preserve\">Footnote twelve opening words</w:t></w:r></w:p>");
-        footnoteParas.Append("<w:p><w:r><w:rPr><w:b/><w:sz w:val=\"30\"/><w:szCs w:val=\"30\"/></w:rPr><w:t xml:space=\"preserve\">Footnote fifteen second line</w:t></w:r></w:p>");
-        for (int line = 0; line < 60; line++)
-        {
-            footnoteParas.Append("<w:p><w:r><w:t>Long note line " + line.ToString(CultureInfo.InvariantCulture) + " with words to fill pages.</w:t></w:r></w:p>");
-        }
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/><Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/></Types>""",
-            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
-            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/></Relationships>""",
-            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body text with a footnote reference</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="2"/></w:r><w:r><w:t xml:space="preserve"> and </w:t></w:r><w:commentRangeStart w:id="1"/><w:r><w:t xml:space="preserve">a review note</w:t></w:r><w:commentRangeEnd w:id="1"/><w:r><w:commentReference w:id="1"/></w:r><w:r><w:t xml:space="preserve"> trailing words.</w:t></w:r></w:p><w:sectPr><w:headerReference w:type="default" r:id="rIdHeader1"/><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
-            ["word/header1.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t xml:space="preserve">Header twelve opening words</w:t></w:r></w:p></w:hdr>""",
-            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p><w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote><w:footnote w:id="2">""" + footnoteParas.ToString() + """</w:footnote></w:footnotes>""",
-            ["word/comments.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="1" w:author="Reviewer" w:date="2026-06-01T00:00:00Z"><w:p><w:r><w:t>Note</w:t></w:r></w:p></w:comment></w:comments>"""
-        });
-        DocxDocument document;
-        using (FileStream stream = File.OpenRead(input))
-        {
-            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-        }
-
-        var resolver = new WindowsFontResolver();
-        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("Aptos")), CancellationToken.None, resolver);
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, measurer, CancellationToken.None);
+        DocxLayout layout = CreateAptosContinuationHeadLayout();
         DocxLayoutPage page = layout.Pages[0];
         DocxPlacedRelatedStoryLayout separator = page.PlacedRelatedStories.Single(story => story.SeparatorY is not null);
         DocxTextLineLayout mixedFirst = page.PlacedRelatedStories
@@ -7264,6 +7208,33 @@ internal static class DocxFootnotesTests
             .First(line => line.Text.StartsWith("Footnote twelve opening", StringComparison.Ordinal));
         TestAssert.True(Math.Abs((separator.SeparatorY ?? double.NaN) - 682.54d) < 1.5d, "Head separator rule must sit at the Office position; observed rule bottom=" + (separator.SeparatorY?.ToString(CultureInfo.InvariantCulture) ?? "?") + ".");
         TestAssert.True(Math.Abs(mixedFirst.BaselineY - 664.18d) < 1.5d, "Head footnote content must start at the Office position; observed mixed1 baseline=" + mixedFirst.BaselineY.ToString(CultureInfo.InvariantCulture) + ".");
+    }
+
+    private static DocxLayout CreateAptosContinuationHeadLayout()
+    {
+        // Keep the original style-less Word control. Resolve its document default
+        // explicitly: a measurer fallback cannot override a resolved source face.
+        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "CompositionProbes", "aptos-continuation-head.docx"));
+        TestAssert.Equal("12A7AF7C5EB0B12D20F05C383EFEFD8A312C4E327342BF485A368C2695DBCC33",
+            Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(input))));
+        var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        var resolver = new AptosHeadControlFontResolver();
+        DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
+        TestAssert.True(fontPlan.Runs.All(run => run.ResolvedFamily == "Aptos"),
+            "The Office Aptos control must measure every source/default/separator owner with Aptos.");
+        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("Aptos")), CancellationToken.None, resolver);
+        return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, measurer, CancellationToken.None);
+    }
+
+    private sealed class AptosHeadControlFontResolver : IFontResolver
+    {
+        private readonly WindowsFontResolver installed = new();
+
+        public FontFaceResolution Resolve(FontRequest request) => installed.Resolve(
+            request.FamilyName == DocxRenderer.DefaultDocumentTypefaceRequest
+                ? request with { FamilyName = "Aptos" } : request);
     }
 
     private static bool HasUsableAptosFootnoteFace()

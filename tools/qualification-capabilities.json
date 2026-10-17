@@ -5293,5 +5293,9 @@
     "DocxTableMinimumLinePlacementRetainsUnsupportedCellsAndMetrics",
     "DocxWordCompatibleAllMarkupUsesEmittedAdvanceForHyperlinkAnnotations",
     "DocxRendererKeepsSplitTableCellHyperlinkAnnotationsOnVisibleFragment"
+  ],
+  "docx-aptos-head-fixture": [
+    "DocxLongFootnoteHeadTakeMatchesOfficeWithAptosMetrics",
+    "DocxLongFootnoteHeadBlockSitsAtOfficePosition"
   ]
 }
