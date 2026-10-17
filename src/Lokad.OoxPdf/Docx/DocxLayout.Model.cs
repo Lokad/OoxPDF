@@ -243,6 +243,10 @@ internal sealed record DocxTableRowLayout(
     public double ReviewBorderPrintScale { get; init; } = 1d;
 }
 
+// Cell content measurements are retained from the existing row-height pass;
+// later physical projections reuse them rather than measuring source blocks again.
+internal sealed record DocxTableRowMeasurement(DocxTableRow Source, IReadOnlyList<double> CellContentHeights);
+
 internal sealed record DocxTableLayoutContext(
     int TableIndex,
     int SourceBlockIndex,
@@ -264,6 +268,7 @@ internal sealed record DocxTableLayoutContext(
     public int? PageCount { get; init; }
     public IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? MathEquations { get; init; }
     public CancellationToken CancellationToken { get; init; }
+    public IReadOnlyList<DocxTableRowMeasurement> SourceMeasurements { get; init; } = [];
     public IReadOnlyList<double> AlignedMinimumRowBottomMargins { get; init; } = [];
     public bool AutomaticMinimumRowPlacement { get; init; }
     public bool AutomaticTopRowContentClip { get; init; }

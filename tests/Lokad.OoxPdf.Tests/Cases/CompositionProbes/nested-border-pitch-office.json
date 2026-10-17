@@ -1,0 +1,345 @@
+{
+  "Scope": "Retained independent Word outer-row height, following prose and horizontal border geometry. Root edges are the uniquely leftmost long black horizontal paths. No fitted offsets or threshold changes.",
+  "Rows": [
+    {
+      "Id": "mixed-nested-cell-plain",
+      "Mode": "final-preserve",
+      "InputSha256": "04EEC1FA2B4BF52B88D5C1BC74AF43315E1614BDB9B9308D1CCC5E958295B3C4",
+      "ReferencePdfSha256": "1567DD640714E49B30416B55ADE1AD7D84630105D71FB6FDF47927B5D594D0FE",
+      "RootRowHeight": 25.100000000000023,
+      "FollowingY": 683.5,
+      "HorizontalBorders": [
+        {
+          "X": 71.424,
+          "Y": 719.52,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        },
+        {
+          "X": 71.424,
+          "Y": 694.9,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-cell-plain",
+      "Mode": "all-word-compatible",
+      "InputSha256": "04EEC1FA2B4BF52B88D5C1BC74AF43315E1614BDB9B9308D1CCC5E958295B3C4",
+      "ReferencePdfSha256": "F8085D7639CA39BE1A7F1F5982FD50F0BF4B3B6B592F6FC0254A96F6C3618BC4",
+      "RootRowHeight": 19.00999999999999,
+      "FollowingY": 614.3,
+      "HorizontalBorders": [
+        {
+          "X": 54.144,
+          "Y": 641.62,
+          "Width": 354.62,
+          "Height": 0.36000000000001364
+        },
+        {
+          "X": 54.144,
+          "Y": 622.97,
+          "Width": 354.62,
+          "Height": 0.36000000000001364
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-cell-before",
+      "Mode": "final-preserve",
+      "InputSha256": "DAC24A6B1843C59CD5FF29E1CD5F778389E90E1A8B73D1FA31C6B6015A1A9729",
+      "ReferencePdfSha256": "A6B128EBBE75C8388725029FF144E3770D1F0564BABDE63C01B7B6FB262B9588",
+      "RootRowHeight": 39.98000000000002,
+      "FollowingY": 668.62,
+      "HorizontalBorders": [
+        {
+          "X": 72.144,
+          "Y": 719.04,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        },
+        {
+          "X": 72.144,
+          "Y": 704.74,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        },
+        {
+          "X": 71.424,
+          "Y": 719.52,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        },
+        {
+          "X": 71.424,
+          "Y": 680.02,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-cell-before",
+      "Mode": "all-word-compatible",
+      "InputSha256": "DAC24A6B1843C59CD5FF29E1CD5F778389E90E1A8B73D1FA31C6B6015A1A9729",
+      "ReferencePdfSha256": "C7615F5545CDCB4167695314D57D71B925266E35B92B7038D01E1D1F7D072C5C",
+      "RootRowHeight": 30.32000000000005,
+      "FollowingY": 603.02,
+      "HorizontalBorders": [
+        {
+          "X": 54.696,
+          "Y": 641.26,
+          "Width": 354.6,
+          "Height": 0.36000000000001364
+        },
+        {
+          "X": 54.696,
+          "Y": 630.41,
+          "Width": 354.6,
+          "Height": 0.3839900000000398
+        },
+        {
+          "X": 54.144,
+          "Y": 641.62,
+          "Width": 354.62,
+          "Height": 0.36000000000001364
+        },
+        {
+          "X": 54.144,
+          "Y": 611.66,
+          "Width": 354.62,
+          "Height": 0.36000000000001364
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-cell-after",
+      "Mode": "final-preserve",
+      "InputSha256": "DBD00FC93A05B1D8219BAC42992919F61D7A4CF3CBA514C399D2234067BC58E8",
+      "ReferencePdfSha256": "18B1095B8C556B148AB4B6E5899CCF7DC748E2A3EC2C0FDEA50D402183A6D3A2",
+      "RootRowHeight": 53.77999999999997,
+      "FollowingY": 654.82,
+      "HorizontalBorders": [
+        {
+          "X": 72.144,
+          "Y": 694.9,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        },
+        {
+          "X": 72.144,
+          "Y": 680.5,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        },
+        {
+          "X": 71.424,
+          "Y": 719.52,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        },
+        {
+          "X": 71.424,
+          "Y": 666.22,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-cell-after",
+      "Mode": "all-word-compatible",
+      "InputSha256": "DBD00FC93A05B1D8219BAC42992919F61D7A4CF3CBA514C399D2234067BC58E8",
+      "ReferencePdfSha256": "F1C78826F8777C637219912FD3DB86CED80EB262D5BB8424547A39500CC9CC2D",
+      "RootRowHeight": 40.77999999999997,
+      "FollowingY": 592.56,
+      "HorizontalBorders": [
+        {
+          "X": 54.696,
+          "Y": 622.97,
+          "Width": 354.6,
+          "Height": 0.36000000000001364
+        },
+        {
+          "X": 54.696,
+          "Y": 612.02,
+          "Width": 354.6,
+          "Height": 0.38400000000001455
+        },
+        {
+          "X": 54.144,
+          "Y": 641.62,
+          "Width": 354.62,
+          "Height": 0.36000000000001364
+        },
+        {
+          "X": 54.144,
+          "Y": 601.2,
+          "Width": 354.62,
+          "Height": 0.35999999999989996
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-cell-inside",
+      "Mode": "final-preserve",
+      "InputSha256": "31D2508A4A35796FA84FCD22CC372E487C9B690270BF5862571ADDAFE8FA0494",
+      "ReferencePdfSha256": "92C3C8D40405D920D3A5BC33234B79A5FA229764877ED5867143410B5EA790D5",
+      "RootRowHeight": 53.77999999999997,
+      "FollowingY": 654.82,
+      "HorizontalBorders": [
+        {
+          "X": 72.144,
+          "Y": 705.22,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        },
+        {
+          "X": 72.144,
+          "Y": 680.5,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        },
+        {
+          "X": 71.424,
+          "Y": 719.52,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        },
+        {
+          "X": 71.424,
+          "Y": 666.22,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-cell-inside",
+      "Mode": "all-word-compatible",
+      "InputSha256": "31D2508A4A35796FA84FCD22CC372E487C9B690270BF5862571ADDAFE8FA0494",
+      "ReferencePdfSha256": "1D0A39BC303992457768FBDF5191D46D52A8516CD78628A3B87B75CC18466265",
+      "RootRowHeight": 40.77999999999997,
+      "FollowingY": 592.56,
+      "HorizontalBorders": [
+        {
+          "X": 54.696,
+          "Y": 630.79,
+          "Width": 354.6,
+          "Height": 0.36000000000001364
+        },
+        {
+          "X": 54.696,
+          "Y": 612.02,
+          "Width": 354.6,
+          "Height": 0.38400000000001455
+        },
+        {
+          "X": 54.144,
+          "Y": 641.62,
+          "Width": 354.62,
+          "Height": 0.36000000000001364
+        },
+        {
+          "X": 54.144,
+          "Y": 601.2,
+          "Width": 354.62,
+          "Height": 0.35999999999989996
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-math-deep-body",
+      "Mode": "final-preserve",
+      "InputSha256": "BE4865259B03CF47485B2F6555D74B07E3D8644B704932FE153048E36CF1E46F",
+      "ReferencePdfSha256": "CD7A5F9606F0F285E8C2C8AA5DE5E7B05E63FA4E2F0EAFF608271FAC8A69C8ED",
+      "RootRowHeight": 68.53999999999996,
+      "FollowingY": 640.06,
+      "HorizontalBorders": [
+        {
+          "X": 72.984,
+          "Y": 704.74,
+          "Width": 467.59,
+          "Height": 0.4800000000000182
+        },
+        {
+          "X": 72.984,
+          "Y": 680.02,
+          "Width": 467.59,
+          "Height": 0.4800000000000182
+        },
+        {
+          "X": 72.144,
+          "Y": 705.22,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        },
+        {
+          "X": 72.144,
+          "Y": 665.74,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        },
+        {
+          "X": 71.424,
+          "Y": 719.52,
+          "Width": 467.59000000000003,
+          "Height": 0.4800000000000182
+        },
+        {
+          "X": 71.424,
+          "Y": 651.46,
+          "Width": 467.59000000000003,
+          "Height": 0.48000999999999294
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-math-deep-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "BE4865259B03CF47485B2F6555D74B07E3D8644B704932FE153048E36CF1E46F",
+      "ReferencePdfSha256": "28529921D1B9DB7CC9B2093F279C73C74CD0FC27D371A610BF580D8D6C8A1736",
+      "RootRowHeight": 51.960000000000036,
+      "FollowingY": 581.35,
+      "HorizontalBorders": [
+        {
+          "X": 55.344,
+          "Y": 630.41,
+          "Width": 354.6,
+          "Height": 0.3839900000000398
+        },
+        {
+          "X": 55.344,
+          "Y": 611.66,
+          "Width": 354.6,
+          "Height": 0.36000000000001364
+        },
+        {
+          "X": 54.696,
+          "Y": 630.79,
+          "Width": 354.6,
+          "Height": 0.36000000000001364
+        },
+        {
+          "X": 54.696,
+          "Y": 600.84,
+          "Width": 354.6,
+          "Height": 0.36000000000001364
+        },
+        {
+          "X": 54.144,
+          "Y": 641.62,
+          "Width": 354.62,
+          "Height": 0.36000000000001364
+        },
+        {
+          "X": 54.144,
+          "Y": 590.02,
+          "Width": 354.62,
+          "Height": 0.36000000000001364
+        }
+      ]
+    }
+  ]
+}
