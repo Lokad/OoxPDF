@@ -14,7 +14,10 @@ internal sealed record DocxLayout(
     IReadOnlyList<DocxFloatingDrawingLayout> StaticFloatingDrawings,
     IReadOnlyList<DocxRelatedStoryLayout> RelatedStories,
     IReadOnlyDictionary<int, double> HeaderContentBottomByPage,
-    IReadOnlyDictionary<int, double> FooterContentTopByPage);
+    IReadOnlyDictionary<int, double> FooterContentTopByPage)
+{
+    internal bool UsesSourceOwnedFootnoteReserve { get; init; }
+}
 
 internal sealed record DocxRelatedStoryLayout(
     DocxRelatedStory Story,
@@ -384,6 +387,8 @@ internal sealed partial class DocxLayoutEngine
 
         IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts = GetRelatedStoryLayouts(page.BodyWidth);
         double currentPageFootnoteReserveHeight = 0d;
+        CompleteFootnoteAdmission? completeFootnoteAdmission = textMeasurer is null ? null :
+            CreateCompleteFootnoteAdmission(document, relatedStoryLayouts, locationsByBlock, cancellationToken);
 
         void ApplyActiveColumnFrame()
         {
@@ -414,6 +419,9 @@ internal sealed partial class DocxLayoutEngine
                 MarkupLaneDesignBodyEnd = page.MarkupLaneDesignBodyEnd
             });
             PlaceInFlightFootnotesOnCompletingPage();
+            if (completeFootnoteAdmission is not null)
+                foreach (var key in inFlightNotes.Where(note => note.Value.RemainingLineCount == 0).Select(note => note.Key).ToArray())
+                    inFlightNotes.Remove(key);
             // RV12: guard the page budget while paginating without consuming it, so
             // a tiny budget trips before the full layout is retained; emission still
             // charges once per final page and repagination never double-charges.
@@ -626,7 +634,8 @@ internal sealed partial class DocxLayoutEngine
             if (GetCurrentPlainFootnoteFooterFrame() is { } frame &&
                 TrySharedFootnoteFrameReserve(inFlightNotes.Values, frame with { Items = currentItems.ToArray() },
                     separatorMeasurerForNotes, cancellationToken, out double sharedReserve)) return sharedReserve;
-            if (useCompleteFootnoteReserve && TryCompleteFootnoteReserve(inFlightNotes.Values, out double completeReserve))
+            if ((completeFootnoteAdmission is not null || useCompleteFootnoteReserve) &&
+                TryCompleteFootnoteReserve(inFlightNotes.Values, out double completeReserve))
             {
                 return completeReserve;
             }
@@ -639,9 +648,17 @@ internal sealed partial class DocxLayoutEngine
             return Math.Max(0d, total);
         }
 
-        void RegisterInFlightFootnotesForSourceBlock(int sourceBlockIndex)
+        void RegisterInFlightFootnotesForSourceBlock(int sourceBlockIndex, IEnumerable<DocxTextSpan>? sourceSpans = null)
         {
-            if (!locationsByBlock.TryGetValue(sourceBlockIndex, out List<DocxInlineReferenceLocation>? blockLocations))
+            if (completeFootnoteAdmission is not null && sourceSpans is null)
+            {
+                currentPageFootnoteReserveHeight = FootnoteRemainderTotal();
+                return; // Source fragments register only when their line seeks admission.
+            }
+            IReadOnlyList<DocxInlineReferenceLocation>? blockLocations = completeFootnoteAdmission is null
+                ? locationsByBlock.GetValueOrDefault(sourceBlockIndex)
+                : completeFootnoteAdmission.Select(sourceBlockIndex, sourceSpans!, cancellationToken);
+            if (blockLocations is null || blockLocations.Count == 0)
             {
                 currentPageFootnoteReserveHeight = Math.Max(currentPageFootnoteReserveHeight, FootnoteRemainderTotal());
                 return;
@@ -685,6 +702,11 @@ internal sealed partial class DocxLayoutEngine
                 inFlightNotes[key] = new InFlightRelatedStory(storyLayout, separatorLayout, continuationLayout, sourceBlockIndex, location);
             }
 
+            if (completeFootnoteAdmission is not null)
+            {
+                currentPageFootnoteReserveHeight = FootnoteRemainderTotal();
+                return;
+            }
             double registeringBlockRemainder = 0d;
             // A newly referenced note may split beside an earlier continuation;
             // its own complete height cannot evict that reference from a usable
@@ -1461,6 +1483,8 @@ internal sealed partial class DocxLayoutEngine
                         // and page anchor. The measured occupied height stays intact.
                         double labelLeading = line.BaselineInset - Math.Max(line.TextBaselineInset, objectInset);
                         line = line with { BaselineInset = Math.Max(baseInset * paragraphSpacingScale, objectInset) + labelLeading };
+                        if (completeFootnoteAdmission is not null)
+                            RegisterInFlightFootnotesForSourceBlock(elementIndex, line.Fragments.SelectMany(fragment => fragment.Text));
                         if (cursorY - line.OccupiedHeight < CurrentParagraphFrameBottom() &&
                             (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(line.OccupiedHeight)))
                         {
@@ -1545,6 +1569,8 @@ internal sealed partial class DocxLayoutEngine
                         cursorY -= ResolveListLabelFirstLineExtraLeading(paragraph, paragraphFontSize, textMeasurer);
                     }
 
+                    if (completeFootnoteAdmission is not null)
+                        RegisterInFlightFootnotesForSourceBlock(elementIndex, line.Spans);
                     if (cursorY - extraAbove - extraBelow - lineHeight < CurrentParagraphFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(extraAbove + extraBelow + lineHeight)))
                     {
                         AdvanceForOverflowingItem(extraAbove + extraBelow + lineHeight, elementIndex);
@@ -2054,7 +2080,7 @@ internal sealed partial class DocxLayoutEngine
             CreateStaticFloatingDrawingLayouts(pagesWithStaticText, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken, unscaledTextMeasurer),
             relatedStoryLayouts,
             staticContent.HeaderContentBottomByPage,
-            footerContentTopByPage);
+            footerContentTopByPage) { UsesSourceOwnedFootnoteReserve = completeFootnoteAdmission is not null };
     }
 
     private static IReadOnlyList<DocxTextLineLayout> ShiftTextLines(IReadOnlyList<DocxTextLineLayout> lines, double deltaY, double deltaX)

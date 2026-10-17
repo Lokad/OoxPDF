@@ -496,7 +496,8 @@ internal sealed partial class DocxRenderer
         DocxMarkupContext context, OoxPdfDocxMarkupGeometryMode geometry, CancellationToken cancellationToken, int? pageCount = null)
     {
         var first = CreateHeaderDisplacedLayout(document, fonts, context, geometry, cancellationToken, pageCount: pageCount);
-        if (context.GeometryMode != OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup || context.WordCompatiblePrintScale != 1d ||
+        if (first.UsesSourceOwnedFootnoteReserve ||
+            context.GeometryMode != OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup || context.WordCompatiblePrintScale != 1d ||
             fonts.TextMeasurer is null || fonts.FallbackFaces.Count != 0 ||
             !DocxPageFootnoteNumbering.IsEligibleDocument(document, includeContinuousRestart: true) ||
             document.Paragraphs.Any(p => p.KeepRules.KeepNext == true || p.KeepRules.KeepLines == true) ||

@@ -91,7 +91,13 @@ internal static partial class DocxInlineCompositionTests
         CheckSpanningPageNotes(null);
     }
 
-    internal static void CheckSpanningPageNotes(IFontResolver? resolver)
+    public static void DocxInlineCompositionSpanningPageNotesMatchIndependentPageCapacity()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent capacity controls use installed Windows fonts.");
+        CheckSpanningPageNotes(null, requireIndependentGeometry: true);
+    }
+
+    internal static void CheckSpanningPageNotes(IFontResolver? resolver, bool requireIndependentGeometry = false)
     {
         string folder = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
         using var golden = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, "spanning-page-notes-office.json")));
@@ -107,6 +113,23 @@ internal static partial class DocxInlineCompositionTests
             var pages = new DocxRenderer(resolver, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                 : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(source, null, default).ToArray();
             TestAssert.True(pages.Length > 1, "The paragraph must cross a physical page boundary.");
+            if (requireIndependentGeometry)
+            {
+                TestAssert.Equal(row.GetProperty("ExpectedPages").GetInt32(), pages.Length);
+                var actual = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
+                    .Where(show => show.Size < size * .8d && show.Text.Length > 0 && show.Text.All(char.IsAsciiDigit))
+                    .Select(show => (Page: index + 1, Show: show))).ToArray();
+                var expected = row.GetProperty("Markers").EnumerateArray().ToArray();
+                TestAssert.Equal(expected.Length, actual.Length);
+                for (int i = 0; i < actual.Length; i++)
+                {
+                    TestAssert.Equal(expected[i].GetProperty("PageNumber").GetInt32(), actual[i].Page);
+                    TestAssert.Equal(expected[i].GetProperty("Text").GetString(), actual[i].Show.Text);
+                    TestAssert.True(Math.Abs(expected[i].GetProperty("X").GetDouble() - actual[i].Show.X) <= .5d &&
+                        Math.Abs(expected[i].GetProperty("Y").GetDouble() - actual[i].Show.Y) <= .5d,
+                        "Source and target glyphs retain independent Word page geometry within half a point.");
+                }
+            }
             var destinations = pages.SelectMany(page => page.Annotations).Select(link => link.Destination).ToArray();
             TestAssert.Equal(4, destinations.Length);
             TestAssert.Equal(4, destinations.Distinct().Count());
@@ -124,8 +147,8 @@ internal static partial class DocxInlineCompositionTests
                     link.Width > 0d && link.Height > 0d), "Every source marker retains its own complete same-page destination.");
             }
             // The independent Word data establishes eachPage counter semantics.
-            // It does not establish candidate pagination parity: Calibri still
-            // has an extra page, and portable fonts have their own line widths.
+            // Portable fonts have their own line widths; only the native
+            // capacity observer above compares independent Word pagination.
             TestAssert.Equal("decimalZero", row.GetProperty("NumberFormat").GetString());
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
             foreach (string content in new[] { "105", "108", "Alpha", "Bravo", "Charlie", "Delta" }) TestAssert.Contains(content, text);

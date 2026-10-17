@@ -17,7 +17,8 @@ internal static class DocxCompleteFootnoteReserveTests
             int Spacers(DocxLayoutPageSnapshot p) => p.Items.Count(i => i.SourceBlockIndex >= initialCount && i.SourceBlockIndex < initialCount + 36);
             TestAssert.Equal(2, after.Pages.Count);
             TestAssert.Equal(36, after.Pages.Sum(Spacers));
-            TestAssert.True(Spacers(after.Pages[0]) > Spacers(before.Pages[0]), "Complete notes share their unused reserve so more authored spacer rows fit.");
+            TestAssert.Equal(Spacers(before.Pages[0]), Spacers(after.Pages[0]));
+            TestAssert.Equal(PageBodyPositions(before), PageBodyPositions(after));
             TestAssert.Equal(NotePlacements(before), NotePlacements(after));
             TestAssert.Equal("105", source.Paragraphs.First(p => p.InlineReferences.Count != 0).InlineReferences[0].DisplayText);
             var pages = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
