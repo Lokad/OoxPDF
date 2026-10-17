@@ -1,5 +1,24 @@
 # Composed-document reliability checkpoint
 
+C143 challenges the accepted numbering library with compound source content:
+each paragraph has two fractions, one inline PNG and an enclosing bookmark.
+Both font controls/both modes retain eight formulas/four image draws, correct
+body/story labels, authored digits and four distinct note destinations. Four
+independent Word outcomes preserve all content; four Final page pairs reviewed,
+four Review pairs carry by PNG identity. All four strict gates remain failed
+with typography/wrapping residuals. No production eligibility change is needed.
+
+Only the test harness builds: three test assets change, fourteen runtime assets
+and all1,990 prior inputs stay exact. Five affected Windows checks pass; Ubuntu
+passes three/skips two native checks. The other100 Windows/96 Ubuntu/four skipped
+checks carry from C142 by unchanged library, source scope and input identities.
+Combined105 Windows/99 Ubuntu/six native skips. No library/CLI build,103-check
+replay or conversion replay. Seventeen assets/four smokes transfer without root
+build/suite replay. Rootaf0789da;
+`artifacts/composition-c1/compound-page-notes-evidence.json`. The fixed portfolio
+and retained flags carry unchanged; no new full audit. Next, reproduce explicit
+document-level page-restart source metadata before changing its fallback.
+
 C142 fixes numbering when supported equations accompany section-level page
 restarts. Math was already painted, but the plain-body gate left provisional
 labels105-108. Measured numbering now owns complete marker/note page maps
