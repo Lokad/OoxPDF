@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+C75 gives an inserted numbering mark its own decoration/revision source. The
+shared prefix factory keeps placement-time font/spacing choices while restoring
+source ink and actual revision identity. Final inherits paragraph color and
+level-only underline; Review uses single revision underline over level styling.
+First-run authored formatting stays on its source. Whole-paragraph and unsupported
+mark ownership retain their prior paths; no font/size/container guards are added.
+
+Six new Word exports and sixteen retained references qualify first-marker color
+and underline in 22 outcomes across body/cells/headers/footers, including explicit
+level color/none/double overrides. All nonwhitespace text content, matrices, sizes,
+spacing and advances remain exactly equal to the parent. First-marker geometry
+retains the one-point tolerance. One frozen Release artifact passes 159 Windows
+checks and 121 Ubuntu checks/38 explicit skips, each in one invocation; two new
+checks fail causally on the parent. Seventeen assets/four smoke PDFs transfer
+without a root build or suite replay.
+
+Eighteen MAEs improve/four remain equal. Recall improves in six, stays equal in ten
+and decreases in six by at most .001094, with no new failing gate components.
+All 22 visual gates still fail unchanged thresholds. Two page pairs were reviewed.
+Word's following old/new counters, their review ink, the underline across the
+whole numbering-tab gap and mixed mark/formatting balloons remain explicit gaps.
+The fixed ten corpus comparisons carry through C74's source-scope exclusion;
+no corpus qualification conversions or new corpus-PDF identity claim. C74 CI is
+green on both platforms (38988044843). Latest workspace scan is 9.038GB, so the
+loose 5GB target remains unmet. Evidence:
+`artifacts/composition-c1/numbering-mark-decoration-evidence.json` and linked reports.
+
 C74 retains the actual inserted numbering mark through the existing paragraph-
 mark run. Shared revision ownership admits that source independently of visible
 text; copied/misplaced metadata, deleted marks, unnumbered marks and unrelated
