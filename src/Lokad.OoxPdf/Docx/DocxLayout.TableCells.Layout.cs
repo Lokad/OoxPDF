@@ -694,11 +694,11 @@ internal sealed partial class DocxLayoutEngine
                             Math.Max(0d, midLinePlan.SourceShiftAboveHeights[lineIndex] - extraAbove),
                         Math = mathWidth > 0d ? inlineMath?.Math : null, IsInlineMath = mathWidth > 0d,
                         InlineMathOffsetX = mathOffset, MathScale = context.ParagraphSpacingScale,
-                        // The cell cursor is seated at its first baseline. Publish
-                        // the actual occupied slot relative to this placed line;
-                        // paint coordinates and paragraph spacing stay separate.
+                        // The legacy cursor seat stays nominal. The occupied
+                        // strut uses physical metrics relative to that baseline,
+                        // just like the scaled line height and transition.
                         OccupiedLineBox = new(lineHeight + extraAbove + extraBelow,
-                            cellFirstBaselineInset + lineBaselineTransition + extraAbove) });
+                            cellFirstBaselineInset * context.ParagraphSpacingScale + lineBaselineTransition + extraAbove) });
                     if (midLinePlan is not null)
                     {
                         foreach (DocxMidLineImage placed in midLinePlan.ImagesByLine[lineIndex])

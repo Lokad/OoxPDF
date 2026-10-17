@@ -5523,5 +5523,26 @@
     "DocxInlineCompositionSingleMathLinksTargetMeasuredFormula",
     "DocxInlineCompositionHyperlinkPreservesSingleMathFrame",
     "DocxInlineCompositionExplicitDisplayLinks"
+  ],
+  "docx-scaled-cell-struts": [
+    "DocxInlineCompositionScaledCellStruts",
+    "PortableRenderingScaledCellNoteStruts",
+    "DocxInlineCompositionPlainCellPageNotes",
+    "PortableRenderingPlainCellPageNotes",
+    "DocxInlineCompositionCellPageNotes",
+    "PortableRenderingCellPageNotes",
+    "DocxInlineCompositionMixedContainer",
+    "PortableRenderingMixedContainer",
+    "DocxRendererEmitsTableCell",
+    "DocxWordCompatibleAllMarkupUsesEmittedAdvanceForTableCellHyperlinkAnnotations",
+    "DocxRendererKeepsSplitTableCellHyperlinkAnnotationsOnVisibleFragment",
+    "DocxRendererEmitsPlacedFootnoteInternalHyperlinkDestinations",
+    "DocxRendererEmitsPlacedEndnoteInternalHyperlinkDestinations",
+    "DocxInlineCompositionNestedMath",
+    "DocxInlineCompositionNestedNavigation",
+    "DocxInlineCompositionFittingNestedEndnotes",
+    "DocxScaledFootnoteExactAdvanceMatchesIndependentOffice",
+    "DocxScaledFootnoteAdmissionMatchesIndependentPageMembership",
+    "PortableRenderingScaledFootnoteSharesPrintedBodyCapacity"
   ]
 }

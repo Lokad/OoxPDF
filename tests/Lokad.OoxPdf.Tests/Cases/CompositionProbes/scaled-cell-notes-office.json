@@ -1,0 +1,53 @@
+{
+  "Provenance": "Four independent Word source/link-rectangle facts at11pt and12pt; comment markup activates scaled Review. Preserve half-point edge observers and existing visual thresholds.",
+  "Rows": [
+    {
+      "Id": "scaled-cell-note-calibri-11",
+      "Mode": "final-preserve",
+      "InputSha256": "DE9821CC0A84D0B4BFB14D8646DFF4EA7598ED56B8A0184CA2615B31DC18C51B",
+      "ReferencePdfSha256": "36766D5BA7F052CEBEE185FDC02E08B53A098FFBE5AF31A0AF6BAE609F4E3AA4",
+      "Rect": [
+        172.27,
+        706.57,
+        180.25,
+        720.0
+      ]
+    },
+    {
+      "Id": "scaled-cell-note-calibri-11",
+      "Mode": "all-word-compatible",
+      "InputSha256": "DE9821CC0A84D0B4BFB14D8646DFF4EA7598ED56B8A0184CA2615B31DC18C51B",
+      "ReferencePdfSha256": "770FE186C76D2094B0657A8451EC89D36DB58773AB9342875A51812921C3E3A2",
+      "Rect": [
+        130.73,
+        631.73,
+        136.8,
+        641.92
+      ]
+    },
+    {
+      "Id": "scaled-cell-note-calibri-12",
+      "Mode": "final-preserve",
+      "InputSha256": "F423F8F34B8470EC78F86F64BED848C471F9FFD6B2828324F21BDF464836CD54",
+      "ReferencePdfSha256": "B3B03099BAE1D91EC5086532CBF7DA75E2EE87F187FE8EA1B5E7AD85C96F8D80",
+      "Rect": [
+        181.59,
+        705.35,
+        190.07,
+        720.0
+      ]
+    },
+    {
+      "Id": "scaled-cell-note-calibri-12",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F423F8F34B8470EC78F86F64BED848C471F9FFD6B2828324F21BDF464836CD54",
+      "ReferencePdfSha256": "F8BE77FF8C9301BB55AFF8372EBC0CCCA8F81447E85AE98A4FA88E731D9B0844",
+      "Rect": [
+        137.81,
+        630.8,
+        144.25,
+        641.92
+      ]
+    }
+  ]
+}

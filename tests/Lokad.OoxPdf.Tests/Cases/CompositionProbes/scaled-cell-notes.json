@@ -1,0 +1,32 @@
+[
+  {
+    "Id": "scaled-cell-note-calibri-11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/scaled-cell-note-calibri-11.docx",
+    "Sha256": "DE9821CC0A84D0B4BFB14D8646DFF4EA7598ED56B8A0184CA2615B31DC18C51B",
+    "FontSize": 11,
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public cell before note",
+      "and after note.",
+      "Public review anchor",
+      "Public note target."
+    ]
+  },
+  {
+    "Id": "scaled-cell-note-calibri-12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/scaled-cell-note-calibri-12.docx",
+    "Sha256": "F423F8F34B8470EC78F86F64BED848C471F9FFD6B2828324F21BDF464836CD54",
+    "FontSize": 12,
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public cell before note",
+      "and after note.",
+      "Public review anchor",
+      "Public note target."
+    ]
+  }
+]
