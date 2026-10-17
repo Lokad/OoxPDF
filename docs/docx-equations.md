@@ -32,8 +32,16 @@ Nonempty literal run insertions/deletions inside a supported formula preserve
 actual run ownership and affect only their glyph ink in Word-compatible Review.
 Final filters deleted text while retaining supported fraction structure and other
 arguments. Independent numerator controls cover body/cell/header/footer placement;
-bookmarks and splitting the mathematical run preserve geometry. Empty or
-structurally different inner revision wrappers retain explicit fallback.
+bookmarks and splitting the mathematical run preserve geometry. Empty literal wrappers and unknown/multiple/nested structural revision wrappers
+retain explicit fallback.
+
+A single root, delimiter, n-ary or bar-fraction node can also retain its actual
+insertion/deletion wrapper inside `oMath`. Parsing keeps that control transparent
+to measurement while preserving its authored properties and actual source owners.
+Final reuses the existing literal deletion frames; Review preserves structural ink
+and actual revised literal color/strike. Independent group starts remain within
+0.683pt X / 0.768pt Y in both presets; strict raster gates remain failed. Unknown,
+deeper, multiple and nested wrapper compositions retain explicit fallback.
 
 Empty subscript/superscript arguments and partial empty matrix cells now retain
 metric-only placeholder geometry and the remaining source glyphs. Independent

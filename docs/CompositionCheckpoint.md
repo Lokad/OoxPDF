@@ -1,5 +1,34 @@
 # Composed-document reliability checkpoint
 
+C103 closes another confirmed content omission: insertion/deletion around a single
+root, delimiter, n-ary or bar-fraction node inside `oMath`. Revision syntax now
+publishes the actual control rather than a synthetic row; literal/control owners
+and properties survive. Final shares existing literal deletion-frame preservation.
+Iterative traversal retains cancellation and explicit unknown/deeper/multiple/
+nested-wrapper fallbacks, without a public option or container-specific rule.
+
+Eight sources/sixteen independent Office outcomes improve MAE; all one-point group
+gates pass (0.683pt X / 0.768pt Y maximum). Strict raster gates remain failed with
+no new components. Five same-scale crop pairs reviewed, including deleted fraction
+structure. Two parent checks retain the actual 18-versus-14 missing glyphs.
+
+The first production prototype retained a synthetic row and failed content/source
+ownership: Windows 213 pass/3 fail, Ubuntu 149 pass/2 fail/65 skips. After production
+correction all 216 selected methods rerun. One observer then incorrectly assumed
+unique paragraph revision entries; a harness-only correction asserts every actual
+reference and reruns only that method per platform. Accepted production qualification
+is 216 Windows passes, Ubuntu 151 passes/65 native skips, two invocations each with
+unchanged checks carried; raw failures retained. Initial prototype adds one rejected
+invocation per platform. No checks carry across changed production libraries.
+
+Seven fixed portfolio sources contain no affected structural revision wrappers.
+C100 accepted twelve PDF identities/comparisons carry by source inference with two
+actual portfolio transfer smokes; the initial rejected artifact also converted
+twelve unchanged PDFs, which are not final-artifact qualification. Seventeen
+assets/four smoke PDFs transfer without root build or suite/corpus replay. Root 08ba96fb;
+evidence `artifacts/composition-c1/structural-fragments-evidence.json`.
+C101 CI39018292234 is green on both platforms; C102 pushed as dd380df8.
+
 C102 qualifies whole root insertion/operator deletion in mixed numbered paragraphs
 inside cells and direct headers/footers through unchanged C101 production code.
 Six sources/twelve strict Office outcomes preserve math, image, prose and source
