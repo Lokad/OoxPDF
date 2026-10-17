@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+C123 consolidates actual child metric ownership across admitted math containers.
+An iterative source-order walk skips hidden operator roles. Metric-only root
+classification reuses discovered runs; child metrics share the conversion font cache.
+All-metric preparation requires every control to be metric-only, preserving painted
+parent glyphs. Roots, operators, script bases and matrix cells forward actual metric
+owners. Valid occupied structured cells no longer require glyphs. No grammar
+widening, invented sources/subsets, quota knobs or native code.
+
+Ten sources/twenty independent Word outcomes restore fourteen omissions and preserve
+six primitive-fraction controls byte-for-byte. Fourteen MAEs improve without new
+failure components. Sixteen one-point gates pass; four matrix cases retain1.762-
+1.794pt Y residuals. All twenty strict raster gates remain failed. Ten crop pairs
+reviewed; identical Final/Review rasters carry the other ten reviews.
+
+The initial eighteen-outcome PDF screen restores ten omissions and leaves the two
+matrix-script outcomes. Their missing forwarding/glyph-required guard is corrected
+before qualification; an empty-fraction cell adds only two independent outcomes.
+Original manifest SHA, failed prototype outputs and separate parent reports stay.
+One final Release artifact passes195 Windows and120 Ubuntu checks/75 native skips,
+once each. No tests repeat. Parent checks fail expected16 versus14 glyphs.
+
+Seventeen assets/four smoke PDFs transfer without root build/suite replay, including
+two original-portfolio identities. Roote8f9e3c2; evidence
+`artifacts/composition-c1/child-metric-evidence.json`. C122 CI39035669276 is green
+on Windows/Ubuntu. The next milestone reuses this artifact for one finite fixed-
+portfolio refresh and the existing compound allocation probe. Matrix occupied-frame
+residuals remain a separate source-backed geometry task, without fitted offsets.
+
 C122 makes delimiter discovery, function discovery and argument measurement share
 existing bounded fraction/script/matrix box kinds. Supported subscript, superscript,
 combined-script and fraction-based script boxes now survive delimiters. Unknown or
