@@ -97,10 +97,11 @@ internal static partial class DocxInlineCompositionTests
         CheckSpanningPageNotes(null, requireIndependentGeometry: true);
     }
 
-    internal static void CheckSpanningPageNotes(IFontResolver? resolver, bool requireIndependentGeometry = false)
+    internal static void CheckSpanningPageNotes(IFontResolver? resolver, bool requireIndependentGeometry = false,
+        string referenceFile = "spanning-page-notes-office.json")
     {
         string folder = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
-        using var golden = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, "spanning-page-notes-office.json")));
+        using var golden = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, referenceFile)));
         foreach (var row in golden.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string input = Path.Combine(folder, row.GetProperty("Id").GetString()! + ".docx");
@@ -128,6 +129,38 @@ internal static partial class DocxInlineCompositionTests
                     TestAssert.True(Math.Abs(expected[i].GetProperty("X").GetDouble() - actual[i].Show.X) <= .5d &&
                         Math.Abs(expected[i].GetProperty("Y").GetDouble() - actual[i].Show.Y) <= .5d,
                         "Source and target glyphs retain independent Word page geometry within half a point.");
+                }
+            }
+            if (row.TryGetProperty("ExpectedEquations", out var expectedEquations))
+            {
+                string mathText = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText))
+                    .Normalize(System.Text.NormalizationForm.FormKC);
+                TestAssert.Equal(expectedEquations.GetInt32(), mathText.Split("ratetime", StringSplitOptions.None).Length - 1);
+                int images = pages.Sum(page => page.Images.Sum(image => System.Text.RegularExpressions.Regex.Matches(page.Content,
+                    "/" + System.Text.RegularExpressions.Regex.Escape(image.ResourceName) + @"\s+Do\b").Count));
+                TestAssert.Equal(row.GetProperty("ImagePlacements").GetInt32(), images);
+                if (requireIndependentGeometry)
+                {
+                    var glyphs = pages.SelectMany((page, index) =>
+                    {
+                        var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
+                            .Select(resource => resource.Font).ToHashSet();
+                        return DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
+                            .Where(show => fonts.Contains(show.Font)).Select(show => (Page: index + 1, Show: show));
+                    }).ToArray();
+                    var anchors = row.GetProperty("MathAnchors").EnumerateArray().ToArray();
+                    TestAssert.Equal(anchors.Length * 4, glyphs.Length);
+                    for (int i = 0; i < anchors.Length; i++)
+                    {
+                        var anchor = glyphs[i * 4];
+                        string mathWord = string.Concat(glyphs.Skip(i * 4).Take(4).Select(item => item.Show.Text))
+                            .Normalize(System.Text.NormalizationForm.FormKC);
+                        TestAssert.Equal(anchors[i].GetProperty("Text").GetString(), mathWord);
+                        TestAssert.Equal(anchors[i].GetProperty("PageNumber").GetInt32(), anchor.Page);
+                        TestAssert.True(Math.Abs(anchors[i].GetProperty("X").GetDouble() - anchor.Show.X) <= .5d &&
+                            Math.Abs(anchors[i].GetProperty("Y").GetDouble() - anchor.Show.Y) <= .5d,
+                            "Mixed-content fractions retain independent Word page geometry within half a point.");
+                    }
                 }
             }
             var destinations = pages.SelectMany(page => page.Annotations).Select(link => link.Destination).ToArray();

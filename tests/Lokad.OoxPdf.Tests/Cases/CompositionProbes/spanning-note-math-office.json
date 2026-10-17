@@ -1,0 +1,641 @@
+{
+  "Provenance": "Four independent Word exports, same source/modes. Eight fractions/four pictures/four bookmarks/four footnotes in one naturally paginated paragraph. Content and pagination are distinct from retained visual gates.",
+  "Rows": [
+    {
+      "Id": "spanning-note-math-arial-11-zero",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E7FBECA42CAE431D8A5BFADAE3ECC512002A9A1529C5E1898B4EA4BC281F5060",
+      "ReferenceSha256": "2061DB15F6EA83783949319FF77B28FC3F28220D3EA7935D8B79384C1E36FACD",
+      "ExpectedPages": 2,
+      "NumberStart": 9,
+      "NumberFormat": "decimalZero",
+      "ExpectedEquations": 8,
+      "ImagePlacements": 4,
+      "Markers": [
+        {
+          "PageNumber": 1,
+          "Text": "09",
+          "X": 434.35,
+          "Y": 541.51
+        },
+        {
+          "PageNumber": 1,
+          "Text": "10",
+          "X": 376.87,
+          "Y": 353.45
+        },
+        {
+          "PageNumber": 1,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 90.864
+        },
+        {
+          "PageNumber": 1,
+          "Text": "10",
+          "X": 72.024,
+          "Y": 78.144
+        },
+        {
+          "PageNumber": 2,
+          "Text": "09",
+          "X": 299.21,
+          "Y": 427.63
+        },
+        {
+          "PageNumber": 2,
+          "Text": "10",
+          "X": 222.05,
+          "Y": 239.57
+        },
+        {
+          "PageNumber": 2,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 90.864
+        },
+        {
+          "PageNumber": 2,
+          "Text": "10",
+          "X": 72.024,
+          "Y": 78.144
+        }
+      ],
+      "MathAnchors": [
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 341.11,
+          "Y": 544.03
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 340.51,
+          "Y": 532.03
+        },
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 416.71,
+          "Y": 544.03
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 416.11,
+          "Y": 532.03
+        },
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 283.61,
+          "Y": 355.97
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 283.01,
+          "Y": 343.97
+        },
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 359.23,
+          "Y": 355.97
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 358.63,
+          "Y": 343.97
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 205.97,
+          "Y": 430.15
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 205.37,
+          "Y": 418.15
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 281.57,
+          "Y": 430.15
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 280.97,
+          "Y": 418.15
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 128.9,
+          "Y": 242.09
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 128.3,
+          "Y": 230.09
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 204.53,
+          "Y": 242.09
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 203.93,
+          "Y": 230.09
+        }
+      ]
+    },
+    {
+      "Id": "spanning-note-math-arial-11-zero",
+      "Mode": "final-preserve",
+      "InputSha256": "E7FBECA42CAE431D8A5BFADAE3ECC512002A9A1529C5E1898B4EA4BC281F5060",
+      "ReferenceSha256": "8EB09B6E25FDFEBF456B6E27198C13B8E4EF0C4937887DA579E8C8D6C21E59C2",
+      "ExpectedPages": 2,
+      "NumberStart": 9,
+      "NumberFormat": "decimalZero",
+      "ExpectedEquations": 8,
+      "ImagePlacements": 4,
+      "Markers": [
+        {
+          "PageNumber": 1,
+          "Text": "09",
+          "X": 434.35,
+          "Y": 541.51
+        },
+        {
+          "PageNumber": 1,
+          "Text": "10",
+          "X": 376.87,
+          "Y": 353.45
+        },
+        {
+          "PageNumber": 1,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 90.864
+        },
+        {
+          "PageNumber": 1,
+          "Text": "10",
+          "X": 72.024,
+          "Y": 78.144
+        },
+        {
+          "PageNumber": 2,
+          "Text": "09",
+          "X": 299.21,
+          "Y": 427.63
+        },
+        {
+          "PageNumber": 2,
+          "Text": "10",
+          "X": 222.05,
+          "Y": 239.57
+        },
+        {
+          "PageNumber": 2,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 90.864
+        },
+        {
+          "PageNumber": 2,
+          "Text": "10",
+          "X": 72.024,
+          "Y": 78.144
+        }
+      ],
+      "MathAnchors": [
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 341.11,
+          "Y": 544.03
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 340.51,
+          "Y": 532.03
+        },
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 416.71,
+          "Y": 544.03
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 416.11,
+          "Y": 532.03
+        },
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 283.61,
+          "Y": 355.97
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 283.01,
+          "Y": 343.97
+        },
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 359.23,
+          "Y": 355.97
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 358.63,
+          "Y": 343.97
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 205.97,
+          "Y": 430.15
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 205.37,
+          "Y": 418.15
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 281.57,
+          "Y": 430.15
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 280.97,
+          "Y": 418.15
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 128.9,
+          "Y": 242.09
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 128.3,
+          "Y": 230.09
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 204.53,
+          "Y": 242.09
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 203.93,
+          "Y": 230.09
+        }
+      ]
+    },
+    {
+      "Id": "spanning-note-math-calibri-12-zero",
+      "Mode": "all-word-compatible",
+      "InputSha256": "5765B29684C070357EFA35AF2E0FDAEE3694077BED4024EB54F0448D542B55C1",
+      "ReferenceSha256": "329905DEFB87134C4C66C7B495014E24F3D390E2523E26E6B1F37794A97AF982",
+      "ExpectedPages": 3,
+      "NumberStart": 9,
+      "NumberFormat": "decimalZero",
+      "ExpectedEquations": 8,
+      "ImagePlacements": 4,
+      "Markers": [
+        {
+          "PageNumber": 1,
+          "Text": "09",
+          "X": 436.87,
+          "Y": 515.47
+        },
+        {
+          "PageNumber": 1,
+          "Text": "10",
+          "X": 380.83,
+          "Y": 300.89
+        },
+        {
+          "PageNumber": 1,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 93.744
+        },
+        {
+          "PageNumber": 1,
+          "Text": "10",
+          "X": 72.024,
+          "Y": 79.104
+        },
+        {
+          "PageNumber": 2,
+          "Text": "09",
+          "X": 301.85,
+          "Y": 281.09
+        },
+        {
+          "PageNumber": 2,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 79.104
+        },
+        {
+          "PageNumber": 3,
+          "Text": "09",
+          "X": 222.29,
+          "Y": 676.66
+        },
+        {
+          "PageNumber": 3,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 79.104
+        }
+      ],
+      "MathAnchors": [
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 343.03,
+          "Y": 518.59
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 342.31,
+          "Y": 505.51
+        },
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 418.87,
+          "Y": 518.59
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 418.15,
+          "Y": 505.51
+        },
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 286.85,
+          "Y": 304.01
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 286.13,
+          "Y": 290.93
+        },
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 362.71,
+          "Y": 304.01
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 361.99,
+          "Y": 290.93
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 207.89,
+          "Y": 284.21
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 207.17,
+          "Y": 271.13
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 283.73,
+          "Y": 284.21
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 283.01,
+          "Y": 271.13
+        },
+        {
+          "PageNumber": 3,
+          "Text": "rate",
+          "X": 128.3,
+          "Y": 679.78
+        },
+        {
+          "PageNumber": 3,
+          "Text": "time",
+          "X": 127.58,
+          "Y": 666.7
+        },
+        {
+          "PageNumber": 3,
+          "Text": "rate",
+          "X": 204.17,
+          "Y": 679.78
+        },
+        {
+          "PageNumber": 3,
+          "Text": "time",
+          "X": 203.45,
+          "Y": 666.7
+        }
+      ]
+    },
+    {
+      "Id": "spanning-note-math-calibri-12-zero",
+      "Mode": "final-preserve",
+      "InputSha256": "5765B29684C070357EFA35AF2E0FDAEE3694077BED4024EB54F0448D542B55C1",
+      "ReferenceSha256": "2FA69A881CE56D58C7A111EAFDB5B96129971300E815A01304F79D805425F34D",
+      "ExpectedPages": 3,
+      "NumberStart": 9,
+      "NumberFormat": "decimalZero",
+      "ExpectedEquations": 8,
+      "ImagePlacements": 4,
+      "Markers": [
+        {
+          "PageNumber": 1,
+          "Text": "09",
+          "X": 436.87,
+          "Y": 515.47
+        },
+        {
+          "PageNumber": 1,
+          "Text": "10",
+          "X": 380.83,
+          "Y": 300.89
+        },
+        {
+          "PageNumber": 1,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 93.744
+        },
+        {
+          "PageNumber": 1,
+          "Text": "10",
+          "X": 72.024,
+          "Y": 79.104
+        },
+        {
+          "PageNumber": 2,
+          "Text": "09",
+          "X": 301.85,
+          "Y": 281.09
+        },
+        {
+          "PageNumber": 2,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 79.104
+        },
+        {
+          "PageNumber": 3,
+          "Text": "09",
+          "X": 222.29,
+          "Y": 676.66
+        },
+        {
+          "PageNumber": 3,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 79.104
+        }
+      ],
+      "MathAnchors": [
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 343.03,
+          "Y": 518.59
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 342.31,
+          "Y": 505.51
+        },
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 418.87,
+          "Y": 518.59
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 418.15,
+          "Y": 505.51
+        },
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 286.85,
+          "Y": 304.01
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 286.13,
+          "Y": 290.93
+        },
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 362.71,
+          "Y": 304.01
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 361.99,
+          "Y": 290.93
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 207.89,
+          "Y": 284.21
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 207.17,
+          "Y": 271.13
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 283.73,
+          "Y": 284.21
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 283.01,
+          "Y": 271.13
+        },
+        {
+          "PageNumber": 3,
+          "Text": "rate",
+          "X": 128.3,
+          "Y": 679.78
+        },
+        {
+          "PageNumber": 3,
+          "Text": "time",
+          "X": 127.58,
+          "Y": 666.7
+        },
+        {
+          "PageNumber": 3,
+          "Text": "rate",
+          "X": 204.17,
+          "Y": 679.78
+        },
+        {
+          "PageNumber": 3,
+          "Text": "time",
+          "X": 203.45,
+          "Y": 666.7
+        }
+      ]
+    }
+  ]
+}

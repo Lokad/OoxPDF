@@ -1,0 +1,30 @@
+[
+  {
+    "Id": "spanning-note-math-calibri-12-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-note-math-calibri-12-zero.docx",
+    "Sha256": "5765B29684C070357EFA35AF2E0FDAEE3694077BED4024EB54F0448D542B55C1",
+    "SourceSha256": "7FADBE5067EA4DE9EF3C4CB533D788B2AFFA11B89D44FFEC98E7E49F4FD02AFE",
+    "DonorSha256": "E8FB62A69DD4CC79C28925A944B27DD4C86965D70C39C156ECC90FF52EE62A81",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedImagePlacements": 4,
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "spanning-note-math-arial-11-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-note-math-arial-11-zero.docx",
+    "Sha256": "E7FBECA42CAE431D8A5BFADAE3ECC512002A9A1529C5E1898B4EA4BC281F5060",
+    "SourceSha256": "1ED460811AF909619CABCBC9CC8D288431871CF31086927815F7BBBEAAE7BB86",
+    "DonorSha256": "AF30AACFB72D7D28EE20A2D7CBB2885C98CB294678D87CDC6A32C0C7B5DF7BBC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedImagePlacements": 4,
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  }
+]

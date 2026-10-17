@@ -5161,5 +5161,12 @@
     "DocxSingleSectionNoteNumbers",
     "DocxTableMinimumNoteLinks",
     "DocxTableNoteBeforeSpacing"
+  ],
+  "docx-spanning-note-math-observers": [
+    "DocxInlineCompositionSpanningNoteMath",
+    "PortableRenderingSpanningNoteMath",
+    "DocxInlineCompositionSpanningPageNotesRenderCountersAndDistinctDestinations",
+    "DocxInlineCompositionSpanningPageNotesMatchIndependentPageCapacity",
+    "PortableRenderingSpanningPageNotesKeepOwnedCountersAndDestinations"
   ]
 }
