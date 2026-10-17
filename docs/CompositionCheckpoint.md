@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+C150 fixes another composition boundary: moving supported mixed paragraphs into
+cells left provisional105-108 instead of page counters09/10. Numbering now shares
+body/cell source order and complete measured line/paint-clip ownership. One
+paragraph replacement is published through ordered items, references and both
+cell views; derived cell text updates, authored runs and unchanged manual-mark
+containers retain their identities. Typography keeps its narrower map. Missing
+frames, clipped/ambiguous/merged owners, structural revisions and unstable pages
+retain existing fallbacks; legacy ordinary-cell measurements remain staged.
+
+One frozen artifact passes70 Windows/59 Ubuntu checks/11 native skips. Eight
+independent Word outcomes restore automatic/custom counters with eight equations/
+four image draws/four destinations and authored105/108 intact.64 math operations
+stay exact to parent. All eight comparisons improve/no new failed components;
+strict typography/spacing gates remain failed. Eight Final page pairs reviewed;
+eight Review pairs carry by both PNG identities. Parent label regression fails.
+Missing/duplicate/clipped/unmeasured/merged owners reject atomically; source/view
+identity, unchanged manual targets, no-op and cancellation regressions pass.
+
+Seventeen assets/four smokes transfer without root build/suite replay. The fixed
+DOCX portfolio has no section eachPage request, so C148's12 outcomes/seven sources/
+twenty reviewed pages carry by source scope/report/deck smokes; no full replay or
+content audit. Ten DOCX failures/two deck passes/two extraction flags and two Aptos
+baseline failures remain. Rootf7f5a9b1;
+`artifacts/composition-c1/cell-page-numbering-evidence.json`. C149 CI is green.
+Next: measure ordinary cell-line ownership against Word before publishing more
+frame metadata or changing note annotation slots.
+
 C149 challenges the accepted library with eight fractions/four images/four
 bookmarks/four automatic notes inside one naturally paginated paragraph. Four
 independent Word outcomes match Calibri's three pages/Arial's two pages and every
