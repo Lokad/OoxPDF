@@ -29,7 +29,7 @@ produce identical printed rasters. The same known profiles now share one PDF
 layout rule. Empty literal script bases and visible n-ary limits also retain metric-only
 geometry and remaining source content, including Final deletion. Five independent
 Word roles qualify deleted/authored-empty identity and sub-point group starts.
-Wholly empty/control-only discovery, unknown properties and richer structures retain
+Unpainted empty function/grid forms, unknown properties and richer structures retain
 fallback. Revision-role body controls cover literals, scripts, roots and matrices. Additional
 mixed controls qualify empty script/matrix roles with prose, images, numbering and
 links across body/cells/direct headers/footers in both presets. Geometry remains
@@ -40,7 +40,12 @@ a 1.163pt horizontal group-start residual; the one-point geometry gate stays fai
 Empty literal function arguments and n-ary bodies now share the same metric-only
 argument measurement. Function names, operators and remaining limits stay visible,
 including Final deletion, with independently validated source ink and group starts.
-An empty function name or a wholly control-only equation retains explicit fallback.
+An empty literal function name retains its visible argument. Supported root,
+delimiter and n-ary controls retain structural paint even when no literal source
+runs remain, using shared font preparation and authored control/paragraph metrics.
+No dummy source runs or glyphs are introduced. Independent Word controls qualify
+content, source ink and group starts; unpainted empty function/grid forms and
+unsupported deeper structures retain explicit fallback.
 
 Numbered paragraphs retain supported explicit math zones alongside prose and
 inline pictures. The list label owns only the first authored row: its formulas
