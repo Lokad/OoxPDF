@@ -1,5 +1,28 @@
 # Composed-document reliability checkpoint
 
+C157 preserves supported direct mathematical paragraphs beside ordinary nested
+tables. Shared cell properties admit the direct owner; authoritative BodyElements
+prevent stale paragraph preparation. Picture and nested placement reuse one
+occupied-frame map. Whole-cell fitting/placement guards remain, and mathematics
+inside the nested table is still an explicit content gap for the next slice.
+
+One Release artifact qualifies34 Windows/25 Ubuntu passes/nine native-font skips.
+Eight independent Word outcomes retain two formulas; four affected comparisons
+improve, four PDFs retain parent bytes, no new failure components, all eight strict
+gates remain failed. Eight top-page regions were reviewed. Final math Y differs
+by at most0.029pt; absolute X0.917pt and Review Y2.510pt remain unaccepted. The
+inside-nested control retains both missing formulas and its previous PDF bytes.
+Parent content observer fails expected2/got0. Initial development failures and
+raw residuals remain retained; existing visual thresholds are unchanged.
+
+A read-only inventory covers1,446 tracked DOCX files/zero skips; only the two new
+adjacent-table fixtures match the changed source combination. Fixed12 outcomes/
+7 sources/20 pages carry scope and exact report/deck smokes; their ten DOCX visual
+failures/two deck passes/two report extraction flags remain.17 assets/four exact
+smokes transfer without root build or suite/corpus replay. Root118b9188; evidence
+artifacts/composition-c1/nested-cell-neighbors-evidence.json. Next: bounded source
+and measured-frame ownership for ordinary inside-nested mathematics.
+
 C156 fixes declared run-default ownership across all paragraph containers. Word
 uses nominal10pt when rPrDefault is present without a size, even for an empty
 container; the parent used12pt. The shared cascade now supplies the owned fallback
@@ -2174,7 +2197,7 @@ unsupported diagnostics. Qualification passes 90 Windows and 74 Ubuntu methods/1
 explicit skips. Expanding the harness to both presets reruns only three affected
 checks on the same production DLL, carrying 87 unchanged results. One new check
 fails on the parent. Independent probes establish the same glyph/frame failure
-on C65 and C66. At footer distance 18, the pinned PDF summary returns from Y −16.61
+on C65 and C66. At footer distance 18, the pinned PDF summary returns from Y âˆ’16.61
 to 150.84; both before/after conversions retain the same two diagnostics. Four
 pinned before/after PDFs are inspected and one full page pair is reviewed.
 
@@ -2268,7 +2291,7 @@ corpus replay. The tracked generator reproduces the no-op fixture exactly. Evide
 qualification and CI failures remain alongside them.
 
 C63 fixes default each-page footnote numbering through complete measured owners.
-The old default path retained document labels 105–108 while Word and the review
+The old default path retained document labels 105â€“108 while Word and the review
 path printed section labels 09/10 on each page. The existing source-marker/actual-
 segment/same-page-note map now drives numbering independently of font adjustment.
 Legacy adjustment, leading and reserve guards remain; known settings/full fonts,
@@ -2347,7 +2370,7 @@ gates still fail unchanged thresholds. Body/footer visual pairs retain corrected
 text and visible content; footer balloon Y, fill, typography and connector/bar
 geometry remain. Evidence: `formatting-description-evidence.json` and linked reports.
 
-Latest bounded batches, C56–C57: unchanged equations survive adjacent source-owned
+Latest bounded batches, C56â€“C57: unchanged equations survive adjacent source-owned
 run-formatting revisions in body, cell, header and footer paragraphs. Five public
 controls cover a bold change and an empty change; all ten Final/Review outcomes
 retain 18 mathematical operations instead of dropping the first fraction in eight
@@ -2403,8 +2426,8 @@ the two unchanged decks pass. Ten fixed content audits have zero deficit/unresol
 screens. Both complete-report audits retain field extraction uncertainty and
 prose/math-token differences; expected simple math is present.
 
-Single warm samples on report/memo Final show allocation rising 1.1–1.2%, while
-explicit advance compensation adds 22–29KB per PDF (28–35%). Stage and whole PDFs
+Single warm samples on report/memo Final show allocation rising 1.1â€“1.2%, while
+explicit advance compensation adds 22â€“29KB per PDF (28â€“35%). Stage and whole PDFs
 match. Timings are noisy and stages overlap; no speedup is claimed. Evidence:
 `source-advances-evidence.json` and linked reports under the ignored evidence root.
 
@@ -2467,7 +2490,7 @@ Twenty-seven selected methods pass in one invocation; six portable source/bookma
 methods also pass on the exact artifact in Ubuntu. Seventeen assets and four
 integration PDFs transfer without root rebuild. All ten portfolio PDFs
 retain their baseline bytes, so their Office comparisons are reused. Mixed-document
-warm allocation medians rise by approximately 11–25KB for the DOCX sources; deck
+warm allocation medians rise by approximately 11â€“25KB for the DOCX sources; deck
 allocation medians are unchanged. Three-iteration timings are noisy and establish
 no speedup. These measurements precede any repeated-layout optimization.
 
@@ -2818,7 +2841,7 @@ A numbering-only transformation previously removed four equations from three
 mixed paragraphs in both modes, while preserving prose. The candidate retains
 four equations and three labels across body/cell/header/footer controls. Native
 unchanged-format run splitting and pinned-font source transformations also retain
-content. The body control's recall improves 0.141→0.671 and MAE 1.464→0.821;
+content. The body control's recall improves 0.141â†’0.671 and MAE 1.464â†’0.821;
 all eight independent numbered-story visual gates still fail. Raster review shows
 the labels, fractions, literals and illustration together.
 
@@ -2852,7 +2875,7 @@ pieces, drops inter-piece glue at a line boundary and preserves source equation
 identity. Structured boxes, display rows, nested and unary-only literals retain
 their qualified fallbacks. No font/size/document-shape rule is added.
 
-Word 16 keeps `α+` on the first line and `β=γ` on the next for default, before,
+Word 16 keeps `Î±+` on the first line and `Î²=Î³` on the next for default, before,
 after and repeat settings in the independent inline control. This observed inline
 behavior differs from the general default described in [Microsoft's brkBin
 documentation](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.math.breakbinary?view=openxml-2.10.0);
@@ -2861,7 +2884,7 @@ glyphs now paint in a two-line source paragraph, including with bookmarks and ru
 splitting. The portable regression fails on the previous library.
 
 Forty selected methods pass in one invocation; fourteen portable methods pass on
-Ubuntu. The overfull control's recall improves 0.375→0.480 and MAE 0.290→0.280.
+Ubuntu. The overfull control's recall improves 0.375â†’0.480 and MAE 0.290â†’0.280.
 All eight setting/mode controls still fail foreground/MAE/SSIM gates. Its body
 auto line height remains 16.968pt versus Word's 14.64pt; font/measurement ownership
 needs separate evidence before changing it. Eight fitting literal/fraction/script
@@ -2904,8 +2927,8 @@ added or indiscriminately removed.
 
 The seven-source ownership matrix separates absent, run-only, empty/nonempty
 paragraph defaults and explicit Normal inheritance. Its fourteen mode outcomes
-preserve explicit Normal PDF bytes while affected recall improves 0.222→0.773 and
-MAE 9.173→3.981. The source controls still fail their original visual gates. Plain
+preserve explicit Normal PDF bytes while affected recall improves 0.222â†’0.773 and
+MAE 9.173â†’3.981. The source controls still fail their original visual gates. Plain
 cell/header/footer controls improve recall from 0.377/0.286/0.353 to
 0.836/0.850/0.831; MAE and changed-pixel gates pass, with foreground/SSIM failures
 remaining. These controls disprove a global fallback replacement and do not
@@ -2998,7 +3021,7 @@ object bounds and label leading.
 The independent Word regression fails on the prior accepted library by 2.219pt.
 Across twenty mode controls, the largest following-paragraph gap error is now
 0.199pt (previous literal cases reached 2.297pt). All preserve their mathematical
-text. Literal review MAE improves about 0.258–0.261; SSIM failures remain. The native
+text. Literal review MAE improves about 0.258â€“0.261; SSIM failures remain. The native
 assertion now checks both the mathematical baseline and following advance. A
 pinned-font ordinary-text substitution exercises the same line-box contract on
 Windows/Ubuntu; it already passed with the prior library, so it is integration
@@ -3674,7 +3697,7 @@ pinned hashes/protection and the six current parent inputs have independent file
 ownership. Ownership repair/rejection evidence remains beside the delivery report.
 
 The measured font-maintenance batch reduces warm portfolio allocation to
-28.75–33.83MB for Final DOCX and 32.34–37.36MB for review, with unchanged PDFs.
+28.75â€“33.83MB for Final DOCX and 32.34â€“37.36MB for review, with unchanged PDFs.
 Counted kerning source batches replace the expanded pair list, retaining bounded
 source contributions, last-wins lookup values and cancellation. All 715,743 map
 entries across the three actual faces match. Frozen f35fa653 / root 993543d6 passes
@@ -4016,7 +4039,7 @@ incorrect fixture-count assertion was corrected without rebuilding the library o
 repeating PDF conversions. Two content tests fail on C40. Twelve fixed/complete
 PDFs retain accepted bytes/comparisons/screens/reviews; transfer verifies 17 assets
 and four PDFs without a root build or suite replay. Focused warm allocation is
-27.99–28.47MB Final and 31.47–31.90MB review; overlapping stages are not additive,
+27.99â€“28.47MB Final and 31.47â€“31.90MB review; overlapping stages are not additive,
 and no speedup is claimed. Evidence:
 `artifacts/composition-c1/total-page-math-evidence.json`.
 
@@ -4160,7 +4183,7 @@ assets/four PDFs without rebuilding or repeating the root suite. Evidence:
 Picture outlines now reuse preset stroke geometry at Office's external half-width
 centerline extent. Unblurred shadows reuse existing preset fill geometry. Five
 of six independent Word pages pass retained image-family thresholds, with SSIM
-0.9981–0.9999. Five complete pairs were reviewed, including the transformed
+0.9981â€“0.9999. Five complete pairs were reviewed, including the transformed
 footprint and following marker. The blurred-shadow control still paints visible
 rectangular gray corners and fails SSIM (0.9612); it remains the next high-priority
 blocker. Unknown/custom geometry remains diagnosed.
@@ -4261,7 +4284,7 @@ Evidence: list-label-owner-evidence.json.
 
 Correction to the deletion-markup investigation: the composition reference helper
 left Word's RevisionsMode at 0 (balloons), while the library declares inline mode
-1. The earlier 77–85pt comparison therefore does not establish a library frame
+1. The earlier 77â€“85pt comparison therefore does not establish a library frame
 defect; that claim is withdrawn. Equation omission remains confirmed. Four new
 independent deletion review references use the declared inline view; old exports
 remain as provenance. View-agnostic historical comparisons are retained.
@@ -4298,7 +4321,7 @@ No root rebuild or broad suite/corpus replay. Evidence: deletion-inline-evidence
 
 Revision bars now use the authored margin and printed-page scale. Their distance
 from text is capped at 36pt, with centered placement in narrower margins and
-scaled 0.72pt nominal thickness. Eight independent controls cover 36–144pt left
+scaled 0.72pt nominal thickness. Eight independent controls cover 36â€“144pt left
 margins, right-margin/orientation changes and a fitted two-page report. Maximum
 horizontal/thickness residuals are 0.024/0.018pt; vertical extents remain approximate.
 
