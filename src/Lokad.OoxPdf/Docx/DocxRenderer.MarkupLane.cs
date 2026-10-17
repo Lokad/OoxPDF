@@ -187,22 +187,23 @@ internal sealed partial class DocxRenderer
 
         bool HasTextLineRevision(DocxTextLineLayout line)
         {
-            return CollectTextLineRevisions(line, markupContext).Count != 0;
+            return CollectTextLineRevisions(line, markupContext, cancellationToken).Count != 0;
         }
     }
 
-    private static IReadOnlyList<DocxRevisionInfo> CollectTextLineRevisions(DocxTextLineLayout line, DocxMarkupContext markupContext)
+    private static IReadOnlyList<DocxRevisionInfo> CollectTextLineRevisions(DocxTextLineLayout line, DocxMarkupContext markupContext,
+        CancellationToken token = default)
     {
         var revisions = new List<DocxRevisionInfo>();
         if (line.SourceParagraph is { } paragraph)
         {
             bool nonRendering = false;
-            if (UsesWordCompatibleAllMarkupTextProfile(markupContext) && paragraph.NonRenderingRunOwners.Count != 0)
+            if (UsesWordCompatibleAllMarkupTextProfile(markupContext) && paragraph.Revisions.Count != 0)
             {
                 var classifications = markupContext.NonRenderingRevisionParagraphs;
                 if (classifications is null || !classifications.TryGetValue(paragraph, out nonRendering))
                 {
-                    nonRendering = DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph);
+                    nonRendering = DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph, token: token);
                     classifications?.Add(paragraph, nonRendering);
                 }
             }

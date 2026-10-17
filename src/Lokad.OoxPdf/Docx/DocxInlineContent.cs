@@ -152,18 +152,27 @@ internal static class DocxInlineContent
     }
 
     internal static bool HasOnlyNonRenderingRevisionMetadata(DocxParagraph paragraph,
-        IReadOnlyList<DocxRevisionInfo>? revisions = null)
+        IReadOnlyList<DocxRevisionInfo>? revisions = null, CancellationToken token = default)
     {
+        token.ThrowIfCancellationRequested();
         var source = revisions ?? paragraph.Revisions;
         if (source.Count == 0) return true;
-        if (paragraph.NonRenderingRunOwners.Count == 0 || paragraph.RevisionRanges.Count != 0 ||
+        if (paragraph.RevisionRanges.Count != 0 ||
             paragraph.HasDeletedParagraphMark ||
             paragraph.Runs.Any(run => run.Revision is not null || run.Revisions.Count != 0) ||
             paragraph.Images.Any(image => image.Revisions.Count != 0) ||
-            paragraph.Equations.Any(equation => equation.Revision is not null || equation.HasRunRevisions) ||
             paragraph.InlineTextBoxes.Any(box => box.Revisions.Count != 0) ||
             paragraph.ParagraphMarkRun is { } mark && (mark.Revision is not null || mark.Revisions.Count != 0)) return false;
-        return HasSupportedRunRevisionOwners(source, [], default, nonRenderingRunOwners: paragraph.NonRenderingRunOwners);
+        foreach (var equation in paragraph.Equations)
+        {
+            token.ThrowIfCancellationRequested();
+            // Structural paint retains authored ink. Only actual revised literal
+            // sources can make this equation contribute a visible revision band.
+            if ((equation.Revision is not null || equation.HasRunRevisions) &&
+                (!DocxMathLayout.TryGetRuns(equation, token, out var runs) || runs.Count != 0)) return false;
+        }
+        return HasSupportedRunRevisionOwners(source, [], token, nonRenderingRunOwners: paragraph.NonRenderingRunOwners,
+            equations: paragraph.Equations);
     }
 
     public static bool HasSupportedParagraphRevisionOwners(DocxParagraph paragraph, CancellationToken token,

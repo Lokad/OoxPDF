@@ -5,7 +5,7 @@ from xml.etree import ElementTree as E
 import json,hashlib
 root=Path(__file__).resolve().parent.parent;cases=root/'tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes'
 m='{http://schemas.openxmlformats.org/officeDocument/2006/math}';w='{http://schemas.openxmlformats.org/wordprocessingml/2006/main}';E.register_namespace('m',m[1:-1]);E.register_namespace('w',w[1:-1]);rows=[]
-profiles=[(role,kind,False) for role in ['root','delimiter','operator','root-degree'] for kind in ['ins','del']]+[(role,'ins',True) for role in ['root','delimiter','operator']]
+profiles=[(role,kind,False) for role in ['root','delimiter','operator','root-degree'] for kind in ['ins','del']]+[(role,kind,True) for role in ['root','delimiter','operator'] for kind in ['ins','del']]
 for role,kind,empty in profiles:
  source=cases/('structural-placement-'+('root' if role=='root-degree' else role)+'-body.docx')
  with ZipFile(source) as z:entries={name:z.read(name) for name in z.namelist()}
@@ -26,4 +26,4 @@ for role,kind,empty in profiles:
   for name,data in sorted(entries.items()):
    info=ZipInfo(name,(2026,10,17,0,0,0));info.compress_type=ZIP_DEFLATED;z.writestr(info,data)
  rows.append(dict(Id=target.stem,Input=target.relative_to(root).as_posix(),Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(),Role=role,Kind=kind,Empty=empty,HeldOut=False,ExpectedEquationCount=4,ExpectedText=['share the same input series.']))
-(cases/'whole-math.json').write_text(json.dumps(rows,indent=2)+'\n',encoding='utf-8');print('Pinned eleven whole-equation revision controls')
+(cases/'whole-math.json').write_text(json.dumps(rows,indent=2)+'\n',encoding='utf-8');print('Pinned fourteen whole-equation revision controls')

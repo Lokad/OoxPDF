@@ -126,6 +126,20 @@
     ]
   },
   {
+    "Id": "whole-math-empty-root-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-empty-root-del.docx",
+    "Sha256": "8422B2B852D61EB234D1D070B94B6391AE382F91479C86FEF60ABFB607AC83C9",
+    "SourceSha256": "F7A0FB003131799C176861A747EA4B7071CB8237D2545FF8935286DEC2CA3FED",
+    "Role": "root",
+    "Kind": "del",
+    "Empty": true,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
     "Id": "whole-math-empty-delimiter-ins",
     "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-empty-delimiter-ins.docx",
     "Sha256": "6206445C0A5605FD8AE9239811A1A984EDD1EBC39EE0903387AA3BF856634187",
@@ -140,12 +154,40 @@
     ]
   },
   {
+    "Id": "whole-math-empty-delimiter-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-empty-delimiter-del.docx",
+    "Sha256": "3474896AB12044DC5E95CD79D22B78E731362A18B3BECF25229B9E9990A08972",
+    "SourceSha256": "E8031ADE843870797BCC65448D2950108B225636A3489DB87070B843C4FAE0D2",
+    "Role": "delimiter",
+    "Kind": "del",
+    "Empty": true,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
     "Id": "whole-math-empty-operator-ins",
     "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-empty-operator-ins.docx",
     "Sha256": "B63DF4EFA05CEC515EBB40ADC3E88B12E52F3159DAD1B4501D49AF244196A1FA",
     "SourceSha256": "C27E9B191527E9BC614A1CEBD517852A6421B291ABEEB5AE51E128B9D043ED32",
     "Role": "operator",
     "Kind": "ins",
+    "Empty": true,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "whole-math-empty-operator-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-empty-operator-del.docx",
+    "Sha256": "2FBF8ED3EC1B324D60AABEDC3332EB2094B68C834849FF347D192EF4C5429680",
+    "SourceSha256": "C27E9B191527E9BC614A1CEBD517852A6421B291ABEEB5AE51E128B9D043ED32",
+    "Role": "operator",
+    "Kind": "del",
     "Empty": true,
     "HeldOut": false,
     "ExpectedEquationCount": 4,
