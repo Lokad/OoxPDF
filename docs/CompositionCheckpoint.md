@@ -1,5 +1,37 @@
 # Composed-document reliability checkpoint
 
+C149 challenges the accepted library with eight fractions/four images/four
+bookmarks/four automatic notes inside one naturally paginated paragraph. Four
+independent Word outcomes match Calibri's three pages/Arial's two pages and every
+note's labels/page membership. Math origins differ by at most0.165pt X/0.051pt Y;
+marker Y differs by at most0.187pt. Five Final page pairs reviewed; five Review
+pairs carry by both raster identities. All four strict visual gates still fail
+spacing/typography thresholds. No visible content loss, overlap or clipping was
+demonstrated on these pages; arbitrary-document parity is not established.
+
+No production change is needed. Only the harness builds:14 runtime assets/2,012
+prior inputs stay exact, four inputs added. Seven new/helper-neighbor Windows
+methods pass; Ubuntu passes three/skips four native checks. Neutral bookmarks and
+unchanged-format run splitting retain text, page counts, note rectangles/targets
+and mathematical glyph placement. Combined103 unique methods carry101 Windows
+passes/two unchanged Aptos failures and92 Ubuntu passes/11 native skips. No library/
+CLI build,99-check replay or conversion replay. An initial local-name compile error
+was corrected before freezing or tests; no failed artifact was published.
+
+Seventeen assets/four integration PDFs transfer without root build/suite replay.
+C148's fixed12 outcomes/seven sources/twenty reviewed pages and eight earlier
+compound controls carry by unchanged runtime/source scope/report/deck smokes.
+Ten DOCX failures/two deck passes/two extraction flags and two Aptos baseline
+failures remain; no new full content audit. Roota6299c85;
+`artifacts/composition-c1/spanning-note-math-evidence.json`. C148 CI is green on both
+platforms. Next: independently probe mixed paragraph note ownership in table cells.
+
+The infrequent workspace check measures11.539GB/592,016 files, zero errors. The
+loose5GB target remains unmet. Automatic approval review rejected retiring two
+superseded development compiled snapshots before process creation ("blocked by
+policy"); zero files removed. Inputs/useful evidence and both snapshots remain,
+with68 snapshot names protected; no alternate retirement attempt is made.
+
 C148 removes an extra Calibri page and large unused body regions in natural
 paragraphs with multiple notes. Block-wide registration reserved future markers
 and repeated separators (161.1875pt on page one). Complete one-line body notes
