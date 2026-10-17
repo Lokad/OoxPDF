@@ -1,5 +1,26 @@
 # Composed-document reliability checkpoint
 
+C144 fixes a metadata-only composition omission. Explicitly declaring matching
+document-level footnote page restarts suppressed all eight equations in C143's
+compound paragraphs. Automatic footnote page dependencies now retain actual source
+run ownership; numbering owns measured label resolution and stable-page acceptance.
+Endnote page restarts, unknown/custom markers and unstable owners retain fallback.
+
+One artifact passes110 Windows/102 Ubuntu checks/eight native skips. Four new Word
+outcomes restore eight equations/four image draws/correct body+story labels each.
+All four candidate PDFs equal the equivalent accepted C143 compounds; fresh Word
+rasters also equal C143. Eight prior visual page pairs carry by identity, without
+review replay. All four parent comparisons improve/no new failed components;
+all strict gates remain failed. The parent fails the independent content regression.
+
+Seventeen assets/four smokes transfer without root build/suite replay. Fixed
+portfolio evidence carries by source scope and unchanged report/deck smokes;
+no new twelve-outcome replay or full content audit. Root4b525e8c;
+`artifacts/composition-c1/explicit-page-note-source-evidence.json`. An infrequent
+workspace scan measures11.376GB/581,812 files, zero errors; the loose5GB target
+remains unmet and protected retirements remain untouched. No reclaimed space is
+claimed. Next: custom note-marker source ownership alongside supported equations.
+
 C143 challenges the accepted numbering library with compound source content:
 each paragraph has two fractions, one inline PNG and an enclosing bookmark.
 Both font controls/both modes retain eight formulas/four image draws, correct
