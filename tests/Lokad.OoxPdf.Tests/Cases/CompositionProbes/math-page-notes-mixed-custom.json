@@ -1,0 +1,46 @@
+[
+  {
+    "Id": "math-page-notes-mixed-custom-calibri-12-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-page-notes-mixed-custom-calibri-12-zero.docx",
+    "Sha256": "E1F14C586DC15AB2BF0E96ECC918D72227DCBC666D166AB97EBDA3F995DEB40B",
+    "SourceSha256": "BE124B6423DD497AF28748180439D524F1BF96295B5BD597E3678967E2095F89",
+    "ImageSha256": "BAB292FEC1A1CAE9B0841F07A2972CA87E92543B2B7600450DE707F1A1902961",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ImagePlacements": 4,
+    "ExpectedMarkers": [
+      "*",
+      "09",
+      "09",
+      "10"
+    ],
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Bravo.",
+      "Public destination Charlie.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "math-page-notes-mixed-custom-arial-11-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-page-notes-mixed-custom-arial-11-zero.docx",
+    "Sha256": "B7002CB4C98D42BA14813EB0522BC12B7F27C378A5979D3A1FCD018CD87A1503",
+    "SourceSha256": "70A7FCC6FDDF611FCFDE55EF64290FBFFD9102037B5EAC2A9BC1E2C182E6AB92",
+    "ImageSha256": "BAB292FEC1A1CAE9B0841F07A2972CA87E92543B2B7600450DE707F1A1902961",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ImagePlacements": 4,
+    "ExpectedMarkers": [
+      "*",
+      "09",
+      "09",
+      "10"
+    ],
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Bravo.",
+      "Public destination Charlie.",
+      "Public destination Delta."
+    ]
+  }
+]

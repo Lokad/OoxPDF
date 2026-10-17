@@ -18,6 +18,7 @@ with ZipFile(output / "math-footnote-before-body-plain.docx") as z:
 rows = []
 compound_rows = []
 explicit_rows = []
+mixed_rows = []
 for typography in ["calibri-12-zero", "arial-11-zero"]:
     source = output / ("footnote-page-owners-" + typography + ".docx")
     with ZipFile(source) as z:
@@ -115,7 +116,36 @@ for typography in ["calibri-12-zero", "arial-11-zero"]:
     explicit_rows.append(compound_rows[-1] | dict(Id=explicit.stem, Input=explicit.relative_to(root).as_posix(),
         Sha256=hashlib.sha256(explicit.read_bytes()).hexdigest().upper(),
         SourceSha256=hashlib.sha256(compound.read_bytes()).hexdigest().upper()))
+    # A custom mark is visible source content, not an automatic counter value.
+    xml = E.fromstring(entries["word/document.xml"])
+    reference = next(xml.iter(w + "footnoteReference"))
+    reference.set(w + "customMarkFollows", "1")
+    reference_run = next(run for run in xml.iter(w + "r") if reference in list(run))
+    reference_run.insert(list(reference_run).index(reference) + 1, E.Element(w + "t"))
+    reference_run[list(reference_run).index(reference) + 1].text = "*"
+    notes = E.fromstring(entries["word/footnotes.xml"])
+    destination = next(note for note in notes if note.get(w + "id") == reference.get(w + "id"))
+    marker = next(destination.iter(w + "footnoteRef"))
+    marker_run = next(run for run in destination.iter(w + "r") if marker in list(run))
+    position = list(marker_run).index(marker)
+    marker_run.remove(marker)
+    mark = E.Element(w + "t")
+    mark.text = "*"
+    marker_run.insert(position, mark)
+    entries["word/document.xml"] = E.tostring(xml, encoding="utf-8", xml_declaration=True)
+    entries["word/footnotes.xml"] = E.tostring(notes, encoding="utf-8", xml_declaration=True)
+    mixed = output / ("math-page-notes-mixed-custom-" + typography + ".docx")
+    with ZipFile(mixed, "w", ZIP_DEFLATED) as z:
+        for name, data in sorted(entries.items()):
+            info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+            info.compress_type = ZIP_DEFLATED
+            z.writestr(info, data)
+    mixed_rows.append(explicit_rows[-1] | dict(Id=mixed.stem, Input=mixed.relative_to(root).as_posix(),
+        Sha256=hashlib.sha256(mixed.read_bytes()).hexdigest().upper(),
+        SourceSha256=hashlib.sha256(explicit.read_bytes()).hexdigest().upper(),
+        ExpectedMarkers=["*", "09", "09", "10"]))
+(output / "math-page-notes-mixed-custom.json").write_text(json.dumps(mixed_rows, indent=2) + "\n", encoding="utf-8")
 (output / "math-page-notes-explicit-page.json").write_text(json.dumps(explicit_rows, indent=2) + "\n", encoding="utf-8")
 (output / "math-page-notes-compound.json").write_text(json.dumps(compound_rows, indent=2) + "\n", encoding="utf-8")
 (output / "math-page-notes.json").write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
-print("Pinned original, compound and explicit page-dependency controls")
+print("Pinned original, compound, explicit and mixed custom page-note controls")

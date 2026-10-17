@@ -66,6 +66,12 @@ internal static partial class DocxInlineCompositionTests
         CheckPageNoteMath(null, "math-page-notes-explicit-page-office.json");
     }
 
+    public static void DocxInlineCompositionMixedPageNotesKeepIndependentCountersAndCustomMarks()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent mixed page counters use installed Windows fonts.");
+        CheckPageNoteMath(null, "math-page-notes-mixed-custom-office.json");
+    }
+
     internal static void CheckPageNoteMath(IFontResolver? resolver, string referenceFile = "math-page-notes-office.json")
     {
         string folder = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
@@ -90,6 +96,8 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(expectedImages.GetInt32(), images);
             }
             foreach (string unchanged in new[] { "105", "108", "Public destination Alpha.", "Public destination Delta." }) TestAssert.Contains(unchanged, text);
+            if (row.TryGetProperty("ExpectedCustomMarks", out var expectedCustom))
+                TestAssert.Equal(expectedCustom.GetInt32(), text.Count(character => character == '*'));
             var labels = pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true))
                 .Select(show => show.Text.Trim()).Where(label => label is "09" or "10").ToArray();
             TestAssert.Equal(string.Join(',', row.GetProperty("ExpectedDisplayedLabels").EnumerateArray().Select(x => x.GetString())), string.Join(',', labels));

@@ -468,16 +468,16 @@ internal sealed partial class DocxRenderer
         if (fonts.TextMeasurer is null || fonts.FallbackFaces.Count != 0 ||
             !DocxPageFootnoteNumbering.TryCreateDocument(document, first, out var numbered, out var pages,
                 allowWrappedBody: context.WordCompatiblePrintScale == 1d,
-                calibriPolicy: numberingPolicy, ownerScope: DocxFootnoteOwnerScope.AllSourceReferences))
+                calibriPolicy: numberingPolicy, ownerScope: DocxFootnoteOwnerScope.AllSourceReferences, cancellationToken: cancellationToken))
             return (document, fonts, first);
         // Corrected labels need their own glyph subset and measured advances.
         // One bounded retry is accepted only when body and complete note pages
         // remain stable; otherwise the original resources/layout retain fallback.
         var numberedFonts = PrepareFontResourcesCore(numbered, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount);
         var final = CreatePlainFootnoteTextLayout(numbered, numberedFonts, context, geometry, cancellationToken, pageCount);
-        return final.Pages.Count == first.Pages.Count && DocxPageFootnoteNumbering.HasStablePages(numbered, final, pages,
+        return final.Pages.Count == first.Pages.Count && DocxPageFootnoteNumbering.HasStableNumberingPages(numbered, final, pages,
             allowWrappedBody: context.WordCompatiblePrintScale == 1d,
-            calibriPolicy: numberingPolicy, ownerScope: DocxFootnoteOwnerScope.AllSourceReferences)
+            calibriPolicy: numberingPolicy, ownerScope: DocxFootnoteOwnerScope.AllSourceReferences, cancellationToken: cancellationToken)
             ? (numbered, numberedFonts, final) : (document, fonts, first);
     }
 

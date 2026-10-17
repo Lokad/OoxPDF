@@ -89,13 +89,21 @@ internal static class DocxCustomNoteMarkerOwners
         return marks;
     }
 
-    private static DocxTextRun? ResolveBaselineTarget(DocxRelatedStory story, IReadOnlyDictionary<string, string?> marks)
+    internal static bool TryGetTargetRun(DocxRelatedStory story, string mark,
+        [NotNullWhen(true)] out DocxTextRun? run)
     {
+        run = null;
         if (!story.IsNormalStoryType || story.Id is null || story.BodyElements.Count != 1 ||
-            story.Paragraphs.Count != 1 || story.Paragraphs[0].Runs.Count == 0) return null;
-        DocxTextRun first = story.Paragraphs[0].Runs[0];
-        return !first.IsAutomaticNoteStoryMarker && first.VerticalAlignment == DocxRunVerticalAlignment.Baseline &&
-            first.SourceRunIndex >= 0 && first.SourceTextOffsetInRun == 0 && marks.TryGetValue(story.Id, out string? mark) &&
-            mark is not null && first.Text.StartsWith(mark, StringComparison.Ordinal) ? first : null;
+            story.Paragraphs.Count != 1 || story.Paragraphs[0].Runs.Count == 0) return false;
+        var first = story.Paragraphs[0].Runs[0];
+        if (first.IsAutomaticNoteStoryMarker || first.SourceRunIndex < 0 || first.SourceTextOffsetInRun != 0 ||
+            !first.Text.StartsWith(mark, StringComparison.Ordinal)) return false;
+        run = first;
+        return true;
     }
+
+    private static DocxTextRun? ResolveBaselineTarget(DocxRelatedStory story, IReadOnlyDictionary<string, string?> marks) =>
+        story.Id is not null && marks.TryGetValue(story.Id, out string? mark) && mark is not null &&
+        TryGetTargetRun(story, mark, out var first) && first.VerticalAlignment == DocxRunVerticalAlignment.Baseline
+            ? first : null;
 }

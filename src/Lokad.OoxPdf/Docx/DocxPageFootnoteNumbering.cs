@@ -41,24 +41,31 @@ internal static class DocxPageFootnoteNumbering
     internal static bool TryCreateDocument(DocxDocument source, DocxLayout layout,
         out DocxDocument numbered, out IReadOnlyDictionary<string, int> referencePages, bool allowWrappedBody = false,
         DocxWrappedCalibriPolicy calibriPolicy = DocxWrappedCalibriPolicy.NormalizedNominal,
-        DocxFootnoteOwnerScope ownerScope = DocxFootnoteOwnerScope.SingleReferenceParagraphs)
+        DocxFootnoteOwnerScope ownerScope = DocxFootnoteOwnerScope.SingleReferenceParagraphs,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         numbered = source;
         referencePages = new Dictionary<string, int>();
         if ((!IsEligibleDocument(source) && !IsEligibleInlineNumberingDocument(source)) ||
             !TryMapReferencePages(source, layout, out var pages, allowWrappedBody,
-            calibriPolicy: calibriPolicy, ownerScope: ownerScope)) return false;
+            calibriPolicy: calibriPolicy, ownerScope: ownerScope, includeCustomMarkers: true, cancellationToken: cancellationToken)) return false;
         var settings = source.FinalSectionBreak!.PageSettings.FootnoteReferenceSettings;
         var counts = new Dictionary<int, int>();
         var labels = new Dictionary<string, (string Before, string After)>(StringComparer.Ordinal);
         var replacements = new Dictionary<DocxParagraph, DocxParagraph>(ReferenceEqualityComparer.Instance);
         foreach (var paragraph in source.Paragraphs)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (paragraph.InlineReferences.Count == 0) continue;
             var runLabels = new Dictionary<int, string>();
             var references = new List<DocxInlineReference>();
             foreach (var reference in paragraph.InlineReferences)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+                // A custom glyph owns a page and destination but does not consume
+                // an automatic counter value or acquire generated marker text.
+                if (reference.CustomMarkText is not null) { references.Add(reference); continue; }
                 int page = pages[reference.Id!];
                 counts.TryGetValue(page, out int count);
                 int value = checked((settings.NumberStart ?? 1) + count);
@@ -78,8 +85,13 @@ internal static class DocxPageFootnoteNumbering
         if (labels.Values.All(label => label.Before == label.After)) return false;
         foreach (var story in source.RelatedStories.Where(s => s.IsNormalStoryType))
         {
-            if (story.Id is null || !labels.TryGetValue(story.Id, out var label) || story.Paragraphs.Count != 1 ||
-                story.Paragraphs[0].Runs.Count == 0 || story.Paragraphs[0].Runs[0].Text != label.Before) return false;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (story.Id is null) return false;
+            // Complete mapping already validated custom source/target glyphs.
+            // Only automatic stories appear in the replacement-label map.
+            if (!labels.TryGetValue(story.Id, out var label)) continue;
+            if (story.Paragraphs.Count != 1 || story.Paragraphs[0].Runs.Count == 0 ||
+                story.Paragraphs[0].Runs[0].Text != label.Before) return false;
             var p = story.Paragraphs[0];
             replacements.Add(p, p with { Runs = [p.Runs[0] with { Text = label.After }, .. p.Runs.Skip(1)] });
         }
@@ -136,8 +148,20 @@ internal static class DocxPageFootnoteNumbering
         IReadOnlyDictionary<string, int> originalPages, bool allowWrappedBody = false, DocxWrappedCalibriPolicy calibriPolicy = DocxWrappedCalibriPolicy.NormalizedNominal,
         DocxFootnoteOwnerScope ownerScope = DocxFootnoteOwnerScope.SingleReferenceParagraphs) =>
         TryMapReferencePages(numbered, layout, out var actual, allowWrappedBody,
-            calibriPolicy: calibriPolicy, ownerScope: ownerScope) && actual.Count == originalPages.Count &&
-        actual.All(p => originalPages.TryGetValue(p.Key, out int before) && before == p.Value);
+            calibriPolicy: calibriPolicy, ownerScope: ownerScope) && HaveSameReferencePages(actual, originalPages);
+
+    internal static bool HasStableNumberingPages(DocxDocument numbered, DocxLayout layout,
+        IReadOnlyDictionary<string, int> originalPages, bool allowWrappedBody = false,
+        DocxWrappedCalibriPolicy calibriPolicy = DocxWrappedCalibriPolicy.NormalizedNominal,
+        DocxFootnoteOwnerScope ownerScope = DocxFootnoteOwnerScope.SingleReferenceParagraphs,
+        CancellationToken cancellationToken = default) =>
+        TryMapReferencePages(numbered, layout, out var actual, allowWrappedBody,
+            calibriPolicy: calibriPolicy, ownerScope: ownerScope, includeCustomMarkers: true, cancellationToken: cancellationToken) &&
+        HaveSameReferencePages(actual, originalPages);
+
+    private static bool HaveSameReferencePages(IReadOnlyDictionary<string, int> actual,
+        IReadOnlyDictionary<string, int> original) => actual.Count == original.Count &&
+        actual.All(page => original.TryGetValue(page.Key, out int before) && before == page.Value);
 
     internal static bool HasCompleteNoteOwners(DocxDocument document, DocxLayout layout) =>
         TryMapReferencePages(document, layout, out _);
@@ -171,13 +195,16 @@ internal static class DocxPageFootnoteNumbering
 
     private static bool TryMapReferencePages(DocxDocument document, DocxLayout layout, out Dictionary<string, int> pages,
         bool allowWrappedBody = false, DocxWrappedCalibriPolicy calibriPolicy = DocxWrappedCalibriPolicy.NormalizedNominal,
-        DocxFootnoteOwnerScope ownerScope = DocxFootnoteOwnerScope.SingleReferenceParagraphs)
+        DocxFootnoteOwnerScope ownerScope = DocxFootnoteOwnerScope.SingleReferenceParagraphs,
+        bool includeCustomMarkers = false, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         pages = new(StringComparer.Ordinal);
         var linesByParagraph = new Dictionary<DocxParagraph, List<(int Page, DocxTextLineLayout Line)>>(ReferenceEqualityComparer.Instance);
         var notes = new Dictionary<string, List<(int Page, DocxPlacedRelatedStoryLayout Note)>>(StringComparer.Ordinal);
         for (int i = 0; i < layout.Pages.Count; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var page = layout.Pages[i];
             if (page.ColumnFrames.Count > 1 || page.StaticTextLines.Count != 0 || page.StaticInlineImages.Count != 0 ||
                 page.StaticTableRows.Count != 0 || page.StaticInlineTextBoxes.Count != 0) return false;
@@ -202,6 +229,7 @@ internal static class DocxPageFootnoteNumbering
         bool? wrappedBodyEligible = null;
         foreach (var p in document.Paragraphs.Where(p => p.InlineReferences.Count != 0))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if ((ownerScope != DocxFootnoteOwnerScope.AllSourceReferences && p.InlineReferences.Count != 1) ||
                 !linesByParagraph.TryGetValue(p, out var lines) || lines.Count == 0) return false;
             bool wrapped = lines.Count != 1;
@@ -216,23 +244,47 @@ internal static class DocxPageFootnoteNumbering
             var markerRuns = p.Runs.GroupBy(r => r.SourceRunIndex).ToDictionary(g => g.Key, g => g.ToArray());
             var markerLines = lines.SelectMany(l => l.Line.Segments.Where(s => s.Role == DocxTextSegmentRole.Text)
                 .Select(s => (l.Page, Segment: s)))
-                .GroupBy(l => (l.Segment.SourceTextRunIndex, l.Segment.SourceTextOffsetInRun, l.Segment.Text))
+                .GroupBy(l => (l.Segment.SourceTextRunIndex, l.Segment.SourceTextOffsetInRun))
                 .ToDictionary(g => g.Key, g => g.ToArray());
             var ownedRuns = new HashSet<int>();
-            foreach (var r in p.InlineReferences)
+            Dictionary<(int Run, int Offset), DocxTextRun?>? customRuns = null;
+            foreach (var reference in p.InlineReferences)
             {
-                if (r.Kind != DocxRelatedStoryKind.Footnote || string.IsNullOrEmpty(r.Id) || string.IsNullOrEmpty(r.DisplayText) ||
-                    r.CustomMarkText is not null || !string.IsNullOrEmpty(r.CustomMarkFollowsValue) && !OoxBoolean.IsOff(r.CustomMarkFollowsValue) ||
-                    r.Revision is not null || r.Revisions.Count != 0 || !r.DisplayText.All(char.IsAsciiDigit)) return false;
-                if (!markerRuns.TryGetValue(r.SourceRunIndex, out var marker) || !ownedRuns.Add(r.SourceRunIndex)) return false;
-                bool completeSegmentOwner = wrapped || ownerScope == DocxFootnoteOwnerScope.AllSourceReferences;
-                markerLines.TryGetValue((r.SourceRunIndex, r.TextOffsetInRun, r.DisplayText), out var ownedLines);
-                if (completeSegmentOwner && ownedLines?.Length != 1) return false;
-                int ownerPage = completeSegmentOwner ? ownedLines![0].Page : lines[0].Page;
-                if (marker.Length != 1 || marker[0].SourceTextOffsetInRun != r.TextOffsetInRun || marker[0].Text != r.DisplayText ||
-                    !notes.TryGetValue(r.Id, out var places) || places.Count != 1 || places[0].Page != ownerPage ||
+                cancellationToken.ThrowIfCancellationRequested();
+                if (reference.Kind != DocxRelatedStoryKind.Footnote || string.IsNullOrEmpty(reference.Id) ||
+                    reference.Revision is not null || reference.Revisions.Count != 0 ||
+                    !ownedRuns.Add(reference.SourceRunIndex)) return false;
+                bool custom = reference.CustomMarkText is not null;
+                if (custom)
+                {
+                    if (!includeCustomMarkers || reference.DisplayText is not null ||
+                        !DocxCustomNoteMarkerOwners.TryGetSourceRun(reference,
+                            customRuns ??= DocxCustomNoteMarkerOwners.IndexSourceRuns(p.Runs, cancellationToken), out _)) return false;
+                }
+                else if (string.IsNullOrEmpty(reference.DisplayText) || !reference.DisplayText.All(char.IsAsciiDigit) ||
+                    !string.IsNullOrEmpty(reference.CustomMarkFollowsValue) && !OoxBoolean.IsOff(reference.CustomMarkFollowsValue) ||
+                    !markerRuns.TryGetValue(reference.SourceRunIndex, out var marker) || marker.Length != 1 ||
+                    marker[0].SourceTextOffsetInRun != reference.TextOffsetInRun || marker[0].Text != reference.DisplayText) return false;
+                bool completeSegmentOwner = custom || wrapped || ownerScope == DocxFootnoteOwnerScope.AllSourceReferences;
+                markerLines.TryGetValue((reference.SourceRunIndex, reference.TextOffsetInRun), out var ownedLines);
+                int matches = 0, measuredPage = 0;
+                if (ownedLines is not null)
+                    foreach (var owned in ownedLines)
+                        if (custom ? owned.Segment.Text.StartsWith(reference.CustomMarkText!, StringComparison.Ordinal) &&
+                                !owned.Segment.StyleRun.EffectiveProperties.Hidden
+                            : owned.Segment.Text == reference.DisplayText)
+                        { matches++; measuredPage = owned.Page; }
+                if (completeSegmentOwner && matches != 1) return false;
+                int ownerPage = completeSegmentOwner ? measuredPage : lines[0].Page;
+                if (!notes.TryGetValue(reference.Id, out var places) || places.Count != 1 || places[0].Page != ownerPage ||
                     places[0].Note.ContentTopOffset != 0d || places[0].Note.TextLines.Count != 1 ||
-                    places[0].Note.StoryLayout.TextLines.Count != 1 || !pages.TryAdd(r.Id, ownerPage)) return false;
+                    places[0].Note.StoryLayout.TextLines.Count != 1 || !pages.TryAdd(reference.Id, ownerPage)) return false;
+                if (custom && (!DocxCustomNoteMarkerOwners.TryGetTargetRun(places[0].Note.StoryLayout.Story,
+                        reference.CustomMarkText!, out var target) ||
+                    !places[0].Note.TextLines[0].Segments.Any(segment =>
+                        segment.SourceTextRunIndex == target.SourceRunIndex && segment.SourceTextOffsetInRun == 0 &&
+                        segment.Text.StartsWith(reference.CustomMarkText!, StringComparison.Ordinal) &&
+                        !segment.StyleRun.EffectiveProperties.Hidden))) return false;
             }
         }
         return pages.Count > 0 && pages.Count == notes.Count &&
