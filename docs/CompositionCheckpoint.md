@@ -1,5 +1,42 @@
 # Composed-document reliability checkpoint
 
+C76 keeps separate current/original numbering timelines after actual inserted
+numbering marks. Original state is allocated lazily, shared through source-story
+tables and invalidated for unsupported original ownership. Derived counters retain
+a real preceding mark as their trigger without inventing source revisions or
+balloons. Shared prefix measurement/placement handles old strike/current underline,
+suffixes and overflow to the next configured tab; painting owns automatic blue
+review ink. Both prefix runs enter the existing font plan. Final paths retain bytes.
+
+Eighteen new Word exports and 22 retained references cover moved/two insertions,
+digit transitions, suffixes, custom tabs, level decoration, explicit restart and
+body/cells/static math. Of forty retained outcomes, 38 qualify inserted-mark
+semantics: all 148 numeric paints match text/color within the existing one-point
+geometry tolerance; 34 old-number paints are restored. Twenty actual-mark prefixes
+recover underline extent within .456pt. All twenty Review outcomes improve in MAE
+and foreground recall, all twenty Final PDFs stay byte-identical, and no new gate
+component fails. All forty visual gates still fail unchanged thresholds. Three
+page pairs were reviewed; mixed mark/formatting balloons remain generic.
+
+The independent-concrete-ID control exposes a separate inherited defect: Word
+Final paints 1/2/3 and the candidate 1/1/2. Both raw modes, metrics and Word facts
+remain explicitly unqualified. The explicit-start-override control establishes a
+real independent restart. C77 must establish continuation/restart semantics with
+independent Office controls before changing counter identity; do not infer a
+universal shared-abstract-numbering rule from this single input.
+
+The first production qualification passed 159 neighbors but failed its three new
+checks: previous-counter runs were not registered in font preparation. The shared
+font-plan correction is requalified on one frozen Release artifact: 162 Windows
+checks and 123 Ubuntu checks/39 explicit skips, each once; two rendering checks
+fail causally on C75. Seventeen assets/four integration PDFs transfer, without a
+root rebuild or suite replay. An earlier snapshot consistency correction occurred
+before tests. Initial failed outputs/reports remain; no results from the changed
+DLL are carried. Prior ten corpus comparisons carry by C74/C75 source-scope
+exclusion, with no new corpus-PDF identity claim. C75 CI is green on both platforms
+(38988927008). Evidence:
+`artifacts/composition-c1/numbering-counter-evidence.json` and linked reports.
+
 C75 gives an inserted numbering mark its own decoration/revision source. The
 shared prefix factory keeps placement-time font/spacing choices while restoring
 source ink and actual revision identity. Final inherits paragraph color and
