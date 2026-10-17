@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+C151 completes the ordinary-cell measurement contract. Four parent outcomes had
+visible note glyphs but no occupied line bounds, leaving105-108 instead of Word09/10.
+Legacy cell lines now publish actual height/baseline inset from their existing
+placement measurements. Painting and container placement stay unchanged; shared
+C150 source/clip ownership admits the complete slots. No font/size rule or model
+flag is added. Missing and clipped measurements retain their existing fallbacks.
+
+87 Windows/75 Ubuntu checks/12 native skips include slot containment, larger first
+runs and existing note hit-area/before/after-spacing contracts. Two new observers
+initially invoked an equation-only bookmark helper. The corrected helper preserves
+all passing math arguments:14 runtime assets/2,025 inputs exact, only failed
+ordinary observers rerun. No library/CLI rebuild, passing suite or conversion
+replay after this harness correction.
+
+Four independent Word outcomes restore source/story09/10 labels and four distinct
+same-page targets, marker Y within0.187pt. All four comparisons improve/no new
+failed components; strict typography/spacing gates still fail. Four Final page
+pairs reviewed/four Review pairs carry by both PNG identities. Parent label
+regression fails. Seventeen assets/four smokes transfer without root build/suite
+replay. Final twelve portfolio outcomes/seven sources/twenty pages and eight
+mixed-cell PDFs retain accepted bytes. Office comparisons and reviewed ink carry;
+ten DOCX failures/two deck passes/two extraction flags and existing Aptos baseline
+failures remain. No new full content audit. Root68ca1278;
+`artifacts/composition-c1/plain-cell-line-frames-evidence.json`. C150 CI is green.
+Next: investigate complete-note admission when a long body paragraph and cell note
+coexist, before changing reservation or any validated container fallback.
+
 C150 fixes another composition boundary: moving supported mixed paragraphs into
 cells left provisional105-108 instead of page counters09/10. Numbering now shares
 body/cell source order and complete measured line/paint-clip ownership. One
