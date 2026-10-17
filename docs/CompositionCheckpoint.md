@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+C87 renders supported source-owned inserted/deleted equations through the shared
+inline path. Actual wrapper/run revision identities and source positions establish
+ownership; aggregate/value-equal metadata, wrong positions and unsupported kinds
+retain fallback. Equation authors share source order with prose/pictures, including
+an equation tied to its following prose index. Math glyphs reuse the existing author
+palette and font strike metrics. Word uses no insertion underline here; fraction
+rules retain their authored ink. No font/size/document-shape rule was added.
+
+Sixteen strict Word outcomes cover insertion/deletion across body/cell/header/footer
+and both public presets. The twelve affected MAEs improve; four Final deletion PDFs
+retain parent bytes. All sixteen gates still fail unchanged thresholds without new
+components. Four omitted fraction glyphs return alongside the other equations,
+prose and picture. The affected maximum X/Y residuals are 0.551/0.768 points. Five
+same-scale crop pairs reviewed. The unchanged Final deletion body/cell/header flow
+still differs by up to 6.766 points; this is an explicit next defect, outside the
+affected geometry assertion. Its raw failures remain; no tolerance was widened.
+
+One production artifact qualifies 28 Windows methods (26 unchanged checks carried
+through identical DLL/CLI/input identities, two corrected grayscale observers) and
+nineteen Ubuntu checks/nine skips in one invocation. Raw observer failures remain.
+Two parent regressions fail actual ownership/content checks. Neutral bookmarks/run
+splits preserve all math geometry. Seven-source portfolio comparisons carry by
+absence of revised equation wrappers, not by a corpus replay claim. Seventeen
+assets/four smoke PDFs transfer without root build or suite replay. Root 142e320f;
+evidence: `artifacts/composition-c1/equation-revisions-evidence.json`.
+C86 CI 39005243891 remains running; Ubuntu has passed. Work continues meanwhile.
+
 C86 shares actual non-rendering revision eligibility with Word change-bar
 classification, memoized within each painting conversion. Ordinary unscaled Final
 now uses the existing minimum-leading correction. Existing font/size/shape guards,
