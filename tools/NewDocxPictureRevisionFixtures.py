@@ -16,13 +16,22 @@ rows += [row for row in json.loads((cases / 'ReviewAuthors/revision-text-ink.jso
 source = cases / 'ReviewAuthors/nontext-author-image-insertion.docx'
 source_sha = hashlib.sha256(source.read_bytes()).hexdigest().upper()
 assert source_sha == next(row['Sha256'] for row in rows if row['Id'] == 'nontext-author-image-insertion')
-for variant in ['cell', 'header', 'footer', 'arial14', 'calibri18', 'authored-double-green', 'shared-run-body', 'shared-run-cell', 'shared-run-header', 'shared-run-footer']:
+for variant in ['cell', 'header', 'footer', 'arial14', 'calibri18', 'authored-double-green', 'shared-run-body', 'shared-run-cell', 'shared-run-header', 'shared-run-footer', 'standalone-body', 'standalone-cell', 'large-body', 'large-cell', 'tall-body', 'tall-cell']:
     with ZipFile(source) as archive:
         entries = {part: archive.read(part) for part in archive.namelist()}
     document = E.fromstring(entries['word/document.xml']); body = document.find(w + 'body')
     paragraph = body.find(w + 'p'); section = body.find(w + 'sectPr')
     insertion = next(paragraph.iter(w + 'ins')); picture_run = insertion.find(w + 'r')
-    placement = variant.replace('shared-run-', '') if variant.startswith('shared-run-') else variant
+    placement = variant.replace('shared-run-', '').replace('standalone-', '').replace('large-', '').replace('tall-', '')
+    if variant.startswith(('large-', 'tall-')):
+        factor = 2 if variant.startswith('large-') else 4
+        wp = '{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}'
+        a = '{http://schemas.openxmlformats.org/drawingml/2006/main}'
+        for extent in [picture_run.find('.//' + wp + 'extent'), picture_run.find('.//' + a + 'xfrm/' + a + 'ext')]:
+            for key in ['cx', 'cy']: extent.set(key, str(int(extent.get(key)) * factor))
+    if variant.startswith('standalone-'):
+        for child in list(paragraph):
+            if child.tag == w + 'r': paragraph.remove(child)
     if variant.startswith('shared-run-'):
         drawing = deepcopy(picture_run.find(w + 'drawing'))
         wp = '{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}'
@@ -58,6 +67,6 @@ for variant in ['cell', 'header', 'footer', 'arial14', 'calibri18', 'authored-do
         for part, data in sorted(entries.items()):
             info = ZipInfo(part, (2026, 10, 17, 0, 0, 0)); info.compress_type = ZIP_DEFLATED
             archive.writestr(info, data)
-    rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(), Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(), SourceSha256=source_sha, Variant=variant, HeldOut=False, ExpectedEquationCount=0, ExpectedText=['Public owner paragraph.', 'Public comment anchor.']))
+    rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(), Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(), SourceSha256=source_sha, Variant=variant, HeldOut=False, ExpectedEquationCount=0, ExpectedText=['Public comment anchor.'] if variant.startswith('standalone-') else ['Public owner paragraph.', 'Public comment anchor.']))
 (output / 'picture-revisions.json').write_text(json.dumps(rows, indent=2)+'\n', encoding='utf-8')
-print('Pinned fourteen image-revision controls; four prior sources reused')
+print('Pinned twenty image-revision controls; four prior sources reused')

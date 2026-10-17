@@ -110,6 +110,9 @@ internal sealed record DocxTextLineLayout(
     public double InlineMathOffsetX { get; init; }
     public IReadOnlyList<DocxInlineMathPlacement> InlineMath { get; init; } = [];
     public DocxInlineLineFrame? InlineFrame { get; init; }
+    // Relative source-frame geometry survives translations. The first print
+    // origin maps the source baseline while subsequent flow uses printed sizes.
+    public double SourceBaselineOffset { get; init; }
 }
 
 internal sealed record DocxTextSegmentLayout(

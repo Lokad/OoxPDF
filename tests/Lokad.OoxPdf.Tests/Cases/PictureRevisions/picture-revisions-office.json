@@ -35,7 +35,9 @@
         52,
         56
       ],
-      "Variant": "body"
+      "Variant": "body",
+      "OwnerTextBaselineY": 628.32,
+      "FollowingTextBaselineY": 613.58
     },
     {
       "Id": "nontext-author-image-before-text",
@@ -71,7 +73,9 @@
         52,
         56
       ],
-      "Variant": "body"
+      "Variant": "body",
+      "OwnerTextBaselineY": 628.32,
+      "FollowingTextBaselineY": 613.58
     },
     {
       "Id": "nontext-author-image-after-text",
@@ -107,7 +111,9 @@
         120,
         212
       ],
-      "Variant": "body"
+      "Variant": "body",
+      "OwnerTextBaselineY": 628.32,
+      "FollowingTextBaselineY": 613.58
     },
     {
       "Id": "revision-ink-deletion-after-image",
@@ -143,7 +149,9 @@
         52,
         56
       ],
-      "Variant": "body"
+      "Variant": "body",
+      "OwnerTextBaselineY": 628.32,
+      "FollowingTextBaselineY": 613.58
     },
     {
       "Id": "picture-revision-cell",
@@ -179,7 +187,9 @@
         52,
         56
       ],
-      "Variant": "cell"
+      "Variant": "cell",
+      "OwnerTextBaselineY": 628.32,
+      "FollowingTextBaselineY": 613.58
     },
     {
       "Id": "picture-revision-header",
@@ -215,7 +225,9 @@
         52,
         56
       ],
-      "Variant": "header"
+      "Variant": "header",
+      "OwnerTextBaselineY": 655.63,
+      "FollowingTextBaselineY": 634.06
     },
     {
       "Id": "picture-revision-footer",
@@ -251,7 +263,9 @@
         52,
         56
       ],
-      "Variant": "footer"
+      "Variant": "footer",
+      "OwnerTextBaselineY": 130.03,
+      "FollowingTextBaselineY": 634.06
     },
     {
       "Id": "picture-revision-arial14",
@@ -287,7 +301,9 @@
         52,
         56
       ],
-      "Variant": "arial14"
+      "Variant": "arial14",
+      "OwnerTextBaselineY": 628.32,
+      "FollowingTextBaselineY": 613.58
     },
     {
       "Id": "picture-revision-calibri18",
@@ -323,7 +339,9 @@
         52,
         56
       ],
-      "Variant": "calibri18"
+      "Variant": "calibri18",
+      "OwnerTextBaselineY": 628.32,
+      "FollowingTextBaselineY": 612.22
     },
     {
       "Id": "picture-revision-authored-double-green",
@@ -359,7 +377,9 @@
         52,
         56
       ],
-      "Variant": "authored-double-green"
+      "Variant": "authored-double-green",
+      "OwnerTextBaselineY": 628.32,
+      "FollowingTextBaselineY": 613.58
     }
   ]
 }

@@ -313,6 +313,7 @@ internal sealed partial class DocxLayoutEngine
         var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int), double>();
         var plainFootnoteFooterFrames = new Dictionary<(DocxPageSettings, double, double, double, double, double, double, int), DocxLayoutPage?>();
         double? bodyFirstBaselineMemo = null;
+        double bodyFirstSourceOffsetMemo = 0d;
         bool bodyFirstBaselineComputed = false;
         bool useSimpleSectionPagination = UsesSimpleSectionPagination(document) &&
             (Math.Abs(paragraphSpacingScale - 1d) < 0.000001d ||
@@ -1504,7 +1505,7 @@ internal sealed partial class DocxLayoutEngine
                 DocxTextRun firstRun = paragraph.Runs[0];
                 bool firstLine = true;
                 double continuationParagraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
-                DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pages.Count + 1, cancellationToken, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans)).ToArray();
+                DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pages.Count + 1, cancellationToken, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans, paragraphSpacingScale)).ToArray();
                 DocxMidLineMath? inlineMath = TryGetSinglePreparedMath(paragraph, mathEquations, out var preparedMath) &&
                     !preparedMath.Equation.Display
                     ? WrapInlineMath(paragraph, preparedMath, textSpans, ref lines, paragraphWidth, continuationParagraphWidth,
@@ -1518,7 +1519,7 @@ internal sealed partial class DocxLayoutEngine
 
                 // RV05: ordered inline atoms (body path). Affined images in text-mixed
                 // paragraphs attach to wrapped lines at run position; wrapping is untouched.
-                midLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, baselineLineHeight, IsExactLineSpacing(effective)), lineHeight);
+                midLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, baselineLineHeight, IsExactLineSpacing(effective)), lineHeight, paragraphSpacingScale, textMeasurer);
                 double? typographicBaselineInset = lineHeightProfile.Source == DocxLineHeightSource.BodySingleLineAuto
                     ? DocxLineMetrics.ResolveUniformBodyTypographicBaselineInset(paragraph, paragraphFontSize, textMeasurer) : null;
                 for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
@@ -1529,7 +1530,7 @@ internal sealed partial class DocxLayoutEngine
                     // so an auto-spaced line shifts down by image height minus ascent here; the
                     // advance below never grows. Exact spacing stays rigid (no shift).
                     double extraAbove = IsExactLineSpacing(effective) ? 0d : (midLinePlan?.ShiftAboveHeights[lineIndex] ?? 0d);
-                    double extraBelow = 0d;
+                    double extraBelow = IsExactLineSpacing(effective) ? 0d : midLinePlan?.ExtraBelow(lineIndex) ?? 0d;
                     if (inlineMath?.LineIndex == lineIndex && !IsExactLineSpacing(effective))
                     {
                         var expansion = ResolveInlineMathExpansion(inlineMath.Math, paragraphFontSize, baselineLineHeight,
@@ -1537,7 +1538,7 @@ internal sealed partial class DocxLayoutEngine
                             placementBaselineInset: (typographicBaselineInset ?? ResolveOrderedBodyBaselineInset(
                                 paragraph, paragraphFontSize, baselineLineHeight, textMeasurer)) * paragraphSpacingScale);
                         extraAbove = Math.Max(extraAbove, expansion.Above);
-                        extraBelow = expansion.Below;
+                        extraBelow = Math.Max(extraBelow, expansion.Below);
                     }
                     if (firstLine)
                     {
@@ -1698,6 +1699,8 @@ internal sealed partial class DocxLayoutEngine
                     {
                         FrameOriginOffsetX = x - lineShape.X,
                         InlineObjectEndOffsetX = lineMath is null ? null : lineMath.X + inlineMath!.Width - lineShape.X,
+                        SourceBaselineOffset = IsExactLineSpacing(effective) || midLinePlan is null ? 0d :
+                            Math.Max(0d, midLinePlan.SourceShiftAboveHeights[lineIndex] - extraAbove),
                         UsesUniformBodyTypographicBaseline = typographicBaselineInset is not null,
                         BodyLineBoxBaselineInsetPoints = lineHeightProfile.Source is DocxLineHeightSource.ExactLineSpacing or DocxLineHeightSource.BodySingleLineAuto
                             ? rawBaselineOffset * paragraphSpacingScale : null,
@@ -1898,8 +1901,8 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
                 cancellationToken.ThrowIfCancellationRequested();
-                double imageWidth = Math.Min(width, image.WidthPoints);
-                double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
+                var (imageWidth, imageHeight) = ResolveInlineImageSize(image, width, paragraphSpacingScale);
+
                 if (cursorY - imageHeight < CurrentFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(imageHeight)))
                 {
                     AdvanceForOverflowingItem(imageHeight, elementIndex);
@@ -2003,20 +2006,19 @@ internal sealed partial class DocxLayoutEngine
             if (!bodyFirstBaselineComputed && pages.Count != 0)
             {
                 bodyFirstBaselineComputed = true;
-                foreach (DocxTextLineLayout bodyLine in DocxRenderer.EnumerateBodyTextLines(pages[0]))
-                {
-                    bodyFirstBaselineMemo = bodyFirstBaselineMemo is null ? bodyLine.BaselineY : Math.Max(bodyFirstBaselineMemo.Value, bodyLine.BaselineY);
-                }
+                (bodyFirstBaselineMemo, bodyFirstSourceOffsetMemo) = DocxRenderer.ResolveBodyPrintOrigin(pages[0]);
             }
 
             double? firstPinBaseline = bodyFirstBaselineMemo;
+            double firstPinSourceOffset = bodyFirstSourceOffsetMemo;
             if (pages.Count != 0)
             {
                 DocxStaticStoryLayoutResult? firstHeaderLayout = GetContinuationHeader(pages[0], 1, pageCount);
                 if (firstHeaderLayout is not null && firstHeaderLayout.TextLines.Count != 0)
                 {
                     double firstHeaderBaseline = firstHeaderLayout.TextLines.Max(staticLine => staticLine.BaselineY);
-                    firstPinBaseline = firstPinBaseline is null ? firstHeaderBaseline : Math.Max(firstPinBaseline.Value, firstHeaderBaseline);
+                    if (firstPinBaseline is null || firstHeaderBaseline > firstPinBaseline.Value)
+                        (firstPinBaseline, firstPinSourceOffset) = (firstHeaderBaseline, 0d);
                 }
             }
 
@@ -2026,7 +2028,7 @@ internal sealed partial class DocxLayoutEngine
             }
 
             double takeScale = paragraphSpacingScale;
-            return (keepOutLayout - firstPinBaseline.Value * (1d - takeScale)) / takeScale;
+            return (keepOutLayout - firstPinBaseline.Value * (1d - takeScale) - firstPinSourceOffset * takeScale) / takeScale;
         }
         double ResolveFooterKeepOut(DocxLayoutPage templatePage, int pageNumber, int pageCount)
         {

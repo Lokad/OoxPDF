@@ -951,7 +951,7 @@ internal sealed partial class DocxRenderer
     // unscaled pages with balloons and for lineless layouts. Balloonless unscaled pages
     // print plain (Office: text-box reference), so they keep no shift.
     private const double WordCompatibleTextYOffsetReferenceAnchorPoints = 69.58d;
-    internal static double ResolveWordCompatibleTextYOffset(DocxMarkupContext markupContext, double? firstBaselineY, double pageHeight, bool hasBalloonContent)
+    internal static double ResolveWordCompatibleTextYOffset(DocxMarkupContext markupContext, double? firstBaselineY, double pageHeight, bool hasBalloonContent, double sourceBaselineOffset = 0d)
     {
         // Office A/B (W5-Y1 top-margin probes w5-ytop54/w5-ytop144): Word scales Y about the
         // page center with the print scale. Pin the laid-out first baseline to its center-scaled
@@ -974,7 +974,8 @@ internal sealed partial class DocxRenderer
             return hasBalloonContent ? WordCompatibleTextYOffsetReferenceAnchorPoints : 0d;
         }
 
-        return (firstBaselineY.Value - pageHeight / 2d) * (1d - markupContext.WordCompatiblePrintScale);
+        return (firstBaselineY.Value - pageHeight / 2d) * (1d - markupContext.WordCompatiblePrintScale) +
+            sourceBaselineOffset * markupContext.WordCompatiblePrintScale;
     }
 
     private static DocxMarkupContext WithFirstPinYOffset(DocxMarkupContext markupContext, DocxDocument document, DocxLayout layout)
@@ -985,21 +986,13 @@ internal sealed partial class DocxRenderer
         }
 
         DocxLayoutPage page = layout.Pages[0];
-        double? firstBaselineY = null;
-        foreach (DocxTextLineLayout line in EnumerateBodyTextLines(page))
-        {
-            // Inline objects may enlarge ascent without moving the source text
-            // strut. Pin that measured strut, not an object's occupied baseline.
-            double anchor = line.BaselineY;
-            if (line.InlineFrame is { TextBaselineInset: { } textInset } frame)
-                anchor += frame.BaselineInset - textInset;
-            firstBaselineY = firstBaselineY is null ? anchor : Math.Max(firstBaselineY.Value, anchor);
-        }
-
+        var (firstBaselineY, sourceBaselineOffset) = ResolveBodyPrintOrigin(page);
         double? firstBodyBaselineY = firstBaselineY;
+        double bodySourceBaselineOffset = sourceBaselineOffset;
         foreach (DocxTextLineLayout line in EnumerateStaticTextLines(page, includeTextBoxes: false))
         {
-            firstBaselineY = firstBaselineY is null ? line.BaselineY : Math.Max(firstBaselineY.Value, line.BaselineY);
+            if (firstBaselineY is null || line.BaselineY > firstBaselineY.Value)
+                (firstBaselineY, sourceBaselineOffset) = (line.BaselineY, 0d);
         }
 
         bool hasBalloons = markupContext.WordCompatibleHasPrintedBalloons ?? HasAnyWordCompatibleBalloon(document);
@@ -1011,12 +1004,12 @@ internal sealed partial class DocxRenderer
             return markupContext with
             {
                 WordCompatibleTextYOffset = ResolveWordCompatibleTextYOffset(markupContext,
-                    bodyBaseline + headerDisplacement, page.Height, hasBalloons),
+                    bodyBaseline + headerDisplacement, page.Height, hasBalloons, bodySourceBaselineOffset),
                 WordCompatibleStaticTextYAdjustmentPoints = 0d
             };
         }
 
-        double legacyOffset = ResolveWordCompatibleTextYOffset(markupContext, firstBaselineY, page.Height, hasBalloons);
+        double legacyOffset = ResolveWordCompatibleTextYOffset(markupContext, firstBaselineY, page.Height, hasBalloons, sourceBaselineOffset);
         // Word independently scales the first body and header origins. Their
         // continuation pitches are already scaled by layout. A higher header
         // must not move the body down by the unscaled distance between them.
@@ -1030,7 +1023,7 @@ internal sealed partial class DocxRenderer
                 candidate.StaticInlineImages.Count == 0 && candidate.StaticTableRows.Count == 0 &&
                 candidate.StaticInlineTextBoxes.Count == 0);
         double bodyOffset = useBodyAnchor
-            ? ResolveWordCompatibleTextYOffset(markupContext, firstBodyBaselineY, page.Height, hasBalloons)
+            ? ResolveWordCompatibleTextYOffset(markupContext, firstBodyBaselineY, page.Height, hasBalloons, bodySourceBaselineOffset)
             : legacyOffset;
         return markupContext with
         {

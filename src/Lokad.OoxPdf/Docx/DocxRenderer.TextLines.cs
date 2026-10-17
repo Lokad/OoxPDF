@@ -33,6 +33,31 @@ internal sealed partial class DocxRenderer
         }
     }
 
+    internal static (double? BaselineY, double SourceBaselineOffset) ResolveBodyPrintOrigin(DocxLayoutPage page)
+    {
+        double? baseline = null;
+        double sourceOffset = 0d;
+        foreach (var line in EnumerateBodyTextLines(page))
+        {
+            double anchor = line.BaselineY;
+            if (line.InlineFrame is { TextBaselineInset: { } textInset } frame)
+                anchor += frame.BaselineInset - textInset;
+            if (baseline is null || anchor > baseline.Value)
+                (baseline, sourceOffset) = (anchor, line.SourceBaselineOffset);
+        }
+        // Leading picture-only blocks have their own frame origin. A later
+        // caption cannot supply the source origin for already scaled content.
+        double? pictureTop = page.Items.FirstOrDefault() switch
+        {
+            DocxInlineImageLayout image => image.Y + image.Height,
+            DocxTableRowLayout row when !EnumerateTableRowTextLines(row).Any() =>
+                row.Cells.SelectMany(cell => cell.InlineImages).Select(image => (double?)(image.Y + image.Height)).Max(),
+            _ => null
+        };
+        return pictureTop is { } top && (baseline is null || top > baseline.Value)
+            ? (top, 0d) : (baseline, sourceOffset);
+    }
+
     private static IEnumerable<DocxTextLineLayout> EnumerateRenderedPageTextLines(
         FloatingDrawingPageIndex.PageIndexPair drawingPages,
         DocxLayoutPage page,

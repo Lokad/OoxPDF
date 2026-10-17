@@ -179,5 +179,81 @@
       "Public owner paragraph.",
       "Public comment anchor."
     ]
+  },
+  {
+    "Id": "picture-revision-standalone-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-standalone-body.docx",
+    "Sha256": "02B09AD04D587FB58F67051E33CD80DA88304F49A2A313BD1A9A138525C4FC65",
+    "SourceSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "Variant": "standalone-body",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "picture-revision-standalone-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-standalone-cell.docx",
+    "Sha256": "2ED77AC534EDD7C116E08E50627A08047A4F7C4A28EBE78872C380383CB7A894",
+    "SourceSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "Variant": "standalone-cell",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "picture-revision-large-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-large-body.docx",
+    "Sha256": "0FC0B8F1C479C85E1D517E3B03B3C71FAAD2CDFCAED5645D8E4EC23672FCD808",
+    "SourceSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "Variant": "large-body",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "picture-revision-large-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-large-cell.docx",
+    "Sha256": "84731C6A666F9B3EC74E43372F80C0DF42DA3C4D67A84D97DA55C82B9E629E37",
+    "SourceSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "Variant": "large-cell",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "picture-revision-tall-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-tall-body.docx",
+    "Sha256": "1FEDA513A637266221341C3EECD5EEFFF51D40A227C92C78E7F24C4C6A625272",
+    "SourceSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "Variant": "tall-body",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "picture-revision-tall-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-tall-cell.docx",
+    "Sha256": "62D4364AE1E82F44B53FA6B40879028F156AF9329447B1AA43DDC27A657DB724",
+    "SourceSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "Variant": "tall-cell",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
   }
 ]

@@ -30,7 +30,9 @@
           641.96
         ]
       ],
-      "FirstToSecondAdvance": 27.319999999999993
+      "FirstToSecondAdvance": 27.319999999999993,
+      "OwnerTextBaselineY": 628.32,
+      "FollowingTextBaselineY": 613.58
     },
     {
       "Id": "picture-revision-shared-run-cell",
@@ -61,7 +63,9 @@
           641.96
         ]
       ],
-      "FirstToSecondAdvance": 27.319999999999993
+      "FirstToSecondAdvance": 27.319999999999993,
+      "OwnerTextBaselineY": 628.32,
+      "FollowingTextBaselineY": 613.58
     },
     {
       "Id": "picture-revision-shared-run-header",
@@ -92,7 +96,9 @@
           669.241
         ]
       ],
-      "FirstToSecondAdvance": 27.319999999999993
+      "FirstToSecondAdvance": 27.319999999999993,
+      "OwnerTextBaselineY": 655.63,
+      "FollowingTextBaselineY": 634.06
     },
     {
       "Id": "picture-revision-shared-run-footer",
@@ -123,7 +129,9 @@
           143.33
         ]
       ],
-      "FirstToSecondAdvance": 27.319999999999993
+      "FirstToSecondAdvance": 27.319999999999993,
+      "OwnerTextBaselineY": 130.03,
+      "FollowingTextBaselineY": 634.06
     }
   ]
 }

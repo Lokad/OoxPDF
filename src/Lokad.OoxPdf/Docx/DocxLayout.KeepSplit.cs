@@ -615,7 +615,7 @@ internal sealed partial class DocxLayoutEngine
             double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, fixedScale, defaultTabStopPoints);
             double firstParagraphWidth = Math.Max(1d, availableWidth - textStartOffset - GetParagraphRightInset(paragraph, fixedScale));
             double continuationParagraphWidth = Math.Max(1d, availableWidth - GetParagraphTextStartOffset(paragraph, fixedScale) - GetParagraphRightInset(paragraph, fixedScale));
-            height += WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans)).Count() * lineHeight;
+            height += WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans, fixedScale)).Count() * lineHeight;
         }
         else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
         {
@@ -624,8 +624,8 @@ internal sealed partial class DocxLayoutEngine
 
         foreach (DocxInlineImage image in paragraph.Images)
         {
-            double imageWidth = Math.Min(availableWidth, image.WidthPoints);
-            double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
+            var (imageWidth, imageHeight) = ResolveInlineImageSize(image, availableWidth, fixedScale);
+
             height += imageHeight;
         }
 

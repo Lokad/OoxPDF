@@ -45,14 +45,14 @@ internal sealed partial class DocxLayoutEngine
     // into wrapping; the range index requires sorted offsets.
     private static List<(int CharOffset, double Width)> ResolveInlineImageWrapWidths(
         DocxParagraph paragraph,
-        IReadOnlyList<DocxTextSpan> textSpans)
+        IReadOnlyList<DocxTextSpan> textSpans, double imageScale = 1d)
     {
         var widths = new List<(int CharOffset, double Width)>();
         for (int i = 0; i < paragraph.Images.Count; i++)
         {
             if (paragraph.Images[i].SourceRunIndex >= 0)
             {
-                widths.Add((ResolveInlineImageCharOffset(paragraph, textSpans, paragraph.Images[i]), paragraph.Images[i].WidthPoints));
+                widths.Add((ResolveInlineImageCharOffset(paragraph, textSpans, paragraph.Images[i]), paragraph.Images[i].WidthPoints * imageScale));
             }
         }
 

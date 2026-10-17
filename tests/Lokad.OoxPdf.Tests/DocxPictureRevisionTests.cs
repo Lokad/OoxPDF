@@ -14,6 +14,65 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxPictureRevisionTests
 {
+    public static void DocxPictureRevisionBodyCellFramesMatchIndependentWordDimensions()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Native picture controls use installed Windows fonts.");
+        CheckBodyCellPictureFrames(null);
+    }
+
+    internal static void CheckBodyCellPictureFrames(IFontResolver? resolver)
+    {
+        using var single = ReadGolden();
+        using var shared = JsonDocument.Parse(File.ReadAllText(Path.Combine(Cases(), "PictureRevisions", "shared-picture-runs-office.json")));
+        using var standalone = JsonDocument.Parse(File.ReadAllText(Path.Combine(Cases(), "PictureRevisions", "picture-size-variants-office.json")));
+        var rows = single.RootElement.GetProperty("Rows").EnumerateArray()
+            .Concat(shared.RootElement.GetProperty("Rows").EnumerateArray()).Concat(standalone.RootElement.GetProperty("Rows").EnumerateArray())
+            .Where(row => row.GetProperty("Id").GetString() is { } id && !id.EndsWith("-header", StringComparison.Ordinal) && !id.EndsWith("-footer", StringComparison.Ordinal));
+        foreach (var row in rows)
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string context = row.GetProperty("Id").GetString() + "/" + mode;
+            var document = ReadSource(row, mode);
+            var geometry = mode == OoxPdfDocxMarkupMode.AllMarkup
+                ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
+            var page = new DocxRenderer(resolver, mode, geometry).RenderBlankPages(document, null, default).Single();
+            int expected = row.TryGetProperty("ImageClips", out var clips) ? clips.GetArrayLength() : 1;
+            TestAssert.Equal(expected, page.Images.Count);
+            var officeClip = expected == 1 ? row.GetProperty("ImageClip") : clips[0];
+            double scale = mode == OoxPdfDocxMarkupMode.AllMarkup ? 1d : 1d / .7586666666666667d;
+            foreach (var resource in page.Images)
+            {
+                var picture = Regex.Match(page.Content, @"(?<w>[-\d.]+) 0 0 (?<h>[-\d.]+) (?<x>[-\d.]+) (?<y>[-\d.]+) cm\r?\n/" + Regex.Escape(resource.ResourceName) + " Do");
+                TestAssert.True(picture.Success, "Both presets must retain their source picture: " + context);
+                double x = Number(picture, "x"), y = Number(picture, "y"), width = Number(picture, "w"), height = Number(picture, "h");
+                TestAssert.True(Math.Abs(width - (officeClip[2].GetDouble() - officeClip[0].GetDouble()) * scale) < .1d &&
+                    Math.Abs(height - (officeClip[3].GetDouble() - officeClip[1].GetDouble()) * scale) < .1d,
+                    "Wrapping and painting must share the source picture's print scale: " + context);
+                TestAssert.True(x >= 0d && y >= 0d && x + width <= page.Width && y + height <= page.Height,
+                    "Body/cell picture ink must remain inside the physical page: " + context);
+            }
+            TestAssert.Contains("Public comment anchor.", ReadControlText(page));
+            if (resolver is null && mode == OoxPdfDocxMarkupMode.Final && row.TryGetProperty("FinalFollowingTextBaselineY", out var finalBaseline))
+            {
+                var following = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, includeTextTransforms: true)
+                    .Single(show => show.Text.Trim() == "Public comment anchor.");
+                TestAssert.True(Math.Abs(following.Y - finalBaseline.GetDouble()) < .75d,
+                    "Source-positioned image paragraphs must preserve Word Final's following baseline: " + context);
+            }
+            if (resolver is null && mode == OoxPdfDocxMarkupMode.AllMarkup)
+            {
+                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, includeTextTransforms: true).ToArray();
+                foreach (var pair in new[] { (Text: "Public owner paragraph.", Key: "OwnerTextBaselineY"), (Text: "Public comment anchor.", Key: "FollowingTextBaselineY") })
+                {
+                    if (row.GetProperty(pair.Key).ValueKind == JsonValueKind.Null) continue;
+                    var show = shows.Single(show => show.Text.Trim() == pair.Text);
+                    TestAssert.True(Math.Abs(show.Y - row.GetProperty(pair.Key).GetDouble()) < .75d,
+                        "Picture scaling must preserve the independent source-text baseline: " + context + ", " + pair.Text + ", y=" + show.Y.ToString(CultureInfo.InvariantCulture));
+                }
+            }
+        }
+    }
+
     public static void DocxPictureRevisionEligibilityRequiresActualImageOwnership()
     {
         using var golden = ReadGolden();

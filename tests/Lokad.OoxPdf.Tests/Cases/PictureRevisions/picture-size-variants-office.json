@@ -1,0 +1,173 @@
+{
+  "Scope": "Strict independent Word image geometry and adjacent source-text baselines for picture-only and mixed body/cell frames, with original, doubled and quadrupled image dimensions. Cached eight-value view readback and source pins retained.",
+  "Rows": [
+    {
+      "Id": "picture-revision-standalone-body",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-standalone-body.docx",
+      "InputSha256": "02B09AD04D587FB58F67051E33CD80DA88304F49A2A313BD1A9A138525C4FC65",
+      "ReferencePdfSha256": "94C0A86296D8A387EDD88B115C7D406296CFF5AB1842E8AAB7DA4CD43C9DFCED",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClip": [
+        54.641,
+        628.3,
+        81.961,
+        641.96
+      ],
+      "OwnerTextBaselineY": null,
+      "FollowingTextBaselineY": 613.58,
+      "FinalReferencePdfSha256": "30289FA27799EA29582459C7B33DB15E0B781F8F817DC9F8521C20DCCF3CA2BA",
+      "FinalOfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "FinalFollowingTextBaselineY": 685.54
+    },
+    {
+      "Id": "picture-revision-standalone-cell",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-standalone-cell.docx",
+      "InputSha256": "2ED77AC534EDD7C116E08E50627A08047A4F7C4A28EBE78872C380383CB7A894",
+      "ReferencePdfSha256": "7880F7F23E1FD6A97533661D3B71E03A40128687A2A8DDEC3EB4C1C340DE06C9",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClip": [
+        54.641,
+        628.3,
+        81.961,
+        641.96
+      ],
+      "OwnerTextBaselineY": null,
+      "FollowingTextBaselineY": 613.58,
+      "FinalReferencePdfSha256": "664D0E0B2B912A83A459963B2DE4E97937051445E94CBC7A5112AA20FCD51A2D",
+      "FinalOfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "FinalFollowingTextBaselineY": 685.54
+    },
+    {
+      "Id": "picture-revision-large-body",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-large-body.docx",
+      "InputSha256": "0FC0B8F1C479C85E1D517E3B03B3C71FAAD2CDFCAED5645D8E4EC23672FCD808",
+      "ReferencePdfSha256": "29BF761D0F06262C403295381B801A75981B434F0480981FDBEC0488CB70879C",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClip": [
+        137.69,
+        614.64,
+        192.331,
+        641.96
+      ],
+      "OwnerTextBaselineY": 614.66,
+      "FollowingTextBaselineY": 599.93
+    },
+    {
+      "Id": "picture-revision-large-cell",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-large-cell.docx",
+      "InputSha256": "84731C6A666F9B3EC74E43372F80C0DF42DA3C4D67A84D97DA55C82B9E629E37",
+      "ReferencePdfSha256": "E885972D02740EE5AE0B5D3BE8420D8D216AD34A2D542CBC079DB557848148B6",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClip": [
+        137.69,
+        614.64,
+        192.331,
+        641.96
+      ],
+      "OwnerTextBaselineY": 614.66,
+      "FollowingTextBaselineY": 599.93
+    },
+    {
+      "Id": "picture-revision-tall-body",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-tall-body.docx",
+      "InputSha256": "1FEDA513A637266221341C3EECD5EEFFF51D40A227C92C78E7F24C4C6A625272",
+      "ReferencePdfSha256": "AD0F5F58F59C774D00A893FBBB341EDF5091DAE2AD7216FB2461C6511428F66D",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClip": [
+        137.69,
+        587.32,
+        246.97,
+        641.961
+      ],
+      "OwnerTextBaselineY": 587.38,
+      "FollowingTextBaselineY": 572.62
+    },
+    {
+      "Id": "picture-revision-tall-cell",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-tall-cell.docx",
+      "InputSha256": "62D4364AE1E82F44B53FA6B40879028F156AF9329447B1AA43DDC27A657DB724",
+      "ReferencePdfSha256": "73B3794F2EC353EDE8E13F5D43BAE3FB87FAA6E6C77ED2A0C00476579E75C36E",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClip": [
+        137.69,
+        587.32,
+        246.97,
+        641.961
+      ],
+      "OwnerTextBaselineY": 587.38,
+      "FollowingTextBaselineY": 572.62
+    }
+  ]
+}

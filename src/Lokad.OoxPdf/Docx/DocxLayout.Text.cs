@@ -694,8 +694,19 @@ internal sealed partial class DocxLayoutEngine
     // RV05: ordered inline atoms (body path). Images carrying a recorded source run
     // in a text-mixed paragraph attach to the wrapped line spanning their character
     // offset instead of emitting as blocks after paragraph text.
-    private sealed record DocxMidLineImage(DocxInlineImage Image, int LineCharOffset, double Width, double Height, double AdvanceBefore);
-    private sealed record DocxMidLinePlan(List<DocxMidLineImage>[] ImagesByLine, double[] LineImageWidths, double[] ShiftAboveHeights, bool[] PlacedMask);
+    // Use the container's print scale before width fitting, in both measurement
+    // and placement. Natural static stories map their complete frame afterward.
+    private static (double Width, double Height) ResolveInlineImageSize(DocxInlineImage image, double availableWidth, double scale)
+    {
+        double width = Math.Min(availableWidth, image.WidthPoints * scale);
+        return (width, image.HeightPoints * width / Math.Max(1d, image.WidthPoints));
+    }
+
+    private sealed record DocxMidLineImage(DocxInlineImage Image, int LineCharOffset, double Width, double Height, double AdvanceBefore, double ExtraBelow);
+    private sealed record DocxMidLinePlan(List<DocxMidLineImage>[] ImagesByLine, double[] LineImageWidths, double[] ShiftAboveHeights, double[] SourceShiftAboveHeights, bool[] PlacedMask)
+    {
+        public double ExtraBelow(int lineIndex) => ImagesByLine[lineIndex].Select(image => image.ExtraBelow).DefaultIfEmpty(0d).Max();
+    }
     private static DocxMidLinePlan? CreateMidLinePlan(
         DocxParagraph paragraph,
         IReadOnlyList<DocxTextSpan> textSpans,
@@ -703,7 +714,9 @@ internal sealed partial class DocxLayoutEngine
         double firstLineMaxWidth,
         double continuationLineMaxWidth,
         double baselineOffset,
-        double lineHeight)
+        double lineHeight,
+        double imageScale = 1d,
+        IDocxTextMeasurer? textMeasurer = null)
     {
         List<(int ImageIndex, DocxInlineImage Image)> affined = new List<(int ImageIndex, DocxInlineImage Image)>();
         for (int i = 0; i < paragraph.Images.Count; i++)
@@ -739,12 +752,16 @@ internal sealed partial class DocxLayoutEngine
         List<DocxMidLineImage>[] imagesByLine = new List<DocxMidLineImage>[lines.Length];
         double[] lineImageWidths = new double[lines.Length];
         double[] shiftAboveHeights = new double[lines.Length];
+        double[] sourceShiftAboveHeights = new double[lines.Length];
         bool[] placedMask = new bool[paragraph.Images.Count];
         for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
             imagesByLine[lineIndex] = new List<DocxMidLineImage>();
             shiftAboveHeights[lineIndex] = 0d;
         }
+        var metrics = textMeasurer as IDocxStaticTextMetricsProvider;
+        double textDescender = metrics is null ? 0d : textSpans.Select(span =>
+            metrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize)).DefaultIfEmpty(0d).Max();
         foreach ((int imageIndex, DocxInlineImage image) in affined
             .OrderBy(item => item.Image.SourceRunIndex)
             .ThenBy(item => item.Image.SourceTextOffsetInRun)
@@ -781,17 +798,19 @@ internal sealed partial class DocxLayoutEngine
                 lineOffset = lineCharLengths[targetLine];
             }
             double maxWidth = targetLine == 0 ? firstLineMaxWidth : continuationLineMaxWidth;
-            double width = Math.Min(maxWidth, image.WidthPoints);
-            double height = image.HeightPoints * width / Math.Max(1d, image.WidthPoints);
+            var (width, height) = ResolveInlineImageSize(image, maxWidth, imageScale);
             // Text-prefix measurement excludes pictures. Retain their preceding
             // advance once, so every container places the ordered objects alike.
-            imagesByLine[targetLine].Add(new DocxMidLineImage(image, lineOffset, width, height, lineImageWidths[targetLine]));
+            double extraBelow = metrics is not null && image.SourceRunStyle is { } owner
+                ? Math.Max(0d, metrics.MeasureWindowsDescender(owner, owner.EffectiveProperties.FontSize) - textDescender) : 0d;
+            imagesByLine[targetLine].Add(new DocxMidLineImage(image, lineOffset, width, height, lineImageWidths[targetLine], extraBelow));
             lineImageWidths[targetLine] += width;
             // RV05 calibration (Word 16.0): the image top pins to the natural line top,
             // so the baseline drops by image height minus ascent; the advance below never grows.
             shiftAboveHeights[targetLine] = Math.Max(shiftAboveHeights[targetLine], height - baselineOffset);
+            sourceShiftAboveHeights[targetLine] = Math.Max(sourceShiftAboveHeights[targetLine], height / imageScale - baselineOffset);
             placedMask[imageIndex] = true;
         }
-        return new DocxMidLinePlan(imagesByLine, lineImageWidths, shiftAboveHeights, placedMask);
+        return new DocxMidLinePlan(imagesByLine, lineImageWidths, shiftAboveHeights, sourceShiftAboveHeights, placedMask);
     }
 }
