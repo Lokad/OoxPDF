@@ -5,7 +5,8 @@ param(
     [Parameter(Mandatory=$true)] [string] $InspectorPath,
     [Parameter(Mandatory=$true)] [string] $OutputDirectory,
     [ValidateSet('Both','Final','Review')] [string] $DocxPreset = 'Both',
-    [string] $Manifest = (Join-Path $PSScriptRoot '../tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json')
+    [string] $Manifest = (Join-Path $PSScriptRoot '../tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json'),
+    [switch] $IncludeRawStreams
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
@@ -41,7 +42,11 @@ foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Js
         $timer.Stop()
         if ($exitCode -ne 0) { throw ('Portfolio conversion failed: ' + $document.Id + '/' + $mode) }
         $inspect = Join-Path $run 'inspect'
-        dotnet $inspector $pdf $inspect *> (Join-Path $run 'inspect.log')
+        # Text/graphics summaries suffice for routine content and geometry gates.
+        # Dump decoded font/image streams only for a focused byte-level audit.
+        $inspectArguments = @($pdf, $inspect)
+        if (!$IncludeRawStreams) { $inspectArguments += '--text-only' }
+        dotnet $inspector @inspectArguments *> (Join-Path $run 'inspect.log')
         if ($LASTEXITCODE -ne 0) { throw ('Portfolio inspection failed: ' + $document.Id) }
         # The inspector omits its text report when a PDF contains no text.
         # Page objects still identify image-only and blank pages independently.
@@ -71,6 +76,7 @@ foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Js
 [ordered]@{
     LibrarySha256=$libraryHash;CliSha256=$cliHash;InspectorSha256=$inspectorHash
     ManifestSha256=(Get-FileHash -LiteralPath $Manifest).Hash;Rebuilt=$false;DocxPreset=$DocxPreset
+    InspectionMode=if ($IncludeRawStreams) {'SummariesAndRawStreams'} else {'SummariesOnly'}
     MeasurementScope='Cold CLI process wall time includes startup; allocation and stage baselines are separate'
     Rows=$rows
 } | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $output 'outcomes.json') -Encoding utf8
