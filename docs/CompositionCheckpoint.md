@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+C132 assigns structural cell labels to their printed cell top, independently
+of connector anchors. Six independent row-height/preceding-row controls confirm
+that Word retains this owner. One preferred-top rule also preserves existing
+footer-story formatting placement: two actual formatting peer PDFs stay exact.
+No fitted offset or extra font/size/document-shape guard is introduced.
+
+All six MAEs improve without new failed components; all strict/full one-point
+gates remain failed. Original label error falls25.545pt to0.228pt. Tall/following
+rows retain1.665pt/7.424pt label errors; declared-height review-table projection,
+connector center/colors and balloon frame height remain approximate. All child
+math/text/ink survives. Six distinct visual pairs reviewed. Six references were
+exported, including two original-source references repeated in the probe batch;
+no later exports repeat.
+
+One 23-method capability batch passes on Windows. Ubuntu passes17 and initially
+exposes an inherited installed-font absolute packing assertion, reproduced exactly
+by the parent. Its final observer retains the Windows tolerance and explicitly
+skips native coordinates elsewhere; portable layout/overflow/grouping remain.
+A proposed relative-gap observer also fails fallback-font anchors and is removed;
+all failed reports stay. Only that observer reruns. Fourteen other assets and all
+1,929 inputs remain identical, so22 Windows/17 Ubuntu passing observers carry.
+Final counts23 Windows/17 Ubuntu/six skips. Seventeen assets/four smoke PDFs
+transfer without root rebuild or suite replay. Root73794b52;
+`artifacts/composition-c1/cell-structure-placement-evidence.json`. C130/C131 CI
+are green on both platforms. C131 portfolio comparisons carry by explicit source
+scope and formatting peer identities, plus original report Review/deck smokes.
+Next is source-backed declared-height table placement; no parity claim.
+
 C131 refreshes all twelve fixed-portfolio outcomes with the accepted C130
 artifact, without a library rebuild or test replay. Seven source documents and
 twenty inspected pages retain their accepted PDF bytes and reference identities.
