@@ -45,7 +45,10 @@ delimiter and n-ary controls retain structural paint even when no literal source
 runs remain, using shared font preparation and authored control/paragraph metrics.
 No dummy source runs or glyphs are introduced. Independent Word controls qualify
 content, source ink and group starts; unpainted empty function/grid forms and
-unsupported deeper structures retain explicit fallback.
+unsupported deeper structures retain explicit fallback. Supported structural-only
+controls also preserve content and source ink in mixed numbered/image/link paragraphs
+across body/cells/direct headers/footers. One operator-cell Review outcome retains
+the known 1.163pt X residual; strict gates remain failed.
 
 Numbered paragraphs retain supported explicit math zones alongside prose and
 inline pictures. The list label owns only the first authored row: its formulas

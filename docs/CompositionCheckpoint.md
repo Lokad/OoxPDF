@@ -1,5 +1,23 @@
 # Composed-document reliability checkpoint
 
+C96 checks C95 structural-only roots, delimiters and summations beside prose,
+pictures, links, numbering and other formulas across body/cells/direct headers and
+footers. Twelve sources/twenty-four strict Word outcomes preserve exact content,
+source ink and bookmark/applicable run-split invariants. Four crop pairs reviewed.
+Twenty-three outcomes meet the one-point group-start gate. Operator-cell Review
+retains C93's 1.163pt X residual; maximum Y residual is 0.390pt. All twenty-four
+strict raster gates remain failed. No threshold relaxation or container correction.
+
+Two new Windows checks pass once; Ubuntu one pass/one native skip once. Production
+source/library/CLI remain C95-identical: its 121 checks and twelve portfolio PDF
+identities/comparisons/audit flags carry without replay. Harness-only build;
+seventeen assets/four smoke PDFs transfer without root rebuild. The existing
+placement generator now handles both families; the earlier eight fixtures and
+manifest retain exact bytes. Root a2133569; evidence:
+`artifacts/composition-c1/structural-placement-evidence.json`.
+C94 CI39012308087 is green on both platforms; C95 CI39012795079 has Ubuntu green
+and Windows running at last check.
+
 C95 separates structural mathematical paint from printable literal source runs.
 Supported roots, delimiters and n-ary operators keep their actual control owners
 when all children are empty. One existing control-font preparation path serves
@@ -22,8 +40,7 @@ Two parent checks fail on actual omitted glyphs. Twelve fresh portfolio PDFs ret
 accepted bytes, comparisons and content-audit flags. Seventeen assets/four smoke
 PDFs transfer without root rebuild/suite replay. Root 81110ef7; evidence:
 `artifacts/composition-c1/structural-math-paint-evidence.json`.
-C93 CI39011779448 is green on both platforms; C94 CI39012308087 has Ubuntu green
-and Windows running at the last check.
+C94 CI39012308087 is green on both platforms.
 
 C94 restores function names and n-ary operators/remaining limits when a literal
 argument/body is empty. Three Word roles show identical deleted/authored-empty
