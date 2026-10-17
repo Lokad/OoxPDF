@@ -1,0 +1,92 @@
+[
+  {
+    "Id": "fraction-script-inline-numerator",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/fraction-script-inline-numerator.docx",
+    "Sha256": "6F3098F85CF88750F0D3B9F9FE7C8D18FD5032A1B6F834AD7EAB2C7BEB5AA941",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Style": "inline",
+    "Role": "numerator",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      0,
+      695,
+      612,
+      760
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "fraction-script-inline-denominator",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/fraction-script-inline-denominator.docx",
+    "Sha256": "A01E39F31E25D2C5F8D4605D665336425DFD1B0C2AE4087537ADBE375866A9A9",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Style": "inline",
+    "Role": "denominator",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      0,
+      695,
+      612,
+      760
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "fraction-script-display-numerator",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/fraction-script-display-numerator.docx",
+    "Sha256": "35EB4041DF06D6EB31DBB8B73D1280361CA6126FCCE92782D4F30A40C90B2F54",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Style": "display",
+    "Role": "numerator",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [],
+    "RuleRegion": [
+      0,
+      695,
+      612,
+      760
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "fraction-script-display-denominator",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/fraction-script-display-denominator.docx",
+    "Sha256": "BB9F9FCCCD87CE6531E02FC6D5F70998570A1216787B8F93944BCEF4F6CB000E",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Style": "display",
+    "Role": "denominator",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [],
+    "RuleRegion": [
+      0,
+      695,
+      612,
+      760
+    ],
+    "RuleFillColor": "g:0"
+  }
+]

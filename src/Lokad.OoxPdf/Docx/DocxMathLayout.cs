@@ -80,7 +80,10 @@ internal static partial class DocxMathLayout
             if (!AddScriptRows(scripts)) { runs = []; return false; }
         }
         else if (GetFraction(equation) is { } fraction)
-        { int level = equation.Display ? 0 : 1; rows.Add((fraction.Numerator, level, false)); rows.Add((fraction.Denominator, level, false)); }
+        {
+            if (!AddFractionArgumentRows(fraction.Numerator) || !AddFractionArgumentRows(fraction.Denominator))
+            { runs = []; return false; }
+        }
         else if (GetNary(equation, token) is { } nary)
         {
             if (!AddBoxArgumentRows(nary.Body)) { runs = []; return false; }
@@ -144,13 +147,23 @@ internal static partial class DocxMathLayout
             return true;
         }
 
-        bool AddScriptRows(DocxMathScripts script)
+        bool AddFractionArgumentRows(DocxMathRow argument)
         {
-            AddArgumentRows(script.Base);
+            int level = equation.Display ? 0 : 1;
+            if (GetScripts(equation with { Content = argument }) is { } child)
+                return AddScriptRows(child, level, literalBase: true);
+            rows.Add((argument, level, false));
+            return true;
+        }
+
+        bool AddScriptRows(DocxMathScripts script, int startingLevel = 0, bool literalBase = false)
+        {
+            if (literalBase) rows.Add((script.Base, startingLevel, false));
+            else AddArgumentRows(script.Base);
             foreach (DocxMathRow? argument in new[] { script.Subscript, script.Superscript })
             {
                 if (argument is null) { continue; }
-                if (!DocxMathArgumentMetrics.TryGetScriptLevel(argument, out int level)) { return false; }
+                if (!DocxMathArgumentMetrics.TryGetScriptLevel(argument, out int level, Math.Min(2, startingLevel + 1))) { return false; }
                 rows.Add((argument, level, true));
             }
             return true;
@@ -205,10 +218,8 @@ internal static partial class DocxMathLayout
         OpenTypeFont? metricOwner = parentMetricsFont ?? resolveFont(sources[0].Run)?.Font.Font;
         if (metricOwner is null || !metricOwner.TryGetMathConstants(out OpenTypeMathConstants constants))
         { fallback = "MissingMathFractionConstants"; return false; }
-        if (!TryMeasureLiteralArgument(fraction.Numerator, resolveFont, metricOwner, parentSize, scriptLevel, token,
-                out DocxMathBox? numerator, out fallback, out bool emptyNumerator, operatorSpacingFontSize: parentSize) ||
-            !TryMeasureLiteralArgument(fraction.Denominator, resolveFont, metricOwner, parentSize, scriptLevel, token,
-                out DocxMathBox? denominator, out fallback, out bool emptyDenominator, operatorSpacingFontSize: parentSize) ||
+        if (!TryMeasureFractionArgument(fraction.Numerator, denominator: false, out DocxMathBox? numerator, out fallback, out bool emptyNumerator) ||
+            !TryMeasureFractionArgument(fraction.Denominator, denominator: true, out DocxMathBox? denominator, out fallback, out bool emptyDenominator) ||
             numerator is null || denominator is null || numerator.Glyphs.Count == 0 && denominator.Glyphs.Count == 0)
         { fallback ??= "EmptyMathFraction"; return false; }
         bool hasEmptyArgument = emptyNumerator || emptyDenominator;
@@ -216,15 +227,29 @@ internal static partial class DocxMathLayout
             !DocxMathRowLayout.HasSupportedTextFormatting(fraction.ControlText, allowBold: false)))
         { fallback = "UnsupportedEmptyFractionControl"; return false; }
         DocxMathGlyphPlacement first = numerator.Glyphs.Count != 0 ? numerator.Glyphs[0] : denominator.Glyphs[0];
-        double size = first.FontSize;
-        if (numerator.Glyphs.Concat(denominator.Glyphs).Any(glyph =>
-            glyph.FontSize != size) || sources.Any(source => !source.Run.NormalText &&
+        // Uniform source nominal size was checked above. Distinct emitted
+        // sizes now belong to the supported argument/script roles.
+        if (sources.Any(source => !source.Run.NormalText &&
                 !ReferenceEquals(resolveFont(source.Run)?.Font.Font, metricOwner)))
         { fallback = "MixedMathFractionMetrics"; return false; }
         var ruleColor = first.Color;
         if (hasEmptyArgument) RgbColor.TryParse(fraction.ControlText!.ColorHex, out ruleColor);
         return TryComposeFraction(equation, fraction, metricOwner, constants, parentSize, numerator, denominator,
             ruleColor, hasEmptyArgument || sources.Any(source => source.Run.NormalText), token, out box, out fallback);
+
+        bool TryMeasureFractionArgument(DocxMathRow argument, bool denominator, out DocxMathBox? child,
+            out string? reason, out bool empty)
+        {
+            var childEquation = equation with { Content = argument, Cramped = equation.Cramped || denominator };
+            if (GetScripts(childEquation) is { } childScripts)
+            {
+                empty = false;
+                return TryMeasureScripts(childEquation, childScripts, resolveFont, token, out child, out reason,
+                    resolveControlMetrics, startingLevel: scriptLevel);
+            }
+            return TryMeasureLiteralArgument(argument, resolveFont, metricOwner, parentSize, scriptLevel, token,
+                out child, out reason, out empty, operatorSpacingFontSize: parentSize);
+        }
     }
 
     private static bool TryComposeFraction(DocxEquation equation, DocxMathFraction fraction, OpenTypeFont metricOwner,

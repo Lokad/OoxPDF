@@ -84,7 +84,8 @@ internal static partial class DocxMathLayout
         DocxMathNode? RetainControl(DocxEquation source)
         {
             DocxMathNode? retained = null;
-            if (GetFraction(source) is { TypeValue: null or "bar" } fraction)
+            if (GetFraction(source) is { TypeValue: null or "bar" } fraction &&
+                Literal(fraction.Numerator) && Literal(fraction.Denominator))
                 retained = fraction with { Numerator = Empty(fraction.Numerator), Denominator = Empty(fraction.Denominator) };
             else if (GetScripts(source) is { } scripts && Literal(scripts.Base) &&
                 (scripts.Subscript is null || Literal(scripts.Subscript, true)) &&

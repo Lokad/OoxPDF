@@ -22,7 +22,7 @@ internal static partial class DocxMathLayout
 
     private static bool TryMeasureScripts(DocxEquation equation, DocxMathScripts scripts,
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token, out DocxMathBox? box, out string? fallback,
-        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics)
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics, int startingLevel = 0)
     {
         box = null; fallback = null;
         if (!TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> sources) ||
@@ -42,22 +42,26 @@ internal static partial class DocxMathLayout
             if (source.Run.Text.FontSize != size || !source.Run.NormalText && !ReferenceEquals(resolveFont(source.Run)?.Font.Font, font))
             { fallback = "MixedMathScriptMetrics"; return false; }
         }
+        double styleSize = size;
+        if (startingLevel != 0 && !DocxMathArgumentMetrics.TryGetNominalScriptFontSize(font, size, startingLevel, out styleSize))
+        { fallback = "MissingMathScriptScale"; return false; }
         DocxEquation baseEquation = equation with { Content = scripts.Base };
         bool fractionBase = GetFraction(baseEquation) is not null;
         // Discovery has already required literal fraction children. This one
         // composition step cannot recurse through arbitrary authored nesting.
         bool measuredBase = fractionBase
             ? TryMeasure(baseEquation, resolveFont, token, out DocxMathBox? basis, out fallback)
-            : TryMeasureLiteralArgument(scripts.Base, resolveFont, font, size, 0, token, out basis, out fallback, out _, exportFontSize: true);
+            : TryMeasureLiteralArgument(scripts.Base, resolveFont, font, size, startingLevel, token, out basis, out fallback, out _, exportFontSize: true);
         if (!measuredBase || basis is null) { fallback ??= "EmptyMathScriptBase"; return false; }
         if (basis.Glyphs.Any(glyph => !ReferenceEquals(glyph.Font.Font.Font, font)))
             { fallback = "MixedMathScriptBaseMetrics"; return false; }
         DocxMathBox? subscript = null, superscript = null;
-        if (scripts.Subscript is { } sub && (!TryMeasureScriptArgument(sub, resolveFont, font, size, token, out subscript, out fallback) ||
+        int argumentLevel = Math.Min(2, startingLevel + 1);
+        if (scripts.Subscript is { } sub && (!TryMeasureScriptArgument(sub, resolveFont, font, size, token, out subscript, out fallback, argumentLevel) ||
             subscript is null)) { fallback ??= "EmptyMathSubscript"; return false; }
-        if (scripts.Superscript is { } sup && (!TryMeasureScriptArgument(sup, resolveFont, font, size, token, out superscript, out fallback) ||
+        if (scripts.Superscript is { } sup && (!TryMeasureScriptArgument(sup, resolveFont, font, size, token, out superscript, out fallback, argumentLevel) ||
             superscript is null)) { fallback ??= "EmptyMathSuperscript"; return false; }
-        double scale = size / font.UnitsPerEm;
+        double scale = styleSize / font.UnitsPerEm;
         double Value(OpenTypeMathConstant field) => constants.GetValue(field) * scale;
         bool boxBase = fractionBase || basis.Glyphs.Count > 1;
         if (!boxBase)
@@ -68,7 +72,7 @@ internal static partial class DocxMathLayout
             if (!font.TryIsMathExtendedShape(glyph, out boxBase))
             { fallback = "InvalidMathExtendedShapeCoverage"; return false; }
         }
-        GetScriptShifts(constants, size / font.UnitsPerEm, basis, subscript, superscript,
+        GetScriptShifts(constants, scale, basis, subscript, superscript,
             boxBase, equation.Cramped, out double up, out double down);
         DocxMathGlyphPlacement? last = basis.Glyphs.Count == 0 ? null : basis.Glyphs[^1];
         short correction = 0;
@@ -121,7 +125,7 @@ internal static partial class DocxMathLayout
             enclosureBelow = descent;
         }
         box = new DocxMathBox(width, above, below, glyphs)
-        { LogicalAdvance = advanceWidth == width ? null : advanceWidth, Rules = rules, ParentMetrics = basis.ParentMetrics ?? (basis.Glyphs.Count == 0 ? new(font, size) : null),
+        { LogicalAdvance = advanceWidth == width ? null : advanceWidth, Rules = rules, ParentMetrics = basis.ParentMetrics ?? (basis.Glyphs.Count == 0 ? new(font, styleSize) : null),
             EnclosureBelowBaseline = enclosureBelow };
         fallback = null;
         return true;
@@ -142,10 +146,10 @@ internal static partial class DocxMathLayout
     }
 
     private static bool TryMeasureScriptArgument(DocxMathRow argument, Func<DocxMathRun, PdfFontResource?> resolveFont,
-        OpenTypeFont metricFont, double size, CancellationToken token, out DocxMathBox? child, out string? fallback)
+        OpenTypeFont metricFont, double size, CancellationToken token, out DocxMathBox? child, out string? fallback, int startingLevel = 1)
     {
         child = null; fallback = "UnsupportedMathScriptArgument";
-        return DocxMathArgumentMetrics.TryGetScriptLevel(argument, out int level) &&
+        return DocxMathArgumentMetrics.TryGetScriptLevel(argument, out int level, startingLevel) &&
             TryMeasureLiteralArgument(argument, resolveFont, metricFont, size, level, token, out child, out fallback, out _,
                 exportFontSize: true, allowArgumentSize: true);
     }

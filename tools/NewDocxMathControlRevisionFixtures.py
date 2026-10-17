@@ -245,3 +245,41 @@ for story in ["cell", "header", "footer"]:
                                    RuleRegion=[120, 0, 210, 792], RuleFillColor="g:0"))
 (output / "mixed-control-placement.json").write_text(json.dumps(placement_rows, indent=2) + "\n", encoding="utf-8")
 print("Pinned six mixed-control cell/static-story placements")
+
+# One literal script box in either fraction argument; deeper nesting stays explicit.
+source = output / "compound-revision-script-first-ordinary.docx"
+with ZipFile(source) as z:
+    original = {name: z.read(name) for name in z.namelist()}
+fraction_script_rows = []
+for display in [False, True]:
+    for role in ["numerator", "denominator"]:
+        entries = dict(original)
+        xml = E.fromstring(entries["word/document.xml"])
+        equation = next(xml.iter(m + "oMath"))
+        script = deepcopy(next(equation.iter(m + "sSubSup")))
+        fraction = deepcopy(next(equation.iter(m + "f")))
+        argument = fraction.find(m + ("num" if role == "numerator" else "den"))
+        argument.clear()
+        argument.append(script)
+        equation.clear()
+        equation.append(fraction)
+        if display:
+            paragraph = next(xml.iter(w + "p"))
+            paragraph.clear()
+            E.SubElement(paragraph, m + "oMathPara").append(equation)
+        entries["word/document.xml"] = E.tostring(xml, encoding="utf-8", xml_declaration=True)
+        target = output / ("fraction-script-" + ("display" if display else "inline") + "-" + role + ".docx")
+        with ZipFile(target, "w", ZIP_DEFLATED) as z:
+            for name, data in sorted(entries.items()):
+                info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+                info.compress_type = ZIP_DEFLATED
+                z.writestr(info, data)
+        fraction_script_rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
+                                         Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
+                                         SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(),
+                                         Style="display" if display else "inline", Role=role, HeldOut=False,
+                                         ExpectedEquationCount=4, ExpectedText=["share the same input series."],
+                                         ProsePrefixes=[] if display else ["Summary:", "governs"],
+                                         RuleRegion=[0, 695, 612, 760], RuleFillColor="g:0"))
+(output / "fraction-script-arguments.json").write_text(json.dumps(fraction_script_rows, indent=2) + "\n", encoding="utf-8")
+print("Pinned four bounded fraction/script argument compositions")

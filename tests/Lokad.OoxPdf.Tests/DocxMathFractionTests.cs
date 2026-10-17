@@ -9,6 +9,38 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontFractionArgumentScriptsKeepStylesCancellationAndWorkBounds()
+    {
+        byte[] constants = Constants();
+        BinaryPrimitives.WriteInt16BigEndian(constants.AsSpan(12), 60);
+        var resource = Resource(TestFontBuilder.CreateMathFont(constants));
+        DocxEquation source = Fraction();
+        var fraction = (DocxMathFraction)source.Content.Children.Single();
+        var script = new DocxMathScripts(Row("B"), Row("C"), Row("B"));
+        var missingScale = Resource(TestFontBuilder.CreateMathFont(Constants()));
+        var inline = source with { Display = false, Content = new([fraction with { Numerator = new([script]) }]) };
+        TestAssert.True(!DocxMathLayout.TryMeasure(inline, _ => missingScale, default, out var missing, out _) && missing is null,
+            "A missing required script-script scale retains whole-box fallback.");
+        foreach (bool display in new[] { true, false })
+        {
+            var equation = source with { Display = display,
+                Content = new([fraction with { Numerator = new([script]) }]) };
+            TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, default, out var box, out var reason),
+                reason ?? "Literal script arguments compose through the existing MATH boxes.");
+            var measured = TestAssert.NotNull(box);
+            TestAssert.Equal(1, measured.Rules.Count);
+            TestAssert.Equal(4, measured.Glyphs.Count);
+            TestAssert.True(measured.Glyphs[1].FontSize == measured.Glyphs[2].FontSize &&
+                measured.Glyphs[1].FontSize < measured.Glyphs[0].FontSize &&
+                measured.Glyphs[1].BaselineY < measured.Glyphs[2].BaselineY,
+                "Authored nominal size is uniform while semantic child styles own their emitted sizes and baselines.");
+            using var canceled = new CancellationTokenSource(); canceled.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, canceled.Token, out _, out _));
+            using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 1 });
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, default, out _, out _));
+        }
+    }
+
     public static void MathFontDelimiterFractionsKeepCompositeHeightRulesAndCompleteFallback()
     {
         var font = OpenTypeFont.Load(DelimiterFontBytes(separator: true));
