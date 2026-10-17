@@ -16,6 +16,9 @@ actual control ownership without invented text. Independent group gates pass
 within 0.683pt X / 0.584pt Y; strict raster gates remain failed. Structural-only insertion/deletion revisions share the non-rendering source policy
 and do not add a Review margin bar. Actual source owners remain intact. Unknown/deeper/nested wrappers
 retain explicit fallback.
+Whole root insertion/operator deletion also preserve content, source ink and
+transformations in cells/direct headers/footers. The operator-cell Review case
+retains the known 1.163pt X residual; strict visual gates remain failed.
 
 In Final, deleting a supported bar fraction's text preserves its empty arguments
 and structural rule. Authored empty bar fractions share the same metric-only

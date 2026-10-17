@@ -1,5 +1,21 @@
 # Composed-document reliability checkpoint
 
+C102 qualifies whole root insertion/operator deletion in mixed numbered paragraphs
+inside cells and direct headers/footers through unchanged C101 production code.
+Six sources/twelve strict Office outcomes preserve math, image, prose and source
+ink; bookmarks and unchanged-format run splits preserve placement. Eleven group
+gates pass; the operator-cell Review case retains the known 1.163pt X failure.
+Maximum Y residual is 0.384pt. All twelve strict raster gates remain failed; four
+same-scale crop pairs reviewed. No container guard or threshold change.
+
+A harness-only build adds two checks: Windows 2 pass once; Ubuntu 1 pass/1 native
+skip once. Production source/library/CLI and existing inputs are identical; C101
+73 Windows and 62 Ubuntu/11 skips, plus C100 twelve fixed portfolio identities and
+comparisons, carry without replay. Seventeen assets/four smoke PDFs transfer
+without root build or suite replay. Root 43c5b904; evidence
+`artifacts/composition-c1/whole-math-placement-evidence.json`.
+C100 CI39017791481 is green on both platforms; C101 pushed as f385403c.
+
 C101 removes extra Review bars from structural-only equation revisions through
 the shared non-rendering source policy. Actual parsed control owners remain valid;
 visible literal revisions, unowned/value-equal metadata and unknown positions
