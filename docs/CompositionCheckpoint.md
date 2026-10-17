@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+C85 retains actual empty source-run revision ownership as small metadata records.
+Their source indices/revision references participate in author ordering and shared
+paragraph eligibility; they carry no visible text or font/layout purpose. Aggregate
+or value-equal revision metadata still cannot establish ownership. Other source
+fallbacks and cancellation remain intact.
+
+This closes the retained empty-insertion color mismatch (all thirteen prior Word
+owner-color facts now match) and a confirmed composition defect: adding an empty
+insertion previously omitted a supported fraction in both Final and Review output.
+The numerator/denominator now remain visible. Current Final PDFs with/without the
+empty insertion are byte-identical; independent Word Final rasters are identical
+too. Four new Review references and two Final references supplement the retained
+empty-owner reference. Four of seven MAEs improve and three PDFs retain bytes;
+all seven raw gates still fail unchanged thresholds, without new failure components.
+Four same-scale pairs were reviewed. Typography/review annotations remain approximate.
+
+Windows passes 31 focused checks; Ubuntu passes eighteen with thirteen explicit
+skips, each in one invocation. An actual C84 parent regression fails its author
+color check; parent CLI outputs independently establish the fraction omission in
+both modes. The existing unreferenced-header equation diagnostic remains recorded.
+Seventeen assets/four smoke PDFs transfer without root build or suite replay.
+Seven-source corpus reports carry by verified absence of relevant source revisions;
+this is source inference, not a full-corpus reconversion claim. Complete Final/deck
+transfer smoke additionally retains bytes. Root aedf0585; evidence:
+`artifacts/composition-c1/empty-revision-owners-evidence.json`.
+C84 CI39002083572 is green on both platforms; work continues during C85 CI.
+
 C84 shares print-scaled image dimensions between body/cell wrapping, occupied
 size estimates and placement. Relative source-baseline geometry keeps the first
 print origin independent of scaled flow; leading picture-only blocks own their
