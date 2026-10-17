@@ -1,0 +1,92 @@
+[
+  {
+    "Id": "nested-metric-inline-numerator",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/nested-metric-inline-numerator.docx",
+    "Sha256": "0F2A22C849D1CADE6484D1BDC288A0D958EA0FA6B8D9EB2857A4D63D1DA64401",
+    "SourceSha256": "6F3098F85CF88750F0D3B9F9FE7C8D18FD5032A1B6F834AD7EAB2C7BEB5AA941",
+    "Style": "inline",
+    "Role": "numerator",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      0,
+      695,
+      612,
+      760
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "nested-metric-inline-denominator",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/nested-metric-inline-denominator.docx",
+    "Sha256": "DD9059E59EF017E2C7D2F6696504259DED1A166BF4BF03877A6A147ED4DECEC4",
+    "SourceSha256": "A01E39F31E25D2C5F8D4605D665336425DFD1B0C2AE4087537ADBE375866A9A9",
+    "Style": "inline",
+    "Role": "denominator",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      0,
+      695,
+      612,
+      760
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "nested-metric-display-numerator",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/nested-metric-display-numerator.docx",
+    "Sha256": "44F55DC9D85424BEB01A89C2C40653534FCF5B562E63338664DC8D9CE286D884",
+    "SourceSha256": "35EB4041DF06D6EB31DBB8B73D1280361CA6126FCCE92782D4F30A40C90B2F54",
+    "Style": "display",
+    "Role": "numerator",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [],
+    "RuleRegion": [
+      0,
+      695,
+      612,
+      760
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "nested-metric-display-denominator",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/nested-metric-display-denominator.docx",
+    "Sha256": "BA3FF947AEDE86301AA870C2135DB97AFD4BA0FD41728339801C3AC08BE0A38C",
+    "SourceSha256": "BB9F9FCCCD87CE6531E02FC6D5F70998570A1216787B8F93944BCEF4F6CB000E",
+    "Style": "display",
+    "Role": "denominator",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [],
+    "RuleRegion": [
+      0,
+      695,
+      612,
+      760
+    ],
+    "RuleFillColor": "g:0"
+  }
+]

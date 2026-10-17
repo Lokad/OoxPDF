@@ -16,6 +16,13 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingNestedMetricControlsKeepContentRulesAndMetricOnlyPublication()
+    {
+        var resolver = new PinnedResolver(mathFont: true);
+        DocxInlineCompositionTests.CheckEquationRevisions(resolver, false, "nested-metric-controls-office.json", splitMathRuns: true);
+        DocxInlineCompositionTests.CheckNestedMetricPublication(resolver);
+    }
+
     public static void PortableRenderingFractionScriptArgumentsKeepContentRulesAndSourceOrder() =>
         DocxInlineCompositionTests.CheckEquationRevisions(new PinnedResolver(mathFont: true), false,
             "fraction-script-arguments-office.json", splitMathRuns: true);

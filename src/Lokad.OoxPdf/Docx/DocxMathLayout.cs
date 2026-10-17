@@ -150,7 +150,7 @@ internal static partial class DocxMathLayout
         bool AddFractionArgumentRows(DocxMathRow argument)
         {
             int level = equation.Display ? 0 : 1;
-            if (GetScripts(equation with { Content = argument }) is { } child)
+            if (GetScriptArgument(argument) is { } child)
                 return AddScriptRows(child, level, literalBase: true);
             rows.Add((argument, level, false));
             return true;

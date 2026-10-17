@@ -283,3 +283,30 @@ for display in [False, True]:
                                          RuleRegion=[0, 695, 612, 760], RuleFillColor="g:0"))
 (output / "fraction-script-arguments.json").write_text(json.dumps(fraction_script_rows, indent=2) + "\n", encoding="utf-8")
 print("Pinned four bounded fraction/script argument compositions")
+
+# Keep the visible sibling while an admitted script argument has only metrics.
+nested_metric_rows = []
+for row in fraction_script_rows:
+    source = root / row["Input"]
+    with ZipFile(source) as z:
+        entries = {name: z.read(name) for name in z.namelist()}
+    xml = E.fromstring(entries["word/document.xml"])
+    script = next(next(xml.iter(m + "oMath")).iter(m + "sSubSup"))
+    for parent in list(script.iter()):
+        for run in list(parent.findall(m + "r")):
+            parent.remove(run)
+    entries["word/document.xml"] = E.tostring(xml, encoding="utf-8", xml_declaration=True)
+    target = output / ("nested-metric-" + row["Style"] + "-" + row["Role"] + ".docx")
+    with ZipFile(target, "w", ZIP_DEFLATED) as z:
+        for name, data in sorted(entries.items()):
+            info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+            info.compress_type = ZIP_DEFLATED
+            z.writestr(info, data)
+    nested_metric_rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
+                                   Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
+                                   SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(),
+                                   Style=row["Style"], Role=row["Role"], HeldOut=False,
+                                   ExpectedEquationCount=4, ExpectedText=row["ExpectedText"],
+                                   ProsePrefixes=row["ProsePrefixes"], RuleRegion=row["RuleRegion"], RuleFillColor="g:0"))
+(output / "nested-metric-controls.json").write_text(json.dumps(nested_metric_rows, indent=2) + "\n", encoding="utf-8")
+print("Pinned four nested metric-only argument compositions")

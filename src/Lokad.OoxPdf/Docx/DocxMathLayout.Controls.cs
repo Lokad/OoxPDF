@@ -19,16 +19,31 @@ internal static partial class DocxMathLayout
 
     internal static IReadOnlyList<IDocxMathControl> GetControlSources(DocxEquation equation, CancellationToken token)
     {
-        if (GetStandaloneControl(equation, token) is { } single) return [single];
+        var controls = new List<IDocxMathControl>();
+        if (GetStandaloneControl(equation, token) is { } single)
+        { Append(single); return controls; }
         if (GetStructuredRow(equation, token) is not { } row) return [];
-        var controls = new List<IDocxMathControl>(row.Parts.Count);
         foreach (var part in row.Parts)
         {
             token.ThrowIfCancellationRequested();
             if (part.Structure is not IDocxMathControl control) return [];
-            controls.Add(control);
+            Append(control);
         }
         return controls;
+
+        void Append(IDocxMathControl control)
+        {
+            token.ThrowIfCancellationRequested();
+            controls.Add(control);
+            // The admitted fraction grammar has at most one literal script
+            // per argument. Publish its actual owner even without source runs;
+            // no recursive discovery or invented source/paint is required.
+            if (control is DocxMathFraction fraction)
+            {
+                if (GetScriptArgument(fraction.Numerator) is { } numerator) controls.Add(numerator);
+                if (GetScriptArgument(fraction.Denominator) is { } denominator) controls.Add(denominator);
+            }
+        }
     }
 
     internal static IReadOnlyList<IDocxMathControl> GetMetricOnlyControls(DocxEquation equation,
