@@ -1,5 +1,36 @@
 # Composed-document reliability checkpoint
 
+C111 refreshes the fixed seven-source portfolio using C110's already qualified
+artifact: twelve actual conversions/twenty inspected pages retain accepted PDF
+bytes, expected text and zero ignored equations. All twelve independent Office
+comparisons reuse exact candidate/reference/threshold identities. Ten DOCX gates
+remain failed; both decks pass. Ten prior prose/math screens and two unresolved
+complete-report screens carry by source/PDF/reference identity; no new audit pass
+is claimed. Twenty earlier reviewed page pairs carry by PDF identity. No extra
+build, broad suite, Office export, rasterization or frozen artifact is needed.
+Cold process times are recorded without a speedup claim. Evidence:
+`artifacts/composition-c1/checkpoint-111-evidence.json`.
+
+C110 restores six missing glyphless fraction bars through the existing control
+ownership contract. Whole/fragment insertion and deletion retain actual owners,
+metric-only preparation and neutral black structural ink, with no dummy glyph or
+math subset. Eight independent Word rule/anchor gates pass; rule residuals max
+0.021pt X / 0.015pt Y, width 0.068pt and thickness 0.006pt. Word and candidate have
+zero margin bars. Six MAEs improve/two unaffected Final deletion PDFs remain exact.
+Six equal-scale crop pairs reviewed; all eight strict raster gates remain failed.
+
+One production artifact qualifies 53 Windows methods and 40 Ubuntu passes/13 skips.
+A native observer initially compares local rectangles to page coordinates. Its
+harness-only correction accounts for emitted transforms; actual production/CLI/
+all 1,814 inputs remain identical. Carry 52 passes and rerun only that native check:
+two Windows invocations, Ubuntu once with unchanged executed branches/skip guard.
+The failed report remains retained. Two parent checks fail on actual expected two
+fraction rules versus one. Seventeen assets/four smoke PDFs transfer without root
+build/suite replay. Root 71124339; evidence
+`artifacts/composition-c1/glyphless-fraction-revisions-evidence.json`.
+C109 CI39026052784 is green on both platforms. Version remains 0.1.5; release
+preparation stays deferred.
+
 C109 fixes wrapper-only content loss in supported compound script/fraction rows.
 Insertion syntax now reuses the ordinary literal/control grammar and actual source
 owners. Both orders retain all eight formerly omitted glyphs in both presets.
