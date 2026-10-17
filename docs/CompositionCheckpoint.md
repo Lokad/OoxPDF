@@ -1,5 +1,26 @@
 # Composed-document reliability checkpoint
 
+C122 makes delimiter discovery, function discovery and argument measurement share
+existing bounded fraction/script/matrix box kinds. Supported subscript, superscript,
+combined-script and fraction-based script boxes now survive delimiters. Unknown or
+nested delimiters and deeper source-role fallbacks remain explicit.
+
+Four sources/eight independent Word outcomes restore four to eight omitted glyphs.
+Six one-point gates pass; two superscript cases retain1.093pt Y residuals. Prose max
+0.834pt X /0.722pt Y. All eight MAEs improve without new failure components; all
+strict raster gates stay failed. Four crop pairs reviewed, carrying four more by
+identical Final/Review rasters. No geometry threshold is relaxed.
+
+One frozen Release artifact passes53 exact Windows delimiter/script/function/encoding
+checks and37 Ubuntu checks/16 native skips, once each. Parent checks fail expected18
+versus14 glyphs. Seven exact portfolio sources contain no scripts inside delimiters,
+carrying C121's twelve actual accepted comparisons by source inference. Seventeen
+assets/four smoke PDFs transfer without root build/suite/corpus replay. Rootc2f90a4a;
+evidence `artifacts/composition-c1/delimiter-script-evidence.json`.
+C120/C121 CI39034795913 is green on Windows/Ubuntu. Next bounded review: supported
+child boxes whose metric owner is missing from parent preparation, using independent
+Word probes before consolidating control discovery/forwarding.
+
 C120 retains admitted bar fractions whose script and literal arguments have only
 metrics. Actual controls own fonts and nominal sizes; existing placeholder boxes
 compose structural ink without invented source glyphs or subsets. Empty literal
