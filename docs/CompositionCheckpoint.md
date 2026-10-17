@@ -1,5 +1,31 @@
 # Composed-document reliability checkpoint
 
+C86 shares actual non-rendering revision eligibility with Word change-bar
+classification, memoized within each painting conversion. Ordinary unscaled Final
+now uses the existing minimum-leading correction. Existing font/size/shape guards,
+related-story placement and classic markup fallbacks remain. Twelve independent
+Word outcomes establish identical rasters across control/empty/formatted-empty
+variants and both presets within each source size. Ten MAEs improve; two Review
+control PDFs retain bytes. All twelve raw gates still fail unchanged thresholds.
+Two neighboring empty-owner MAEs improve; three PDFs retain bytes and all five
+neighbor gates still fail. No new failure components. Two same-scale crop pairs
+confirm placement and removal of the phantom bar; typography remains approximate.
+
+One final artifact passes 57 Windows checks and 48 Ubuntu checks/nine explicit
+skips, one invocation each. Two actual parent failures establish eligibility and
+Final baseline defects. A placement-only prototype's two output-neutrality failures
+remain retained; its results were not carried across the changed library. After
+production was committed, adding empty insertions to all 21 held-out memo body/cell
+paragraphs retains its accepted candidate PDF and both independent Word raster
+pages byte-for-byte, including 32 math text operations. No fitting followed that
+probe. Its existing four failed gate components and C79 visual review carry by
+identity. All twelve freshly converted portfolio PDFs also retain accepted bytes;
+ten DOCX gates fail and both decks pass. Seventeen assets/four smoke PDFs transfer
+without root rebuild or suite replay. Root a716c42c; evidence:
+`artifacts/composition-c1/revision-neutrality-evidence.json`.
+C85 CI 39003038812 is green. The 05:01Z scan reports 9.598 GB/462,083 files,
+zero errors; the loose cap remains unmet and no blocked retirement was retried.
+
 C85 retains actual empty source-run revision ownership as small metadata records.
 Their source indices/revision references participate in author ordering and shared
 paragraph eligibility; they carry no visible text or font/layout purpose. Aggregate
@@ -25,7 +51,7 @@ Seven-source corpus reports carry by verified absence of relevant source revisio
 this is source inference, not a full-corpus reconversion claim. Complete Final/deck
 transfer smoke additionally retains bytes. Root aedf0585; evidence:
 `artifacts/composition-c1/empty-revision-owners-evidence.json`.
-C84 CI39002083572 is green on both platforms; work continues during C85 CI.
+C85 CI 39003038812 is green on both platforms.
 
 C84 shares print-scaled image dimensions between body/cell wrapping, occupied
 size estimates and placement. Relative source-baseline geometry keeps the first
