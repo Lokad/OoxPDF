@@ -1,0 +1,119 @@
+{
+  "Provenance": "Six independent Word exports; exact source/PDF pins and raw annotation dictionaries retained. Source-relative viewport context is distinct from existing absolute X/Review Y residuals and strict visual gates.",
+  "Rows": [
+    {
+      "Id": "nested-math-navigation-within",
+      "Mode": "final-preserve",
+      "Direction": "within",
+      "InputSha256": "0CB35DFCD4880C7D4833E2E834DAB98E5FD52668614737EB437B8C8BEA23E659",
+      "ReferencePdfSha256": "6FD4256263EF763E65536AEBEBC1206FF857A8654E57ED0BA7CA12DD79A7151F",
+      "ExpectedEquations": 2,
+      "ExpectedLinks": 1,
+      "Rect": [
+        106.2,
+        681.07,
+        127.76,
+        705.2
+      ],
+      "DestinationX": 123.0,
+      "DestinationY": 705.0,
+      "TargetTextX": 71.664,
+      "TargetTextY": 669.22
+    },
+    {
+      "Id": "nested-math-navigation-within",
+      "Mode": "all-word-compatible",
+      "Direction": "within",
+      "InputSha256": "0CB35DFCD4880C7D4833E2E834DAB98E5FD52668614737EB437B8C8BEA23E659",
+      "ReferencePdfSha256": "3D8C5091552E23A3C1A455AFEDF997B2ECDE5E0E470B22F439635326B104E357",
+      "ExpectedEquations": 2,
+      "ExpectedLinks": 1,
+      "Rect": [
+        80.595,
+        612.37,
+        96.955,
+        630.69
+      ],
+      "DestinationX": 93.0,
+      "DestinationY": 630.0,
+      "TargetTextX": 54.336,
+      "TargetTextY": 603.48
+    },
+    {
+      "Id": "nested-math-navigation-incoming",
+      "Mode": "final-preserve",
+      "Direction": "incoming",
+      "InputSha256": "96DB08D040FA28071C2A8FA6691A25BA1EF3F103F6338F8AE90A9EE7CECBCFD9",
+      "ReferencePdfSha256": "655C93624BA448864E26072B647D30D34BF4CF723A13E7ECFB822BAADE1AF5C4",
+      "ExpectedEquations": 2,
+      "ExpectedLinks": 1,
+      "Rect": [
+        69.75,
+        651.62,
+        154.44,
+        666.27
+      ],
+      "DestinationX": 123.0,
+      "DestinationY": 705.0,
+      "TargetTextX": 71.664,
+      "TargetTextY": 669.22
+    },
+    {
+      "Id": "nested-math-navigation-incoming",
+      "Mode": "all-word-compatible",
+      "Direction": "incoming",
+      "InputSha256": "96DB08D040FA28071C2A8FA6691A25BA1EF3F103F6338F8AE90A9EE7CECBCFD9",
+      "ReferencePdfSha256": "15F912F4CA8D4A89355FC0AEF1D343EFB16E0960CE7AD589C2F81AB01F2FC467",
+      "ExpectedEquations": 2,
+      "ExpectedLinks": 1,
+      "Rect": [
+        52.933,
+        590.03,
+        117.2,
+        601.14
+      ],
+      "DestinationX": 93.0,
+      "DestinationY": 630.0,
+      "TargetTextX": 54.336,
+      "TargetTextY": 603.48
+    },
+    {
+      "Id": "nested-math-navigation-outgoing",
+      "Mode": "final-preserve",
+      "Direction": "outgoing",
+      "InputSha256": "B42DD5B0001F7323B1D81F303EE778772705D528D4CFC96CA8E9899BE425D323",
+      "ReferencePdfSha256": "3D50FDF42D2426BB5F94A18950EE40AF67A4CD32617032D0C57382F2C3BBF4A4",
+      "ExpectedEquations": 2,
+      "ExpectedLinks": 1,
+      "Rect": [
+        106.2,
+        681.07,
+        127.76,
+        705.2
+      ],
+      "DestinationX": 69.0,
+      "DestinationY": 680.0,
+      "TargetTextX": 71.664,
+      "TargetTextY": 669.22
+    },
+    {
+      "Id": "nested-math-navigation-outgoing",
+      "Mode": "all-word-compatible",
+      "Direction": "outgoing",
+      "InputSha256": "B42DD5B0001F7323B1D81F303EE778772705D528D4CFC96CA8E9899BE425D323",
+      "ReferencePdfSha256": "D6954FE5C554C539B9CC9739DA6FD76DA6C2C46DBA871CD95405AE6976A8E0FC",
+      "ExpectedEquations": 2,
+      "ExpectedLinks": 1,
+      "Rect": [
+        80.595,
+        612.37,
+        96.955,
+        630.69
+      ],
+      "DestinationX": 52.0,
+      "DestinationY": 611.0,
+      "TargetTextX": 54.336,
+      "TargetTextY": 603.48
+    }
+  ]
+}

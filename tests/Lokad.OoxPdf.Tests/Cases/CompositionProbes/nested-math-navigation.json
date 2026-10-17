@@ -1,0 +1,47 @@
+[
+  {
+    "Id": "nested-math-navigation-within",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/nested-math-navigation-within.docx",
+    "Sha256": "0CB35DFCD4880C7D4833E2E834DAB98E5FD52668614737EB437B8C8BEA23E659",
+    "SourceSha256": "31D2508A4A35796FA84FCD22CC372E487C9B690270BF5862571ADDAFE8FA0494",
+    "Direction": "within",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public outer head",
+      "Public outer tail",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "nested-math-navigation-incoming",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/nested-math-navigation-incoming.docx",
+    "Sha256": "96DB08D040FA28071C2A8FA6691A25BA1EF3F103F6338F8AE90A9EE7CECBCFD9",
+    "SourceSha256": "31D2508A4A35796FA84FCD22CC372E487C9B690270BF5862571ADDAFE8FA0494",
+    "Direction": "incoming",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public outer head",
+      "Public outer tail",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "nested-math-navigation-outgoing",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/nested-math-navigation-outgoing.docx",
+    "Sha256": "B42DD5B0001F7323B1D81F303EE778772705D528D4CFC96CA8E9899BE425D323",
+    "SourceSha256": "31D2508A4A35796FA84FCD22CC372E487C9B690270BF5862571ADDAFE8FA0494",
+    "Direction": "outgoing",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public outer head",
+      "Public outer tail",
+      "Following prose."
+    ]
+  }
+]

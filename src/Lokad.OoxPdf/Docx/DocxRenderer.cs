@@ -1290,9 +1290,10 @@ internal sealed partial class DocxRenderer
                 double pageTextEmissionXOffset = ResolveTextEmissionXOffset(pageMarkupContext);
                 var bodyMath = fontResources.MathEquations.Count == 0 ? null : page.Items.OfType<DocxEquationLayout>()
                     .ToLookup(item => item.Math.Equation, ReferenceEqualityComparer.Instance);
-                foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(drawingPages, page, pageIndex, pageMarkupContext, page.Height))
+                foreach (var source in EnumerateRenderedPageLineSources(page, drawingPages.PageAll(pageIndex), pageMarkupContext, page.Height))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    DocxTextLineLayout line = source.Line;
                     if (line.SourceParagraph is not { } paragraph ||
                         paragraph.BookmarkAnchors.Count == 0)
                     {
@@ -1359,7 +1360,7 @@ internal sealed partial class DocxRenderer
                         // Word 16 bookmark controls: indentation/alignment do not move the
                         // viewport origin, while a prefix before a mid-line bookmark does.
                         // The three design-point context scales with the review print scale.
-                        if (line.Story?.Kind == DocxStoryKind.Body && line.FrameOriginOffsetX is { } columnOffsetX)
+                        if (source.Owner.Kind == DocxStoryKind.Body && line.FrameOriginOffsetX is { } columnOffsetX)
                         {
                             targetX += columnOffsetX - viewportContextPoints * textEmissionFontScale;
                         }

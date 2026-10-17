@@ -5501,5 +5501,27 @@
     "DocxRendererEmitsPlacedEndnoteExternalHyperlinkAnnotations",
     "DocxInlineCompositionEndnotesShareOwnedAutomaticReferenceRules",
     "PortableRenderingAutomaticEndnotesPreserveMixedMathAndDestinations"
+  ],
+  "docx-nested-navigation": [
+    "DocxInlineCompositionNestedNavigation",
+    "PortableRenderingNestedNavigation",
+    "DocxBookmarkViewport",
+    "DocxRendererUsesSourceRunIndexesForBookmarkDestinations",
+    "DocxRendererUsesSourceTextOffsetsForBookmarkDestinations",
+    "DocxRendererEmitsInternalHyperlinkDestinationsFromBookmarks",
+    "DocxRendererEmitsTableCellInternalHyperlinkDestinations",
+    "DocxRendererEmitsTableCellExternalHyperlinkAnnotations",
+    "DocxRendererEmitsTableCellHyperlinkAnnotationsNextToFields",
+    "DocxRendererKeepsSplitTableCellHyperlinkAnnotationsOnVisibleFragment",
+    "DocxWordCompatibleAllMarkupUsesEmittedAdvanceForTableCellHyperlinkAnnotations",
+    "DocxRendererEmitsPlacedFootnoteInternalHyperlinkDestinations",
+    "DocxRendererEmitsPlacedEndnoteInternalHyperlinkDestinations",
+    "DocxRendererEmitsFloatingTextBoxInternalHyperlinkDestinations",
+    "DocxRendererEmitsStaticFloatingTextBoxInternalHyperlinkDestinations",
+    "DocxStaticStoryRendererEmitsInternalHyperlinkDestinations",
+    "DocxInlineCompositionAtomicFormulaHyperlinksCoverPaintedGlyphs",
+    "DocxInlineCompositionSingleMathLinksTargetMeasuredFormula",
+    "DocxInlineCompositionHyperlinkPreservesSingleMathFrame",
+    "DocxInlineCompositionExplicitDisplayLinks"
   ]
 }

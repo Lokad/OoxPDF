@@ -796,12 +796,16 @@ internal static class DocxTablesTests
             ]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Uri is null, "Internal table-cell links should not be emitted as URI actions.");
         TestAssert.True(annotation.Destination is { PageIndex: 0 }, "Internal table-cell links should resolve to a PDF page destination.");
-        TestAssert.True(annotation.Destination?.Left >= document.MarginLeftPoints, "The destination should use placed table-cell bookmark coordinates.");
+        var target = renderer.InspectTextEmission(document).Lines.SelectMany(line => line.Segments)
+            .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == "Bookmark target".Length);
+        TestAssert.True(Math.Abs(annotation.Destination!.Value.Left!.Value - target.X + 3d) < .01d,
+            "The body-cell viewport keeps its independently measured context before the emitted cell origin.");
         TestAssert.True(annotation.Destination?.Top > 0d, "The destination should point to a concrete table-cell bookmark line top.");
         TestAssert.True(annotation.Width > 0d, "The clickable rectangle should cover the rendered table-cell internal-link text.");
     }
