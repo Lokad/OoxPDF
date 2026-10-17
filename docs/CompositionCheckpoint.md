@@ -1,5 +1,22 @@
 # Composed-document reliability checkpoint
 
+C136 refreshes the fixed twelve outcomes with the accepted C135 artifact:
+seven source documents/twenty pages retain accepted PDF and reference identities.
+Twelve comparisons and twenty previously reviewed page pairs carry, without Office
+exports, raster/metrics replay, library rebuild or suite replay. Ten DOCX gates
+still fail; both decks pass. Ten earlier content screens and the complete report's
+two unresolved dynamic-field/math-tokenization flags carry; no new audit pass.
+Routine expected-string/ignored-math screens show no new flags.
+
+Manifest integrity passes for715 cases/twelve families; this is not715 Office
+matches. The extended reference tool reproduces twelve earlier goldens byte-for-
+byte without exports/builds. Existing CI supplies broader Windows corpus, Ubuntu
+portable, package and tool checks; local suites are not duplicated. C124 compound
+allocation evidence stays unchanged; no new performance claim. Workspace remains
+11.134GB/556,727 files with zero scan errors, above the loose5GB target. No protected
+retirement is attempted. Evidence `artifacts/composition-c1/checkpoint-136-evidence.json`.
+Next bounded rendering work investigates exact-height occupied-frame fit and clips.
+
 C135 coalesces actual structural cell owners before packing: consecutive rows
 share a range only for the same table/column span, revision kind and known author.
 Dates stay source metadata without splitting the range. Same-row/diagonal spans,
