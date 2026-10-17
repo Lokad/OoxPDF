@@ -1,0 +1,73 @@
+[
+  {
+    "Id": "mixed-nested-cell-inside",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-nested-cell-inside.docx",
+    "Sha256": "31D2508A4A35796FA84FCD22CC372E487C9B690270BF5862571ADDAFE8FA0494",
+    "Container": "body",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public outer head",
+      "Public outer tail"
+    ]
+  },
+  {
+    "Id": "mixed-nested-math-deep-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-nested-math-deep-body.docx",
+    "Sha256": "BE4865259B03CF47485B2F6555D74B07E3D8644B704932FE153048E36CF1E46F",
+    "Container": "body",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public outer head",
+      "Public middle tail",
+      "Public outer tail"
+    ]
+  },
+  {
+    "Id": "mixed-nested-math-static",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-nested-math-static.docx",
+    "Sha256": "0B2BB823C7CB1987F748413267C9D2A41FF5B54B2550C124689E445A72540A36",
+    "Container": "static",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedImagePlacements": 2,
+    "ExpectedText": [
+      "Public body anchor",
+      "Public outer head",
+      "Public outer tail"
+    ]
+  },
+  {
+    "Id": "mixed-nested-math-footnote",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-nested-math-footnote.docx",
+    "Sha256": "3B7D1CAB0618B50504E38F26B4CA57D654460E93F7791CDBACA4CC95FE5532B6",
+    "Container": "footnote",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public note calculation",
+      "Public note outer tail",
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "mixed-nested-math-endnote",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-nested-math-endnote.docx",
+    "Sha256": "D82C0ECA804C470491C2479F786B5D47DCCF04265E47ED9586727409D2A7773C",
+    "Container": "endnote",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public note calculation",
+      "Public note outer tail",
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  }
+]

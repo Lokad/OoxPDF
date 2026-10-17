@@ -1,5 +1,5 @@
 {
-  "Scope": "Direct paragraphs beside plain nested tables; inside-nested mathematics remains a diagnosed content gap",
+  "Scope": "Direct paragraphs and qualified ordinary nested mathematics; raw Review geometry/absolute X residuals remain.",
   "Rows": [
     {
       "Id": "mixed-nested-cell-plain",
@@ -249,7 +249,7 @@
       "InputSha256": "31D2508A4A35796FA84FCD22CC372E487C9B690270BF5862571ADDAFE8FA0494",
       "ReferencePdfSha256": "D165F9C7DF105D75426D7093789332646A3D72D766B34945EFB4800CC152A1A6",
       "ExpectedEquations": 2,
-      "AcceptedPaintedEquations": 0,
+      "AcceptedPaintedEquations": 2,
       "ImagePlacements": 1,
       "ExpectedText": [
         "Public outer tail",
@@ -296,7 +296,7 @@
       "InputSha256": "31D2508A4A35796FA84FCD22CC372E487C9B690270BF5862571ADDAFE8FA0494",
       "ReferencePdfSha256": "B601753F476615AEB92DF68069161C0DA8F6DDC9E56E20EAAB253EC746644E1B",
       "ExpectedEquations": 2,
-      "AcceptedPaintedEquations": 0,
+      "AcceptedPaintedEquations": 2,
       "ImagePlacements": 1,
       "ExpectedText": [
         "Public outer tail",

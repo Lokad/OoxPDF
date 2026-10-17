@@ -642,7 +642,8 @@ internal sealed partial class DocxLayoutEngine
         if (!isHeader &&
             (images.Count == 0 || canAnchorInlineImages) &&
             boxes.Count == 0 &&
-            lines.Any(line => line.SingleLineHeight.HasValue || line.LineHeightSource == DocxLineHeightSource.ExactLineSpacing))
+            (tableRows.Count != 0 ||
+             lines.Any(line => line.SingleLineHeight.HasValue || line.LineHeightSource == DocxLineHeightSource.ExactLineSpacing)))
         {
             // Office A/B (w38 default multi-line footer at distance 36, w39 tokened
             // multi-line footer at 72, w40 bare multi-line footer at 54, w43-solo

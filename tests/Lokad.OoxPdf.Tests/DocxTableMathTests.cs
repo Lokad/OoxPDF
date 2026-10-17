@@ -515,7 +515,7 @@ internal static class DocxTableMathTests
                 EquationParts = [new DocxEquationPartSource(guard == "note" ? "/word/footnotes.xml" : "/word/static.xml", 1, elements)]
             };
             var candidates = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).ToArray();
-            TestAssert.Equal(guard is "plain" or "exact" ? 1 : 0, candidates.Length);
+            TestAssert.Equal(guard is "plain" or "exact" or "nested" ? 1 : 0, candidates.Length);
             if (candidates.Length != 0)
                 TestAssert.True(ReferenceEquals(paragraph, candidates[0].Paragraph) && candidates[0].HasPageInputs,
                     "Shared variants prepare one original source owner with actual page inputs.");

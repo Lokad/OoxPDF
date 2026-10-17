@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingNestedMathKeepsContentAcrossContainersAndSourceSplitting() =>
+        DocxInlineCompositionTests.CheckNestedMath(new PinnedResolver());
+
     public static void PortableRenderingNestedCellNeighborsKeepContentAndSourceOrder() =>
         DocxInlineCompositionTests.CheckNestedCellNeighbors(new PinnedResolver());
 

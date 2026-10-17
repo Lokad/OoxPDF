@@ -47,23 +47,26 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    public static void DocxInlineCompositionNestedCellNeighborsRetainUnqualifiedAndNestedSourceFallbacks()
+    public static void DocxInlineCompositionNestedCellNeighborsRetainUnqualifiedAncestorAndChildFallbacks()
     {
-        foreach (string variant in new[] { "merge", "fit", "vertical", "height", "move", "inside" })
+        foreach (string variant in new[] { "merge", "fit", "vertical", "height", "move", "nested-vertical" })
         {
-            var source = ReadMutation("CompositionProbes/mixed-nested-cell-" + (variant == "inside" ? "inside" : "after"),
+            var source = ReadMutation("CompositionProbes/mixed-nested-cell-" + (variant == "nested-vertical" ? "inside" : "after"),
                 OoxPdfDocxMarkupMode.Final, false, false, (xml, w, _) =>
                 {
                     var table = xml.Root!.Element(w + "body")!.Element(w + "tbl")!;
                     var row = table.Element(w + "tr")!;
                     var cell = row.Element(w + "tc")!;
-                    if (variant == "height")
+                    if (variant == "nested-vertical")
+                        cell.Element(w + "tbl")!.Element(w + "tr")!.Element(w + "tc")!.Element(w + "tcPr")!
+                            .Add(new XElement(w + "textDirection", new XAttribute(w + "val", "tbRl")));
+                    else if (variant == "height")
                         row.AddFirst(new XElement(w + "trPr", new XElement(w + "trHeight",
                             new XAttribute(w + "val", "320"), new XAttribute(w + "hRule", "unknown"))));
                     else if (variant == "move")
                         cell.Element(w + "p")!.ReplaceWith(new XElement(w + "moveTo",
                             new XAttribute(w + "id", "71"), new XAttribute(w + "author", "Public author"), cell.Element(w + "p")));
-                    else if (variant != "inside")
+                    else
                         cell.Element(w + "tcPr")!.Add(variant switch
                         {
                             "merge" => new XElement(w + "vMerge", new XAttribute(w + "val", "restart")),

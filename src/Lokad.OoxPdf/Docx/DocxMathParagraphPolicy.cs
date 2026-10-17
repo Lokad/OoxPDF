@@ -25,9 +25,9 @@ internal static class DocxMathParagraphPolicy
         }
     }
 
-    // A nested table does not replace its surrounding paragraph owners. Prepare
-    // those direct paragraphs under the shared cell properties; nested content
-    // retains its own staged fallback and is not traversed here.
+    // Follow source block order through ordinary cells. Every ancestor keeps
+    // the same property guards; a nested table never substitutes a paragraph
+    // from the cell's derived collection for its actual block owner.
     private static IEnumerable<DocxParagraph> EnumerateSupportedTableParagraphs(DocxTable table, CancellationToken token)
     {
         foreach (DocxTableRow row in table.Rows)
@@ -37,10 +37,16 @@ internal static class DocxMathParagraphPolicy
             foreach (DocxTableCell cell in row.Cells)
             {
                 token.ThrowIfCancellationRequested();
-                if (!HasSupportedCellProperties(cell) ||
-                    !cell.BodyElements.All(child => child is DocxParagraphElement or DocxTableElement)) { continue; }
-                foreach (DocxParagraph paragraph in DocxTableCellContent.GetParagraphs(cell))
-                { token.ThrowIfCancellationRequested(); yield return paragraph; }
+                var children = DocxTableCellContent.GetBodyElements(cell);
+                if (!IsSupportedCellProperties(cell) ||
+                    !children.All(child => child is DocxParagraphElement or DocxTableElement)) { continue; }
+                foreach (var child in children)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (child is DocxParagraphElement paragraph) yield return paragraph.Paragraph;
+                    else if (child is DocxTableElement nested)
+                        foreach (var descendant in EnumerateSupportedTableParagraphs(nested.Table, token)) yield return descendant;
+                }
             }
         }
     }
@@ -49,9 +55,9 @@ internal static class DocxMathParagraphPolicy
         HasSupportedTableContentRevisions(row.Revisions, DocxRevisionKind.TableRowPropertiesChange);
 
     public static bool IsSupportedSimpleCell(DocxTableCell cell) =>
-        HasSupportedCellProperties(cell) && cell.BodyElements.All(child => child is DocxParagraphElement);
+        IsSupportedCellProperties(cell) && cell.BodyElements.All(child => child is DocxParagraphElement);
 
-    private static bool HasSupportedCellProperties(DocxTableCell cell) =>
+    public static bool IsSupportedCellProperties(DocxTableCell cell) =>
         !cell.HasVerticalMerge && !cell.FitText &&
         HasSupportedTableContentRevisions(cell.Revisions, DocxRevisionKind.TableCellPropertiesChange) &&
         cell.TextDirectionValue is null or "lrTb";

@@ -1,0 +1,455 @@
+{
+  "Scope": "Independent nested-content source/geometry facts across two body depths/header/footer/footnote/endnote; no arbitrary nested/fragmented fidelity claim.",
+  "Rows": [
+    {
+      "Id": "mixed-nested-cell-inside",
+      "Mode": "final-preserve",
+      "Container": "body",
+      "InputSha256": "31D2508A4A35796FA84FCD22CC372E487C9B690270BF5862571ADDAFE8FA0494",
+      "ReferencePdfSha256": "92C3C8D40405D920D3A5BC33234B79A5FA229764877ED5867143410B5EA790D5",
+      "ExpectedEquations": 2,
+      "ImagePlacements": 1,
+      "ExpectedText": [
+        "Public outer head",
+        "Public outer tail"
+      ],
+      "Math": [
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 109.22,
+          "Y": 694.3
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 108.5,
+          "Y": 681.22
+        },
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 127.22,
+          "Y": 694.3
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 126.5,
+          "Y": 681.22
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-cell-inside",
+      "Mode": "all-word-compatible",
+      "Container": "body",
+      "InputSha256": "31D2508A4A35796FA84FCD22CC372E487C9B690270BF5862571ADDAFE8FA0494",
+      "ReferencePdfSha256": "1D0A39BC303992457768FBDF5191D46D52A8516CD78628A3B87B75CC18466265",
+      "ExpectedEquations": 2,
+      "ImagePlacements": 1,
+      "ExpectedText": [
+        "Public outer head",
+        "Public outer tail"
+      ],
+      "Math": [
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 82.824,
+          "Y": 622.51
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 82.272,
+          "Y": 612.58
+        },
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 96.48,
+          "Y": 622.51
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 95.928,
+          "Y": 612.58
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-math-deep-body",
+      "Mode": "final-preserve",
+      "Container": "body",
+      "InputSha256": "BE4865259B03CF47485B2F6555D74B07E3D8644B704932FE153048E36CF1E46F",
+      "ReferencePdfSha256": "CD7A5F9606F0F285E8C2C8AA5DE5E7B05E63FA4E2F0EAFF608271FAC8A69C8ED",
+      "ExpectedEquations": 2,
+      "ImagePlacements": 1,
+      "ExpectedText": [
+        "Public outer head",
+        "Public middle tail",
+        "Public outer tail"
+      ],
+      "Math": [
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 109.94,
+          "Y": 693.82
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 109.22,
+          "Y": 680.74
+        },
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 127.94,
+          "Y": 693.82
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 127.22,
+          "Y": 680.74
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-math-deep-body",
+      "Mode": "all-word-compatible",
+      "Container": "body",
+      "InputSha256": "BE4865259B03CF47485B2F6555D74B07E3D8644B704932FE153048E36CF1E46F",
+      "ReferencePdfSha256": "28529921D1B9DB7CC9B2093F279C73C74CD0FC27D371A610BF580D8D6C8A1736",
+      "ExpectedEquations": 2,
+      "ImagePlacements": 1,
+      "ExpectedText": [
+        "Public outer head",
+        "Public middle tail",
+        "Public outer tail"
+      ],
+      "Math": [
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 83.376,
+          "Y": 622.13
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 82.824,
+          "Y": 612.22
+        },
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 97.032,
+          "Y": 622.13
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 96.48,
+          "Y": 612.22
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-math-static",
+      "Mode": "final-preserve",
+      "Container": "static",
+      "InputSha256": "0B2BB823C7CB1987F748413267C9D2A41FF5B54B2550C124689E445A72540A36",
+      "ReferencePdfSha256": "5092A239BFB7115623BF77192AC8BEB0938F20D725C5CC22D721FCE4CCC0A5D9",
+      "ExpectedEquations": 4,
+      "ImagePlacements": 2,
+      "ExpectedText": [
+        "Public body anchor",
+        "Public outer head",
+        "Public outer tail"
+      ],
+      "Math": [
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 109.94,
+          "Y": 748.32
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 109.22,
+          "Y": 735.24
+        },
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 127.94,
+          "Y": 748.32
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 127.22,
+          "Y": 735.24
+        },
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 109.94,
+          "Y": 45.864
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 109.22,
+          "Y": 32.76
+        },
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 127.94,
+          "Y": 45.864
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 127.22,
+          "Y": 32.76
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-math-static",
+      "Mode": "all-word-compatible",
+      "Container": "static",
+      "InputSha256": "0B2BB823C7CB1987F748413267C9D2A41FF5B54B2550C124689E445A72540A36",
+      "ReferencePdfSha256": "6BEBA835D5B99B6CD7184B65EC2E0DB64262413454DEAE3917377322713ADC9B",
+      "ExpectedEquations": 4,
+      "ImagePlacements": 2,
+      "ExpectedText": [
+        "Public body anchor",
+        "Public outer head",
+        "Public outer tail"
+      ],
+      "Math": [
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 83.376,
+          "Y": 663.46
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 82.824,
+          "Y": 653.54
+        },
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 97.032,
+          "Y": 663.46
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 96.48,
+          "Y": 653.54
+        },
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 83.376,
+          "Y": 130.75
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 82.824,
+          "Y": 120.84
+        },
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 97.032,
+          "Y": 130.75
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 96.48,
+          "Y": 120.84
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-math-footnote",
+      "Mode": "final-preserve",
+      "Container": "footnote",
+      "InputSha256": "3B7D1CAB0618B50504E38F26B4CA57D654460E93F7791CDBACA4CC95FE5532B6",
+      "ReferencePdfSha256": "AA69BE834128413D12EFB4DA5ADFE6ABC225564D763B1E8A061BD672E19CEEBC",
+      "ExpectedEquations": 2,
+      "ImagePlacements": 1,
+      "ExpectedText": [
+        "Public note calculation",
+        "Public note outer tail",
+        "Public destination Alpha.",
+        "Public destination Delta."
+      ],
+      "Math": [
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 185.78,
+          "Y": 138.38
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 185.06,
+          "Y": 125.3
+        },
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 261.65,
+          "Y": 138.38
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 260.93,
+          "Y": 125.3
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-math-footnote",
+      "Mode": "all-word-compatible",
+      "Container": "footnote",
+      "InputSha256": "3B7D1CAB0618B50504E38F26B4CA57D654460E93F7791CDBACA4CC95FE5532B6",
+      "ReferencePdfSha256": "4C8F035CEC1B594E17B03958CBC27246F0333EBFB67610EB82BCF6EBCAAB9183",
+      "ExpectedEquations": 2,
+      "ImagePlacements": 1,
+      "ExpectedText": [
+        "Public note calculation",
+        "Public note outer tail",
+        "Public destination Alpha.",
+        "Public destination Delta."
+      ],
+      "Math": [
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 185.78,
+          "Y": 138.38
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 185.06,
+          "Y": 125.3
+        },
+        {
+          "Text": "rate",
+          "Page": 1,
+          "X": 261.65,
+          "Y": 138.38
+        },
+        {
+          "Text": "time",
+          "Page": 1,
+          "X": 260.93,
+          "Y": 125.3
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-math-endnote",
+      "Mode": "final-preserve",
+      "Container": "endnote",
+      "InputSha256": "D82C0ECA804C470491C2479F786B5D47DCCF04265E47ED9586727409D2A7773C",
+      "ReferencePdfSha256": "29AEB9426F6AC265D892DB07999CC13195BD35838B8A08C7BB7E103F3D396613",
+      "ExpectedEquations": 2,
+      "ImagePlacements": 1,
+      "ExpectedText": [
+        "Public note calculation",
+        "Public note outer tail",
+        "Public destination Alpha.",
+        "Public destination Delta."
+      ],
+      "Math": [
+        {
+          "Text": "rate",
+          "Page": 2,
+          "X": 185.78,
+          "Y": 650.5
+        },
+        {
+          "Text": "time",
+          "Page": 2,
+          "X": 185.06,
+          "Y": 637.42
+        },
+        {
+          "Text": "rate",
+          "Page": 2,
+          "X": 261.65,
+          "Y": 650.5
+        },
+        {
+          "Text": "time",
+          "Page": 2,
+          "X": 260.93,
+          "Y": 637.42
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-math-endnote",
+      "Mode": "all-word-compatible",
+      "Container": "endnote",
+      "InputSha256": "D82C0ECA804C470491C2479F786B5D47DCCF04265E47ED9586727409D2A7773C",
+      "ReferencePdfSha256": "9118FEF9A231EBE693DBD9993E0910EDFE0D383D800D45F9F6682A97A980CA22",
+      "ExpectedEquations": 2,
+      "ImagePlacements": 1,
+      "ExpectedText": [
+        "Public note calculation",
+        "Public note outer tail",
+        "Public destination Alpha.",
+        "Public destination Delta."
+      ],
+      "Math": [
+        {
+          "Text": "rate",
+          "Page": 2,
+          "X": 185.78,
+          "Y": 650.5
+        },
+        {
+          "Text": "time",
+          "Page": 2,
+          "X": 185.06,
+          "Y": 637.42
+        },
+        {
+          "Text": "rate",
+          "Page": 2,
+          "X": 261.65,
+          "Y": 650.5
+        },
+        {
+          "Text": "time",
+          "Page": 2,
+          "X": 260.93,
+          "Y": 637.42
+        }
+      ]
+    }
+  ]
+}

@@ -242,11 +242,12 @@ internal sealed partial class DocxLayoutEngine
             DocxTableRow row = table.Rows[rowIndex];
             IReadOnlyList<double> rowHeights = frame.RowHeights;
             double rowHeight = rowHeights[rowIndex];
+            bool nestedMath = HasPreparedNestedTableMath(row, frame.Context.MathEquations, cancellationToken);
             // The containing body frame already supplies printed capacity;
             // fragment baseline projection must not scale it a second time.
             double flowBottom = marginBottom;
             double remainingPageHeight = Math.Max(0d, cursorY - flowBottom);
-            if (!row.CantSplit &&
+            if (!row.CantSplit && !nestedMath &&
                 TryResolveExplicitTableCellPageBreakBoundaries(row, frame.EffectiveColumns, frame.Scale, rowHeight, textMeasurer, defaultTabStopPoints, getPageNumber(), pageCount: frame.Context.PageCount, out IReadOnlyList<double> explicitBreakBoundaries, paragraphSpacingScale: paragraphSpacingScale))
             {
                 double explicitBreakFragmentHeight = explicitBreakBoundaries[0];
@@ -281,7 +282,7 @@ internal sealed partial class DocxLayoutEngine
                 continue;
             }
 
-            if (!row.CantSplit &&
+            if (!row.CantSplit && !nestedMath &&
                 rowHeight > remainingPageHeight &&
                 remainingPageHeight > 0.001d &&
                 CanSplitTableRowAtPageBoundary(row, frame.EffectiveColumns, frame.Scale, rowHeight, remainingPageHeight, frame.Context.MathEquations, out double splitPitch, out double firstFragmentHeight))
@@ -1192,6 +1193,23 @@ internal sealed partial class DocxLayoutEngine
 
     // Boundary tail admission is a natural-flow contract. Authored row heights,
     // keeps, merges, positioned content and shifted glyphs retain their fallback.
+    // Nested math shares the existing atomic-row fallback until fragmented
+    // nested mathematical frames have independent placement qualification.
+    private static bool HasPreparedNestedTableMath(DocxTableRow row,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
+    {
+        if (mathEquations is null || mathEquations.Count == 0) return false;
+        foreach (var cell in row.Cells)
+        foreach (var nested in GetTableCellLayoutBodyElements(cell).OfType<DocxTableElement>())
+        foreach (var paragraph in DocxBlockTraversal.EnumerateTableParagraphs(nested.Table))
+        {
+            token.ThrowIfCancellationRequested();
+            foreach (var equation in paragraph.Equations)
+                if (mathEquations.ContainsKey(equation)) return true;
+        }
+        return false;
+    }
+
     private static bool CanDiscardTableRowAfterSpacing(DocxTableRow row)
     {
         if (row.IsHeader || row.CantSplit || row.HeightPoints is not null || row.HeightRuleValue is not null)
@@ -1802,7 +1820,7 @@ internal sealed partial class DocxLayoutEngine
             (IReadOnlyList<DocxInlineImageLayout> cellInlineImages, IReadOnlyList<DocxInlineTextBoxLayout> cellInlineTextBoxes) = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? (Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>())
                 : LayoutTableCellInlineImages(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageIndex, currentPageNumber, pageCount, paragraphSpacingScale,
-                    orderedParagraphFrames);
+                    orderedParagraphFrames, tableContext.MathEquations, tableContext.CancellationToken);
             IReadOnlyList<DocxInlineImageLayout> inlineImages = cellInlineImages
                     .Concat(cellPlacedImages)
                     .Where(image => IsInlineImageOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerParagraphBoundaryIndex, cellPageBreakUpperParagraphBoundaryIndex, cell, image, FragmentIndex, FragmentCount))
@@ -1815,7 +1833,7 @@ internal sealed partial class DocxLayoutEngine
             IReadOnlyList<DocxTableRowLayout> nestedTableRows = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
                 ? []
                 : LayoutTableCellNestedTables(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageIndex, currentPageNumber, pageCount, paragraphSpacingScale, cellMemo,
-                    orderedParagraphFrames, tableContext.CancellationToken)
+                    orderedParagraphFrames, tableContext.MathEquations, tableContext.CancellationToken)
                     .Where(rowLayout => IsNestedTableRowOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerNestedTableBoundaryIndex, cellPageBreakUpperNestedTableBoundaryIndex, rowLayout, FragmentCount))
                     .Where(rowLayout => IsNestedTableRowVisibleInCellFragmentGeometry(cellPageBreakAlignsWithNestedTableBlock, rowLayout, visualY, visualHeight, FragmentIndex, FragmentCount))
                     .ToArray();

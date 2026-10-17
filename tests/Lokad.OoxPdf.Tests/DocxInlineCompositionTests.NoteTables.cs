@@ -42,7 +42,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxInlineCompositionNoteTablesRetainComplexCellAndStoryFallbacks()
     {
         foreach (string kind in new[] { "footnote", "endnote" })
-        foreach (string variant in new[] { "merge", "vertical", "nested", "height", "unknown-story" })
+        foreach (string variant in new[] { "merge", "vertical", "nested-vertical", "height", "unknown-story" })
         {
             var source = ReadMutation("CompositionProbes/mixed-note-" + kind + "-table", OoxPdfDocxMarkupMode.Final,
                 false, false, (xml, w, _) =>
@@ -51,10 +51,11 @@ internal static partial class DocxInlineCompositionTests
                     var table = story.Element(w + "tbl")!;
                     var cell = table.Descendants(w + "tc").Single();
                     if (variant == "unknown-story") story.SetAttributeValue(w + "type", "unknown");
-                    else if (variant == "nested")
+                    else if (variant == "nested-vertical")
                     {
                         var paragraph = cell.Element(w + "p")!;
-                        paragraph.ReplaceWith(new XElement(w + "tbl", new XElement(w + "tr", new XElement(w + "tc", paragraph))));
+                        paragraph.ReplaceWith(new XElement(w + "tbl", new XElement(w + "tr", new XElement(w + "tc",
+                            new XElement(w + "tcPr", new XElement(w + "textDirection", new XAttribute(w + "val", "tbRl"))), paragraph))));
                     }
                     else if (variant == "height")
                     {

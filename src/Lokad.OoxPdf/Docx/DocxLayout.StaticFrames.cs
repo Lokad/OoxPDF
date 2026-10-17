@@ -117,7 +117,8 @@ internal sealed partial class DocxLayoutEngine
                         Width = cell.Width * scale, Height = cell.Height * scale,
                         ContentPaddingLeft = cell.ContentPaddingLeft * scale, ContentPaddingRight = cell.ContentPaddingRight * scale,
                         ContentPaddingTop = cell.ContentPaddingTop * scale, ContentPaddingBottom = cell.ContentPaddingBottom * scale,
-                        TextLines = cell.TextLines.Select(MapLine).ToArray(), InlineImages = cell.InlineImages.Select(MapImage).ToArray()
+                        TextLines = cell.TextLines.Select(MapLine).ToArray(), InlineImages = cell.InlineImages.Select(MapImage).ToArray(),
+                        NestedTableRows = cell.NestedRows.Select(MapRow).ToArray()
                     };
                 }).ToArray()
             };
@@ -142,43 +143,67 @@ internal sealed partial class DocxLayoutEngine
         foreach (var element in story.BodyElements)
         {
             token.ThrowIfCancellationRequested();
-            IEnumerable<DocxParagraph> paragraphs;
             if (element is DocxParagraphElement direct &&
                 DocxInlineContent.HasSupportedParagraphRevisionOwners(direct.Paragraph, token, direct.Revisions))
-                { paragraphs = [direct.Paragraph]; }
-            else if (element is DocxTableElement table && table.Table.Revisions.Count == 0 &&
-                table.Table.Rows.All(row =>
-                {
-                    token.ThrowIfCancellationRequested();
-                    return DocxMathParagraphPolicy.IsSupportedSimpleRow(row) && row.Cells.All(cell =>
-                    {
-                        token.ThrowIfCancellationRequested();
-                        return DocxMathParagraphPolicy.IsSupportedSimpleCell(cell);
-                    });
-                }))
-                paragraphs = table.Table.Rows.SelectMany(row => row.Cells).SelectMany(cell => cell.Paragraphs);
+            {
+                if (!IsNaturalStaticParagraph(direct.Paragraph, width, mathEquations, token)) return false;
+            }
+            else if (element is DocxTableElement table)
+            {
+                if (!IsNaturalStaticTable(table.Table, width, mathEquations, token)) return false;
+            }
             else { return false; }
-            foreach (DocxParagraph paragraph in paragraphs)
+        }
+        return true;
+    }
+
+    private static bool IsNaturalStaticTable(DocxTable table, double width,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
+    {
+        if (table.Revisions.Count != 0) return false;
+        foreach (var row in table.Rows)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!DocxMathParagraphPolicy.IsSupportedSimpleRow(row)) return false;
+            foreach (var cell in row.Cells)
             {
                 token.ThrowIfCancellationRequested();
-                if (paragraph.Equations.Count != 0)
+                if (!DocxMathParagraphPolicy.IsSupportedCellProperties(cell)) return false;
+                foreach (var child in DocxTableCellContent.GetBodyElements(cell))
                 {
-                    if (!TryGetStandaloneMath(paragraph, width, 1d, mathEquations, out _) &&
-                        (mathEquations is null || paragraph.InlineContent is null ||
-                        DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasPageInputs: true).Count != paragraph.Equations.Count ||
-                        // Unavailable math keeps its diagnosed fallback; the
-                        // remaining ordered source items still own a static frame.
-                        paragraph.Equations.Any(equation => mathEquations.TryGetValue(equation, out var math) && math.Box.AdvanceWidth > width) ||
-                        paragraph.Images.Any(image => image.WidthPoints > width))) { return false; }
+                    token.ThrowIfCancellationRequested();
+                    if (child is DocxParagraphElement paragraph)
+                    {
+                        if (!IsNaturalStaticParagraph(paragraph.Paragraph, width, mathEquations, token)) return false;
+                    }
+                    else if (child is DocxTableElement nested)
+                    {
+                        if (!IsNaturalStaticTable(nested.Table, width, mathEquations, token)) return false;
+                    }
+                    else return false;
                 }
-                else if (paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right) ||
-                    paragraph.Images.Any(image => image.SourceRunIndex < 0 || image.RotationDegrees != 0d ||
-                        !double.IsFinite(image.WidthPoints) || !double.IsFinite(image.HeightPoints) ||
-                        image.WidthPoints <= 0d || image.HeightPoints <= 0d || image.WidthPoints > width) ||
-                    !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
-                    !DocxInlineContent.HasSupportedSourceOwner(paragraph, token: token)) { return false; }
             }
         }
         return true;
+    }
+
+    private static bool IsNaturalStaticParagraph(DocxParagraph paragraph, double width,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (paragraph.Equations.Count != 0)
+            return TryGetStandaloneMath(paragraph, width, 1d, mathEquations, out _) ||
+                mathEquations is not null && paragraph.InlineContent is not null &&
+                DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasPageInputs: true).Count == paragraph.Equations.Count &&
+                // Unavailable math keeps its diagnosed fallback; the remaining
+                // ordered source items still own a static frame.
+                paragraph.Equations.All(equation => !mathEquations.TryGetValue(equation, out var math) || math.Box.AdvanceWidth <= width) &&
+                paragraph.Images.All(image => image.WidthPoints <= width);
+        return paragraph.Alignment is DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right &&
+            paragraph.Images.All(image => image.SourceRunIndex >= 0 && image.RotationDegrees == 0d &&
+                double.IsFinite(image.WidthPoints) && double.IsFinite(image.HeightPoints) &&
+                image.WidthPoints > 0d && image.HeightPoints > 0d && image.WidthPoints <= width) &&
+            DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) &&
+            DocxInlineContent.HasSupportedSourceOwner(paragraph, token: token);
     }
 }
