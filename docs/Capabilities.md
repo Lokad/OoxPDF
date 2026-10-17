@@ -208,9 +208,11 @@ literal math-run insertions/deletions preserve source-specific review ink and ot
 arguments. Empty or structurally different inner revision wrappers, empty stacks
 and richer unsupported revision structures retain fallback.
 
-Explicitly hidden empty matrix cells retain metric-only placeholder geometry,
-including empty rows and columns; visible-placeholder and wholly empty grids
-retain fallback.
+Supported empty subscript/superscript arguments and partial empty matrix cells
+retain metric-only placeholder geometry and remaining source content. Known matrix
+placeholder visibility values/defaults share the independently validated printed
+layout, including empty rows/columns. Empty script bases, wholly empty grids and
+unknown properties retain fallback.
 
 Bounded matrices also render inside ready-made round/square delimiters, retaining
 independent metric and paint owners. Fence variant and vertical-layout residuals

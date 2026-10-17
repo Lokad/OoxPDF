@@ -22,6 +22,14 @@ arguments. Independent numerator controls cover body/cell/header/footer placemen
 bookmarks and splitting the mathematical run preserve geometry. Empty or
 structurally different inner revision wrappers retain explicit fallback.
 
+Empty subscript/superscript arguments and partial empty matrix cells now retain
+metric-only placeholder geometry and the remaining source glyphs. Independent
+Word profiles with omitted, disabled or enabled matrix placeholder visibility
+produce identical printed rasters. The same known profiles now share one PDF
+layout rule. Empty script bases, wholly empty grids and unknown properties retain
+fallback. Revision-role body controls cover literals, scripts, roots and matrices;
+new empty-role placement combinations remain a separate qualification step.
+
 Numbered paragraphs retain supported explicit math zones alongside prose and
 inline pictures. The list label owns only the first authored row: its formulas
 use inline sizing, while a later math-only row after a hard break owns display
@@ -910,8 +918,8 @@ U+2B1A dotted-square metrics. Empty slots reuse that advance and extent without
 painting a glyph or preparing a PDF font resource. Empty rows retain the shared
 control frame; empty columns retain their slots and gaps. Each empty slot charges
 the existing cumulative work budget. Missing placeholder metrics, unknown cell
-properties, wholly empty grids and visible-placeholder profiles retain complete
-fallback. No additional cache, quota or native code is introduced.
+properties and wholly empty grids retain complete fallback. C90 extends the
+known placeholder-visibility profiles after independent Word counterprobes. No additional cache, quota or native code is introduced.
 
 Six Word controls improve across diagonal gaps, empty rows/columns, a larger
 control and all-Arial paint. Text-operation residuals remain within 0.34 pt X and

@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+C90 shares literal-argument measurement across fractions and scripts, retaining
+metric-only empty sub/sup slots. Matrix discovery uses the same semantic emptiness
+rule. Independent Word counterprobes show deleted/authored-empty script and matrix
+arguments have identical rasters; known matrix placeholder visibility profiles also
+have identical rasters in both presets. Their previous exclusion is removed. Empty
+script bases, wholly empty grids and unknown properties retain explicit fallback.
+Fraction/script operator spacing retains each role's previously qualified behavior.
+
+Fourteen sources/twenty-eight strict Word outcomes generalize revisions across
+literal, script, root and matrix roles. Eleven affected MAEs improve; seventeen
+PDFs retain bytes. All twenty-eight gates still fail unchanged thresholds without
+new components. Maximum group-start X/Y residuals are 0.455/0.700pt. Exact content
+and ink cover every glyph; grouped Word strings use their actual starts, with no
+estimated interior anchors. Six crop pairs reviewed (four changed, two reused by
+PDF identity). Typography/strict visual failures remain. No raw prose-screen pass
+is claimed for manifests without expected strings; focused tests assert the prose.
+
+One frozen artifact passes 36 focused Windows checks once and eleven Ubuntu checks/
+25 explicit skips once. Two actual parent failures show missing script remainders;
+frozen CLI outputs independently establish the matrix omission. A selector-only
+correction before tests keeps the same production/test source and artifact; no
+extra build/freeze. All twelve actual portfolio PDFs retain accepted comparisons,
+including ten failed DOCX gates/two deck passes. Seventeen assets/four smoke PDFs
+transfer without root build or suite replay. Root d78c970c; evidence:
+`artifacts/composition-c1/empty-math-arguments-evidence.json`.
+C89 CI 39007590057 is green on both platforms; C90 CI follows the scoped push.
+
 C89 composes tracked literal runs inside supported mathematics. Recognized
 nonempty insertion/deletion wrappers use the existing iterative parser and declared
 view filtering. Eligibility and author order require actual measured run identities
