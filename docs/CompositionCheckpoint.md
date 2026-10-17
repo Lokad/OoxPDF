@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+C128 replaces blanket row/cell revision exclusions with non-deleting source-owner
+rules. Supported insertions and current property geometry keep the actual child
+paragraph/equation ownership. Deleting, moving and unknown kinds stay staged.
+Static table formatting reuses existing revision traversal for the same printed
+review lane and fitted anchor as other qualified owners.
+
+Nine sources/eighteen Word outcomes restore all four equations in fourteen outcomes
+(parent zero math operations versus21 glyphs). Four unmodeled cell-marker control
+PDFs retain accepted C127 bytes. Prequalification exposes static-format review
+errors of91.518pt X/136.540pt Y; the shared lane fix reduces them below0.155pt X/
+1.763pt Y. No fitted offsets. All fourteen MAEs improve without new failure
+components. All strict raster/full one-point gates remain failed. Changed outcomes
+retain matrix/rule/placement residuals up to1.778pt math Y/2.172pt prose Y. Unmodeled
+cell insertion/deletion review markers retain91.878pt X/76.325pt Y and missing bar/
+lane state. Fifteen distinct crop pairs reviewed; three carry by raster identity.
+
+Only two affected review PDFs are converted after the lane fix; sixteen prior
+screens carry by explicit branch/source inference. No prototype tests run. The
+final Release artifact passes100 Windows and76 Ubuntu checks/24 native skips, once
+each. Four unchanged controls remain in the complete raw comparisons; new content/
+ink assertions cover the fourteen changed outcomes. Parent checks fail21 versus0.
+Seventeen assets/four smokes transfer without root build/suite replay. Seven exact
+portfolio inputs contain no affected table revision owners, carrying C124's twelve
+outcomes by source inference; original report Review/deck PDFs remain smoked.
+Root6d75f2cb; `artifacts/composition-c1/table-math-lane-evidence.json`. C126/C127
+CI39039390276/39039923804 green on both platforms. The independent deleted-row Final
+probe confirms retained prose that Word hides; row visibility is the next fix.
+
 C127 verifies the same authored empty-script/painted-fraction controls in cells,
 headers and footers. Six sources/twelve independent Word outcomes retain all math
 content and ink. Matrix row/baseline, fraction-rule and paragraph-placement gates
