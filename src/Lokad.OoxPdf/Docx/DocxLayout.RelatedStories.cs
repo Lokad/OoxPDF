@@ -2239,7 +2239,8 @@ internal sealed partial class DocxLayoutEngine
                     cancellationToken,
                     pageNumber: pageNumber,
                     pageCount: pageCount,
-                    paragraphSpacingScale: paragraphSpacingScale);
+                    paragraphSpacingScale: paragraphSpacingScale,
+                    mathEquations: mathEquations);
                 int relatedStoryPageNumber = pageNumber ?? 1;
                 for (int rowIndex = 0; rowIndex < tableElement.Table.Rows.Count; rowIndex++)
                 {

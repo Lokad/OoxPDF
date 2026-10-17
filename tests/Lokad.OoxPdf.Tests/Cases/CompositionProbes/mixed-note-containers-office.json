@@ -1,0 +1,285 @@
+{
+  "Provenance": "Eight independently exported Word16 outcomes. Direct/table footnotes and endnotes contain the same two fractions, image and bookmark; existing four source note stories remain. Content outcomes remain separate from strict geometry/visual thresholds.",
+  "Rows": [
+    {
+      "Id": "mixed-note-endnote-paragraph",
+      "Mode": "all-word-compatible",
+      "InputSha256": "87B6EA350F80A6C11C17C9FA01E30DA19255D01C6F0AE31B63E5580B3131595C",
+      "ReferenceSha256": "B11EB207C256AC280160F6A37F3D5F97257DB5DABD2353D626FCEF961B9843A8",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 2,
+      "ImagePlacements": 1,
+      "MathAnchors": [
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 185.78,
+          "Y": 650.5
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 185.06,
+          "Y": 637.42
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 261.65,
+          "Y": 650.5
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 260.93,
+          "Y": 637.42
+        }
+      ]
+    },
+    {
+      "Id": "mixed-note-endnote-paragraph",
+      "Mode": "final-preserve",
+      "InputSha256": "87B6EA350F80A6C11C17C9FA01E30DA19255D01C6F0AE31B63E5580B3131595C",
+      "ReferenceSha256": "9AE2CE8FE74F24FA42BC2FC49BE6C6F909BD7E64DA7D81FFD9CBEF2184655D00",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 2,
+      "ImagePlacements": 1,
+      "MathAnchors": [
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 185.78,
+          "Y": 650.5
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 185.06,
+          "Y": 637.42
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 261.65,
+          "Y": 650.5
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 260.93,
+          "Y": 637.42
+        }
+      ]
+    },
+    {
+      "Id": "mixed-note-endnote-table",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F663443874A0FB61E8514D5B57F63D20EDF6C8627AD8105E1B134FE984138810",
+      "ReferenceSha256": "3242E6E8FBD1F290FE4D08E7D33C6CD651263BB0906B15C462D89F4151A135E5",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 2,
+      "ImagePlacements": 1,
+      "MathAnchors": [
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 185.78,
+          "Y": 650.5
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 185.06,
+          "Y": 637.42
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 261.65,
+          "Y": 650.5
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 260.93,
+          "Y": 637.42
+        }
+      ]
+    },
+    {
+      "Id": "mixed-note-endnote-table",
+      "Mode": "final-preserve",
+      "InputSha256": "F663443874A0FB61E8514D5B57F63D20EDF6C8627AD8105E1B134FE984138810",
+      "ReferenceSha256": "34062150F5F924F6B90BE274CA2D764B36012F52E75004AFE0BBD686D25D22B4",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 2,
+      "ImagePlacements": 1,
+      "MathAnchors": [
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 185.78,
+          "Y": 650.5
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 185.06,
+          "Y": 637.42
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 261.65,
+          "Y": 650.5
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 260.93,
+          "Y": 637.42
+        }
+      ]
+    },
+    {
+      "Id": "mixed-note-footnote-paragraph",
+      "Mode": "all-word-compatible",
+      "InputSha256": "8F4AB9857936CF4A0E24099AADACAB8A379F914BB3CE1AE2F2C4FDD7B47ED1CF",
+      "ReferenceSha256": "FCB258A89D053BD156C93DA008AF8C33B91EF2CD86863625F1E770177762F94F",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 2,
+      "ImagePlacements": 1,
+      "MathAnchors": [
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 185.78,
+          "Y": 99.744
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 185.06,
+          "Y": 86.664
+        },
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 261.65,
+          "Y": 99.744
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 260.93,
+          "Y": 86.664
+        }
+      ]
+    },
+    {
+      "Id": "mixed-note-footnote-paragraph",
+      "Mode": "final-preserve",
+      "InputSha256": "8F4AB9857936CF4A0E24099AADACAB8A379F914BB3CE1AE2F2C4FDD7B47ED1CF",
+      "ReferenceSha256": "DB2E223A0CD0EE6136072CA29749C9BF8C78B7BA44795B755DA9F9BBEF8CC706",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 2,
+      "ImagePlacements": 1,
+      "MathAnchors": [
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 185.78,
+          "Y": 99.744
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 185.06,
+          "Y": 86.664
+        },
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 261.65,
+          "Y": 99.744
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 260.93,
+          "Y": 86.664
+        }
+      ]
+    },
+    {
+      "Id": "mixed-note-footnote-table",
+      "Mode": "all-word-compatible",
+      "InputSha256": "1AD23FDEEADE7478D94F9BAA4E3A67ABA150B57B2DBB2C15F692C3CB1DD63022",
+      "ReferenceSha256": "5E969F5B5CBAC23C330DA60962647002EA244B8B15C9102A11211994D53A8AA2",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 2,
+      "ImagePlacements": 1,
+      "MathAnchors": [
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 185.78,
+          "Y": 114.38
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 185.06,
+          "Y": 101.3
+        },
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 261.65,
+          "Y": 114.38
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 260.93,
+          "Y": 101.3
+        }
+      ]
+    },
+    {
+      "Id": "mixed-note-footnote-table",
+      "Mode": "final-preserve",
+      "InputSha256": "1AD23FDEEADE7478D94F9BAA4E3A67ABA150B57B2DBB2C15F692C3CB1DD63022",
+      "ReferenceSha256": "25D2FFA8308B60D4BA06AA3299BAD331D208D0560920089F1D5C3ED6F82F1D05",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 2,
+      "ImagePlacements": 1,
+      "MathAnchors": [
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 185.78,
+          "Y": 114.38
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 185.06,
+          "Y": 101.3
+        },
+        {
+          "PageNumber": 1,
+          "Text": "rate",
+          "X": 261.65,
+          "Y": 114.38
+        },
+        {
+          "PageNumber": 1,
+          "Text": "time",
+          "X": 260.93,
+          "Y": 101.3
+        }
+      ]
+    }
+  ]
+}

@@ -5297,5 +5297,35 @@
   "docx-aptos-head-fixture": [
     "DocxLongFootnoteHeadTakeMatchesOfficeWithAptosMetrics",
     "DocxLongFootnoteHeadBlockSitsAtOfficePosition"
+  ],
+  "docx-note-table-composition": [
+    "DocxInlineCompositionNormalNoteSourcesRetainEquationOwners",
+    "DocxInlineCompositionNormalNoteMathSurvivesRunSplittingAndContinuation",
+    "DocxInlineCompositionNormalNoteBaselinesMatchIndependentOffice",
+    "PortableRenderingNormalNoteContentPreservesMixedMath",
+    "DocxInlineCompositionUnsupportedEquationRetainsAccuratePartialPartDiagnostics",
+    "DocxNativeStaticMathRetainsStoryFlowAndPerPartDiagnosticScope",
+    "DocxMathReaderUsesTheSameStructureForCellsAndStaticStories",
+    "DocxNativeMathMissingFontsAndUnqualifiedFormattingRetainIgnoredDiagnostics",
+    "DocxWordCompatibleFloatingTextBoxEmissionMapMatchesOfficeProbe",
+    "DocxWordCompatibleFloatingTextBoxPrecompensatedEmissionMatchesCenterScale",
+    "DocxMinimumEndnoteTypographySharesPlainParagraphFlow",
+    "DocxEndnoteContinuationTakeExcludesTrailingAfterSpacing",
+    "DocxScaledFootnoteExactAdvanceMatchesIndependentOffice",
+    "DocxAtomicFootnotesMatchIndependentPageAdmission",
+    "DocxInlineCompositionNoteTables",
+    "PortableRenderingNoteTableComposition",
+    "PortableRenderingCustomNotes",
+    "DocxInlineCompositionCell",
+    "DocxStaticTableMath",
+    "DocxInlineCompositionStatic",
+    "PortableRenderingStatic",
+    "PortableRenderingOrderedMathCell",
+    "DocxInlineCompositionCustomNotes",
+    "DocxTableAnchoredFootnoteSharesBodyPages",
+    "DocxRendererEmitsPlacedFootnoteFloatingTextBoxTableRows",
+    "DocxAllMarkupRendererPlacesRelatedStoryTableRevisionBalloons",
+    "DocxLayoutPlacesFootnoteTableRowsAtPageMargin",
+    "DocxLayoutPlacesTableCellFootnoteOnOwningParagraphPage"
   ]
 }

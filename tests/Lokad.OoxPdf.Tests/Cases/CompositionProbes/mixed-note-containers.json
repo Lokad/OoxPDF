@@ -1,0 +1,74 @@
+[
+  {
+    "Id": "mixed-note-footnote-paragraph",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-note-footnote-paragraph.docx",
+    "Sha256": "8F4AB9857936CF4A0E24099AADACAB8A379F914BB3CE1AE2F2C4FDD7B47ED1CF",
+    "SourceSha256": "D99DF58E0383504BD8AC33FF0D893AEB0539BD61CC546EA1C6AE7E0EEE8B6BBD",
+    "DonorSha256": "E8FB62A69DD4CC79C28925A944B27DD4C86965D70C39C156ECC90FF52EE62A81",
+    "TableSourceSha256": "BD0D2EF6D5EECB1D6A17F50CF85F0C7D29560C04DD0094050E7E4BCEC593BC82",
+    "Kind": "footnote",
+    "Container": "paragraph",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public note calculation",
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "mixed-note-footnote-table",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-note-footnote-table.docx",
+    "Sha256": "1AD23FDEEADE7478D94F9BAA4E3A67ABA150B57B2DBB2C15F692C3CB1DD63022",
+    "SourceSha256": "D99DF58E0383504BD8AC33FF0D893AEB0539BD61CC546EA1C6AE7E0EEE8B6BBD",
+    "DonorSha256": "E8FB62A69DD4CC79C28925A944B27DD4C86965D70C39C156ECC90FF52EE62A81",
+    "TableSourceSha256": "BD0D2EF6D5EECB1D6A17F50CF85F0C7D29560C04DD0094050E7E4BCEC593BC82",
+    "Kind": "footnote",
+    "Container": "table",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public note calculation",
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "mixed-note-endnote-paragraph",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-note-endnote-paragraph.docx",
+    "Sha256": "87B6EA350F80A6C11C17C9FA01E30DA19255D01C6F0AE31B63E5580B3131595C",
+    "SourceSha256": "BD0F7BE2640553AA381E472DE6E4F94CB6479222284B09ABE249F6FABA50303F",
+    "DonorSha256": "E8FB62A69DD4CC79C28925A944B27DD4C86965D70C39C156ECC90FF52EE62A81",
+    "TableSourceSha256": "BD0D2EF6D5EECB1D6A17F50CF85F0C7D29560C04DD0094050E7E4BCEC593BC82",
+    "Kind": "endnote",
+    "Container": "paragraph",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public note calculation",
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "mixed-note-endnote-table",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-note-endnote-table.docx",
+    "Sha256": "F663443874A0FB61E8514D5B57F63D20EDF6C8627AD8105E1B134FE984138810",
+    "SourceSha256": "BD0F7BE2640553AA381E472DE6E4F94CB6479222284B09ABE249F6FABA50303F",
+    "DonorSha256": "E8FB62A69DD4CC79C28925A944B27DD4C86965D70C39C156ECC90FF52EE62A81",
+    "TableSourceSha256": "BD0D2EF6D5EECB1D6A17F50CF85F0C7D29560C04DD0094050E7E4BCEC593BC82",
+    "Kind": "endnote",
+    "Container": "table",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public note calculation",
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  }
+]

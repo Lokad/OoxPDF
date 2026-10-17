@@ -77,6 +77,14 @@ internal static class DocxMathParagraphPolicy
             pageOwners.Add(paragraph);
         }
         var seen = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
+        var noteTables = new HashSet<DocxTable>(ReferenceEqualityComparer.Instance);
+        foreach (var story in document.RelatedStories)
+        {
+            token.ThrowIfCancellationRequested();
+            if (story.Kind is not (DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote) || !story.IsNormalStoryType) continue;
+            foreach (var table in story.Tables)
+            { token.ThrowIfCancellationRequested(); noteTables.Add(table); }
+        }
         foreach (DocxEquationPartSource part in document.EquationParts)
         {
             token.ThrowIfCancellationRequested();
@@ -87,6 +95,7 @@ internal static class DocxMathParagraphPolicy
                 IEnumerable<DocxParagraph> paragraphs = element switch
                 {
                     DocxParagraphElement direct => [direct.Paragraph],
+                    DocxTableElement table when noteTables.Contains(table.Table) => EnumerateSupportedTableParagraphs(table.Table, token),
                     DocxTableElement table => EnumerateSupportedTableParagraphs(table.Table, token).Where(pageOwners.Contains),
                     _ => []
                 };
