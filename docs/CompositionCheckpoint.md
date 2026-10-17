@@ -1,5 +1,26 @@
 # Composed-document reliability checkpoint
 
+C141 shares the existing terminal-paragraph boundary with note flow. Independent
+Word counterfactuals agree for implicit, explicit empty/default/zero and short
+trailing paragraphs. The already represented TerminalParagraphMark owns zero
+after-spacing; earlier positioned table rows expose page-space bounds. No source
+run is invented. Known body/static/scale/column/source/slicing fallbacks remain.
+
+Seventy-one Windows/62 Ubuntu checks pass/nine native skips on one artifact.
+Eight outcomes reuse two Word references/add six exports. All eight comparisons
+improve without new failed components; all strict gates still fail. Original
+table note Y error17.059pt becomes0.059pt across all four shapes. Mathematical
+operations stay exact, eight fractions/four distinct note destinations survive.
+Eight Final page pairs reviewed; eight Review pairs carry by PNG identity. The
+parent fails the independent position observer.
+
+Both composite-report PDFs are actually reconverted and stay exact to C140.
+The remaining portfolio carries by source scope and the held-out deck smoke;
+no new twelve-outcome replay or content audit. Seventeen assets/four smokes
+transfer without root build/suite replay. Rootdcda71df;
+`artifacts/composition-c1/terminal-table-note-flow-evidence.json`. C140 CI remains
+in progress; work continues while it runs.
+
 C140 separates note static-frame validation from unrelated body contents while
 retaining shared final-section/mirror/floating guards and existing static, scale,
 source and slicing fallbacks. Complete endnote paragraphs lose the legacy3pt gap.
