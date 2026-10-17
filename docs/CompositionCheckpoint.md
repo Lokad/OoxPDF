@@ -1,5 +1,25 @@
 # Composed-document reliability checkpoint
 
+C101 removes extra Review bars from structural-only equation revisions through
+the shared non-rendering source policy. Actual parsed control owners remain valid;
+visible literal revisions, unowned/value-equal metadata and unknown positions
+retain their existing behavior. Revision-band painting reuses cached paragraph
+classification and threads cancellation through source discovery.
+
+Three new deletion sources/six strict Word references confirm the insertion
+findings. Seventeen actual outcomes yield six MAE improvements/eleven exact PDFs;
+all seventeen group gates pass and strict raster gates remain failed without new
+components. Six neutral Review outcomes have zero Word/candidate bars; four crop
+pairs reviewed. One Release artifact passes 73 Windows checks and 62 Ubuntu checks/
+11 native skips, one invocation per platform. Two parent checks retain the actual
+extra bar. Fixed portfolio C100 results carry by source inference rather than a
+corpus replay; two actual portfolio transfer smokes preserve complete Review/deck
+bytes. Seventeen assets/four smoke PDFs transfer without root rebuild or suite
+replay. Root b2676a1b; evidence `artifacts/composition-c1/structural-neutrality-evidence.json`.
+
+Workspace scan at 08:36Z remains above the loose cap: 10.071GB/487,263 files, no
+measurement errors. Rejected retirements remain untouched; no reclamation claimed.
+
 C100 fixes confirmed whole-equation loss inside insertion/deletion wrappers in
 `oMathPara`. One actual source owner survives iterative traversal. Known literal
 root, delimiter and n-ary deletion frames retain structural paint in Final; their

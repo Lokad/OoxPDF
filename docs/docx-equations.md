@@ -13,8 +13,8 @@ formulas. Final preserves known literal deletion frames and structural paint;
 Review keeps structural symbols in authored ink while literal text receives the
 actual author's color and deletion strike. Structural-only insertions retain
 actual control ownership without invented text. Independent group gates pass
-within 0.683pt X / 0.584pt Y; strict raster gates remain failed. Empty structural
-insertions still have an extra Review margin bar. Unknown/deeper/nested wrappers
+within 0.683pt X / 0.584pt Y; strict raster gates remain failed. Structural-only insertion/deletion revisions share the non-rendering source policy
+and do not add a Review margin bar. Actual source owners remain intact. Unknown/deeper/nested wrappers
 retain explicit fallback.
 
 In Final, deleting a supported bar fraction's text preserves its empty arguments
