@@ -211,8 +211,9 @@ and richer unsupported revision structures retain fallback.
 Supported empty subscript/superscript arguments and partial empty matrix cells
 retain metric-only placeholder geometry and remaining source content. Known matrix
 placeholder visibility values/defaults share the independently validated printed
-layout, including empty rows/columns. Empty script bases, wholly empty grids and
-unknown properties retain fallback.
+layout, including empty rows/columns. Empty literal script bases and visible n-ary limits retain metric-only
+geometry and remaining source content, including Final deletion. Wholly empty/control-only
+discovery and unknown properties retain fallback.
 
 Bounded matrices also render inside ready-made round/square delimiters, retaining
 independent metric and paint owners. Fence variant and vertical-layout residuals

@@ -26,7 +26,10 @@ Empty subscript/superscript arguments and partial empty matrix cells now retain
 metric-only placeholder geometry and the remaining source glyphs. Independent
 Word profiles with omitted, disabled or enabled matrix placeholder visibility
 produce identical printed rasters. The same known profiles now share one PDF
-layout rule. Empty script bases, wholly empty grids and unknown properties retain
+layout rule. Empty literal script bases and visible n-ary limits also retain metric-only
+geometry and remaining source content, including Final deletion. Five independent
+Word roles qualify deleted/authored-empty identity and sub-point group starts.
+Wholly empty/control-only discovery, unknown properties and richer structures retain
 fallback. Revision-role body controls cover literals, scripts, roots and matrices. Additional
 mixed controls qualify empty script/matrix roles with prose, images, numbering and
 links across body/cells/direct headers/footers in both presets. Geometry remains

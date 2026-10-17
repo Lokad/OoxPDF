@@ -1,5 +1,28 @@
 # Composed-document reliability checkpoint
 
+C92 preserves remaining script glyphs and n-ary operator/body content when a
+literal base or visible limit is empty, including Final deletion. Existing shared
+argument measurement supplies metric-only geometry; an empty base is one atom,
+classified by its font glyph. No font/size/container-specific correction added.
+Five roles have independently identical deleted/authored-empty Word rasters.
+
+Thirteen sources/twenty-six strict Word outcomes restore content: fifteen MAEs
+improve and eleven PDFs stay exact. Group-start X/Y residuals stay within
+0.122/0.340pt. Six same-scale pairs reviewed; all twenty-six strict gates remain
+failed with no new failure components or changed thresholds. Native and pinned
+checks preserve source ink, bookmarks and unchanged-format mathematical run splits.
+Unknown structures, mixed metrics and wholly empty/control-only fallbacks remain.
+
+One final frozen Release artifact passes 77 Windows checks once; Ubuntu passes
+48 and skips 29 native checks once. Two parent checks fail on actual missing glyphs.
+The first prototype's 1.267pt subscript failure is retained; after its semantic
+atom correction all checks run on the new DLL. Twelve fresh fixed-portfolio PDFs
+retain accepted bytes, reusing comparisons and the unresolved complete-report
+content flags. Seventeen assets/four smoke PDFs transfer without root rebuild or
+suite replay. Root daa1476f; evidence:
+`artifacts/composition-c1/math-remainders-evidence.json`.
+C91 CI39010092649 is green on Windows and Ubuntu; C92 CI is pending push.
+
 C91 qualifies empty script/matrix roles beside prose, links, numbering and pictures
 across body, simple cells and direct headers/footers. Sixteen strict Word outcomes
 retain every expected mathematical glyph and source ink in both presets. Group-start
@@ -22,7 +45,7 @@ Only this corrected check is rerun through the unchanged library; the placement
 checks carry through unchanged source/helpers. Seventeen assets/four smoke PDFs
 transfer without root build/suite replay. Root bbccd55a; font fix c4d4c458; evidence:
 `artifacts/composition-c1/empty-role-placement-evidence.json`.
-The next scoped push repairs CI; work continues while it runs.
+C91 CI39010092649 repaired CI on Windows and Ubuntu; its earlier failure stays retained.
 
 C90 shares literal-argument measurement across fractions and scripts, retaining
 metric-only empty sub/sup slots. Matrix discovery uses the same semantic emptiness
