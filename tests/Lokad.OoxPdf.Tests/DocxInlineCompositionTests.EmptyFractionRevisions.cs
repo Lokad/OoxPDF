@@ -63,11 +63,12 @@ internal static partial class DocxInlineCompositionTests
         var rectangles = Regex.Matches(page.Content, @"(?m)^" + rectangle).Cast<Match>().ToArray();
         var rules = rectangles.Where(IsThinRule).ToArray();
         TestAssert.Equal(row.GetProperty("TotalThinRules").GetInt32(), rules.Length);
-        TestAssert.Equal(rules.Length, Regex.Matches(page.Content, @"(?m)^0 g\r?\n" + rectangle).Cast<Match>().Count(IsThinRule));
+        var blackRules = Regex.Matches(page.Content, @"(?m)^0 g\r?\n" + rectangle).Cast<Match>().Where(IsThinRule).ToArray();
+        TestAssert.Equal(row.TryGetProperty("BlackThinRules", out var blackCount) ? blackCount.GetInt32() : rules.Length, blackRules.Length);
         TestAssert.Equal(row.GetProperty("RevisionBarCount").GetInt32(), rectangles.Count(rule =>
             Number(rule, "x") is > 20d and < 40d && Number(rule, "width") is > 0d and < 2d && Number(rule, "height") > 5d));
         if (!compareGeometry) return;
-        var physicalRules = rules.Select(rule => ResolveGeneratedRuleBounds(page.Content, rule)).ToArray();
+        var physicalRules = blackRules.Select(rule => ResolveGeneratedRuleBounds(page.Content, rule)).ToArray();
         foreach (var expected in row.GetProperty("RuleBoxes").EnumerateArray())
         {
             TestAssert.Equal("g:0", expected.GetProperty("FillColor").GetString());

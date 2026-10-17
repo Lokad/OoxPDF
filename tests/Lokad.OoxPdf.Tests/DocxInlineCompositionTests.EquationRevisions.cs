@@ -51,7 +51,7 @@ internal static partial class DocxInlineCompositionTests
 
     internal static void CheckEquationRevisions(IFontResolver? resolver, bool compareGeometry,
         string referenceFile = "equation-revisions-office.json", bool splitMathRuns = false, bool horizontalGeometryOnly = false,
-        Func<string, bool>? includeCase = null)
+        Func<string, bool>? includeCase = null, Func<JsonElement, bool>? includeRow = null)
     {
         string folder = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
         using var golden = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, referenceFile)));
@@ -59,6 +59,7 @@ internal static partial class DocxInlineCompositionTests
         {
             string id = row.GetProperty("Id").GetString()!;
             if (includeCase is not null && !includeCase(id)) continue;
+            if (includeRow is not null && !includeRow(row)) continue;
             string fixture = row.TryGetProperty("Fixture", out var authored) ? authored.GetString()! : "CompositionProbes/" + id;
             string input = Path.GetFullPath(Path.Combine(folder, "..", fixture + ".docx"));
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));

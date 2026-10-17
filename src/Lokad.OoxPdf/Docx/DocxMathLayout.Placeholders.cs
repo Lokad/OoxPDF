@@ -66,25 +66,49 @@ internal static partial class DocxMathLayout
     {
         token.ThrowIfCancellationRequested();
         if (!TryGetRuns(equation, token, out _)) return null;
-        DocxMathNode? retained = null;
-        if (GetFraction(equation) is { TypeValue: null or "bar" } fraction)
-            retained = fraction with { Numerator = Empty(fraction.Numerator), Denominator = Empty(fraction.Denominator) };
-        else if (GetRadical(equation) is { } radical && Literal(radical.Radicand) && Literal(radical.Degree, true))
-            retained = radical with { Radicand = Empty(radical.Radicand), Degree = Empty(radical.Degree) };
-        else if (GetNary(equation, token) is { } nary && Literal(nary.Body) && Literal(nary.Subscript, true) && Literal(nary.Superscript, true))
-            retained = nary with { Body = Empty(nary.Body), Subscript = Empty(nary.Subscript), Superscript = Empty(nary.Superscript) };
-        else if (GetDelimiter(equation) is { } delimiter)
+        // Flat compound rows already have bounded literal/control discovery.
+        // Preserve each actual control; unknown/deeper arguments reject the row.
+        if (GetStructuredRow(equation, token) is { } compound)
         {
-            var arguments = new List<DocxMathRow>(delimiter.Arguments.Count);
-            foreach (var argument in delimiter.Arguments)
+            var controls = new List<DocxMathNode>(compound.Parts.Count);
+            foreach (var part in compound.Parts)
             {
                 token.ThrowIfCancellationRequested();
-                if (!Literal(argument)) return null;
-                arguments.Add(Empty(argument));
+                if (RetainControl(equation with { Content = new([part.Structure]) }) is not { } control) return null;
+                controls.Add(control);
             }
-            retained = delimiter with { Arguments = arguments };
+            return equation.Content with { Children = controls };
         }
-        return retained is null ? null : new([retained]);
+        return RetainControl(equation) is { } single ? new([single]) : null;
+
+        DocxMathNode? RetainControl(DocxEquation source)
+        {
+            DocxMathNode? retained = null;
+            if (GetFraction(source) is { TypeValue: null or "bar" } fraction)
+                retained = fraction with { Numerator = Empty(fraction.Numerator), Denominator = Empty(fraction.Denominator) };
+            else if (GetScripts(source) is { } scripts && Literal(scripts.Base) &&
+                (scripts.Subscript is null || Literal(scripts.Subscript, true)) &&
+                (scripts.Superscript is null || Literal(scripts.Superscript, true)))
+                retained = scripts with { Base = Empty(scripts.Base),
+                    Subscript = scripts.Subscript is null ? null : Empty(scripts.Subscript),
+                    Superscript = scripts.Superscript is null ? null : Empty(scripts.Superscript) };
+            else if (GetRadical(source) is { } radical && Literal(radical.Radicand) && Literal(radical.Degree, true))
+                retained = radical with { Radicand = Empty(radical.Radicand), Degree = Empty(radical.Degree) };
+            else if (GetNary(source, token) is { } nary && Literal(nary.Body) && Literal(nary.Subscript, true) && Literal(nary.Superscript, true))
+                retained = nary with { Body = Empty(nary.Body), Subscript = Empty(nary.Subscript), Superscript = Empty(nary.Superscript) };
+            else if (GetDelimiter(source) is { } delimiter)
+            {
+                var arguments = new List<DocxMathRow>(delimiter.Arguments.Count);
+                foreach (var argument in delimiter.Arguments)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (!Literal(argument)) return null;
+                    arguments.Add(Empty(argument));
+                }
+                retained = delimiter with { Arguments = arguments };
+            }
+            return retained;
+        }
 
         bool Literal(DocxMathRow row, bool argumentSize = false) =>
             DocxMathRowLayout.TryGetRenderCodePoints(row, token, out _, out _, allowArgumentSize: argumentSize);

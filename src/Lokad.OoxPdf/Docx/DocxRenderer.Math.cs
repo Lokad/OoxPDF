@@ -143,17 +143,22 @@ internal sealed partial class DocxRenderer
                 DocxEquation equation = sourceEquation.Display == displayStyle
                     ? sourceEquation : sourceEquation with { Display = displayStyle };
                 if (!DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
-                if (DocxMathLayout.IsEmptyFraction(equation) || DocxMathLayout.IsEmptyMatrix(equation, token) ||
-                    DocxMathLayout.IsEmptyScripts(equation, token))
+                var metricControls = DocxMathLayout.GetMetricOnlyControls(equation, mathRuns, token);
+                if (metricControls.Count != 0)
                 {
                     // No painted source glyphs: load only the existing conversion
                     // metric owner, without creating a PDF subset or glyph map.
-                    var metricControl = DocxMathLayout.GetStandaloneControl(equation, token);
-                    var metricFace = resolver.Resolve(new FontRequest(metricControl?.ControlFontFamily ??
-                        document.Settings.MathFontFamily ?? "Cambria Math"));
-                    var metricFont = LoadFont(metricFace, fontCache, token);
+                    var metricFonts = new Dictionary<IDocxMathControl, OpenTypeFont?>(ReferenceEqualityComparer.Instance);
+                    foreach (var control in metricControls)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        var face = resolver.Resolve(new FontRequest(control.ControlFontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math"));
+                        metricFonts.Add(control, LoadFont(face, fontCache, token));
+                    }
+                    var metricFont = metricControls.Count == 1 ? metricFonts[metricControls[0]] :
+                        LoadFont(resolver.Resolve(new FontRequest(document.Settings.MathFontFamily ?? "Cambria Math")), fontCache, token);
                     if (DocxMathLayout.TryMeasure(equation, _ => null, token, out var emptyBox, out _, metricFont,
-                        resolveControlMetrics: _ => metricFont) &&
+                        resolveControlMetrics: control => metricFonts.GetValueOrDefault(control)) &&
                         emptyBox is not null && TryPrepareMathParagraph(paragraph, equation, sourceEquation, emptyBox, token, out var emptyLayout))
                         (metricOnlyLayouts ??= new(ReferenceEqualityComparer.Instance)).Add(sourceEquation, emptyLayout!);
                     continue;

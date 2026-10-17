@@ -17,6 +17,37 @@ internal static partial class DocxMathLayout
         return GetDelimiter(equation);
     }
 
+    internal static IReadOnlyList<IDocxMathControl> GetControlSources(DocxEquation equation, CancellationToken token)
+    {
+        if (GetStandaloneControl(equation, token) is { } single) return [single];
+        if (GetStructuredRow(equation, token) is not { } row) return [];
+        var controls = new List<IDocxMathControl>(row.Parts.Count);
+        foreach (var part in row.Parts)
+        {
+            token.ThrowIfCancellationRequested();
+            if (part.Structure is not IDocxMathControl control) return [];
+            controls.Add(control);
+        }
+        return controls;
+    }
+
+    internal static IReadOnlyList<IDocxMathControl> GetMetricOnlyControls(DocxEquation equation,
+        IReadOnlyList<DocxMathRunSource> runs, CancellationToken token)
+    {
+        if (MetricOnly(equation)) return GetControlSources(equation, token);
+        // Painted source paths retain existing discovery and resource ownership.
+        if (runs.Count != 0) return [];
+        var controls = GetControlSources(equation, token);
+        foreach (var control in controls)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!MetricOnly(equation with { Content = new([(DocxMathNode)control]) })) return [];
+        }
+        return controls;
+
+        bool MetricOnly(DocxEquation source) => IsEmptyFraction(source) || IsEmptyMatrix(source, token) || IsEmptyScripts(source, token);
+    }
+
     private static PdfFontResource? ResolveControlResource(IDocxMathControl control,
         IReadOnlyList<DocxMathRunSource> sources, Func<DocxMathRun, PdfFontResource?> resolveFont,
         Func<IDocxMathControl, PdfFontResource?>? resolveControlFont) =>

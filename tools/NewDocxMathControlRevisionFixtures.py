@@ -130,3 +130,40 @@ for order in ["script-first", "fraction-first"]:
                                   ExpectedText=["share the same input series."], ProsePrefixes=["Summary:", "governs"]))
 (output / "compound-revisions.json").write_text(json.dumps(compound_rows, indent=2) + "\n", encoding="utf-8")
 print("Pinned four compound control rows with and without insertion wrappers")
+
+glyphless_rows = []
+for order in ["script-first", "fraction-first"]:
+    source = output / ("compound-revision-" + order + "-inserted.docx")
+    with ZipFile(source) as z:
+        original = {name: z.read(name) for name in z.namelist()}
+    for kind in ["deleted", "authored-empty", "empty-ins"]:
+        entries = dict(original)
+        xml = E.fromstring(entries["word/document.xml"])
+        equation = next(xml.iter(m + "oMath"))
+        wrapper = equation.find(w + "ins")
+        if kind == "deleted":
+            wrapper.tag = w + "del"
+        else:
+            for parent in list(wrapper.iter()):
+                for run in list(parent.findall(m + "r")):
+                    parent.remove(run)
+            if kind == "authored-empty":
+                for child in list(wrapper):
+                    wrapper.remove(child)
+                    equation.append(child)
+                equation.remove(wrapper)
+        entries["word/document.xml"] = E.tostring(xml, encoding="utf-8", xml_declaration=True)
+        target = output / ("glyphless-compound-" + order + "-" + kind + ".docx")
+        with ZipFile(target, "w", ZIP_DEFLATED) as z:
+            for name, data in sorted(entries.items()):
+                info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+                info.compress_type = ZIP_DEFLATED
+                z.writestr(info, data)
+        glyphless_rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
+                                   Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
+                                   SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(),
+                                   Order=order, Kind=kind, HeldOut=False, ExpectedEquationCount=4,
+                                   ExpectedText=["share the same input series."], ProsePrefixes=["Summary:", "governs"],
+                                   RuleRegion=[120, 680, 210, 740], RuleFillColor="g:0"))
+(output / "glyphless-compounds.json").write_text(json.dumps(glyphless_rows, indent=2) + "\n", encoding="utf-8")
+print("Pinned six ordered glyphless-control and deletion compositions")

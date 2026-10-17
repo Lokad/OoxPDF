@@ -16,6 +16,13 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingGlyphlessCompoundsKeepRulesInkAndMetricOnlyFrames()
+    {
+        var resolver = new PinnedResolver(mathFont: true);
+        DocxInlineCompositionTests.CheckEquationRevisions(resolver, false, "glyphless-compounds-office.json", splitMathRuns: true);
+        DocxInlineCompositionTests.CheckGlyphlessCompoundPublication(resolver);
+    }
+
     public static void PortableRenderingEmptyScriptsKeepContentInkAndMetricOnlyFrames()
     {
         var resolver = new PinnedResolver(mathFont: true);

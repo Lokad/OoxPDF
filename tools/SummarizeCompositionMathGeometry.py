@@ -55,12 +55,16 @@ def main():
                        0 < row["MaxX"] - row["MinX"] < 2 and row["MaxY"] - row["MinY"] > 5 for row in graphics)
             boxes = []
             for expected in reference["RuleBoxes"]:
-                rule = min(rules, key=lambda row: abs(row["MinX"] - expected["X"]) + abs(row["MinY"] - expected["Y"]))
+                matching = [row for row in rules if row["FillColor"] == expected["FillColor"]]
+                if not matching:
+                    continue
+                rule = min(matching, key=lambda row: abs(row["MinX"] - expected["X"]) + abs(row["MinY"] - expected["Y"]))
                 boxes.append(dict(Dx=rule["MinX"] - expected["X"], Dy=rule["MinY"] - expected["Y"],
                                   DWidth=rule["MaxX"] - rule["MinX"] - expected["Width"],
                                   DHeight=rule["MaxY"] - rule["MinY"] - expected["Height"]))
             rule_gate = len(rules) == reference["TotalThinRules"] and bars == reference["RevisionBarCount"] and \
-                all(row["FillColor"] == "g:0" for row in rules) and \
+                sum(row["FillColor"] == "g:0" for row in rules) == reference.get("BlackThinRules", reference["TotalThinRules"]) and \
+                len(boxes) == len(reference["RuleBoxes"]) and \
                 all(abs(row["Dx"]) < 1 and abs(row["Dy"]) < 1 and abs(row["DWidth"]) < .1 and abs(row["DHeight"]) < .03 for row in boxes)
             rows[-1].update(RuleBoxes=boxes, RevisionBarCount=bars, RuleGatePassed=rule_gate,
                             OnePointGatePassed=passed and rule_gate)

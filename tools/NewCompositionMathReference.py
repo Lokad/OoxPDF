@@ -68,12 +68,17 @@ def main():
                 graphics = read(run / "inspect/graphics-operations.json")
                 rules = [row for row in graphics if row["Kind"] == "Fill" and
                          left < row["MinX"] < right and bottom < row["MinY"] < top and
-                         1 < row["MaxX"] - row["MinX"] < 50 and 0 < row["MaxY"] - row["MinY"] < 2]
+                         1 < row["MaxX"] - row["MinX"] < 50 and 0 < row["MaxY"] - row["MinY"] < 2 and
+                         (not source.get("RuleFillColor") or row["FillColor"] == source["RuleFillColor"])]
                 assert len(rules) == 1, "Expected one source-region rule"
                 rows[-1]["RuleBoxes"] = [dict(X=row["MinX"], Y=row["MinY"], Width=row["MaxX"] - row["MinX"],
                                               Height=row["MaxY"] - row["MinY"], FillColor=row["FillColor"]) for row in rules]
                 rows[-1]["TotalThinRules"] = sum(row["Kind"] == "Fill" and 1 < row["MaxX"] - row["MinX"] < 50 and
                                                 0 < row["MaxY"] - row["MinY"] < 2 for row in graphics)
+                if source.get("RuleFillColor"):
+                    rows[-1]["BlackThinRules"] = sum(row["Kind"] == "Fill" and row["FillColor"] == "g:0" and
+                                                    1 < row["MaxX"] - row["MinX"] < 50 and 0 < row["MaxY"] - row["MinY"] < 2
+                                                    for row in graphics)
                 rows[-1]["RevisionBarCount"] = sum(row["Kind"] == "Fill" and 20 < row["MinX"] < 40 and
                                                   0 < row["MaxX"] - row["MinX"] < 2 and row["MaxY"] - row["MinY"] > 5
                                                   for row in graphics)

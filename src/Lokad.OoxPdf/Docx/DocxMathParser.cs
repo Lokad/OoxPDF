@@ -150,7 +150,7 @@ internal static partial class DocxMathParser
             {
                 var retained = DocxMathLayout.RemoveDeletedLiteralMathText(
                     new(new([node]), 0, 0, false, null, null, null), cancellationToken);
-                node = retained is { Children.Count: 1 } ? retained.Children[0] :
+                node = retained is not null ? retained.Children.Count == 1 ? retained.Children[0] : retained :
                     new DocxMathUnsupported(name, element.Name.NamespaceName, null,
                         ContentChildren(element).Select(child => new DocxMathChild(
                             child.Name.LocalName, child.Name.NamespaceName, nodes[child])).ToArray());

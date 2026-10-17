@@ -32,12 +32,17 @@ internal static partial class DocxInlineCompositionTests
                     "One actual wrapper owns every retained source; value-equal or synthetic owners are unnecessary.");
         }
         const string fixture = "CompositionProbes/compound-revision-script-first-inserted";
-        var deleted = ReadMutation(fixture, OoxPdfDocxMarkupMode.Final, false, false,
-            (xml, w, m) => xml.Descendants(w + "ins").First().Name = w + "del");
+        var deleted = ReadMutation(fixture, OoxPdfDocxMarkupMode.Final, false, false, (xml, w, m) =>
+        {
+            xml.Descendants(w + "ins").First().Name = w + "del";
+            xml.Descendants(m + "f").First().Element(m + "num")!.ReplaceNodes(new XElement(m + "f",
+                new XElement(m + "num", new XElement(m + "r", new XElement(m + "t", "1"))),
+                new XElement(m + "den", new XElement(m + "r", new XElement(m + "t", "2")))));
+        });
         var retained = deleted.Paragraphs.First().Equations.Single();
         TestAssert.True(!DocxMathLayout.TryGetRuns(retained, default, out _) &&
             retained.Content.Children.Single() is DocxMathUnsupported { ElementName: "del", SourceXml: null, Children.Count: 3 },
-            "Unsupported compound deletion retains traversed source and an explicit fallback instead of silently dropping structural paint.");
+            "Unsupported deeper compound deletion retains traversed source and an explicit fallback instead of silently dropping structural paint.");
         foreach (bool nested in new[] { false, true })
         {
             var unknown = ReadMutation(fixture, OoxPdfDocxMarkupMode.AllMarkup, false, false, (xml, w, m) =>

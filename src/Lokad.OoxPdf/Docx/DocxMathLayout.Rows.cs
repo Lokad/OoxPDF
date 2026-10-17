@@ -55,9 +55,13 @@ internal static partial class DocxMathLayout
         {
             token.ThrowIfCancellationRequested();
             DocxEquation childEquation = equation with { Content = new([part.Structure]) };
-            if (!TryGetRuns(childEquation, token, out var childRuns) || childRuns.Count == 0)
+            if (!TryGetRuns(childEquation, token, out var childRuns))
             { fallback = "UnsupportedMathStructuredRow"; return false; }
-            double parentSize = equation.ParentFontSize ?? childRuns[0].Run.Text.FontSize;
+            var metricControl = childRuns.Count == 0 ? GetStandaloneControl(childEquation, token) : null;
+            if (childRuns.Count == 0 && (metricControl is null || resolveControlMetrics?.Invoke(metricControl) is null))
+            { fallback = "MissingMathStructuredControlMetrics"; return false; }
+            double parentSize = equation.ParentFontSize ?? (childRuns.Count == 0
+                ? metricControl!.ControlText?.FontSize ?? double.NaN : childRuns[0].Run.Text.FontSize);
             bool measured = TryMeasure(childEquation, resolveFont, token, out var structure, out fallback,
                 parentMetricsFont, resolveControlFont, resolveControlMetrics, rowControlSize: parentSize);
             if (!measured || structure is null)
@@ -91,7 +95,7 @@ internal static partial class DocxMathLayout
 
         void Append(DocxMathBox child, double x)
         {
-            if (child.Glyphs.Count != 0 || child.Rules.Count != 0)
+            if (child.AdvanceWidth > 0d || child.AboveBaseline + child.BelowBaseline > 0d)
             {
                 var edges = child.Edges ?? new(DocxMathRowLayout.AtomKind.Ordinary, DocxMathRowLayout.AtomKind.Ordinary, false);
                 leadingEdges ??= edges;

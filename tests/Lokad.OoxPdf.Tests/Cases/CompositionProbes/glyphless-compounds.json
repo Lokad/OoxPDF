@@ -1,0 +1,146 @@
+[
+  {
+    "Id": "glyphless-compound-script-first-deleted",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/glyphless-compound-script-first-deleted.docx",
+    "Sha256": "50400EEC91380EDA655866CF579CAAA7B1B921585D8159C6E424EF73B9BC5F87",
+    "SourceSha256": "D2EF8CAC2634DD0495C8C5C3B527481E21DA705F57207E3F674EF4B8B56CB976",
+    "Order": "script-first",
+    "Kind": "deleted",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      680,
+      210,
+      740
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "glyphless-compound-script-first-authored-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/glyphless-compound-script-first-authored-empty.docx",
+    "Sha256": "A67EBE88240509E56A9ABBCBD54E618DE3E252A0BEE18071322AC0DB72602952",
+    "SourceSha256": "D2EF8CAC2634DD0495C8C5C3B527481E21DA705F57207E3F674EF4B8B56CB976",
+    "Order": "script-first",
+    "Kind": "authored-empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      680,
+      210,
+      740
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "glyphless-compound-script-first-empty-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/glyphless-compound-script-first-empty-ins.docx",
+    "Sha256": "43DD621CA6FC1EF8563330CC9772930DD753027145FADDC5C75FFA23DBE9D168",
+    "SourceSha256": "D2EF8CAC2634DD0495C8C5C3B527481E21DA705F57207E3F674EF4B8B56CB976",
+    "Order": "script-first",
+    "Kind": "empty-ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      680,
+      210,
+      740
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "glyphless-compound-fraction-first-deleted",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/glyphless-compound-fraction-first-deleted.docx",
+    "Sha256": "DA70901E0CC65F587E09DA2C5723BAD00CB9BD30F3BFFCB8DB4570803EA44418",
+    "SourceSha256": "FBB41F9E71715B5A52FAB02F6CC1D6E0D1260FDB18528BAB69A5F44501E1AB43",
+    "Order": "fraction-first",
+    "Kind": "deleted",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      680,
+      210,
+      740
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "glyphless-compound-fraction-first-authored-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/glyphless-compound-fraction-first-authored-empty.docx",
+    "Sha256": "0739BAAEA27290C44C41CA2BEAB0096C052EC52984C9B80D155FFB9CF0966752",
+    "SourceSha256": "FBB41F9E71715B5A52FAB02F6CC1D6E0D1260FDB18528BAB69A5F44501E1AB43",
+    "Order": "fraction-first",
+    "Kind": "authored-empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      680,
+      210,
+      740
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "glyphless-compound-fraction-first-empty-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/glyphless-compound-fraction-first-empty-ins.docx",
+    "Sha256": "A4A869867C4EE686B70C9021BE2A7C996231B254C8DA2DFE3D395AF648D3359B",
+    "SourceSha256": "FBB41F9E71715B5A52FAB02F6CC1D6E0D1260FDB18528BAB69A5F44501E1AB43",
+    "Order": "fraction-first",
+    "Kind": "empty-ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      680,
+      210,
+      740
+    ],
+    "RuleFillColor": "g:0"
+  }
+]
