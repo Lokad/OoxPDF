@@ -33,7 +33,9 @@ Wholly empty/control-only discovery, unknown properties and richer structures re
 fallback. Revision-role body controls cover literals, scripts, roots and matrices. Additional
 mixed controls qualify empty script/matrix roles with prose, images, numbering and
 links across body/cells/direct headers/footers in both presets. Geometry remains
-approximate; strict visual gates stay failed.
+approximate; strict visual gates stay failed. Empty bases/operator limits also preserve
+content and source ink in these mixed containers. Two operator-cell outcomes retain
+a 1.163pt horizontal group-start residual; the one-point geometry gate stays failed.
 
 Numbered paragraphs retain supported explicit math zones alongside prose and
 inline pictures. The list label owns only the first authored row: its formulas

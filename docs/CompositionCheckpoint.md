@@ -1,5 +1,23 @@
 # Composed-document reliability checkpoint
 
+C93 checks the unchanged C92 binary with empty script bases and operator limits
+beside prose, images, links, numbering and other formulas across body/cells/direct
+headers/footers. Sixteen independent Word outcomes preserve exact content and ink;
+bookmarks and unchanged-format run splits preserve geometry. Four same-scale crop
+pairs show the remaining content without demonstrated omission/overlap/clipping.
+
+Fourteen outcomes meet the existing one-point group-start gate. Both operator-cell
+modes still fail it at up to 1.163pt horizontally; body/operator and cell-origin
+residuals accumulate. Maximum Y residual is 0.626pt. All sixteen strict raster gates
+also remain failed. No threshold relaxation or container-specific correction.
+Content/ink regression checks explicitly do not claim those geometry gates passed.
+
+Two new checks pass once on Windows; Ubuntu one pass/one native skip once.
+Production source/library/CLI remain C92-identical, so its 77 checks and twelve
+portfolio PDFs/comparisons/audit flags carry without replay. Harness-only build;
+seventeen assets/four smoke PDFs transfer without root rebuild. Root e5e9dc69;
+evidence: `artifacts/composition-c1/remainder-placement-evidence.json`.
+
 C92 preserves remaining script glyphs and n-ary operator/body content when a
 literal base or visible limit is empty, including Final deletion. Existing shared
 argument measurement supplies metric-only geometry; an empty base is one atom,
