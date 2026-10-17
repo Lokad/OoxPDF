@@ -96,7 +96,11 @@ internal static partial class DocxPageFootnoteNumberingTests
             (xml, _, _) => xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2"))),
             (xml, _, _) => xml.Descendants(Word + "p").First().Add(new XElement(Word + "ins", new XAttribute(Word + "id", "9"),
                 new XElement(Word + "r", new XElement(Word + "t", "public revision")))),
-            (xml, _, _) => { XElement p = xml.Descendants(Word + "p").First(); p.ReplaceWith(new XElement(Word + "tbl", new XElement(Word + "tr", new XElement(Word + "tc", p)))); },
+            // A complete ordinary cell is supported; use an actual source clip
+            // to exercise the measured ownership fallback instead of nesting alone.
+            (xml, _, _) => { XElement p = xml.Descendants(Word + "p").First(); p.ReplaceWith(new XElement(Word + "tbl",
+                new XElement(Word + "tr", new XElement(Word + "trPr", new XElement(Word + "trHeight",
+                    new XAttribute(Word + "val", "20"), new XAttribute(Word + "hRule", "exact"))), new XElement(Word + "tc", p)))); },
             (_, settings, _) => settings.Descendants(Word + "footnotePr").Single().Add(new XElement(Word + "numRestart", new XAttribute(Word + "val", "unknown"))),
             (_, _, notes) => notes.Root!.Elements(Word + "footnote").First(n => n.Attribute(Word + "type") is null)
                 .Add(new XElement(Word + "p", new XElement(Word + "r", new XElement(Word + "t", "another note paragraph"))))
@@ -107,6 +111,26 @@ internal static partial class DocxPageFootnoteNumberingTests
             TestAssert.True(!DocxPageFootnoteNumbering.TryCreateDocument(source, CreateLayout(source), out var fallback, out _), "Excluded note scope " + i);
             TestAssert.True(ReferenceEquals(source, fallback), "Fallback preserves authored metadata and numbering.");
         }
+    }
+
+    public static void DocxPageFootnoteNumbersUseCompleteCellOwnershipAndKeepTypographyScope()
+    {
+        var source = ReadFixture(modify: (xml, _, _) =>
+        {
+            XElement p = xml.Descendants(Word + "p").First();
+            p.ReplaceWith(new XElement(Word + "tbl", new XElement(Word + "tr", new XElement(Word + "tc", p))));
+        });
+        var first = CreateLayout(source);
+        TestAssert.True(!DocxPageFootnoteNumbering.IsEligibleDocument(source) &&
+            !DocxPageFootnoteNumbering.HasCompleteNoteOwners(source, first),
+            "Ordinary cell numbering does not acquire plain-body typography or reserve eligibility.");
+        TestAssert.True(DocxPageFootnoteNumbering.TryCreateDocument(source, first, out var numbered, out var pages),
+            "The complete measured ordinary cell shares source/note numbering ownership.");
+        TestAssert.Equal("1,1,2,2", string.Join(',', new[] { "37", "4", "73", "8" }.Select(id => pages[id])));
+        TestAssert.Equal("4,5,4,5", string.Join(',', DocxBlockTraversal.EnumerateBodyParagraphs(numbered)
+            .SelectMany(paragraph => paragraph.InlineReferences).Select(reference => reference.DisplayText)));
+        TestAssert.True(DocxPageFootnoteNumbering.HasStableNumberingPages(numbered, CreateLayout(numbered), pages),
+            "Publishing complete cell numbering keeps every source marker and note on its original page.");
     }
 
     public static void DocxPageFootnoteNumbersRenderLabelsAndDistinctDestinationsTogether()
