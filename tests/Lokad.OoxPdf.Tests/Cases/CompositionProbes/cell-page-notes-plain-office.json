@@ -1,0 +1,81 @@
+{
+  "Provenance": "Four independent Word exports; ordinary body paragraphs placed in cells. Page counters/ownership remain separate from raw visual gates.",
+  "Rows": [
+    {
+      "Id": "cell-page-notes-plain-arial-11-zero",
+      "Mode": "all-word-compatible",
+      "InputSha256": "3C409F5205D6BE7136FEA97B7091D4BD731101C8D7B8349712139EDED1A5F774",
+      "ReferenceSha256": "7F3AEDAAE77CEBCB78D5D0BEDFB2CC06BC4A0B9FFC31C96E97B25669B96E0130",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 0,
+      "ImagePlacements": 0,
+      "ExpectedDisplayedLabels": [
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10"
+      ]
+    },
+    {
+      "Id": "cell-page-notes-plain-arial-11-zero",
+      "Mode": "final-preserve",
+      "InputSha256": "3C409F5205D6BE7136FEA97B7091D4BD731101C8D7B8349712139EDED1A5F774",
+      "ReferenceSha256": "AE22CADFEE83F4F5E20214AD4453A46EDEB4D75D14EA139D143B1E966CCB7FF8",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 0,
+      "ImagePlacements": 0,
+      "ExpectedDisplayedLabels": [
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10"
+      ]
+    },
+    {
+      "Id": "cell-page-notes-plain-calibri-12-zero",
+      "Mode": "all-word-compatible",
+      "InputSha256": "BD0D2EF6D5EECB1D6A17F50CF85F0C7D29560C04DD0094050E7E4BCEC593BC82",
+      "ReferenceSha256": "1FD8B21773D8501F070E96A8D4BD8F0D0302846038CB1B3D3A7A90A1D5D9515E",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 0,
+      "ImagePlacements": 0,
+      "ExpectedDisplayedLabels": [
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10"
+      ]
+    },
+    {
+      "Id": "cell-page-notes-plain-calibri-12-zero",
+      "Mode": "final-preserve",
+      "InputSha256": "BD0D2EF6D5EECB1D6A17F50CF85F0C7D29560C04DD0094050E7E4BCEC593BC82",
+      "ReferenceSha256": "65B01AFA9F45360E10AAA19AF62A9D034A011D5C96C5E0FACDE1583D043853AF",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 0,
+      "ImagePlacements": 0,
+      "ExpectedDisplayedLabels": [
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10"
+      ]
+    }
+  ]
+}

@@ -50,5 +50,31 @@
       "Public destination Alpha.",
       "Public destination Delta."
     ]
+  },
+  {
+    "Id": "cell-page-notes-plain-calibri-12-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-page-notes-plain-calibri-12-zero.docx",
+    "Sha256": "BD0D2EF6D5EECB1D6A17F50CF85F0C7D29560C04DD0094050E7E4BCEC593BC82",
+    "SourceSha256": "E70290A5ECB37604406E24BEC90E2210F1BD73DBAC404362C48E9C4E2CA884E8",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "cell-page-notes-plain-arial-11-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-page-notes-plain-arial-11-zero.docx",
+    "Sha256": "3C409F5205D6BE7136FEA97B7091D4BD731101C8D7B8349712139EDED1A5F774",
+    "SourceSha256": "18D343F5FB99AD3FC146AE42E1345E3046FF860E66D3F81D2802F7EB291542FB",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
   }
 ]

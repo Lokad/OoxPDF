@@ -82,7 +82,8 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(Path.Combine(folder, id + ".docx")))));
             bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
             var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
-            var document = ReadMutation("CompositionProbes/" + id, mode, true, true);
+            bool hasMath = row.GetProperty("ExpectedEquations").GetInt32() != 0;
+            var document = ReadMutation("CompositionProbes/" + id, mode, hasMath, true);
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(resolver, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                 : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, diagnostics.Add, default).ToArray();

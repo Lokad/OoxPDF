@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingPlainCellPageNotesKeepLabelsAndDestinations() =>
+        DocxInlineCompositionTests.CheckPageNoteMath(new PinnedResolver(), "cell-page-notes-plain-office.json");
+
     public static void PortableRenderingCellPageNotesKeepLabelsMathImagesAndDestinations() =>
         DocxInlineCompositionTests.CheckPageNoteMath(new PinnedResolver(), "cell-page-notes-office.json");
 

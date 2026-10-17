@@ -606,6 +606,8 @@ internal sealed partial class DocxLayoutEngine
                         ? ResolveTableInlineMathExpansion(inlineMath.Math, paragraph, GetParagraphsFromBodyElements(bodyElements), fontSize, lineHeight, context)
                         : (Above: 0d, Below: 0d);
                     extraAbove = Math.Max(extraAbove, mathExpansion.Above);
+                    double extraBelow = Math.Max(mathExpansion.Below,
+                        IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : midLinePlan?.ExtraBelow(lineIndex) ?? 0d);
                     cursorY -= extraAbove;
                     double mathWidth = inlineMath?.LineIndex == lineIndex ? inlineMath.Width : 0d;
                     double lineWidth = MeasureTextSpansForLayout(line.Spans, fontSize, measurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, context.PageNumber) + (midLinePlan?.LineImageWidths[lineIndex] ?? 0d) + mathWidth;
@@ -690,7 +692,12 @@ internal sealed partial class DocxLayoutEngine
                         SourceBaselineOffset = IsExactLineSpacing(paragraph.EffectiveProperties) || midLinePlan is null ? 0d :
                             Math.Max(0d, midLinePlan.SourceShiftAboveHeights[lineIndex] - extraAbove),
                         Math = mathWidth > 0d ? inlineMath?.Math : null, IsInlineMath = mathWidth > 0d,
-                        InlineMathOffsetX = mathOffset, MathScale = context.ParagraphSpacingScale });
+                        InlineMathOffsetX = mathOffset, MathScale = context.ParagraphSpacingScale,
+                        // The cell cursor is seated at its first baseline. Publish
+                        // the actual occupied slot relative to this placed line;
+                        // paint coordinates and paragraph spacing stay separate.
+                        BodyLineBoxBaselineInsetPoints = cellFirstBaselineInset + lineBaselineTransition + extraAbove,
+                        BodyLineBoxHeightPoints = lineHeight + extraAbove + extraBelow });
                     if (midLinePlan is not null)
                     {
                         foreach (DocxMidLineImage placed in midLinePlan.ImagesByLine[lineIndex])
@@ -718,8 +725,7 @@ internal sealed partial class DocxLayoutEngine
                     firstLine = false;
                     paragraphX = cellX + paddingLeft + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, textWidth - continuationTextStartOffset - GetParagraphRightInset(paragraph, context.ParagraphSpacingScale));
-                    cursorY -= lineHeight + Math.Max(mathExpansion.Below,
-                        IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : midLinePlan?.ExtraBelow(lineIndex) ?? 0d);
+                    cursorY -= lineHeight + extraBelow;
                 }
 
                 // RV06 table-align probe: cells keep one row-end space beyond authored

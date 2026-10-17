@@ -11,8 +11,9 @@ output = root / "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes"
 w = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 E.register_namespace("w", w[1:-1])
 rows = []
-for typography, composition in [(t, c) for c in ["", "mixed-custom-"] for t in ["calibri-12-zero", "arial-11-zero"]]:
-    source = output / (("math-page-notes-compound-" if not composition else "math-page-notes-mixed-custom-") + typography + ".docx")
+for typography, composition in [(t, c) for c in ["", "mixed-custom-", "plain-"] for t in ["calibri-12-zero", "arial-11-zero"]]:
+    prefix = {"": "math-page-notes-compound-", "mixed-custom-": "math-page-notes-mixed-custom-", "plain-": "footnote-page-owners-"}[composition]
+    source = output / (prefix + typography + ".docx")
     with ZipFile(source) as z:
         entries = {name: z.read(name) for name in z.namelist()}
     xml = E.fromstring(entries["word/document.xml"])
@@ -54,7 +55,8 @@ for typography, composition in [(t, c) for c in ["", "mixed-custom-"] for t in [
     rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
         Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
         SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(),
-        HeldOut=False, ExpectedEquationCount=8, ExpectedImagePlacements=4,
+        HeldOut=False, ExpectedEquationCount=0 if composition == "plain-" else 8,
+        ExpectedImagePlacements=0 if composition == "plain-" else 4,
         ExpectedText=["Public destination Alpha.", "Public destination Delta."]))
 (output / "cell-page-notes.json").write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
-print("Pinned four four-cell controls with automatic/custom note owners and shared math/images")
+print("Pinned six four-cell controls with ordinary and mixed automatic/custom note owners")
