@@ -1,5 +1,35 @@
 # Composed-document reliability checkpoint
 
+C155 makes complete fitting endnote blocks own source paragraph boundaries.
+Independent plain/image-removal/paragraph-joining controls isolate8 latent
+separator points and3 legacy points per subsequent story. Placement now uses
+exact first/last owners, measured fit, existing simple-cell/occupied-clip rules
+and unique paragraph identities. Typography and continuation admission remain
+separate. Compound overflow, scaled/static/current-footnote frames, unsupported/
+nested/clipped cells, keeps and unknown spacing retain fallback. No fitted offset
+or font/size branch is added.
+
+Final Release artifact passes127 Windows/95 Ubuntu checks/32 native skips. An
+initial126/1 report exposed a repeated paragraph object; the source-ambiguity
+correction preserves every old fallback assertion. Seven independent Word
+outcomes now have note Y max0.063pt/math X0.136/Y0.063pt. Eleven actual PDFs yield
+six improved comparisons/five parent identities/no new failed components; all
+strict raster gates remain failed. Ten Final page pairs reviewed/four affected
+Review pairs carry by both PNG identities. Eight footnote-control pairs carry
+from C154. All11 final PDFs match development outputs, so comparisons/reviews
+carry without raster replay. Content/pictures/four targets survive; no full
+word/order audit. Parent independent boundary observer fails on C154.
+
+Seventeen assets/four integration smokes transfer without root build/suite replay.
+Fixed notes are footnotes or the static complete report, so the new fitting
+purpose does not enter; report/deck smokes match. Prior C15112 outcomes/seven
+sources/twenty pages remain separately qualified, with ten DOCX failures/two deck
+passes/two report extraction flags. Rootc44cc806;
+`artifacts/composition-c1/fitting-endnote-boundaries-evidence.json`. C154 CI is green.
+Next: investigate declared run-default ownership without a size. The retained
+independent styles counterfactual uses Word9.96pt ordinary/15pt explicit text,
+versus native12/15; no leading correction is justified by that observation.
+
 C154 restores two formulas omitted when supported mixed note content enters a
 simple footnote/endnote table. Normal note tables now join preparation through
 exact source owners and existing simple-cell rules; related-table frames receive
