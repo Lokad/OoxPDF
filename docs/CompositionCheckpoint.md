@@ -1,5 +1,18 @@
 # Composed-document reliability checkpoint
 
+C125 inspects actual matrix/child frames without changing production. Ten independent
+Word Final counterfactuals vary matrix/child control sizes and row placement. The
+residual depends on both; a uniform row gap or font-size substitution is not
+supported. Four C123 matrix gates remain failed, with their cause unverified.
+
+The same probes confirm a higher-priority content defect: four ordinary explicit
+fraction/script child controls lose the complete equation, while Word preserves
+all three matrix glyphs. Existing parser property restrictions cause the fallback.
+Next bounded change shares existing control-property validation and actual source
+ownership, with independent empty/painted controls and neighboring composition checks.
+Evidence: `artifacts/composition-c1/matrix-row-frame-review.json`. No rebuild, test
+replay or speculative geometry correction.
+
 C124 refreshes the finite portfolio using the accepted C123 artifact: twelve actual
 outcomes, seven sources and twenty inspected pages retain every accepted PDF byte.
 All reference and threshold identities match, so twelve comparisons and twenty
