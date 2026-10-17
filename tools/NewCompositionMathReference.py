@@ -63,6 +63,20 @@ def main():
                     row = matches[0]
                     prose.append(dict(Prefix=prefix, X=row["EffectiveX"], Y=row["EffectiveY"]))
                 rows[-1]["ProseAnchors"] = prose
+            if source.get("RuleRegion"):
+                left, bottom, right, top = source["RuleRegion"]
+                graphics = read(run / "inspect/graphics-operations.json")
+                rules = [row for row in graphics if row["Kind"] == "Fill" and
+                         left < row["MinX"] < right and bottom < row["MinY"] < top and
+                         1 < row["MaxX"] - row["MinX"] < 50 and 0 < row["MaxY"] - row["MinY"] < 2]
+                assert len(rules) == 1, "Expected one source-region rule"
+                rows[-1]["RuleBoxes"] = [dict(X=row["MinX"], Y=row["MinY"], Width=row["MaxX"] - row["MinX"],
+                                              Height=row["MaxY"] - row["MinY"], FillColor=row["FillColor"]) for row in rules]
+                rows[-1]["TotalThinRules"] = sum(row["Kind"] == "Fill" and 1 < row["MaxX"] - row["MinX"] < 50 and
+                                                0 < row["MaxY"] - row["MinY"] < 2 for row in graphics)
+                rows[-1]["RevisionBarCount"] = sum(row["Kind"] == "Fill" and 20 < row["MinX"] < 40 and
+                                                  0 < row["MaxX"] - row["MinX"] < 2 and row["MaxY"] - row["MinY"] > 5
+                                                  for row in graphics)
     output.write_text(json.dumps(dict(Rows=rows), indent=2) + "\n", encoding="utf-8")
     print("Pinned", len(rows), "independent math outcomes without exporting or rebuilding")
 

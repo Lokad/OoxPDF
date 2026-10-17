@@ -1,0 +1,94 @@
+[
+  {
+    "Id": "empty-fraction-revision-whole-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-fraction-revision-whole-ins.docx",
+    "Sha256": "A0A070D9AFEDF79DD1E652FEA64639329F7378F2BB930339C044C863F6EF2AF2",
+    "SourceSha256": "A3E166127D19BEA5B5F8D24C1A16D5FDFA35EE6017DBA456E9266525BDA1E227",
+    "Shape": "whole",
+    "Kind": "ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      680,
+      180,
+      740
+    ]
+  },
+  {
+    "Id": "empty-fraction-revision-whole-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-fraction-revision-whole-del.docx",
+    "Sha256": "EF699476D66B7BB8CB1A094A30BD1B58232C601FDF94D2DD3C5EF5D31D9C10EF",
+    "SourceSha256": "5FB2BB15C4C981208EFC02520EB099675DEEF138128738EE07B74C56ED0620E9",
+    "Shape": "whole",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      680,
+      180,
+      740
+    ]
+  },
+  {
+    "Id": "empty-fraction-revision-fragment-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-fraction-revision-fragment-ins.docx",
+    "Sha256": "663FB217042F0B115A8D6E9B5149EF7B3E806A0E2EF4CFF93FBDEA7700A26A76",
+    "SourceSha256": "1D93261477ABF36FF43FA419F17FE458F0D71F95AE0D9B7E5330A9C89F2FB85C",
+    "Shape": "fragment",
+    "Kind": "ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      680,
+      180,
+      740
+    ]
+  },
+  {
+    "Id": "empty-fraction-revision-fragment-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-fraction-revision-fragment-del.docx",
+    "Sha256": "298C2751D131428CE23ABE15D5D6832F2E45ED01587B41547C9734F2E2A4594B",
+    "SourceSha256": "FF827C237F54414545369D84936A9A9AE6F96F9405B4E5452B272C21F25EF304",
+    "Shape": "fragment",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      680,
+      180,
+      740
+    ]
+  }
+]

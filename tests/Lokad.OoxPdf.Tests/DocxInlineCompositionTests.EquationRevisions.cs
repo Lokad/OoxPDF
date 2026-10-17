@@ -96,6 +96,7 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(expectedGlyphs, math.Length);
                 TestAssert.Equal(row.GetProperty("MathText").GetString(), string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
                 TestAssert.Equal(row.TryGetProperty("ImageCount", out var images) ? images.GetInt32() : 1, page.Images.Count);
+                if (row.TryGetProperty("RuleBoxes", out _)) CheckPinnedMathRuleBoxes(page, row, compareGeometry);
                 if (compareGeometry && row.TryGetProperty("ProseAnchors", out var proseAnchors))
                 {
                     var proseShows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)

@@ -114,3 +114,30 @@ fragments = [fragment_fixture(role, kind) for role in ["root", "delimiter", "ope
 for name, rows in [("whole-math", body), ("whole-math-placement", placement), ("math-fragment", fragments)]:
     (cases / (name + ".json")).write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
     print("Pinned", len(rows), name, "controls")
+
+empty_fractions = []
+for shape in ["whole", "fragment"]:
+    for kind in ["ins", "del"]:
+        source = cases / (("equation-revision-body-" if shape == "whole" else "math-fragment-fraction-") + kind + ".docx")
+        with ZipFile(source) as z:
+            entries = {name: z.read(name) for name in z.namelist()}
+        xml = E.fromstring(entries["word/document.xml"])
+        fraction = next(xml.iter(m + "f"))
+        for parent in list(fraction.iter()):
+            for run in list(parent.findall(m + "r")):
+                parent.remove(run)
+        entries["word/document.xml"] = E.tostring(xml, encoding="utf-8", xml_declaration=True)
+        target = cases / ("empty-fraction-revision-" + shape + "-" + kind + ".docx")
+        with ZipFile(target, "w", ZIP_DEFLATED) as z:
+            for name, data in sorted(entries.items()):
+                info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+                info.compress_type = ZIP_DEFLATED
+                z.writestr(info, data)
+        empty_fractions.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
+                                    Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
+                                    SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(),
+                                    Shape=shape, Kind=kind, HeldOut=False, ExpectedEquationCount=4,
+                                    ExpectedText=["share the same input series."], ProsePrefixes=["Summary:", "governs"],
+                                    RuleRegion=[120, 680, 180, 740]))
+(cases / "empty-fraction-revisions.json").write_text(json.dumps(empty_fractions, indent=2) + "\n", encoding="utf-8")
+print("Pinned four glyphless fraction revisions with actual control ownership")

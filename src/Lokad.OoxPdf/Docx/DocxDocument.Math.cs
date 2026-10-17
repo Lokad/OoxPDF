@@ -41,11 +41,13 @@ internal sealed record DocxMathRun(DocxTextRun Text, string? MathStyleValue, str
     public bool HasUnsupportedProperties { get; init; }
     public string? ExplicitFontFamily { get; init; }
 }
-internal sealed record DocxMathFraction(DocxMathRow Numerator, DocxMathRow Denominator, string? TypeValue) : DocxMathNode
+internal sealed record DocxMathFraction(DocxMathRow Numerator, DocxMathRow Denominator, string? TypeValue) : DocxMathNode, IDocxMathControl
 {
     public bool HasUnsupportedProperties { get; init; }
     // Empty arguments still have the authored control's metric/ink purpose.
     public DocxTextRun? ControlText { get; init; }
+    // Authored fraction control-font overrides retain their existing fallback.
+    public string? ControlFontFamily => null;
 }
 internal sealed record DocxMathScripts(DocxMathRow Base, DocxMathRow? Subscript, DocxMathRow? Superscript) : DocxMathNode;
 internal interface IDocxMathControl
