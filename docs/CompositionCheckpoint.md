@@ -1,5 +1,27 @@
 # Composed-document reliability checkpoint
 
+C106 fixes confirmed script/function/matrix omissions inside insertion revisions.
+Revision wrappers now reuse the existing single-control grammar instead of a
+second, narrower allowlist. Actual literal owners/properties survive; role/orphan
+rows and unknown/multiple/nested compositions keep explicit fallbacks. Richer
+Final deletion frames remain bounded rather than silently losing structural paint.
+
+Three mixed sources/six independent Word outcomes retain all expected math and
+revision ink. Bookmark and unchanged-format run splitting preserve placement.
+Both native and pinned parent checks fail on actual 17-versus-14 missing glyphs.
+All six one-point group gates pass (0.106pt X / 0.620pt Y maximum); all six MAEs
+improve. Six strict raster gates still fail, without new components. Six same-scale
+crop pairs reviewed, including the image and neighboring formulas.
+
+One frozen Release artifact passes 23 exact Windows checks and 17 Ubuntu checks
+with six native skips, one invocation each. Seven original sources contain no
+affected revisions; twelve accepted portfolio comparisons carry by source audit,
+with two actual original portfolio transfer smokes. Seventeen assets/four smoke
+PDFs transfer without root build or suite replay. A reusable command pins math-run
+anchors from existing source/PDF/export-log/view identities, without exporting or
+rebuilding. Root 88d6f14c; evidence
+`artifacts/composition-c1/control-revisions-evidence.json`.
+
 C105 fixes a confirmed unit mismatch in Review band painting. Mapped note frames
 already carry physical heights, while their legacy line-height field retains
 unscaled design units. Painting now consumes the physical frame, using the existing
