@@ -3689,5 +3689,9 @@
     "PortableRenderingStructuralPaint",
     "DocxInlineCompositionEmptyFraction",
     "PortableRenderingEmptyFractions"
+  ],
+  "docx-matrix-cell-revisions": [
+    "DocxInlineCompositionMatrixCellRevisions",
+    "PortableRenderingMatrixCellRevisions"
   ]
 }

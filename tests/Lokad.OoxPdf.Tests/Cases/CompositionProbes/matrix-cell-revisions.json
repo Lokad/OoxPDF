@@ -1,0 +1,66 @@
+[
+  {
+    "Id": "matrix-cell-revision-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/matrix-cell-revision-body.docx",
+    "Sha256": "01EE7406DCD9C5D2E984535359552129E6887C37627E8E4B51F883A8E315F47A",
+    "SourceSha256": "F7A0FB003131799C176861A747EA4B7071CB8237D2545FF8935286DEC2CA3FED",
+    "Story": "body",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "matrix-cell-revision-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/matrix-cell-revision-cell.docx",
+    "Sha256": "CA0913079019AC7F97B4E2A61B7060FC7013CF883FC1BE48A979E1428EA3B4D7",
+    "SourceSha256": "08E3B9301D0566909A89941AD59ABC07AC9E9049B2B7EC4F0076D9BE3E30B8B8",
+    "Story": "cell",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "matrix-cell-revision-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/matrix-cell-revision-header.docx",
+    "Sha256": "2CFDC4BB957667428364F3F38523115A423DAC52C985A343F6A5031984AF57C1",
+    "SourceSha256": "7A58C565993F5DC58DCB3BE53397D4F8FC81A407B46D6447A68745ED62268B07",
+    "Story": "header",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "matrix-cell-revision-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/matrix-cell-revision-footer.docx",
+    "Sha256": "F2FD8C0129AE5D3057E224DE0358B4B7F34A58849FAB4A813B8008D97B4CEBA0",
+    "SourceSha256": "7C594C15A2658C786620E0A01E5A84438AD26EE240364DC5B0F96C884406667A",
+    "Story": "footer",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  }
+]
