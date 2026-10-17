@@ -59,7 +59,8 @@ internal static class DocxMathParagraphPolicy
     private static bool HasSupportedTableContentRevisions(IReadOnlyList<DocxRevisionInfo> revisions,
         DocxRevisionKind propertiesKind) => revisions.All(revision =>
             revision.Kind == DocxRevisionKind.Insertion || revision.Kind == propertiesKind ||
-            propertiesKind == DocxRevisionKind.TableRowPropertiesChange && revision.Kind == DocxRevisionKind.Deletion);
+            propertiesKind == DocxRevisionKind.TableRowPropertiesChange && revision.Kind == DocxRevisionKind.Deletion ||
+            propertiesKind == DocxRevisionKind.TableCellPropertiesChange && revision.Kind.IsCellStructureRevision());
 
     public static IEnumerable<(DocxParagraph Paragraph, bool HasPageInputs)> EnumerateStaticPreparationCandidates(DocxDocument document, CancellationToken token)
     {

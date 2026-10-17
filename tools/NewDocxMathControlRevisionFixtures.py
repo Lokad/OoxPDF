@@ -663,3 +663,36 @@ for shape in ["sole", "middle", "header", "footer"]:
             "all-word-compatible": dict(ExpectedMathGlyphCount=21)}))
 (output / "row-visibility.json").write_text(json.dumps(row_visibility_rows, indent=2) + "\n", encoding="utf-8")
 print("Pinned four row-deletion visibility and independent child-content controls")
+
+# Cell structure markers own review metadata, not literal insertion/deletion.
+cell_structure_rows = []
+for story in ["body", "header", "footer"]:
+    for kind in ["ins", "del"]:
+        source = output / ("table-math-revision-cell-" + kind + ".docx") if story == "body" else output / ("table-math-revision-" + story + "-row-ins.docx")
+        if story == "body":
+            target = source
+        else:
+            with ZipFile(source) as z:
+                entries = {name: z.read(name) for name in z.namelist()}
+            part = "word/" + story + "1.xml"
+            xml = E.fromstring(entries[part])
+            row = next(xml.iter(w + "tr"))
+            properties = row.find(w + "trPr")
+            properties.remove(properties.find(w + "ins"))
+            cell = row.find(w + "tc")
+            E.SubElement(cell.find(w + "tcPr"), w + ("cellIns" if kind == "ins" else "cellDel"),
+                {w + "id": "712", w + "author": "Table Editor", w + "date": "2026-10-17T00:00:00Z"})
+            entries[part] = E.tostring(xml, encoding="utf-8", xml_declaration=True)
+            target = output / ("cell-structure-" + story + "-" + kind + ".docx")
+            with ZipFile(target, "w", ZIP_DEFLATED) as z:
+                for name, data in sorted(entries.items()):
+                    info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+                    info.compress_type = ZIP_DEFLATED
+                    z.writestr(info, data)
+        cell_structure_rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
+            Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
+            SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(), Story=story, Kind=kind,
+            HeldOut=False, ExpectedEquationCount=4, ExpectedText=["share the same input series."],
+            ProsePrefixes=["Summary:", "governs"], RuleRegion=[120, 0, 210, 792], RuleFillColor="g:0"))
+(output / "cell-structure-revisions.json").write_text(json.dumps(cell_structure_rows, indent=2) + "\n", encoding="utf-8")
+print("Pinned six cell structure revision controls across body and static tables")

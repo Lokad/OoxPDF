@@ -1,0 +1,146 @@
+[
+  {
+    "Id": "table-math-revision-cell-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/table-math-revision-cell-ins.docx",
+    "Sha256": "8866EFF08FE42ECAC6C6E605DD274B80B52E92DF782FC06E9B5B9B70E1323417",
+    "SourceSha256": "8866EFF08FE42ECAC6C6E605DD274B80B52E92DF782FC06E9B5B9B70E1323417",
+    "Story": "body",
+    "Kind": "ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "table-math-revision-cell-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/table-math-revision-cell-del.docx",
+    "Sha256": "2D5023D163FC5C0D9F0E088F3B33958C5D9074B0298D8F365D3EFCE0A3822105",
+    "SourceSha256": "2D5023D163FC5C0D9F0E088F3B33958C5D9074B0298D8F365D3EFCE0A3822105",
+    "Story": "body",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "cell-structure-header-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-structure-header-ins.docx",
+    "Sha256": "7030738D05618583B2CD0C7C72410A5894597B8CAF442F55528D2469E018A592",
+    "SourceSha256": "8656546E9E91F561D9DD4AD9A61854CBC11443FCABECEE81DCB788CDEA143202",
+    "Story": "header",
+    "Kind": "ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "cell-structure-header-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-structure-header-del.docx",
+    "Sha256": "EF057CE0AE89694BF938DB90FFAC04B2D2C3309C47357A408B34E50A0184EEC8",
+    "SourceSha256": "8656546E9E91F561D9DD4AD9A61854CBC11443FCABECEE81DCB788CDEA143202",
+    "Story": "header",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "cell-structure-footer-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-structure-footer-ins.docx",
+    "Sha256": "F0F9BE2336E9F6FEF3E914C16046516079FE3420584A625F31E8469FE7315961",
+    "SourceSha256": "758FDE4FC66D4B07FEEE5ED47580AC03A8CB7CB6C74E69B9D28D6D07EFA436A4",
+    "Story": "footer",
+    "Kind": "ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "cell-structure-footer-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-structure-footer-del.docx",
+    "Sha256": "27221E02663CA921F6BE769A6266F779734F99D128A3605463605340B21962B4",
+    "SourceSha256": "758FDE4FC66D4B07FEEE5ED47580AC03A8CB7CB6C74E69B9D28D6D07EFA436A4",
+    "Story": "footer",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  }
+]

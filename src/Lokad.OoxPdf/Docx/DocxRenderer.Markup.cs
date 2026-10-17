@@ -13,7 +13,8 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
-    private static bool ShouldRenderRevisionBalloon(DocxMarkupContext markupContext, IReadOnlyList<DocxRevisionInfo> revisions)
+    private static bool ShouldRenderRevisionBalloon(DocxMarkupContext markupContext, IReadOnlyList<DocxRevisionInfo> revisions,
+        bool isMainStory = true)
     {
         if (!markupContext.RendersRevisionBalloons || revisions.Count == 0)
         {
@@ -26,13 +27,24 @@ internal sealed partial class DocxRenderer
         }
 
         // Declared Word-compatible mixed view (Word16 RevisionsMode=2): insertions, deletions, and
-        // moves render inline while property (formatting) revisions and comments balloon.
+        // moves render inline while property revisions, cell structure markers
+        // and comments balloon. Cell markers do not revise their child runs.
         // Office paints Deleted:/Inserted: balloons under RevisionsMode=0 instead (dense-revisions
         // reference artifacts/rv06-lane/insp-dense*); that ballooning view needs its own
         // rendering mode. A property change with no property elements (for example an empty
         // rPrChange) is void: Word shows no balloon for it, so it cannot sustain one either.
-        return revisions.Any(static revision => IsPropertyChangeRevision(revision.Kind) && revision.PropertyElementNames.Count != 0);
+        return revisions.Any(revision => IsWordCompatibleBalloonRevision(revision, isMainStory));
     }
+
+    // Word prints cell structure markers only in the main story; their child
+    // content remains visible in every story. Qualified formatting owners keep
+    // their existing wider story scope. Lane, balloon and bar selection share it.
+    private static bool CanPrintRevisionOwner(DocxRevisionInfo revision, bool isMainStory) =>
+        !revision.Kind.IsCellStructureRevision() || isMainStory;
+
+    private static bool IsWordCompatibleBalloonRevision(DocxRevisionInfo revision, bool isMainStory = true) =>
+        CanPrintRevisionOwner(revision, isMainStory) && (revision.Kind.IsCellStructureRevision() ||
+        IsPropertyChangeRevision(revision.Kind) && revision.PropertyElementNames.Count != 0);
 
     private static bool IsPropertyChangeRevision(DocxRevisionKind kind)
     {
@@ -759,7 +771,8 @@ internal sealed partial class DocxRenderer
                 foreach (DocxTableRowLayout row in EnumerateMarkupBalloonTableRows(page, floatingDrawings))
                 {
                     IReadOnlyList<DocxRevisionInfo> tableRevisions = row.Table.Revisions ?? [];
-                    if (ShouldRenderRevisionBalloon(markupContext, tableRevisions))
+                    bool mainTableStory = row.Story?.Kind is null or DocxStoryKind.Body;
+                    if (ShouldRenderRevisionBalloon(markupContext, tableRevisions, mainTableStory))
                     {
                         string tableKey = TableBalloonKey(row);
                         if (renderedTableRevisions.Add(tableKey))
@@ -788,8 +801,12 @@ internal sealed partial class DocxRenderer
                         }
                     }
 
+                    // Row rollups include cell markers for diagnostics/indicators;
+                    // their balloons retain the actual cell owner below.
                     IReadOnlyList<DocxRevisionInfo> rowRevisions = row.Revisions ?? [];
-                    if (ShouldRenderRevisionBalloon(markupContext, rowRevisions))
+                    if (rowRevisions.Any(revision => revision.Kind.IsCellStructureRevision()))
+                        rowRevisions = rowRevisions.Where(revision => !revision.Kind.IsCellStructureRevision()).ToArray();
+                    if (ShouldRenderRevisionBalloon(markupContext, rowRevisions, mainTableStory))
                     {
                         string rowKey = TableRowBalloonKey(row);
                         if (renderedTableRowRevisions.Add(rowKey))
@@ -822,7 +839,7 @@ internal sealed partial class DocxRenderer
                     {
                         DocxTableCellLayout cell = row.Cells[cellIndex];
                         IReadOnlyList<DocxRevisionInfo> cellRevisions = cell.Cell.Revisions;
-                        if (!ShouldRenderRevisionBalloon(markupContext, cellRevisions))
+                        if (!ShouldRenderRevisionBalloon(markupContext, cellRevisions, mainTableStory))
                         {
                             continue;
                         }
@@ -836,12 +853,13 @@ internal sealed partial class DocxRenderer
                         DocxRevisionMarkupPalette cellRevisionPalette = ResolveRevisionMarkupPalette(cellRevisions);
                         string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(cellRevisions), textWidth);
                         string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(cellRevisions), textWidth);
+                        bool cellStructureOnly = cellRevisions.All(revision => revision.Kind.IsCellStructureRevision());
                         balloonCandidates.Add(new DocxMarkupBalloonCandidate(
                             DocxMarkupBalloonKind.Revision,
                             revisionTitle,
                             revisionBody,
-                            revisionTitle,
-                            revisionBody,
+                            cellStructureOnly ? revisionBody : revisionTitle,
+                            cellStructureOnly ? string.Empty : revisionBody,
                             cell.Y + Math.Max(0d, cell.Height) * 0.5d,
                             cell.X + Math.Max(0d, cell.Width) * 0.5d,
                             cell.X - 2d,

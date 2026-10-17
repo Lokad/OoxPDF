@@ -594,7 +594,7 @@ internal sealed partial class DocxRenderer
             WordCompatibleMainStoryCommentParagraphs = visibleComments,
             WordCompatibleHasPrintedBalloons = UsesWordCompatibleAllMarkupTextProfile(effective)
                 ? (effective.RendersCommentBalloons && HasBalloonableCommentAnchor(document)) ||
-                    (effective.RendersRevisionBalloons && HasAnyNonVoidPropertyRevision(document)) : null };
+                    (effective.RendersRevisionBalloons && HasAnyRevisionBalloon(document)) : null };
     }
 
     private const double WordCompatibleBalloonLaneWidthPoints = 266.5d;
@@ -623,12 +623,12 @@ internal sealed partial class DocxRenderer
         return document.PageWidthPoints / designWidth;
     }
 
-    // Word balloons comments from the main story and formatting revisions from
+    // Word balloons comments from the main story and revision balloons from
     // the separately qualified revision stories. Only printed balloons sustain
     // the fitted text anchor; hidden static/note comments do not.
     private static bool HasAnyWordCompatibleBalloon(DocxDocument document)
     {
-        return HasBalloonableCommentAnchor(document) || HasAnyNonVoidPropertyRevision(document);
+        return HasBalloonableCommentAnchor(document) || HasAnyRevisionBalloon(document);
     }
 
     private static bool HasWordCompatibleBalloonContent(DocxDocument document, DocxMarkupContext markupContext)
@@ -639,7 +639,7 @@ internal sealed partial class DocxRenderer
             return true;
         }
 
-        return markupContext.RendersRevisionBalloons && HasNonVoidPropertyChangeRevision(document);
+        return markupContext.RendersRevisionBalloons && HasPageRevisionBalloon(document);
     }
 
     // Independent Word references omit header/footer/note comments, including
@@ -689,27 +689,27 @@ internal sealed partial class DocxRenderer
         return false;
     }
 
-    private static bool HasNonVoidPropertyChangeRevision(DocxDocument document)
+    private static bool HasPageRevisionBalloon(DocxDocument document)
     {
         // Mixed-view Word controls reserve and fit the same page lane for
-        // formatting balloons anchored in body or direct header/footer text.
+        // revision balloons anchored in body or direct header/footer text.
         // Hidden static comments remain governed by their separate visibility rule.
         if (DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType)
             .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType))
             .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
-            .Any(paragraph => HasNonVoidPropertyChange(paragraph.Revisions))) return true;
-        // A printed formatting balloon owns the same page lane when its source
+            .Any(paragraph => HasRevisionBalloon(paragraph.Revisions, isMainStory: false))) return true;
+        // A printed revision balloon owns the same page lane when its source
         // is a static table, row or cell. Reuse the revision-owner traversal
         // already used to select the fitted anchor.
         if (StaticStoryTables(document.HeaderBodyElementsByType)
             .Concat(StaticStoryTables(document.FooterBodyElementsByType))
             .Concat(StaticStoryTables(document.PageSettings.HeaderBodyElementsByType))
             .Concat(StaticStoryTables(document.PageSettings.FooterBodyElementsByType))
-            .Any(TableSubtreeHasNonVoidPropertyChange)) return true;
+            .Any(table => TableSubtreeHasRevisionBalloon(table, isMainStory: false))) return true;
 
         foreach (DocxParagraph paragraph in document.Paragraphs)
         {
-            if (HasNonVoidPropertyChange(paragraph.Revisions))
+            if (HasRevisionBalloon(paragraph.Revisions))
             {
                 return true;
             }
@@ -717,28 +717,28 @@ internal sealed partial class DocxRenderer
 
         foreach (DocxTable table in document.Tables)
         {
-            if (HasNonVoidPropertyChange(table.Revisions))
+            if (HasRevisionBalloon(table.Revisions))
             {
                 return true;
             }
 
             foreach (DocxTableRow row in table.Rows)
             {
-                if (HasNonVoidPropertyChange(row.Revisions))
+                if (HasRevisionBalloon(row.Revisions))
                 {
                     return true;
                 }
 
                 foreach (DocxTableCell cell in row.Cells)
                 {
-                    if (HasNonVoidPropertyChange(cell.Revisions))
+                    if (HasRevisionBalloon(cell.Revisions))
                     {
                         return true;
                     }
 
                     foreach (DocxParagraph paragraph in cell.Paragraphs)
                     {
-                        if (HasNonVoidPropertyChange(paragraph.Revisions))
+                        if (HasRevisionBalloon(paragraph.Revisions))
                         {
                             return true;
                         }
@@ -750,26 +750,26 @@ internal sealed partial class DocxRenderer
         return false;
     }
 
-    private static bool HasNonVoidPropertyChange(IReadOnlyList<DocxRevisionInfo> revisions)
+    private static bool HasRevisionBalloon(IReadOnlyList<DocxRevisionInfo> revisions, bool isMainStory = true)
     {
-        return revisions.Any(revision => IsPropertyChangeRevision(revision.Kind) && revision.PropertyElementNames.Count != 0);
+        return revisions.Any(revision => IsWordCompatibleBalloonRevision(revision, isMainStory));
     }
 
-    // Anchor-gating only: formatting revisions balloon from any story (body, static,
+    // Anchor-gating only: supported revision balloons print from any story (body, static,
     // placed, floating text boxes), so any of them sustains the fitted anchor. The
     // lane-fit scale trigger covers body and static paragraph/table owners;
     // other story/effect combinations retain their qualified scale behavior.
     // Section-break revisions never anchor balloons (no anchor line) and stay excluded.
-    private static bool HasAnyNonVoidPropertyRevision(DocxDocument document)
+    private static bool HasAnyRevisionBalloon(DocxDocument document)
     {
-        if (HasNonVoidPropertyChangeRevision(document))
+        if (HasPageRevisionBalloon(document))
         {
             return true;
         }
 
         foreach (DocxParagraph paragraph in ParaEnumerations())
         {
-            if (HasNonVoidPropertyChange(paragraph.Revisions))
+            if (HasRevisionBalloon(paragraph.Revisions, isMainStory: false))
             {
                 return true;
             }
@@ -777,7 +777,7 @@ internal sealed partial class DocxRenderer
 
         foreach (DocxTable table in TableEnumerations())
         {
-            if (TableSubtreeHasNonVoidPropertyChange(table))
+            if (TableSubtreeHasRevisionBalloon(table, isMainStory: false))
             {
                 return true;
             }
@@ -900,30 +900,30 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    private static bool TableSubtreeHasNonVoidPropertyChange(DocxTable table)
+    private static bool TableSubtreeHasRevisionBalloon(DocxTable table, bool isMainStory = true)
     {
-        if (HasNonVoidPropertyChange(table.Revisions))
+        if (HasRevisionBalloon(table.Revisions, isMainStory))
         {
             return true;
         }
 
         foreach (DocxTableRow row in table.Rows)
         {
-            if (HasNonVoidPropertyChange(row.Revisions))
+            if (HasRevisionBalloon(row.Revisions, isMainStory))
             {
                 return true;
             }
 
             foreach (DocxTableCell cell in row.Cells)
             {
-                if (HasNonVoidPropertyChange(cell.Revisions))
+                if (HasRevisionBalloon(cell.Revisions, isMainStory))
                 {
                     return true;
                 }
 
                 foreach (DocxParagraph paragraph in cell.Paragraphs)
                 {
-                    if (HasNonVoidPropertyChange(paragraph.Revisions))
+                    if (HasRevisionBalloon(paragraph.Revisions, isMainStory))
                     {
                         return true;
                     }
@@ -931,7 +931,7 @@ internal sealed partial class DocxRenderer
 
                 foreach (DocxTable nested in DocxBlockTraversal.EnumerateBodyTables(DocxTableCellContent.GetBodyElements(cell)))
                 {
-                    if (TableSubtreeHasNonVoidPropertyChange(nested))
+                    if (TableSubtreeHasRevisionBalloon(nested, isMainStory))
                     {
                         return true;
                     }

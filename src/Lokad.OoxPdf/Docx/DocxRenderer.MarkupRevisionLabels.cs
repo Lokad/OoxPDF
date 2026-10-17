@@ -155,6 +155,8 @@ internal sealed partial class DocxRenderer
         {
             DocxRevisionKind.Insertion => "Inserted text",
             DocxRevisionKind.Deletion => "Deleted text",
+            DocxRevisionKind.TableCellInsertion => "Inserted Cells",
+            DocxRevisionKind.TableCellDeletion => "Deleted Cells",
             DocxRevisionKind.MoveFrom => "Moved from",
             DocxRevisionKind.MoveTo => "Moved to",
             DocxRevisionKind.RunPropertiesChange => BuildFormattingRevisionBalloonLabel(revision),

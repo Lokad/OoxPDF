@@ -146,6 +146,11 @@ internal sealed partial class DocxReader
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxRevisionKind? RevisionKind(XElement element)
     {
+        if (element.Parent?.Name == WordprocessingNamespace + "tcPr")
+        {
+            if (element.Name == WordprocessingNamespace + "cellIns") return DocxRevisionKind.TableCellInsertion;
+            if (element.Name == WordprocessingNamespace + "cellDel") return DocxRevisionKind.TableCellDeletion;
+        }
         if (element.Name == WordprocessingNamespace + "ins")
         {
             return DocxRevisionKind.Insertion;

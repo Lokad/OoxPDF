@@ -190,8 +190,10 @@ internal sealed partial class DocxRenderer
 
         bool HasTableRowRevision(DocxTableRowLayout row)
         {
-            return row.RevisionCount != 0 ||
-                row.Table.Revisions?.Count > 0;
+            bool mainStory = row.Story?.Kind is null or DocxStoryKind.Body;
+            bool rows = row.Revisions is { Count: > 0 } revisions
+                ? revisions.Any(revision => CanPrintRevisionOwner(revision, mainStory)) : row.RevisionCount != 0;
+            return rows || row.Table.Revisions?.Any(revision => CanPrintRevisionOwner(revision, mainStory)) == true;
         }
 
         bool HasTextLineRevision(DocxTextLineLayout line)

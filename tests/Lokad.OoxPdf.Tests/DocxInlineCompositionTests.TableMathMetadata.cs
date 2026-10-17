@@ -7,10 +7,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxInlineCompositionTableMathMetadataKeepsIndependentWordContentAndInk()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent table metadata uses installed Windows fonts.");
-        // Cell insertion/deletion markers are unchanged counterfactuals. Their
-        // existing missing review bars remain in the complete raw comparisons.
-        CheckEquationRevisions(null, false, "table-math-metadata-office.json", splitMathRuns: true,
-            includeCase: id => !id.EndsWith("-cell-ins", StringComparison.Ordinal) && !id.EndsWith("-cell-del", StringComparison.Ordinal));
+        CheckEquationRevisions(null, false, "table-math-metadata-office.json", splitMathRuns: true);
     }
 
     public static void DocxInlineCompositionTableMathMetadataKeepsChildOwnersAndMovingFallback()
