@@ -1,5 +1,31 @@
 # Composed-document reliability checkpoint
 
+C160 keeps ordinary body-cell bookmark destinations bound to their placement
+owner, retaining the existing three-point viewport context. The old walk checked
+nullable local story metadata after dropping the actual owner. Mathematical
+target handling and painting remain unchanged. Six independent Word outcomes
+exercise links within, into and out of nested content; all 12 formulas, six
+pictures and six internal links survive, including neutral source transformations.
+
+Twenty-four Windows and 19 Ubuntu checks pass, with five native skips. The
+synthetic observer now uses emitted cell origin; its earlier margin assumptions
+were contradicted by Word. Fourteen runtime assets/2,073 inputs match, 23 Windows
+passes carry and only that observer reruns. Initial failures remain retained.
+Four PDFs retain parent bytes; only two outgoing destinations change. All six
+candidate rasters and visual metric sets retain exact values; all six strict
+gates remain failed. Three unique region pairs were reviewed, three others carry
+by both PNG identities. Final outgoing X differs by 0.48pt and both source-relative
+context gates pass within 0.5pt. Raw formula-target and Review coordinate residuals
+remain unaccepted. The independent context observer fails on C159.
+
+A read-only audit of 1,453 tracked DOCX sources finds only the new outgoing source
+in the changed body-cell target combination. C158's fixed 12 outcomes/7 sources/
+20 pages carry scope and exact report/deck smokes; ten DOCX failures/two deck
+passes/two report extraction flags remain. Seventeen assets/four exact smokes
+transfer without root build or suite/corpus replay. Root9b6d06e6; evidence
+artifacts/composition-c1/nested-navigation-evidence.json. C159 CI39074500899 is green
+on both platforms. Next: establish the cause of Review nested-table frame residuals.
+
 C159 admits complete fitting nested endnote blocks through shared source and
 clip ownership. Every measured line must survive all ancestor clips, so a visible
 first line cannot hide a clipped continuation. Original paragraph identities,
