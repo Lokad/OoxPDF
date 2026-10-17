@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+C158 restores ordinary nested cell mathematics through shared source ownership,
+measurement and painting. One prepared map follows guarded source blocks across
+two body depths, headers/footers and notes. Containing mathematical rows remain
+atomic; whole-cell note fitting and typography guards retain their prior scopes.
+The static probe also demonstrates an inherited table-only footer below the page.
+The complete measured block now bottom-anchors at the footer distance, and nested
+rows join the existing physical static-frame map. Independent Word origins are
+within 0.5pt in both modes, correcting prior errors of about 54pt and 221pt.
+
+One final Release artifact passes 56 Windows and 39 Ubuntu checks, with 17 native
+font skips. Ten independent Word outcomes/five sources/14 pages retain 24 formula
+placements, pictures and all note destinations. All ten whole-document mean MAEs
+improve without new failed components; all ten strict visual gates remain failed.
+Fourteen page/region pairs were reviewed. Final body math Y differs by at most
+0.029pt and footnote Y by 0.082pt. Review body Y2.654pt and nested endnote Y8.063pt,
+plus border/typography differences, remain unaccepted. Content and footer-origin
+observers fail independently on their respective parent artifacts.
+
+This shared-frame milestone measures the fixed 12 outcomes/7 sources/20 pages
+once on the final artifact: every PDF equals C151, so its Office comparisons and
+20 reviewed pairs carry by identity. Ten DOCX failures/two deck passes/two report
+extraction flags remain. Source inventories identify no older tracked input with
+the expanded combination. Seventeen assets/four exact smokes transfer without a
+root build or suite/corpus replay. Root03fc252e; evidence
+artifacts/composition-c1/inside-nested-static-evidence.json. C157 CI39072934179 is
+green on both platforms. Next: complete nested endnote boundary ownership using
+retained Word evidence, preserving fitting/clip/revision/continuation fallbacks.
+
 C157 preserves supported direct mathematical paragraphs beside ordinary nested
 tables. Shared cell properties admit the direct owner; authoritative BodyElements
 prevent stale paragraph preparation. Picture and nested placement reuse one
