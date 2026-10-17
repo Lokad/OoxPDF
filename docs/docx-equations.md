@@ -71,6 +71,15 @@ controls also preserve content and source ink in mixed numbered/image/link parag
 across body/cells/direct headers/footers. One operator-cell Review outcome retains
 the known 1.163pt X residual; strict gates remain failed.
 
+A complete report combines these revision forms across body, table/static cells
+and an endnote. Word-compatible bars retain placement-container ownership rather
+than joining separate stories. Invalid negative/nonfinite note/textbox baseline
+hints share the existing measured fallback, preserving prepared equations with
+portable fonts; valid hints retain their measured behavior. Source-backed Word
+math/ink counts pass in both presets, including normal-font formulas. Vertical
+bar spans remain approximate (up to 6.759pt); full raster and extraction screens
+remain failed/unresolved.
+
 Signed degree overlap now clamps the complete root origin. Narrow degrees can begin
 to its right without negative group origins; wider degrees retain leading space.
 Independent original/revision controls retain shared root/body/bar translation and

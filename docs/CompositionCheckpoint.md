@@ -1,5 +1,40 @@
 # Composed-document reliability checkpoint
 
+C104 checks a complete report with five whole-equation/fragment revisions across
+body, static cells and an endnote. Shared mapped-line traversal retains placement
+container ownership; Review now has six separate story bars across two pages,
+matching Word counts rather than joining each page through unchanged content.
+Body adjacency uses its own source flow; existing table/column/floating fallbacks
+remain. Both modes preserve byte-identical text operations and Final PDF bytes.
+The two Review page MAEs improve; strict raster outcomes remain failed. Horizontal
+bar gates pass; all six vertical edge gates fail, up to 6.759pt. No vertical pass
+or full-document Office-fidelity claim. Four whole-page pairs reviewed.
+
+The portable check exposed inherited, real note-content loss: a font-derived first
+inset of -7.238pt caused ordered layout to reject otherwise prepared/owned math.
+Shared finite/nonnegative hint admission now uses the existing measured fallback.
+Valid Office-measured hints stay intact. Pinned math-face rendering restores four
+Final/eight Review note glyphs (total 52/72), including wrapping and actual revision
+ink. Two pinned before/after crop pairs reviewed.
+
+The first built candidate passed native report checks but failed portable content:
+Windows 94 pass/1 fail, Ubuntu 78 pass/1 fail/16 skips. After production correction
+the expanded 108-method selection passes once on Windows; Ubuntu 92 pass/16 native
+skips once. Initial failures and a preceding compile-error log remain retained;
+no passing checks carry across changed libraries. All twelve existing portfolio
+PDFs retain accepted bytes and independent comparisons reuse exact identities.
+Two content screens still flag extraction/source ambiguities; raw failures remain
+even though source-backed Word math/ink counts and reviewed pages retain content.
+
+The new report is a development regression fixture; its initial held-out label is
+corrected without changing binaries, actual DOCX or golden data. A metadata-only
+freeze reuses qualification by asset identity, with no build/test/conversion replay.
+Existing held-out originals remain unchanged. Seventeen assets/four smoke PDFs
+transfer without root build or suite replay. Root b8ba9044; evidence
+`artifacts/composition-c1/revision-story-bands-evidence.json`. C103 CI39020057269 is
+green on both platforms. Workspace 09:42Z: 10.229GB/497,024 files, no errors; loose
+5GB target remains unmet and rejected retirements stay untouched.
+
 C103 closes another confirmed content omission: insertion/deletion around a single
 root, delimiter, n-ary or bar-fraction node inside `oMath`. Revision syntax now
 publishes the actual control rather than a synthetic row; literal/control owners
