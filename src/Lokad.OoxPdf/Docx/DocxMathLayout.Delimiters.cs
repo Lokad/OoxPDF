@@ -29,10 +29,10 @@ internal static partial class DocxMathLayout
         foreach (var argument in delimiter.Arguments)
         {
             token.ThrowIfCancellationRequested(); var child = equation with { Content = argument };
-            // Admission stays bounded to earlier literal/fraction roles and one
-            // supported matrix. A delimiter or unknown deeper owner cannot
+            // Admission shares the measured literal/structured argument roles.
+            // A delimiter or unknown deeper owner cannot
             // recursively rediscover itself through the general composer.
-            if (GetFraction(child) is null && GetMatrix(child, token) is null &&
+            if (!HasStructuredBoxArgument(child, token) &&
                 !DocxMathRowLayout.TryGetRenderCodePoints(argument, token, out _, out _) ||
                 !TryGetRuns(child, token, out var sources))
             { runs = []; return false; }

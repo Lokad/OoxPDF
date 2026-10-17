@@ -1,0 +1,66 @@
+[
+  {
+    "Id": "delimiter-script-sub",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/delimiter-script-sub.docx",
+    "Sha256": "F5179474C4D540B9429171BE2A4B74DFCA9C4754698403CE60A66E54F6A9E608",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Role": "sub",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "delimiter-script-sup",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/delimiter-script-sup.docx",
+    "Sha256": "9BA608AFEA0ACA4C3F18936FC5CE1E27803E8839F13C4277E0D074CB57AE9B55",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Role": "sup",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "delimiter-script-combined",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/delimiter-script-combined.docx",
+    "Sha256": "071FC8CF7ABC4A6A9D1876D273419BFE2E5D03A4B9601E92AD706E8F741777F7",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Role": "combined",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "delimiter-script-fraction-base",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/delimiter-script-fraction-base.docx",
+    "Sha256": "84D60F836B57FA11E145DB5A4F6BA3B47C265765587B3F03C1DE06E1F42B0D64",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Role": "fraction-base",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  }
+]

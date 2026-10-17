@@ -338,3 +338,43 @@ for row in nested_metric_rows:
                                         RuleFillColor="g:0"))
 (output / "glyphless-fraction-arguments.json").write_text(json.dumps(glyphless_fraction_rows, indent=2) + "\n", encoding="utf-8")
 print("Pinned four glyphless fraction argument compositions")
+
+# Existing script boxes compose inside the same delimiter argument contract.
+source = output / "compound-revision-script-first-ordinary.docx"
+with ZipFile(source) as z:
+    original = {name: z.read(name) for name in z.namelist()}
+delimiter_script_rows = []
+for role in ["sub", "sup", "combined", "fraction-base"]:
+    entries = dict(original)
+    xml = E.fromstring(entries["word/document.xml"])
+    equation = next(xml.iter(m + "oMath"))
+    script = deepcopy(next(equation.iter(m + "sSubSup")))
+    fraction = deepcopy(next(equation.iter(m + "f")))
+    if role in ["sub", "sup"]:
+        script.tag = m + ("sSub" if role == "sub" else "sSup")
+        script.remove(script.find(m + ("sup" if role == "sub" else "sub")))
+    elif role == "fraction-base":
+        basis = script.find(m + "e")
+        basis.clear()
+        basis.append(fraction)
+    delimiter = E.Element(m + "d")
+    properties = E.SubElement(delimiter, m + "dPr")
+    E.SubElement(properties, m + "begChr", {m + "val": "("})
+    E.SubElement(properties, m + "endChr", {m + "val": ")"})
+    E.SubElement(delimiter, m + "e").append(script)
+    equation.clear()
+    equation.append(delimiter)
+    entries["word/document.xml"] = E.tostring(xml, encoding="utf-8", xml_declaration=True)
+    target = output / ("delimiter-script-" + role + ".docx")
+    with ZipFile(target, "w", ZIP_DEFLATED) as z:
+        for name, data in sorted(entries.items()):
+            info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+            info.compress_type = ZIP_DEFLATED
+            z.writestr(info, data)
+    delimiter_script_rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
+                                      Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
+                                      SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(),
+                                      Role=role, HeldOut=False, ExpectedEquationCount=4,
+                                      ExpectedText=["share the same input series."], ProsePrefixes=["Summary:", "governs"]))
+(output / "delimiter-scripts.json").write_text(json.dumps(delimiter_script_rows, indent=2) + "\n", encoding="utf-8")
+print("Pinned four delimiter/script compositions")
