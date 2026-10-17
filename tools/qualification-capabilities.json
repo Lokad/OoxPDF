@@ -3645,5 +3645,22 @@
     "PortableRenderingCompleteRevisionsKeepContentInkAndStoryBands",
     "DocxInlineCompositionWholeRevisionsKeepCellAndStaticContentAndInk",
     "PortableRenderingWholeRevisionsKeepCellAndStaticContentAndInk"
+  ],
+  "docx-control-revisions": [
+    "DocxInlineCompositionControlRevisions",
+    "PortableRenderingControlRevisions",
+    "DocxInlineCompositionStructuralFragments",
+    "PortableRenderingStructuralFragments",
+    "DocxMathReader",
+    "DocxMathMatrixMalformedAndOrphanRowsRetainTraversedSource",
+    "DocxMathMatrixDeepTraversalAndCancellationRemainIterative",
+    "DocxInlineCompositionMathRunRevisions",
+    "PortableRenderingMathRunRevisions",
+    "DocxInlineCompositionEquationRevisions",
+    "PortableRenderingEquationRevisions",
+    "DocxInlineCompositionWholeStructuralRevisions",
+    "PortableRenderingWholeStructuralRevisions",
+    "DocxInlineCompositionCompleteRevisionsKeepDistinctWordStoryBands",
+    "PortableRenderingCompleteRevisionsKeepContentInkAndStoryBands"
   ]
 }

@@ -1,0 +1,41 @@
+[
+  {
+    "Id": "math-control-revision-script",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-control-revision-script.docx",
+    "Sha256": "4803537023354C890DDFBB4E224C7D7649135EEF92F048F6958042166FA214AC",
+    "SourceSha256": "F7A0FB003131799C176861A747EA4B7071CB8237D2545FF8935286DEC2CA3FED",
+    "ControlSourceSha256": "CC36F49124C6AFB40D9A457A37B77CB1B31AE78D4C7B17E27B4D28DB1C2A1E0B",
+    "Role": "script",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-control-revision-function",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-control-revision-function.docx",
+    "Sha256": "905865126C20E79B3C2DCF3E4D36C14B3D1F0801D6C9CC74CFB5EC97C3572E83",
+    "SourceSha256": "F7A0FB003131799C176861A747EA4B7071CB8237D2545FF8935286DEC2CA3FED",
+    "ControlSourceSha256": "440C73C72A9B69030A06DF8188A2B2D3564A93B352993A2A31A15FC6F5E2C343",
+    "Role": "function",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-control-revision-matrix",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-control-revision-matrix.docx",
+    "Sha256": "F6A6C8D64EBA84C75A4BA519E33032913A73DDF977CC13937847B927D424FFD6",
+    "SourceSha256": "F7A0FB003131799C176861A747EA4B7071CB8237D2545FF8935286DEC2CA3FED",
+    "ControlSourceSha256": "5D49FF3ED2457F36DB122BE97E3B4F8ED6DB9F6FFB2F23314C025EF7BCBBB670",
+    "Role": "matrix",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]

@@ -27,7 +27,7 @@ internal static partial class DocxMathParser
                     child.Name == MathNamespace + "r" && child.Elements(MathNamespace + "t").Any(text => text.Value.Length != 0));
             bool structuralRevision = revisionSource && element.Elements().Count() == 1 &&
                 element.Elements().Single().Name.Namespace == MathNamespace &&
-                element.Elements().Single().Name.LocalName is "f" or "rad" or "d" or "nary";
+                IsControl(element.Elements().Single().Name.LocalName);
             bool revisionRow = revisionRun || structuralRevision;
             bool retainDeletedFrame = structuralRevision && preserveDeletedStructure && name == "del" && !includeRevision!(element);
             if (revisionRow && !item.Expanded && !includeRevision!(element) && !retainDeletedFrame)
@@ -168,7 +168,10 @@ internal static partial class DocxMathParser
         string.IsNullOrWhiteSpace(property.Value) && property.Name.LocalName is
             "rFonts" or "sz" or "szCs" or "color" or "i" or "iCs" or "b" or "bCs" or "lang" or "rStyle" or
             "u" or "strike" or "dstrike" or "vanish" or "caps" or "smallCaps" or "vertAlign" or "spacing" or "highlight" or "shd";
-    private static bool IsContainer(string name) => IsRow(name) || name is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary" or "func" or "m" or "mr";
+    // A single control has the same grammar inside an admitted revision wrapper.
+    // Role rows and orphan matrix rows still require their actual source parent.
+    private static bool IsControl(string name) => name is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary" or "func" or "m";
+    private static bool IsContainer(string name) => IsRow(name) || IsControl(name) || name == "mr";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
     private static IEnumerable<XElement> ContentChildren(XElement element) => element.Elements().Where(child => !IsProperty(child));
     private static bool HasOnlyRoles(XElement element, params string[] roles)
