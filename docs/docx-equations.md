@@ -50,6 +50,11 @@ controls also preserve content and source ink in mixed numbered/image/link parag
 across body/cells/direct headers/footers. One operator-cell Review outcome retains
 the known 1.163pt X residual; strict gates remain failed.
 
+Signed degree overlap now clamps the complete root origin. Narrow degrees can begin
+to its right without negative group origins; wider degrees retain leading space.
+Independent original/revision controls retain shared root/body/bar translation and
+horizontal group starts within 0.264pt. Vertical-clearance residuals remain separate.
+
 Empty visible root degrees retain shared script-level placeholder metrics and the
 remaining root/body glyphs, including Final deletion. Independent inline/display
 controls retain source ink and transformations. Larger structural frames still have

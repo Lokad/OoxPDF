@@ -225,7 +225,7 @@ structures retain fallback.
 
 Empty visible root degrees share script-level metric-only argument sizing and
 retain root/body content, including Final deletion. Larger-control placement remains
-approximate (up to1.96pt Y in independent controls); stored nonempty hidden degrees
+approximate (up to 1.96pt Y in independent controls); stored nonempty hidden degrees
 and unknown/deeper structures retain fallback.
 
 Bounded matrices also render inside ready-made round/square delimiters, retaining

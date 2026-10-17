@@ -1,5 +1,31 @@
 # Composed-document reliability checkpoint
 
+C98 clamps the complete radical origin after signed degree overlap. A narrow
+degree can begin to its right while the complete group stays nonnegative; wider
+degrees retain leading space. Root, radicand and bar retain shared translation.
+Six unrevised public controls independently confirm the Word relationship; no new
+DOCX fixtures or font/size/context-specific rule.
+
+Across those six controls and sixteen revision outcomes, four MAEs improve and
+eighteen PDFs retain exact bytes. All twenty-two horizontal group-start gates pass,
+within 0.264pt. Ten vertical gates still fail at up to 1.96pt, and all twenty-two
+strict raster gates remain failed with no new failure components. Four crop pairs
+reviewed; the vertical body/prose discrepancy remains separate and visible.
+
+One production Release artifact passes a 33-method root-specific selection. Parent
+Word reproduces the 1.325pt defect; the initial synthetic strict-inequality observer
+was too weak against floating-point cancellation noise. A harness-only margin fix
+runs only that check on each platform through unchanged production/CLI/inputs:
+Windows 33 pass and Ubuntu 22 pass/11 native skips, two invocations per platform with
+unchanged methods carried. Both corrected parent regressions now fail on actual
+placement; original weak pass retained without relabeling.
+
+Seven fixed portfolio inputs contain no radicals; broader checkpoint carries by
+source inference with two actual portfolio smoke PDF identities. Seventeen assets/
+four smoke PDFs transfer without root rebuild or corpus/suite replay. Root 15d7d915;
+evidence: `artifacts/composition-c1/root-degree-kerns-evidence.json`.
+C96/C97 CI39013761358 is green on both platforms.
+
 C97 retains root/body content beside empty visible degrees, using the existing
 script-level argument sizing and metric-only placeholders. Eight inline/display
 controls include independently sized structural frames. Four deleted/authored-empty
@@ -17,14 +43,14 @@ One production Release artifact supplies qualification. The initial native obser
 correctly exposed that residual: 30 pass/1 fail retained. A content-only observer
 replaces its qualification role; a harness-only build preserves production/CLI/input
 identity, carries thirty unchanged methods and runs only that observer. Final
-selection has31passing methods through two invocations; Ubuntu21pass/10native skips
+selection has 31 passing methods through two invocations; Ubuntu 21 pass/10 native skips
 once. Two parent checks fail on actual missing root/body glyphs.
 
 Seven pinned portfolio inputs contain zero radicals, so the C95 broad checkpoint
 carries by source inference rather than a new twelve-PDF identity claim. Four smoke
 PDFs include actual complete-report Review/deck identities. Seventeen assets transfer
 without root rebuild/corpus/suite replay. The existing generator retains its earlier
-eight source fixtures/manifest byte for byte. Root2e6e641f; evidence:
+eight source fixtures/manifest byte for byte. Root 2e6e641f; evidence:
 `artifacts/composition-c1/empty-root-degrees-evidence.json`.
 C95 CI39012795079 is green on Windows and Ubuntu.
 
