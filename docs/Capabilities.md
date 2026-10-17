@@ -223,6 +223,11 @@ without printable literal source runs, using shared control-font preparation and
 metric-only arguments. Unpainted empty function/grid forms and unknown/deeper
 structures retain fallback.
 
+Empty visible root degrees share script-level metric-only argument sizing and
+retain root/body content, including Final deletion. Larger-control placement remains
+approximate (up to1.96pt Y in independent controls); stored nonempty hidden degrees
+and unknown/deeper structures retain fallback.
+
 Bounded matrices also render inside ready-made round/square delimiters, retaining
 independent metric and paint owners. Fence variant and vertical-layout residuals
 remain explicit; arbitrary deeper delimiter nesting retains fallback.

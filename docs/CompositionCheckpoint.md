@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+C97 retains root/body content beside empty visible degrees, using the existing
+script-level argument sizing and metric-only placeholders. Eight inline/display
+controls include independently sized structural frames. Four deleted/authored-empty
+Final pairs have identical Word rasters. Unknown/deeper, stored nonempty hidden
+degrees and missing-metric/encoding fallbacks remain.
+
+Sixteen Word outcomes restore content/ink: twelve MAEs improve; four nonempty Review
+PDFs stay parent-identical. Five crop pairs reviewed. Eight group-start outcomes
+meet one point; eight larger-control outcomes still fail, reaching 1.54pt X/1.96pt Y.
+The unchanged Review PDFs expose the same inherited error. Its cause remains
+unverified. All sixteen strict raster gates also remain failed; no thresholds relaxed.
+Content/ink observers explicitly do not claim those geometry gates passed.
+
+One production Release artifact supplies qualification. The initial native observer
+correctly exposed that residual: 30 pass/1 fail retained. A content-only observer
+replaces its qualification role; a harness-only build preserves production/CLI/input
+identity, carries thirty unchanged methods and runs only that observer. Final
+selection has31passing methods through two invocations; Ubuntu21pass/10native skips
+once. Two parent checks fail on actual missing root/body glyphs.
+
+Seven pinned portfolio inputs contain zero radicals, so the C95 broad checkpoint
+carries by source inference rather than a new twelve-PDF identity claim. Four smoke
+PDFs include actual complete-report Review/deck identities. Seventeen assets transfer
+without root rebuild/corpus/suite replay. The existing generator retains its earlier
+eight source fixtures/manifest byte for byte. Root2e6e641f; evidence:
+`artifacts/composition-c1/empty-root-degrees-evidence.json`.
+C95 CI39012795079 is green on Windows and Ubuntu.
+
 C96 checks C95 structural-only roots, delimiters and summations beside prose,
 pictures, links, numbering and other formulas across body/cells/direct headers and
 footers. Twelve sources/twenty-four strict Word outcomes preserve exact content,
@@ -15,8 +43,7 @@ seventeen assets/four smoke PDFs transfer without root rebuild. The existing
 placement generator now handles both families; the earlier eight fixtures and
 manifest retain exact bytes. Root a2133569; evidence:
 `artifacts/composition-c1/structural-placement-evidence.json`.
-C94 CI39012308087 is green on both platforms; C95 CI39012795079 has Ubuntu green
-and Windows running at last check.
+C95 CI39012795079 is green on Windows and Ubuntu.
 
 C95 separates structural mathematical paint from printable literal source runs.
 Supported roots, delimiters and n-ary operators keep their actual control owners

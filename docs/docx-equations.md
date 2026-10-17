@@ -50,6 +50,12 @@ controls also preserve content and source ink in mixed numbered/image/link parag
 across body/cells/direct headers/footers. One operator-cell Review outcome retains
 the known 1.163pt X residual; strict gates remain failed.
 
+Empty visible root degrees retain shared script-level placeholder metrics and the
+remaining root/body glyphs, including Final deletion. Independent inline/display
+controls retain source ink and transformations. Larger structural frames still have
+inherited child-placement residuals up to 1.96pt; those geometry gates remain failed.
+Stored nonempty hidden degrees and unknown/deeper children retain explicit fallback.
+
 Numbered paragraphs retain supported explicit math zones alongside prose and
 inline pictures. The list label owns only the first authored row: its formulas
 use inline sizing, while a later math-only row after a hard break owns display
