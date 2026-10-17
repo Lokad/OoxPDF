@@ -419,10 +419,14 @@ internal sealed partial class DocxReader
             EnsureInlineContent();
             bool display = container.Name == MathNamespace + "oMathPara";
             XElement? properties = display ? container.Element(MathNamespace + "oMathParaPr") : null;
+            Dictionary<XElement, DocxRevisionInfo>? mathRunRevisions = null;
+            bool hasMathRunRevisions = false;
             foreach (XElement equation in display ? container.Elements(MathNamespace + "oMath") : new[] { container })
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var content = DocxMathParser.Read(equation, ReadMathRun, cancellationToken);
+                hasMathRunRevisions = false;
+                var content = DocxMathParser.Read(equation, ReadMathRun, cancellationToken,
+                    wrapper => IsIncludedRevisionContainer(wrapper, markupMode));
                 if (removeDeletedText)
                 {
                     var source = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null, null);
@@ -437,20 +441,38 @@ internal sealed partial class DocxReader
                 {
                     ParentFontSize = ResolveRunProperties(null, paragraphStyleId, null, styles, tableCellStyle?.Run).FontSize
                         ?? DocxDefaults.UnstyledRunFontSizePoints,
-                    LimitSettings = (documentSettings ?? DocxDocumentSettings.Empty).MathLimitSettings
+                    LimitSettings = (documentSettings ?? DocxDocumentSettings.Empty).MathLimitSettings,
+                    HasRunRevisions = hasMathRunRevisions
                 });
                 inlineItems!.Add(new DocxInlineEquation(equations[^1]));
             }
 
             DocxTextRun ReadMathRun(XElement run, string text)
             {
+                DocxRevisionInfo? owner = revision;
+                XElement? wrapper = run.Ancestors().TakeWhile(parent => parent.Name != MathNamespace + "oMath")
+                    .FirstOrDefault(parent => parent.Name.Namespace == WordprocessingNamespace && parent.Name.LocalName is "ins" or "del");
+                if (wrapper is not null)
+                {
+                    mathRunRevisions ??= new();
+                    if (!mathRunRevisions.TryGetValue(wrapper, out owner))
+                    {
+                        owner = CreateRevisionInfo(wrapper);
+                        if (owner is not null) mathRunRevisions.Add(wrapper, owner);
+                    }
+                }
+                if (owner is not null)
+                {
+                    hasMathRunRevisions = true;
+                    AddRevision(paragraphRevisions, owner);
+                }
                 XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
                 string? characterStyleId = ReadCharacterStyleId(run);
                 DocxResolvedRunProperties resolved = ResolveRunProperties(runProperties, paragraphStyleId,
                     characterStyleId, styles, tableCellStyle?.Run);
                 return CreateResolvedTextRun(text, resolved,
                     CreateRunStyleResolution(runProperties, paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run),
-                    complexScript: false, sourceRunIndex, sourceTextOffsetInRun: 0, revision, RevisionList(revision));
+                    complexScript: false, sourceRunIndex, sourceTextOffsetInRun: 0, owner, RevisionList(owner));
             }
         }
 

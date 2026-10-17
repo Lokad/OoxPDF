@@ -21,9 +21,40 @@ internal static partial class DocxMathLayout
         return true;
     }
 
-    private static bool IsEmptyArgument(DocxMathRow row) => row.HasSupportedProperties &&
-        row.Children.All(node => node is DocxMathRun run && run.Text.Text.Length == 0 &&
-            !run.HasUnsupportedProperties && DocxMathRowLayout.HasSupportedTextFormatting(run.Text, run.NormalText));
+    private static bool IsEmptyArgument(DocxMathRow row, CancellationToken token = default)
+    {
+        if (!row.HasSupportedProperties) return false;
+        if (row.Children.Count == 0) return true;
+        // Ordinary visible rows exit without allocating a traversal stack.
+        if (row.Children.Any(node => node is DocxMathRun run && run.Text.Text.Length != 0)) return false;
+        var pending = new Stack<DocxMathNode>(row.Children);
+        while (pending.TryPop(out var node))
+        {
+            token.ThrowIfCancellationRequested();
+            if (node is DocxMathRow nested && nested.HasSupportedProperties)
+                foreach (var child in nested.Children) pending.Push(child);
+            else if (node is not DocxMathRun run || run.Text.Text.Length != 0 || !DocxMathRowLayout.HasSupportedStyle(run)) return false;
+        }
+        return true;
+    }
+
+    private static bool TryMeasureFractionArgument(DocxMathRow row, Func<DocxMathRun, PdfFontResource?> resolveFont,
+        OpenTypeFont font, double size, int scriptLevel, CancellationToken token,
+        out DocxMathBox? box, out string? fallback, out bool empty)
+    {
+        empty = IsEmptyArgument(row, token);
+        if (!empty)
+            return DocxMathRowLayout.TryMeasure(row, resolveFont, token, out box, out fallback, scriptLevel,
+                operatorSpacingFontSize: size, scriptMetricsFont: font);
+        box = null;
+        fallback = "MissingMathFractionPlaceholder";
+        double argumentSize = size;
+        if (scriptLevel != 0 && !DocxMathArgumentMetrics.TryGetScriptFontSize(font, size, scriptLevel, out argumentSize) ||
+            !TryMeasureHiddenPlaceholder(font, OfficePdfTextEmissionProfile.FontSize(argumentSize), out box)) return false;
+        OoxConversionBudget.Current?.ChargeSceneNodes(1);
+        fallback = null;
+        return true;
+    }
 
     internal static bool IsEmptyFraction(DocxEquation equation) => GetFraction(equation) is { ControlText: not null, TypeValue: null or "bar" } fraction &&
         IsEmptyArgument(fraction.Numerator) && IsEmptyArgument(fraction.Denominator);

@@ -1,0 +1,2240 @@
+{
+  "Rows": [
+    {
+      "Id": "math-run-revision-body-ins",
+      "Mode": "final-preserve",
+      "InputSha256": "211D1E68974509A7FBE668123ACC7C8E368418DF7914F4CD5A3A7355351AD987",
+      "ReferencePdfSha256": "4112A28AD46BF7145DC3998BA7429DBE29077A561E5EC8743DBA690D69DDD745",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 701.38,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 675.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-run-revision-body-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "211D1E68974509A7FBE668123ACC7C8E368418DF7914F4CD5A3A7355351AD987",
+      "ReferencePdfSha256": "949AAA69DFA678177FF02545C91B699ABB9366C7B007FF27AAFD553D77E503AB",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 701.38,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 675.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-run-revision-body-del",
+      "Mode": "final-preserve",
+      "InputSha256": "CE1C585CC68B3073E5FA211433743C5A9C6DEDF68F130315FC0F6230CB66180E",
+      "ReferencePdfSha256": "0F2DD35350B42EB894D8529F720DB2E2E23D40C0886EA11C98D0223516AB8DA8",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "ya+b=cx+2ya+b=c",
+      "Anchors": [
+        {
+          "Text": "y",
+          "X": 138.86,
+          "Y": 700.18,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 679.54,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 679.54,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 679.54,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 679.54,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 679.54,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 686.02,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 686.02,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 686.02,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 674.02,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 648.46,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 648.46,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 648.46,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 648.46,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 648.46,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-run-revision-body-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "CE1C585CC68B3073E5FA211433743C5A9C6DEDF68F130315FC0F6230CB66180E",
+      "ReferencePdfSha256": "EB6B73B1CA623015F6D80A055B2A5F833983E783C2A5D6CA58D6E98D70A4471A",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 701.38,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 675.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-run-revision-cell-ins",
+      "Mode": "final-preserve",
+      "InputSha256": "A9A896B1E9FDBE0BB1E95E86116094D31BF79683DE5D88D421B95EDA416FBEB1",
+      "ReferencePdfSha256": "FA4004C321778B69868CC1A8311CCBE893ED70CE5A02A400736B8BC9C8A210F2",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 701.38,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 675.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-run-revision-cell-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "A9A896B1E9FDBE0BB1E95E86116094D31BF79683DE5D88D421B95EDA416FBEB1",
+      "ReferencePdfSha256": "5C55B1CD6A751716D1232732E4D74B501ABDDC7AE97D0AC5029086255C17D14C",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 701.38,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 675.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-run-revision-cell-del",
+      "Mode": "final-preserve",
+      "InputSha256": "349A9FC757ABEBF7941744491547F5E243D0703F9B1AA9E03FFEEDAFB8DB953F",
+      "ReferencePdfSha256": "16B83F4A6C71E455493066EE046F65044D55FF47457F6DF0C0A6056E252F2E71",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "ya+b=cx+2ya+b=c",
+      "Anchors": [
+        {
+          "Text": "y",
+          "X": 138.86,
+          "Y": 700.18,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 679.54,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 679.54,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 679.54,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 679.54,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 679.54,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 686.02,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 686.02,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 686.02,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 674.02,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 648.46,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 648.46,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 648.46,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 648.46,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 648.46,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-run-revision-cell-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "349A9FC757ABEBF7941744491547F5E243D0703F9B1AA9E03FFEEDAFB8DB953F",
+      "ReferencePdfSha256": "1573FC4678FEB96757E074A52AB2428B766067759E780B1C0351057A89F93380",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 713.38,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 701.38,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 680.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 687.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 675.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 649.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-run-revision-header-ins",
+      "Mode": "final-preserve",
+      "InputSha256": "2389C980293B43C67C48A7EE607F8D1EF7B70C1816A44DC5527E1689338B2948",
+      "ReferencePdfSha256": "7E4A42714DDB1FBF2EF71F1D118DDF90003B7776D99FD6D01F12E33A6459B610",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 749.4,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 749.4,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 749.4,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 737.4,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 716.76,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 716.76,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 716.76,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 716.76,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 716.76,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 723.24,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 723.24,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 723.24,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 711.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 685.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 685.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 685.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 685.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 685.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-run-revision-header-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "2389C980293B43C67C48A7EE607F8D1EF7B70C1816A44DC5527E1689338B2948",
+      "ReferencePdfSha256": "3E9A62BEBCAFE0EF4BC886C45B117B3B0A2CED597D8FB433F02956EC4157B604",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 749.4,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 749.4,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 749.4,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 737.4,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 716.76,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 716.76,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 716.76,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 716.76,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 716.76,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 723.24,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 723.24,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 723.24,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 711.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 685.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 685.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 685.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 685.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 685.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-run-revision-header-del",
+      "Mode": "final-preserve",
+      "InputSha256": "F980E6B4131B5AEFF4A0E317E0052EACA3BE31745F3F2CF0B72E7A7349E8ED3F",
+      "ReferencePdfSha256": "4CDB1783EBDBFC1D7DDF3D521E499F9A41F17F10B3E8A05513A3E98C8D6678D3",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "ya+b=cx+2ya+b=c",
+      "Anchors": [
+        {
+          "Text": "y",
+          "X": 138.86,
+          "Y": 736.2,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 715.56,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 715.56,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 715.56,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 715.56,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 715.56,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 722.04,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 722.04,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 722.04,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 710.02,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 684.46,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 684.46,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 684.46,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 684.46,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 684.46,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-run-revision-header-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F980E6B4131B5AEFF4A0E317E0052EACA3BE31745F3F2CF0B72E7A7349E8ED3F",
+      "ReferencePdfSha256": "3FBAD51FF5ADE37102BF9DCFF0C08BC5560A280E5487C17E97F3ADAFE42AC3FD",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 749.4,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 749.4,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 749.4,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 737.4,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 716.76,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 716.76,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 716.76,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 716.76,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 716.76,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 723.24,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 723.24,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 723.24,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 711.22,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 685.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 685.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 685.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 685.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 685.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-run-revision-footer-ins",
+      "Mode": "final-preserve",
+      "InputSha256": "4A026811A144549BD8ACD51F520A665F1B91DB43A5DDCBCC307A6441FD485F0D",
+      "ReferencePdfSha256": "BD50A71DB73C1A08E9A9CB186B367B69AE5332282418489E938E0FE11D683F17",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 108.62,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 108.62,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 108.62,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 96.624,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 82.464,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 82.464,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 82.464,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 70.464,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-run-revision-footer-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "4A026811A144549BD8ACD51F520A665F1B91DB43A5DDCBCC307A6441FD485F0D",
+      "ReferencePdfSha256": "FA583EFEC1674743FCEA94137DA4D89984853055FB041E7F4584570781646FC8",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 108.62,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 108.62,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 108.62,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 96.624,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 82.464,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 82.464,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 82.464,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 70.464,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-run-revision-footer-del",
+      "Mode": "final-preserve",
+      "InputSha256": "07D420380C3AED914C84B378781646797E524A640BDCA235D1B5F9689B94E1D8",
+      "ReferencePdfSha256": "F45A69373F9B083BB1A9DFCEF589B626D9DE4F371F261D215D5CCEC990EC0C9A",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "ya+b=cx+2ya+b=c",
+      "Anchors": [
+        {
+          "Text": "y",
+          "X": 138.86,
+          "Y": 96.624,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 82.464,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 82.464,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 82.464,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 70.464,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-run-revision-footer-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "07D420380C3AED914C84B378781646797E524A640BDCA235D1B5F9689B94E1D8",
+      "ReferencePdfSha256": "5020A0AE07852F5FC600538BB3F5F6C284A13D2543AA7B82EBE1681EF44B9ADC",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ya+b=cx+2ya+b=c",
+      "Anchors": [
+        {
+          "Text": "x",
+          "X": 137.9,
+          "Y": 108.62,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "+",
+          "X": 142.94,
+          "Y": 108.62,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "2",
+          "X": 148.82,
+          "Y": 108.62,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Text": "y",
+          "X": 142.94,
+          "Y": 96.624,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 189.02,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 197.93,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 208.61,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 217.73,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 229.01,
+          "Y": 75.984,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "x",
+          "X": 256.25,
+          "Y": 82.464,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 261.17,
+          "Y": 82.464,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "2",
+          "X": 267.05,
+          "Y": 82.464,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "y",
+          "X": 261.29,
+          "Y": 70.464,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "a",
+          "X": 338.47,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "+",
+          "X": 347.35,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "b",
+          "X": 358.03,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "=",
+          "X": 367.27,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Text": "c",
+          "X": 378.55,
+          "Y": 44.904,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    }
+  ]
+}

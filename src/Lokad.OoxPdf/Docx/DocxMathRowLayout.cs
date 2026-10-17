@@ -84,7 +84,7 @@ internal static class DocxMathRowLayout
             RgbColor color = default;
             RgbColor.TryParse(atom.Run.Text.ColorHex, out color);
             glyphs.Add(new(atom.Source.Value, atom.Render.Value, resource, cid.ToString("X4", CultureInfo.InvariantCulture),
-                size, x, 0d, advance, color) { OriginalGlyph = glyph,
+                size, x, 0d, advance, color) { Revision = atom.Run.Text.Revision, OriginalGlyph = glyph,
                     TextShear = shear });
             if (shear != 0d && font.TryGetGlyphBounds(glyph, out var slantedBounds))
                 slantedInkRight = Math.Max(slantedInkRight, x + (slantedBounds.XMax + shear * slantedBounds.YMax) * scale);
@@ -143,7 +143,7 @@ internal static class DocxMathRowLayout
         return true;
     }
 
-    private static bool HasSupportedStyle(DocxMathRun run) =>
+    internal static bool HasSupportedStyle(DocxMathRun run) =>
         !run.HasUnsupportedProperties && run.MathStyleValue is null or "i" or "p" or "b" or "bi" && run.ScriptValue is null or "roman" &&
         HasSupportedTextFormatting(run.Text, run.NormalText);
 

@@ -160,7 +160,7 @@ internal static class DocxInlineContent
             paragraph.HasDeletedParagraphMark ||
             paragraph.Runs.Any(run => run.Revision is not null || run.Revisions.Count != 0) ||
             paragraph.Images.Any(image => image.Revisions.Count != 0) ||
-            paragraph.Equations.Any(equation => equation.Revision is not null) ||
+            paragraph.Equations.Any(equation => equation.Revision is not null || equation.HasRunRevisions) ||
             paragraph.InlineTextBoxes.Any(box => box.Revisions.Count != 0) ||
             paragraph.ParagraphMarkRun is { } mark && (mark.Revision is not null || mark.Revisions.Count != 0)) return false;
         return HasSupportedRunRevisionOwners(source, [], default, nonRenderingRunOwners: paragraph.NonRenderingRunOwners);
@@ -171,28 +171,47 @@ internal static class DocxInlineContent
         HasSupportedRunRevisionOwners(revisions ?? paragraph.Revisions, paragraph.Runs, token,
             paragraph.ListLabel is null ? null : paragraph.ParagraphMarkRun, paragraph.Images, paragraph.NonRenderingRunOwners, paragraph.Equations);
 
-    // The equation and all measured source runs must share the actual wrapper
-    // revision. Aggregate/value-equal metadata cannot invent a revised owner.
-    internal static bool HasSupportedEquationRevisionOwner(DocxEquation equation, CancellationToken token)
+    // Reference identity and measured source position establish actual owners.
+    // The hint avoids rediscovering unchanged math; it cannot invent ownership.
+    internal static bool TryGetEquationRevisionOwners(DocxEquation equation, CancellationToken token,
+        out IReadOnlyList<DocxRevisionInfo> owners)
     {
+        owners = [];
         token.ThrowIfCancellationRequested();
-        return equation.SourceRunIndex >= 0 &&
-            equation.Revision is { Kind: DocxRevisionKind.Insertion or DocxRevisionKind.Deletion } revision &&
-            DocxMathLayout.TryGetRuns(equation, token, out var runs) && runs.Count != 0 &&
-            runs.All(run => run.Run.Text.SourceRunIndex == equation.SourceRunIndex &&
-                ReferenceEquals(run.Run.Text.Revision, revision) &&
-                run.Run.Text.Revisions.All(owner => ReferenceEquals(owner, revision)));
+        if (equation.Revision is null && !equation.HasRunRevisions) return true;
+        if (equation.SourceRunIndex < 0 || !DocxMathLayout.TryGetRuns(equation, token, out var runs) || runs.Count == 0) return false;
+        var actual = new List<DocxRevisionInfo>();
+        var seen = new HashSet<DocxRevisionInfo>(ReferenceEqualityComparer.Instance);
+        foreach (var source in runs)
+        {
+            token.ThrowIfCancellationRequested();
+            var run = source.Run.Text;
+            if (run.SourceRunIndex != equation.SourceRunIndex ||
+                equation.Revision is { } wrapper && !ReferenceEquals(run.Revision, wrapper)) return false;
+            if (run.Revision is not { } revision)
+            {
+                if (run.Revisions.Count != 0) return false;
+                continue;
+            }
+            if (revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion) ||
+                run.Revisions.Count == 0 || run.Revisions.Any(owner => !ReferenceEquals(owner, revision))) return false;
+            if (seen.Add(revision)) actual.Add(revision);
+        }
+        if (equation.Revision is { } primary && !seen.Contains(primary)) return false;
+        owners = actual;
+        return true;
     }
 
     public static bool HasSupportedRunRevisionOwners(IReadOnlyList<DocxRevisionInfo> revisions,
         IReadOnlyList<DocxTextRun> runs, CancellationToken token, DocxTextRun? numberingMark = null, IReadOnlyList<DocxInlineImage>? images = null,
         IReadOnlyList<DocxNonRenderingRunOwner>? nonRenderingRunOwners = null, IReadOnlyList<DocxEquation>? equations = null)
     {
+        List<DocxRevisionInfo>? equationOwners = null;
         if (equations is not null)
             foreach (var equation in equations)
             {
-                token.ThrowIfCancellationRequested();
-                if (equation.Revision is not null && !HasSupportedEquationRevisionOwner(equation, token)) return false;
+                if (!TryGetEquationRevisionOwners(equation, token, out var owners)) return false;
+                if (owners.Count != 0) (equationOwners ??= []).AddRange(owners);
             }
         if (revisions.Count == 0) return true;
         var remaining = new HashSet<DocxRevisionInfo>(ReferenceEqualityComparer.Instance);
@@ -240,12 +259,9 @@ internal static class DocxInlineContent
                         remaining.Remove(revision);
                 }
             }
-        if (equations is not null)
-            foreach (var equation in equations)
-            {
-                token.ThrowIfCancellationRequested();
-                if (equation.Revision is not null) remaining.Remove(equation.Revision);
-            }
+        if (equationOwners is not null)
+            foreach (var owner in equationOwners)
+            { token.ThrowIfCancellationRequested(); remaining.Remove(owner); }
         // A parsed paragraph mark owns an inserted numbering prefix even when
         // none of its visible text runs is revised. Keep other mark kinds and
         // unrelated/value-equal metadata on their existing fallback paths.

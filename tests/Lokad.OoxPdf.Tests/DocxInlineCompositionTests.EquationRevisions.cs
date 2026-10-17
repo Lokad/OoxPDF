@@ -49,10 +49,11 @@ internal static partial class DocxInlineCompositionTests
         CheckEquationRevisions(null, true);
     }
 
-    internal static void CheckEquationRevisions(IFontResolver? resolver, bool compareGeometry)
+    internal static void CheckEquationRevisions(IFontResolver? resolver, bool compareGeometry,
+        string referenceFile = "equation-revisions-office.json", bool splitMathRuns = false)
     {
         string folder = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
-        using var golden = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, "equation-revisions-office.json")));
+        using var golden = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, referenceFile)));
         foreach (var row in golden.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string id = row.GetProperty("Id").GetString()!;
@@ -64,7 +65,16 @@ internal static partial class DocxInlineCompositionTests
             (double X, double Y, double Size)[]? original = null;
             foreach (bool transformed in new[] { false, true })
             {
-                var source = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed, partOverride: part);
+                var source = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed,
+                    !splitMathRuns || !transformed ? null : (xml, w, m) =>
+                    {
+                        var run = xml.Descendants(m + "r").First(node => node.Element(m + "t")?.Value.Length > 1);
+                        var text = run.Element(m + "t")!;
+                        var second = new XElement(run);
+                        second.Element(m + "t")!.Value = text.Value[1..];
+                        text.Value = text.Value[..1];
+                        run.AddAfterSelf(second);
+                    }, partOverride: part);
                 var page = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                     ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
                     .RenderBlankPages(source, null, default).Single();
@@ -76,9 +86,7 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Contains("share the same input series.", DocxPageFootnoteNumberingTests.DecodeText(page));
                 for (int i = 0; i < math.Length; i++)
                 {
-                    // Deleted Final has no revised equation to admit. Its retained
-                    // parent PDF has a separate, recorded 6.766pt flow residual.
-                    if (compareGeometry && !(mode == OoxPdfDocxMarkupMode.Final && id.EndsWith("-del", StringComparison.Ordinal)))
+                    if (compareGeometry)
                         TestAssert.True(Math.Abs(math[i].X - anchors[i].GetProperty("X").GetDouble()) < 1d &&
                             Math.Abs(math[i].Y - anchors[i].GetProperty("Y").GetDouble()) < 1d,
                             "Revised equations retain independent Word container geometry: " + id + "/" + mode + "/" + i);

@@ -209,20 +209,26 @@ internal static partial class DocxMathLayout
         OpenTypeFont? metricOwner = parentMetricsFont ?? resolveFont(sources[0].Run)?.Font.Font;
         if (metricOwner is null || !metricOwner.TryGetMathConstants(out OpenTypeMathConstants constants))
         { fallback = "MissingMathFractionConstants"; return false; }
-        if (!DocxMathRowLayout.TryMeasure(fraction.Numerator, resolveFont, token, out DocxMathBox? numerator, out fallback, scriptLevel,
-                operatorSpacingFontSize: parentSize, scriptMetricsFont: metricOwner) ||
-            !DocxMathRowLayout.TryMeasure(fraction.Denominator, resolveFont, token, out DocxMathBox? denominator, out fallback, scriptLevel,
-                operatorSpacingFontSize: parentSize, scriptMetricsFont: metricOwner) ||
-            numerator is null || denominator is null || numerator.Glyphs.Count == 0 || denominator.Glyphs.Count == 0)
+        if (!TryMeasureFractionArgument(fraction.Numerator, resolveFont, metricOwner, parentSize, scriptLevel, token,
+                out DocxMathBox? numerator, out fallback, out bool emptyNumerator) ||
+            !TryMeasureFractionArgument(fraction.Denominator, resolveFont, metricOwner, parentSize, scriptLevel, token,
+                out DocxMathBox? denominator, out fallback, out bool emptyDenominator) ||
+            numerator is null || denominator is null || numerator.Glyphs.Count == 0 && denominator.Glyphs.Count == 0)
         { fallback ??= "EmptyMathFraction"; return false; }
-        DocxMathGlyphPlacement first = numerator.Glyphs[0];
+        bool hasEmptyArgument = emptyNumerator || emptyDenominator;
+        if (hasEmptyArgument && (fraction.TypeValue == "noBar" || fraction.ControlText is null ||
+            !DocxMathRowLayout.HasSupportedTextFormatting(fraction.ControlText, allowBold: false)))
+        { fallback = "UnsupportedEmptyFractionControl"; return false; }
+        DocxMathGlyphPlacement first = numerator.Glyphs.Count != 0 ? numerator.Glyphs[0] : denominator.Glyphs[0];
         double size = first.FontSize;
         if (numerator.Glyphs.Concat(denominator.Glyphs).Any(glyph =>
             glyph.FontSize != size) || sources.Any(source => !source.Run.NormalText &&
                 !ReferenceEquals(resolveFont(source.Run)?.Font.Font, metricOwner)))
         { fallback = "MixedMathFractionMetrics"; return false; }
+        var ruleColor = first.Color;
+        if (hasEmptyArgument) RgbColor.TryParse(fraction.ControlText!.ColorHex, out ruleColor);
         return TryComposeFraction(equation, fraction, metricOwner, constants, parentSize, numerator, denominator,
-            first.Color, sources.Any(source => source.Run.NormalText), token, out box, out fallback);
+            ruleColor, hasEmptyArgument || sources.Any(source => source.Run.NormalText), token, out box, out fallback);
     }
 
     private static bool TryComposeFraction(DocxEquation equation, DocxMathFraction fraction, OpenTypeFont metricOwner,

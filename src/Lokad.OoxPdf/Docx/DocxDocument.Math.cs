@@ -13,6 +13,8 @@ internal sealed record DocxEquation(
     string? PropertiesXml,
     DocxRevisionInfo? Revision)
 {
+    // Discovery hint only; eligibility still verifies actual measured run owners.
+    public bool HasRunRevisions { get; init; }
     public double? ParentFontSize { get; init; }
     public bool Cramped { get; init; }
     public DocxMathLimitSettings LimitSettings { get; init; } = DocxMathLimitSettings.Empty;

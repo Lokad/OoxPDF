@@ -10,7 +10,7 @@ internal static partial class DocxMathParser
     public static DocxMathRow Read(
         XElement equation,
         Func<XElement, string, DocxTextRun> readRun,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, Func<XElement, bool>? includeRevision = null)
     {
         var pending = new Stack<(XElement Element, bool Expanded)>();
         var nodes = new Dictionary<XElement, DocxMathNode>();
@@ -20,7 +20,15 @@ internal static partial class DocxMathParser
             cancellationToken.ThrowIfCancellationRequested();
             XElement element = item.Element;
             string name = element.Name.LocalName;
-            if (element.Name.Namespace != MathNamespace || !IsContainer(name))
+            bool revisionRun = includeRevision is not null && element.Name.Namespace == WordprocessingNamespace &&
+                name is "ins" or "del" && element.HasElements && element.Elements().All(child =>
+                    child.Name == MathNamespace + "r" && child.Elements(MathNamespace + "t").Any(text => text.Value.Length != 0));
+            if (revisionRun && !item.Expanded && !includeRevision!(element))
+            {
+                nodes.Add(element, new DocxMathRow([]));
+                continue;
+            }
+            if (!revisionRun && (element.Name.Namespace != MathNamespace || !IsContainer(name)))
             {
                 nodes.Add(element, ReadLeaf(element, readRun));
                 continue;
@@ -37,7 +45,9 @@ internal static partial class DocxMathParser
             }
 
             DocxMathNode node;
-            if (IsRow(name) && (name != "deg" || element.Parent?.Name == MathNamespace + "rad") &&
+            if (revisionRun)
+                node = new DocxMathRow(ContentChildren(element).Select(child => nodes[child]).ToArray());
+            else if (IsRow(name) && (name != "deg" || element.Parent?.Name == MathNamespace + "rad") &&
                 (name != "fName" || element.Parent?.Name == MathNamespace + "func"))
             {
                 node = new DocxMathRow(ContentChildren(element).Select(child => nodes[child]).ToArray())

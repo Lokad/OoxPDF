@@ -83,17 +83,23 @@ internal sealed partial class DocxRenderer
         graphics.SaveState();
         graphics.Transform(scale, 0d, 0d, scale, x + ResolveTextEmissionXOffset(context),
             baseline - ResolveTextEmissionBaselineOffset(context));
-        RgbColor? revisionColor = null;
-        bool strike = false;
-        if (UsesWordCompatibleAllMarkupTextProfile(context) && math.Equation.Revision is { } revision &&
-            TryResolveReviewAuthorColor(revision, context, out var color))
-        {
-            revisionColor = color;
-            strike = revision.Kind == DocxRevisionKind.Deletion;
-        }
-        DocxMathBoxPainter.Paint(math.Box, graphics, 0d, 0d, token, revisionColor, strike);
+        Func<DocxMathGlyphPlacement, (RgbColor Color, bool Strike)>? revisionInk = null;
+        if (UsesWordCompatibleAllMarkupTextProfile(context) &&
+            (math.Equation.Revision is not null || math.Box.Glyphs.Any(glyph => glyph.Revision is not null)))
+            revisionInk = CreateMathRevisionInk(math.Equation.Revision, context);
+        DocxMathBoxPainter.Paint(math.Box, graphics, 0d, 0d, token, revisionInk);
         graphics.RestoreState();
     }
+
+    // Allocate the review resolver only for actual revised boxes. Ordinary math
+    // keeps its existing paint path without a captured per-box delegate.
+    private static Func<DocxMathGlyphPlacement, (RgbColor Color, bool Strike)> CreateMathRevisionInk(
+        DocxRevisionInfo? equationOwner, DocxMarkupContext context) => glyph =>
+    {
+        var revision = glyph.Revision ?? equationOwner;
+        return revision is not null && TryResolveReviewAuthorColor(revision, context, out var color)
+            ? (color, revision.Kind == DocxRevisionKind.Deletion) : (glyph.Color, false);
+    };
 
     private static IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph> PrepareMathEquations(
         DocxDocument document, IFontResolver resolver, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,

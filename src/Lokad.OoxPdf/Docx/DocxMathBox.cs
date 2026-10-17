@@ -7,6 +7,7 @@ internal sealed record DocxMathGlyphPlacement(
     int SourceCodePoint, int RenderCodePoint, PdfFontResource Font, string EncodedGlyph,
     double FontSize, double X, double BaselineY, double Advance, RgbColor Color)
 {
+    public DocxRevisionInfo? Revision { get; init; }
     public ushort OriginalGlyph { get; init; }
     public double TextShear { get; init; }
 }
@@ -45,7 +46,8 @@ internal sealed record DocxMathRulePlacement(double X, double Y, double Width, d
 
 internal static class DocxMathBoxPainter
 {
-    public static void Paint(DocxMathBox box, PdfGraphicsBuilder graphics, double x, double baselineY, CancellationToken token, RgbColor? revisionColor = null, bool strike = false)
+    public static void Paint(DocxMathBox box, PdfGraphicsBuilder graphics, double x, double baselineY, CancellationToken token,
+        Func<DocxMathGlyphPlacement, (RgbColor Color, bool Strike)>? resolveRevisionInk = null)
     {
         foreach (DocxMathRulePlacement rule in box.Rules)
         {
@@ -63,13 +65,14 @@ internal static class DocxMathBoxPainter
                 graphics.Transform(1d, 0d, glyph.TextShear, 1d, glyphX, glyphY);
                 glyphX = glyphY = 0d;
             }
-            var color = revisionColor ?? glyph.Color;
+            var ink = resolveRevisionInk is null ? (Color: glyph.Color, Strike: false) : resolveRevisionInk(glyph);
+            var color = ink.Color;
             graphics.DrawGlyphText(glyph.Font.ResourceName, glyph.FontSize, glyphX, glyphY,
                 color.Red, color.Green, color.Blue, glyph.EncodedGlyph,
                 italic: false, characterSpacing: 0d, textRenderingMode: 0,
                 strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
             if (glyph.TextShear != 0d) { graphics.RestoreState(); }
-            if (strike)
+            if (ink.Strike)
             {
                 var font = glyph.Font.Font.Font;
                 double thickness = Math.Abs(font.Os2.StrikeoutSize) * glyph.FontSize / font.UnitsPerEm;

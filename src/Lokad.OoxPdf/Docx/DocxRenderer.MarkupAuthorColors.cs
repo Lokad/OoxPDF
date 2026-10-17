@@ -106,8 +106,8 @@ internal sealed partial class DocxRenderer
                     foreach (var equation in paragraph.Equations)
                     {
                         token.ThrowIfCancellationRequested();
-                        if (equation.Revision is { } revision && DocxInlineContent.HasSupportedEquationRevisionOwner(equation, token))
-                            yield return (equation.SourceRunIndex, revision);
+                        if (DocxInlineContent.TryGetEquationRevisionOwners(equation, token, out var owners))
+                            foreach (var revision in owners) yield return (equation.SourceRunIndex, revision);
                     }
                     foreach (var run in paragraph.Runs)
                     {
