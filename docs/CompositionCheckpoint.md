@@ -1,5 +1,38 @@
 # Composed-document reliability checkpoint
 
+C80 registers review comment authors from actual source owners, including revised
+paragraph marks, run formatting and inserted images. Paragraph marks register
+before inline owners; inline order follows recorded source indices. Every actual
+revised mark is retained independently of numbering/comments. Aggregate paragraph
+revision metadata cannot invent an author slot. Layout eligibility stays unchanged.
+
+Thirteen fresh, strict Word controls distinguish absent/empty revisions, same
+authors, ordinary text, marks, formatting and images, including their order beside
+text revisions. Twelve now match actual comment fill/stroke paints; the empty
+insertion remains a confirmed mismatch because parsing discards its owner. Seven
+MAEs improve, six Review PDFs retain bytes, and all thirteen visual gates remain
+failed with no new failure components. Three Final controls retain bytes. Every
+source-body text operation retains ink and geometry. Three pairs were reviewed;
+image/text multi-author revision ink still differs, and the incomplete-format
+control keeps its generic balloon fallback. These residuals are not color passes.
+
+The first artifact passes 21/24 Windows and 16/18 executed Ubuntu checks: it reveals
+that ordinary revised marks were not retained. The corrected production artifact
+passes all 31 specific mark/author/format/comment checks on Windows and 25 on Ubuntu
+with six explicit skips, each once in one invocation. Two new regressions fail on
+C78. No failed/previous-DLL qualification is carried into the corrected artifact.
+
+Seventeen assets/four smoke PDFs transfer without root rebuild or suite replay.
+The seven fixed/complete sources contain no changed active revision owners, so C79
+comparisons carry by source inference rather than new corpus PDF identity claims;
+the complete-report Final and held-out deck additionally retain transfer-smoke
+bytes. C79 CI is green on both platforms (38994875743). Root 1996ef81 contains the
+production batch. Evidence: `artifacts/composition-c1/nontext-authors-evidence.json`.
+
+C79's font investigation found the measured kerning expansion already uses a
+pre-sized bounded map. Further storage/cache changes exceed the bounded maintenance
+slice; no optimization or speedup is claimed. Keep its baseline for later choices.
+
 C79 reuses the qualified C78 library and test assembly for a composed-document
 checkpoint. The stable supplemental `portfolio-checkpoint.json` includes the six
 fixed inputs and the existing complete report; none of the seven source packages
