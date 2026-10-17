@@ -1,5 +1,35 @@
 # Composed-document reliability checkpoint
 
+C154 restores two formulas omitted when supported mixed note content enters a
+simple footnote/endnote table. Normal note tables now join preparation through
+exact source owners and existing simple-cell rules; related-table frames receive
+the prepared map for shared measurement/placement/painting. Nested/rich-cell,
+continuation, page-input, typography and counter fallbacks remain unchanged.
+
+One Release artifact passes56 Windows/33 Ubuntu checks/23 native skips. Source
+splitting/bookmarks retain content and targets; source/prepared cell identities,
+unsupported stories/cells and cancellation are covered. Eight independent Word
+outcomes: four table comparisons improve/four direct PDFs retain parent bytes;
+no new failed components, all strict gates still fail. Footnote math origins max
+0.057pt X/0.097pt Y. Endnote origins retain8.063pt Y displacement already visible
+in unchanged direct controls; later note gaps also remain approximate.
+
+Eight Final page pairs reviewed; eight Review pairs carry by both PNG identities.
+Two formulas/one image/four distinct destinations and note prose survive each
+outcome. Alphabetic inventories equal, not a complete word/order audit. Parent
+regression fails expected2/got0. Seventeen assets/four integration smokes transfer
+without root build/suite replay. Fixed note parts have no tables; the complete
+report's two direct endnote equations retain their path/report smoke PDF. Prior
+C15112 fixed outcomes/seven sources/twenty pages remain separately qualified;
+ten DOCX failures/two deck passes/two extraction flags remain, no corpus replay.
+Root5a9fe26a; `artifacts/composition-c1/note-table-composition-evidence.json`.
+
+C153 CI39068586597 has both platform jobs completed successfully. Workspace scan
+at21:00UTC reports11.763GB/608,332 files/zero errors; the loose5GB target remains
+unmet. Rejected retirement targets remain protected; no reclamation is claimed.
+Next: isolate trailing-body/separator/story-boundary ownership behind the endnote
+displacement before extending any qualified flow policy.
+
 C153 closes two retained Aptos fixture failures without a production metric change.
 The original style-less sources resolved to Times New Roman before the supplied
 Aptos measurer fallback; synthetic separator marks also own document defaults.
