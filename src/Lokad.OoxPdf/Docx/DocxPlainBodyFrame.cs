@@ -9,10 +9,12 @@ internal static class DocxPlainBodyFrame
         document.HeaderBodyElementsByType.Count == 0 && document.FooterBodyElementsByType.Count == 0 &&
         document.HeaderFloatingDrawingsByType.Count == 0 && document.FooterFloatingDrawingsByType.Count == 0;
 
-    internal static bool HasPlainBody(DocxDocument document) =>
+    internal static bool HasKnownBodyFrame(DocxDocument document) =>
         document.FinalSectionBreak is { Revisions.Count: 0 } &&
-        document.Settings.MirrorMargins != true && document.FloatingDrawings.Count == 0 &&
-        document.BodyElements.Count != 0 && document.BodyElements.All(e =>
+        document.Settings.MirrorMargins != true && document.FloatingDrawings.Count == 0;
+
+    internal static bool HasPlainBody(DocxDocument document) =>
+        HasKnownBodyFrame(document) && document.BodyElements.Count != 0 && document.BodyElements.All(e =>
             e is DocxParagraphElement paragraph ? DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph.Paragraph, e.Revisions) :
             e is DocxPageBreakElement && e.Revisions.Count == 0) &&
         document.Paragraphs.All(IsPlainParagraph);

@@ -208,7 +208,7 @@ internal sealed partial class DocxLayoutEngine
             .Where(story => story.StoryLayout.Story.Kind != DocxRelatedStoryKind.Footnote).ToArray(), printScale);
         if (CanUseNominalNoteSeparatorFlow(page, separator, printScale, endnotes))
         {
-            candidateTop -= ResolveTrailingBodyAfterSpacing(page);
+            candidateTop -= ResolveTrailingBodyBoundarySpacing(page);
         }
         double requiredHeight = endnotes.Sum(story => Math.Max(0d, story.ContentHeight)) +
             endnotes.Count * FootnoteSeparatorGapPoints;
@@ -311,9 +311,10 @@ internal sealed partial class DocxLayoutEngine
             paragraph.Spacing.AfterLinesValue is null && paragraph.Spacing.AfterAutoSpacingValue is null &&
             double.IsFinite(paragraph.EffectiveProperties.SpacingAfterPoints);
 
-    private static double ResolveTrailingBodyAfterSpacing(DocxLayoutPage page) =>
-        page.Items.MinBy(item => GetVerticalBounds(item).Y) is DocxTextLineLayout { SourceParagraph: { } paragraph }
-            ? Math.Max(0d, paragraph.EffectiveProperties.SpacingAfterPoints) : 0d;
+    private static double ResolveTrailingBodyBoundarySpacing(DocxLayoutPage page) =>
+        page.Items.MinBy(item => GetVerticalBounds(item).Y) is DocxTextLineLayout { SourceParagraph: { } paragraph } line
+            ? Math.Max(0d, paragraph.EffectiveProperties.SpacingAfterPoints) +
+                DocxInlineLineGeometry.ExtraBelowTextFrame(line) : 0d;
 
     private static bool IsPlainStaticParagraph(DocxParagraph paragraph) =>
         paragraph.Alignment == DocxTextAlignment.Left && HasNaturalStaticParagraphContent(paragraph);
@@ -323,10 +324,16 @@ internal sealed partial class DocxLayoutEngine
         paragraph.InlineReferences.Count == 0 && paragraph.Runs.All(run => run.FieldKind is null);
 
     private static bool HasPlainStaticNoteStories(DocxDocument document, DocxLayoutPage page,
+        [NotNullWhen(true)] IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken) =>
+        DocxPlainBodyFrame.HasPlainBody(document) &&
+        HasNaturalStaticNoteStories(document, page, measurer, printScale, cancellationToken);
+
+    // Static story ownership is independent of body paragraph contents. Notes
+    // still require complete numeric flow and an admitted measured page frame.
+    private static bool HasNaturalStaticNoteStories(DocxDocument document, DocxLayoutPage page,
         [NotNullWhen(true)] IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken)
     {
-        if (!DocxPlainBodyFrame.HasPlainBody(document) || printScale != 1d ||
-            measurer is not IDocxStaticTextMetricsProvider) return false;
+        if (printScale != 1d || measurer is not IDocxStaticTextMetricsProvider) return false;
         DocxPageSettings settings = page.PageSettings;
         if (document.HeaderFloatingDrawingsByType.Values.Any(v => v.Count != 0) ||
             document.FooterFloatingDrawingsByType.Values.Any(v => v.Count != 0) ||
@@ -355,8 +362,9 @@ internal sealed partial class DocxLayoutEngine
         int pageNumber, int pageCount, IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken)
     {
         if (DocxPlainBodyFrame.IsEligible(document)) return true;
-        if (!HasPlainNoteFlowSources(document, DocxRelatedStoryKind.Footnote, cancellationToken, out _) ||
-            !HasPlainStaticNoteStories(document, page, measurer, printScale, cancellationToken)) return false;
+        if (!DocxPlainBodyFrame.HasKnownBodyFrame(document) ||
+            !HasPlainNoteFlowSources(document, DocxRelatedStoryKind.Footnote, cancellationToken, out _) ||
+            !HasNaturalStaticNoteStories(document, page, measurer, printScale, cancellationToken)) return false;
         return HasUsablePlainStaticNoteFrame(document, page, pageNumber, pageCount, measurer, printScale, cancellationToken);
     }
 

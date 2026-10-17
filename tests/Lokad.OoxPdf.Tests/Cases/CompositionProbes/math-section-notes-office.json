@@ -129,7 +129,18 @@
         "viii"
       ],
       "MarkerRaise": 3.9599999999999227,
-      "MarkerFontRatio": 0.6699999999999999
+      "MarkerFontRatio": 0.6699999999999999,
+      "NoteParagraphPitches": [
+        14.639999999999986,
+        14.639999999999986,
+        14.639999999999986
+      ],
+      "NoteProseBaselines": [
+        652.18,
+        637.54,
+        622.9,
+        608.26
+      ]
     },
     {
       "Id": "math-section-notes-endnote-body",
@@ -155,7 +166,18 @@
         "viii"
       ],
       "MarkerRaise": 3.9599999999999227,
-      "MarkerFontRatio": 0.6699999999999999
+      "MarkerFontRatio": 0.6699999999999999,
+      "NoteParagraphPitches": [
+        14.639999999999986,
+        14.639999999999986,
+        14.639999999999986
+      ],
+      "NoteProseBaselines": [
+        652.18,
+        637.54,
+        622.9,
+        608.26
+      ]
     },
     {
       "Id": "math-section-notes-endnote-cell",

@@ -330,7 +330,7 @@ internal sealed partial class DocxLayoutEngine
                     activePlacedStories, documentEndSeparatorLayout, printScale, documentEndStories);
                 if (FollowsBodyParagraph() || CanUseNominalNoteSeparatorFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories))
                 {
-                    cursorTop -= ResolveTrailingBodyAfterSpacing(activePage);
+                    cursorTop -= ResolveTrailingBodyBoundarySpacing(activePage);
                 }
                 double mixedSourceEndnoteHeight = 0d;
                 bool allowMixedEndnoteHead = hasFootnotes && endnoteFrameBottom is not null &&

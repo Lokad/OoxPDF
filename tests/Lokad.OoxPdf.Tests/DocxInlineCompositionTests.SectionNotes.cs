@@ -68,6 +68,61 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxInlineCompositionSectionNoteMathKeepsIndependentEndnoteParagraphPitch()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent paragraph pitch uses installed Windows fonts.");
+        string folder = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, "math-section-notes-office.json")));
+        foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            if (!row.TryGetProperty("NoteParagraphPitches", out var expected)) continue;
+            bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
+            var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
+            var document = DocxTests.ReadDocx(Path.Combine(folder, row.GetProperty("Id").GetString() + ".docx"), mode);
+            var lines = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(document).Lines
+                .Where(line => line.ContainerStoryKind == "Endnote" && line.TextLength > 1).ToArray();
+            TestAssert.Equal(expected.GetArrayLength() + 1, lines.Length);
+            var baselines = row.GetProperty("NoteProseBaselines");
+            for (int index = 0; index < lines.Length; index++)
+                TestAssert.True(Math.Abs(lines[index].Segments.MaxBy(segment => segment.TextLength)!.BaselineY -
+                    baselines[index].GetDouble()) < 1d, "Complete body inline depth preserves independent endnote placement.");
+            for (int index = 0; index < expected.GetArrayLength(); index++)
+            {
+                double baseline = lines[index].Segments.MaxBy(segment => segment.TextLength)!.BaselineY;
+                double next = lines[index + 1].Segments.MaxBy(segment => segment.TextLength)!.BaselineY;
+                TestAssert.True(Math.Abs(baseline - next - expected[index].GetDouble()) < .03d,
+                    "Adjacent complete endnote paragraphs share Word's measured pitch even beside body equations.");
+            }
+        }
+    }
+
+    public static void DocxInlineCompositionSectionNoteMathCountsExtraDepthOnceAndKeepsFallbacks()
+    {
+        var document = ReadMutation("CompositionProbes/math-section-notes-endnote-body", OoxPdfDocxMarkupMode.Final, false, false);
+        TestAssert.True(DocxPlainBodyFrame.HasKnownBodyFrame(document), "Resolved mixed paragraphs can own a known body frame.");
+        TestAssert.True(!DocxPlainBodyFrame.HasKnownBodyFrame(document with { FinalSectionBreak = null }) &&
+            !DocxPlainBodyFrame.HasKnownBodyFrame(document with { Settings = document.Settings with { MirrorMargins = true } }),
+            "Unknown and mirrored frames retain the existing fallback independently of paragraph contents.");
+        var source = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default).Pages[0].Items.OfType<DocxTextLineLayout>().First();
+        var line = source with { InlineFrame = new(15d, 21d) { TextBaselineInset = 11d }, SingleLineHeight = 14d };
+        TestAssert.Equal(3d, DocxInlineLineGeometry.ExtraBelowTextFrame(line));
+        TestAssert.Equal(3d, DocxInlineLineGeometry.ExtraBelowTextFrame(line with { BaselineY = line.BaselineY - 50d }));
+        foreach (var fallback in new[] {
+            line with { InlineFrame = null },
+            line with { InlineFrame = new(15d, 21d) },
+            line with { InlineFrame = new(15d, double.NaN) { TextBaselineInset = 11d } },
+            line with { InlineFrame = new(15d, 14d) { TextBaselineInset = 11d } },
+            line with { SingleLineHeight = null },
+            line with { SingleLineHeight = 10d },
+            line with { InlineFrame = new(11d, 14d) { TextBaselineInset = 11d } },
+            line with { SourceParagraph = null },
+            line with { SourceParagraph = line.SourceParagraph! with { LineSpacingPoints = 12d,
+                Spacing = line.SourceParagraph.Spacing with { LineRuleValue = "exact" } } },
+        }) TestAssert.Equal(0d, DocxInlineLineGeometry.ExtraBelowTextFrame(fallback));
+    }
+
     internal static void CheckSectionNoteMath(IFontResolver? resolver)
     {
         foreach (string kind in new[] { "footnote", "endnote" })
