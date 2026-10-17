@@ -1,0 +1,153 @@
+{
+  "Provenance": "Eight independent Word outcomes; automatic/custom mixed paragraphs in cells. Source/target ownership/counter labels are distinct from retained visual thresholds.",
+  "Rows": [
+    {
+      "Id": "cell-page-notes-arial-11-zero",
+      "Mode": "all-word-compatible",
+      "InputSha256": "895B5A70DA04ACA8779984E46B4EE0C53FDD213FEA2B8ADC0FB8A5E86391703A",
+      "ReferenceSha256": "8F39815EE95C188A0A60598B74F18A513267C04D226179BBCD7834EECF9A7ABF",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 8,
+      "ImagePlacements": 4,
+      "ExpectedDisplayedLabels": [
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10"
+      ]
+    },
+    {
+      "Id": "cell-page-notes-arial-11-zero",
+      "Mode": "final-preserve",
+      "InputSha256": "895B5A70DA04ACA8779984E46B4EE0C53FDD213FEA2B8ADC0FB8A5E86391703A",
+      "ReferenceSha256": "5510200DE7B748B625BE554FC9BCDBB16AA5AD738C7B41D61692185E3C5DC4DD",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 8,
+      "ImagePlacements": 4,
+      "ExpectedDisplayedLabels": [
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10"
+      ]
+    },
+    {
+      "Id": "cell-page-notes-calibri-12-zero",
+      "Mode": "all-word-compatible",
+      "InputSha256": "3D5E61FCD2C8C7B7BFD56E165A14866A866C2CD20FC00AD5CCF28C25ADF8D00F",
+      "ReferenceSha256": "62CA045CAA0DBEB2BD1A68E86D98F158D15BC85763FC07186221FC7696FA86F4",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 8,
+      "ImagePlacements": 4,
+      "ExpectedDisplayedLabels": [
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10"
+      ]
+    },
+    {
+      "Id": "cell-page-notes-calibri-12-zero",
+      "Mode": "final-preserve",
+      "InputSha256": "3D5E61FCD2C8C7B7BFD56E165A14866A866C2CD20FC00AD5CCF28C25ADF8D00F",
+      "ReferenceSha256": "1D698AE38A09CEFF8ADCA76D79BAB55E03B8D6CDF2031D7243EBB151CAF9512C",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 8,
+      "ImagePlacements": 4,
+      "ExpectedDisplayedLabels": [
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10"
+      ]
+    },
+    {
+      "Id": "cell-page-notes-mixed-custom-arial-11-zero",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F9236A9EC44EF4E2B731FF384F28EC9918F264164C420A8D0C25AB66D7D6CAF5",
+      "ReferenceSha256": "A7932F84FE09D6DFCEE01E86CE2857CF4E29A3404435B03EEAB1FEAFC334D410",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 8,
+      "ImagePlacements": 4,
+      "ExpectedDisplayedLabels": [
+        "09",
+        "09",
+        "09",
+        "10",
+        "09",
+        "10"
+      ],
+      "ExpectedCustomMarks": 2
+    },
+    {
+      "Id": "cell-page-notes-mixed-custom-arial-11-zero",
+      "Mode": "final-preserve",
+      "InputSha256": "F9236A9EC44EF4E2B731FF384F28EC9918F264164C420A8D0C25AB66D7D6CAF5",
+      "ReferenceSha256": "D42BD45626A061DC47A103E917032AEA17E898C9F5252CE7211E4B03879450CA",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 8,
+      "ImagePlacements": 4,
+      "ExpectedDisplayedLabels": [
+        "09",
+        "09",
+        "09",
+        "10",
+        "09",
+        "10"
+      ],
+      "ExpectedCustomMarks": 2
+    },
+    {
+      "Id": "cell-page-notes-mixed-custom-calibri-12-zero",
+      "Mode": "all-word-compatible",
+      "InputSha256": "1D1FFB93E3E21D6F79CE58F029C4924B0086096A5CD38AD5B2A54C433689C962",
+      "ReferenceSha256": "0619C2D594BD4DF819F3AE8D6B03A1FD6340251D9B0C8FC0A2638233F3A891F6",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 8,
+      "ImagePlacements": 4,
+      "ExpectedDisplayedLabels": [
+        "09",
+        "09",
+        "09",
+        "10",
+        "09",
+        "10"
+      ],
+      "ExpectedCustomMarks": 2
+    },
+    {
+      "Id": "cell-page-notes-mixed-custom-calibri-12-zero",
+      "Mode": "final-preserve",
+      "InputSha256": "1D1FFB93E3E21D6F79CE58F029C4924B0086096A5CD38AD5B2A54C433689C962",
+      "ReferenceSha256": "E6FA1DC154A2BBE3D4EF2F0880B877F75BDBE812055736453B84DDD396D11595",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 8,
+      "ImagePlacements": 4,
+      "ExpectedDisplayedLabels": [
+        "09",
+        "09",
+        "09",
+        "10",
+        "09",
+        "10"
+      ],
+      "ExpectedCustomMarks": 2
+    }
+  ]
+}

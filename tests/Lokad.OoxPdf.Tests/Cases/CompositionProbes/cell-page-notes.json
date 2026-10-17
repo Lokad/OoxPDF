@@ -1,0 +1,54 @@
+[
+  {
+    "Id": "cell-page-notes-calibri-12-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-page-notes-calibri-12-zero.docx",
+    "Sha256": "3D5E61FCD2C8C7B7BFD56E165A14866A866C2CD20FC00AD5CCF28C25ADF8D00F",
+    "SourceSha256": "E8FB62A69DD4CC79C28925A944B27DD4C86965D70C39C156ECC90FF52EE62A81",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedImagePlacements": 4,
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "cell-page-notes-arial-11-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-page-notes-arial-11-zero.docx",
+    "Sha256": "895B5A70DA04ACA8779984E46B4EE0C53FDD213FEA2B8ADC0FB8A5E86391703A",
+    "SourceSha256": "AF30AACFB72D7D28EE20A2D7CBB2885C98CB294678D87CDC6A32C0C7B5DF7BBC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedImagePlacements": 4,
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "cell-page-notes-mixed-custom-calibri-12-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-page-notes-mixed-custom-calibri-12-zero.docx",
+    "Sha256": "1D1FFB93E3E21D6F79CE58F029C4924B0086096A5CD38AD5B2A54C433689C962",
+    "SourceSha256": "E1F14C586DC15AB2BF0E96ECC918D72227DCBC666D166AB97EBDA3F995DEB40B",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedImagePlacements": 4,
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "cell-page-notes-mixed-custom-arial-11-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-page-notes-mixed-custom-arial-11-zero.docx",
+    "Sha256": "F9236A9EC44EF4E2B731FF384F28EC9918F264164C420A8D0C25AB66D7D6CAF5",
+    "SourceSha256": "B7002CB4C98D42BA14813EB0522BC12B7F27C378A5979D3A1FCD018CD87A1503",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedImagePlacements": 4,
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  }
+]

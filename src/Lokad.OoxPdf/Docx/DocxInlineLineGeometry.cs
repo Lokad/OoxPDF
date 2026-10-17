@@ -2,6 +2,19 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxInlineLineGeometry
 {
+    internal static bool TryGetOccupiedBounds(DocxTextLineLayout line, out double bottom, out double top)
+    {
+        bottom = top = 0d;
+        double? height = line.InlineFrame?.Height ?? line.BodyLineBoxHeightPoints;
+        double? inset = line.InlineFrame?.BaselineInset ?? line.BodyLineBoxBaselineInsetPoints;
+        if (height is not > 0d || inset is null || !double.IsFinite(height.Value) || !double.IsFinite(inset.Value) ||
+            inset.Value < 0d || inset.Value > height.Value || !double.IsFinite(line.BaselineY)) return false;
+        var visible = VerticalExtents(line);
+        top = line.BaselineY + Math.Max(inset.Value, visible.Above);
+        bottom = line.BaselineY - Math.Max(height.Value - inset.Value, visible.Below);
+        return double.IsFinite(top) && double.IsFinite(bottom);
+    }
+
     // The legacy paragraph boundary already includes the ordinary text descent.
     // Charge only extra occupied depth, so mixed inline frames are not counted twice.
     internal static double ExtraBelowTextFrame(DocxTextLineLayout line)
