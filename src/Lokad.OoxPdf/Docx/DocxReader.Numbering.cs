@@ -81,57 +81,75 @@ internal sealed partial class DocxReader
             return new DocxListLabel(bulletText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, labelStyle);
         }
 
-        int start = numbering.StartOverrides.TryGetValue((numId, level), out int overriddenStart)
-            ? overriddenStart
-            : numberingLevel.Start;
-        var change = counters.Advance(numId, level, start, numberingLevel.Text,
-            trackOriginal, originalIncluded, markInsertion);
-        string labelText = ResolveNumberingLevelText(numberingLevel.Text, numId, counters.Current);
+        int? startOverride = numbering.StartOverrides.TryGetValue((numId, level), out int overriddenStart)
+            ? overriddenStart : null;
+        var change = counters.Advance(abstractId, numId, level, numberingLevel.Start, startOverride,
+            numberingLevel.Text, trackOriginal, originalIncluded, markInsertion);
+        string labelText = ResolveNumberingLevelText(numberingLevel.Text, abstractId, counters.Current);
         return new DocxListLabel(labelText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, labelStyle)
         {
             NumberingChange = change
         };
     }
 
-    // One state per source story, shared with its tables. Original counters are
-    // allocated only when an inserted numbered mark makes the timelines differ.
+    // One current/original timeline per story, shared with its tables. Concrete
+    // IDs reference a definition's sequence; explicit starts apply on first use
+    // in each timeline. Skipped inserted marks cannot consume original overrides.
     private sealed class DocxNumberingCounters
     {
-        public Dictionary<(string NumId, int Level), int> Current { get; } = new();
-        private Dictionary<(string NumId, int Level), int>? original;
+        private readonly CounterTimeline current = new();
+        public IReadOnlyDictionary<(string GroupId, int Level), int> Current => current.Values;
+        private CounterTimeline? original;
         private Dictionary<string, DocxRevisionInfo>? triggers;
-        private HashSet<string>? unsupportedOriginalLists;
+        private HashSet<string>? unsupportedOriginalGroups;
 
-        public DocxNumberingChange? Advance(string numId, int level, int start, string pattern,
-            bool trackOriginal, bool? originalIncluded, DocxRevisionInfo? insertion)
+        public DocxNumberingChange? Advance(string groupId, string numId, int level, int start,
+            int? startOverride, string pattern, bool trackOriginal, bool? originalIncluded, DocxRevisionInfo? insertion)
         {
             if (trackOriginal)
             {
                 if (originalIncluded is null)
-                    (unsupportedOriginalLists ??= new(StringComparer.Ordinal)).Add(numId);
-                else if (insertion is not null && unsupportedOriginalLists?.Contains(numId) != true)
+                    (unsupportedOriginalGroups ??= new(StringComparer.Ordinal)).Add(groupId);
+                else if (insertion is not null && unsupportedOriginalGroups?.Contains(groupId) != true)
                 {
-                    original ??= new(Current);
-                    (triggers ??= new(StringComparer.Ordinal))[numId] = insertion;
+                    original ??= new(current);
+                    (triggers ??= new(StringComparer.Ordinal))[groupId] = insertion;
                 }
             }
-            AdvanceCounter(Current, numId, level, start);
+            current.Advance(groupId, numId, level, start, startOverride);
             if (!trackOriginal || original is null) return null;
-            if (originalIncluded == true) AdvanceCounter(original, numId, level, start);
-            if (originalIncluded != true || unsupportedOriginalLists?.Contains(numId) == true ||
-                triggers is null || !triggers.TryGetValue(numId, out var trigger)) return null;
-            string previous = ResolveNumberingLevelText(pattern, numId, original);
-            string current = ResolveNumberingLevelText(pattern, numId, Current);
-            return previous == current ? null : new(previous, trigger);
+            if (originalIncluded == true) original.Advance(groupId, numId, level, start, startOverride);
+            if (originalIncluded != true || unsupportedOriginalGroups?.Contains(groupId) == true ||
+                triggers is null || !triggers.TryGetValue(groupId, out var trigger)) return null;
+            string previous = ResolveNumberingLevelText(pattern, groupId, original.Values);
+            string value = ResolveNumberingLevelText(pattern, groupId, current.Values);
+            return previous == value ? null : new(previous, trigger);
         }
 
-        private static void AdvanceCounter(Dictionary<(string NumId, int Level), int> values,
-            string numId, int level, int start)
+        private sealed class CounterTimeline
         {
-            var key = (numId, level);
-            values[key] = values.TryGetValue(key, out int value) ? value + 1 : start;
-            foreach (var child in values.Keys.Where(k => k.NumId == numId && k.Level > level).ToArray())
-                values.Remove(child);
+            public Dictionary<(string GroupId, int Level), int> Values { get; }
+            private HashSet<(string GroupId, string NumId, int Level)>? appliedOverrides;
+
+            public CounterTimeline() => Values = new();
+            public CounterTimeline(CounterTimeline source)
+            {
+                Values = new(source.Values);
+                if (source.appliedOverrides is not null) appliedOverrides = new(source.appliedOverrides);
+            }
+
+            public void Advance(string groupId, string numId, int level, int start, int? startOverride)
+            {
+                var key = (groupId, level);
+                int next = Values.TryGetValue(key, out int value) ? value + 1 : start;
+                if (startOverride is int explicitStart && (appliedOverrides ??= new()).Add((groupId, numId, level)))
+                    next = explicitStart;
+                Values[key] = next;
+                var children = Values.Keys.Where(k => k.GroupId == groupId && k.Level > level).ToArray();
+                foreach (var child in children) Values.Remove(child);
+                if (children.Length != 0)
+                    appliedOverrides?.RemoveWhere(item => item.GroupId == groupId && item.Level > level);
+            }
         }
     }
 
@@ -199,7 +217,7 @@ internal sealed partial class DocxReader
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
-    private static string ResolveNumberingLevelText(string text, string numId, IReadOnlyDictionary<(string NumId, int Level), int> counters)
+    private static string ResolveNumberingLevelText(string text, string groupId, IReadOnlyDictionary<(string GroupId, int Level), int> counters)
     {
         string resolved = text;
         for (int level = 0; level < 9; level++)
@@ -207,7 +225,7 @@ internal sealed partial class DocxReader
             string token = "%" + (level + 1).ToString(CultureInfo.InvariantCulture);
             if (resolved.Contains(token, StringComparison.Ordinal))
             {
-                string value = counters.TryGetValue((numId, level), out int counter)
+                string value = counters.TryGetValue((groupId, level), out int counter)
                     ? counter.ToString(CultureInfo.InvariantCulture)
                     : "0";
                 resolved = resolved.Replace(token, value, StringComparison.Ordinal);
@@ -235,6 +253,8 @@ internal sealed partial class DocxReader
         XDocument numberingXml = SafeXml.Load(stream, cancellationToken);
         OoxMarkupCompatibility.WarnMustUnderstandOnce(numberingXml, numberingPart.Name, diagnosticSink, warnedParts);
         var levels = new Dictionary<(string AbstractId, int Level), DocxNumberingLevel>();
+        var canonicalAbstractIds = new Dictionary<string, string>(StringComparer.Ordinal);
+        var firstDefinitionByNsid = new Dictionary<uint, string>();
         foreach (XElement abstractNum in numberingXml.Root?.Elements(WordprocessingNamespace + "abstractNum") ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -243,6 +263,17 @@ internal sealed partial class DocxReader
             {
                 continue;
             }
+
+            // Word treats matching valid NSIDs as one definition, including
+            // zero/case variants. The first XML definition owns both formatting
+            // and counter identity, independently of first paragraph reference.
+            string? nsid = (string?)abstractNum.Element(WordprocessingNamespace + "nsid")?.Attribute(WordprocessingNamespace + "val");
+            string canonicalId = abstractId;
+            if (nsid is { Length: 8 } && uint.TryParse(nsid, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out uint identity))
+            {
+                if (!firstDefinitionByNsid.TryAdd(identity, abstractId)) canonicalId = firstDefinitionByNsid[identity];
+            }
+            canonicalAbstractIds[abstractId] = canonicalId;
 
             foreach (XElement level in abstractNum.Elements(WordprocessingNamespace + "lvl"))
             {
@@ -264,7 +295,7 @@ internal sealed partial class DocxReader
             string? abstractId = (string?)num.Element(WordprocessingNamespace + "abstractNumId")?.Attribute(WordprocessingNamespace + "val");
             if (numId is not null && abstractId is not null)
             {
-                numToAbstract[numId] = abstractId;
+                numToAbstract[numId] = canonicalAbstractIds.GetValueOrDefault(abstractId, abstractId);
             }
 
             if (numId is null)

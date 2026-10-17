@@ -8,9 +8,12 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
-    public static void DocxInlineCompositionNumberingCountersRetainSourceTimelines()
+    public static void DocxInlineCompositionNumberingCountersRetainSourceTimelines() =>
+        CheckNumberingCounterTimelines("numbering-counters-office.json", checkUnsupported: true);
+
+    internal static void CheckNumberingCounterTimelines(string goldenName, bool checkUnsupported)
     {
-        using var golden = ReadNumberingCounterGolden();
+        using var golden = ReadNumberingCounterGolden(goldenName);
         foreach (var row in golden.RootElement.GetProperty("Rows").EnumerateArray())
         {
             // Both independent-list Word outcomes stay in the retained visual
@@ -38,6 +41,7 @@ internal static partial class DocxInlineCompositionTests
                 }
             }
         }
+        if (!checkUnsupported) return;
         // A different mark operation cannot establish an original/current counter
         // timeline. Preserve the existing fallback instead of inventing numbers.
         var unsupported = ReadMutation("CompositionProbes/numbering-counter-second-mark", OoxPdfDocxMarkupMode.AllMarkup,
@@ -56,9 +60,9 @@ internal static partial class DocxInlineCompositionTests
         CheckNumberingCounterContent(null);
     }
 
-    internal static void CheckNumberingCounterContent(IFontResolver? resolver)
+    internal static void CheckNumberingCounterContent(IFontResolver? resolver, string goldenName = "numbering-counters-office.json")
     {
-        using var golden = ReadNumberingCounterGolden();
+        using var golden = ReadNumberingCounterGolden(goldenName);
         foreach (var row in golden.RootElement.GetProperty("Rows").EnumerateArray())
         {
             // Both independent-list Word outcomes stay in the retained visual
@@ -72,7 +76,7 @@ internal static partial class DocxInlineCompositionTests
                 final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
                 .RenderBlankPages(document, null, default).Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, includeTextTransforms: true).ToArray();
-            var numbers = shows.Where(show => Regex.IsMatch(show.Text.Trim(), @"^\d+\.$")).ToArray();
+            var numbers = shows.Where(show => Regex.IsMatch(show.Text.Trim(), @"^\d+[.)]$")).ToArray();
             var expectedParagraphs = row.GetProperty("Paragraphs").EnumerateArray().ToArray();
             var expectedNumbers = expectedParagraphs.SelectMany(p => p.GetProperty("Paints").EnumerateArray()).ToArray();
             TestAssert.Equal(string.Join(" ", expectedNumbers.Select(value => value.GetProperty("Text").GetString())),
@@ -99,8 +103,8 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    private static JsonDocument ReadNumberingCounterGolden() =>
-        JsonDocument.Parse(File.ReadAllText(NumberingMarkCase("numbering-counters-office.json")));
+    private static JsonDocument ReadNumberingCounterGolden(string name) =>
+        JsonDocument.Parse(File.ReadAllText(NumberingMarkCase(name)));
 
     private static DocxDocument ReadNumberingCounterDocument(JsonElement row)
     {

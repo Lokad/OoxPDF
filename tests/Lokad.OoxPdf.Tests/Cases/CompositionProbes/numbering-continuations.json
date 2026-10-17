@@ -1,0 +1,156 @@
+[
+  {
+    "Id": "numbering-continuation-shared-return",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-continuation-shared-return.docx",
+    "Sha256": "B40B804A2C8B784B8464316E2CA508FB9000E1B366C9D544B00EFC3C48E55483",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-continuation-override-return",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-continuation-override-return.docx",
+    "Sha256": "566778C6025F06B88F733F952A563D7B7FAFD257F68BD14F9CF4A02F1194F223",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-continuation-override-continue",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-continuation-override-continue.docx",
+    "Sha256": "2E00A5BBB26B5AEB87E9D77C0EA4B22C5A5275F6F7A05AF59F2DB24EA08D2FF6",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-continuation-distinct-definitions",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-continuation-distinct-definitions.docx",
+    "Sha256": "29F716BDF6390B521807D97D311C303A37E992255D745955662998A74DB39806",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-continuation-distinct-nsids",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-continuation-distinct-nsids.docx",
+    "Sha256": "8FF516DB8CDFB171571D57253046A13A4EBA29D569F937FB87F719D238F4B5DD",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-continuation-shared-nsid",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-continuation-shared-nsid.docx",
+    "Sha256": "F9DD413B9D164D9C82405B9033C019C67ED962C28CB9974D318A8C1438A52E53",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-continuation-level-format-override",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-continuation-level-format-override.docx",
+    "Sha256": "0FEBF4F56B25F9B172517CDCC573C346017D0D184DA4CAF9BFB2079A4B1501FD",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-continuation-shared-return-unmarked",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-continuation-shared-return-unmarked.docx",
+    "Sha256": "FDE8DD7AC729DF02D1F8BA970DB6F387C1368E22486B0D4C03050760265B1B2C",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-continuation-override-return-unmarked",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-continuation-override-return-unmarked.docx",
+    "Sha256": "E0094D92A5A653AA87B64C8751A5A86CE9BAC15B90B157F32671E1AF75F00334",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-continuation-zero-nsid",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-continuation-zero-nsid.docx",
+    "Sha256": "7478C61388C49A7A975F29BF477194677613ED8BE39DE5BEAA3994B752218CB8",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-continuation-case-nsid",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-continuation-case-nsid.docx",
+    "Sha256": "2D5533271AC683109DE7F49F2E1BC426B5C4ECDE7416C62A34EEA84102ECA4D0",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-continuation-shared-nsid-variation",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-continuation-shared-nsid-variation.docx",
+    "Sha256": "66FEB332C1395FFADF889148ED6FE03BF14E29980C123CC5326F6672DE82583A",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-continuation-shared-nsid-reverse-definitions",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-continuation-shared-nsid-reverse-definitions.docx",
+    "Sha256": "CDE6067A5B720588C2BA9E6DD31803925FB4D78DE2EE3EE61E1A695955B94CB3",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-continuation-shared-nsid-reverse-references",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-continuation-shared-nsid-reverse-references.docx",
+    "Sha256": "A299289DFF642798A169970D45DD0C9F952115F7FCD72554EB25821E3493288D",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]

@@ -1,0 +1,1789 @@
+{
+  "Source": "Independent Word 16: shared/distinct definitions, NSID identity/case/zero/order, first-use starts, return references and marked/unmarked composition.",
+  "Rows": [
+    {
+      "Id": "numbering-continuation-shared-return",
+      "File": "numbering-continuation-shared-return.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "B40B804A2C8B784B8464316E2CA508FB9000E1B366C9D544B00EFC3C48E55483",
+      "ReferencePdfSha256": "E171A69A3F3E57EE9922D6E800C9CDCAAB05C20EFD5D0EDD5B5661AB8FD595BF",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-shared-return",
+      "File": "numbering-continuation-shared-return.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "B40B804A2C8B784B8464316E2CA508FB9000E1B366C9D544B00EFC3C48E55483",
+      "ReferencePdfSha256": "5A8877840480A71470EB3397F06475A1BB4480F402071C0AB34D97A4EFBA76EC",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-override-return",
+      "File": "numbering-continuation-override-return.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "566778C6025F06B88F733F952A563D7B7FAFD257F68BD14F9CF4A02F1194F223",
+      "ReferencePdfSha256": "A8795659DEEFD1138B2230A2BC417008905E0CF13EB2171569C2360820C85C65",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "9.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "10.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-override-return",
+      "File": "numbering-continuation-override-return.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "566778C6025F06B88F733F952A563D7B7FAFD257F68BD14F9CF4A02F1194F223",
+      "ReferencePdfSha256": "C860815AB80DB76EB3AC484D6B293EAD430A8AF7277CC69A6239F323D6423556",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "9.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "10.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-override-continue",
+      "File": "numbering-continuation-override-continue.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "2E00A5BBB26B5AEB87E9D77C0EA4B22C5A5275F6F7A05AF59F2DB24EA08D2FF6",
+      "ReferencePdfSha256": "162A274C8E0A67125CA0EFE376567766F3A9FAEF9D965B13FDD1247E961A9880",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "9.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "10.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "11.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-override-continue",
+      "File": "numbering-continuation-override-continue.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "2E00A5BBB26B5AEB87E9D77C0EA4B22C5A5275F6F7A05AF59F2DB24EA08D2FF6",
+      "ReferencePdfSha256": "CAE3B66E1539C3B5BC4588319276582CBB1E8B15B2030E37D2613CD3BA3116D9",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "9.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "10.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 108.02,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "11.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 108.02,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-distinct-definitions",
+      "File": "numbering-continuation-distinct-definitions.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "29F716BDF6390B521807D97D311C303A37E992255D745955662998A74DB39806",
+      "ReferencePdfSha256": "E57B2EACC28FC12E61285D281D962C167A3522D62982B8BA0ED5156E38AD089C",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-distinct-definitions",
+      "File": "numbering-continuation-distinct-definitions.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "29F716BDF6390B521807D97D311C303A37E992255D745955662998A74DB39806",
+      "ReferencePdfSha256": "E9441D953625DECB5358B164D7A63B5D72D4B01BEA6A068F399C48A21908B5AC",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-distinct-nsids",
+      "File": "numbering-continuation-distinct-nsids.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "8FF516DB8CDFB171571D57253046A13A4EBA29D569F937FB87F719D238F4B5DD",
+      "ReferencePdfSha256": "9C4FD25721341C992B38D850E9C73E4618A6602474101CB49A1EE1E69E533562",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-distinct-nsids",
+      "File": "numbering-continuation-distinct-nsids.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "8FF516DB8CDFB171571D57253046A13A4EBA29D569F937FB87F719D238F4B5DD",
+      "ReferencePdfSha256": "A70206254262E779BFD6F5C4130C43ADFA82AF0C3E73E4F718BDDDD4928E4D00",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-shared-nsid",
+      "File": "numbering-continuation-shared-nsid.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "F9DD413B9D164D9C82405B9033C019C67ED962C28CB9974D318A8C1438A52E53",
+      "ReferencePdfSha256": "24A3DEE0E7FD25A531C20701CFA5DF9A53F3AA7A75168E2A389618BAB79BD891",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-shared-nsid",
+      "File": "numbering-continuation-shared-nsid.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F9DD413B9D164D9C82405B9033C019C67ED962C28CB9974D318A8C1438A52E53",
+      "ReferencePdfSha256": "4639363564BE5924D4456C9D56E94688A0511BACFB479457AA0BB8B767214281",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-level-format-override",
+      "File": "numbering-continuation-level-format-override.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "0FEBF4F56B25F9B172517CDCC573C346017D0D184DA4CAF9BFB2079A4B1501FD",
+      "ReferencePdfSha256": "CC8B519E048EFD941B4E965B9DFE227501CD7D70889B9E092CDA415AA6CCCF46",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2)",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3)",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-level-format-override",
+      "File": "numbering-continuation-level-format-override.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "0FEBF4F56B25F9B172517CDCC573C346017D0D184DA4CAF9BFB2079A4B1501FD",
+      "ReferencePdfSha256": "8A4271062B2F886F7D0B696B4C96C5FB9CA51B0B294B0784D1220CECFFF1330B",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1)",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2)",
+              "X": 81.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2)",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3)",
+              "X": 81.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-shared-return-unmarked",
+      "File": "numbering-continuation-shared-return-unmarked.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "FDE8DD7AC729DF02D1F8BA970DB6F387C1368E22486B0D4C03050760265B1B2C",
+      "ReferencePdfSha256": "CD1798BA99D51CC7E67BB6D32008971B95F96705F8005B571EC8888376F2778A",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-shared-return-unmarked",
+      "File": "numbering-continuation-shared-return-unmarked.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "FDE8DD7AC729DF02D1F8BA970DB6F387C1368E22486B0D4C03050760265B1B2C",
+      "ReferencePdfSha256": "A483790769A81CACD094E942BACD474E2746F36D9758EB33512AE699149A9A7A",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-override-return-unmarked",
+      "File": "numbering-continuation-override-return-unmarked.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "E0094D92A5A653AA87B64C8751A5A86CE9BAC15B90B157F32671E1AF75F00334",
+      "ReferencePdfSha256": "E4D4E6C3C14B5CC7371D5AAE0B23839D3C914C54DF56C9EC02CD3ABCBD07B1A4",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "9.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "10.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-override-return-unmarked",
+      "File": "numbering-continuation-override-return-unmarked.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E0094D92A5A653AA87B64C8751A5A86CE9BAC15B90B157F32671E1AF75F00334",
+      "ReferencePdfSha256": "44693938DF65DFD66E3FFEF3B214D16B5141749900DB977EA3CB1363DB22F894",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "9.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "10.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-zero-nsid",
+      "File": "numbering-continuation-zero-nsid.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "7478C61388C49A7A975F29BF477194677613ED8BE39DE5BEAA3994B752218CB8",
+      "ReferencePdfSha256": "1FC5CD8067E1DDBB7154A47CDF8F02ABCD7F0970A30777298F3946B42EC548C6",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-zero-nsid",
+      "File": "numbering-continuation-zero-nsid.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "7478C61388C49A7A975F29BF477194677613ED8BE39DE5BEAA3994B752218CB8",
+      "ReferencePdfSha256": "BC3C6D74822B2FCB6C07C53F6BC3DFA174A068FA645CAFED6653B6808BC02EF7",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-case-nsid",
+      "File": "numbering-continuation-case-nsid.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "2D5533271AC683109DE7F49F2E1BC426B5C4ECDE7416C62A34EEA84102ECA4D0",
+      "ReferencePdfSha256": "B18242E94DEB7D22CFFC7099CBB39B91BBD0544FC443ADA44BB1BE9FAA66FA3A",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-case-nsid",
+      "File": "numbering-continuation-case-nsid.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "2D5533271AC683109DE7F49F2E1BC426B5C4ECDE7416C62A34EEA84102ECA4D0",
+      "ReferencePdfSha256": "1845E68B723ADB6FC47AB0F96203A09BC27402995E790B8ACFD0789DE901EC8B",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-shared-nsid-variation",
+      "File": "numbering-continuation-shared-nsid-variation.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "66FEB332C1395FFADF889148ED6FE03BF14E29980C123CC5326F6672DE82583A",
+      "ReferencePdfSha256": "B2D4756EAD59F66A6A5CBA76767F985B758A583EB2AD4FE08A9A58F4AD6EFEB4",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-shared-nsid-variation",
+      "File": "numbering-continuation-shared-nsid-variation.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "66FEB332C1395FFADF889148ED6FE03BF14E29980C123CC5326F6672DE82583A",
+      "ReferencePdfSha256": "E6FF89BF57AC805C828051F3E7B08DE45A5FAA646AEC4E5D1FD6E47C9732B7BC",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-shared-nsid-reverse-definitions",
+      "File": "numbering-continuation-shared-nsid-reverse-definitions.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "CDE6067A5B720588C2BA9E6DD31803925FB4D78DE2EE3EE61E1A695955B94CB3",
+      "ReferencePdfSha256": "248E6E2382E2FD3D7CD091FBA4FE601BFA382F0D25732D9EEB3FA2FCA86E92F0",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1)",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2)",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3)",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-shared-nsid-reverse-definitions",
+      "File": "numbering-continuation-shared-nsid-reverse-definitions.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "CDE6067A5B720588C2BA9E6DD31803925FB4D78DE2EE3EE61E1A695955B94CB3",
+      "ReferencePdfSha256": "F75F20AFEA12E2D74EB43E77A8CC4AA9F784388ABF6718BCE8650B7E74AD0021",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1)",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1)",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2)",
+              "X": 81.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2)",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3)",
+              "X": 81.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-shared-nsid-reverse-references",
+      "File": "numbering-continuation-shared-nsid-reverse-references.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "A299289DFF642798A169970D45DD0C9F952115F7FCD72554EB25821E3493288D",
+      "ReferencePdfSha256": "A28BA12BCF44AFA91324989897C021043BD33388D5EF14F6E6D4AB9ABE2187C0",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-continuation-shared-nsid-reverse-references",
+      "File": "numbering-continuation-shared-nsid-reverse-references.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "A299289DFF642798A169970D45DD0C9F952115F7FCD72554EB25821E3493288D",
+      "ReferencePdfSha256": "0F9C16E95CCDDA0C1BE9C7D7C5B0086587C4B6B9574207F393C62A515DAEE879",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-independent-list",
+      "File": "numbering-counter-independent-list.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "0C386B7488592DB125BA128AD74A11626FF3D7A00E31693D55EB4385CD9F46DD",
+      "ReferencePdfSha256": "91FE5B4B7927DA84BFD92CD9D5FB103C22CD4A736D88C4EAF50B7980F4E044DF",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-independent-list",
+      "File": "numbering-counter-independent-list.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "0C386B7488592DB125BA128AD74A11626FF3D7A00E31693D55EB4385CD9F46DD",
+      "ReferencePdfSha256": "0083025BDBF022E013BAC51FAF03B0098086A9AAC03051B31228EBB4557B5508",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-restart-list",
+      "File": "numbering-counter-restart-list.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "4065EBC3F08A4A43756DD726220AE0D1513F946BF7FC4B4890AA4199B1B19002",
+      "ReferencePdfSha256": "E09813759DCE500EEEED248F4B4EDFFB112A0F2605B86C82487A6906B4E1D7F6",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "9.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-restart-list",
+      "File": "numbering-counter-restart-list.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "4065EBC3F08A4A43756DD726220AE0D1513F946BF7FC4B4890AA4199B1B19002",
+      "ReferencePdfSha256": "E1388E7F364A7C486FCA683D01B9CEFBF20B7B42B44C1188AC5837617F277BCB",
+      "QualifiesInsertedMarkTimeline": true,
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "9.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    }
+  ]
+}
