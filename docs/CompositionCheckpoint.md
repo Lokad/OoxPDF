@@ -1,5 +1,36 @@
 # Composed-document reliability checkpoint
 
+C107 retains authored-empty matrix slots through existing hidden-placeholder
+measurement and shared metric-only font preparation. Actual control/paragraph
+metrics own advance and occupied height; no dummy run, placeholder glyph or math
+PDF subset is published. Source-free measurement still requires a metric owner.
+Shared standalone-control discovery retains actual empty-grid revision ownership.
+
+Five sources/ten independent Word outcomes cover explicit 11/18pt controls,
+implicit metrics and whole-deletion counterfactuals. Six affected authored-empty
+gates pass: maximum prose residual 0.087pt X / 0.318pt Y, and neighboring math
+0.106pt X / 0.454pt Y. Parent errors reached 51.162pt advance and 15.120pt baseline.
+All six affected MAEs improve; four deletion PDFs retain exact bytes. Six crop
+pairs reviewed. All ten strict raster outcomes remain failed, with no new components.
+The inherited 18pt Review deletion baseline misses by 2.424pt; its raw geometry gate
+stays failed. Word distinguishes tested empty grids and whole deletions; no blanket
+deletion-frame rule is added, and the implicit-deletion discrepancy remains separate.
+
+One production Release artifact qualifies 65 Windows methods and 46 Ubuntu passes/
+19 native skips. The first native observer assumes an unsplit text run. Its correction
+exposes the inherited deletion residual. Both failures stay retained. Harness-only
+corrections prove production/CLI/runtime/all 1,796 inputs identical; 64 Windows
+passes carry and only the corrected native check reruns. Accepted qualification uses
+two Windows invocations plus one rejected intermediate observer invocation; Ubuntu
+runs once, with executed branches/skip guard unchanged. Two parent checks fail on
+actual missing frame geometry/source admission, without new production APIs.
+
+Seven original sources contain no all-empty matrices; twelve accepted portfolio
+comparisons carry by source audit. Seventeen assets/four smoke PDFs transfer with
+no root build/suite replay. Root 205429a7; evidence
+`artifacts/composition-c1/empty-matrices-evidence.json`.
+C105 CI39023185874 and C106 CI39023621260 are green on both platforms.
+
 C106 fixes confirmed script/function/matrix omissions inside insertion revisions.
 Revision wrappers now reuse the existing single-control grammar instead of a
 second, narrower allowlist. Actual literal owners/properties survive; role/orphan
