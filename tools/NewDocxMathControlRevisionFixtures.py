@@ -378,3 +378,90 @@ for role in ["sub", "sup", "combined", "fraction-base"]:
                                       ExpectedText=["share the same input series."], ProsePrefixes=["Summary:", "governs"]))
 (output / "delimiter-scripts.json").write_text(json.dumps(delimiter_script_rows, indent=2) + "\n", encoding="utf-8")
 print("Pinned four delimiter/script compositions")
+
+# Supported child boxes retain their own metrics in every existing argument container.
+source = output / "compound-revision-script-first-ordinary.docx"
+with ZipFile(source) as z:
+    original = {name: z.read(name) for name in z.namelist()}
+source_equation = next(E.fromstring(original["word/document.xml"]).iter(m + "oMath"))
+script = deepcopy(next(source_equation.iter(m + "sSubSup")))
+fraction = deepcopy(next(source_equation.iter(m + "f")))
+empty_script, empty_fraction = deepcopy(script), deepcopy(fraction)
+for node in [empty_script, empty_fraction]:
+    for parent in list(node.iter()):
+        for run in list(parent.findall(m + "r")):
+            parent.remove(run)
+with ZipFile(cases / "docx-omml-function-display-sin-literal.docx") as z:
+    child_function = next(E.fromstring(z.read("word/document.xml")).iter(m + "func"))
+with ZipFile(cases / "docx-omml-matrix-display-literal.docx") as z:
+    child_matrix = next(E.fromstring(z.read("word/document.xml")).iter(m + "m"))
+def child_delimiter(child):
+    node = E.Element(m + "d")
+    properties = E.SubElement(node, m + "dPr")
+    E.SubElement(properties, m + "begChr", {m + "val": "("})
+    E.SubElement(properties, m + "endChr", {m + "val": ")"})
+    E.SubElement(node, m + "e").append(deepcopy(child))
+    return node
+def child_application(child):
+    node = deepcopy(child_function)
+    argument = node.find(m + "e")
+    argument.clear()
+    argument.append(deepcopy(child))
+    return node
+def child_root(child):
+    node = E.Element(m + "rad")
+    E.SubElement(E.SubElement(node, m + "radPr"), m + "degHide", {m + "val": "1"})
+    E.SubElement(node, m + "deg")
+    E.SubElement(node, m + "e").append(deepcopy(child))
+    return node
+child_nary = E.Element(m + "nary")
+properties = E.SubElement(child_nary, m + "naryPr")
+for name, value in [("chr", "\u2211"), ("limLoc", "subSup"), ("subHide", "1"), ("supHide", "1")]:
+    E.SubElement(properties, m + name, {m + "val": value})
+E.SubElement(child_nary, m + "sub")
+E.SubElement(child_nary, m + "sup")
+E.SubElement(child_nary, m + "e").append(deepcopy(empty_script))
+cell = next(child_matrix.iter(m + "e"))
+cell.clear()
+cell.append(deepcopy(empty_script))
+script_base = deepcopy(script)
+argument = script_base.find(m + "e")
+argument.clear()
+argument.append(deepcopy(empty_fraction))
+with ZipFile(cases / "docx-omml-matrix-display-literal.docx") as z:
+    fraction_matrix = next(E.fromstring(z.read("word/document.xml")).iter(m + "m"))
+cell = next(fraction_matrix.iter(m + "e"))
+cell.clear()
+cell.append(deepcopy(empty_fraction))
+child_metric_rows = []
+for role, control, counter in [
+    ("delimiter-script", child_delimiter(empty_script), False),
+    ("function-script", child_application(empty_script), False),
+    ("root-script", child_root(empty_script), False),
+    ("operator-script", child_nary, False),
+    ("matrix-script", child_matrix, False),
+    ("script-fraction", script_base, False),
+    ("delimiter-fraction", child_delimiter(empty_fraction), True),
+    ("function-fraction", child_application(empty_fraction), True),
+    ("root-fraction", child_root(empty_fraction), True),
+    ("matrix-fraction", fraction_matrix, False),
+]:
+    entries = dict(original)
+    xml = E.fromstring(entries["word/document.xml"])
+    equation = next(xml.iter(m + "oMath"))
+    equation.clear()
+    equation.append(control)
+    entries["word/document.xml"] = E.tostring(xml, encoding="utf-8", xml_declaration=True)
+    target = output / ("child-metric-" + role + ".docx")
+    with ZipFile(target, "w", ZIP_DEFLATED) as z:
+        for name, data in sorted(entries.items()):
+            info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+            info.compress_type = ZIP_DEFLATED
+            z.writestr(info, data)
+    child_metric_rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
+                                  Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
+                                  SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(),
+                                  Role=role, Counterfactual=counter, HeldOut=False, ExpectedEquationCount=4,
+                                  ExpectedText=["share the same input series."], ProsePrefixes=["Summary:", "governs"]))
+(output / "child-metric-controls.json").write_text(json.dumps(child_metric_rows, indent=2) + "\n", encoding="utf-8")
+print("Pinned ten shared child-metric compositions")

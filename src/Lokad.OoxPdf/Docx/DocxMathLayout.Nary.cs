@@ -34,7 +34,8 @@ internal static partial class DocxMathLayout
 
     private static bool TryMeasureNary(DocxEquation equation, DocxMathNary nary,
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token,
-        out DocxMathBox? box, out string? fallback, Func<IDocxMathControl, PdfFontResource?>? resolveControlFont)
+        out DocxMathBox? box, out string? fallback, Func<IDocxMathControl, PdfFontResource?>? resolveControlFont,
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics)
     {
         box = null;
         if (!TryGetRuns(equation, token, out var sources))
@@ -54,7 +55,7 @@ internal static partial class DocxMathLayout
         if (!(equation.Display && NaryLimitLocation(equation, nary) == "undOvr") && !HasValidScriptConstants(constants, equation.Cramped))
         { fallback = "InvalidMathNaryScriptConstants"; return false; }
         if (!TryMeasureBoxArgument(equation with { Content = nary.Body }, resolveFont, font, size, token,
-                out var body, out fallback) || body is null)
+                out var body, out fallback, resolveControlFont: resolveControlFont, resolveControlMetrics: resolveControlMetrics) || body is null)
         { fallback ??= "UnsupportedMathNaryBody"; return false; }
         DocxMathBox? lower = null, upper = null;
         if (nary.SubscriptHiddenValue != true &&

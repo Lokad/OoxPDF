@@ -110,8 +110,9 @@ internal static partial class DocxMathLayout
                     continue;
                 }
                 if (!TryMeasureBoxArgument(equation with { Content = matrix.Rows[r].Cells[c], ParentFontSize = size },
-                    resolveFont, font, size, token, out var cell, out fallback, neighbors: new(After: DocxMathRowLayout.AtomKind.Ordinary)) ||
-                    cell is null || cell.Glyphs.Count == 0)
+                    resolveFont, font, size, token, out var cell, out fallback, neighbors: new(After: DocxMathRowLayout.AtomKind.Ordinary),
+                    resolveControlFont: resolveControlFont, resolveControlMetrics: resolveControlMetrics) ||
+                    cell is null || cell.Glyphs.Count == 0 && cell.AdvanceWidth <= 0d && cell.AboveBaseline + cell.BelowBaseline <= 0d)
                 { fallback ??= "UnsupportedMathMatrixCell"; return false; }
                 measured[c] = cell; widths[c] = Math.Max(widths[c], cell.AdvanceWidth);
                 // The control owns each ordinary row frame. Cell ink can grow

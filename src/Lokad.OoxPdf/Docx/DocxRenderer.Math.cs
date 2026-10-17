@@ -143,8 +143,10 @@ internal sealed partial class DocxRenderer
                 DocxEquation equation = sourceEquation.Display == displayStyle
                     ? sourceEquation : sourceEquation with { Display = displayStyle };
                 if (!DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
-                var metricControls = DocxMathLayout.GetMetricOnlyControls(equation, mathRuns, token);
-                if (!mathRuns.Any(source => source.Run.Text.Text.Length != 0) && metricControls.Count != 0)
+                var controls = DocxMathLayout.GetControlSources(equation, token);
+                var metricControls = DocxMathLayout.GetMetricOnlyControls(equation, mathRuns, token, controls);
+                if (!mathRuns.Any(source => source.Run.Text.Text.Length != 0) &&
+                    metricControls.Count != 0 && metricControls.Count == controls.Count)
                 {
                     // No painted source glyphs: load only the existing conversion
                     // metric owner, without creating a PDF subset or glyph map.

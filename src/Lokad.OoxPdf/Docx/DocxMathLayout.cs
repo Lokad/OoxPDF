@@ -195,11 +195,11 @@ internal static partial class DocxMathLayout
         if (GetScripts(equation) is { } scripts)
             return TryMeasureScripts(equation, scripts, resolveFont, token, out box, out fallback, resolveControlMetrics);
         if (GetNary(equation, token) is { } nary)
-            return TryMeasureNary(equation, nary, resolveFont, token, out box, out fallback, resolveControlFont);
+            return TryMeasureNary(equation, nary, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics);
         if (GetDelimiter(equation) is { } delimiter)
             return TryMeasureDelimiter(equation, delimiter, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics);
         if (GetRadical(equation) is { } radical)
-            return TryMeasureRadical(equation, radical, resolveFont, token, out box, out fallback, resolveControlFont);
+            return TryMeasureRadical(equation, radical, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics);
         if (GetStructuredRow(equation, token) is { } compound)
             return TryMeasureStructuredRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont, resolveControlFont, resolveControlMetrics);
         if (GetFraction(equation) is not { } fraction)

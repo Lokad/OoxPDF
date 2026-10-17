@@ -1,0 +1,172 @@
+[
+  {
+    "Id": "child-metric-delimiter-script",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/child-metric-delimiter-script.docx",
+    "Sha256": "BAA9B4200E6FD632B4C333D14FCE7990020077446FCE6737DDC4D3E0CD643BAC",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Role": "delimiter-script",
+    "Counterfactual": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "child-metric-function-script",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/child-metric-function-script.docx",
+    "Sha256": "95AB1A5B39DF27EC0E2C27D91A50392F74DA649EF9F8140D732CD1A10611D6A2",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Role": "function-script",
+    "Counterfactual": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "child-metric-root-script",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/child-metric-root-script.docx",
+    "Sha256": "7CCC91252DB7FDEF34B93E8CDECD179CE5670262DF777E2CCAB89F418B55A29A",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Role": "root-script",
+    "Counterfactual": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "child-metric-operator-script",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/child-metric-operator-script.docx",
+    "Sha256": "0280D619B325B1C7A4E1354357B4EAAEFA7CD50D189BA863D04F15178832949D",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Role": "operator-script",
+    "Counterfactual": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "child-metric-matrix-script",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/child-metric-matrix-script.docx",
+    "Sha256": "E50EBECD3E1CEE8249F333B452DCDAE7D57AD4C499CE829B104BE15571C27C32",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Role": "matrix-script",
+    "Counterfactual": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "child-metric-script-fraction",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/child-metric-script-fraction.docx",
+    "Sha256": "4E2FC4829607A659FD803AA39F199DF694DA218BB917F5C7873EAB85F9478A64",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Role": "script-fraction",
+    "Counterfactual": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "child-metric-delimiter-fraction",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/child-metric-delimiter-fraction.docx",
+    "Sha256": "60005A2925CDEAA18E8F3EFCACD9A7A424FDEBAB3AFFDBB0334C4F5038E89BAB",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Role": "delimiter-fraction",
+    "Counterfactual": true,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "child-metric-function-fraction",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/child-metric-function-fraction.docx",
+    "Sha256": "0F8BFEFDC392ADD586D504F21D552A1E384A9B6F36D424EBE218BBC83FD920AC",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Role": "function-fraction",
+    "Counterfactual": true,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "child-metric-root-fraction",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/child-metric-root-fraction.docx",
+    "Sha256": "E1344D84DFE3F1B8018BB446A622B4D62FAC5ED893340DB4C2C0485676612763",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Role": "root-fraction",
+    "Counterfactual": true,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "child-metric-matrix-fraction",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/child-metric-matrix-fraction.docx",
+    "Sha256": "A891519815EDEBE3D61982126DAA6ABE4C6DE684C52167722D793ED490E1BD17",
+    "SourceSha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "Role": "matrix-fraction",
+    "Counterfactual": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  }
+]

@@ -58,7 +58,8 @@ internal static partial class DocxMathLayout
         // Discovery has already required literal fraction children. This one
         // composition step cannot recurse through arbitrary authored nesting.
         bool measuredBase = fractionBase
-            ? TryMeasure(baseEquation, resolveFont, token, out DocxMathBox? basis, out fallback)
+            ? TryMeasure(baseEquation, resolveFont, token, out DocxMathBox? basis, out fallback,
+                resolveControlMetrics: resolveControlMetrics)
             : TryMeasureLiteralArgument(scripts.Base, resolveFont, font, size, startingLevel, token, out basis, out fallback, out _, exportFontSize: true);
         if (!measuredBase || basis is null) { fallback ??= "EmptyMathScriptBase"; return false; }
         if (basis.Glyphs.Any(glyph => !ReferenceEquals(glyph.Font.Font.Font, font)))

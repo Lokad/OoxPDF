@@ -16,7 +16,8 @@ internal static partial class DocxMathLayout
 
     private static bool TryMeasureRadical(DocxEquation equation, DocxMathRadical radical,
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token,
-        out DocxMathBox? box, out string? fallback, Func<IDocxMathControl, PdfFontResource?>? resolveControlFont)
+        out DocxMathBox? box, out string? fallback, Func<IDocxMathControl, PdfFontResource?>? resolveControlFont,
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics)
     {
         box = null;
         if (!TryGetRuns(equation, token, out var sources))
@@ -31,7 +32,8 @@ internal static partial class DocxMathLayout
         DocxEquation radicandEquation = equation with { Content = radical.Radicand, ParentFontSize = size, Cramped = true };
         // Discovery admits existing bounded fraction/script boxes; their own
         // literal-role checks prevent arbitrary recursive radicands.
-        bool measuredChild = TryMeasureBoxArgument(radicandEquation, resolveFont, font, size, token, out var child, out fallback);
+        bool measuredChild = TryMeasureBoxArgument(radicandEquation, resolveFont, font, size, token, out var child, out fallback,
+            resolveControlFont: resolveControlFont, resolveControlMetrics: resolveControlMetrics);
         if (!measuredChild || child is null)
         { fallback ??= "EmptyMathRadical"; return false; }
         double scale = size / font.UnitsPerEm;
