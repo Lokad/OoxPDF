@@ -49,7 +49,11 @@ internal sealed record DocxMathFraction(DocxMathRow Numerator, DocxMathRow Denom
     // Authored fraction control-font overrides retain their existing fallback.
     public string? ControlFontFamily => null;
 }
-internal sealed record DocxMathScripts(DocxMathRow Base, DocxMathRow? Subscript, DocxMathRow? Superscript) : DocxMathNode;
+internal sealed record DocxMathScripts(DocxMathRow Base, DocxMathRow? Subscript, DocxMathRow? Superscript) : DocxMathNode, IDocxMathControl
+{
+    public DocxTextRun? ControlText { get; init; }
+    public string? ControlFontFamily => null;
+}
 internal interface IDocxMathControl
 {
     DocxTextRun? ControlText { get; }

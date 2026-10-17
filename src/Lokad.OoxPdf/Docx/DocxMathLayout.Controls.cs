@@ -13,6 +13,7 @@ internal static partial class DocxMathLayout
         if (GetNary(equation, token) is { } nary) return nary;
         if (GetMatrix(equation, token) is { } matrix) return matrix;
         if (GetFraction(equation) is { } fraction) return fraction;
+        if (GetScripts(equation) is { } scripts) return scripts;
         return GetDelimiter(equation);
     }
 

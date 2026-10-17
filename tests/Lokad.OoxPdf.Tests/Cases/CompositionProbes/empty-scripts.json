@@ -1,0 +1,87 @@
+[
+  {
+    "Id": "empty-script-sub-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-script-sub-empty.docx",
+    "Sha256": "0CF0144EE24BF76223B488BA67435E66FAAE9D08F08555E6DF0E86A2037CF0D6",
+    "SourceSha256": "4803537023354C890DDFBB4E224C7D7649135EEF92F048F6958042166FA214AC",
+    "Role": "sub",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "empty-script-sup-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-script-sup-empty.docx",
+    "Sha256": "A73F42A60F27EC59E84531353FF46AFE68F56F648DFC8EC85968971F24D2F0E8",
+    "SourceSha256": "4803537023354C890DDFBB4E224C7D7649135EEF92F048F6958042166FA214AC",
+    "Role": "sup",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "empty-script-combined-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-script-combined-empty.docx",
+    "Sha256": "3C75FF6154DEECFFE6296159D00FFFCB32E7B4EE20A7CA7CB6C048A5410EDCAB",
+    "SourceSha256": "4803537023354C890DDFBB4E224C7D7649135EEF92F048F6958042166FA214AC",
+    "Role": "combined",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "empty-script-combined-literal-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-script-combined-literal-del.docx",
+    "Sha256": "8FFECE4A23EFA65A4B892FB758A290CFA8C89CBBC370C3486F9A37DE1686E5AE",
+    "SourceSha256": "4803537023354C890DDFBB4E224C7D7649135EEF92F048F6958042166FA214AC",
+    "Role": "combined",
+    "Kind": "literal-del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "empty-script-combined-empty-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-script-combined-empty-ins.docx",
+    "Sha256": "DA61A2A7BFE47167C36E8F746191631532D509190B3E354E4C4F7E5D7226BA77",
+    "SourceSha256": "4803537023354C890DDFBB4E224C7D7649135EEF92F048F6958042166FA214AC",
+    "Role": "combined",
+    "Kind": "empty-ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  }
+]

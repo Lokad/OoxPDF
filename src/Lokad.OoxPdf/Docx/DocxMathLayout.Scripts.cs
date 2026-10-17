@@ -12,20 +12,30 @@ internal static partial class DocxMathLayout
         node is DocxMathScripts { PropertiesXml.Count: 0 } scripts &&
         (scripts.Subscript is not null || scripts.Superscript is not null) ? scripts : null;
 
+    internal static bool IsEmptyScripts(DocxEquation equation, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        return GetScripts(equation) is { } scripts && IsEmptyArgument(scripts.Base, token) &&
+            (scripts.Subscript is null || IsEmptyArgument(scripts.Subscript, token, allowArgumentSize: true)) &&
+            (scripts.Superscript is null || IsEmptyArgument(scripts.Superscript, token, allowArgumentSize: true));
+    }
+
     private static bool TryMeasureScripts(DocxEquation equation, DocxMathScripts scripts,
-        Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token, out DocxMathBox? box, out string? fallback)
+        Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token, out DocxMathBox? box, out string? fallback,
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics)
     {
         box = null; fallback = null;
-        if (!TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> sources) || sources.Count == 0)
+        if (!TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> sources) ||
+            sources.Count == 0 && !IsEmptyScripts(equation, token))
         { fallback = "UnsupportedMathScriptSource"; return false; }
-        DocxMathRun owner = sources[0].Run;
-        PdfFontResource? ownerResource = resolveFont(owner);
-        if (ownerResource is null || !ownerResource.Font.Font.TryGetMathConstants(out OpenTypeMathConstants constants))
+        OpenTypeFont? font = sources.Count == 0 ? resolveControlMetrics?.Invoke(scripts) : resolveFont(sources[0].Run)?.Font.Font;
+        if (font is null || !font.TryGetMathConstants(out OpenTypeMathConstants constants))
         { fallback = "MissingMathScriptConstants"; return false; }
-        OpenTypeFont font = ownerResource.Font.Font;
         if (!HasValidScriptConstants(constants, equation.Cramped))
         { fallback = "InvalidMathScriptConstants"; return false; }
-        double size = owner.Text.FontSize;
+        double size = sources.Count == 0 ? ResolveControlSize(scripts, equation, sources) : sources[0].Run.Text.FontSize;
+        if (!double.IsFinite(size) || size <= 0d)
+        { fallback = "InvalidMathScriptSize"; return false; }
         foreach (DocxMathRunSource source in sources)
         {
             token.ThrowIfCancellationRequested();

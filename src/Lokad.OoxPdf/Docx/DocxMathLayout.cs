@@ -180,7 +180,7 @@ internal static partial class DocxMathLayout
         if (GetFunction(equation) is { } function)
             return TryMeasureFunction(equation, function, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics, rowControlSize);
         if (GetScripts(equation) is { } scripts)
-            return TryMeasureScripts(equation, scripts, resolveFont, token, out box, out fallback);
+            return TryMeasureScripts(equation, scripts, resolveFont, token, out box, out fallback, resolveControlMetrics);
         if (GetNary(equation, token) is { } nary)
             return TryMeasureNary(equation, nary, resolveFont, token, out box, out fallback, resolveControlFont);
         if (GetDelimiter(equation) is { } delimiter)

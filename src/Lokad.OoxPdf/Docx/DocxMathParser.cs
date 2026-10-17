@@ -94,7 +94,12 @@ internal static partial class DocxMathParser
                 (name == "sSub" || Role(element, "sup") is not null) &&
                 HasOnlyRoles(element, name == "sSub" ? ["e", "sub"] : name == "sSup" ? ["e", "sup"] : ["e", "sub", "sup"]))
             {
-                node = new DocxMathScripts(basis, Role(element, "sub"), Role(element, "sup"));
+                node = new DocxMathScripts(basis, Role(element, "sub"), Role(element, "sup"))
+                {
+                    // Unsupported script properties retain their existing source
+                    // fallback and cannot reserve an unpainted revision author.
+                    ControlText = element.Elements().Any(IsProperty) ? null : readRun(element, string.Empty)
+                };
             }
             else if (name == "func" && Role(element, "fName") is { } functionName && Role(element, "e") is { } argument &&
                 HasOnlyRoles(element, "fName", "e"))
