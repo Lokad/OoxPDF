@@ -3334,5 +3334,18 @@
   "docx-structural-placement": [
     "DocxInlineCompositionStructuralPaintKeepsMixedStoryContentAndInk",
     "PortableRenderingStructuralPaintKeepsMixedStoryContentAndInk"
+  ],
+  "docx-empty-root-degrees": [
+    "DocxInlineCompositionEmptyRootDegrees",
+    "PortableRenderingEmptyRootDegrees",
+    "MathFontRadical",
+    "DocxMathRadical",
+    "DocxNativeRoot",
+    "DocxNativeAuthoredRoot",
+    "DocxNativeRadicals",
+    "DocxInlineCompositionStructuralPaint",
+    "PortableRenderingStructuralPaint",
+    "DocxInlineCompositionMathRoles",
+    "PortableRenderingMathRoles"
   ]
 }

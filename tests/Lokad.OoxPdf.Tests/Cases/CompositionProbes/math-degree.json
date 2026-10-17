@@ -1,0 +1,90 @@
+[
+  {
+    "Id": "math-degree-display-cube-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-degree-display-cube-del.docx",
+    "Sha256": "AEA2F163DEAA7AADDB37F53B7E7A7F6384B57ECD44D0982291FFF3B4949AF1D3",
+    "SourceSha256": "9D28A9E6D1060DA3D5C8857F867ECB1FAD2E9AC8A130E16D8E82DEC7AA97882A",
+    "Role": "display-cube",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-degree-display-cube-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-degree-display-cube-empty.docx",
+    "Sha256": "DB88406D079D53562B097BC54BB745EC363D5B22104B7CFDF7B736D1A3E4039E",
+    "SourceSha256": "9D28A9E6D1060DA3D5C8857F867ECB1FAD2E9AC8A130E16D8E82DEC7AA97882A",
+    "Role": "display-cube",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-degree-inline-cube-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-degree-inline-cube-del.docx",
+    "Sha256": "0652877C7037567F05A43BA59DEAE5A34AD9334FAD31E868FFB62E11272D556B",
+    "SourceSha256": "4A870071BCC87616215747F8E712615E76F87F4824C6C123E441CA56DAEE31C5",
+    "Role": "inline-cube",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-degree-inline-cube-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-degree-inline-cube-empty.docx",
+    "Sha256": "AAEA73B09870779AAD300F2CDDB22CD62E8721E9EB8BF6E7967C20C420BCC859",
+    "SourceSha256": "4A870071BCC87616215747F8E712615E76F87F4824C6C123E441CA56DAEE31C5",
+    "Role": "inline-cube",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-degree-display-large-control-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-degree-display-large-control-del.docx",
+    "Sha256": "34743F2DB5782C451CB35344671BC3787ACDA0F6C0CEC5358F2C2F1F53207335",
+    "SourceSha256": "0455774939411DB3B518A8509D83256C4021589547EE51A3217DBB135480B901",
+    "Role": "display-large-control",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-degree-display-large-control-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-degree-display-large-control-empty.docx",
+    "Sha256": "328CCFE6224CF1E2496956225500832028F19977D5AA9258093565A838CE746E",
+    "SourceSha256": "0455774939411DB3B518A8509D83256C4021589547EE51A3217DBB135480B901",
+    "Role": "display-large-control",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-degree-inline-large-control-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-degree-inline-large-control-del.docx",
+    "Sha256": "E614175E693F970CAC30CA742F741D05DCE6F3C7CE73A260C4AF7D35A3F532E8",
+    "SourceSha256": "081E74D28943B4D585E5759C955424C7730B3C43073954886805F227D10AFF4F",
+    "Role": "inline-large-control",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-degree-inline-large-control-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-degree-inline-large-control-empty.docx",
+    "Sha256": "C7649BC84FA2B69D2DF9B93F793AC86A0D8758D36B458F081F95F53B46FEF5B5",
+    "SourceSha256": "081E74D28943B4D585E5759C955424C7730B3C43073954886805F227D10AFF4F",
+    "Role": "inline-large-control",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  }
+]

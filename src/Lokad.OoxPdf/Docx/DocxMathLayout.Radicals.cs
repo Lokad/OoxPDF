@@ -10,7 +10,7 @@ internal static partial class DocxMathLayout
     private static DocxMathRadical? GetSupportedRadical(DocxMathNode? node) =>
         node is DocxMathRadical { HasUnsupportedProperties: false } radical &&
         (radical.DegreeHidden == true ? radical.Degree.Children.Count == 0 && radical.Degree.HasSupportedProperties :
-            radical.Degree.Children.Count > 0 && DocxMathArgumentMetrics.TryGetScriptLevel(radical.Degree, out _, startingLevel: 2)) &&
+            DocxMathArgumentMetrics.TryGetScriptLevel(radical.Degree, out _, startingLevel: 2)) &&
         (radical.ControlText is null ||
             DocxMathRowLayout.HasSupportedTextFormatting(radical.ControlText, allowBold: false)) ? radical : null;
 
@@ -56,9 +56,8 @@ internal static partial class DocxMathLayout
         if (radical.DegreeHidden != true)
         {
             if (!DocxMathArgumentMetrics.TryGetScriptLevel(radical.Degree, out int level, startingLevel: 2) ||
-                !DocxMathRowLayout.TryMeasure(radical.Degree, resolveFont, token, out degree, out fallback, level,
-                    exportFontSize: true, allowArgumentSize: true, scriptMetricsFont: font) ||
-                degree is null || degree.Glyphs.Count == 0)
+                !TryMeasureLiteralArgument(radical.Degree, resolveFont, font, size, level, token,
+                    out degree, out fallback, out _, exportFontSize: true, allowArgumentSize: true) || degree is null)
             { fallback ??= "UnsupportedMathRadicalDegree"; return false; }
             degreeX = Math.Max(0d, constants.GetValue(OpenTypeMathConstant.RadicalKernBeforeDegree) * scale);
             rootX = degreeX + degree.AdvanceWidth + Math.Max(-degree.AdvanceWidth,

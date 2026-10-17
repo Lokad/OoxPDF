@@ -1,0 +1,932 @@
+{
+  "Rows": [
+    {
+      "Id": "math-degree-display-cube-del",
+      "Mode": "final-preserve",
+      "InputSha256": "AEA2F163DEAA7AADDB37F53B7E7A7F6384B57ECD44D0982291FFF3B4949AF1D3",
+      "ReferencePdfSha256": "5F5446D22BD0169D3EDA6406689C38F104E14A8B295960449D46741FCBE782D0",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+1",
+      "MathGlyphCount": 4,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 289.85,
+          "Y": 705.82,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 297.77,
+          "Y": 705.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 307.49,
+          "Y": 705.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 319.13,
+          "Y": 705.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-degree-display-cube-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "AEA2F163DEAA7AADDB37F53B7E7A7F6384B57ECD44D0982291FFF3B4949AF1D3",
+      "ReferencePdfSha256": "62CF9FD9DAE965493A47FEDF0B2E062D677521AB969E1417C9FA141AD38B2641",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+13",
+      "MathGlyphCount": 5,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 288.65,
+          "Y": 706.42,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 296.57,
+          "Y": 706.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 306.29,
+          "Y": 706.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 317.93,
+          "Y": 706.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "3",
+          "X": 288.17,
+          "Y": 713.5,
+          "FontSize": 6.96,
+          "FillColor": "rg:0.82,0.204,0.22"
+        }
+      ]
+    },
+    {
+      "Id": "math-degree-display-cube-empty",
+      "Mode": "final-preserve",
+      "InputSha256": "DB88406D079D53562B097BC54BB745EC363D5B22104B7CFDF7B736D1A3E4039E",
+      "ReferencePdfSha256": "645810AC7A81C3EB732CE61267C201355401AAF5B4739363FE1813D9452982A1",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+1",
+      "MathGlyphCount": 4,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 289.85,
+          "Y": 705.82,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 297.77,
+          "Y": 705.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 307.49,
+          "Y": 705.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 319.13,
+          "Y": 705.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-degree-display-cube-empty",
+      "Mode": "all-word-compatible",
+      "InputSha256": "DB88406D079D53562B097BC54BB745EC363D5B22104B7CFDF7B736D1A3E4039E",
+      "ReferencePdfSha256": "FE5168DAA0F959669AA4120B7338D112C72EABF50286777AC29CF2393429A97D",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+1",
+      "MathGlyphCount": 4,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 289.85,
+          "Y": 705.82,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 297.77,
+          "Y": 705.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 307.49,
+          "Y": 705.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 319.13,
+          "Y": 705.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-degree-inline-cube-del",
+      "Mode": "final-preserve",
+      "InputSha256": "0652877C7037567F05A43BA59DEAE5A34AD9334FAD31E868FFB62E11272D556B",
+      "ReferencePdfSha256": "751AE400EF78694E7FE4554CFF304E086FACE9BA9031FAF28B28859F7D79E915",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+1",
+      "MathGlyphCount": 4,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 155.3,
+          "Y": 705.82,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 163.22,
+          "Y": 706.42,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 172.94,
+          "Y": 706.42,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 184.58,
+          "Y": 706.42,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-degree-inline-cube-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "0652877C7037567F05A43BA59DEAE5A34AD9334FAD31E868FFB62E11272D556B",
+      "ReferencePdfSha256": "3EFB74DE30B6106B5D372CCDD83653B1EA1234E94029120F6DA9F62209C5309C",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+13",
+      "MathGlyphCount": 5,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 153.02,
+          "Y": 706.42,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 160.94,
+          "Y": 707.02,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 170.66,
+          "Y": 707.02,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 182.3,
+          "Y": 707.02,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "3",
+          "X": 152.54,
+          "Y": 713.5,
+          "FontSize": 6.96,
+          "FillColor": "rg:0.82,0.204,0.22"
+        }
+      ]
+    },
+    {
+      "Id": "math-degree-inline-cube-empty",
+      "Mode": "final-preserve",
+      "InputSha256": "AAEA73B09870779AAD300F2CDDB22CD62E8721E9EB8BF6E7967C20C420BCC859",
+      "ReferencePdfSha256": "EC14420556571CFF65B693F32D3E970E661D81F51BFE2E1D035B8F8954AE002E",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+1",
+      "MathGlyphCount": 4,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 155.3,
+          "Y": 705.82,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 163.22,
+          "Y": 706.42,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 172.94,
+          "Y": 706.42,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 184.58,
+          "Y": 706.42,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-degree-inline-cube-empty",
+      "Mode": "all-word-compatible",
+      "InputSha256": "AAEA73B09870779AAD300F2CDDB22CD62E8721E9EB8BF6E7967C20C420BCC859",
+      "ReferencePdfSha256": "D2E994A41CCEC433BA259549BC2E4AF55B9C2148775AD56ACA44BD6B8CAF92BF",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+1",
+      "MathGlyphCount": 4,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 155.3,
+          "Y": 705.82,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 163.22,
+          "Y": 706.42,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 172.94,
+          "Y": 706.42,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 184.58,
+          "Y": 706.42,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-degree-display-large-control-del",
+      "Mode": "final-preserve",
+      "InputSha256": "34743F2DB5782C451CB35344671BC3787ACDA0F6C0CEC5358F2C2F1F53207335",
+      "ReferencePdfSha256": "5E9DDC6A2EC2CF89DDDDF8F0C7B7B65F2E519C3A8A37B557F734ADF74C41FAD9",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+1",
+      "MathGlyphCount": 4,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 286.85,
+          "Y": 695.98,
+          "FontSize": 20.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 300.05,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 311.33,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 324.67,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-degree-display-large-control-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "34743F2DB5782C451CB35344671BC3787ACDA0F6C0CEC5358F2C2F1F53207335",
+      "ReferencePdfSha256": "C78B158C70BAFACA5EB0528FE9C66A74894D3DB9FB124AB36F4A55A76EF2CF93",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+13",
+      "MathGlyphCount": 5,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 283.85,
+          "Y": 697.3,
+          "FontSize": 20.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 297.05,
+          "Y": 698.86,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 308.21,
+          "Y": 698.86,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 321.67,
+          "Y": 698.86,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "3",
+          "X": 285.17,
+          "Y": 708.94,
+          "FontSize": 6.96,
+          "FillColor": "rg:0.82,0.204,0.22"
+        }
+      ]
+    },
+    {
+      "Id": "math-degree-display-large-control-empty",
+      "Mode": "final-preserve",
+      "InputSha256": "328CCFE6224CF1E2496956225500832028F19977D5AA9258093565A838CE746E",
+      "ReferencePdfSha256": "EC445F7798116D69FC13628D954D4C713611DFBC139C49E3E2C33AF400354F1C",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+1",
+      "MathGlyphCount": 4,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 286.85,
+          "Y": 695.98,
+          "FontSize": 20.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 300.05,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 311.33,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 324.67,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-degree-display-large-control-empty",
+      "Mode": "all-word-compatible",
+      "InputSha256": "328CCFE6224CF1E2496956225500832028F19977D5AA9258093565A838CE746E",
+      "ReferencePdfSha256": "D7D75D1D4D4A1AEF54FD4E666994D80B6AF1E733603E316671239276283D607C",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+1",
+      "MathGlyphCount": 4,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 286.85,
+          "Y": 695.98,
+          "FontSize": 20.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 300.05,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 311.33,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 324.67,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-degree-inline-large-control-del",
+      "Mode": "final-preserve",
+      "InputSha256": "E614175E693F970CAC30CA742F741D05DCE6F3C7CE73A260C4AF7D35A3F532E8",
+      "ReferencePdfSha256": "3A5A36C31669E9AD6AD7398FBE99C6C68482C2042BCF5D44537A01C3539AC0C4",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+1",
+      "MathGlyphCount": 4,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 157.94,
+          "Y": 695.98,
+          "FontSize": 20.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 171.14,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 182.42,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 195.89,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-degree-inline-large-control-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E614175E693F970CAC30CA742F741D05DCE6F3C7CE73A260C4AF7D35A3F532E8",
+      "ReferencePdfSha256": "3F545A9ED38C327696E62B6B2BFB443E8C3107ABDAD4CA9914F45EB38AC75E0D",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+13",
+      "MathGlyphCount": 5,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 151.82,
+          "Y": 697.3,
+          "FontSize": 20.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 165.02,
+          "Y": 698.86,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 176.3,
+          "Y": 698.86,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 189.74,
+          "Y": 698.86,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "3",
+          "X": 153.14,
+          "Y": 708.94,
+          "FontSize": 6.96,
+          "FillColor": "rg:0.82,0.204,0.22"
+        }
+      ]
+    },
+    {
+      "Id": "math-degree-inline-large-control-empty",
+      "Mode": "final-preserve",
+      "InputSha256": "C7649BC84FA2B69D2DF9B93F793AC86A0D8758D36B458F081F95F53B46FEF5B5",
+      "ReferencePdfSha256": "79C0AB8897341BB6B0A12FE0DFD3DD99A296188DBA865EFC35B9994AF7B3EBEA",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+1",
+      "MathGlyphCount": 4,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 157.94,
+          "Y": 695.98,
+          "FontSize": 20.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 171.14,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 182.42,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 195.89,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-degree-inline-large-control-empty",
+      "Mode": "all-word-compatible",
+      "InputSha256": "C7649BC84FA2B69D2DF9B93F793AC86A0D8758D36B458F081F95F53B46FEF5B5",
+      "ReferencePdfSha256": "813F79614D03A503C2DA401BF6D0DF146048C723A87FB6A15DAAE3691256FAA0",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+1",
+      "MathGlyphCount": 4,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 157.94,
+          "Y": 695.98,
+          "FontSize": 20.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 171.14,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 182.42,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 195.89,
+          "Y": 697.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    }
+  ]
+}
