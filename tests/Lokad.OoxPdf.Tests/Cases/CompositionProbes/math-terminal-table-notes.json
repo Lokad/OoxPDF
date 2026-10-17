@@ -1,0 +1,55 @@
+[
+  {
+    "Id": "math-section-notes-endnote-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-section-notes-endnote-cell.docx",
+    "Sha256": "9666940A0BC656E3D088433EA2770F133E9B546149474ED74B6101D148F9F298",
+    "SourceSha256": "9666940A0BC656E3D088433EA2770F133E9B546149474ED74B6101D148F9F298",
+    "Shape": "original",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedText": [
+      "Before formula:",
+      "Public destination 4."
+    ]
+  },
+  {
+    "Id": "math-terminal-table-note-empty-default",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-terminal-table-note-empty-default.docx",
+    "Sha256": "06B8AEFDF483490C34D6B58FDECDE8395B02EE649491B9C712324B585D4A011B",
+    "SourceSha256": "9666940A0BC656E3D088433EA2770F133E9B546149474ED74B6101D148F9F298",
+    "Shape": "empty-default",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedText": [
+      "Before formula:",
+      "Public destination 4."
+    ]
+  },
+  {
+    "Id": "math-terminal-table-note-empty-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-terminal-table-note-empty-zero.docx",
+    "Sha256": "E8498A8537033C7DB89A0F69318E43384EAA98E7AC2081315F91DD3700D5416A",
+    "SourceSha256": "9666940A0BC656E3D088433EA2770F133E9B546149474ED74B6101D148F9F298",
+    "Shape": "empty-zero",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedText": [
+      "Before formula:",
+      "Public destination 4."
+    ]
+  },
+  {
+    "Id": "math-terminal-table-note-prose-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-terminal-table-note-prose-zero.docx",
+    "Sha256": "B55E6F29D045A2FED315D6EA38A56672E8B576CE27D5BBB77F6B55B77FD1D64C",
+    "SourceSha256": "9666940A0BC656E3D088433EA2770F133E9B546149474ED74B6101D148F9F298",
+    "Shape": "prose-zero",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedText": [
+      "Before formula:",
+      "Public destination 4.",
+      "Public ending paragraph."
+    ]
+  }
+]

@@ -1,0 +1,245 @@
+{
+  "Source": "Independent Word exports; two reused original references and six new terminal-paragraph counterfactuals. Normal-font rate/time literals independently counted; unchanged visual thresholds.",
+  "Rows": [
+    {
+      "Id": "math-section-notes-endnote-cell",
+      "Mode": "final-preserve",
+      "Shape": "original",
+      "InputSha256": "9666940A0BC656E3D088433EA2770F133E9B546149474ED74B6101D148F9F298",
+      "ReferencePdfSha256": "6A51B92EB43F80314E469F204F05F94E16251F4E68D07316179D35A637CF1BE7",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "ExpectedMathOccurrences": 8,
+      "ExpectedPages": 2,
+      "NoteProseBaselines": [
+        637.54,
+        622.9,
+        608.26,
+        593.62
+      ],
+      "NoteParagraphPitches": [
+        14.639999999999986,
+        14.639999999999986,
+        14.639999999999986
+      ]
+    },
+    {
+      "Id": "math-section-notes-endnote-cell",
+      "Mode": "all-word-compatible",
+      "Shape": "original",
+      "InputSha256": "9666940A0BC656E3D088433EA2770F133E9B546149474ED74B6101D148F9F298",
+      "ReferencePdfSha256": "BAA18DBD49D0B2A17ECFA7CEFD98619E322764A754B4F57B06634B650D24C414",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ExpectedMathOccurrences": 8,
+      "ExpectedPages": 2,
+      "NoteProseBaselines": [
+        637.54,
+        622.9,
+        608.26,
+        593.62
+      ],
+      "NoteParagraphPitches": [
+        14.639999999999986,
+        14.639999999999986,
+        14.639999999999986
+      ]
+    },
+    {
+      "Id": "math-terminal-table-note-empty-default",
+      "Mode": "final-preserve",
+      "Shape": "empty-default",
+      "InputSha256": "06B8AEFDF483490C34D6B58FDECDE8395B02EE649491B9C712324B585D4A011B",
+      "ReferencePdfSha256": "677C030ECFEF719C7D30F3F79BC80331A3F45C499BAF109A6EBAD30A4D906677",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "ExpectedMathOccurrences": 8,
+      "ExpectedPages": 2,
+      "NoteProseBaselines": [
+        637.54,
+        622.9,
+        608.26,
+        593.62
+      ],
+      "NoteParagraphPitches": [
+        14.639999999999986,
+        14.639999999999986,
+        14.639999999999986
+      ]
+    },
+    {
+      "Id": "math-terminal-table-note-empty-default",
+      "Mode": "all-word-compatible",
+      "Shape": "empty-default",
+      "InputSha256": "06B8AEFDF483490C34D6B58FDECDE8395B02EE649491B9C712324B585D4A011B",
+      "ReferencePdfSha256": "AB51632F4CBA7BA0F406E8C98327A20F96628F4E87E568A98F22F0A350F94202",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ExpectedMathOccurrences": 8,
+      "ExpectedPages": 2,
+      "NoteProseBaselines": [
+        637.54,
+        622.9,
+        608.26,
+        593.62
+      ],
+      "NoteParagraphPitches": [
+        14.639999999999986,
+        14.639999999999986,
+        14.639999999999986
+      ]
+    },
+    {
+      "Id": "math-terminal-table-note-empty-zero",
+      "Mode": "final-preserve",
+      "Shape": "empty-zero",
+      "InputSha256": "E8498A8537033C7DB89A0F69318E43384EAA98E7AC2081315F91DD3700D5416A",
+      "ReferencePdfSha256": "FE9B22282C6F00A665F6631227664E5D958E4AF6372FAC99BBC7711523EF0A32",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "ExpectedMathOccurrences": 8,
+      "ExpectedPages": 2,
+      "NoteProseBaselines": [
+        637.54,
+        622.9,
+        608.26,
+        593.62
+      ],
+      "NoteParagraphPitches": [
+        14.639999999999986,
+        14.639999999999986,
+        14.639999999999986
+      ]
+    },
+    {
+      "Id": "math-terminal-table-note-empty-zero",
+      "Mode": "all-word-compatible",
+      "Shape": "empty-zero",
+      "InputSha256": "E8498A8537033C7DB89A0F69318E43384EAA98E7AC2081315F91DD3700D5416A",
+      "ReferencePdfSha256": "FA3D7A1F5BE4867F03F8979CBAEA4E9584827A040BF5256A2B7D6F0ED5397AFA",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ExpectedMathOccurrences": 8,
+      "ExpectedPages": 2,
+      "NoteProseBaselines": [
+        637.54,
+        622.9,
+        608.26,
+        593.62
+      ],
+      "NoteParagraphPitches": [
+        14.639999999999986,
+        14.639999999999986,
+        14.639999999999986
+      ]
+    },
+    {
+      "Id": "math-terminal-table-note-prose-zero",
+      "Mode": "final-preserve",
+      "Shape": "prose-zero",
+      "InputSha256": "B55E6F29D045A2FED315D6EA38A56672E8B576CE27D5BBB77F6B55B77FD1D64C",
+      "ReferencePdfSha256": "47CDD41FB4A610C1C338136253B2A137E6CEB753C6C929C5AF1A7D1DA4F695E4",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "ExpectedMathOccurrences": 8,
+      "ExpectedPages": 2,
+      "NoteProseBaselines": [
+        637.54,
+        622.9,
+        608.26,
+        593.62
+      ],
+      "NoteParagraphPitches": [
+        14.639999999999986,
+        14.639999999999986,
+        14.639999999999986
+      ]
+    },
+    {
+      "Id": "math-terminal-table-note-prose-zero",
+      "Mode": "all-word-compatible",
+      "Shape": "prose-zero",
+      "InputSha256": "B55E6F29D045A2FED315D6EA38A56672E8B576CE27D5BBB77F6B55B77FD1D64C",
+      "ReferencePdfSha256": "EDB591ABF0284EC10B2F7E67A04B77B760DE6A6BFA6551E6506DCDD399A02DC3",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ExpectedMathOccurrences": 8,
+      "ExpectedPages": 2,
+      "NoteProseBaselines": [
+        637.54,
+        622.9,
+        608.26,
+        593.62
+      ],
+      "NoteParagraphPitches": [
+        14.639999999999986,
+        14.639999999999986,
+        14.639999999999986
+      ]
+    }
+  ]
+}

@@ -281,7 +281,9 @@ internal sealed partial class DocxLayoutEngine
     {
         return Math.Abs(printScale - 1d) <= 0.000000001d &&
             HasEmptyNoteSeparatorFlow(separator, contentStories) && page.ColumnFrames.Count <= 1 &&
-            page.Items.Count != 0 && page.Items.All(item => item is DocxTextLineLayout) &&
+            // Positioned text and table rows expose the same page-space
+            // boundary. Earlier tables do not change a following paragraph.
+            page.Items.Count != 0 && page.Items.All(item => item is DocxTextLineLayout or DocxTableRowLayout) &&
             HasNumericTrailingBodyAfterSpacing(page);
     }
 
@@ -306,10 +308,15 @@ internal sealed partial class DocxLayoutEngine
         HasNumericTrailingBodyAfterSpacing(page);
 
     private static bool HasNumericTrailingBodyAfterSpacing(DocxLayoutPage page) =>
-        page.Items.MinBy(item => GetVerticalBounds(item).Y) is DocxTextLineLayout
-            { SourceParagraph: { } paragraph } &&
+        page.Items.MinBy(item => GetVerticalBounds(item).Y) is DocxTextLineLayout line &&
+        (line is { SourceParagraph: { } paragraph } &&
             paragraph.Spacing.AfterLinesValue is null && paragraph.Spacing.AfterAutoSpacingValue is null &&
-            double.IsFinite(paragraph.EffectiveProperties.SpacingAfterPoints);
+            double.IsFinite(paragraph.EffectiveProperties.SpacingAfterPoints) ||
+            // Terminal tables already own an explicit implicit-paragraph item.
+            // It carries no authored after-spacing; do not invent a source run.
+            line is { SourceParagraph: null, LineHeightSource: DocxLineHeightSource.TerminalParagraphMark,
+                EmitsTerminalParagraphMark: true, Text.Length: 0, LineHeight: > 0d } &&
+            double.IsFinite(line.LineHeight.Value));
 
     private static double ResolveTrailingBodyBoundarySpacing(DocxLayoutPage page) =>
         page.Items.MinBy(item => GetVerticalBounds(item).Y) is DocxTextLineLayout { SourceParagraph: { } paragraph } line
