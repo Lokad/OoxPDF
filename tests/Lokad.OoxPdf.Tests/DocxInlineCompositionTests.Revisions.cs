@@ -73,9 +73,10 @@ internal static partial class DocxInlineCompositionTests
         var paragraph = document.Paragraphs.First(p => p.Equations.Count != 0);
         var text = paragraph.Runs[0] with { FontSize = 7d, CharacterSpacingPoints = .25d, PairKerningEnabled = false };
         var label = DocxLayoutEngine.CreateListLabelRun(paragraph.ListLabel!, text, 7d);
-        TestAssert.Equal("1964AE", label.ColorHex);
-        TestAssert.True(label.Underline && label.UnderlineValue == "double" && !label.Bold && text.Bold && label.Revision is null,
-            "Retain the existing authored color/underline policy while label weight follows its own paragraph/level owner.");
+        TestAssert.True(label.ColorHex is null && !label.Underline && !label.Bold && label.Revision is null,
+            "Independent Word controls give unchanged markers their own paragraph color and level-only underline.");
+        TestAssert.True(text.ColorHex == "1964AE" && text.Underline && text.UnderlineValue == "double" && text.Bold,
+            "First-run authored formatting stays on its actual source owner.");
         TestAssert.Equal(.25d, label.CharacterSpacingPoints);
         TestAssert.True(!label.PairKerningEnabled, "Placement-time spacing/kerning decisions remain on the actual base run.");
         var overridden = paragraph.ListLabel! with { Style = paragraph.ListLabel.Style with { ColorHex = "008844", Underline = false, UnderlineValue = "none", FontSize = 16d } };

@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingUnchangedListDecorationsKeepSourceOwners() =>
+        DocxInlineCompositionTests.CheckUnchangedListDecorations(new PinnedResolver());
+
     public static void PortableRenderingDefaultMathFontCoversItalicAlphabet()
     {
         var resolver = new PinnedResolver(mathFont: true);

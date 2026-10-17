@@ -475,9 +475,22 @@ internal sealed partial class DocxReader
         DocxListLabel? ResolveParagraphListLabel()
         {
             var label = CreateListLabel(paragraphProperties, numbering, numberingCounters, styles, paragraphStyleId, tableCellStyle, paragraphMarkRun);
-            return label is not null && runs.Count != 0 &&
-                unmarkedListTextStyle?.SourceRunIndex == runs[0].SourceRunIndex
-                ? label with { UnmarkedTextStyle = unmarkedListTextStyle } : label;
+            // A marker without its own paragraph/mark revision owns the resolved
+            // paragraph color, not the first text run's authored or review ink.
+            // Word inherits underline only from the numbering level. Keep the
+            // separately qualified marker-revision path and other decorations.
+            if (label is null || runs.Count == 0 || inheritedRevision is not null || paragraphMarkRevisions.Count != 0 ||
+                (unmarkedListTextStyle is { } captured && captured.SourceRunIndex != runs[0].SourceRunIndex)) return label;
+            return label with
+            {
+                UnmarkedTextStyle = (unmarkedListTextStyle ?? runs[0]) with
+                {
+                    ColorHex = paragraphMarkRun.ColorHex,
+                    Underline = false,
+                    UnderlineValue = null,
+                    UnderlineColorHex = null
+                }
+            };
         }
 
         void CaptureUnmarkedListTextStyle(string text, DocxResolvedRunProperties properties,

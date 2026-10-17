@@ -316,8 +316,9 @@ internal sealed record DocxListLabel(
     DocxNumberingIndent Indent,
     DocxTextRunStyle Style)
 {
-    // The first text run supplies inherited formatting, but its inline revision
-    // decoration belongs to that text, not to an unchanged numbering marker.
+    // Decoration source for an unchanged marker: resolved paragraph color,
+    // no inherited underline, and separately retained authored decorations.
+    // Placement-time font/spacing decisions remain on the actual base run.
     public DocxTextRun? UnmarkedTextStyle { get; init; }
 }
 

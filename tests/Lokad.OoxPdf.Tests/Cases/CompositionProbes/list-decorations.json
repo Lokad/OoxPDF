@@ -1,0 +1,79 @@
+[
+  {
+    "Id": "list-decoration-run-blue-double",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-decoration-run-blue-double.docx",
+    "Sha256": "6565524D7E01BA1C8C9047436D00655044C8BF4D492C0DDA21A440B99A7503D9",
+    "SourceSha256": "5E2F5DC27FFFF7E9100AA3F06D6702FD7D7361974E610D707527B45EF16BEFFF",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "list-decoration-mark-red-single",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-decoration-mark-red-single.docx",
+    "Sha256": "946676AE41826F5A274F288EFE346E7BD38C991BFD2CC64B146BF0200CE5B206",
+    "SourceSha256": "5E2F5DC27FFFF7E9100AA3F06D6702FD7D7361974E610D707527B45EF16BEFFF",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "list-decoration-level-green-none",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-decoration-level-green-none.docx",
+    "Sha256": "ED113EA26ECBD031FAC338B3905C4411C04A90CD19A0327D1305D9C7E6A5243F",
+    "SourceSha256": "5E2F5DC27FFFF7E9100AA3F06D6702FD7D7361974E610D707527B45EF16BEFFF",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "list-decoration-normal-purple-single",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-decoration-normal-purple-single.docx",
+    "Sha256": "958EF8380D112E5D9E8F8BEDBE1F4789AB8156FDE1D4E27735C8F7842D362193",
+    "SourceSha256": "5E2F5DC27FFFF7E9100AA3F06D6702FD7D7361974E610D707527B45EF16BEFFF",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "list-decoration-run-blue-double-inserted",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-decoration-run-blue-double-inserted.docx",
+    "Sha256": "0F43C6C91C757920C4C78707339DB22B419EB92AA086810530867DF226523036",
+    "SourceSha256": "5E2F5DC27FFFF7E9100AA3F06D6702FD7D7361974E610D707527B45EF16BEFFF",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "list-decoration-mark-inserted",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-decoration-mark-inserted.docx",
+    "Sha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "SourceSha256": "5E2F5DC27FFFF7E9100AA3F06D6702FD7D7361974E610D707527B45EF16BEFFF",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "list-decoration-level-green-double",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-decoration-level-green-double.docx",
+    "Sha256": "5DD847478C87F3E72BBCA41F91967ED1A0D44B781B3B4B84129D9A7C594795F7",
+    "SourceSha256": "5E2F5DC27FFFF7E9100AA3F06D6702FD7D7361974E610D707527B45EF16BEFFF",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]

@@ -1,0 +1,656 @@
+{
+  "Source": "Independent Word 16 clean Final / visible Review. PdfInspect device fill follows its graphics-state lifetime; underline rectangles map to independent label baselines/X.",
+  "Scope": "Unchanged marker decorations. Mark-only insertion is an unresolved revision/renumbering scope: Review paints old/new counter pairs.",
+  "Rows": [
+    {
+      "Id": "list-decoration-level-green-none",
+      "File": "list-decoration-level-green-none.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "ED113EA26ECBD031FAC338B3905C4411C04A90CD19A0327D1305D9C7E6A5243F",
+      "ReferencePdfSha256": "35C99F31E9DD812E3F40C174615A1A20FF19598FB3CA1C00B9EB5AC3EA460DB7",
+      "HasParagraphMarkRevision": false,
+      "Labels": [
+        {
+          "Text": "1.",
+          "ColorHex": "008844",
+          "DeviceFill": "rg:0,0.533,0.267",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 83.784,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "2.",
+          "ColorHex": "008844",
+          "DeviceFill": "rg:0,0.533,0.267",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 64.344,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "3.",
+          "ColorHex": "008844",
+          "DeviceFill": "rg:0,0.533,0.267",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 44.904,
+          "UnderlinePaths": []
+        }
+      ]
+    },
+    {
+      "Id": "list-decoration-level-green-none",
+      "File": "list-decoration-level-green-none.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "ED113EA26ECBD031FAC338B3905C4411C04A90CD19A0327D1305D9C7E6A5243F",
+      "ReferencePdfSha256": "44397B56D44193B156E9F8DF24A5B68F41B959915CB63F08A44DE8BCBB596F4A",
+      "HasParagraphMarkRevision": false,
+      "Labels": [
+        {
+          "Text": "1.",
+          "ColorHex": "008844",
+          "DeviceFill": "rg:0,0.533,0.267",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 83.784,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "2.",
+          "ColorHex": "008844",
+          "DeviceFill": "rg:0,0.533,0.267",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 64.344,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "3.",
+          "ColorHex": "008844",
+          "DeviceFill": "rg:0,0.533,0.267",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 44.904,
+          "UnderlinePaths": []
+        }
+      ]
+    },
+    {
+      "Id": "list-decoration-mark-inserted",
+      "File": "list-decoration-mark-inserted.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+      "ReferencePdfSha256": "70BF1D4A2FB3C43DFA7C57A62D2D61A16F32A0AC9870BE0F1F9F1951E9160CC8",
+      "HasParagraphMarkRevision": true,
+      "Labels": [
+        {
+          "Text": "1.",
+          "ColorHex": "D13438",
+          "DeviceFill": "rg:0.82,0.204,0.22",
+          "UnderlineLines": 1,
+          "X": 72.024,
+          "Y": 83.784,
+          "UnderlinePaths": [
+            {
+              "MinX": 72.024,
+              "MinY": 81.744,
+              "MaxX": 90.024,
+              "MaxY": 82.58397,
+              "FillColor": "rg:0.82,0.204,0.22"
+            }
+          ]
+        },
+        {
+          "Text": "1.",
+          "ColorHex": "0078D4",
+          "DeviceFill": "rg:0,0.471,0.831",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 64.344,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "2.",
+          "ColorHex": "0078D4",
+          "DeviceFill": "rg:0,0.471,0.831",
+          "UnderlineLines": 1,
+          "X": 80.424,
+          "Y": 64.344,
+          "UnderlinePaths": [
+            {
+              "MinX": 80.424,
+              "MinY": 62.424,
+              "MaxX": 90.024,
+              "MaxY": 63.14397,
+              "FillColor": "rg:0,0.471,0.831"
+            }
+          ]
+        },
+        {
+          "Text": "2.",
+          "ColorHex": "0078D4",
+          "DeviceFill": "rg:0,0.471,0.831",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 44.904,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "3.",
+          "ColorHex": "0078D4",
+          "DeviceFill": "rg:0,0.471,0.831",
+          "UnderlineLines": 1,
+          "X": 80.424,
+          "Y": 44.904,
+          "UnderlinePaths": [
+            {
+              "MinX": 80.424,
+              "MinY": 42.96,
+              "MaxX": 90.024,
+              "MaxY": 43.67997,
+              "FillColor": "rg:0,0.471,0.831"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Id": "list-decoration-mark-inserted",
+      "File": "list-decoration-mark-inserted.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+      "ReferencePdfSha256": "D0CFA443B8D6079F2B4395228EA5B680574DF636EF7530B6C7DA1AE6516941BD",
+      "HasParagraphMarkRevision": true,
+      "Labels": [
+        {
+          "Text": "1.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 83.784,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "2.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 64.344,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "3.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 44.904,
+          "UnderlinePaths": []
+        }
+      ]
+    },
+    {
+      "Id": "list-decoration-mark-red-single",
+      "File": "list-decoration-mark-red-single.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "946676AE41826F5A274F288EFE346E7BD38C991BFD2CC64B146BF0200CE5B206",
+      "ReferencePdfSha256": "A8CAF59C8F1F2532DA6714AED52198C91895112B79BFB600B004F1B01CE75D34",
+      "HasParagraphMarkRevision": false,
+      "Labels": [
+        {
+          "Text": "1.",
+          "ColorHex": "AA2200",
+          "DeviceFill": "rg:0.667,0.133,0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 83.784,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "2.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 64.344,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "3.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 44.904,
+          "UnderlinePaths": []
+        }
+      ]
+    },
+    {
+      "Id": "list-decoration-mark-red-single",
+      "File": "list-decoration-mark-red-single.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "946676AE41826F5A274F288EFE346E7BD38C991BFD2CC64B146BF0200CE5B206",
+      "ReferencePdfSha256": "854605282BCC5A23C1E7B62F3D6FF0CBC5673EC2DC9B860C1DBBE40412522F9A",
+      "HasParagraphMarkRevision": false,
+      "Labels": [
+        {
+          "Text": "1.",
+          "ColorHex": "AA2200",
+          "DeviceFill": "rg:0.667,0.133,0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 83.784,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "2.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 64.344,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "3.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 44.904,
+          "UnderlinePaths": []
+        }
+      ]
+    },
+    {
+      "Id": "list-decoration-normal-purple-single",
+      "File": "list-decoration-normal-purple-single.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "958EF8380D112E5D9E8F8BEDBE1F4789AB8156FDE1D4E27735C8F7842D362193",
+      "ReferencePdfSha256": "462330BFDC7EAD864DD2D4DDB70C2A6F30705707433957A456A347FBF909FF00",
+      "HasParagraphMarkRevision": false,
+      "Labels": [
+        {
+          "Text": "1.",
+          "ColorHex": "8822AA",
+          "DeviceFill": "rg:0.533,0.133,0.667",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 83.784,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "2.",
+          "ColorHex": "8822AA",
+          "DeviceFill": "rg:0.533,0.133,0.667",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 64.344,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "3.",
+          "ColorHex": "8822AA",
+          "DeviceFill": "rg:0.533,0.133,0.667",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 44.904,
+          "UnderlinePaths": []
+        }
+      ]
+    },
+    {
+      "Id": "list-decoration-normal-purple-single",
+      "File": "list-decoration-normal-purple-single.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "958EF8380D112E5D9E8F8BEDBE1F4789AB8156FDE1D4E27735C8F7842D362193",
+      "ReferencePdfSha256": "09CB9794A7D93E33F17C9DED4DEB61EAADFCB46AB6D92E36945CD693468C793A",
+      "HasParagraphMarkRevision": false,
+      "Labels": [
+        {
+          "Text": "1.",
+          "ColorHex": "8822AA",
+          "DeviceFill": "rg:0.533,0.133,0.667",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 83.784,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "2.",
+          "ColorHex": "8822AA",
+          "DeviceFill": "rg:0.533,0.133,0.667",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 64.344,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "3.",
+          "ColorHex": "8822AA",
+          "DeviceFill": "rg:0.533,0.133,0.667",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 44.904,
+          "UnderlinePaths": []
+        }
+      ]
+    },
+    {
+      "Id": "list-decoration-run-blue-double",
+      "File": "list-decoration-run-blue-double.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6565524D7E01BA1C8C9047436D00655044C8BF4D492C0DDA21A440B99A7503D9",
+      "ReferencePdfSha256": "6C8817D8301D9081999DFC31E48ACB2C79B4EF7A5FEC00741C48964F606333D7",
+      "HasParagraphMarkRevision": false,
+      "Labels": [
+        {
+          "Text": "1.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 83.784,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "2.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 64.344,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "3.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 44.904,
+          "UnderlinePaths": []
+        }
+      ]
+    },
+    {
+      "Id": "list-decoration-run-blue-double",
+      "File": "list-decoration-run-blue-double.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "6565524D7E01BA1C8C9047436D00655044C8BF4D492C0DDA21A440B99A7503D9",
+      "ReferencePdfSha256": "87FA68DEB2090BD2283E9CDC7B41B769D5D9FB93EFDF5F258646A257CD2B8EBC",
+      "HasParagraphMarkRevision": false,
+      "Labels": [
+        {
+          "Text": "1.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 83.784,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "2.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 64.344,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "3.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 44.904,
+          "UnderlinePaths": []
+        }
+      ]
+    },
+    {
+      "Id": "list-decoration-run-blue-double-inserted",
+      "File": "list-decoration-run-blue-double-inserted.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "0F43C6C91C757920C4C78707339DB22B419EB92AA086810530867DF226523036",
+      "ReferencePdfSha256": "6D494ABC2883A0CB9A33C7CEF09F369946B5F889542079703635334F2C2886C5",
+      "HasParagraphMarkRevision": false,
+      "Labels": [
+        {
+          "Text": "1.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 83.784,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "2.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 64.344,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "3.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 44.904,
+          "UnderlinePaths": []
+        }
+      ]
+    },
+    {
+      "Id": "list-decoration-run-blue-double-inserted",
+      "File": "list-decoration-run-blue-double-inserted.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "0F43C6C91C757920C4C78707339DB22B419EB92AA086810530867DF226523036",
+      "ReferencePdfSha256": "C2531B8F891BE349C31356FC52F333A819EB1A9D51613CFB4713943728606940",
+      "HasParagraphMarkRevision": false,
+      "Labels": [
+        {
+          "Text": "1.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 83.784,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "2.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 64.344,
+          "UnderlinePaths": []
+        },
+        {
+          "Text": "3.",
+          "ColorHex": "000000",
+          "DeviceFill": "g:0",
+          "UnderlineLines": 0,
+          "X": 72.024,
+          "Y": 44.904,
+          "UnderlinePaths": []
+        }
+      ]
+    },
+    {
+      "Id": "list-decoration-level-green-double",
+      "File": "list-decoration-level-green-double.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "5DD847478C87F3E72BBCA41F91967ED1A0D44B781B3B4B84129D9A7C594795F7",
+      "ReferencePdfSha256": "65BEB8AFA047271EB931EEB5625CBD13D5BB32E25867843F5EBD19E03DC814A0",
+      "HasParagraphMarkRevision": false,
+      "Labels": [
+        {
+          "Text": "1.",
+          "ColorHex": "008844",
+          "DeviceFill": "rg:0,0.533,0.267",
+          "UnderlineLines": 2,
+          "X": 72.024,
+          "Y": 83.784,
+          "UnderlinePaths": [
+            {
+              "MinX": 72.024,
+              "MinY": 82.824,
+              "MaxX": 80.424,
+              "MaxY": 83.18405,
+              "FillColor": "rg:0,0.533,0.267"
+            },
+            {
+              "MinX": 72.024,
+              "MinY": 81.504,
+              "MaxX": 80.424,
+              "MaxY": 81.86405,
+              "FillColor": "rg:0,0.533,0.267"
+            }
+          ]
+        },
+        {
+          "Text": "2.",
+          "ColorHex": "008844",
+          "DeviceFill": "rg:0,0.533,0.267",
+          "UnderlineLines": 2,
+          "X": 72.024,
+          "Y": 64.344,
+          "UnderlinePaths": [
+            {
+              "MinX": 72.024,
+              "MinY": 63.384,
+              "MaxX": 80.424,
+              "MaxY": 63.74405,
+              "FillColor": "rg:0,0.533,0.267"
+            },
+            {
+              "MinX": 72.024,
+              "MinY": 62.064,
+              "MaxX": 80.424,
+              "MaxY": 62.42405,
+              "FillColor": "rg:0,0.533,0.267"
+            }
+          ]
+        },
+        {
+          "Text": "3.",
+          "ColorHex": "008844",
+          "DeviceFill": "rg:0,0.533,0.267",
+          "UnderlineLines": 2,
+          "X": 72.024,
+          "Y": 44.904,
+          "UnderlinePaths": [
+            {
+              "MinX": 72.024,
+              "MinY": 43.944,
+              "MaxX": 80.424,
+              "MaxY": 44.30405,
+              "FillColor": "rg:0,0.533,0.267"
+            },
+            {
+              "MinX": 72.024,
+              "MinY": 42.6,
+              "MaxX": 80.424,
+              "MaxY": 42.96005,
+              "FillColor": "rg:0,0.533,0.267"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Id": "list-decoration-level-green-double",
+      "File": "list-decoration-level-green-double.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "5DD847478C87F3E72BBCA41F91967ED1A0D44B781B3B4B84129D9A7C594795F7",
+      "ReferencePdfSha256": "03854BA41645BCF1AB9E8D5FC6942D2EC264194793E94FF342FF35E7AF2A6918",
+      "HasParagraphMarkRevision": false,
+      "Labels": [
+        {
+          "Text": "1.",
+          "ColorHex": "008844",
+          "DeviceFill": "rg:0,0.533,0.267",
+          "UnderlineLines": 2,
+          "X": 72.024,
+          "Y": 83.784,
+          "UnderlinePaths": [
+            {
+              "MinX": 72.024,
+              "MinY": 82.824,
+              "MaxX": 80.424,
+              "MaxY": 83.18405,
+              "FillColor": "rg:0,0.533,0.267"
+            },
+            {
+              "MinX": 72.024,
+              "MinY": 81.504,
+              "MaxX": 80.424,
+              "MaxY": 81.86405,
+              "FillColor": "rg:0,0.533,0.267"
+            }
+          ]
+        },
+        {
+          "Text": "2.",
+          "ColorHex": "008844",
+          "DeviceFill": "rg:0,0.533,0.267",
+          "UnderlineLines": 2,
+          "X": 72.024,
+          "Y": 64.344,
+          "UnderlinePaths": [
+            {
+              "MinX": 72.024,
+              "MinY": 63.384,
+              "MaxX": 80.424,
+              "MaxY": 63.74405,
+              "FillColor": "rg:0,0.533,0.267"
+            },
+            {
+              "MinX": 72.024,
+              "MinY": 62.064,
+              "MaxX": 80.424,
+              "MaxY": 62.42405,
+              "FillColor": "rg:0,0.533,0.267"
+            }
+          ]
+        },
+        {
+          "Text": "3.",
+          "ColorHex": "008844",
+          "DeviceFill": "rg:0,0.533,0.267",
+          "UnderlineLines": 2,
+          "X": 72.024,
+          "Y": 44.904,
+          "UnderlinePaths": [
+            {
+              "MinX": 72.024,
+              "MinY": 43.944,
+              "MaxX": 80.424,
+              "MaxY": 44.30405,
+              "FillColor": "rg:0,0.533,0.267"
+            },
+            {
+              "MinX": 72.024,
+              "MinY": 42.6,
+              "MaxX": 80.424,
+              "MaxY": 42.96005,
+              "FillColor": "rg:0,0.533,0.267"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
