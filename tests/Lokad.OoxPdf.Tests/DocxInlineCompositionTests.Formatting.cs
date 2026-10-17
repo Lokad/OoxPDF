@@ -46,7 +46,9 @@ internal static partial class DocxInlineCompositionTests
             {
                 var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(new PdfPage(page.Width, page.Height, block.Value, page.Fonts)).ToArray();
                 if (shows.Length != 1 || !targetText.Contains(shows[0].Text)) continue;
-                string expected = authoredColor ? "0.098 0.392 0.682 rg" : "0 g";
+                // Independent Word formatting-revision controls retain blue
+                // ink on Summary, while its unchanged marker remains black.
+                string expected = authoredColor && shows[0].Text == "Summary: " ? "0.098 0.392 0.682 rg" : "0 g";
                 TestAssert.Contains(expected, block.Value);
                 matched.Add(shows[0].Text);
             }
