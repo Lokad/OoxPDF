@@ -1,5 +1,30 @@
 # Composed-document reliability checkpoint
 
+C159 admits complete fitting nested endnote blocks through shared source and
+clip ownership. Every measured line must survive all ancestor clips, so a visible
+first line cannot hide a clipped continuation. Original paragraph identities,
+source uniqueness, row/revision/property guards and conservative whole-block fit
+remain; typography and continuation policies keep their previous scopes.
+
+Fifty Windows and 45 Ubuntu checks pass, with five native skips. A harness-only
+assertion proves the partial-clip control retains both visible and excluded lines:
+14 runtime assets/2,068 inputs match, 49 passing methods carry and only that method
+reruns per platform. The final transferred artifact contains the stronger check.
+Six retained independent Word outcomes require no new export or reference raster.
+Both changed document-average MAEs improve; four control PDFs retain bytes and all
+six strict gates remain failed. Note/body Y differs by at most 0.065pt, mathematical
+X/Y by 0.057/0.063pt, correcting the inherited 8.063pt offset and later story gaps.
+Two Final page pairs were reviewed; two Review pairs carry by both PNG identities.
+The unchanged half-point boundary observer fails on C158.
+
+Seventeen assets/four exact smokes transfer without root build or suite/corpus
+replay. C158's fixed 12 outcomes/7 sources/20 pages carry source scope and exact
+report/deck smokes; ten DOCX failures/two deck passes/two report extraction flags
+remain. Rootdd74b523; artifacts/composition-c1/nested-endnote-boundaries-evidence.json.
+Next: probe navigation alongside restored nested content before changing guards.
+The infrequent workspace scan records 11.95GB/624,124 files, zero errors. The loose
+5GB target remains unmet; no previously rejected retirement was retried.
+
 C158 restores ordinary nested cell mathematics through shared source ownership,
 measurement and painting. One prepared map follows guarded source blocks across
 two body depths, headers/footers and notes. Containing mathematical rows remain
