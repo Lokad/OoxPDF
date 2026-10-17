@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+C156 fixes declared run-default ownership across all paragraph containers. Word
+uses nominal10pt when rPrDefault is present without a size, even for an empty
+container; the parent used12pt. The shared cascade now supplies the owned fallback
+beneath table/style/direct properties. Unowned12pt, explicit default11pt and direct
+15pt remain; paragraph13pt precedence is covered. No family or leading correction.
+
+One Release artifact passes30 Windows/29 Ubuntu checks/one native skip.24 independent
+Word outcomes cover two families/both presets/body/cell/header/footer/footnote,
+with144 visible role-size observations and max0.04pt PDF size quantization. Eight
+comparisons improve/16 parent PDFs remain exact/no new failed components; all24
+strict raster gates remain failed. Twelve Final labeled-region pairs reviewed;
+twelve Review pairs carry by both PNG identities. Labels and the custom note
+source/target survive; no full word/order audit. Parent visible-size observer fails.
+
+Read-only bounded inventory of1,442 tracked DOCX inputs has zero skips and only
+four new owner cases affected. No older fixture/fixed source has unresolved owned
+size; all five fixed DOCX sources explicitly declare11pt. Report/deck smokes match,
+so prior C15112 outcomes/seven sources/twenty pages remain separately qualified,
+with ten DOCX failures/two deck passes/two report extraction flags; no corpus replay.
+The retained independent Aptos default-owner trigger now takes27 lines like Word27,
+first baseline within0.034pt/rule0.082pt. This is an additional frozen-layout
+measurement, not another visual pass. Seventeen assets/four integration smokes
+transfer without root build/suite replay. Rootfbff99f0;
+`artifacts/composition-c1/run-default-owner-size-evidence.json`. C155 CI is green.
+Next: probe supported mathematics adjacent to ordinary nested tables before
+changing source preparation or nested-frame eligibility.
+
 C155 makes complete fitting endnote blocks own source paragraph boundaries.
 Independent plain/image-removal/paragraph-joining controls isolate8 latent
 separator points and3 legacy points per subsequent story. Placement now uses
