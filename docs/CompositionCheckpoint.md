@@ -1,5 +1,35 @@
 # Composed-document reliability checkpoint
 
+C152 restores capacity when body notes and a cell note coexist. Four independent
+Word outcomes confirm correct parent page counts/counters but63.247-73.488pt of
+unused first-page capacity. Measured body-line registration now coexists with
+complete table notes' existing block reservation. Exact paragraph/run ownership
+survives multiple cell paragraphs; pure-table/nested/keep/complex-note/frame
+fallbacks remain. No font/size rule or fitted offset is added.
+
+C151 CI39066861742 caught14 missed checks. Ordinary occupancy had reused metadata
+that also selected qualified body hyperlink padding and minimum-leading policy.
+C152 publishes explicit measured occupancy instead, preserving existing painting
+and all old assertions. Its106 Windows/93 Ubuntu checks/13 native skips include
+all14 failures unchanged. Final qualification uses one frozen artifact/one exact
+set per platform; development qualification and failure logs remain retained.
+
+All four Word comparisons improve without new failed components; all strict
+visual gates remain failed. Markers max0.187pt Y, mathematical origins max0.165pt X/
+0.051pt Y. Five Final page pairs reviewed; five Review pairs carry by both PNG
+identities. Eight fractions/four pictures/four same-page destinations and authored
+105/108 survive. Alphabetic inventories equal, not a full word/order audit. Parent
+half-point geometry observer fails. Twelve pure-table PDFs retain accepted bytes.
+
+Seventeen assets/four integration smokes transfer without root build/suite replay.
+Prior C151 fixed twelve outcomes/seven sources/twenty pages remain separately
+qualified: fixed inputs have no cell-note references, report/deck smokes match.
+Ten DOCX gate failures/two deck passes/two extraction flags and two Aptos baseline
+failures remain; no new full corpus/content audit. Root2abe15c2;
+`artifacts/composition-c1/mixed-container-admission-evidence.json`.
+Next: investigate the pinned Aptos continuation-head residuals before changing
+metrics or thresholds. Release preparation stays deferred at0.1.5.
+
 C151 completes the ordinary-cell measurement contract. Four parent outcomes had
 visible note glyphs but no occupied line bounds, leaving105-108 instead of Word09/10.
 Legacy cell lines now publish actual height/baseline inset from their existing
