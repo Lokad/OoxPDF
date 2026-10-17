@@ -57,6 +57,8 @@ internal sealed partial class DocxRenderer
         int BodySummaryPartCount,
         int WordCompatibleBodySummaryPartCount)
     {
+        public DocxCellRevisionBalloonSource? WordCompatibleCellSource { get; init; }
+        public DocxCellRevisionBalloonSource? WordCompatibleCellLastSource { get; init; }
         public double? WordCompatibleAnchorDepthPoints { get; init; }
         // An explicit printed frame top can own placement independently of
         // the changed source line or cell center retained by the connector.

@@ -94,6 +94,18 @@ def main():
                 rows[-1]["RevisionBarCount"] = sum(row["Kind"] == "Fill" and 20 < row["MinX"] < 40 and
                                                   0 < row["MaxX"] - row["MinX"] < 2 and row["MaxY"] - row["MinY"] > 5
                                                   for row in graphics)
+            if outcome.get("BalloonRegion"):
+                left, bottom, right, top = outcome["BalloonRegion"]
+                frames = [item for item in read(run / "inspect/graphics-operations.json")
+                          if item["Kind"] == "FillStroke" and left < item["MinX"] < right
+                          and bottom < item["MinY"] < top and item["MaxX"] <= right and item["MaxY"] <= top]
+                frames.sort(key=lambda item: (-item["MaxY"], item["MinX"]))
+                rows[-1]["BalloonFrames"] = [dict(X=item["MinX"], Y=item["MinY"],
+                    Width=item["MaxX"]-item["MinX"], Height=item["MaxY"]-item["MinY"],
+                    StrokeColor=item["StrokeColor"]) for item in frames]
+                rows[-1]["BalloonTexts"] = [" ".join(" ".join(item["DecodedText"] for item in text_operations
+                    if frame["MinX"] <= item["EffectiveX"] <= frame["MaxX"] and
+                    frame["MinY"] <= item["EffectiveY"] <= frame["MaxY"]).split()) for frame in frames]
     output.write_text(json.dumps(dict(Rows=rows), indent=2) + "\n", encoding="utf-8")
     print("Pinned", len(rows), "independent math outcomes without exporting or rebuilding")
 

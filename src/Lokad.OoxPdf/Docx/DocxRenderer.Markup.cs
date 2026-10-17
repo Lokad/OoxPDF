@@ -398,7 +398,8 @@ internal sealed partial class DocxRenderer
         DocxMarkupBalloonArea area = ResolveMarkupBalloonArea(page, markupContext);
         DocxMarkupBalloonCandidate[] candidates = OrderMarkupBalloonCandidatesForPlacement(
                 GroupNearbyMarkupBalloonCandidates(
-                    OrderMarkupBalloonCandidatesForPlacement(CollectMarkupBalloonCandidates(area.Width)),
+                    OrderMarkupBalloonCandidatesForPlacement(CoalesceCellRevisionRanges(
+                        CollectMarkupBalloonCandidates(area.Width), cancellationToken)),
                     area.Width))
             .ToArray();
 
@@ -432,6 +433,10 @@ internal sealed partial class DocxRenderer
             bool CanGroupMarkupBalloonCandidates(IReadOnlyList<DocxMarkupBalloonCandidate> group, DocxMarkupBalloonCandidate candidate)
             {
                 DocxMarkupBalloonCandidate previous = group[^1];
+                // A structural source range is already coalesced semantically;
+                // nearby geometry must not join distinct columns or authors.
+                if (candidate.WordCompatibleCellSource is not null ||
+                    group.Any(item => item.WordCompatibleCellSource is not null)) return false;
                 if (Math.Abs(previous.AnchorY - candidate.AnchorY) <= 0.5d)
                 {
                     return true;
@@ -833,9 +838,15 @@ internal sealed partial class DocxRenderer
                         }
                     }
 
+                    int sourceGridStart = 0;
+                    bool completeGrid = row.FragmentCount == 1 && row.Cells.All(cell => cell.Cell.GridSpan > 0) &&
+                        row.Cells.Sum(cell => cell.Cell.GridSpan) == row.Table.GridColumnCount;
+                    string cellTableKey = TableBalloonKey(row);
                     for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
                     {
                         DocxTableCellLayout cell = row.Cells[cellIndex];
+                        int gridStart = sourceGridStart;
+                        sourceGridStart = checked(sourceGridStart + cell.Cell.GridSpan);
                         IReadOnlyList<DocxRevisionInfo> cellRevisions = cell.Cell.Revisions;
                         if (!ShouldRenderRevisionBalloon(markupContext, cellRevisions, mainTableStory))
                         {
@@ -854,6 +865,10 @@ internal sealed partial class DocxRenderer
                         bool cellStructureOnly = cellRevisions.All(revision => revision.Kind.IsCellStructureRevision());
                         DocxTextLineLayout? structuralAnchor = cellStructureOnly && UsesWordCompatibleAllMarkupTextProfile(markupContext)
                             ? cell.TextLines.FirstOrDefault() : null;
+                        DocxCellRevisionBalloonSource? cellSource = structuralAnchor is not null && completeGrid &&
+                            !cell.Cell.HasVerticalMerge && cell.NestedRows.Count == 0 && cellRevisions.Count == 1 &&
+                            !string.IsNullOrEmpty(cellRevisions[0].Author)
+                                ? new(cellTableKey, row.RowIndex, gridStart, cell.Cell.GridSpan, cellRevisions[0]) : null;
                         balloonCandidates.Add(new DocxMarkupBalloonCandidate(
                             DocxMarkupBalloonKind.Revision,
                             revisionTitle,
@@ -876,6 +891,8 @@ internal sealed partial class DocxRenderer
                         {
                             // A structural cell label belongs to the changed cell's
                             // top frame, independently of its height and connector.
+                            WordCompatibleCellSource = cellSource,
+                            WordCompatibleCellLastSource = cellSource,
                             WordCompatibleStrokeRgb = ResolveCellStructureStrokeRgb(cellRevisions),
                             WordCompatibleAnchorDepthPoints = structuralAnchor?.InlineFrame is null ? null :
                                 ResolveInlineLineVerticalExtents(structuralAnchor).Below,

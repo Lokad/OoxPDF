@@ -1,0 +1,368 @@
+[
+  {
+    "Id": "cell-connector-same-author-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-connector-same-author-ins.docx",
+    "Sha256": "5A421C04FAE938D6FD9400A2B443DD12CEAC8CA3B9D12798302840251AA91BDA",
+    "SourceSha256": "5A421C04FAE938D6FD9400A2B443DD12CEAC8CA3B9D12798302840251AA91BDA",
+    "Kind": "ins",
+    "Shape": "same-author",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell."
+    ]
+  },
+  {
+    "Id": "cell-connector-second-author-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-connector-second-author-ins.docx",
+    "Sha256": "83954BC7C7E386F433630741E555C5D8B52B4444752F1F77A2143AB921166F3C",
+    "SourceSha256": "83954BC7C7E386F433630741E555C5D8B52B4444752F1F77A2143AB921166F3C",
+    "Kind": "ins",
+    "Shape": "second-author",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell."
+    ]
+  },
+  {
+    "Id": "cell-range-gap-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-range-gap-ins.docx",
+    "Sha256": "7373B2516A963551E8EB7CB49405FCE4B96EDA132557A816FCA09073E6BD4C96",
+    "SourceSha256": "5A421C04FAE938D6FD9400A2B443DD12CEAC8CA3B9D12798302840251AA91BDA",
+    "Kind": "ins",
+    "Shape": "gap",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell.",
+      "Intervening unchanged row."
+    ]
+  },
+  {
+    "Id": "cell-range-later-date-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-range-later-date-ins.docx",
+    "Sha256": "D224E1E7A8709D4F0DB8DF007C40E1002B93FD539D4CD5BE3ED90154D9223B1D",
+    "SourceSha256": "5A421C04FAE938D6FD9400A2B443DD12CEAC8CA3B9D12798302840251AA91BDA",
+    "Kind": "ins",
+    "Shape": "later-date",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell."
+    ]
+  },
+  {
+    "Id": "cell-range-mixed-kind-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-range-mixed-kind-ins.docx",
+    "Sha256": "2947ED7EEEEF635CD74E2D917AD149E0932F28C8F322E0CA6282AC80D421D8D8",
+    "SourceSha256": "5A421C04FAE938D6FD9400A2B443DD12CEAC8CA3B9D12798302840251AA91BDA",
+    "Kind": "ins",
+    "Shape": "mixed-kind",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell."
+    ]
+  },
+  {
+    "Id": "cell-range-columns-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-range-columns-ins.docx",
+    "Sha256": "13156FF6BE57BEAB79B2A9D6FC65C8FD0A8006480F82C70E7694CD62ECBF3308",
+    "SourceSha256": "5A421C04FAE938D6FD9400A2B443DD12CEAC8CA3B9D12798302840251AA91BDA",
+    "Kind": "ins",
+    "Shape": "columns",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell."
+    ]
+  },
+  {
+    "Id": "cell-range-columns-second-author-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-range-columns-second-author-ins.docx",
+    "Sha256": "BFB42C6AAAC7978BADFEDB8A9ED03611E2535781083294C42722C6A18A29CE5A",
+    "SourceSha256": "5A421C04FAE938D6FD9400A2B443DD12CEAC8CA3B9D12798302840251AA91BDA",
+    "Kind": "ins",
+    "Shape": "columns-second-author",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell."
+    ]
+  },
+  {
+    "Id": "cell-range-vertical-column-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-range-vertical-column-ins.docx",
+    "Sha256": "C3436E2EC87B67C7A1B2F6BC410EC4739C68FC0BD3F9FA3D14CB82774178A970",
+    "SourceSha256": "5A421C04FAE938D6FD9400A2B443DD12CEAC8CA3B9D12798302840251AA91BDA",
+    "Kind": "ins",
+    "Shape": "vertical-column",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell.",
+      "Neighboring cell."
+    ]
+  },
+  {
+    "Id": "cell-range-diagonal-column-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-range-diagonal-column-ins.docx",
+    "Sha256": "83FA656522731978F7DF226FA2DF7F9E5945D1FF747C07AB6101C7B7D8633FF2",
+    "SourceSha256": "5A421C04FAE938D6FD9400A2B443DD12CEAC8CA3B9D12798302840251AA91BDA",
+    "Kind": "ins",
+    "Shape": "diagonal-column",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell.",
+      "Neighboring cell."
+    ]
+  },
+  {
+    "Id": "cell-connector-same-author-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-connector-same-author-del.docx",
+    "Sha256": "21BFB1B2E39BB9740F554081CE5EBB71F356F65B2243AC63BAAE0C06D68EA217",
+    "SourceSha256": "21BFB1B2E39BB9740F554081CE5EBB71F356F65B2243AC63BAAE0C06D68EA217",
+    "Kind": "del",
+    "Shape": "same-author",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell."
+    ]
+  },
+  {
+    "Id": "cell-connector-second-author-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-connector-second-author-del.docx",
+    "Sha256": "5A167E198090C8C9F221183BE37FB59101B53F1C9C2ACED49651F0533035429D",
+    "SourceSha256": "5A167E198090C8C9F221183BE37FB59101B53F1C9C2ACED49651F0533035429D",
+    "Kind": "del",
+    "Shape": "second-author",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell."
+    ]
+  },
+  {
+    "Id": "cell-range-gap-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-range-gap-del.docx",
+    "Sha256": "95CEE8A442767D467BD88B86CDBC774F8717B560A1E2C434416786C2B1B7E9B9",
+    "SourceSha256": "21BFB1B2E39BB9740F554081CE5EBB71F356F65B2243AC63BAAE0C06D68EA217",
+    "Kind": "del",
+    "Shape": "gap",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell.",
+      "Intervening unchanged row."
+    ]
+  },
+  {
+    "Id": "cell-range-later-date-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-range-later-date-del.docx",
+    "Sha256": "34729747DD6F29CFC9E05F379776AE03A1D30A7F9F3560A4070B5A481ABCFDA2",
+    "SourceSha256": "21BFB1B2E39BB9740F554081CE5EBB71F356F65B2243AC63BAAE0C06D68EA217",
+    "Kind": "del",
+    "Shape": "later-date",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell."
+    ]
+  },
+  {
+    "Id": "cell-range-mixed-kind-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-range-mixed-kind-del.docx",
+    "Sha256": "6DBC934B6D109C37BFA8A55947D4B1B7EFD0A2087CC2DBEEC890FF9195B40A58",
+    "SourceSha256": "21BFB1B2E39BB9740F554081CE5EBB71F356F65B2243AC63BAAE0C06D68EA217",
+    "Kind": "del",
+    "Shape": "mixed-kind",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell."
+    ]
+  },
+  {
+    "Id": "cell-range-columns-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-range-columns-del.docx",
+    "Sha256": "087F64FFC4D15C5AE4A1CC36723B90CEF3D6249D59F418E7D94E0F909854DD76",
+    "SourceSha256": "21BFB1B2E39BB9740F554081CE5EBB71F356F65B2243AC63BAAE0C06D68EA217",
+    "Kind": "del",
+    "Shape": "columns",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell."
+    ]
+  },
+  {
+    "Id": "cell-range-columns-second-author-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-range-columns-second-author-del.docx",
+    "Sha256": "8F1A2ECE7AAECA0661763963FBA0B03E86C37D2BBEB63D1784E4FCE44CA52454",
+    "SourceSha256": "21BFB1B2E39BB9740F554081CE5EBB71F356F65B2243AC63BAAE0C06D68EA217",
+    "Kind": "del",
+    "Shape": "columns-second-author",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell."
+    ]
+  },
+  {
+    "Id": "cell-range-vertical-column-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-range-vertical-column-del.docx",
+    "Sha256": "6D944A4F70512B8FD21E3A389E4BB758ED72623671C86EADA8EEC77AE76D9646",
+    "SourceSha256": "21BFB1B2E39BB9740F554081CE5EBB71F356F65B2243AC63BAAE0C06D68EA217",
+    "Kind": "del",
+    "Shape": "vertical-column",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell.",
+      "Neighboring cell."
+    ]
+  },
+  {
+    "Id": "cell-range-diagonal-column-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-range-diagonal-column-del.docx",
+    "Sha256": "D93810224E1C3E5EE8E2DD25352148DC518829711D9A37C28E0CA9BDADB0C686",
+    "SourceSha256": "21BFB1B2E39BB9740F554081CE5EBB71F356F65B2243AC63BAAE0C06D68EA217",
+    "Kind": "del",
+    "Shape": "diagonal-column",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ExpectedText": [
+      "share the same input series.",
+      "Additional cell.",
+      "Neighboring cell."
+    ]
+  }
+]

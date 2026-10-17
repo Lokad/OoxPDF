@@ -1,0 +1,3796 @@
+{
+  "Rows": [
+    {
+      "Id": "cell-connector-same-author-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "5A421C04FAE938D6FD9400A2B443DD12CEAC8CA3B9D12798302840251AA91BDA",
+      "ReferencePdfSha256": "8E913648EE18C79FC3617BDF56FDA8C01175C1F11D716C52C2755D5CFC7A468C",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 598.92,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 256.68,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 263.4,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 271.51,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 278.52,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 287.06,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.439,0.718,0.929"
+        }
+      ],
+      "BalloonTexts": [
+        "Inserted Cells"
+      ]
+    },
+    {
+      "Id": "cell-connector-second-author-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "83954BC7C7E386F433630741E555C5D8B52B4444752F1F77A2143AB921166F3C",
+      "ReferencePdfSha256": "94A2DF47CCECB7DB0322CD882DD7161E9CB21723B6276227019259E6F414541C",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 598.92,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 256.68,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 263.4,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 271.51,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 278.52,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 287.06,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.439,0.718,0.929"
+        },
+        {
+          "X": 433.51,
+          "Y": 520.46,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.439,0.718,0.929"
+        }
+      ],
+      "BalloonTexts": [
+        "Inserted Cells",
+        "Inserted Cells"
+      ]
+    },
+    {
+      "Id": "cell-range-gap-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "7373B2516A963551E8EB7CB49405FCE4B96EDA132557A816FCA09073E6BD4C96",
+      "ReferencePdfSha256": "3E8382CA79B54046F2DCA003A415DDBD6E1C1765AD8E62BD4B4C95F5337E43A1",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell.",
+        "Intervening unchanged row."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 598.92,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 256.68,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 263.4,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 271.51,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 278.52,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 287.06,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.439,0.718,0.929"
+        },
+        {
+          "X": 433.51,
+          "Y": 490.08,
+          "Width": 174.58000000000004,
+          "Height": 12.379999999999995,
+          "StrokeColor": "RG:0.439,0.718,0.929"
+        }
+      ],
+      "BalloonTexts": [
+        "Inserted Cells",
+        "Inserted Cells"
+      ]
+    },
+    {
+      "Id": "cell-range-later-date-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "D224E1E7A8709D4F0DB8DF007C40E1002B93FD539D4CD5BE3ED90154D9223B1D",
+      "ReferencePdfSha256": "DDC2F9D1FEE30BB5E861D6E957F927B87346BA39E5292D5BF601F65B30C472DD",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 598.92,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 256.68,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 263.4,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 271.51,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 278.52,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 287.06,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.439,0.718,0.929"
+        }
+      ],
+      "BalloonTexts": [
+        "Inserted Cells"
+      ]
+    },
+    {
+      "Id": "cell-range-mixed-kind-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "2947ED7EEEEF635CD74E2D917AD149E0932F28C8F322E0CA6282AC80D421D8D8",
+      "ReferencePdfSha256": "8F085F971E7EE19080375EF5B714B89E49AFED207625220A773DDAC863A19DF2",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 598.92,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 256.68,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 263.4,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 271.51,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 278.52,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 287.06,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.439,0.718,0.929"
+        },
+        {
+          "X": 433.51,
+          "Y": 520.46,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.937,0.439,0.737"
+        }
+      ],
+      "BalloonTexts": [
+        "Inserted Cells",
+        "Deleted Cells"
+      ]
+    },
+    {
+      "Id": "cell-range-columns-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "13156FF6BE57BEAB79B2A9D6FC65C8FD0A8006480F82C70E7694CD62ECBF3308",
+      "ReferencePdfSha256": "7D46DB43FBF88B2DBA6622A708ADC42B12F6AE592E978A1009ACB98DE197ABBC",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 588.74,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 106.94,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 113.59,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 121.68,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 128.69,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 137.26,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.439,0.718,0.929"
+        },
+        {
+          "X": 433.51,
+          "Y": 616.49,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.439,0.718,0.929"
+        }
+      ],
+      "BalloonTexts": [
+        "Inserted Cells",
+        "Inserted Cells"
+      ]
+    },
+    {
+      "Id": "cell-range-columns-second-author-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "BFB42C6AAAC7978BADFEDB8A9ED03611E2535781083294C42722C6A18A29CE5A",
+      "ReferencePdfSha256": "CC4F1A6BE9A9B2EB0249C409ED19C634F2A677BE6987C0FB576EACB12E1BDA1F",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 588.74,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 106.94,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 113.59,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 121.68,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 128.69,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 137.26,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.439,0.718,0.929"
+        },
+        {
+          "X": 433.51,
+          "Y": 616.49,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.439,0.718,0.929"
+        }
+      ],
+      "BalloonTexts": [
+        "Inserted Cells",
+        "Inserted Cells"
+      ]
+    },
+    {
+      "Id": "cell-range-vertical-column-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "C3436E2EC87B67C7A1B2F6BC410EC4739C68FC0BD3F9FA3D14CB82774178A970",
+      "ReferencePdfSha256": "6EDE42A8FD7F29FA3076CB399C5F16F197338BF8B9F281E0E4EF8E11BBC0A5F3",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell.",
+        "Neighboring cell."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 588.74,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 106.94,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 113.59,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 121.68,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 128.69,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 137.26,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.439,0.718,0.929"
+        }
+      ],
+      "BalloonTexts": [
+        "Inserted Cells"
+      ]
+    },
+    {
+      "Id": "cell-range-diagonal-column-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "83FA656522731978F7DF226FA2DF7F9E5945D1FF747C07AB6101C7B7D8633FF2",
+      "ReferencePdfSha256": "0FE1F5CA58AE3C11B032244F98B93A6BB6863E9C1CADFC4E96282BB6E61542E9",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell.",
+        "Neighboring cell."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 588.74,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 106.94,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 113.59,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 121.68,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 128.69,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 137.26,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.439,0.718,0.929"
+        },
+        {
+          "X": 433.51,
+          "Y": 520.46,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.439,0.718,0.929"
+        }
+      ],
+      "BalloonTexts": [
+        "Inserted Cells",
+        "Inserted Cells"
+      ]
+    },
+    {
+      "Id": "cell-connector-same-author-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "21BFB1B2E39BB9740F554081CE5EBB71F356F65B2243AC63BAAE0C06D68EA217",
+      "ReferencePdfSha256": "8137C261518A9F9A1730891A991A4504C6ED57C652514E11083B98B9AB675089",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 598.92,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 256.68,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 263.4,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 271.51,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 278.52,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 287.06,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.937,0.439,0.737"
+        }
+      ],
+      "BalloonTexts": [
+        "Deleted Cells"
+      ]
+    },
+    {
+      "Id": "cell-connector-second-author-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "5A167E198090C8C9F221183BE37FB59101B53F1C9C2ACED49651F0533035429D",
+      "ReferencePdfSha256": "AEFB23BD8E35BF1C078B283571FB358BBF6A1E05377B080849768631482F9E1F",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 598.92,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 256.68,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 263.4,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 271.51,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 278.52,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 287.06,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.937,0.439,0.737"
+        },
+        {
+          "X": 433.51,
+          "Y": 520.46,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.937,0.439,0.737"
+        }
+      ],
+      "BalloonTexts": [
+        "Deleted Cells",
+        "Deleted Cells"
+      ]
+    },
+    {
+      "Id": "cell-range-gap-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "95CEE8A442767D467BD88B86CDBC774F8717B560A1E2C434416786C2B1B7E9B9",
+      "ReferencePdfSha256": "4BDB67A834E01C15A28F268B5419719FB548F6BB0DC1641678E68C7DC413840B",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell.",
+        "Intervening unchanged row."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 598.92,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 256.68,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 263.4,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 271.51,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 278.52,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 287.06,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.937,0.439,0.737"
+        },
+        {
+          "X": 433.51,
+          "Y": 490.08,
+          "Width": 174.58000000000004,
+          "Height": 12.379999999999995,
+          "StrokeColor": "RG:0.937,0.439,0.737"
+        }
+      ],
+      "BalloonTexts": [
+        "Deleted Cells",
+        "Deleted Cells"
+      ]
+    },
+    {
+      "Id": "cell-range-later-date-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "34729747DD6F29CFC9E05F379776AE03A1D30A7F9F3560A4070B5A481ABCFDA2",
+      "ReferencePdfSha256": "5E5EAEACC0B2046CC12271AD22A44E74DC21B5D679952C74AC5709DFD380D8B9",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 598.92,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 256.68,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 263.4,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 271.51,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 278.52,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 287.06,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.937,0.439,0.737"
+        }
+      ],
+      "BalloonTexts": [
+        "Deleted Cells"
+      ]
+    },
+    {
+      "Id": "cell-range-mixed-kind-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6DBC934B6D109C37BFA8A55947D4B1B7EFD0A2087CC2DBEEC890FF9195B40A58",
+      "ReferencePdfSha256": "0552FB756AE47D1BC8CBDFE90DDC3549607A279514305182D479C9EB19DC77CC",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 603.12,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 608.04,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 598.92,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 256.68,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 263.4,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 271.51,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 278.52,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 287.06,
+          "Y": 579.55,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.937,0.439,0.737"
+        },
+        {
+          "X": 433.51,
+          "Y": 520.46,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.439,0.718,0.929"
+        }
+      ],
+      "BalloonTexts": [
+        "Deleted Cells",
+        "Inserted Cells"
+      ]
+    },
+    {
+      "Id": "cell-range-columns-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "087F64FFC4D15C5AE4A1CC36723B90CEF3D6249D59F418E7D94E0F909854DD76",
+      "ReferencePdfSha256": "044CE87EFC4FBEBB23AB1DCAD9DE42FB1E4F34EEB2CA01A2C6846C870C879D43",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 588.74,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 106.94,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 113.59,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 121.68,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 128.69,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 137.26,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.937,0.439,0.737"
+        },
+        {
+          "X": 433.51,
+          "Y": 616.49,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.937,0.439,0.737"
+        }
+      ],
+      "BalloonTexts": [
+        "Deleted Cells",
+        "Deleted Cells"
+      ]
+    },
+    {
+      "Id": "cell-range-columns-second-author-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "8F1A2ECE7AAECA0661763963FBA0B03E86C37D2BBEB63D1784E4FCE44CA52454",
+      "ReferencePdfSha256": "FD4C20AC728817753C96A6EC3AEADC08A3EBCF91589FD95D432DBF65C17C202D",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 588.74,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 106.94,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 113.59,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 121.68,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 128.69,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 137.26,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.937,0.439,0.737"
+        },
+        {
+          "X": 433.51,
+          "Y": 616.49,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.937,0.439,0.737"
+        }
+      ],
+      "BalloonTexts": [
+        "Deleted Cells",
+        "Deleted Cells"
+      ]
+    },
+    {
+      "Id": "cell-range-vertical-column-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6D944A4F70512B8FD21E3A389E4BB758ED72623671C86EADA8EEC77AE76D9646",
+      "ReferencePdfSha256": "7F30E1E817A84E7E4BD11E2974E0A3A47773F2383FC875A485FC7D34107B0707",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell.",
+        "Neighboring cell."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 588.74,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 106.94,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 113.59,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 121.68,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 128.69,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 137.26,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.937,0.439,0.737"
+        }
+      ],
+      "BalloonTexts": [
+        "Deleted Cells"
+      ]
+    },
+    {
+      "Id": "cell-range-diagonal-column-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "D93810224E1C3E5EE8E2DD25352148DC518829711D9A37C28E0CA9BDADB0C686",
+      "ReferencePdfSha256": "3F68A4A7EE3A204B15D8A0769421609C0CACC34B386983EC2EBF63C5EFAA5595",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x+2ybcda+b=cx+2ya+b=c",
+      "MathGlyphCount": 21,
+      "ImageCount": 1,
+      "ExpectedText": [
+        "share the same input series.",
+        "Additional cell.",
+        "Neighboring cell."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 104.57,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 108.41,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 112.87,
+          "Y": 636.98,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "y",
+          "X": 108.41,
+          "Y": 627.86,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 124.78,
+          "Y": 632.06,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 108.31,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 124.61,
+          "Y": 617.69,
+          "FontSize": 9.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 7,
+          "Text": "a",
+          "X": 143.35,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 150.1,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 9,
+          "Text": "b",
+          "X": 158.18,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 10,
+          "Text": "=",
+          "X": 165.1,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 11,
+          "Text": "c",
+          "X": 173.66,
+          "Y": 592.92,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 12,
+          "Text": "x",
+          "X": 194.33,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 13,
+          "Text": "+",
+          "X": 198.05,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 14,
+          "Text": "2",
+          "X": 202.51,
+          "Y": 597.84,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 15,
+          "Text": "y",
+          "X": 198.14,
+          "Y": 588.74,
+          "FontSize": 6.096,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 16,
+          "Text": "a",
+          "X": 106.94,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 17,
+          "Text": "+",
+          "X": 113.59,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 18,
+          "Text": "b",
+          "X": 121.68,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 19,
+          "Text": "=",
+          "X": 128.69,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 20,
+          "Text": "c",
+          "X": 137.26,
+          "Y": 548.95,
+          "FontSize": 8.352,
+          "FillColor": "g:0"
+        }
+      ],
+      "BalloonFrames": [
+        {
+          "X": 433.51,
+          "Y": 629.69,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.937,0.439,0.737"
+        },
+        {
+          "X": 433.51,
+          "Y": 520.46,
+          "Width": 174.58000000000004,
+          "Height": 12.289999999999964,
+          "StrokeColor": "RG:0.937,0.439,0.737"
+        }
+      ],
+      "BalloonTexts": [
+        "Deleted Cells",
+        "Deleted Cells"
+      ]
+    }
+  ]
+}
