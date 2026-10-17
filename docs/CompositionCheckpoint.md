@@ -1,5 +1,34 @@
 # Composed-document reliability checkpoint
 
+C120 retains admitted bar fractions whose script and literal arguments have only
+metrics. Actual controls own fonts and nominal sizes; existing placeholder boxes
+compose structural ink without invented source glyphs or subsets. Empty literal
+runs cannot choose an unrelated font/size or create unused resources. Unsupported
+empty stacks and deeper structures retain explicit fallbacks.
+
+Four sources/eight Word outcomes restore missing bars/frames although both old and
+reference text totals are14 glyphs. All math/prose anchors pass: math max0.107pt X /
+0.730pt Y, prose0.024pt /0.102pt. Four full rule gates pass; four display width gates
+retain0.110pt against0.1pt. All eight MAEs improve, strict raster gates remain failed
+without new components. Four crop pairs reviewed; the other four carry by identical
+Final/Review rasters. Empty-run variants paint identically and publish no math subset.
+
+One frozen Release artifact passes118 Windows checks and74 Ubuntu checks/44 native
+skips, once each. Parent checks fail two rules versus one. Seventeen assets/four
+integration PDFs transfer without root build/suite replay. Root9aa208ca; evidence
+`artifacts/composition-c1/glyphless-fraction-evidence.json`.
+
+C121 reuses the same artifact for twelve actual fixed-portfolio outcomes and twenty
+inspected pages. All accepted candidate/reference PDF identities match. Twelve
+comparisons and twenty previously reviewed page pairs carry without new Office
+exports, rasters or metrics. Ten DOCX gates fail and both decks pass unchanged
+thresholds. Ten prior content screens and two unresolved complete-report dynamic-
+field/math-tokenization flags carry by identity; no fresh audit pass is claimed.
+No tests/library rebuild or allocation rerun; descriptive cold timings imply no
+speedup. Evidence `artifacts/composition-c1/checkpoint-121-evidence.json`.
+C119 CI39033900340 is green on Windows/Ubuntu. Next bounded omission probe: supported
+script boxes inside delimiters, aligning discovery with existing argument measurement.
+
 C119 retains an entirely empty script argument beside a visible fraction sibling.
 Shared script-argument recognition publishes the actual fraction/child owners in
 order within the admitted bounded grammar. Existing metric-only preparation then
