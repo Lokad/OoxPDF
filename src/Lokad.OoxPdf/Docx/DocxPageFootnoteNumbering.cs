@@ -49,7 +49,7 @@ internal static class DocxPageFootnoteNumbering
         referencePages = new Dictionary<string, int>();
         if ((!IsEligibleDocument(source) && !IsEligibleInlineNumberingDocument(source)) ||
             !TryMapReferencePages(source, layout, out var pages, allowWrappedBody,
-            calibriPolicy: calibriPolicy, ownerScope: ownerScope, includeCustomMarkers: true, cancellationToken: cancellationToken)) return false;
+            calibriPolicy: calibriPolicy, ownerScope: ownerScope, forNumbering: true, cancellationToken: cancellationToken)) return false;
         var settings = source.FinalSectionBreak!.PageSettings.FootnoteReferenceSettings;
         var counts = new Dictionary<int, int>();
         var labels = new Dictionary<string, (string Before, string After)>(StringComparer.Ordinal);
@@ -156,7 +156,7 @@ internal static class DocxPageFootnoteNumbering
         DocxFootnoteOwnerScope ownerScope = DocxFootnoteOwnerScope.SingleReferenceParagraphs,
         CancellationToken cancellationToken = default) =>
         TryMapReferencePages(numbered, layout, out var actual, allowWrappedBody,
-            calibriPolicy: calibriPolicy, ownerScope: ownerScope, includeCustomMarkers: true, cancellationToken: cancellationToken) &&
+            calibriPolicy: calibriPolicy, ownerScope: ownerScope, forNumbering: true, cancellationToken: cancellationToken) &&
         HaveSameReferencePages(actual, originalPages);
 
     private static bool HaveSameReferencePages(IReadOnlyDictionary<string, int> actual,
@@ -196,7 +196,7 @@ internal static class DocxPageFootnoteNumbering
     private static bool TryMapReferencePages(DocxDocument document, DocxLayout layout, out Dictionary<string, int> pages,
         bool allowWrappedBody = false, DocxWrappedCalibriPolicy calibriPolicy = DocxWrappedCalibriPolicy.NormalizedNominal,
         DocxFootnoteOwnerScope ownerScope = DocxFootnoteOwnerScope.SingleReferenceParagraphs,
-        bool includeCustomMarkers = false, CancellationToken cancellationToken = default)
+        bool forNumbering = false, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         pages = new(StringComparer.Ordinal);
@@ -234,10 +234,11 @@ internal static class DocxPageFootnoteNumbering
                 !linesByParagraph.TryGetValue(p, out var lines) || lines.Count == 0) return false;
             bool wrapped = lines.Count != 1;
             // Numbering can use complete measured marker/note ownership below.
-            // Font adjustment purposes keep their separately qualified frames.
+            // Paragraph page boundaries do not change marker ownership. Font
+            // adjustment purposes keep their separately qualified frames.
             if (wrapped && (!allowWrappedBody || ownerScope != DocxFootnoteOwnerScope.AllSourceReferences &&
                 (wrappedBodyEligible ??= DocxWrappedFootnoteFrame.IsEligible(document, calibriPolicy, ownerScope)) != true ||
-                lines.Any(l => l.Page != lines[0].Page))) return false;
+                !forNumbering && lines.Any(l => l.Page != lines[0].Page))) return false;
             // Index source runs and actual text segments once per paragraph.
             // Numbering can own every marker; layout/kerning purposes retain
             // their independently qualified single-reference paragraph scope.
@@ -257,7 +258,7 @@ internal static class DocxPageFootnoteNumbering
                 bool custom = reference.CustomMarkText is not null;
                 if (custom)
                 {
-                    if (!includeCustomMarkers || reference.DisplayText is not null ||
+                    if (!forNumbering || reference.DisplayText is not null ||
                         !DocxCustomNoteMarkerOwners.TryGetSourceRun(reference,
                             customRuns ??= DocxCustomNoteMarkerOwners.IndexSourceRuns(p.Runs, cancellationToken), out _)) return false;
                 }

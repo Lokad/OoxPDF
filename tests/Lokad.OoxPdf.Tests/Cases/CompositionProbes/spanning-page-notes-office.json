@@ -1,0 +1,241 @@
+{
+  "Provenance": "Four independent Word exports. Counter labels restart on each physical marker page. Calibri candidate currently has an extra third page; no pagination parity is claimed.",
+  "Rows": [
+    {
+      "Id": "spanning-page-notes-arial-11-zero",
+      "Mode": "all-word-compatible",
+      "InputSha256": "1ED460811AF909619CABCBC9CC8D288431871CF31086927815F7BBBEAAE7BB86",
+      "ReferenceSha256": "2A2827E126333A2CA3186C85DC77EE9F5BE3AA705AE686CDC667D01D04F130E4",
+      "ExpectedPages": 2,
+      "NumberStart": 9,
+      "NumberFormat": "decimalZero",
+      "Markers": [
+        {
+          "PageNumber": 1,
+          "Text": "09",
+          "X": 337.51,
+          "Y": 549.22
+        },
+        {
+          "PageNumber": 1,
+          "Text": "10",
+          "X": 171.74,
+          "Y": 372.05
+        },
+        {
+          "PageNumber": 1,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 90.864
+        },
+        {
+          "PageNumber": 1,
+          "Text": "10",
+          "X": 72.024,
+          "Y": 78.144
+        },
+        {
+          "PageNumber": 2,
+          "Text": "09",
+          "X": 412.75,
+          "Y": 473.23
+        },
+        {
+          "PageNumber": 2,
+          "Text": "10",
+          "X": 234.77,
+          "Y": 296.21
+        },
+        {
+          "PageNumber": 2,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 90.864
+        },
+        {
+          "PageNumber": 2,
+          "Text": "10",
+          "X": 72.024,
+          "Y": 78.144
+        }
+      ]
+    },
+    {
+      "Id": "spanning-page-notes-arial-11-zero",
+      "Mode": "final-preserve",
+      "InputSha256": "1ED460811AF909619CABCBC9CC8D288431871CF31086927815F7BBBEAAE7BB86",
+      "ReferenceSha256": "010D2F5C49FBE7CF1A0E75627B2BD0B5E3C7247C7BB3D3D251574EF91A2D5E71",
+      "ExpectedPages": 2,
+      "NumberStart": 9,
+      "NumberFormat": "decimalZero",
+      "Markers": [
+        {
+          "PageNumber": 1,
+          "Text": "09",
+          "X": 337.51,
+          "Y": 549.22
+        },
+        {
+          "PageNumber": 1,
+          "Text": "10",
+          "X": 171.74,
+          "Y": 372.05
+        },
+        {
+          "PageNumber": 1,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 90.864
+        },
+        {
+          "PageNumber": 1,
+          "Text": "10",
+          "X": 72.024,
+          "Y": 78.144
+        },
+        {
+          "PageNumber": 2,
+          "Text": "09",
+          "X": 412.75,
+          "Y": 473.23
+        },
+        {
+          "PageNumber": 2,
+          "Text": "10",
+          "X": 234.77,
+          "Y": 296.21
+        },
+        {
+          "PageNumber": 2,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 90.864
+        },
+        {
+          "PageNumber": 2,
+          "Text": "10",
+          "X": 72.024,
+          "Y": 78.144
+        }
+      ]
+    },
+    {
+      "Id": "spanning-page-notes-calibri-12-zero",
+      "Mode": "all-word-compatible",
+      "InputSha256": "7FADBE5067EA4DE9EF3C4CB533D788B2AFFA11B89D44FFEC98E7E49F4FD02AFE",
+      "ReferenceSha256": "2DFCBD2209000797810C5CAAA40D0868C5C466828D029097A184C182B8B12A40",
+      "ExpectedPages": 2,
+      "NumberStart": 9,
+      "NumberFormat": "decimalZero",
+      "Markers": [
+        {
+          "PageNumber": 1,
+          "Text": "09",
+          "X": 339.55,
+          "Y": 522.07
+        },
+        {
+          "PageNumber": 1,
+          "Text": "10",
+          "X": 172.82,
+          "Y": 316.97
+        },
+        {
+          "PageNumber": 1,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 93.744
+        },
+        {
+          "PageNumber": 1,
+          "Text": "10",
+          "X": 72.024,
+          "Y": 79.104
+        },
+        {
+          "PageNumber": 2,
+          "Text": "09",
+          "X": 416.35,
+          "Y": 331.61
+        },
+        {
+          "PageNumber": 2,
+          "Text": "10",
+          "X": 237.29,
+          "Y": 126.5
+        },
+        {
+          "PageNumber": 2,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 93.744
+        },
+        {
+          "PageNumber": 2,
+          "Text": "10",
+          "X": 72.024,
+          "Y": 79.104
+        }
+      ]
+    },
+    {
+      "Id": "spanning-page-notes-calibri-12-zero",
+      "Mode": "final-preserve",
+      "InputSha256": "7FADBE5067EA4DE9EF3C4CB533D788B2AFFA11B89D44FFEC98E7E49F4FD02AFE",
+      "ReferenceSha256": "602B57BE6CD932AC4EDA796B3C89ADEE5274F015B1B8A7C2B302929DCD898D07",
+      "ExpectedPages": 2,
+      "NumberStart": 9,
+      "NumberFormat": "decimalZero",
+      "Markers": [
+        {
+          "PageNumber": 1,
+          "Text": "09",
+          "X": 339.55,
+          "Y": 522.07
+        },
+        {
+          "PageNumber": 1,
+          "Text": "10",
+          "X": 172.82,
+          "Y": 316.97
+        },
+        {
+          "PageNumber": 1,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 93.744
+        },
+        {
+          "PageNumber": 1,
+          "Text": "10",
+          "X": 72.024,
+          "Y": 79.104
+        },
+        {
+          "PageNumber": 2,
+          "Text": "09",
+          "X": 416.35,
+          "Y": 331.61
+        },
+        {
+          "PageNumber": 2,
+          "Text": "10",
+          "X": 237.29,
+          "Y": 126.5
+        },
+        {
+          "PageNumber": 2,
+          "Text": "09",
+          "X": 72.024,
+          "Y": 93.744
+        },
+        {
+          "PageNumber": 2,
+          "Text": "10",
+          "X": 72.024,
+          "Y": 79.104
+        }
+      ]
+    }
+  ]
+}

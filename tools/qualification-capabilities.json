@@ -5099,5 +5099,26 @@
     "DocxTableNoteBeforeSpacingIncludesCustomAndExactSlots",
     "DocxInlineCompositionMixedPageNotes",
     "PortableRenderingMixedPageNotesKeepCountersMarksMathAndImages"
+  ],
+  "docx-spanning-page-numbering": [
+    "DocxMeasuredFootnoteOwners",
+    "PortableRenderingMeasuredFootnoteOwners",
+    "DocxPageFootnoteNumbers",
+    "DocxMultipleFootnote",
+    "DocxWrappedFootnoteNumbers",
+    "DocxMetWrappedFootnoteNumbers",
+    "DocxInlineCompositionPageNotes",
+    "DocxInlineCompositionMixedPageNotes",
+    "DocxInlineCompositionCompoundPageNotesRetainIndependentLabelsMathAndImages",
+    "DocxInlineCompositionExplicitPageNotesRetainIndependentLabelsMathAndImages",
+    "PortableRenderingPageNotes",
+    "PortableRenderingCompoundPageNotes",
+    "PortableRenderingExplicitPageNotes",
+    "PortableRenderingMixedPageNotes",
+    "DocxInlineCompositionSpanningPageNotes",
+    "PortableRenderingSpanningPageNotes",
+    "DocxPlainFootnoteKerning",
+    "DocxWrappedCalibriKerning",
+    "DocxCompleteFootnote"
   ]
 }

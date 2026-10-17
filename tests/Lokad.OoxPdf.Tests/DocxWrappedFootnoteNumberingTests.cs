@@ -58,7 +58,11 @@ internal static class DocxWrappedFootnoteNumberingTests
         var splitPages = first.Pages.ToArray();
         splitPages[0] = splitPages[0] with { Items = splitPages[0].Items.Where(i => !ReferenceEquals(i, otherLine)).ToArray() };
         splitPages[1] = splitPages[1] with { Items = [otherLine, .. splitPages[1].Items] };
-        TestAssert.True(!DocxPageFootnoteNumbering.TryCreateDocument(source, first with { Pages = splitPages }, out _, out _, allowWrappedBody: true), "A wrapped paragraph spanning pages stays outside the complete-frame admission.");
+        var split = first with { Pages = splitPages };
+        TestAssert.True(DocxPageFootnoteNumbering.TryCreateDocument(source, split, out _, out var owners, allowWrappedBody: true),
+            "Unmarked paragraph lines on another page do not invalidate complete marker/note ownership for numbering.");
+        TestAssert.True(!DocxPageFootnoteNumbering.HasStablePages(source, split, owners, allowWrappedBody: true),
+            "Typography purposes retain their existing same-paragraph-page complete-frame admission.");
     }
 
     public static void DocxWrappedFootnoteNumbersKeepUnqualifiedSourceFrames()
