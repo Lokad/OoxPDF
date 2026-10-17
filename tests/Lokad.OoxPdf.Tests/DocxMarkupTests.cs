@@ -1898,12 +1898,12 @@ internal static class DocxMarkupTests
         TestAssert.Contains("0.82 0.204 0.22 rg", page.Content);
         Match[] decorations = Regex.Matches(
             page.Content,
-            @"0\.82 0\.204 0\.22 rg\r?\n[-\d.]+ [-\d.]+ [\d.]+ (?<thickness>[\d.]+) re f")
+            @"(?:0\.82 0\.204 0\.22|0 0\.471 0\.831) rg\r?\n[-\d.]+ [-\d.]+ [\d.]+ (?<thickness>[\d.]+) re f")
             .ToArray();
         TestAssert.Equal(4, decorations.Length);
         TestAssert.True(
             decorations.All(decoration => double.Parse(decoration.Groups["thickness"].Value, CultureInfo.InvariantCulture) >= 0.475d),
-            "Revision decorations should use the Office review color and at least the Office minimum thickness; font metrics may require thicker strokes.");
+            "Revision decorations should use their source authors' Office review ink and at least the Office minimum thickness; font metrics may require thicker strokes.");
     }
 
     public static void DocxWordCompatibleAllMarkupEmitsOfficeLikeMarkupPrimitiveInventory()

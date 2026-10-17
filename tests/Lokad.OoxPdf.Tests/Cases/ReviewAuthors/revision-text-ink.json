@@ -1,0 +1,79 @@
+[
+  {
+    "Id": "nontext-author-mark-with-text",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/nontext-author-mark-with-text.docx",
+    "Sha256": "1B6A1072BF0D39160C7B13650BAFE9F4D74428AE3E0F3E44E57CBA53DA33BCD3",
+    "SourceSha256": "201EEFC0969A39E392FE50CB94FA6D7402DB65A212A3EF102A32345B6A29E569",
+    "Kind": "mark-with-text",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "nontext-author-image-before-text",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/nontext-author-image-before-text.docx",
+    "Sha256": "18C015E5E57343628A7AC279F6902B29A86EBBC93049109BCAAE839B9982B9CC",
+    "SourceSha256": "201EEFC0969A39E392FE50CB94FA6D7402DB65A212A3EF102A32345B6A29E569",
+    "Kind": "image-before-text",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "nontext-author-image-after-text",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/nontext-author-image-after-text.docx",
+    "Sha256": "6ED5623D7FDD5B31E5E0952678B3C61DB833225F10AB386347D09AA705C6960A",
+    "SourceSha256": "201EEFC0969A39E392FE50CB94FA6D7402DB65A212A3EF102A32345B6A29E569",
+    "Kind": "image-after-text",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "nontext-author-format-before-text",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/nontext-author-format-before-text.docx",
+    "Sha256": "8B92521E2539FE2410861BCCB49CB958AB58E77FED392026C0DC2FE37D7F901D",
+    "SourceSha256": "201EEFC0969A39E392FE50CB94FA6D7402DB65A212A3EF102A32345B6A29E569",
+    "Kind": "format-before-text",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "nontext-author-format-after-text",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/nontext-author-format-after-text.docx",
+    "Sha256": "57A45DAC016C195576680360DDD0DA0F8661E9FB854FD13526815961E834435C",
+    "SourceSha256": "201EEFC0969A39E392FE50CB94FA6D7402DB65A212A3EF102A32345B6A29E569",
+    "Kind": "format-after-text",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "revision-ink-deletion-after-image",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/revision-ink-deletion-after-image.docx",
+    "Sha256": "7214FD2A3FA86F0121DE4B40601A16BE03FF75959BB70FD6525DC4163FB9CF26",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor.",
+      "Other deleted phrase."
+    ]
+  }
+]

@@ -1112,11 +1112,13 @@ internal sealed partial class DocxRenderer
         // RV06: comment balloons and range washes wear first-seen author colors;
         // the slots ride the markup context so static emission helpers can resolve
         // them per comment reference without signature changes.
+        DocxReviewAuthorPalette? reviewAuthors = UsesWordCompatibleAllMarkupTextProfile(markupContext)
+            ? BuildWordReviewAuthorPalette(document, SelectCommentAuthorsForPalette(layout.RelatedStories), cancellationToken) : null;
         markupContext = markupContext with
         {
-            CommentAuthorPaletteSlots = UsesWordCompatibleAllMarkupTextProfile(markupContext)
-                ? BuildWordReviewCommentAuthorPaletteSlots(document, SelectCommentAuthorsForPalette(layout.RelatedStories), cancellationToken)
-                : BuildCommentAuthorPaletteSlots(SelectCommentAuthorsForPalette(layout.RelatedStories))
+            WordReviewAuthorPalette = reviewAuthors,
+            CommentAuthorPaletteSlots = reviewAuthors?.CommentSlots ??
+                BuildCommentAuthorPaletteSlots(SelectCommentAuthorsForPalette(layout.RelatedStories))
         };
         // RV16: comment/reply story lookup rides the markup context so per-page
         // candidate collection resolves stories without rebuilding group dictionaries

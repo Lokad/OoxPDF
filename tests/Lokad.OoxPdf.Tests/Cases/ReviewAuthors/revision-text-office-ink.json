@@ -1,0 +1,167 @@
+{
+  "Scope": "Independent Word 16 text/decoration ink: five retained ordering controls plus deletion after an inserted image; each source owner and reference is pinned.",
+  "Rows": [
+    {
+      "Id": "nontext-author-mark-with-text",
+      "InputSha256": "1B6A1072BF0D39160C7B13650BAFE9F4D74428AE3E0F3E44E57CBA53DA33BCD3",
+      "ReferencePdfSha256": "7C15BDC89DC14AF1259185F1D391A5FBC26CCDA8730B9B4DEA39D4A72719E870",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "TargetWord": "Other",
+      "FillRgb": [
+        0,
+        120,
+        212
+      ],
+      "DecorationFillRgb": [
+        0,
+        120,
+        212
+      ],
+      "Decoration": "Underline"
+    },
+    {
+      "Id": "nontext-author-image-before-text",
+      "InputSha256": "18C015E5E57343628A7AC279F6902B29A86EBBC93049109BCAAE839B9982B9CC",
+      "ReferencePdfSha256": "1EEC212373E6B112546952836145F67EBF71F8BFC33AD40D91668DD948995AF7",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "TargetWord": "Other",
+      "FillRgb": [
+        0,
+        120,
+        212
+      ],
+      "DecorationFillRgb": [
+        0,
+        120,
+        212
+      ],
+      "Decoration": "Underline"
+    },
+    {
+      "Id": "nontext-author-image-after-text",
+      "InputSha256": "6ED5623D7FDD5B31E5E0952678B3C61DB833225F10AB386347D09AA705C6960A",
+      "ReferencePdfSha256": "40AD910BCB08A999C99E21527F9AB27EE496952DE540FA8DBFE6BE8097F54FF8",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "TargetWord": "Other",
+      "FillRgb": [
+        209,
+        52,
+        56
+      ],
+      "DecorationFillRgb": [
+        209,
+        52,
+        56
+      ],
+      "Decoration": "Underline"
+    },
+    {
+      "Id": "nontext-author-format-before-text",
+      "InputSha256": "8B92521E2539FE2410861BCCB49CB958AB58E77FED392026C0DC2FE37D7F901D",
+      "ReferencePdfSha256": "ABD375A28A93E1905678DE44C41A781675AB2C90122E73D6B7D147E84125CC67",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "TargetWord": "Other",
+      "FillRgb": [
+        0,
+        120,
+        212
+      ],
+      "DecorationFillRgb": [
+        0,
+        120,
+        212
+      ],
+      "Decoration": "Underline"
+    },
+    {
+      "Id": "nontext-author-format-after-text",
+      "InputSha256": "57A45DAC016C195576680360DDD0DA0F8661E9FB854FD13526815961E834435C",
+      "ReferencePdfSha256": "1253A79095A4C89C0660B356A6CEF87CA1DD930D2D02BADE0B297E4F08F105A8",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "TargetWord": "Other",
+      "FillRgb": [
+        209,
+        52,
+        56
+      ],
+      "DecorationFillRgb": [
+        209,
+        52,
+        56
+      ],
+      "Decoration": "Underline"
+    },
+    {
+      "Id": "revision-ink-deletion-after-image",
+      "InputSha256": "7214FD2A3FA86F0121DE4B40601A16BE03FF75959BB70FD6525DC4163FB9CF26",
+      "ReferencePdfSha256": "8D5EC031A9B250C0A6C0842A19C651D8EDFFAC21B363A9BBFEF68E65671CE2E8",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "TargetWord": "Other",
+      "FillRgb": [
+        0,
+        120,
+        212
+      ],
+      "DecorationFillRgb": [
+        0,
+        120,
+        212
+      ],
+      "Decoration": "Strike"
+    }
+  ]
+}

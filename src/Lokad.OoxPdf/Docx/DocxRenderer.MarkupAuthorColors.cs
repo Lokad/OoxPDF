@@ -2,6 +2,9 @@ using System.Globalization;
 
 namespace Lokad.OoxPdf.Docx;
 
+internal sealed record DocxReviewAuthorPalette(
+    IReadOnlyDictionary<string, int> AuthorSlots, IReadOnlyDictionary<string, int> CommentSlots);
+
 internal sealed partial class DocxRenderer
 {
     // RV06: Word 16.0 paints comment balloons, body range washes and their
@@ -68,9 +71,13 @@ internal sealed partial class DocxRenderer
 
     internal static IReadOnlyDictionary<string, int> BuildCommentAuthorPaletteSlots(
         IEnumerable<(string? Id, string? Author)> commentsInFileOrder)
-        => BuildCommentAuthorPaletteSlotsCore(commentsInFileOrder, [], default);
+        => BuildCommentAuthorPaletteSlotsCore(commentsInFileOrder, [], default).CommentSlots;
 
     internal static IReadOnlyDictionary<string, int> BuildWordReviewCommentAuthorPaletteSlots(
+        DocxDocument document, IEnumerable<(string? Id, string? Author)> comments, CancellationToken token)
+        => BuildWordReviewAuthorPalette(document, comments, token).CommentSlots;
+
+    internal static DocxReviewAuthorPalette BuildWordReviewAuthorPalette(
         DocxDocument document, IEnumerable<(string? Id, string? Author)> comments, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
@@ -122,7 +129,7 @@ internal sealed partial class DocxRenderer
             DocxRevisionKind.Insertion or DocxRevisionKind.Deletion or DocxRevisionKind.RunPropertiesChange;
     }
 
-    private static IReadOnlyDictionary<string, int> BuildCommentAuthorPaletteSlotsCore(
+    private static DocxReviewAuthorPalette BuildCommentAuthorPaletteSlotsCore(
         IEnumerable<(string? Id, string? Author)> commentsInFileOrder,
         IEnumerable<string?> sourceRevisionAuthors, CancellationToken token)
     {
@@ -155,7 +162,7 @@ internal sealed partial class DocxRenderer
             }
         }
 
-        return slotsById;
+        return new(slotByAuthor, slotsById);
     }
 
     internal static IEnumerable<(string? Id, string? Author)> SelectCommentAuthorsForPalette(

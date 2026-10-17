@@ -25,7 +25,7 @@ internal sealed partial class DocxRenderer
                 HasTextContentRevision(segment.StyleRun);
         }
 
-        RgbColor color = segment.Color;
+        RgbColor color = ResolvePaintedRevisionColor(segment, markupContext);
         if (segment.FallbackFace is { } fallback)
         {
             DrawFallbackTextEmissionSegment(segment, fallback, graphics, markupContext);
@@ -61,9 +61,7 @@ internal sealed partial class DocxRenderer
         if (!segment.IsTerminalLineSpace)
         {
             bool useWordCompatibleRevisionDecorationProfile = ShouldUseWordCompatibleRevisionDecorationProfile();
-            RgbColor decorationColor = useWordCompatibleRevisionDecorationProfile
-                ? new RgbColor(WordCompatibleAllMarkupReviewStrokeRgb.Red, WordCompatibleAllMarkupReviewStrokeRgb.Green, WordCompatibleAllMarkupReviewStrokeRgb.Blue)
-                : color;
+            RgbColor decorationColor = color;
             double ResolveRevisionDecorationWidth()
             {
                 if (!useWordCompatibleRevisionDecorationProfile || segment.Role != DocxTextSegmentRole.Text ||
@@ -384,6 +382,20 @@ internal sealed partial class DocxRenderer
         return emissionSegments;
     }
 
+    private static RgbColor ResolvePaintedRevisionColor(DocxTextEmissionSegment segment, DocxMarkupContext context)
+    {
+        if (!UsesWordCompatibleAllMarkupTextProfile(context) ||
+            segment.Role == DocxTextSegmentRole.NumberingChange ||
+            context.WordReviewAuthorPalette is not { } palette) return segment.Color;
+        var run = segment.StyleRun;
+        DocxRevisionInfo? owner = run.Revision is { Kind: DocxRevisionKind.Insertion or DocxRevisionKind.Deletion } primary
+            ? primary : run.Revisions.FirstOrDefault(revision => revision.Kind is DocxRevisionKind.Insertion or DocxRevisionKind.Deletion);
+        if (owner is null || !palette.AuthorSlots.TryGetValue(NormalizeReviewAuthorIdentity(owner.Author), out int slot))
+            return segment.Color;
+        var color = CommentAuthorStrokePalette[PositivePaletteIndex(slot, CommentAuthorStrokePalette.Length)];
+        return new(color.Red, color.Green, color.Blue);
+    }
+
     private static RgbColor ResolveTextEmissionColor(
         DocxTextRun styleRun,
         bool useWordCompatibleTextProfile,
@@ -677,6 +689,7 @@ internal sealed partial class DocxRenderer
         PdfGraphicsBuilder graphics,
         DocxMarkupContext markupContext)
     {
+        RgbColor color = ResolvePaintedRevisionColor(segment, markupContext);
         if (!segment.IsTerminalLineSpace)
         {
             RenderRunBackground(
@@ -695,24 +708,19 @@ internal sealed partial class DocxRenderer
             segment.Text,
             segment.X,
             segment.BaselineY,
-            segment.Color,
+            color,
             segment.FontSize,
             segment.StyleRun.EffectiveProperties.CharacterSpacingPoints);
 
         if (!segment.IsTerminalLineSpace)
         {
-            bool revisionProfile = UsesWordCompatibleAllMarkupTextProfile(markupContext) &&
-                HasTextContentRevision(segment.StyleRun);
-            RgbColor decorationColor = revisionProfile
-                ? new RgbColor(WordCompatibleAllMarkupReviewStrokeRgb.Red, WordCompatibleAllMarkupReviewStrokeRgb.Green, WordCompatibleAllMarkupReviewStrokeRgb.Blue)
-                : segment.Color;
             RenderFallbackTextDecorations(
                 segment.StyleRun,
                 segment.X,
                 segment.Width,
                 segment.FontSize,
                 segment.BaselineY,
-                decorationColor,
+                color,
                 graphics);
         }
     }
