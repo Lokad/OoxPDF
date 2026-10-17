@@ -1,5 +1,42 @@
 # Composed-document reliability checkpoint
 
+C162 projects one complete guarded nested body table through the existing
+Review origin. Ordinary text converts its nominal inset, while measured
+mathematical/picture frames translate with their container exactly once at each
+depth. All descendant lines must survive shared ancestor clips before any
+replacement is published. Nested border pitch, exact clips and fragments retain
+explicit fallbacks; qualified flat-table geometry remains.
+
+Thirty-eight Windows and30 Ubuntu checks pass, with eight native skips. Sixteen
+independent Word outcomes/eight sources/16 pages retain32 formulas,16 pictures
+and six internal links. Mathematical Y differs by at most0.218pt and named
+surrounding prose by0.452pt, correcting the inherited Review2.654pt displacement.
+All seven changed Review MAEs improve; nine PDFs retain accepted bytes, all16
+strict visual gates remain failed and no failed component is added. Four changed
+unique region pairs were reviewed; three navigation Review pairs carry both PNG
+identities. Both Word/occupied-slot observers fail on C161. Horizontal mathematics
+up to0.916pt, absolute destination coordinates (ReviewY0.750pt), borders,
+typography and connector residuals remain unaccepted.
+
+C161 CI39077405467 passes Ubuntu; Windows3421pass/1fail/16skip exposes an old
+blanket table-note exclusion previously masked by invalid occupied metadata.
+A real1pt source clip now tests exclusion, and a complete-cell positive observer
+keeps numbering separate from typography eligibility. One production build runs
+36 exact methods; harness-only corrections preserve14 final runtime assets and
+2,078 inputs. Thirty-seven Windows passes carry and only the corrected new
+start-four observer reruns; Ubuntu runs only the two added/corrected checks.
+Original CI and development failures remain retained.
+
+A source audit of1,455 tracked DOCX inputs finds seven matching nested-body
+sources, all included plus the direct control. C158's fixed12/7/20 carries source
+scope and report/deck smokes. Sixteen pinned Word references/PNGs reuse without
+exports/reference raster replay. Seventeen assets/four exact smokes transfer
+without root build or suite/corpus replay. Rooteee789fb; evidence
+artifacts/composition-c1/review-nested-placement-evidence.json. The infrequent
+workspace scan records12.075GB/631,514 files, zero errors; the loose5GB target
+remains unmet and no rejected retirement is retried. Next: simplify reusable
+reference lookup, then measure nested border pitch before changing height rules.
+
 C161 keeps ordinary scaled cell occupied bounds in physical coordinates. The
 old baseline inset could exceed its measured height; independent Word controls
 also demonstrate Review note rectangles2.44-3.09pt too high. Scaling that inset
