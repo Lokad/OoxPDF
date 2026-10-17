@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+C73 gives unchanged, text-bearing numbering markers the resolved paragraph color
+and numbering-level underline. First-run authored/review decoration stays on its
+source; existing marker-revision fallbacks and other decoration policies remain.
+Fourteen Word outcomes pin color/underline facts; twelve unchanged-marker outcomes
+match all 36 emitted number colors and underline counts. MAE improves in all
+twelve, recall stays identical, and no new gate component fails. All fourteen
+visual gates remain failed at unchanged thresholds. Two accepted pairs and the
+known mark-revision pair were reviewed.
+
+Qualification passes 141 Windows methods and 105 Ubuntu methods/36 explicit skips.
+Two older ink checks incorrectly gave the unchanged number its first run's blue
+color. Two fresh Word formatting-revision exports establish black numbers and a
+blue Summary; only those two checks rerun on the unchanged DLL, carrying 139
+Windows results. Ubuntu runs once; two new checks fail on the parent. The external
+PDF inspector now reports device fill through its existing graphics-state stack;
+default/gray/RGB/CMYK, nested q/Q and literal/comment checks agree across platforms.
+Production self-validation is unchanged.
+
+All fourteen outcomes retain their non-whitespace text's parent font/matrix/
+spacing fields; newly undecorated separator spaces can omit paint operations.
+All ten fixed/complete corpus PDFs retain bytes and comparisons. The two separate
+mark-only insertion controls retain parent PDFs and confirmed defects: the first
+number disappears in both modes, and Review emits two numbers where Word paints
+five, including old/new counter pairs. This is a high-priority content/revision
+gap, not a qualified match. Evidence:
+`artifacts/composition-c1/list-decoration-evidence.json` and linked reports.
+
 C72 adds a test-only, hash-pinned DejaVu Math TeX Gyre face with retained upstream
 2.37 notices. TrueType outlines, MATH constants and the five mathematical italic
 letters missing from the existing Sans face are checked explicitly. Forty
