@@ -1,0 +1,276 @@
+[
+  {
+    "Id": "cell-structure-placement-exact-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-structure-placement-exact-ins.docx",
+    "Sha256": "1C44B5413E01402E55BB83102A6F4B64647D890E741BE05B5B0AF94CD2968AC3",
+    "SourceSha256": "1C44B5413E01402E55BB83102A6F4B64647D890E741BE05B5B0AF94CD2968AC3",
+    "Kind": "ins",
+    "Shape": "original",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ContentMustFit": true,
+    "ImageCount": 1,
+    "VisibilityContract": "Complete contained content",
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ProsePrefixes": []
+  },
+  {
+    "Id": "exact-row-frame-96-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/exact-row-frame-96-ins.docx",
+    "Sha256": "5D2901914D1ECC4C06A2F5F6A86B9CA069015FFBE437D2B50B9ED791AC78BF58",
+    "SourceSha256": "1C44B5413E01402E55BB83102A6F4B64647D890E741BE05B5B0AF94CD2968AC3",
+    "Kind": "ins",
+    "Shape": "96",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ContentMustFit": true,
+    "ImageCount": 1,
+    "VisibilityContract": "Complete contained content",
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ProsePrefixes": []
+  },
+  {
+    "Id": "exact-row-frame-72-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/exact-row-frame-72-ins.docx",
+    "Sha256": "AF023335295864ED2BAB797BD68A9029CC6914B08F04C51ED1B666EB56CC41D5",
+    "SourceSha256": "1C44B5413E01402E55BB83102A6F4B64647D890E741BE05B5B0AF94CD2968AC3",
+    "Kind": "ins",
+    "Shape": "72",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ContentMustFit": false,
+    "ImageCount": 1,
+    "VisibilityContract": "Office deliberately clips source content to the exact cell; raw text is not visible-content proof",
+    "ExpectedText": [],
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ProsePrefixes": []
+  },
+  {
+    "Id": "exact-row-frame-24-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/exact-row-frame-24-ins.docx",
+    "Sha256": "3CB142BE96E50ED161770E3122499C1E5EBC97F1546A226D51677FE36D94B45F",
+    "SourceSha256": "1C44B5413E01402E55BB83102A6F4B64647D890E741BE05B5B0AF94CD2968AC3",
+    "Kind": "ins",
+    "Shape": "24",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ContentMustFit": false,
+    "ImageCount": 0,
+    "VisibilityContract": "Office deliberately clips source content to the exact cell; raw text is not visible-content proof",
+    "ExpectedText": [],
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ProsePrefixes": []
+  },
+  {
+    "Id": "exact-row-frame-border-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/exact-row-frame-border-ins.docx",
+    "Sha256": "13801DDC40753829696080B034A01C8910EC4DD4AA81043E17C905A105336D51",
+    "SourceSha256": "1C44B5413E01402E55BB83102A6F4B64647D890E741BE05B5B0AF94CD2968AC3",
+    "Kind": "ins",
+    "Shape": "border",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ContentMustFit": true,
+    "ImageCount": 1,
+    "VisibilityContract": "Complete contained content",
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ProsePrefixes": []
+  },
+  {
+    "Id": "exact-row-frame-flow-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/exact-row-frame-flow-ins.docx",
+    "Sha256": "9F02405D8C7E0D5980DF74893DD00766EF1F505A618B8CA2BF0C722627C79E6C",
+    "SourceSha256": "1C44B5413E01402E55BB83102A6F4B64647D890E741BE05B5B0AF94CD2968AC3",
+    "Kind": "ins",
+    "Shape": "flow",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ContentMustFit": true,
+    "ImageCount": 1,
+    "VisibilityContract": "Complete contained content",
+    "ExpectedText": [
+      "share the same input series.",
+      "Following exact row."
+    ],
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ProsePrefixes": [
+      "Following exact row."
+    ]
+  },
+  {
+    "Id": "cell-structure-placement-exact-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/cell-structure-placement-exact-del.docx",
+    "Sha256": "91A4637D4BD3E45590097681D2DE1B04A60AEE774A08CBFA67EDBEFF50A6B71D",
+    "SourceSha256": "91A4637D4BD3E45590097681D2DE1B04A60AEE774A08CBFA67EDBEFF50A6B71D",
+    "Kind": "del",
+    "Shape": "original",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ContentMustFit": true,
+    "ImageCount": 1,
+    "VisibilityContract": "Complete contained content",
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ProsePrefixes": []
+  },
+  {
+    "Id": "exact-row-frame-96-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/exact-row-frame-96-del.docx",
+    "Sha256": "62325785EF00EBE2DD4783E18FF7692256755EAAB07EE2784B555998EDF60346",
+    "SourceSha256": "91A4637D4BD3E45590097681D2DE1B04A60AEE774A08CBFA67EDBEFF50A6B71D",
+    "Kind": "del",
+    "Shape": "96",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ContentMustFit": true,
+    "ImageCount": 1,
+    "VisibilityContract": "Complete contained content",
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ProsePrefixes": []
+  },
+  {
+    "Id": "exact-row-frame-72-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/exact-row-frame-72-del.docx",
+    "Sha256": "CC6CC760E28BB6E89355930E3A06B333A05C8B360059999F35AB567522AAC8B1",
+    "SourceSha256": "91A4637D4BD3E45590097681D2DE1B04A60AEE774A08CBFA67EDBEFF50A6B71D",
+    "Kind": "del",
+    "Shape": "72",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ContentMustFit": false,
+    "ImageCount": 1,
+    "VisibilityContract": "Office deliberately clips source content to the exact cell; raw text is not visible-content proof",
+    "ExpectedText": [],
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ProsePrefixes": []
+  },
+  {
+    "Id": "exact-row-frame-24-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/exact-row-frame-24-del.docx",
+    "Sha256": "111DDC20754EE5E67CB0EB071C4FF0216E457CC57E9FA6CC4C8F821428607BA4",
+    "SourceSha256": "91A4637D4BD3E45590097681D2DE1B04A60AEE774A08CBFA67EDBEFF50A6B71D",
+    "Kind": "del",
+    "Shape": "24",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ContentMustFit": false,
+    "ImageCount": 0,
+    "VisibilityContract": "Office deliberately clips source content to the exact cell; raw text is not visible-content proof",
+    "ExpectedText": [],
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ProsePrefixes": []
+  },
+  {
+    "Id": "exact-row-frame-border-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/exact-row-frame-border-del.docx",
+    "Sha256": "18E55911409CBF30F10883962E5AF255D423D76B63831D5F5DB2725BAD3DA4A5",
+    "SourceSha256": "91A4637D4BD3E45590097681D2DE1B04A60AEE774A08CBFA67EDBEFF50A6B71D",
+    "Kind": "del",
+    "Shape": "border",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ContentMustFit": true,
+    "ImageCount": 1,
+    "VisibilityContract": "Complete contained content",
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ProsePrefixes": []
+  },
+  {
+    "Id": "exact-row-frame-flow-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/exact-row-frame-flow-del.docx",
+    "Sha256": "DFB1F75B024B4D36BF59D570A2DE12EA910AB4B63D27729B543D0D9B268A1EF7",
+    "SourceSha256": "91A4637D4BD3E45590097681D2DE1B04A60AEE774A08CBFA67EDBEFF50A6B71D",
+    "Kind": "del",
+    "Shape": "flow",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ContentMustFit": true,
+    "ImageCount": 1,
+    "VisibilityContract": "Complete contained content",
+    "ExpectedText": [
+      "share the same input series.",
+      "Following exact row."
+    ],
+    "BalloonRegion": [
+      400,
+      350,
+      612,
+      792
+    ],
+    "ProsePrefixes": [
+      "Following exact row."
+    ]
+  }
+]

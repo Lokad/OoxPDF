@@ -261,7 +261,7 @@ internal sealed partial class DocxRenderer
             {
                 double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
                 int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
-                var (above, below) = ResolveInlineLineVerticalExtents(line);
+                var (above, below) = DocxInlineLineGeometry.VerticalExtents(line);
                 RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics, CommentAuthorFillRgb(authorSlot), CommentAuthorStrokeRgb(authorSlot), above, below);
             }
             else if ((range is null || !HasCommentRangeBounds(range)) &&
@@ -411,18 +411,6 @@ internal sealed partial class DocxRenderer
         }
 
         return segmentEndOffset > segmentStartOffset || segment.Width > 0d;
-    }
-
-    private static (double Above, double Below) ResolveInlineLineVerticalExtents(DocxTextLineLayout line)
-    {
-        double above = line.InlineFrame?.BaselineInset ?? 0d;
-        double below = line.InlineFrame is { } frame ? Math.Max(0d, frame.Height - frame.BaselineInset) : 0d;
-        // Source endpoints constrain horizontal extent. Selection and connector
-        // share the occupied line frame, enlarged only by visible math bounds.
-        foreach (var extent in line.InlineSourceExtents)
-            if (extent.IsMath)
-            { above = Math.Max(above, extent.AboveBaseline); below = Math.Max(below, extent.BelowBaseline); }
-        return (above, below);
     }
 
     private static void RenderWordCompatibleCommentRangeMarker(

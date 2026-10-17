@@ -35,7 +35,8 @@ internal sealed partial class DocxLayoutEngine
             if (items[itemIndex] is not DocxTableRowLayout row ||
                 row.FragmentCount != 1 && !(allowPageBoundaryFragments && row.FragmentReason == "PageBoundary") ||
                 !HasAutomaticTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue) &&
-                !HasMinimumTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue))
+                !HasMinimumTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue) &&
+                !HasExactTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue))
             {
                 return;
             }
@@ -79,6 +80,22 @@ internal sealed partial class DocxLayoutEngine
             rows.Add((row, insets));
         }
 
+        // Validate every exact frame before translating any earlier row. Tight
+        // source clips and incomplete/overflowing occupied frames keep their
+        // existing path; geometry admission and painting share clip ownership.
+        for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
+        {
+            DocxTableRowLayout row = rows[rowIndex].Row;
+            if (!HasExactTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue)) continue;
+            double borderAdvance = ResolveReviewRowBorderAdvance(row, rowIndex == rows.Count - 1, scaleSimpleBorders, printScale);
+            foreach (var cell in row.Cells)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (DocxTableCellClipGeometry.Resolve(row, cell).Admitted ||
+                    !HasContainedReviewCellFrames(cell, cell.Y + borderAdvance, cell.Y + cell.Height, cancellationToken)) return;
+            }
+        }
+
         // Word review controls: body text already carries a scaled baseline anchor,
         // while simple table cells retain nominal insets in their layout. Move the
         // table geometry to that anchor and scale each cell inset once. Surrounding
@@ -95,14 +112,8 @@ internal sealed partial class DocxLayoutEngine
         {
             cancellationToken.ThrowIfCancellationRequested();
             (DocxTableRowLayout row, double[] insets) = rows[rowIndex];
-            double borderAdvanceCorrection = 0d;
-            if (scaleSimpleBorders)
-            {
-                double bottom = MaxBorderWidth("bottom");
-                double advance = bottom > 0d ? bottom : MaxBorderWidth("top");
-                if (rowIndex == rows.Count - 1) advance += bottom;
-                borderAdvanceCorrection = advance * (1d - printScale);
-            }
+            double borderAdvanceCorrection = ResolveReviewRowBorderAdvance(row,
+                rowIndex == rows.Count - 1, scaleSimpleBorders, printScale);
             var cells = new DocxTableCellLayout[row.Cells.Count];
             bool fragmentInsetsAlreadyPrinted = row.FragmentCount > 1 &&
                 row.Cells.All(cell => HasNaturalReviewCellLineMetrics(cell.VisualCell));
@@ -136,11 +147,47 @@ internal sealed partial class DocxLayoutEngine
             };
             previousBorderAdvanceCorrection += borderAdvanceCorrection;
 
-            double MaxBorderWidth(string edge) => row.Cells
-                .Select(cell => DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.VisualCell.Borders, edge)))
-                .DefaultIfEmpty(0d).Max();
         }
         cursorY += previousBorderAdvanceCorrection;
+    }
+
+    private static bool HasExactTableRowHeight(double? height, string? rule) =>
+        height is double exact && double.IsFinite(exact) && exact > 0d &&
+        string.Equals(rule, "exact", StringComparison.OrdinalIgnoreCase);
+
+    private static double ResolveReviewRowBorderAdvance(DocxTableRowLayout row, bool isLastRow, bool scaleBorders, double scale)
+    {
+        if (!scaleBorders) return 0d;
+        double Width(string edge) => row.Cells.Select(cell => DocxTableBorderGeometry.ResolveVisibleWidth(
+            DocxTableBorderGeometry.Find(cell.VisualCell.Borders, edge))).DefaultIfEmpty(0d).Max();
+        double bottom = Width("bottom");
+        double advance = bottom > 0d ? bottom : Width("top");
+        return (advance + (isLastRow ? bottom : 0d)) * (1d - scale);
+    }
+
+    private static bool HasContainedReviewCellFrames(DocxTableCellLayout cell, double bottom, double top, CancellationToken token)
+    {
+        // This only absorbs floating-point roundoff, not an Office correction.
+        const double roundoff = .000001d;
+        if (!double.IsFinite(bottom) || !double.IsFinite(top) || top <= bottom) return false;
+        foreach (var line in cell.TextLines)
+        {
+            token.ThrowIfCancellationRequested();
+            if (line.InlineFrame is not { } frame || !double.IsFinite(frame.Height) || frame.Height <= 0d) return false;
+            var extent = DocxInlineLineGeometry.VerticalExtents(line);
+            double lineTop = line.BaselineY + extent.Above;
+            double lineBottom = line.BaselineY - extent.Below;
+            if (!double.IsFinite(lineTop) || !double.IsFinite(lineBottom) || lineBottom < bottom - roundoff || lineTop > top + roundoff) return false;
+        }
+        foreach (var image in cell.InlineImages)
+        {
+            token.ThrowIfCancellationRequested();
+            // Ordered pictures already share their measured line owner. An
+            // additional legacy picture frame must fit as well when present.
+            if (image.LineFrame is { } frame && (!frame.IsUsable || frame.Bottom < bottom - roundoff ||
+                frame.Bottom + frame.Height > top + roundoff)) return false;
+        }
+        return true;
     }
 
     private static bool HasOrderedPictureLineOwners(DocxTableCellLayout cell, CancellationToken token)

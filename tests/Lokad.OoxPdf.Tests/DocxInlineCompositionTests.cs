@@ -50,12 +50,13 @@ internal static partial class DocxInlineCompositionTests
         }
         foreach (string rule in new[] { "exact", "unknown" })
         {
-            var guarded = row with { RowIndex = 1, HeightRuleValue = rule, DeclaredHeightPoints = 30d };
+            var guarded = row with { RowIndex = 1, HeightRuleValue = rule, DeclaredHeightPoints = 1d,
+                Height = 1d, Cells = [cell with { Height = 1d }] };
             var fallback = new List<DocxLayoutItem> { row, guarded };
             cursor = 0d;
             DocxLayoutEngine.ApplyReviewTableBaselineGeometry(fallback, 0, 12d, measurer, .75d, ref cursor, default);
             TestAssert.True(ReferenceEquals(row, fallback[0]) && ReferenceEquals(guarded, fallback[1]) && cursor == 0d,
-                "An exact or unknown height retains the complete table fallback before any earlier row is mutated.");
+                "A clipped exact or unknown height retains the complete table fallback before any earlier row is mutated.");
         }
         using var canceled = new CancellationTokenSource(); canceled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() =>

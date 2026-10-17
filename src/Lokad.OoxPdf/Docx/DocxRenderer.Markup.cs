@@ -895,7 +895,7 @@ internal sealed partial class DocxRenderer
                             WordCompatibleCellLastSource = cellSource,
                             WordCompatibleStrokeRgb = ResolveCellStructureStrokeRgb(cellRevisions),
                             WordCompatibleAnchorDepthPoints = structuralAnchor?.InlineFrame is null ? null :
-                                ResolveInlineLineVerticalExtents(structuralAnchor).Below,
+                                DocxInlineLineGeometry.VerticalExtents(structuralAnchor).Below,
                             WordCompatiblePlacementTopY = cellStructureOnly && UsesWordCompatibleAllMarkupTextProfile(markupContext)
                                 ? cell.Y + cell.Height - ResolveTextEmissionBaselineOffset(markupContext)
                                 : null
