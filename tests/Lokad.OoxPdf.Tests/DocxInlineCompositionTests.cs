@@ -1330,7 +1330,9 @@ internal static partial class DocxInlineCompositionTests
                 paragraph.Runs.Any(item => ReferenceEquals(item, run)) && run.Text == reference.DisplayText,
                 "Automatic footnote glyphs must have an explicit resolved source owner in the ordered content.");
             TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
-            foreach (string restart in new[] { "eachPage", "invalid" })
+            TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with
+                { InlineReferences = [reference with { NoteNumberRestartValue = "eachPage" }] }).Count);
+            foreach (string restart in new[] { "invalid" })
                 TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with
                     { InlineReferences = [reference with { NoteNumberRestartValue = restart }] }).Count);
             TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with

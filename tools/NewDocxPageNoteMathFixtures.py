@@ -17,6 +17,7 @@ with ZipFile(output / "math-footnote-before-body-plain.docx") as z:
     equation = next(E.fromstring(z.read("word/document.xml")).iter(m + "oMath"))
 rows = []
 compound_rows = []
+explicit_rows = []
 for typography in ["calibri-12-zero", "arial-11-zero"]:
     source = output / ("footnote-page-owners-" + typography + ".docx")
     with ZipFile(source) as z:
@@ -96,6 +97,25 @@ for typography in ["calibri-12-zero", "arial-11-zero"]:
         ImageSha256=hashlib.sha256(image_bytes).hexdigest().upper(), HeldOut=False,
         ExpectedEquationCount=8, ImagePlacements=4, ExpectedMarkers=["09", "10", "09", "10"],
         ExpectedText=rows[-1]["ExpectedText"]))
+    # Declaring the same page dependency in document settings must not remove
+    # otherwise identical supported paragraph content.
+    settings = E.fromstring(entries["word/settings.xml"])
+    properties = settings.find(w + "footnotePr")
+    restart = properties.find(w + "numRestart")
+    if restart is None:
+        restart = E.SubElement(properties, w + "numRestart")
+    restart.set(w + "val", "eachPage")
+    entries["word/settings.xml"] = E.tostring(settings, encoding="utf-8", xml_declaration=True)
+    explicit = output / ("math-page-notes-explicit-page-" + typography + ".docx")
+    with ZipFile(explicit, "w", ZIP_DEFLATED) as z:
+        for name, data in sorted(entries.items()):
+            info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+            info.compress_type = ZIP_DEFLATED
+            z.writestr(info, data)
+    explicit_rows.append(compound_rows[-1] | dict(Id=explicit.stem, Input=explicit.relative_to(root).as_posix(),
+        Sha256=hashlib.sha256(explicit.read_bytes()).hexdigest().upper(),
+        SourceSha256=hashlib.sha256(compound.read_bytes()).hexdigest().upper()))
+(output / "math-page-notes-explicit-page.json").write_text(json.dumps(explicit_rows, indent=2) + "\n", encoding="utf-8")
 (output / "math-page-notes-compound.json").write_text(json.dumps(compound_rows, indent=2) + "\n", encoding="utf-8")
 (output / "math-page-notes.json").write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
-print("Pinned two original and two compound page-numbering controls")
+print("Pinned original, compound and explicit page-dependency controls")

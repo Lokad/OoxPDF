@@ -28,8 +28,9 @@ internal static partial class DocxInlineCompositionTests
                     paragraph.Runs.Any(owner => ReferenceEquals(owner, run)), "Section-resolved labels retain their actual marker owner.");
                 TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
                 foreach (string restart in new[] { "eachPage", "invalid" })
-                    TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with
-                        { InlineReferences = [reference with { NoteNumberRestartValue = restart }] }).Count);
+                    TestAssert.Equal(restart == "eachPage" && reference.Kind == DocxRelatedStoryKind.Footnote ? 2 : 0,
+                        DocxMathParagraphPolicy.GetPreparationEquations(paragraph with
+                            { InlineReferences = [reference with { NoteNumberRestartValue = restart }] }).Count);
             }
         }
     }

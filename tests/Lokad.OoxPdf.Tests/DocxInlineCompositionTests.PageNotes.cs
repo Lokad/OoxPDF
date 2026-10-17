@@ -12,10 +12,11 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxInlineCompositionPageNotesRenumberOwnedRunsWithoutDiscardingMath()
     {
         foreach (string typography in new[] { "calibri-12-zero", "arial-11-zero" })
-        foreach (bool compound in new[] { false, true })
+        foreach (string composition in new[] { "", "compound-", "explicit-page-" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            var source = ReadMutation("CompositionProbes/math-page-notes-" + (compound ? "compound-" : "") + typography, mode, true, true);
+            bool compound = composition.Length != 0;
+            var source = ReadMutation("CompositionProbes/math-page-notes-" + composition + typography, mode, true, true);
             TestAssert.True(!DocxPageFootnoteNumbering.IsEligibleDocument(source), "Typography purposes retain their existing plain-body qualification.");
             var math = source.Paragraphs.SelectMany(p => p.Equations).ToDictionary(equation => equation,
                 equation => new DocxPreparedMathParagraph(equation, new(18d, 9d, 4d, []), 12d, 16d));
@@ -57,6 +58,12 @@ internal static partial class DocxInlineCompositionTests
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent compound page-note controls use installed Windows fonts.");
         CheckPageNoteMath(null, "math-page-notes-compound-office.json");
+    }
+
+    public static void DocxInlineCompositionExplicitPageNotesRetainIndependentLabelsMathAndImages()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent page dependency controls use installed Windows fonts.");
+        CheckPageNoteMath(null, "math-page-notes-explicit-page-office.json");
     }
 
     internal static void CheckPageNoteMath(IFontResolver? resolver, string referenceFile = "math-page-notes-office.json")
