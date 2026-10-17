@@ -3627,5 +3627,23 @@
     "DocxEndnoteSeparatorHeight",
     "DocxFootnoteLineHeightFollowsHhea",
     "DocxLineHeightPrefers"
+  ],
+  "docx-mapped-revision-band-height": [
+    "DocxRevisionBarHorizontalFramesMatchIndependentWord",
+    "PortableRenderingRevisionBarsKeepIndependentPageFrames",
+    "DocxWordCompatibleAllMarkupPaintsPageRevisionBar",
+    "DocxWordCompatibleRevisionBars",
+    "DocxWordCompatibleAllMarkupEmitsOfficeLikeMarkupPrimitiveInventory",
+    "DocxWordCompatiblePrintScale",
+    "DocxWordCompatibleMirroredPagesKeepWrapWidthAndBalloonLane",
+    "DocxMarkupReserveMarginKeepsMirroredGutterInside",
+    "DocxInlineCompositionTextRevisionMathMatchesIndependentWord",
+    "PortableRenderingTextRevisionMathKeepsSourceOwnersAndFallbacks",
+    "DocxSimpleMarkupRendererDrawsChangeBars",
+    "DocxInlineCompositionMappedNoteBandBottomMatchesIndependentWord",
+    "DocxInlineCompositionCompleteRevisionsKeepDistinctWordStoryBands",
+    "PortableRenderingCompleteRevisionsKeepContentInkAndStoryBands",
+    "DocxInlineCompositionWholeRevisionsKeepCellAndStaticContentAndInk",
+    "PortableRenderingWholeRevisionsKeepCellAndStaticContentAndInk"
   ]
 }

@@ -139,8 +139,7 @@ internal sealed partial class DocxRenderer
                 {
                     PaintRevisionBounds();
                 }
-                double scaledFontSize = line.FontSize * ResolveTextEmissionFontScale(markupContext);
-                double height = Math.Max(6d, line.LineHeight ?? scaledFontSize * 1.2d);
+                double height = ResolveRevisionLineHeight(line, markupContext);
                 double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
                 IncludeRevisionBounds(baselineY - height * 0.25d, height);
                 lastChangedBlock = sourceBlock;
@@ -156,8 +155,7 @@ internal sealed partial class DocxRenderer
             var owner = RevisionBandOwner(source.Owner);
             if (separateBodyBands && owner.Kind == DocxStoryKind.Body || !HasTextLineRevision(line)) continue;
 
-            double scaledFontSize = line.FontSize * ResolveTextEmissionFontScale(markupContext);
-            double height = Math.Max(6d, line.LineHeight ?? scaledFontSize * 1.2d);
+            double height = ResolveRevisionLineHeight(line, markupContext);
             double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
             double y = baselineY - height * 0.25d;
             IncludeStoryBounds(owner, y, height);
@@ -201,6 +199,12 @@ internal sealed partial class DocxRenderer
             return CollectTextLineRevisions(line, markupContext, cancellationToken).Count != 0;
         }
     }
+
+    // The mapped inline frame owns physical extents. Related-story LineHeight
+    // may still describe its design-space slot after emission precompensation.
+    private static double ResolveRevisionLineHeight(DocxTextLineLayout line, DocxMarkupContext context) =>
+        Math.Max(6d, line.InlineFrame?.Height ?? line.LineHeight ??
+            line.FontSize * ResolveTextEmissionFontScale(context) * 1.2d);
 
     private static IReadOnlyList<DocxRevisionInfo> CollectTextLineRevisions(DocxTextLineLayout line, DocxMarkupContext markupContext,
         CancellationToken token = default)
