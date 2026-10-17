@@ -1093,6 +1093,7 @@ internal sealed record PdfTextOperation(
     string Font,
     double FontSize,
     double CharacterSpacing,
+    string FillColor,
     double A,
     double B,
     double C,
@@ -1144,6 +1145,10 @@ internal sealed record PdfTextOperation(
         @"(?<spacing>-?(?:\d+\.?\d*|\.\d+))\s+Tc",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    private static readonly Regex FillColorRegex = new(
+        @"(?<!\S)(?<values>(?:-?(?:\d+\.?\d*|\.\d+)\s+){1,4})(?<space>rg|g|k)(?=\s|$)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private static readonly Regex MatrixRegex = new(
         @"(?<a>-?(?:\d+\.?\d*|\.\d+))\s+(?<b>-?(?:\d+\.?\d*|\.\d+))\s+(?<c>-?(?:\d+\.?\d*|\.\d+))\s+(?<d>-?(?:\d+\.?\d*|\.\d+))\s+(?<x>-?(?:\d+\.?\d*|\.\d+))\s+(?<y>-?(?:\d+\.?\d*|\.\d+))\s+Tm",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -1169,6 +1174,7 @@ internal sealed record PdfTextOperation(
         string font = string.Empty;
         double fontSize = 0d;
         double characterSpacing = 0d;
+        string fillColor = "g:0";
         double a = 1d;
         double b = 0d;
         double c = 0d;
@@ -1182,7 +1188,7 @@ internal sealed record PdfTextOperation(
         {
             foreach (Match _ in SaveGraphicsStateRegex.Matches(line))
             {
-                graphicsStack.Push(new TextExtractionState(font, fontSize, characterSpacing, currentMatrix));
+                graphicsStack.Push(new TextExtractionState(font, fontSize, characterSpacing, currentMatrix, fillColor));
             }
 
             foreach (Match match in CurrentMatrixRegex.Matches(line))
@@ -1206,6 +1212,17 @@ internal sealed record PdfTextOperation(
             foreach (Match match in CharacterSpacingRegex.Matches(line))
             {
                 characterSpacing = ReadDouble(match.Groups["spacing"].Value);
+            }
+
+            // Report device colors from the existing graphics-state lifetime.
+            // Text payloads may themselves contain apparent color operators.
+            foreach (Match match in FillColorRegex.Matches(ShowRegex.Replace(line, string.Empty)))
+            {
+                string space = match.Groups["space"].Value;
+                string[] values = match.Groups["values"].Value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+                if (values.Length == (space == "g" ? 1 : space == "rg" ? 3 : 4))
+                    fillColor = space + ":" + string.Join(",", values.Select(value =>
+                        Math.Round(ReadDouble(value), 6).ToString("0.######", CultureInfo.InvariantCulture)));
             }
 
             foreach (Match match in MatrixRegex.Matches(line))
@@ -1249,6 +1266,7 @@ internal sealed record PdfTextOperation(
                     font,
                     fontSize,
                     characterSpacing,
+                    fillColor,
                     a,
                     b,
                     c,
@@ -1288,6 +1306,7 @@ internal sealed record PdfTextOperation(
                     font = string.Empty;
                     fontSize = 0d;
                     characterSpacing = 0d;
+                    fillColor = "g:0";
                     currentMatrix = PdfMatrix.Identity;
                 }
                 else
@@ -1297,6 +1316,7 @@ internal sealed record PdfTextOperation(
                     fontSize = restored.FontSize;
                     characterSpacing = restored.CharacterSpacing;
                     currentMatrix = restored.CurrentMatrix;
+                    fillColor = restored.FillColor;
                 }
             }
         }
@@ -1308,7 +1328,8 @@ internal sealed record PdfTextOperation(
         string Font,
         double FontSize,
         double CharacterSpacing,
-        PdfMatrix CurrentMatrix);
+        PdfMatrix CurrentMatrix,
+        string FillColor);
 
     private static double ReadDouble(string value) => double.Parse(value, CultureInfo.InvariantCulture);
 

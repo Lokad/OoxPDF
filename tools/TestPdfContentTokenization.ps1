@@ -3,12 +3,12 @@
 # decode exactly. Builds adversarial PDFs, inspects them, and asserts the
 # extracted operations. No Office/COM or reference cache needed.
 
+param([string] $OutputDirectory, [string] $InspectorPath)
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$scratch = Join-Path $repoRoot "artifacts/content-tokenize-probe"
-if (Test-Path -LiteralPath $scratch) {
-    Remove-Item -LiteralPath $scratch -Recurse -Force
-}
+$scratch = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) }
+    else { Join-Path $repoRoot ('artifacts/content-tokenize-probe-' + [Guid]::NewGuid().ToString('N')) }
+if (Test-Path -LiteralPath $scratch) { throw 'Use a fresh tokenizer-check directory' }
 New-Item -ItemType Directory -Force -Path $scratch | Out-Null
 
 $pdfLines = @(
@@ -42,9 +42,33 @@ $pdfLines = @(
 '20 20 40 30 re'
 'f*'
 '/F1 12 Tf'
+'% 1 0 0 rg is not an operator here'
+'BT'
 '(Hello) Tj'
+'ET'
+'q'
+'0.2 g'
+'BT'
 '(a(b)c) Tj'
+'ET'
+'q'
+'0 0 1 rg'
+'BT'
 '(a\(b) Tj'
+'ET'
+'Q'
+'BT'
+'(gray again) Tj'
+'ET'
+'Q'
+'BT'
+'(default again) Tj'
+'ET'
+'0 1 1 0 k'
+'BT'
+'(CMYK) Tj'
+'(0 0 1 rg) Tj'
+'ET'
 '% (phantom) Tj'
 'endstream'
 'endobj'
@@ -54,7 +78,8 @@ $pdfLines = @(
 $pdfPath = Join-Path $scratch "adversarial.pdf"
 [IO.File]::WriteAllLines($pdfPath, $pdfLines)
 $inspectDir = Join-Path $scratch "inspect"
-& (Join-Path $repoRoot "tools/InspectPdf.ps1") -InputPdf $pdfPath -OutputDirectory $inspectDir | Out-Null
+if ($InspectorPath) { dotnet $InspectorPath $pdfPath $inspectDir | Out-Null }
+else { & (Join-Path $repoRoot "tools/InspectPdf.ps1") -InputPdf $pdfPath -OutputDirectory $inspectDir | Out-Null }
 if ($LASTEXITCODE -ne 0) {
     throw "PdfInspect failed with exit code $LASTEXITCODE."
 }
@@ -83,15 +108,21 @@ if ($graphics.Count -eq 2) {
     if ($graphics[0].Kind -cne "Fill" -or $graphics[0].Operator -cne "f") { $script:failures += "op0 kind/operator"; Write-Host "FAIL: op0 kind/operator" }
     if ($graphics[1].Kind -cne "Fill" -or $graphics[1].Operator -cne "f*") { $script:failures += "op1 kind/operator"; Write-Host "FAIL: op1 kind/operator" }
 }
-$texts = @(Get-Content -Raw -LiteralPath (Join-Path $inspectDir "text-operations.json") | ConvertFrom-Json | ForEach-Object { $_.DecodedText })
-$wantTexts = @("Hello", "a(b)c", "a(b")
+$textOperations = @(Get-Content -Raw -LiteralPath (Join-Path $inspectDir "text-operations.json") | ConvertFrom-Json)
+$texts = @($textOperations.DecodedText)
+$wantTexts = @("Hello", "a(b)c", "a(b", "gray again", "default again", "CMYK", "0 0 1 rg")
 if (@(Compare-Object $texts $wantTexts).Count -ne 0) {
     $script:failures += ("texts: got [" + ($texts -join "|") + "]")
     Write-Host ("FAIL: texts: got [" + ($texts -join "|") + "]")
 }
 else {
-    Write-Host "PASS: texts Hello|a(b)c|a(b"
+    Write-Host 'PASS: nested/escaped text and color-operator payloads'
 }
+$wantColors = @('g:0', 'g:0.2', 'rg:0,0,1', 'g:0.2', 'g:0', 'k:0,1,1,0', 'k:0,1,1,0')
+if (($textOperations.FillColor -join '|') -cne ($wantColors -join '|')) {
+    $failures += ('Fill-color state: ' + ($textOperations.FillColor -join '|'))
+}
+else { Write-Host 'PASS: default/gray/RGB/CMYK fill, nested save/restore and literal isolation' }
 
 if ($failures.Count -ne 0) {
     throw ("Content tokenization checks failed: " + ($failures -join "; "))
