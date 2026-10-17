@@ -1,5 +1,29 @@
 # Composed-document reliability checkpoint
 
+C78 replaces the balloon formatter's run-only ownership check with the existing
+shared paragraph ownership check. An actual inserted numbering mark can coexist
+with run formatting without forcing a generic inserted-text summary. Source
+revisions, inline marker ink and counters remain unchanged; missing/unnumbered/
+misplaced/copied mark metadata and incomplete formatting keep their fallbacks.
+
+Four retained Word Review references now match "Formatted: Font: Bold" across
+body/cell/header/footer controls. Eight mode outcomes retain source-story text,
+ink, font tags, matrices, sizes, spacing and advances; four Final PDFs retain bytes.
+Horizontal title/body deltas are .185/.253pt. Vertical residuals remain explicit:
+body/footer .559/.541pt, cell/header 1.160/1.152pt. Four Review MAEs/recalls improve;
+body/footer clear the recall component, but all eight visual gates still fail
+unchanged thresholds. Header/footer pairs were reviewed. No new Word exports.
+
+One frozen Release artifact passes 46 Windows methods and 38 Ubuntu methods/eight
+explicit skips, each in one invocation; two new checks fail on C77. Seventeen
+assets/four smoke PDFs transfer without a root rebuild or suite replay. All eight
+parent comparisons are reused through identical PDFs; four Final comparisons
+carry to the candidate. Five fixed/complete input identities match the earlier
+zero-inserted-mark inventory, so ten corpus comparisons carry by scope inference
+without new corpus conversions or PDF-identity claims. C77 CI is green on both
+platforms (38991450463). Evidence:
+`artifacts/composition-c1/mark-formatting-balloon-evidence.json` and linked reports.
+
 C77 resolves numbering definitions before advancing shared source timelines.
 Concrete IDs sharing a definition continue its sequence; explicit starts apply on
 first use in each current/original timeline. Matching valid NSIDs identify the
