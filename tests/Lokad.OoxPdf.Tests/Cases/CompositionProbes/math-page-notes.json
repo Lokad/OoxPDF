@@ -1,0 +1,42 @@
+[
+  {
+    "Id": "math-page-notes-calibri-12-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-page-notes-calibri-12-zero.docx",
+    "Sha256": "54DDFA3F33DBF17D1EF362D5EAB0563C320FED4E1E070320A03EE8A20B241E1B",
+    "SourceSha256": "E70290A5ECB37604406E24BEC90E2210F1BD73DBAC404362C48E9C4E2CA884E8",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedMarkers": [
+      "09",
+      "10",
+      "09",
+      "10"
+    ],
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Bravo.",
+      "Public destination Charlie.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "math-page-notes-arial-11-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-page-notes-arial-11-zero.docx",
+    "Sha256": "F2F185125E1C12284724B3E797FC4EEF3422D1768B5F7896A45DE6AFD895F19D",
+    "SourceSha256": "18D343F5FB99AD3FC146AE42E1345E3046FF860E66D3F81D2802F7EB291542FB",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedMarkers": [
+      "09",
+      "10",
+      "09",
+      "10"
+    ],
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Bravo.",
+      "Public destination Charlie.",
+      "Public destination Delta."
+    ]
+  }
+]

@@ -3,7 +3,9 @@ namespace Lokad.OoxPdf.Docx;
 internal static class DocxPlainBodyFrame
 {
     internal static bool IsEligible(DocxDocument document) =>
-        HasPlainBody(document) &&
+        HasPlainBody(document) && HasNoStaticStories(document);
+
+    internal static bool HasNoStaticStories(DocxDocument document) =>
         document.HeaderParagraphs.Count == 0 && document.FooterParagraphs.Count == 0 &&
         document.HeaderParagraphsByType.Count == 0 && document.FooterParagraphsByType.Count == 0 &&
         document.HeaderBodyElementsByType.Count == 0 && document.FooterBodyElementsByType.Count == 0 &&

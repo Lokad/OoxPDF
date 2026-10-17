@@ -9,9 +9,26 @@ internal static class DocxPageFootnoteNumbering
 {
     internal static bool IsEligibleDocument(DocxDocument document, bool includeContinuousRestart = false)
     {
-        if (!DocxPlainBodyFrame.IsEligible(document) ||
-            !document.Settings.FootnoteReferenceSettings.HasKnownNumberRestart) return false;
-        var settings = document.FinalSectionBreak!.PageSettings.FootnoteReferenceSettings;
+        return DocxPlainBodyFrame.IsEligible(document) &&
+            HasEligibleNoteSettingsAndStories(document, includeContinuousRestart);
+    }
+
+    // Numbering owns measured marker/note pages. Font and leading purposes keep
+    // their existing plain-body admission through IsEligibleDocument above.
+    private static bool IsEligibleInlineNumberingDocument(DocxDocument document) =>
+        DocxPlainBodyFrame.HasKnownBodyFrame(document) && DocxPlainBodyFrame.HasNoStaticStories(document) &&
+        HasEligibleNoteSettingsAndStories(document, includeContinuousRestart: false) &&
+        document.BodyElements.Count != 0 && document.BodyElements.All(element =>
+            element is DocxParagraphElement paragraph
+                ? DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph.Paragraph, element.Revisions)
+                : element is DocxPageBreakElement && element.Revisions.Count == 0) &&
+        document.Paragraphs.All(paragraph => DocxPlainBodyFrame.IsPlainParagraph(paragraph) ||
+            paragraph.InlineContent is not null && DocxInlineContent.HasSupportedSourceOwner(paragraph));
+
+    private static bool HasEligibleNoteSettingsAndStories(DocxDocument document, bool includeContinuousRestart)
+    {
+        if (document.FinalSectionBreak is null || !document.Settings.FootnoteReferenceSettings.HasKnownNumberRestart) return false;
+        var settings = document.FinalSectionBreak.PageSettings.FootnoteReferenceSettings;
         return (settings.NumberRestartValue == "eachPage" || includeContinuousRestart &&
                 settings.NumberRestartValue is "continuous" or "eachSect") &&
             settings.NumberFormatValue is null or "decimal" or "decimalZero" &&
@@ -28,7 +45,8 @@ internal static class DocxPageFootnoteNumbering
     {
         numbered = source;
         referencePages = new Dictionary<string, int>();
-        if (!IsEligibleDocument(source) || !TryMapReferencePages(source, layout, out var pages, allowWrappedBody,
+        if ((!IsEligibleDocument(source) && !IsEligibleInlineNumberingDocument(source)) ||
+            !TryMapReferencePages(source, layout, out var pages, allowWrappedBody,
             calibriPolicy: calibriPolicy, ownerScope: ownerScope)) return false;
         var settings = source.FinalSectionBreak!.PageSettings.FootnoteReferenceSettings;
         var counts = new Dictionary<int, int>();
@@ -52,10 +70,8 @@ internal static class DocxPageFootnoteNumbering
             }
             // Only the generated marker in its own source run changes. Authored
             // digits and original source offsets retain their identities.
-            var runs = paragraph.Runs.Select(r => runLabels.TryGetValue(r.SourceRunIndex, out string? label)
-                ? r with { Text = label } : r).ToArray();
-            replacements.Add(paragraph, paragraph with { Runs = runs,
-                InlineReferences = references.ToArray() });
+            if (!TryReplaceMarkerRuns(paragraph, runLabels, references, out var replacement)) return false;
+            replacements.Add(paragraph, replacement);
         }
         // Complete ownership was validated, but unchanged labels need neither
         // a replacement document nor the coordinator's font/layout retry.
@@ -78,6 +94,41 @@ internal static class DocxPageFootnoteNumbering
             }).ToArray()
         };
         referencePages = pages;
+        return true;
+    }
+
+    private static bool TryReplaceMarkerRuns(DocxParagraph paragraph, IReadOnlyDictionary<int, string> labels,
+        IReadOnlyList<DocxInlineReference> references, out DocxParagraph replacement)
+    {
+        replacement = paragraph;
+        var changed = new Dictionary<DocxTextRun, DocxTextRun>(ReferenceEqualityComparer.Instance);
+        var runs = paragraph.Runs.Select(run =>
+        {
+            if (!labels.TryGetValue(run.SourceRunIndex, out string? label) || run.Text == label) return run;
+            var updated = run with { Text = label };
+            changed.Add(run, updated);
+            return updated;
+        }).ToArray();
+        if (changed.Count == 0) return true;
+        List<DocxInlineItem>? items = paragraph.InlineContent is null ? null : [];
+        if (items is not null)
+            foreach (var item in paragraph.InlineContent!)
+            {
+                if (item is DocxInlineText text && changed.TryGetValue(text.Run, out var updated))
+                {
+                    // The complete measured marker owns one numeric source run.
+                    // A partial source slice retains the original numbering.
+                    if (text.Start != 0 || text.Length != text.Run.Text.Length) return false;
+                    items.Add(text with { Run = updated, Length = updated.Text.Length });
+                }
+                else items.Add(item);
+            }
+        replacement = paragraph with {
+            Runs = runs,
+            InlineReferences = references.Select(reference => reference.DisplayRun is { } run &&
+                changed.TryGetValue(run, out var updated) ? reference with { DisplayRun = updated } : reference).ToArray(),
+            InlineContent = items?.ToArray(),
+        };
         return true;
     }
 
