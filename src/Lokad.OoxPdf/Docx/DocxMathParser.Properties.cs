@@ -7,6 +7,34 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static partial class DocxMathParser
 {
+    private static DocxMathFraction ReadFraction(XElement element, DocxMathRow numerator, DocxMathRow denominator,
+        Func<XElement, string, DocxTextRun> readRun, CancellationToken token)
+    {
+        bool valid = ReadPropertyOwner(element, "fPr", out XElement? owner, out XElement[] children);
+        foreach (XElement property in children)
+        {
+            token.ThrowIfCancellationRequested();
+            valid &= property.Name == MathNamespace + "ctrlPr" ? HasKnownControl(property) :
+                property.Name == MathNamespace + "type" && HasKnownValueProperty(property);
+        }
+        XElement? control = owner?.Element(MathNamespace + "ctrlPr");
+        DocxTextRun text = readRun(control ?? element, string.Empty);
+        return new(numerator, denominator, PropertyValue(element, "fPr", "type"))
+        { HasUnsupportedProperties = !valid, ControlText = text, ControlFontFamily = ControlFontFamily(control, text) };
+    }
+
+    private static DocxMathScripts ReadScripts(XElement element, DocxMathRow basis, DocxMathRow? subscript, DocxMathRow? superscript,
+        Func<XElement, string, DocxTextRun> readRun, CancellationToken token)
+    {
+        bool valid = ReadPropertyOwner(element, element.Name.LocalName + "Pr", out XElement? owner, out XElement[] children);
+        foreach (XElement property in children)
+        { token.ThrowIfCancellationRequested(); valid &= property.Name == MathNamespace + "ctrlPr" && HasKnownControl(property); }
+        XElement? control = owner?.Element(MathNamespace + "ctrlPr");
+        DocxTextRun text = readRun(control ?? element, string.Empty);
+        return new(basis, subscript, superscript)
+        { HasUnsupportedProperties = !valid, ControlText = valid ? text : null, ControlFontFamily = ControlFontFamily(control, text) };
+    }
+
     private static DocxMathFunction ReadFunction(XElement element, DocxMathRow name, DocxMathRow argument,
         Func<XElement, string, DocxTextRun> readRun, CancellationToken token)
     {

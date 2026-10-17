@@ -1,0 +1,146 @@
+[
+  {
+    "Id": "explicit-control-script-empty-11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/explicit-control-script-empty-11.docx",
+    "Sha256": "E00F65D0F491EE001F05289ECC510F37E16CE87A7F0527EE0C4F95AEEB6CC1F9",
+    "SourceSha256": "E50EBECD3E1CEE8249F333B452DCDAE7D57AD4C499CE829B104BE15571C27C32",
+    "Role": "script",
+    "Painted": false,
+    "ControlSize": 11,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "explicit-control-script-empty-12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/explicit-control-script-empty-12.docx",
+    "Sha256": "8CBC8FD74EA14EE847A2F2772C1BD16B1874950E2F572DFC081560CBABC54139",
+    "SourceSha256": "E50EBECD3E1CEE8249F333B452DCDAE7D57AD4C499CE829B104BE15571C27C32",
+    "Role": "script",
+    "Painted": false,
+    "ControlSize": 12,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "explicit-control-script-painted-11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/explicit-control-script-painted-11.docx",
+    "Sha256": "ACD72D750A990870274DC20FA3A43AC5BE2756D0BF402CFC9DB7DB8131F2A447",
+    "SourceSha256": "E50EBECD3E1CEE8249F333B452DCDAE7D57AD4C499CE829B104BE15571C27C32",
+    "Role": "script",
+    "Painted": true,
+    "ControlSize": 11,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "explicit-control-script-painted-12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/explicit-control-script-painted-12.docx",
+    "Sha256": "0905EDA7BC2074D0A0E0E6A5C39F7D3889737D66F999F4BFCBBA667872B61DA2",
+    "SourceSha256": "E50EBECD3E1CEE8249F333B452DCDAE7D57AD4C499CE829B104BE15571C27C32",
+    "Role": "script",
+    "Painted": true,
+    "ControlSize": 12,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "explicit-control-fraction-empty-11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/explicit-control-fraction-empty-11.docx",
+    "Sha256": "E3B81FDF0902BB3A40AA874E79144CD8E27C766EF4AED2896B9BB3746291F98B",
+    "SourceSha256": "A891519815EDEBE3D61982126DAA6ABE4C6DE684C52167722D793ED490E1BD17",
+    "Role": "fraction",
+    "Painted": false,
+    "ControlSize": 11,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "explicit-control-fraction-empty-12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/explicit-control-fraction-empty-12.docx",
+    "Sha256": "99C34233241B25645A65921E8D5D13E6C84E444FD853F526974E43B6736AE4AE",
+    "SourceSha256": "A891519815EDEBE3D61982126DAA6ABE4C6DE684C52167722D793ED490E1BD17",
+    "Role": "fraction",
+    "Painted": false,
+    "ControlSize": 12,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "explicit-control-fraction-painted-11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/explicit-control-fraction-painted-11.docx",
+    "Sha256": "320E87D2C13C96D7DE4E86FBEC0455C9775579F26A056B6B034CB5E94729FCCA",
+    "SourceSha256": "A891519815EDEBE3D61982126DAA6ABE4C6DE684C52167722D793ED490E1BD17",
+    "Role": "fraction",
+    "Painted": true,
+    "ControlSize": 11,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "explicit-control-fraction-painted-12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/explicit-control-fraction-painted-12.docx",
+    "Sha256": "659CE7C6C6846066249D3769A38335364C6BAE8A9551728CD6197BC2BA44FFF9",
+    "SourceSha256": "A891519815EDEBE3D61982126DAA6ABE4C6DE684C52167722D793ED490E1BD17",
+    "Role": "fraction",
+    "Painted": true,
+    "ControlSize": 12,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  }
+]

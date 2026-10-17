@@ -13,7 +13,7 @@ internal static partial class DocxMathLayout
             ? GetSupportedScripts(argument.Children[0]) : null;
 
     private static DocxMathScripts? GetSupportedScripts(DocxMathNode? node) =>
-        node is DocxMathScripts { PropertiesXml.Count: 0 } scripts &&
+        node is DocxMathScripts { HasUnsupportedProperties: false } scripts &&
         (scripts.Subscript is not null || scripts.Superscript is not null) ? scripts : null;
 
     internal static bool IsEmptyScripts(DocxEquation equation, CancellationToken token)

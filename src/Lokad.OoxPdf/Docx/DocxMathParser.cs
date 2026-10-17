@@ -82,24 +82,14 @@ internal static partial class DocxMathParser
             else if (name == "f" && Role(element, "num") is { } numerator && Role(element, "den") is { } denominator &&
                 HasOnlyRoles(element, "num", "den"))
             {
-                node = new DocxMathFraction(numerator, denominator, PropertyValue(element, "fPr", "type"))
-                {
-                    ControlText = readRun(element, string.Empty),
-                    HasUnsupportedProperties = element.Elements().Any(child => IsProperty(child) && child.Name != MathNamespace + "fPr") ||
-                        element.Element(MathNamespace + "fPr")?.Elements().Any(child => child.Name != MathNamespace + "type") == true
-                };
+                node = ReadFraction(element, numerator, denominator, readRun, cancellationToken);
             }
             else if (name is "sSub" or "sSup" or "sSubSup" && Role(element, "e") is { } basis &&
                 (name == "sSup" || Role(element, "sub") is not null) &&
                 (name == "sSub" || Role(element, "sup") is not null) &&
                 HasOnlyRoles(element, name == "sSub" ? ["e", "sub"] : name == "sSup" ? ["e", "sup"] : ["e", "sub", "sup"]))
             {
-                node = new DocxMathScripts(basis, Role(element, "sub"), Role(element, "sup"))
-                {
-                    // Unsupported script properties retain their existing source
-                    // fallback and cannot reserve an unpainted revision author.
-                    ControlText = element.Elements().Any(IsProperty) ? null : readRun(element, string.Empty)
-                };
+                node = ReadScripts(element, basis, Role(element, "sub"), Role(element, "sup"), readRun, cancellationToken);
             }
             else if (name == "func" && Role(element, "fName") is { } functionName && Role(element, "e") is { } argument &&
                 HasOnlyRoles(element, "fName", "e"))

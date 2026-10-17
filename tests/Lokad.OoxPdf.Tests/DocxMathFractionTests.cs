@@ -749,7 +749,7 @@ internal static class DocxMathFractionTests
         var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
         var scripts = new DocxMathScripts(Row("B"), null, Row("C"));
         DocxEquation source = Fraction() with { Content = new([Row("A+"), scripts]) };
-        foreach (var content in new[] { new DocxMathRow([Row("A+"), scripts with { PropertiesXml = ["<m:sSupPr/>"] }]),
+        foreach (var content in new[] { new DocxMathRow([Row("A+"), scripts with { HasUnsupportedProperties = true, PropertiesXml = ["<m:sSupPr><m:future/></m:sSupPr>"] }]),
             new DocxMathRow([Row("A+"), scripts with { Base = new([scripts]) }]) })
             TestAssert.True(!DocxMathLayout.TryGetRuns(source with { Content = content }, CancellationToken.None, out _) &&
                 !DocxMathLayout.TryMeasure(source with { Content = content }, _ => resource, CancellationToken.None, out var box, out _) && box is null,
@@ -1033,7 +1033,7 @@ internal static class DocxMathFractionTests
         foreach ((string properties, bool accepted) in new[]
         {
             ("<m:fPr><m:type m:val='bar'/></m:fPr>", true),
-            ("<m:fPr><m:ctrlPr/></m:fPr>", false),
+            ("<m:fPr><m:ctrlPr/></m:fPr>", true),
             ("<m:fPr><m:type m:val='skw'/></m:fPr>", false)
         })
         {

@@ -465,3 +465,48 @@ for role, control, counter in [
                                   ExpectedText=["share the same input series."], ProsePrefixes=["Summary:", "governs"]))
 (output / "child-metric-controls.json").write_text(json.dumps(child_metric_rows, indent=2) + "\n", encoding="utf-8")
 print("Pinned ten shared child-metric compositions")
+
+# Ordinary authored control properties use the same owner grammar in fractions
+# and scripts. Keep both hidden argument frames and painted child sources.
+explicit_control_rows = []
+namespace_map = dict(E._namespace_map)
+E._namespace_map.pop(w[1:-1], None)
+E._namespace_map.pop(m[1:-1], None)
+try:
+    for role in ["script", "fraction"]:
+        source = output / ("child-metric-matrix-" + role + ".docx")
+        with ZipFile(source) as z:
+            original = {name: z.read(name) for name in z.namelist()}
+        for painted in [False, True]:
+            for size in [11, 12]:
+                entries = dict(original)
+                xml = E.fromstring(entries["word/document.xml"])
+                matrix = next(xml.iter(m + "m"))
+                cell = matrix.find(m + "mr").find(m + "e")
+                if painted:
+                    cell.clear()
+                    cell.append(deepcopy(script if role == "script" else fraction))
+                control = list(cell)[0]
+                properties = E.Element(control.tag + "Pr")
+                owner = E.SubElement(properties, m + "ctrlPr")
+                run = E.SubElement(owner, w + "rPr")
+                E.SubElement(run, w + "rFonts", {w + "ascii": "Cambria Math", w + "hAnsi": "Cambria Math"})
+                E.SubElement(run, w + "sz", {w + "val": str(size * 2)})
+                control.insert(0, properties)
+                entries["word/document.xml"] = E.tostring(xml, encoding="utf-8", xml_declaration=True)
+                target = output / ("explicit-control-" + role + ("-painted-" if painted else "-empty-") + str(size) + ".docx")
+                with ZipFile(target, "w", ZIP_DEFLATED) as z:
+                    for name, data in sorted(entries.items()):
+                        info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+                        info.compress_type = ZIP_DEFLATED
+                        z.writestr(info, data)
+                explicit_control_rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
+                    Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
+                    SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(),
+                    Role=role, Painted=painted, ControlSize=size, HeldOut=False, ExpectedEquationCount=4,
+                    ExpectedText=["share the same input series."], ProsePrefixes=["Summary:", "governs"]))
+finally:
+    E._namespace_map.clear()
+    E._namespace_map.update(namespace_map)
+(output / "explicit-math-controls.json").write_text(json.dumps(explicit_control_rows, indent=2) + "\n", encoding="utf-8")
+print("Pinned eight explicit fraction/script control compositions")
