@@ -1,5 +1,28 @@
 # Composed-document reliability checkpoint
 
+C112 retains empty subscript/superscript/combined slots through actual implicit
+controls and existing MATH placeholder measurement. Zero-run boxes require an
+explicitly resolved metric owner; painted scripts keep their original first-source
+font/size path. Metric-only preparation publishes no dummy glyph or math subset.
+Unsupported script properties retain their existing fallback. Cancellation and
+cumulative scene limits remain intact.
+
+Five sources/ten Word outcomes cover authored blanks, literal deletion and empty
+insertion. All one-point math/prose gates pass: max 0.107pt X / 0.766pt Y. Parent
+advance errors reached 17.892pt and baseline errors 2.4pt. Nine MAEs improve, while
+the visible deleted-script Review PDF remains byte-identical. All ten strict raster
+gates remain failed without new components. Six crop pairs reviewed; bookmarks and
+unchanged-format run splitting preserve content, ink and placement.
+
+One frozen Release artifact passes 77 Windows methods and 54 Ubuntu checks/23
+native skips, once each. Two parent checks fail on actual missing frame geometry/
+main-part fallback, without new production APIs. Seven exact original inputs have
+no empty scripts or revisions; C111's twelve actual accepted portfolio comparisons
+carry by source audit, with painted-script measurements unchanged. Seventeen assets/
+four smoke PDFs transfer without root build/suite replay. Root cc589b76; evidence
+`artifacts/composition-c1/empty-script-frames-evidence.json`.
+C110/C111 CI39027225044 is green on both platforms.
+
 C111 refreshes the fixed seven-source portfolio using C110's already qualified
 artifact: twelve actual conversions/twenty inspected pages retain accepted PDF
 bytes, expected text and zero ignored equations. All twelve independent Office
