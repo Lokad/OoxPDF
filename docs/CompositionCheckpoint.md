@@ -1,5 +1,25 @@
 # Composed-document reliability checkpoint
 
+C115 verifies the C114 mixed-control contract in supported cells and direct
+headers/footers. The visible script and plus sign coexist with a revised empty
+fraction in both orders and both public DOCX presets. No production change.
+
+Six sources/twelve new strict-view Word outcomes pass the existing rule/anchor
+gates: math max0.522pt X /0.591pt Y, prose0.610pt /0.174pt. Six crop pairs reviewed;
+all twelve strict raster gates remain failed. Actual structural bars, revision
+neutrality, content, image presence and bookmark/run-split invariance are checked.
+
+Three new Windows methods and two Ubuntu methods/one native skip run once each.
+C114's84 Windows passes and58 Ubuntu passes/26 skips carry by production tree,
+non-test asset, all1,837 old input and previous test-source identities. A test-only
+build reuses the qualified library/CLI; no old suite or corpus conversions repeat.
+C111's twelve actual accepted portfolio comparisons carry unchanged production.
+Seventeen assets/four smoke PDFs transfer without root build. Root5589a2ed; evidence
+`artifacts/composition-c1/mixed-control-placement-evidence.json`. C114 CI39031072723
+has Ubuntu green/Windows running; C113 CI39030203632 is green on both platforms.
+Next: investigate retained revision-band extents through actual physical frames,
+without adding fitted container/font/size offsets.
+
 C114 retains an empty fraction beside a visible script and plus sign. Shared
 preparation resolves its actual metric owner through the existing conversion cache
 without an unused subset. Revision ownership follows actual controls independently
