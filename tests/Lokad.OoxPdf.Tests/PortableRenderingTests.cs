@@ -35,6 +35,10 @@ internal static class PortableRenderingTests
         DocxInlineCompositionTests.CheckEquationRevisions(new PinnedResolver(mathFont: true), false,
             "structural-placement-office.json", splitMathRuns: true);
 
+    public static void PortableRenderingWholeRevisionsKeepCellAndStaticContentAndInk() =>
+        DocxInlineCompositionTests.CheckEquationRevisions(new PinnedResolver(mathFont: true), false,
+            "whole-math-placement-office.json", splitMathRuns: true);
+
     public static void PortableRenderingStructuralOnlyRevisionsRetainNeutrality() =>
         DocxInlineCompositionTests.CheckStructuralOnlyRevisionNeutrality(new PinnedResolver(mathFont: true));
 

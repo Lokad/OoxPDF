@@ -1,0 +1,92 @@
+[
+  {
+    "Id": "whole-math-placement-root-cell-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-placement-root-cell-ins.docx",
+    "Sha256": "CDE3140E06BA8A73CE9A1BC54FA5FD55B5BB3450465F0FC9B2358888407A1631",
+    "SourceSha256": "08E3B9301D0566909A89941AD59ABC07AC9E9049B2B7EC4F0076D9BE3E30B8B8",
+    "Role": "root",
+    "Kind": "ins",
+    "Empty": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "Story": "cell"
+  },
+  {
+    "Id": "whole-math-placement-root-header-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-placement-root-header-ins.docx",
+    "Sha256": "8CF104AD52C6079EAE595679B6439F91F76750116801F747F33FC63F3DC96973",
+    "SourceSha256": "7A58C565993F5DC58DCB3BE53397D4F8FC81A407B46D6447A68745ED62268B07",
+    "Role": "root",
+    "Kind": "ins",
+    "Empty": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "Story": "header"
+  },
+  {
+    "Id": "whole-math-placement-root-footer-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-placement-root-footer-ins.docx",
+    "Sha256": "9C5C9B7B25530550222F1C2179AD4EC9D1E53C6D8AE98135F28E0EF41A49CDA0",
+    "SourceSha256": "7C594C15A2658C786620E0A01E5A84438AD26EE240364DC5B0F96C884406667A",
+    "Role": "root",
+    "Kind": "ins",
+    "Empty": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "Story": "footer"
+  },
+  {
+    "Id": "whole-math-placement-operator-cell-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-placement-operator-cell-del.docx",
+    "Sha256": "50D89ED6123A6B749EE5FAA3C8D46937BA2E93FFE671CADA5F2566C211AA5345",
+    "SourceSha256": "F6D9A4B15753A27C547880B7D00FE5A05CD9C3CE7B0A052E916A440C7756356A",
+    "Role": "operator",
+    "Kind": "del",
+    "Empty": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "Story": "cell"
+  },
+  {
+    "Id": "whole-math-placement-operator-header-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-placement-operator-header-del.docx",
+    "Sha256": "29E2348E176F7C25CED313FAC409B71B19BF2ACC96CC61015CEB8FCF9EE60FC6",
+    "SourceSha256": "2FCF5E3BE5392B7B6D2CD0FC33784F0AD52D6E84C3DCC0E15C12038B552B6205",
+    "Role": "operator",
+    "Kind": "del",
+    "Empty": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "Story": "header"
+  },
+  {
+    "Id": "whole-math-placement-operator-footer-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-placement-operator-footer-del.docx",
+    "Sha256": "0EDF3C57884B2F157B9A2F3CC8A027AD67EFE4F4B7C107088A5ED459846B02E8",
+    "SourceSha256": "CABF6244187EF523F6338F601EFDCB4F40086FEC03AC7FDD15519D2AC33E5028",
+    "Role": "operator",
+    "Kind": "del",
+    "Empty": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "Story": "footer"
+  }
+]

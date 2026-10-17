@@ -3467,5 +3467,9 @@
     "PortableRenderingWholeStructuralRevisions",
     "DocxInlineCompositionStructuralOnlyRevisions",
     "PortableRenderingStructuralOnlyRevisions"
+  ],
+  "docx-whole-revision-placement": [
+    "DocxInlineCompositionWholeRevisionsKeepCellAndStaticContentAndInk",
+    "PortableRenderingWholeRevisionsKeepCellAndStaticContentAndInk"
   ]
 }
