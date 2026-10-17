@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+C134 attaches structural cell connectors to the first printed paragraph and
+its shared occupied inline frame, while cell-top placement stays independent.
+The same extent helper serves existing comment ranges. Narrow/same-author/
+different-author controls establish type-owned insertion/deletion stroke colors;
+mixed owners retain the review fallback. No fitted offset is introduced.
+
+Eighteen comparisons improve with no new failed components; all strict/full
+one-point gates remain failed. Eight first-source controls are within0.403pt X/
+0.893pt Y and match type color. All eighteen inspected text-operation reports
+are byte-identical to the parent; no prose, math or label placement change.
+Fourteen visual pairs reviewed, four carry by raster identity. Twelve references
+reuse and six new exports suffice. Two same-author cases retain extra labels:
+Word coalesces their adjacent source cells into one range, candidate emits two.
+Dash/width/end attachment, exact-height and matrix residuals remain explicit.
+
+A30-method capability batch passes28 Windows/19 Ubuntu checks initially, with
+new content observers failing on wrapped prose. A whitespace-only correction
+also fails because mathematical paint operations intervene between wrapped words.
+Only those observers repeat after screening prose separately from independently
+checked math text/count/images. Fourteen other assets/all1,947 inputs retain
+identities; no library rebuild or conversion replay. Final30 Windows/20 Ubuntu/
+ten native skips. Both new regressions fail on the parent. Two raw extraction
+flags stay classified, not relabeled as passes; reviewed content is present.
+Seventeen assets/four smokes transfer without root build/suite replay. Root5d87a1f3;
+`artifacts/composition-c1/cell-connectors-evidence.json`. C133 CI39047972023 is
+green on both platforms. Next is bounded source-range coalescing with adjacency,
+author, type and separation controls; first-source qualification does not claim it.
+
 C133 fixes two shared table-frame defects: declared minima stayed in source
 points while exact heights already used the review scale, and baseline projection
 rejected automatic/minimum declarations despite measured physical child frames.
