@@ -1,5 +1,22 @@
 # Composed-document reliability checkpoint
 
+C127 verifies the same authored empty-script/painted-fraction controls in cells,
+headers and footers. Six sources/twelve independent Word outcomes retain all math
+content and ink. Matrix row/baseline, fraction-rule and paragraph-placement gates
+remain failed: math max0.574pt X/1.794pt Y, prose max2.026pt Y. Six crop pairs are
+reviewed; six more carry by identical Final/Review rasters. No geometry parity claim.
+
+Production and CLI remain exactly C126. Fourteen non-test assets and all1,891 prior
+inputs match. The175 Windows/109 Ubuntu passes/66 skips carry without replay; only
+three new Windows checks and two Ubuntu checks/one native skip run, once each.
+An inapplicable unpainted-script rule expectation is corrected before qualification,
+without repeating exports/conversions. Seventeen assets/four smoke PDFs transfer
+without a root build/suite replay. Root847c3bd4; evidence
+`artifacts/composition-c1/explicit-placement-evidence.json`. The original report
+Review and held-out deck PDF identities remain smoked; fixed-portfolio carry stays
+source-backed. Next bounded composition probe: equations in revised table owners,
+confirming visible omissions before replacing any row/cell eligibility guard.
+
 C126 makes fractions and scripts reuse the existing validated control-property owner
 and actual run/font metadata. Scripts retain typed invalid-property state instead
 of excluding every authored property. Unknown/malformed properties and deeper
