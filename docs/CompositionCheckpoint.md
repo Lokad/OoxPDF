@@ -1,5 +1,25 @@
 # Composed-document reliability checkpoint
 
+C105 fixes a confirmed unit mismatch in Review band painting. Mapped note frames
+already carry physical heights, while their legacy line-height field retains
+unscaled design units. Painting now consumes the physical frame, using the existing
+fallback for lines without one. No layout, text or font/size-specific rule changes.
+
+One frozen Release artifact passes 28 Windows checks and 23 Ubuntu checks with
+five native skips, once per platform. The parent fails the independent one-point
+note-bottom gate. Word bottom residual improves from 1.832pt to 0.320pt; the largest
+remaining band-edge residual falls from 6.759pt to 3.660pt. All six full vertical
+gates still fail. Both modes retain exact text operations and Final PDF bytes;
+Review page two MAE improves slightly. Both strict raster gates remain failed,
+with no new components. One note crop pair reviewed; no fitted baseline offsets.
+
+Seven original portfolio sources contain no affected revisions. Accepted twelve
+PDF comparisons carry by source inference, with two actual portfolio transfer
+smokes. Seventeen assets/four smoke PDFs transfer without root build or suite
+replay. Root 58656cd7; evidence
+`artifacts/composition-c1/mapped-revision-band-height-evidence.json`.
+C104 CI39022239555 is green on both platforms.
+
 C104 checks a complete report with five whole-equation/fragment revisions across
 body, static cells and an endnote. Shared mapped-line traversal retains placement
 container ownership; Review now has six separate story bars across two pages,
