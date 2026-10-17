@@ -1,5 +1,31 @@
 # Composed-document reliability checkpoint
 
+C130 represents cell insertion/deletion as distinct structure owners read from
+actual cell properties. They preserve child content and ink. Main-story markers
+share the printed review lane, bar and balloon selection; Word omits these markers
+from headers/footers, while qualified formatting keeps its wider story scope.
+One story policy governs all three decisions. Cell balloons retain actual cell
+ownership instead of duplicating their row rollup.
+
+Six sources/twelve Word outcomes retain all math. Two body review comparisons
+improve; ten control PDFs remain byte-identical. Main math errors fall from91.878pt
+X/76.325pt Y to below0.517pt X/1.169pt Y. Labels and marker presence are restored.
+Structural labels still sit25.545pt low, with connector color/frame differences;
+these significant residuals stay explicit. All strict/full one-point gates remain
+failed, with no new components or threshold relaxation. Five distinct visual pairs
+reviewed; seven carry by raster identity.
+
+Four exact-source references are reused and eight new exports retained. Initial
+PDF screens expose the static-story policy difference before tests. Only four
+affected static review PDFs repeat; eight earlier screens carry by explicit source/
+story inference. Nullable story access is corrected before artifact publication;
+no prototype tests run. One final Release artifact passes120 Windows/92 Ubuntu
+checks/28 native skips, once each. Parent checks fail on absent bars/labels.
+Seventeen assets/four smokes transfer without root build/suite replay. Root7c5a8e64;
+`artifacts/composition-c1/cell-structure-story-evidence.json`. C129 CI39043825422
+is green on both platforms. Next milestone reuses this artifact for one finite
+portfolio refresh; structural-label placement remains a source-frame task.
+
 C129 selects tracked row property markers through existing markup visibility before
 conditional styling, child reads and layout. Cancellation remains checked for rows
 and property iteration. Actually visible deleted rows keep their independent math
