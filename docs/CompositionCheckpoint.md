@@ -1,5 +1,28 @@
 # Composed-document reliability checkpoint
 
+C146 fixes automatic page numbering beside a custom mark. Four parent outcomes
+kept105-107 instead of09/09/10. Complete measured custom source/target glyph pages
+now participate in ownership, while only automatic references consume counters.
+Authored marker identities and target paragraphs stay unchanged. Numbering has
+its own stable-page check; typography retains its stricter map and baseline-only
+font-target admission. Cancellation reaches the coordinator and page mapper.
+
+One artifact passes127 Windows/117 Ubuntu checks/ten native skips. Same-paragraph
+and separate-paragraph references work; invisible/mismatched targets reject
+without partial changes, and correct labels avoid another retry. Four independent
+Word outcomes agree on custom/automatic body+story labels. Eight formulas/four
+image draws/authored digits/four destinations survive; math operations stay exact.
+Four comparisons improve/no new failed components; all strict gates remain failed.
+Four Final page pairs reviewed/four Review pairs carry by raster identity. Parent
+fails the independent label regression.
+
+Seventeen assets/four identical smokes transfer without root build/suite replay.
+The fixed portfolio carries by no-custom source scope/report/deck smokes; no new
+twelve-outcome replay or full content audit. Rootdab4c48b;
+`artifacts/composition-c1/mixed-custom-page-numbering-evidence.json`. C145 CI is
+green on both platforms. Next: investigate paragraph-spanning marker ownership
+before changing the retained same-page paragraph guard.
+
 C145 fixes another confirmed composition omission: custom footnote/endnote marks
 suppressed adjacent one/two fractions in all eight parent outcomes. Exact source
 run/offset/first-character indexing is shared with preparation; qualified note
