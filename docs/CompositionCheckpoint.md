@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+C161 keeps ordinary scaled cell occupied bounds in physical coordinates. The
+old baseline inset could exceed its measured height; independent Word controls
+also demonstrate Review note rectangles2.44-3.09pt too high. Scaling that inset
+corrects metadata and invisible rectangles while preserving painting and purpose
+guards. Six independent Word outcomes/three sources retain all six note links;
+all rectangle edges are within0.484pt, pure-font controls within0.058pt.
+
+Thirty-three Windows and23 Ubuntu checks pass, with ten native skips. One frozen
+artifact qualifies30 exact methods then only three legacy neighbors found during
+source audit; the final capability includes all33 for one future invocation.
+Thirty-two metric/scale/depth combinations retain valid bounds. Ten layout
+contexts preserve26 placed lines and all row/cell geometry and offsets; eight
+invalid occupied bounds are corrected. Three Final PDFs retain bytes; three
+Review PDFs change invisible rectangles only. All six rasters and metric sets
+retain exact parent values; all six strict visual gates remain failed. Six page
+pairs were reviewed in three contacts. Both independent parent observers fail.
+
+A read-only audit of1,455 tracked DOCX sources classifies19 body-cell note
+combinations:16 use ordered math frames, two are new ordinary controls and one is
+an older ordinary control. All three affected sources are independently checked.
+Two legacy Word outputs were refreshed because old unpinned mode0 exports do not
+establish current mode2 provenance; originals remain. C158's fixed12/7/20 carries
+source scope and report/deck smokes. Seventeen assets/four exact smokes transfer
+without root build or suite/corpus replay. Root5f8155a9; evidence
+artifacts/composition-c1/scaled-cell-struts-evidence.json. C160 CI39075501306 is
+green. The visible nested-math Review2.654pt offset remains unaccepted; next,
+investigate shared ordinary/nested placement rather than adding fitted offsets.
+
 C160 keeps ordinary body-cell bookmark destinations bound to their placement
 owner, retaining the existing three-point viewport context. The old walk checked
 nullable local story metadata after dropping the actual owner. Mathematical
