@@ -1,5 +1,42 @@
 # Composed-document reliability checkpoint
 
+C81 shares the retained source-author registry between comment slots and final
+Word-compatible insertion/deletion glyph and decoration painting. Classic colors,
+unknown/move-owner fallbacks and derived numbering-change colors keep their
+existing paths. No geometry, source-object or layout-eligibility changes.
+
+Six independent Word glyph/underline/strike facts match, reusing the previous
+references and adding one deletion-after-image control. All fourteen outcomes
+retain glyph and path geometry; four MAEs improve, ten Review PDFs retain bytes,
+and all fourteen visual gates remain failed without new failure components. Two
+page pairs were reviewed. Classic AllMarkup additionally retains bytes. The
+inserted picture remains visible but lacks Word's review indicator; balloon ink,
+empty insertion ownership and incomplete-format fallbacks remain separate work.
+
+Windows qualifies 40 unique methods: 34 unchanged results carried through an
+identical production DLL, four affected ink/decoration checks rerun, and two
+CI-selected content checks added. The first run's 36 passes/two failures remain
+recorded: the fallback observer assumed literal strings instead of positioned byte
+glyphs, and an older assertion required a fixed color across multiple authors.
+The new independent deletion reference validates its source-ink correction.
+Ubuntu qualifies 31 passes/nine skips, carrying the original 38-method invocation
+and adding only the two content checks. Two new regressions fail on C80.
+
+C80 CI (38995777285) caught two corrupted Greek assertions on both platforms. A
+Windows-encoding test edit caused that damage; original Git UTF-8 bytes restore
+exactly those two lines. The modified-file audit found no other such damage.
+Both content checks pass against C80's unchanged library and the current artifact,
+and on Ubuntu. Root 5319542d records the assertion repair; this was not a renderer
+content omission. The next CI run will cover the repaired source and C81 batch.
+
+Seventeen assets/four smoke PDFs transfer without root build or suite replay;
+complete-report Final and held-out deck retain bytes. Corpus comparisons carry
+by the unchanged C80 source-scope proof, not a new full-corpus conversion claim.
+Root 6d4e1aec contains the rendering batch. Evidence:
+`artifacts/composition-c1/revision-ink-evidence.json`. The latest completed workspace
+scan is 9.312 GB/445,148 files with zero errors. The loose 5 GB target remains unmet;
+no blocked retirement was retried and no reclamation is claimed.
+
 C80 registers review comment authors from actual source owners, including revised
 paragraph marks, run formatting and inserted images. Paragraph marks register
 before inline owners; inline order follows recorded source indices. Every actual
