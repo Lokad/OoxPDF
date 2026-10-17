@@ -32,6 +32,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/BuildQualificationArtifact.ps1`: build/freeze an explicit committed linked worktree and revision; absolute projects prevent accidental root builds. Reuse the frozen artifact for qualification and transfer.
 - `tools/NewFrozenAllocationRuntime.ps1`: build/self-test the existing allocation probe against a frozen library without rebuilding the library.
 - `tools/AuditCompositionContent.py`: screen frozen public portfolio prose and simple math against Office; retain unresolved extraction and visual failures.
+- `tools/CompareCompositionPortfolio.ps1`: compare frozen outputs against one or more pinned Office caches; reuse identical comparisons without copying references.
 
 - `tools/ExportCompositionReferences.ps1`: export or reuse pinned Office references by manifest and optional DOCX preset.
 - `tools/NewParentRegressionRuntime.ps1`: prepare parent regressions with independent owned public-input copies; reject unowned or linked output directories.
