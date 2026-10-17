@@ -3162,6 +3162,7 @@
     "DocxNativeNary",
     "DocxNativeInlineIntegrals",
     "DocxConversionLoadsEachFontProgramOnce",
-    "DocxCoveredRunsSkipFallbackProgramLoads"
+    "DocxCoveredRunsSkipFallbackProgramLoads",
+    "MathFontMatrix"
   ]
 }

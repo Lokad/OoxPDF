@@ -192,12 +192,28 @@ internal static class DocxMathMatrixLayoutTests
     {
         var font = MathFont(withPlaceholder: true); var resource = Resource("Sparse", font, "B"); var empty = new DocxMathRow([]); var literal = new DocxMathRow([Run("B")]);
         var matrix = new DocxMathMatrix([new([empty, empty, literal])]) { HidePlaceholdersValue = true };
-        foreach (var invalid in new[] { matrix with { HidePlaceholdersValue = null }, matrix with { HidePlaceholdersValue = false },
-            matrix with { Rows = [new([empty, empty, empty])] },
+        DocxMathBox? reference = null;
+        foreach (bool? visibility in new bool?[] { null, false, true })
+        {
+            var known = matrix with { HidePlaceholdersValue = visibility };
+            TestAssert.True(DocxMathLayout.TryGetRuns(Equation(known), CancellationToken.None, out _),
+                "Known placeholder visibility profiles retain source discovery.");
+            TestAssert.True(DocxMathLayout.TryMeasure(Equation(known), _ => resource, CancellationToken.None, out var measured, out _,
+                resolveControlMetrics: _ => font), "Known placeholder visibility profiles retain the printed grid.");
+            var box = TestAssert.NotNull(measured);
+            TestAssert.Equal(1, box.Glyphs.Count);
+            if (reference is not null)
+                TestAssert.True(reference.Width == box.Width && reference.AboveBaseline == box.AboveBaseline &&
+                    reference.BelowBaseline == box.BelowBaseline && reference.Glyphs[0].X == box.Glyphs[0].X &&
+                    reference.Glyphs[0].BaselineY == box.Glyphs[0].BaselineY,
+                    "Known visibility settings preserve the independent Word-equivalent empty slots.");
+            reference = box;
+        }
+        foreach (var invalid in new[] { matrix with { Rows = [new([empty, empty, empty])] },
             matrix with { Rows = [new([empty with { PropertiesXml = ["<future/>"] }, empty, literal])] } })
             TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(invalid), CancellationToken.None, out _) &&
                 !DocxMathLayout.TryMeasure(Equation(invalid), _ => resource, CancellationToken.None, out var absent, out _, resolveControlMetrics: _ => font) && absent is null,
-                "Visible placeholders, unknown empty-cell properties and wholly empty grids retain complete fallback.");
+                "Unknown empty-cell properties and wholly empty grids retain complete fallback.");
         TestAssert.True(!DocxMathLayout.TryMeasure(Equation(matrix), _ => resource, CancellationToken.None, out var missing, out _,
             resolveControlMetrics: _ => MathFont()) && missing is null, "Missing placeholder metrics cannot invent an empty width or publish partial cells.");
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
