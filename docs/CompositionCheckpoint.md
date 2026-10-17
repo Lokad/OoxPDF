@@ -1,5 +1,38 @@
 # Composed-document reliability checkpoint
 
+C118 composes a supported literal script in a fraction numerator or denominator,
+inline or display. Shared discovery and nominal math styles publish text/script/
+script-script variants before measurement. Existing boxes consume those roles;
+denominators carry cramped style. Uniform source nominal sizes remain required,
+while child glyph sizes follow semantic roles. Deeper nesting and unverified whole-
+deletion retention keep explicit whole-box fallbacks; no font/size/document guard.
+
+Four sources/eight independent Word outcomes restore four or six omitted glyphs
+each. All eight MAEs improve without new failure components. Four full display
+rule/anchor gates pass (math max0.107pt X /0.719pt Y). Four inline gates remain
+failed: up to1.057pt baseline or0.108pt rule width against unchanged thresholds.
+All eight strict raster gates fail. Four crop pairs reviewed; all Final/Review
+rasters are identical per source/reference, carrying the other four visual reviews.
+Reviewed content is visible without demonstrated clipping/overlap; residual geometry
+is explicit and does not establish arbitrary fidelity.
+
+One production Release artifact qualifies107 Windows and68 Ubuntu passes/39 skips.
+Eight PDF/Office outcomes precede the affected batch, establishing its actual scope.
+Two new assertions initially assume a filename implies effective source-row style
+and use a synthetic font missing script-script scale. A test-only correction uses
+the shared row policy and a complete scale while retaining missing-scale fallback.
+Carry105 Windows/66 Ubuntu passes and rerun only those two methods per platform;
+production/CLI/all1,851 inputs stay exact. Two invocations each; failed reports stay.
+Both parent checks fail expected18 versus14 glyphs. Cancellation, cumulative scene
+work and deeper fallback checks pass.
+
+Seven exact portfolio sources contain no script inside fraction arguments, carrying
+C111's twelve actual accepted comparisons by source inference. Seventeen assets/
+four smoke PDFs transfer without root build/suite replay. Root0f4360d6; evidence
+`artifacts/composition-c1/fraction-script-evidence.json`. C115 CI39031466120 and
+C116/C117 CI39032000763 are green on Windows/Ubuntu. Next bounded probe: nested
+metric-only script ownership beside a visible fraction sibling.
+
 C116 reviews six retained revision-band Word edge gates using actual frozen mapped
 frames, which remain exact C104 identities. Occupied-frame, text-slot and scaled-
 padding alternatives fail existing gates and trade errors across stories. No
