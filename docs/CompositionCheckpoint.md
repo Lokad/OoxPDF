@@ -1,5 +1,35 @@
 # Composed-document reliability checkpoint
 
+C113 publishes ordered actual math controls independently of literal run presence.
+Shared metric-only preparation resolves each control font; occupied geometry drives
+placement and edges. Supported flat Final deletion retains actual control frames
+without recursive discovery, dummy glyphs or math subsets. Deeper/unknown and
+matrix/function deletion fallbacks remain explicit.
+
+Six sources/twelve Word outcomes expose ten missing bar/frame results. All ten
+affected rule/anchor gates pass: prose max 0.089pt X / 0.010pt Y; neighboring math
+0.106pt X / 0.351pt Y. Ten MAEs improve; two visible Review PDFs retain exact bytes.
+Their inherited 0.108pt rule-width residual exceeds the preserved 0.1pt gate and
+remains failed in the raw report. All twelve strict raster gates remain failed,
+without new components. Six crop pairs reviewed; actual rule/strike ink, revision
+neutrality and bookmark/run-split transformations are checked.
+
+One production Release artifact qualifies 81 Windows methods and 56 Ubuntu passes/
+25 skips. A new native assertion initially includes the unchanged Review controls.
+A harness-only selection correction checks ten affected geometry outcomes and two
+unchanged content/ink outcomes. Preserve the failed report and all raw gates; carry
+80 passes and rerun only that native check. Production/CLI/all 1,829 inputs remain
+identical. Two Windows invocations; Ubuntu once with unchanged branches/skip guard.
+Two parent checks fail on actual expected two rules versus one.
+
+C111's twelve actual accepted portfolio comparisons carry by seven-source audit:
+no revisions/glyphless equations, and painted-source measurement stays unchanged.
+Seventeen assets/four smoke PDFs transfer without root build/suite replay. Root
+75a3b9be; evidence `artifacts/composition-c1/glyphless-compound-controls-evidence.json`.
+C112 CI39028685192 is green on both platforms. Workspace at 11:41Z is 10.450GB /
+512,756 files, no errors; loose 5GB target remains unmet. Rejected retirements stay
+untouched and no reclamation is claimed.
+
 C112 retains empty subscript/superscript/combined slots through actual implicit
 controls and existing MATH placeholder measurement. Zero-run boxes require an
 explicitly resolved metric owner; painted scripts keep their original first-source
