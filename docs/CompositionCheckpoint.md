@@ -1,5 +1,20 @@
 # Composed-document reliability checkpoint
 
+C163 removes batch-specific Office reference copying from the comparison path.
+The existing command accepts multiple cache directories, checks source/mode/PDF
+pins and pinned export-log hashes, and rejects conflicting exports before any
+rendering stage. It records the chosen reference directory and provenance hashes;
+identical duplicate exports remain reusable.
+
+Twelve orchestration checks pass for missing/stale pins, source/mode/PDF/log
+mismatches, conflicting exports, identical duplicates and retained failed gates.
+Ten actual C162 outcomes reuse two original Office caches with exact PDF hashes,
+metrics, failures and thresholds. No library build, Office export, conversion,
+rasterization or production-suite replay occurs; source/tests retain C162
+identity. Root2a016618; artifacts/composition-c1/reference-cache-reuse-evidence.json.
+C162 CI39078220251 has green Ubuntu and pending Windows. Next, use retained
+Word/source geometry to investigate nested border pitch without fitted offsets.
+
 C162 projects one complete guarded nested body table through the existing
 Review origin. Ordinary text converts its nominal inset, while measured
 mathematical/picture frames translate with their container exactly once at each
