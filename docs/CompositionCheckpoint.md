@@ -1,5 +1,41 @@
 # Composed-document reliability checkpoint
 
+C165 adds one realistic development report combining qualified nested fractions,
+an image and internal navigation with body tables, numbering, a footnote, comments
+and repeated header/footer content. It derives only from the original development
+report and a public navigation control; existing and held-out inputs retain bytes.
+Both public DOCX presets match Word's two-page count and retain nine mathematical
+placements, two pictures and three links each. Bookmark/run-splitting transformations
+preserve per-page content, source prose/math/image counts, concrete destinations
+and full formula-link coverage; native mathematical origins retain exact coordinates.
+
+Two new Windows methods and one Ubuntu method pass, with one native skip. C164's
+40 Windows/31 Ubuntu/nine skips carry by source/library identity. Fourteen runtime
+assets/2,079 prior inputs match; only test code/three new inputs are added. The
+portable control needs the pinned math face for authored algebraic styles. Sans
+reports unsupported body/header math; no production fallback changes. Synthetic
+bold repeats the18pt title, so splitting runs changes PDF paint packet order.
+Compare character multisets per physical page rather than that invalid stream-order
+invariant; keep native mathematical origin equality. Development failures and the
+validated font/synthetic-bold probes remain retained.
+
+Four new Word page pairs were reviewed, with no demonstrated text/image omission
+or clipping. Both strict visual gates remain failed. Source prose/simple-math
+counters have zero deficits, while both overall audits retain rate/time word-
+extraction flags. Raw geometry includes about0.77-0.90pt nested paragraph Y offsets
+and table-boundary/typography/balloon differences. Read-only Word normalization
+preserves two separate root tables; their placement cause remains unverified.
+
+The expanded portfolio contains14 outcomes/eight sources/24 pages: the original12
+PDFs retain C164 bytes/20 reviewed pairs and four new pairs are reviewed. Twelve
+DOCX gates fail/two decks pass; four extraction flags remain across the old/new
+compound reports. All14 comparisons reuse two existing pinned Office caches
+without repeating the old conversions. Seventeen assets/four exact smokes transfer
+without production rebuild, old suite or root qualification replay. Root4e61a077;
+artifacts/composition-c1/nested-report-evidence.json. C164 CI39079863444 is green
+on both platforms. Next, investigate adjacent table frame/border ownership with
+bounded independent counterfactuals before accepting a correction.
+
 C164 reuses measured cell content to project nested Review row and border flow.
 Nominal border widths/advances caused accumulated height error. Existing row
 measurements now supply source-ordered child reductions, following paragraphs and
