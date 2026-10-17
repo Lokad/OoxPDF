@@ -170,7 +170,10 @@ internal sealed partial class DocxLayoutEngine
                         paragraph.Images.Any(image => image.WidthPoints > width))) { return false; }
                 }
                 else if (paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right) ||
-                    paragraph.Images.Count != 0 || !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
+                    paragraph.Images.Any(image => image.SourceRunIndex < 0 || image.RotationDegrees != 0d ||
+                        !double.IsFinite(image.WidthPoints) || !double.IsFinite(image.HeightPoints) ||
+                        image.WidthPoints <= 0d || image.HeightPoints <= 0d || image.WidthPoints > width) ||
+                    !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
                     !DocxInlineContent.HasSupportedSourceOwner(paragraph, token: token)) { return false; }
             }
         }

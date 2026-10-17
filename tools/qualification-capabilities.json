@@ -2923,5 +2923,28 @@
     "DocxJustifiedInlineImageAlignsWithStretchedText",
     "DocxBodyImageParagraphAdvanceUsesAuthoredSpacingWithoutExtraPadding",
     "DocxBodyImageKeepNextEstimateSharesTheOccupiedImageAdvance"
+  ],
+  "docx-static-picture-frames": [
+    "DocxPictureRevision",
+    "PortableRenderingPictureRevision",
+    "DocxStaticFrameMapping",
+    "DocxNativeScaledStaticFrames",
+    "DocxNativeAlignedStaticFrames",
+    "DocxStaticStoryInlineImagesShareTheTextBaseline",
+    "DocxStaticStoryDeclaredFramesClipInlineImages",
+    "DocxFooterInlineImageReservesItsVisibleHeight",
+    "DocxInlineImageClipTravelsWithScaledStoryPlacement",
+    "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement",
+    "DocxInlineCompositionStaticPageFieldsMatchIndependentWordFrames",
+    "DocxStaticTableMathCompleteReportMatchesIndependentPrintedFrames",
+    "PortableRenderingBrokenLiteralsSurviveCellAndStaticPlacement",
+    "PortableRenderingFooterTableAdmissionKeepsBodyAboveTheCompleteFrame",
+    "DocxInlineCompositionRunFormatting",
+    "DocxInlineCompositionTextRevision",
+    "DocxInlineCompositionNumberingMark",
+    "DocxInlineCompositionMarkFormattingBalloons",
+    "DocxContinuedFootnoteFooterFrames",
+    "DocxContinuedEndnoteFooterFrames",
+    "DocxMixedFootnoteFrameClearsOverflowingFooterWithoutChangingTypographyOwner"
   ]
 }

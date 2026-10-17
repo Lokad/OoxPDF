@@ -14,6 +14,76 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxPictureRevisionTests
 {
+    public static void DocxPictureRevisionEligibilityRequiresActualImageOwnership()
+    {
+        using var golden = ReadGolden();
+        var row = golden.RootElement.GetProperty("Rows")[0];
+        var source = ReadSource(row, OoxPdfDocxMarkupMode.AllMarkup);
+        var paragraph = DocxBlockTraversal.EnumerateSourceParagraphs(source).First(paragraph => paragraph.Images.Count != 0);
+        TestAssert.True(DocxInlineContent.HasSupportedSourceOwner(paragraph),
+            "A retained inserted image owns its source even without text in the same run.");
+        TestAssert.True(!DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default,
+                paragraph.Revisions.Select(revision => revision with { }).ToArray()),
+            "Value-equal aggregate revision metadata must not invent image ownership.");
+        TestAssert.True(!DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph with
+            { Images = paragraph.Images.Select(image => image with { SourceRunStyle = null }).ToArray() }, default),
+            "An image without retained source style must keep its conservative fallback.");
+        TestAssert.True(!DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph with
+            { Images = paragraph.Images.Select(image => image with { SourceRunIndex = -1 }).ToArray() }, default),
+            "A style from another source position must not claim the picture's revisions.");
+        using var canceled = new CancellationTokenSource();
+        canceled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, canceled.Token));
+    }
+
+    public static void DocxPictureRevisionStaticFramesKeepContentInsideThePage()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent static geometry uses installed Windows fonts.");
+        CheckStaticPictureFrames(null, compareGeometry: true);
+    }
+
+    internal static void CheckStaticPictureFrames(IFontResolver? resolver, bool compareGeometry)
+    {
+        using var single = ReadGolden();
+        using var shared = JsonDocument.Parse(File.ReadAllText(Path.Combine(Cases(), "PictureRevisions", "shared-picture-runs-office.json")));
+        var rows = single.RootElement.GetProperty("Rows").EnumerateArray()
+            .Concat(shared.RootElement.GetProperty("Rows").EnumerateArray())
+            .Where(row => row.GetProperty("Id").GetString() is { } id && (id.EndsWith("-header", StringComparison.Ordinal) || id.EndsWith("-footer", StringComparison.Ordinal)));
+        foreach (var row in rows)
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string context = row.GetProperty("Id").GetString() + "/" + mode;
+            var document = ReadSource(row, mode);
+            var geometry = mode == OoxPdfDocxMarkupMode.AllMarkup
+                ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
+            var page = new DocxRenderer(resolver, mode, geometry).RenderBlankPages(document, null, default).Single();
+            int expected = row.TryGetProperty("ImageClips", out var clips) ? clips.GetArrayLength() : 1;
+            TestAssert.Equal(expected, page.Images.Count);
+            var officeClip = expected == 1 ? row.GetProperty("ImageClip") : clips[0];
+            foreach (var resource in page.Images)
+            {
+                var picture = Regex.Match(page.Content, @"(?<w>[-\d.]+) 0 0 (?<h>[-\d.]+) (?<x>[-\d.]+) (?<y>[-\d.]+) cm\r?\n/" + Regex.Escape(resource.ResourceName) + " Do");
+                TestAssert.True(picture.Success, "The source picture must be painted: " + context);
+                double x = Number(picture, "x"), y = Number(picture, "y"), width = Number(picture, "w"), height = Number(picture, "h");
+                TestAssert.True(x >= 0d && y >= 0d && x + width <= page.Width && y + height <= page.Height,
+                    "Static picture ink must remain inside the physical page: " + context);
+                if (mode == OoxPdfDocxMarkupMode.AllMarkup)
+                {
+                    TestAssert.True(Math.Abs(width - officeClip[2].GetDouble() + officeClip[0].GetDouble()) < .1d &&
+                        Math.Abs(height - officeClip[3].GetDouble() + officeClip[1].GetDouble()) < .1d,
+                        "Review picture dimensions must use Word's complete static frame scale: " + context);
+                    if (compareGeometry)
+                        TestAssert.True(Math.Abs(y - officeClip[1].GetDouble()) < 1.5d,
+                            "Static picture origin must retain the independently measured story frame: " + context + ", y=" + y.ToString(CultureInfo.InvariantCulture));
+                }
+            }
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, includeTextTransforms: true).ToArray();
+            TestAssert.True(shows.Where(show => show.Text.Contains("Public owner", StringComparison.Ordinal) || show.Text.Contains("Attached source.", StringComparison.Ordinal))
+                .All(show => show.Y > 0d && show.Y < page.Height), "Source static text must remain within the viewport: " + context);
+            TestAssert.Contains("Public owner paragraph.", ReadControlText(page));
+        }
+    }
+
     public static void DocxPictureRevisionStylesBelongToTheImageRun()
     {
         using var golden = ReadGolden();

@@ -155,10 +155,10 @@ internal static class DocxInlineContent
     public static bool HasSupportedParagraphRevisionOwners(DocxParagraph paragraph, CancellationToken token,
         IReadOnlyList<DocxRevisionInfo>? revisions = null) =>
         HasSupportedRunRevisionOwners(revisions ?? paragraph.Revisions, paragraph.Runs, token,
-            paragraph.ListLabel is null ? null : paragraph.ParagraphMarkRun);
+            paragraph.ListLabel is null ? null : paragraph.ParagraphMarkRun, paragraph.Images);
 
     public static bool HasSupportedRunRevisionOwners(IReadOnlyList<DocxRevisionInfo> revisions,
-        IReadOnlyList<DocxTextRun> runs, CancellationToken token, DocxTextRun? numberingMark = null)
+        IReadOnlyList<DocxTextRun> runs, CancellationToken token, DocxTextRun? numberingMark = null, IReadOnlyList<DocxInlineImage>? images = null)
     {
         if (revisions.Count == 0) return true;
         var remaining = new HashSet<DocxRevisionInfo>(ReferenceEqualityComparer.Instance);
@@ -182,6 +182,22 @@ internal static class DocxInlineContent
             foreach (var item in run.Revisions)
             { token.ThrowIfCancellationRequested(); remaining.Remove(item); }
         }
+        // A picture-only run retains its resolved source owner even without
+        // printable text. Consume only that actual image's insertion metadata;
+        // aggregate or value-equal revisions cannot invent ownership.
+        if (images is not null)
+            foreach (var image in images)
+            {
+                token.ThrowIfCancellationRequested();
+                if (image.SourceRunStyle is not { } owner || owner.SourceRunIndex != image.SourceRunIndex) continue;
+                foreach (var revision in image.Revisions)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (revision.Kind == DocxRevisionKind.Insertion &&
+                        (ReferenceEquals(owner.Revision, revision) || owner.Revisions.Any(item => ReferenceEquals(item, revision))))
+                        remaining.Remove(revision);
+                }
+            }
         // A parsed paragraph mark owns an inserted numbering prefix even when
         // none of its visible text runs is revised. Keep other mark kinds and
         // unrelated/value-equal metadata on their existing fallback paths.
