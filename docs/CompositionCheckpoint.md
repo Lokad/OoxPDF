@@ -1,5 +1,29 @@
 # Composed-document reliability checkpoint
 
+C142 fixes numbering when supported equations accompany section-level page
+restarts. Math was already painted, but the plain-body gate left provisional
+labels105-108. Measured numbering now owns complete marker/note page maps
+independently of typography. Shared settings/static/frame/source guards remain;
+one bounded retry requires stable pages. Changed marker runs retain one identity
+across paragraph runs, references and ordered source items. Partial source slices
+and unsupported explicit restart metadata keep fallback. Typography admission
+is unchanged; no new font/size condition is added.
+
+One artifact passes103 Windows/98 Ubuntu checks/five native skips. A tool-only
+selector correction precedes selection; no rebuild or passing check replay.
+Four independent Word outcomes agree on all body/story09/10 labels; four formulas,
+authored105/108 digits and four distinct note destinations survive. Math operations
+are exact to the parent. All four comparisons improve/no new failed components;
+all strict gates still fail. Four original no-math PDFs are byte-identical. Four
+Final page pairs reviewed/four Review pairs carry by raster identity. The parent
+fails the independent label regression.
+
+Seventeen assets/four smokes transfer, no root build/suite replay. The fixed
+portfolio carries by absence of page-restart metadata and unchanged report/deck
+smokes; no new twelve-outcome replay or content audit. Root12a7dbb1;
+`artifacts/composition-c1/page-note-owned-content-evidence.json`. C140/C141 CI is
+green on both platforms. Next: compound numbering/source-ownership transformations.
+
 C141 shares the existing terminal-paragraph boundary with note flow. Independent
 Word counterfactuals agree for implicit, explicit empty/default/zero and short
 trailing paragraphs. The already represented TerminalParagraphMark owns zero
