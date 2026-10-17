@@ -1,0 +1,170 @@
+[
+  {
+    "Id": "structural-placement-root-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/structural-placement-root-body.docx",
+    "Sha256": "F7A0FB003131799C176861A747EA4B7071CB8237D2545FF8935286DEC2CA3FED",
+    "SourceSha256": "396DF62C526FF77B985D2A3E91A31AC3CA674DB590636327C1DAB8D753A7E183",
+    "FragmentSourceSha256": "D855C212241A75A9CE532F9B94CB92B55A2AD22D024004DA881A8E978B5864B9",
+    "Role": "root",
+    "Story": "body",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "structural-placement-root-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/structural-placement-root-cell.docx",
+    "Sha256": "08E3B9301D0566909A89941AD59ABC07AC9E9049B2B7EC4F0076D9BE3E30B8B8",
+    "SourceSha256": "BF6C08DB053F1A468F51500F5EFFB7975BC9CF0015A42D6DDCEE7864B36B43D5",
+    "FragmentSourceSha256": "D855C212241A75A9CE532F9B94CB92B55A2AD22D024004DA881A8E978B5864B9",
+    "Role": "root",
+    "Story": "cell",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "structural-placement-root-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/structural-placement-root-header.docx",
+    "Sha256": "7A58C565993F5DC58DCB3BE53397D4F8FC81A407B46D6447A68745ED62268B07",
+    "SourceSha256": "F3E14A9D03CB6DF8F9D9889C851CF3E1F02A03716721623FCD8FA878790744B8",
+    "FragmentSourceSha256": "D855C212241A75A9CE532F9B94CB92B55A2AD22D024004DA881A8E978B5864B9",
+    "Role": "root",
+    "Story": "header",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "structural-placement-root-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/structural-placement-root-footer.docx",
+    "Sha256": "7C594C15A2658C786620E0A01E5A84438AD26EE240364DC5B0F96C884406667A",
+    "SourceSha256": "A355BF23D39DD8E6F59428ADEC85A1CF401DD69580BED41743F2BDEEDAE57040",
+    "FragmentSourceSha256": "D855C212241A75A9CE532F9B94CB92B55A2AD22D024004DA881A8E978B5864B9",
+    "Role": "root",
+    "Story": "footer",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "structural-placement-delimiter-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/structural-placement-delimiter-body.docx",
+    "Sha256": "E8031ADE843870797BCC65448D2950108B225636A3489DB87070B843C4FAE0D2",
+    "SourceSha256": "396DF62C526FF77B985D2A3E91A31AC3CA674DB590636327C1DAB8D753A7E183",
+    "FragmentSourceSha256": "8933CE5A152AC3DAAD06B3F70AC664DE402E18CDE7369487C13FB0D1F8CE95FD",
+    "Role": "delimiter",
+    "Story": "body",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "structural-placement-delimiter-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/structural-placement-delimiter-cell.docx",
+    "Sha256": "DD038C6D86671B8F2AEF0A77D794F3ABEDB5D05DA327F273590E537B7818CB8E",
+    "SourceSha256": "BF6C08DB053F1A468F51500F5EFFB7975BC9CF0015A42D6DDCEE7864B36B43D5",
+    "FragmentSourceSha256": "8933CE5A152AC3DAAD06B3F70AC664DE402E18CDE7369487C13FB0D1F8CE95FD",
+    "Role": "delimiter",
+    "Story": "cell",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "structural-placement-delimiter-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/structural-placement-delimiter-header.docx",
+    "Sha256": "4693F5D2C2C9857CC982DC0221CC0F5B83D907C7115BE79B806FA3CA74CFC93E",
+    "SourceSha256": "F3E14A9D03CB6DF8F9D9889C851CF3E1F02A03716721623FCD8FA878790744B8",
+    "FragmentSourceSha256": "8933CE5A152AC3DAAD06B3F70AC664DE402E18CDE7369487C13FB0D1F8CE95FD",
+    "Role": "delimiter",
+    "Story": "header",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "structural-placement-delimiter-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/structural-placement-delimiter-footer.docx",
+    "Sha256": "EEB6ADE7C9624C09C5BAB67FDA1DEE504957612C70D2C65F7EAC49AC5E984754",
+    "SourceSha256": "A355BF23D39DD8E6F59428ADEC85A1CF401DD69580BED41743F2BDEEDAE57040",
+    "FragmentSourceSha256": "8933CE5A152AC3DAAD06B3F70AC664DE402E18CDE7369487C13FB0D1F8CE95FD",
+    "Role": "delimiter",
+    "Story": "footer",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "structural-placement-operator-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/structural-placement-operator-body.docx",
+    "Sha256": "C27E9B191527E9BC614A1CEBD517852A6421B291ABEEB5AE51E128B9D043ED32",
+    "SourceSha256": "396DF62C526FF77B985D2A3E91A31AC3CA674DB590636327C1DAB8D753A7E183",
+    "FragmentSourceSha256": "74C0AFD0F3682CC337BF88AE83821662502E605C70BED6815779E4488C28999A",
+    "Role": "operator",
+    "Story": "body",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "structural-placement-operator-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/structural-placement-operator-cell.docx",
+    "Sha256": "F6D9A4B15753A27C547880B7D00FE5A05CD9C3CE7B0A052E916A440C7756356A",
+    "SourceSha256": "BF6C08DB053F1A468F51500F5EFFB7975BC9CF0015A42D6DDCEE7864B36B43D5",
+    "FragmentSourceSha256": "74C0AFD0F3682CC337BF88AE83821662502E605C70BED6815779E4488C28999A",
+    "Role": "operator",
+    "Story": "cell",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "structural-placement-operator-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/structural-placement-operator-header.docx",
+    "Sha256": "2FCF5E3BE5392B7B6D2CD0FC33784F0AD52D6E84C3DCC0E15C12038B552B6205",
+    "SourceSha256": "F3E14A9D03CB6DF8F9D9889C851CF3E1F02A03716721623FCD8FA878790744B8",
+    "FragmentSourceSha256": "74C0AFD0F3682CC337BF88AE83821662502E605C70BED6815779E4488C28999A",
+    "Role": "operator",
+    "Story": "header",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "structural-placement-operator-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/structural-placement-operator-footer.docx",
+    "Sha256": "CABF6244187EF523F6338F601EFDCB4F40086FEC03AC7FDD15519D2AC33E5028",
+    "SourceSha256": "A355BF23D39DD8E6F59428ADEC85A1CF401DD69580BED41743F2BDEEDAE57040",
+    "FragmentSourceSha256": "74C0AFD0F3682CC337BF88AE83821662502E605C70BED6815779E4488C28999A",
+    "Role": "operator",
+    "Story": "footer",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]

@@ -31,6 +31,10 @@ internal static class PortableRenderingTests
     public static void PortableRenderingStructuralPaintRetainsWorkBounds() =>
         DocxInlineCompositionTests.CheckStructuralPaintBounds(new PinnedResolver(mathFont: true));
 
+    public static void PortableRenderingStructuralPaintKeepsMixedStoryContentAndInk() =>
+        DocxInlineCompositionTests.CheckEquationRevisions(new PinnedResolver(mathFont: true), false,
+            "structural-placement-office.json", splitMathRuns: true);
+
     public static void PortableRenderingMathRemaindersKeepVisibleArgumentsAndInk() =>
         DocxInlineCompositionTests.CheckEquationRevisions(new PinnedResolver(mathFont: true), false,
             "math-remaining-office.json", splitMathRuns: true);
