@@ -1,5 +1,30 @@
 # Composed-document reliability checkpoint
 
+C135 coalesces actual structural cell owners before packing: consecutive rows
+share a range only for the same table/column span, revision kind and known author.
+Dates stay source metadata without splitting the range. Same-row/diagonal spans,
+gaps, authors and kinds remain separate. Geometry cannot join these distinct
+source ranges. Complete-grid, unfragmented, nonmerged/nonnested owners qualify;
+existing fallbacks and other modes remain. Raw source owners and candidate/revision
+totals are retained, even when two cells print one label.
+
+Eighteen independent outcomes agree on range counts and labels; four references
+reuse, fourteen new exports establish boundaries. Ten comparisons improve, eight
+PDFs remain exact, no new failed components. All eighteen body text/math geometry
+reports remain exact to the parent and visible child content survives. Twelve
+visual pairs reviewed, six carry by raster identity. All strict/full one-point
+gates still fail; count agreement does not establish Office parity. Margin-bar
+segmentation, dash/width/end attachment, matrix and exact-height residuals remain.
+The earlier narrow-cell paint-order extraction flags stay; this slice has none.
+
+One Release artifact passes33 Windows/22 Ubuntu checks/eleven native skips, once
+per platform, with no observer corrections or repeated tests. Both new regressions
+fail on the parent. Existing reference tooling pins actual Office balloon frames/
+text from a declared region. Seventeen assets/four smokes transfer without root
+build/suite replay. Rootfa711fc4; `artifacts/composition-c1/cell-ranges-evidence.json`.
+C134 CI39049120946 is green on both platforms. Next is one finite portfolio refresh
+on this accepted artifact, reusing comparisons/reviews and CI milestone checks.
+
 C134 attaches structural cell connectors to the first printed paragraph and
 its shared occupied inline frame, while cell-top placement stays independent.
 The same extent helper serves existing comment ranges. Narrow/same-author/
