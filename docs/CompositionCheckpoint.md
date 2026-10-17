@@ -1,5 +1,37 @@
 # Composed-document reliability checkpoint
 
+C84 shares print-scaled image dimensions between body/cell wrapping, occupied
+size estimates and placement. Relative source-baseline geometry keeps the first
+print origin independent of scaled flow; leading picture-only blocks own their
+origin. Rendering and continued-note keep-out reuse the same origin selection.
+Retained picture-font descent contributes below-baseline space. Source-positioned
+cell images use authored spacing; unpositioned model objects keep their existing
+block fallback. No font-name, point-size or whole-document eligibility rule.
+
+Twenty Review controls cover shared runs, picture-only paragraphs, three image
+sizes, fonts, authors and all four containers. Six new strict Review references
+and two Final references supplement fourteen retained references. All sixteen
+affected Review MAEs improve, four accepted static PDFs retain bytes, and no new
+failure components appear. All twenty Review gates still fail unchanged thresholds.
+Final body retains bytes; the image-only Final cell's MAE improves 0.16618 to
+0.01075 and recall 0.64423 to 0.98951. Both Final foreground-recall gates still fail.
+Five Review and two Final same-scale pairs were reviewed for visible content.
+
+Windows passes all 68 exact capability/neighbor checks; Ubuntu passes 55 with
+thirteen explicit skips, each in one invocation. New independent geometry checks
+reject both C83's size defect and the first dimension-only prototype's 3.294-point
+text displacement. That prototype passed 53 Windows checks, demonstrating why its
+failed visual comparisons mattered. Later failed origin/legacy-fallback runs also
+remain retained; no unsuccessful candidate was transferred to root.
+
+One final frozen artifact produces all accepted comparisons. The twelve fixed
+portfolio PDFs retain accepted bytes and reuse reference/threshold comparisons;
+ten DOCX gates fail and both decks pass. Earlier raw content-audit flags carry by
+PDF identity. Seventeen assets/four smoke PDFs transfer without root build or
+suite replay. Root 32e9a9be; evidence:
+`artifacts/composition-c1/body-cell-picture-composition-evidence.json`.
+C83 CI 39000959707 is green on both platforms; C84 CI follows the scoped push.
+
 C83 admits actual source-owned inserted pictures to the existing semantic owner
 check and shared natural static-frame mapping. Aggregate/value-equal metadata,
 missing styles, wrong source positions, unsupported owners and declared/floating
