@@ -144,7 +144,7 @@ internal sealed partial class DocxRenderer
                     ? sourceEquation : sourceEquation with { Display = displayStyle };
                 if (!DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
                 var metricControls = DocxMathLayout.GetMetricOnlyControls(equation, mathRuns, token);
-                if (metricControls.Count != 0)
+                if (mathRuns.Count == 0 && metricControls.Count != 0)
                 {
                     // No painted source glyphs: load only the existing conversion
                     // metric owner, without creating a PDF subset or glyph map.
@@ -172,6 +172,11 @@ internal sealed partial class DocxRenderer
                     if (parentMetrics is null || !parentMetrics.TryGetMathConstants(out _)) { continue; }
                 }
                 bool valid = true;
+                // Empty neighbors have no literal source to discover their font.
+                // Use the same conversion-owned cache; no unused PDF subset.
+                foreach (var control in metricControls)
+                    if (!TryPrepareControl(control)) { valid = false; break; }
+                if (!valid) continue;
                 if (mathRuns.Count == 0 &&
                     (DocxMathLayout.GetStandaloneControl(equation, token) is not { } controlOwner || !TryPrepareControl(controlOwner)))
                     continue;

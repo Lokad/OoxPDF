@@ -192,7 +192,8 @@ internal static partial class DocxMathLayout
         if (GetFraction(equation) is not { } fraction)
             return DocxMathRowLayout.TryMeasure(equation.Content, resolveFont, token, out box, out fallback);
         if (IsEmptyFraction(equation))
-            return TryMeasureEmptyFraction(equation, fraction, parentMetricsFont, token, out box, out fallback);
+            return TryMeasureEmptyFraction(equation, fraction, parentMetricsFont ?? resolveControlMetrics?.Invoke(fraction),
+                token, out box, out fallback);
         box = null;
         int scriptLevel = equation.Display ? 0 : 1;
         if (!TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> sources) || sources.Count == 0)

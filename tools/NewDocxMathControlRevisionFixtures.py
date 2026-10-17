@@ -167,3 +167,48 @@ for order in ["script-first", "fraction-first"]:
                                    RuleRegion=[120, 680, 210, 740], RuleFillColor="g:0"))
 (output / "glyphless-compounds.json").write_text(json.dumps(glyphless_rows, indent=2) + "\n", encoding="utf-8")
 print("Pinned six ordered glyphless-control and deletion compositions")
+
+# Keep ordinary painted neighbors while only the fraction is empty or revised.
+mixed_rows = []
+for order in ["script-first", "fraction-first"]:
+    source = output / ("compound-revision-" + order + "-inserted.docx")
+    with ZipFile(source) as z:
+        original = {name: z.read(name) for name in z.namelist()}
+    for kind in ["authored-empty", "fraction-ins", "fraction-del"]:
+        entries = dict(original)
+        xml = E.fromstring(entries["word/document.xml"])
+        equation = next(xml.iter(m + "oMath"))
+        wrapper = equation.find(w + "ins")
+        for child in list(wrapper):
+            wrapper.remove(child)
+            equation.append(child)
+        equation.remove(wrapper)
+        fraction = equation.find(m + "f")
+        if kind != "fraction-del":
+            for parent in list(fraction.iter()):
+                for run in list(parent.findall(m + "r")):
+                    parent.remove(run)
+        if kind != "authored-empty":
+            index = list(equation).index(fraction)
+            equation.remove(fraction)
+            revision = E.Element(w + ("ins" if kind == "fraction-ins" else "del"), {
+                w + "id": "1201", w + "author": "Mixed Control Reviewer",
+                w + "date": "2026-10-17T00:00:00Z",
+            })
+            revision.append(fraction)
+            equation.insert(index, revision)
+        entries["word/document.xml"] = E.tostring(xml, encoding="utf-8", xml_declaration=True)
+        target = output / ("mixed-control-" + order + "-" + kind + ".docx")
+        with ZipFile(target, "w", ZIP_DEFLATED) as z:
+            for name, data in sorted(entries.items()):
+                info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+                info.compress_type = ZIP_DEFLATED
+                z.writestr(info, data)
+        mixed_rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
+                               Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
+                               SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(),
+                               Order=order, Kind=kind, HeldOut=False, ExpectedEquationCount=4,
+                               ExpectedText=["share the same input series."], ProsePrefixes=["Summary:", "governs"],
+                               RuleRegion=[120, 680, 210, 740], RuleFillColor="g:0"))
+(output / "mixed-controls.json").write_text(json.dumps(mixed_rows, indent=2) + "\n", encoding="utf-8")
+print("Pinned six mixed painted/metric-control compositions")

@@ -169,7 +169,9 @@ internal static class DocxInlineContent
             // Structural paint retains authored ink. Only actual revised literal
             // sources can make this equation contribute a visible revision band.
             if ((equation.Revision is not null || equation.HasRunRevisions) &&
-                (!DocxMathLayout.TryGetRuns(equation, token, out var runs) || runs.Count != 0)) return false;
+                (!DocxMathLayout.TryGetRuns(equation, token, out var runs) ||
+                 runs.Any(source => source.Run.Text.Text.Length != 0 &&
+                    (source.Run.Text.Revision is not null || source.Run.Text.Revisions.Count != 0)))) return false;
         }
         return HasSupportedRunRevisionOwners(source, [], token, nonRenderingRunOwners: paragraph.NonRenderingRunOwners,
             equations: paragraph.Equations);
@@ -191,14 +193,16 @@ internal static class DocxInlineContent
         if (equation.SourceRunIndex < 0 || !DocxMathLayout.TryGetRuns(equation, token, out var runs)) return false;
         var actual = new List<DocxRevisionInfo>();
         var seen = new HashSet<DocxRevisionInfo>(ReferenceEqualityComparer.Instance);
-        if (runs.Count == 0)
+        var controls = DocxMathLayout.GetControlSources(equation, token);
+        if (runs.Count == 0 && controls.Count == 0) return false;
+        foreach (var control in controls)
         {
-            var controls = DocxMathLayout.GetControlSources(equation, token);
-            if (controls.Count == 0) return false;
-            foreach (var control in controls)
-                if (control.ControlText is not { } source || !AddOwner(source)) return false;
+            token.ThrowIfCancellationRequested();
+            if (control.ControlText is { } source)
+            { if (!AddOwner(source)) return false; }
+            else if (runs.Count == 0) return false;
         }
-        else foreach (var source in runs)
+        foreach (var source in runs)
         {
             token.ThrowIfCancellationRequested();
             if (!AddOwner(source.Run.Text)) return false;

@@ -35,15 +35,15 @@ internal static partial class DocxMathLayout
         IReadOnlyList<DocxMathRunSource> runs, CancellationToken token)
     {
         if (MetricOnly(equation)) return GetControlSources(equation, token);
-        // Painted source paths retain existing discovery and resource ownership.
-        if (runs.Count != 0) return [];
         var controls = GetControlSources(equation, token);
+        var metricOnly = new List<IDocxMathControl>();
         foreach (var control in controls)
         {
             token.ThrowIfCancellationRequested();
-            if (!MetricOnly(equation with { Content = new([(DocxMathNode)control]) })) return [];
+            if (MetricOnly(equation with { Content = new([(DocxMathNode)control]) })) metricOnly.Add(control);
+            else if (runs.Count == 0) return [];
         }
-        return controls;
+        return metricOnly;
 
         bool MetricOnly(DocxEquation source) => IsEmptyFraction(source) || IsEmptyMatrix(source, token) || IsEmptyScripts(source, token);
     }

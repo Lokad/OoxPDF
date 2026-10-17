@@ -1,0 +1,146 @@
+[
+  {
+    "Id": "mixed-control-script-first-authored-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-control-script-first-authored-empty.docx",
+    "Sha256": "FA9C65B2B2EBD13573E33C9A7C795666E315AA46507C60C14C9B0B2B7375BAAA",
+    "SourceSha256": "D2EF8CAC2634DD0495C8C5C3B527481E21DA705F57207E3F674EF4B8B56CB976",
+    "Order": "script-first",
+    "Kind": "authored-empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      680,
+      210,
+      740
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "mixed-control-script-first-fraction-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-control-script-first-fraction-ins.docx",
+    "Sha256": "C0C956ABC17588064E3DDC7A2F2182D62CF3E2323C3459FC4386457DEC28A4D0",
+    "SourceSha256": "D2EF8CAC2634DD0495C8C5C3B527481E21DA705F57207E3F674EF4B8B56CB976",
+    "Order": "script-first",
+    "Kind": "fraction-ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      680,
+      210,
+      740
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "mixed-control-script-first-fraction-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-control-script-first-fraction-del.docx",
+    "Sha256": "492ADED4D2F9F65255905C07A158CCC89ED4E0BEFF7FFF15085D381B193D907B",
+    "SourceSha256": "D2EF8CAC2634DD0495C8C5C3B527481E21DA705F57207E3F674EF4B8B56CB976",
+    "Order": "script-first",
+    "Kind": "fraction-del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      680,
+      210,
+      740
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "mixed-control-fraction-first-authored-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-control-fraction-first-authored-empty.docx",
+    "Sha256": "8F3D9F37A5930D324620C8BC6993B36BAF98C8DDD9AFADE0D00A008C47D44FEF",
+    "SourceSha256": "FBB41F9E71715B5A52FAB02F6CC1D6E0D1260FDB18528BAB69A5F44501E1AB43",
+    "Order": "fraction-first",
+    "Kind": "authored-empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      680,
+      210,
+      740
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "mixed-control-fraction-first-fraction-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-control-fraction-first-fraction-ins.docx",
+    "Sha256": "12B263BA3DB522B102B4246D9672C26D0D70FD98917A1DB8165C46270806B86B",
+    "SourceSha256": "FBB41F9E71715B5A52FAB02F6CC1D6E0D1260FDB18528BAB69A5F44501E1AB43",
+    "Order": "fraction-first",
+    "Kind": "fraction-ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      680,
+      210,
+      740
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "mixed-control-fraction-first-fraction-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-control-fraction-first-fraction-del.docx",
+    "Sha256": "37AC663AF668A381EC89E67D7E99283F38DAB88ED491EE3F9442704DE8A53F99",
+    "SourceSha256": "FBB41F9E71715B5A52FAB02F6CC1D6E0D1260FDB18528BAB69A5F44501E1AB43",
+    "Order": "fraction-first",
+    "Kind": "fraction-del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      680,
+      210,
+      740
+    ],
+    "RuleFillColor": "g:0"
+  }
+]
