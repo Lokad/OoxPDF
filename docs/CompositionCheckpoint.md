@@ -1,5 +1,27 @@
 # Composed-document reliability checkpoint
 
+C145 fixes another confirmed composition omission: custom footnote/endnote marks
+suppressed adjacent one/two fractions in all eight parent outcomes. Exact source
+run/offset/first-character indexing is shared with preparation; qualified note
+references use ordered placement. Unique owners are indexed once, cancellation
+stays checked, and the existing plain font-target admission remains unchanged.
+Revised, missing, duplicate or invalid marker sources retain fallback.
+
+One artifact passes123 Windows/114 Ubuntu checks/nine native skips. Eight independent
+Word outcomes restore math, both custom glyphs, bookmarks, note prose and four
+distinct destinations. Source splitting and *tail preserve first-character link
+width. All eight comparisons improve/no new failed components. Math origins are
+within0.136pt X/0.020pt Y; strict foreground-recall/SSIM gates still fail. Eight
+Final page pairs reviewed; eight Review pairs carry by raster identity. Parent
+fails the independent content regression.
+
+Seventeen assets/four matching smokes transfer without root build/suite replay.
+The fixed DOCX portfolio has no custom markers; prior milestone results carry by
+source scope/report/deck smokes, no twelve-outcome replay or full content audit.
+Rootfb70f24a; `artifacts/composition-c1/custom-note-math-evidence.json`.
+C142-C144 CI is green on both platforms. Next: reproduce whether a custom mark
+can improperly disable automatic eachPage counters in neighboring notes.
+
 C144 fixes a metadata-only composition omission. Explicitly declaring matching
 document-level footnote page restarts suppressed all eight equations in C143's
 compound paragraphs. Automatic footnote page dependencies now retain actual source
