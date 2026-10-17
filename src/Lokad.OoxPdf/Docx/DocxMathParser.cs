@@ -10,25 +10,32 @@ internal static partial class DocxMathParser
     public static DocxMathRow Read(
         XElement equation,
         Func<XElement, string, DocxTextRun> readRun,
-        CancellationToken cancellationToken, Func<XElement, bool>? includeRevision = null)
+        CancellationToken cancellationToken, Func<XElement, bool>? includeRevision = null,
+        bool preserveDeletedStructure = false)
     {
-        var pending = new Stack<(XElement Element, bool Expanded)>();
+        var pending = new Stack<(XElement Element, bool Expanded, bool InsideRevision)>();
         var nodes = new Dictionary<XElement, DocxMathNode>();
-        pending.Push((equation, false));
+        pending.Push((equation, false, false));
         while (pending.TryPop(out var item))
         {
             cancellationToken.ThrowIfCancellationRequested();
             XElement element = item.Element;
             string name = element.Name.LocalName;
-            bool revisionRun = includeRevision is not null && element.Name.Namespace == WordprocessingNamespace &&
-                name is "ins" or "del" && element.HasElements && element.Elements().All(child =>
+            bool revisionSource = !item.InsideRevision && includeRevision is not null && element.Name.Namespace == WordprocessingNamespace &&
+                name is "ins" or "del";
+            bool revisionRun = revisionSource && element.HasElements && element.Elements().All(child =>
                     child.Name == MathNamespace + "r" && child.Elements(MathNamespace + "t").Any(text => text.Value.Length != 0));
-            if (revisionRun && !item.Expanded && !includeRevision!(element))
+            bool structuralRevision = revisionSource && element.Elements().Count() == 1 &&
+                element.Elements().Single().Name.Namespace == MathNamespace &&
+                element.Elements().Single().Name.LocalName is "f" or "rad" or "d" or "nary";
+            bool revisionRow = revisionRun || structuralRevision;
+            bool retainDeletedFrame = structuralRevision && preserveDeletedStructure && name == "del" && !includeRevision!(element);
+            if (revisionRow && !item.Expanded && !includeRevision!(element) && !retainDeletedFrame)
             {
                 nodes.Add(element, new DocxMathRow([]));
                 continue;
             }
-            if (!revisionRun && (element.Name.Namespace != MathNamespace || !IsContainer(name)))
+            if (!revisionRow && (element.Name.Namespace != MathNamespace || !IsContainer(name)))
             {
                 nodes.Add(element, ReadLeaf(element, readRun));
                 continue;
@@ -36,16 +43,31 @@ internal static partial class DocxMathParser
 
             if (!item.Expanded)
             {
-                pending.Push((element, true));
+                pending.Push((element, true, item.InsideRevision));
                 foreach (XElement child in ContentChildren(element).Reverse())
                 {
-                    pending.Push((child, false));
+                    pending.Push((child, false, item.InsideRevision || revisionRow));
                 }
                 continue;
             }
 
             DocxMathNode node;
-            if (revisionRun)
+            if (structuralRevision)
+            {
+                // Revision syntax is transparent to the existing single-control
+                // grammar. Ownership already lives on actual control/literal sources.
+                var child = element.Elements().Single();
+                node = nodes[child];
+                if (retainDeletedFrame)
+                {
+                    var retained = DocxMathLayout.RemoveDeletedLiteralMathText(
+                        new(new([node]), 0, 0, false, null, null, null), cancellationToken);
+                    node = retained is { Children.Count: 1 } ? retained.Children[0] :
+                        new DocxMathUnsupported(name, element.Name.NamespaceName, null,
+                            [new(child.Name.LocalName, child.Name.NamespaceName, node)]);
+                }
+            }
+            else if (revisionRun)
                 node = new DocxMathRow(ContentChildren(element).Select(child => nodes[child]).ToArray());
             else if (IsRow(name) && (name != "deg" || element.Parent?.Name == MathNamespace + "rad") &&
                 (name != "fName" || element.Parent?.Name == MathNamespace + "func"))
@@ -128,7 +150,7 @@ internal static partial class DocxMathParser
                     ContentChildren(element).Select(child => new DocxMathChild(
                         child.Name.LocalName, child.Name.NamespaceName, nodes[child])).ToArray());
             }
-            nodes.Add(element, node with { PropertiesXml = ReadProperties(element) });
+            nodes.Add(element, structuralRevision ? node : node with { PropertiesXml = ReadProperties(element) });
         }
 
         return nodes[equation] as DocxMathRow ?? new DocxMathRow([nodes[equation]]);

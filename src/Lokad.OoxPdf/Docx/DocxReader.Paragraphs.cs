@@ -429,7 +429,7 @@ internal sealed partial class DocxReader
                 equationRevision = sourceEquation.Revision;
                 hasMathRunRevisions = false;
                 var content = DocxMathParser.Read(equation, ReadMathRun, cancellationToken,
-                    wrapper => IsIncludedRevisionContainer(wrapper, markupMode));
+                    wrapper => IsIncludedRevisionContainer(wrapper, markupMode), preserveDeletedStructure: markupMode == OoxPdfDocxMarkupMode.Final);
                 if (sourceEquation.RemoveDeletedText)
                 {
                     var source = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null, null);
@@ -455,7 +455,8 @@ internal sealed partial class DocxReader
                 DocxRevisionInfo? owner = equationRevision;
                 XElement? wrapper = run.Ancestors().TakeWhile(parent => parent.Name != MathNamespace + "oMath")
                     .FirstOrDefault(parent => parent.Name.Namespace == WordprocessingNamespace && parent.Name.LocalName is "ins" or "del");
-                if (wrapper is not null)
+                if (wrapper is not null && !IsIncludedRevisionContainer(wrapper, markupMode)) owner = null;
+                else if (wrapper is not null)
                 {
                     mathRunRevisions ??= new();
                     if (!mathRunRevisions.TryGetValue(wrapper, out owner))

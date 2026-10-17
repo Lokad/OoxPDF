@@ -67,12 +67,50 @@ def fixture(role, kind, empty=False, story="body"):
     return row
 
 
+def fragment_fixture(role, kind):
+    source = cases / ("whole-math-" + ("root" if role == "fraction" else role) + "-" + kind + ".docx")
+    with ZipFile(source) as z:
+        entries = {name: z.read(name) for name in z.namelist()}
+    xml = E.fromstring(entries["word/document.xml"])
+    equation = next(xml.iter(m + "oMath"))
+    if role == "fraction":
+        with ZipFile(cases / "equation-revision-body-ins.docx") as z:
+            fraction = next(E.fromstring(z.read("word/document.xml")).iter(m + "f"))
+        equation.clear()
+        equation.append(fraction)
+    wrapper = next(parent for parent in xml.iter() if equation in list(parent))
+    parent = next(parent for parent in xml.iter() if wrapper in list(parent))
+    index = list(parent).index(wrapper)
+    parent.remove(wrapper)
+    wrapper.remove(equation)
+    contents = list(equation)
+    equation.clear()
+    for child in contents:
+        wrapper.append(child)
+    equation.append(wrapper)
+    parent.insert(index, equation)
+    entries["word/document.xml"] = E.tostring(xml, encoding="utf-8", xml_declaration=True)
+    target = cases / ("math-fragment-" + role + "-" + kind + ".docx")
+    with ZipFile(target, "w", ZIP_DEFLATED) as z:
+        for name, data in sorted(entries.items()):
+            info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+            info.compress_type = ZIP_DEFLATED
+            z.writestr(info, data)
+    return dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
+                Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
+                SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(),
+                Role=role, Kind=kind, HeldOut=False, ExpectedEquationCount=4,
+                ExpectedText=["share the same input series."])
+
+
 profiles = [(role, kind, False) for role in ["root", "delimiter", "operator", "root-degree"]
             for kind in ["ins", "del"]] + [(role, kind, True) for role in ["root", "delimiter", "operator"]
                                          for kind in ["ins", "del"]]
 body = [fixture(*profile) for profile in profiles]
 placement = [fixture(role, kind, story=story) for role, kind in [("root", "ins"), ("operator", "del")]
              for story in ["cell", "header", "footer"]]
-for name, rows in [("whole-math", body), ("whole-math-placement", placement)]:
+fragments = [fragment_fixture(role, kind) for role in ["root", "delimiter", "operator", "fraction"]
+             for kind in ["ins", "del"]]
+for name, rows in [("whole-math", body), ("whole-math-placement", placement), ("math-fragment", fragments)]:
     (cases / (name + ".json")).write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
     print("Pinned", len(rows), name, "controls")

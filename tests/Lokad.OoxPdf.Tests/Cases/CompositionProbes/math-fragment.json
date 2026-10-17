@@ -1,0 +1,106 @@
+[
+  {
+    "Id": "math-fragment-root-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-fragment-root-ins.docx",
+    "Sha256": "C4FB270434502E2CA44AFC56A17C56B5663404424816969C4D44C50FC1A4D061",
+    "SourceSha256": "C90403AAD9339111440F1C81F0A12E417541B00E9F3481A27DDC19A8F3030E2C",
+    "Role": "root",
+    "Kind": "ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-fragment-root-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-fragment-root-del.docx",
+    "Sha256": "91F058A05DBCB0439E9F1FED3A0E6F2B4413810B651C9CFEE00121D1089F3FF4",
+    "SourceSha256": "060E6065D4F3AAFE3EF7D9C4ABDC035118ADE1822117906D101CA47D8168417D",
+    "Role": "root",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-fragment-delimiter-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-fragment-delimiter-ins.docx",
+    "Sha256": "351C61EF8E32B1829393273367C33991A479E6831AF12ED279900143CEA421B8",
+    "SourceSha256": "90AA652A52BCC0491F3CF4A6F02BACB24B2223CE52BA5A74BDF2A40383717F80",
+    "Role": "delimiter",
+    "Kind": "ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-fragment-delimiter-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-fragment-delimiter-del.docx",
+    "Sha256": "EC046D6F0446E9146A1588EEFA81FF0D50F4481703AD1F2EB40B98E1DCF078C2",
+    "SourceSha256": "B9738F5C2068412EDA8F564ED57A876175A67D2A9BE004937DF8FAE1F4A9BD49",
+    "Role": "delimiter",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-fragment-operator-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-fragment-operator-ins.docx",
+    "Sha256": "321A10CABEC9251BA1C75BBA327F5FDAFABE3B9B0DF07FE3DF4FC7C44F22FE2B",
+    "SourceSha256": "5DF1AA34B405FD196C0FCE98F44E6DBA5DECF5591648E4BF1F7F0642A56CE3AF",
+    "Role": "operator",
+    "Kind": "ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-fragment-operator-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-fragment-operator-del.docx",
+    "Sha256": "A37B63567C39B93A3A884CB2C1EE5F492DC3240E93B16FE209304B534850B953",
+    "SourceSha256": "577D7CF08D4E5E30A647D27C3E16BA4DD3581651C0EE64E6E2A8ADC7643592AD",
+    "Role": "operator",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-fragment-fraction-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-fragment-fraction-ins.docx",
+    "Sha256": "1D93261477ABF36FF43FA419F17FE458F0D71F95AE0D9B7E5330A9C89F2FB85C",
+    "SourceSha256": "C90403AAD9339111440F1C81F0A12E417541B00E9F3481A27DDC19A8F3030E2C",
+    "Role": "fraction",
+    "Kind": "ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "math-fragment-fraction-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-fragment-fraction-del.docx",
+    "Sha256": "FF827C237F54414545369D84936A9A9AE6F96F9405B4E5452B272C21F25EF304",
+    "SourceSha256": "060E6065D4F3AAFE3EF7D9C4ABDC035118ADE1822117906D101CA47D8168417D",
+    "Role": "fraction",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]
