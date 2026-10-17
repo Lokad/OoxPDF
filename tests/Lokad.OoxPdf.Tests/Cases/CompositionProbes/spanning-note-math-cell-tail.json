@@ -1,0 +1,32 @@
+[
+  {
+    "Id": "spanning-note-math-cell-tail-calibri-12-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-note-math-cell-tail-calibri-12-zero.docx",
+    "Sha256": "DD9B3666E9F1CCBEBFBBD3FC198D21785C9782FE04C652EB3D3D17E0FF8ABAC0",
+    "SourceSha256": "5765B29684C070357EFA35AF2E0FDAEE3694077BED4024EB54F0448D542B55C1",
+    "TableSourceSha256": "BD0D2EF6D5EECB1D6A17F50CF85F0C7D29560C04DD0094050E7E4BCEC593BC82",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedImagePlacements": 4,
+    "ExpectedText": [
+      "Public table note.",
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "spanning-note-math-cell-tail-arial-11-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-note-math-cell-tail-arial-11-zero.docx",
+    "Sha256": "E765608CF3D36114F95BBB18D5B7B1E1EA6663B9759A46081BCE3D77AFDC4369",
+    "SourceSha256": "E7FBECA42CAE431D8A5BFADAE3ECC512002A9A1529C5E1898B4EA4BC281F5060",
+    "TableSourceSha256": "3C409F5205D6BE7136FEA97B7091D4BD731101C8D7B8349712139EDED1A5F774",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedImagePlacements": 4,
+    "ExpectedText": [
+      "Public table note.",
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  }
+]

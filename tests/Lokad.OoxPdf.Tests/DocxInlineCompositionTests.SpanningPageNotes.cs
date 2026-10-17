@@ -185,7 +185,8 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal("decimalZero", row.GetProperty("NumberFormat").GetString());
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
             foreach (string content in new[] { "105", "108", "Alpha", "Bravo", "Charlie", "Delta" }) TestAssert.Contains(content, text);
-            TestAssert.Equal("105,106,107,108", string.Join(',', paragraph.InlineReferences.Select(reference => reference.DisplayText)));
+            TestAssert.Equal("105,106,107,108", string.Join(',', DocxBlockTraversal.EnumerateBodyParagraphs(source)
+                .SelectMany(item => item.InlineReferences).Select(reference => reference.DisplayText)));
         }
     }
 }

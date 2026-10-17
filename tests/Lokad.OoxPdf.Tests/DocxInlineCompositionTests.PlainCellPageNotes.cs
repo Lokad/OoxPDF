@@ -32,6 +32,8 @@ internal static partial class DocxInlineCompositionTests
             {
                 if (line.SourceParagraph is null || line.SourceParagraph.InlineReferences.Count == 0) continue;
                 TestAssert.True(line.InlineFrame is null, "Ordinary text retains its existing placement path.");
+                TestAssert.True(line.OccupiedLineBox is not null && line.BodyLineBoxBaselineInsetPoints is null,
+                    "Measured occupancy does not select a qualified body painting/minimum-leading policy.");
                 TestAssert.True(DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double bottom, out double top),
                     "Placement publishes a finite occupied slot without an object or font-specific admission rule.");
                 var clip = DocxTableCellClipGeometry.Resolve(row, cell);

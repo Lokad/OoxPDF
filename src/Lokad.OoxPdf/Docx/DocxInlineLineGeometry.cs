@@ -5,8 +5,8 @@ internal static class DocxInlineLineGeometry
     internal static bool TryGetOccupiedBounds(DocxTextLineLayout line, out double bottom, out double top)
     {
         bottom = top = 0d;
-        double? height = line.InlineFrame?.Height ?? line.BodyLineBoxHeightPoints;
-        double? inset = line.InlineFrame?.BaselineInset ?? line.BodyLineBoxBaselineInsetPoints;
+        double? height = line.InlineFrame?.Height ?? line.BodyLineBoxHeightPoints ?? line.OccupiedLineBox?.Height;
+        double? inset = line.InlineFrame?.BaselineInset ?? line.BodyLineBoxBaselineInsetPoints ?? line.OccupiedLineBox?.BaselineInset;
         if (height is not > 0d || inset is null || !double.IsFinite(height.Value) || !double.IsFinite(inset.Value) ||
             inset.Value < 0d || inset.Value > height.Value || !double.IsFinite(line.BaselineY)) return false;
         var visible = VerticalExtents(line);

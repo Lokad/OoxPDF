@@ -60,6 +60,8 @@ internal sealed partial class DocxLayoutEngine
                     return placement with { OffsetX = placement.OffsetX * scale };
                 }).ToArray(),
                 InlineFrame = line.InlineFrame is { } frame ? frame.Scale(scale) : null,
+                OccupiedLineBox = line.OccupiedLineBox is { } occupied
+                    ? new(occupied.Height * scale, occupied.BaselineInset * scale) : null,
                 InlineObjectEndOffsetX = line.InlineObjectEndOffsetX * scale,
                 InlineSourceExtents = line.InlineSourceExtents.Select(extent =>
                 {

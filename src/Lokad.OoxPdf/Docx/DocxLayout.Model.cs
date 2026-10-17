@@ -101,6 +101,9 @@ internal sealed record DocxTextLineLayout(
     // heights are authored distances; automatic heights already contain metric scaling.
     public double? BodyLineBoxBaselineInsetPoints { get; init; }
     public double? BodyLineBoxHeightPoints { get; init; }
+    // Measurement alone does not opt a cell into body hyperlink painting or a
+    // qualified minimum-leading correction. Translations preserve this slot.
+    public DocxOccupiedLineBox? OccupiedLineBox { get; init; }
     public bool UsesUniformBodyTypographicBaseline { get; init; }
     public double? InlineObjectEndOffsetX { get; init; }
     public IReadOnlyList<DocxInlineSourceExtent> InlineSourceExtents { get; init; } = [];
@@ -114,6 +117,8 @@ internal sealed record DocxTextLineLayout(
     // origin maps the source baseline while subsequent flow uses printed sizes.
     public double SourceBaselineOffset { get; init; }
 }
+
+internal readonly record struct DocxOccupiedLineBox(double Height, double BaselineInset);
 
 internal sealed record DocxTextSegmentLayout(
     string Text,

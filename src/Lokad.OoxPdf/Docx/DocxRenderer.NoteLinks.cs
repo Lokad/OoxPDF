@@ -88,10 +88,10 @@ internal sealed partial class DocxRenderer
                     }
                     else continue;
                     double width = ResolveHyperlinkAnnotationWidth(marker, wordProfile);
-                    double inset = line.BodyLineBoxBaselineInsetPoints ??
+                    double inset = line.BodyLineBoxBaselineInsetPoints ?? line.OccupiedLineBox?.BaselineInset ??
                         DocxLineMetrics.ResolveTableCellFirstBaselineInset([paragraph], fontResources.TextMeasurer);
                     double top = line.BaselineY - yOffset + inset;
-                    double height = line.BodyLineBoxHeightPoints ?? line.LineHeight ?? line.FontSize * 1.2d;
+                    double height = line.BodyLineBoxHeightPoints ?? line.OccupiedLineBox?.Height ?? line.LineHeight ?? line.FontSize * 1.2d;
                     if (noteSpacingParagraphs.TryGetValue(paragraph, out NoteReferenceSpacing spacing))
                     {
                         // The predecessor owns its after-spacing. Word assigns only

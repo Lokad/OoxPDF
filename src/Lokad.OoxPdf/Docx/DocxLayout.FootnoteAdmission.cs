@@ -6,11 +6,15 @@ internal sealed partial class DocxLayoutEngine
     // fragments can own admission directly instead of reserving an entire
     // paragraph's future notes before its first line arrives.
     private sealed class CompleteFootnoteAdmission(
-        IReadOnlyDictionary<int, Dictionary<int, DocxInlineReferenceLocation>> owners)
+        IReadOnlyDictionary<int, Dictionary<int, DocxInlineReferenceLocation>> owners,
+        IReadOnlyDictionary<int, List<DocxInlineReferenceLocation>> tableOwners)
     {
         internal IReadOnlyList<DocxInlineReferenceLocation> Select(int block,
-            IEnumerable<DocxTextSpan> spans, CancellationToken token)
+            IEnumerable<DocxTextSpan>? spans, CancellationToken token)
         {
+            // Tables retain their existing block admission. Only body paragraphs
+            // defer registration until the actual source line arrives.
+            if (spans is null) return tableOwners.TryGetValue(block, out var references) ? references : [];
             if (!owners.TryGetValue(block, out var runs)) return [];
             List<DocxInlineReferenceLocation>? selected = null;
             foreach (var span in spans)
@@ -61,23 +65,25 @@ internal sealed partial class DocxLayoutEngine
         }
         if (notes.Count == 0) return null;
         var owners = new Dictionary<int, Dictionary<int, DocxInlineReferenceLocation>>();
+        var tableOwners = new Dictionary<int, List<DocxInlineReferenceLocation>>();
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (block, references) in locations)
         {
             token.ThrowIfCancellationRequested();
-            Dictionary<(int Run, int Offset), DocxTextRun?>? sourceRuns = null;
+            var paragraphs = IndexCompleteNoteParagraphs(document.BodyElements[block], token);
+            var sourceRunsByParagraph = new Dictionary<DocxParagraph, Dictionary<(int Run, int Offset), DocxTextRun?>>(ReferenceEqualityComparer.Instance);
             foreach (var location in references.Where(location => location.Reference.Kind == DocxRelatedStoryKind.Footnote))
             {
                 token.ThrowIfCancellationRequested();
                 var reference = location.Reference;
                 var paragraph = location.SourceParagraph;
-                if (document.BodyElements[block] is not DocxParagraphElement element || !ReferenceEquals(element.Paragraph, paragraph) ||
+                if (paragraphs is null || !paragraphs.Contains(paragraph) ||
                     paragraph.KeepRules.KeepNext == true || paragraph.KeepRules.KeepLines == true ||
                     block > 0 && document.BodyElements[block - 1] is DocxParagraphElement { Paragraph.KeepRules.KeepNext: true } ||
-                    !DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph, element.Revisions) ||
                     reference.Id is not { } id || !ids.Add(id) || !notes.TryGetValue(id, out var note) ||
                     reference.Revision is not null || reference.Revisions.Count != 0) return null;
-                sourceRuns ??= DocxCustomNoteMarkerOwners.IndexSourceRuns(paragraph.Runs, token);
+                if (!sourceRunsByParagraph.TryGetValue(paragraph, out var sourceRuns))
+                    sourceRunsByParagraph.Add(paragraph, sourceRuns = DocxCustomNoteMarkerOwners.IndexSourceRuns(paragraph.Runs, token));
                 if (!sourceRuns.TryGetValue((reference.SourceRunIndex, reference.TextOffsetInRun), out var run) ||
                     run is null || run.EffectiveProperties.Hidden) return null;
                 if (reference.CustomMarkText is { } custom)
@@ -88,10 +94,51 @@ internal sealed partial class DocxLayoutEngine
                 }
                 else if (!DocxInlineContent.TryGetAutomaticNoteRun(reference, out var marker) || !ReferenceEquals(run, marker) ||
                     note.Story.Paragraphs[0].Runs.Count == 0 || note.Story.Paragraphs[0].Runs[0].Text != reference.DisplayText) return null;
-                if (!owners.TryGetValue(block, out var indexed)) owners.Add(block, indexed = []);
-                if (!indexed.TryAdd(reference.SourceRunIndex, location)) return null;
+                if (document.BodyElements[block] is DocxTableElement)
+                {
+                    if (!tableOwners.TryGetValue(block, out var indexed)) tableOwners.Add(block, indexed = []);
+                    indexed.Add(location);
+                }
+                else
+                {
+                    if (!owners.TryGetValue(block, out var indexed)) owners.Add(block, indexed = []);
+                    if (!indexed.TryAdd(reference.SourceRunIndex, location)) return null;
+                }
             }
         }
-        return ids.Count == notes.Count ? new(owners) : null;
+        // Pure tables continue to use their existing reservation contract. This
+        // migration concerns paragraphs whose notes arrive on measured lines.
+        return owners.Count != 0 && ids.Count == notes.Count ? new(owners, tableOwners) : null;
+    }
+
+    private static HashSet<DocxParagraph>? IndexCompleteNoteParagraphs(DocxBodyElement source, CancellationToken token)
+    {
+        var paragraphs = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
+        bool Add(DocxParagraphElement element) =>
+            DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(element.Paragraph, element.Revisions, token) &&
+            paragraphs.Add(element.Paragraph);
+        if (source is DocxParagraphElement paragraph) return Add(paragraph) ? paragraphs : null;
+        if (source is not DocxTableElement table || source.Revisions.Count != 0 || table.Table.Revisions.Count != 0) return null;
+        foreach (var row in table.Table.Rows)
+        {
+            token.ThrowIfCancellationRequested();
+            if (row.Revisions.Count != 0) return null;
+            foreach (var cell in row.Cells)
+            {
+                token.ThrowIfCancellationRequested();
+                if (cell.Revisions.Count != 0) return null;
+                foreach (var element in DocxTableCellContent.GetBodyElements(cell))
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (element is DocxParagraphElement cellParagraph)
+                    {
+                        if (!Add(cellParagraph)) return null;
+                    }
+                    else if (element is not (DocxPageBreakElement or DocxImplicitParagraphElement) || element.Revisions.Count != 0)
+                        return null; // Nested and revised containers retain their existing fallback.
+                }
+            }
+        }
+        return paragraphs;
     }
 }

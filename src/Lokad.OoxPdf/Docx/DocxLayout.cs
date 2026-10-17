@@ -650,17 +650,13 @@ internal sealed partial class DocxLayoutEngine
 
         void RegisterInFlightFootnotesForSourceBlock(int sourceBlockIndex, IEnumerable<DocxTextSpan>? sourceSpans = null)
         {
-            if (completeFootnoteAdmission is not null && sourceSpans is null)
-            {
-                currentPageFootnoteReserveHeight = FootnoteRemainderTotal();
-                return; // Source fragments register only when their line seeks admission.
-            }
             IReadOnlyList<DocxInlineReferenceLocation>? blockLocations = completeFootnoteAdmission is null
                 ? locationsByBlock.GetValueOrDefault(sourceBlockIndex)
-                : completeFootnoteAdmission.Select(sourceBlockIndex, sourceSpans!, cancellationToken);
+                : completeFootnoteAdmission.Select(sourceBlockIndex, sourceSpans, cancellationToken);
             if (blockLocations is null || blockLocations.Count == 0)
             {
-                currentPageFootnoteReserveHeight = Math.Max(currentPageFootnoteReserveHeight, FootnoteRemainderTotal());
+                currentPageFootnoteReserveHeight = completeFootnoteAdmission is not null ? FootnoteRemainderTotal()
+                    : Math.Max(currentPageFootnoteReserveHeight, FootnoteRemainderTotal());
                 return;
             }
             // A block with page content already placed never reserves against notes

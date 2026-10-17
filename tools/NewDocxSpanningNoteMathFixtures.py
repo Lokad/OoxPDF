@@ -19,6 +19,7 @@ for prefix, namespace in [("w", w), ("m", m), ("r", r), ("a", a), ("wp", wp)]:
     E.register_namespace(prefix, namespace[1:-1])
 
 rows = []
+mixed_rows = []
 for typography in ["calibri-12-zero", "arial-11-zero"]:
     source = output / ("spanning-page-notes-" + typography + ".docx")
     donor = output / ("math-page-notes-compound-" + typography + ".docx")
@@ -82,5 +83,47 @@ for typography in ["calibri-12-zero", "arial-11-zero"]:
         DonorSha256=hashlib.sha256(donor.read_bytes()).hexdigest().upper(),
         HeldOut=False, ExpectedEquationCount=8, ExpectedImagePlacements=4,
         ExpectedText=["Public destination Alpha.", "Public destination Delta."]))
+
+    # Move only the fourth source marker into a following cell. The long body
+    # retains all authored prose/formulas/pictures, challenging admission across
+    # containers without adding another body-content or font-specific rule.
+    table_source = output / ("cell-page-notes-plain-" + typography + ".docx")
+    with ZipFile(table_source) as z:
+        table_xml = E.fromstring(z.read("word/document.xml"))
+    table = deepcopy(table_xml.find(w + "body/" + w + "tbl"))
+    mixed_xml = E.fromstring(entries["word/document.xml"])
+    mixed_body = mixed_xml.find(w + "body")
+    mixed_paragraph = mixed_body.find(w + "p")
+    last_marker = [run for run in mixed_paragraph.findall(w + "r") if run.find(w + "footnoteReference") is not None][-1]
+    mixed_paragraph.remove(last_marker)
+    cell_paragraph = E.Element(w + "p")
+    cell_paragraph.append(deepcopy(mixed_paragraph.find(w + "pPr")))
+    cell_paragraph.append(last_marker)
+    text_run = deepcopy(next(run for run in mixed_paragraph.findall(w + "r") if run.find(w + "t") is not None))
+    for index, text in enumerate(text_run.iter(w + "t")):
+        text.text = " Public table note." if index == 0 else ""
+    cell_paragraph.append(text_run)
+    cell = table.find(w + "tr/" + w + "tc")
+    for child in list(cell):
+        if child.tag != w + "tcPr":
+            cell.remove(child)
+    cell.append(cell_paragraph)
+    mixed_body.insert(len(mixed_body) - 1, table)
+    mixed_entries = dict(entries)
+    mixed_entries["word/document.xml"] = E.tostring(mixed_xml, encoding="utf-8", xml_declaration=True)
+    mixed_target = output / ("spanning-note-math-cell-tail-" + typography + ".docx")
+    with ZipFile(mixed_target, "w", ZIP_DEFLATED) as z:
+        for name, data in sorted(mixed_entries.items()):
+            info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+            info.compress_type = ZIP_DEFLATED
+            z.writestr(info, data)
+    mixed_rows.append(dict(Id=mixed_target.stem, Input=mixed_target.relative_to(root).as_posix(),
+        Sha256=hashlib.sha256(mixed_target.read_bytes()).hexdigest().upper(),
+        SourceSha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
+        TableSourceSha256=hashlib.sha256(table_source.read_bytes()).hexdigest().upper(),
+        HeldOut=False, ExpectedEquationCount=8, ExpectedImagePlacements=4,
+        ExpectedText=["Public table note.", "Public destination Alpha.", "Public destination Delta."]))
 (output / "spanning-note-math.json").write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
+(output / "spanning-note-math-cell-tail.json").write_text(json.dumps(mixed_rows, indent=2) + "\n", encoding="utf-8")
 print("Pinned two natural paragraphs with eight formulas/four images/four bookmarks/four notes")
+print("Pinned two mixed-container variants with the last source marker in a following cell")

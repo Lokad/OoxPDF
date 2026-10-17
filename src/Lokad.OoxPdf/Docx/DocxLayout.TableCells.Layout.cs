@@ -696,8 +696,8 @@ internal sealed partial class DocxLayoutEngine
                         // The cell cursor is seated at its first baseline. Publish
                         // the actual occupied slot relative to this placed line;
                         // paint coordinates and paragraph spacing stay separate.
-                        BodyLineBoxBaselineInsetPoints = cellFirstBaselineInset + lineBaselineTransition + extraAbove,
-                        BodyLineBoxHeightPoints = lineHeight + extraAbove + extraBelow });
+                        OccupiedLineBox = new(lineHeight + extraAbove + extraBelow,
+                            cellFirstBaselineInset + lineBaselineTransition + extraAbove) });
                     if (midLinePlan is not null)
                     {
                         foreach (DocxMidLineImage placed in midLinePlan.ImagesByLine[lineIndex])
