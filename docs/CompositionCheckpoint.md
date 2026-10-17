@@ -1,5 +1,30 @@
 # Composed-document reliability checkpoint
 
+C140 separates note static-frame validation from unrelated body contents while
+retaining shared final-section/mirror/floating guards and existing static, scale,
+source and slicing fallbacks. Complete endnote paragraphs lose the legacy3pt gap.
+The body/note boundary charges only measured occupied depth beyond ordinary text
+descent. Missing/malformed/exact frames keep their existing charge. This closes
+the mixed-body note displacement without a font, size or document-shape branch.
+
+Sixty-nine Windows/61 Ubuntu checks pass/eight native skips on the final artifact.
+The first development admission widened header fallbacks and fails three unchanged
+observers on both platforms; that artifact never transfers. Static validation is
+restored before the measured-depth correction. Every production revision reruns
+its selected tests; no passing suite is replayed on root. The final body note Y
+error falls6.284pt to0.051pt, paragraph pitch agrees within0.009pt, and mathematical
+operations stay exact. Two visual comparisons improve/six PDFs stay exact, no new
+failed components. All eight strict gates still fail; terminal-table note error
+17.059pt remains. Changed page pairs reviewed, unchanged peers carry by identity.
+
+The final milestone converts the fixed twelve outcomes/seven sources/twenty pages
+once with the accepted artifact. Every PDF stays exact to C136; twelve comparisons
+and twenty earlier page reviews carry. Ten DOCX failures/two deck passes and two
+complete-report extraction flags remain. Seventeen assets/four smokes transfer,
+no root build or suite replay. Rootada3b6f7;
+`artifacts/composition-c1/endnote-owned-frame-evidence.json`. C138/C139 CI is green
+on both platforms. Next: independent terminal-table boundary counterfactuals.
+
 C139 fixes confirmed equation loss beside section-restarted footnotes/endnotes.
 The reader already resolves section counters; shared marker ownership now admits
 those labels. Page-dependent and unknown restarts retain fallback. No font, size
