@@ -3164,5 +3164,9 @@
     "DocxConversionLoadsEachFontProgramOnce",
     "DocxCoveredRunsSkipFallbackProgramLoads",
     "MathFontMatrix"
+  ],
+  "docx-empty-role-placement": [
+    "DocxInlineCompositionEmptyRoles",
+    "PortableRenderingEmptyRoles"
   ]
 }

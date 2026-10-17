@@ -1,0 +1,106 @@
+[
+  {
+    "Id": "empty-role-placement-script-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-role-placement-script-body.docx",
+    "Sha256": "1AB15C7D62BE15B717FDEF608D655CCE94580C1580FF26B1FC5572277128A994",
+    "SourceSha256": "396DF62C526FF77B985D2A3E91A31AC3CA674DB590636327C1DAB8D753A7E183",
+    "Role": "script",
+    "Story": "body",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "empty-role-placement-script-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-role-placement-script-cell.docx",
+    "Sha256": "0C8DEF7A46A3E6F97B209F3E795A83123780120B9929354D2B4A56FF4A7CF67B",
+    "SourceSha256": "BF6C08DB053F1A468F51500F5EFFB7975BC9CF0015A42D6DDCEE7864B36B43D5",
+    "Role": "script",
+    "Story": "cell",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "empty-role-placement-script-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-role-placement-script-header.docx",
+    "Sha256": "27C514B62E6A199DF5712F0C5297C970E0AB69CFFF8F990C10F3B68B3D418AD9",
+    "SourceSha256": "F3E14A9D03CB6DF8F9D9889C851CF3E1F02A03716721623FCD8FA878790744B8",
+    "Role": "script",
+    "Story": "header",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "empty-role-placement-script-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-role-placement-script-footer.docx",
+    "Sha256": "EDAE8054E8A2138EDFB2BE1B58EA1B91115BD08E1AEF84D814395B0B4FFDC43C",
+    "SourceSha256": "A355BF23D39DD8E6F59428ADEC85A1CF401DD69580BED41743F2BDEEDAE57040",
+    "Role": "script",
+    "Story": "footer",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "empty-role-placement-matrix-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-role-placement-matrix-body.docx",
+    "Sha256": "82D0FA544C2519A8032774DB7337EBF5838892CB6591EF5CC89F19C3387D499E",
+    "SourceSha256": "396DF62C526FF77B985D2A3E91A31AC3CA674DB590636327C1DAB8D753A7E183",
+    "Role": "matrix",
+    "Story": "body",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "empty-role-placement-matrix-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-role-placement-matrix-cell.docx",
+    "Sha256": "326C88C934C4EB2C2D37FD137CD8129D5B88AB6F3AB79DCDB430CD1149670832",
+    "SourceSha256": "BF6C08DB053F1A468F51500F5EFFB7975BC9CF0015A42D6DDCEE7864B36B43D5",
+    "Role": "matrix",
+    "Story": "cell",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "empty-role-placement-matrix-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-role-placement-matrix-header.docx",
+    "Sha256": "EA8D22D5A2E27B9D73DE942B1D6DF6C5EBB3C06A08BB26B1DE4C4C903C5B662C",
+    "SourceSha256": "F3E14A9D03CB6DF8F9D9889C851CF3E1F02A03716721623FCD8FA878790744B8",
+    "Role": "matrix",
+    "Story": "header",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "empty-role-placement-matrix-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/empty-role-placement-matrix-footer.docx",
+    "Sha256": "AEF1640CF72AA40E87A3940A54BB95E9FE1ECB4CC5836687F232C4C3E69BD91C",
+    "SourceSha256": "A355BF23D39DD8E6F59428ADEC85A1CF401DD69580BED41743F2BDEEDAE57040",
+    "Role": "matrix",
+    "Story": "footer",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]
