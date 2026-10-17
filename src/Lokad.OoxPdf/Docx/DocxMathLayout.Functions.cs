@@ -16,17 +16,19 @@ internal static partial class DocxMathLayout
         out IReadOnlyList<DocxMathRunSource> runs)
     {
         runs = [];
-        if (!DocxMathRowLayout.TryGetRenderCodePoints(function.Name, token, out var namePoints, out _) || namePoints.Count == 0) { return false; }
+        if (!DocxMathRowLayout.TryGetRenderCodePoints(function.Name, token, out _, out _)) { return false; }
         DocxEquation argument = equation with { Content = function.Argument };
         // Validate the bounded argument role before delegating discovery, so a
         // nested function cannot recursively expand arbitrary authored depth.
         if (GetDelimiter(argument) is null && GetFraction(argument) is null && GetScripts(argument) is null && GetMatrix(argument, token) is null &&
             !DocxMathRowLayout.TryGetRenderCodePoints(function.Argument, token, out _, out _)) { return false; }
-        if (!TryGetRuns(equation with { Content = function.Name }, token, out var nameRuns) || nameRuns.Count == 0 ||
+        if (!TryGetRuns(equation with { Content = function.Name }, token, out var nameRuns) ||
             !TryGetRuns(argument, token, out var argumentRuns)) { return false; }
         var result = new List<DocxMathRunSource>(nameRuns.Count + argumentRuns.Count);
-        result.AddRange(nameRuns); result[0] = result[0] with { ControlOwners = [function] };
-        result.AddRange(argumentRuns); runs = result;
+        result.AddRange(nameRuns); result.AddRange(argumentRuns);
+        if (result.Count == 0) return false;
+        result[0] = result[0] with { ControlOwners = [function, .. result[0].ControlOwners] };
+        runs = result;
         return true;
     }
 
@@ -47,7 +49,8 @@ internal static partial class DocxMathLayout
         double size = rowControlSize ?? function.ControlText?.FontSize ?? equation.ParentFontSize ?? sources[0].Run.Text.FontSize;
         if (!double.IsFinite(size) || size <= 0d)
         { fallback = "InvalidMathFunctionSize"; return false; }
-        if (!DocxMathRowLayout.TryMeasure(function.Name, resolveFont, token, out var name, out fallback, exportFontSize: true) || name is null || name.Glyphs.Count == 0)
+        if (!TryMeasureLiteralArgument(function.Name, resolveFont, font, size, 0, token,
+            out var name, out fallback, out _, exportFontSize: true) || name is null)
         { fallback ??= "UnsupportedMathFunctionName"; return false; }
         DocxEquation argumentEquation = equation with { Content = function.Argument };
         bool measured = GetDelimiter(argumentEquation) is not null

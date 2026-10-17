@@ -37,13 +37,13 @@ internal static partial class DocxMathLayout
         out DocxMathBox? box, out string? fallback, Func<IDocxMathControl, PdfFontResource?>? resolveControlFont)
     {
         box = null;
-        if (!TryGetRuns(equation, token, out var sources) || sources.Count == 0)
+        if (!TryGetRuns(equation, token, out var sources))
         { fallback = "UnsupportedMathNarySource"; return false; }
-        PdfFontResource? resource = resolveControlFont is null ? resolveFont(sources[0].Run) : resolveControlFont(nary);
+        PdfFontResource? resource = ResolveControlResource(nary, sources, resolveFont, resolveControlFont);
         if (resource is null || !resource.Font.Font.TryGetMathConstants(out var constants))
         { fallback = "MissingMathNaryConstants"; return false; }
         OpenTypeFont font = resource.Font.Font;
-        double size = nary.ControlText?.FontSize ?? equation.ParentFontSize ?? sources[0].Run.Text.FontSize;
+        double size = ResolveControlSize(nary, equation, sources);
         if (!double.IsFinite(size) || size <= 0d)
         { fallback = "InvalidMathNarySize"; return false; }
         ReadOnlySpan<OpenTypeMathConstant> required = [OpenTypeMathConstant.UpperLimitGapMin,

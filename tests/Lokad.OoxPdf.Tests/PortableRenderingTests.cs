@@ -24,6 +24,13 @@ internal static class PortableRenderingTests
         DocxInlineCompositionTests.CheckEquationRevisions(new PinnedResolver(mathFont: true), false,
             "math-body-office.json", splitMathRuns: true);
 
+    public static void PortableRenderingStructuralPaintRetainsVisibleSymbolsAndInk() =>
+        DocxInlineCompositionTests.CheckEquationRevisions(new PinnedResolver(mathFont: true), false,
+            "math-source-office.json", splitMathRuns: true);
+
+    public static void PortableRenderingStructuralPaintRetainsWorkBounds() =>
+        DocxInlineCompositionTests.CheckStructuralPaintBounds(new PinnedResolver(mathFont: true));
+
     public static void PortableRenderingMathRemaindersKeepVisibleArgumentsAndInk() =>
         DocxInlineCompositionTests.CheckEquationRevisions(new PinnedResolver(mathFont: true), false,
             "math-remaining-office.json", splitMathRuns: true);

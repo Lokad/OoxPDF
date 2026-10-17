@@ -19,20 +19,20 @@ internal static partial class DocxMathLayout
         out DocxMathBox? box, out string? fallback, Func<IDocxMathControl, PdfFontResource?>? resolveControlFont)
     {
         box = null;
-        if (!TryGetRuns(equation, token, out var sources) || sources.Count == 0)
+        if (!TryGetRuns(equation, token, out var sources))
         { fallback = "UnsupportedMathRadicalSource"; return false; }
-        PdfFontResource? resource = resolveControlFont is null ? resolveFont(sources[0].Run) : resolveControlFont(radical);
+        PdfFontResource? resource = ResolveControlResource(radical, sources, resolveFont, resolveControlFont);
         if (resource is null || !resource.Font.Font.TryGetMathConstants(out var constants))
         { fallback = "MissingMathRadicalConstants"; return false; }
         OpenTypeFont font = resource.Font.Font;
-        double size = radical.ControlText?.FontSize ?? equation.ParentFontSize ?? sources[0].Run.Text.FontSize;
+        double size = ResolveControlSize(radical, equation, sources);
         if (!double.IsFinite(size) || size <= 0d)
         { fallback = "MixedMathRadicalMetrics"; return false; }
         DocxEquation radicandEquation = equation with { Content = radical.Radicand, ParentFontSize = size, Cramped = true };
         // Discovery admits existing bounded fraction/script boxes; their own
         // literal-role checks prevent arbitrary recursive radicands.
         bool measuredChild = TryMeasureBoxArgument(radicandEquation, resolveFont, font, size, token, out var child, out fallback);
-        if (!measuredChild || child is null || child.Glyphs.Count == 0)
+        if (!measuredChild || child is null)
         { fallback ??= "EmptyMathRadical"; return false; }
         double scale = size / font.UnitsPerEm;
         double glyphSize = OfficePdfTextEmissionProfile.FontSize(size), glyphScale = glyphSize / font.UnitsPerEm;
@@ -75,7 +75,7 @@ internal static partial class DocxMathLayout
             !double.IsFinite(baseline) || width <= 0d || above < 0d || below < 0d)
         { fallback = "InvalidMathRadicalExtent"; return false; }
         var glyphs = new List<DocxMathGlyphPlacement>(child.Glyphs.Count + 1 + (degree?.Glyphs.Count ?? 0));
-        var color = child.Glyphs[0].Color;
+        Lokad.OoxPdf.Pptx.RgbColor color = child.Glyphs.Count == 0 ? default : child.Glyphs[0].Color;
         if (radical.ControlText is { } control)
         { color = default; Lokad.OoxPdf.Pptx.RgbColor.TryParse(control.ColorHex, out color); }
         OoxConversionBudget.Current?.ChargeSceneNodes(2);

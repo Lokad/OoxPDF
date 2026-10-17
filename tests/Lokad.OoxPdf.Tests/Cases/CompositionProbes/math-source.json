@@ -1,0 +1,90 @@
+[
+  {
+    "Id": "math-source-function-name-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-source-function-name-del.docx",
+    "Sha256": "F9505120F2013B4460E723AEF5E166188F575F61A8D0EC4B88F5DC8B6650D56C",
+    "SourceSha256": "440C73C72A9B69030A06DF8188A2B2D3564A93B352993A2A31A15FC6F5E2C343",
+    "Role": "function-name",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-source-function-name-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-source-function-name-empty.docx",
+    "Sha256": "D7AF056E7DF70F2E7764BF2C5E3349030BAB2C3CA5A381F7B01D832FFF4FD306",
+    "SourceSha256": "440C73C72A9B69030A06DF8188A2B2D3564A93B352993A2A31A15FC6F5E2C343",
+    "Role": "function-name",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-source-root-body-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-source-root-body-del.docx",
+    "Sha256": "D855C212241A75A9CE532F9B94CB92B55A2AD22D024004DA881A8E978B5864B9",
+    "SourceSha256": "D0E09DA5A2CBFDDA268FF2E2C5F993B268C3D2742EA762E39DDF0DA80D547455",
+    "Role": "root-body",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-source-root-body-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-source-root-body-empty.docx",
+    "Sha256": "24D6840B6ABF326526C0F677BDCF0A544085FC44306F210AAD1F8A2942FDF160",
+    "SourceSha256": "D0E09DA5A2CBFDDA268FF2E2C5F993B268C3D2742EA762E39DDF0DA80D547455",
+    "Role": "root-body",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-source-delimiter-argument-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-source-delimiter-argument-del.docx",
+    "Sha256": "8933CE5A152AC3DAAD06B3F70AC664DE402E18CDE7369487C13FB0D1F8CE95FD",
+    "SourceSha256": "3F9D27E8A513D85FBF9F63D7F5FF04DF821B04D320D2A9426932E699DC0FE9E1",
+    "Role": "delimiter-argument",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-source-delimiter-argument-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-source-delimiter-argument-empty.docx",
+    "Sha256": "B1E0F96389B4C97628D65DCA9AEEDA5519A2D7D3318EB41465577AD3CB3D1BAF",
+    "SourceSha256": "3F9D27E8A513D85FBF9F63D7F5FF04DF821B04D320D2A9426932E699DC0FE9E1",
+    "Role": "delimiter-argument",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-source-nary-only-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-source-nary-only-del.docx",
+    "Sha256": "74C0AFD0F3682CC337BF88AE83821662502E605C70BED6815779E4488C28999A",
+    "SourceSha256": "7845E8382E4F53814A1B3CB8CA8BE23B4594DFF8B245FDB9EA3198AC671EB2F0",
+    "Role": "nary-only",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-source-nary-only-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-source-nary-only-empty.docx",
+    "Sha256": "0D3DEE63ABD42B8D6CB595163478C17E5BCC9A9242CFC62A124D8415BBD44A98",
+    "SourceSha256": "7845E8382E4F53814A1B3CB8CA8BE23B4594DFF8B245FDB9EA3198AC671EB2F0",
+    "Role": "nary-only",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  }
+]

@@ -34,11 +34,11 @@ internal static partial class DocxMathLayout
             // recursively rediscover itself through the general composer.
             if (GetFraction(child) is null && GetMatrix(child, token) is null &&
                 !DocxMathRowLayout.TryGetRenderCodePoints(argument, token, out _, out _) ||
-                !TryGetRuns(child, token, out var sources) || sources.Count == 0)
+                !TryGetRuns(child, token, out var sources))
             { runs = []; return false; }
             result.AddRange(sources);
         }
-        result[0] = result[0] with { ControlOwners = [delimiter, .. result[0].ControlOwners] };
+        if (result.Count != 0) result[0] = result[0] with { ControlOwners = [delimiter, .. result[0].ControlOwners] };
         runs = result; return true;
     }
 
@@ -58,13 +58,13 @@ internal static partial class DocxMathLayout
         Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics)
     {
         box = null;
-        if (!TryGetRuns(equation, token, out var sources) || sources.Count == 0)
+        if (!TryGetRuns(equation, token, out var sources))
         { fallback = "UnsupportedMathDelimiterSource"; return false; }
-        PdfFontResource? resource = resolveControlFont is null ? resolveFont(sources[0].Run) : resolveControlFont(delimiter);
+        PdfFontResource? resource = ResolveControlResource(delimiter, sources, resolveFont, resolveControlFont);
         if (resource is null || !resource.Font.Font.TryGetMathConstants(out var constants))
         { fallback = "MissingMathDelimiterConstants"; return false; }
         OpenTypeFont font = resource.Font.Font;
-        double size = delimiter.ControlText?.FontSize ?? equation.ParentFontSize ?? sources[0].Run.Text.FontSize;
+        double size = ResolveControlSize(delimiter, equation, sources);
         if (!double.IsFinite(size) || size <= 0d)
         { fallback = "InvalidMathDelimiterSize"; return false; }
         var children = new List<DocxMathBox>();
@@ -73,7 +73,7 @@ internal static partial class DocxMathLayout
         {
             token.ThrowIfCancellationRequested();
             if (!TryMeasureBoxArgument(equation with { Content = argument }, resolveFont, font, size, token,
-                out var child, out fallback, resolveControlFont: resolveControlFont, resolveControlMetrics: resolveControlMetrics) || child is null || child.Glyphs.Count == 0)
+                out var child, out fallback, resolveControlFont: resolveControlFont, resolveControlMetrics: resolveControlMetrics) || child is null)
             { fallback ??= "UnsupportedMathDelimiterArgument"; return false; }
             children.Add(child);above = Math.Max(above, child.AboveBaseline);below = Math.Max(below, child.BelowBaseline);
         }
@@ -83,7 +83,7 @@ internal static partial class DocxMathLayout
             2d * Math.Max(child.AboveBaseline - axis, child.BelowBaseline + axis));
         if (!double.IsFinite(height) || height <= 0d)
         { fallback = "InvalidMathDelimiterExtent"; return false; }
-        RgbColor color = children[0].Glyphs[0].Color;
+        RgbColor color = children.SelectMany(child => child.Glyphs).FirstOrDefault()?.Color ?? default;
         if (delimiter.ControlText is { } control) { color = default; RgbColor.TryParse(control.ColorHex, out color); }
         var glyphs = new List<DocxMathGlyphPlacement>();
         var rules = new List<DocxMathRulePlacement>();
