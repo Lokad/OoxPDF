@@ -1,5 +1,43 @@
 # Composed-document reliability checkpoint
 
+C79 reuses the qualified C78 library and test assembly for a composed-document
+checkpoint. The stable supplemental `portfolio-checkpoint.json` includes the six
+fixed inputs and the existing complete report; none of the seven source packages
+changed. Twelve new CLI outputs are byte-identical to the accepted corpus. All
+twenty Office/candidate page pairs were reviewed at matching scale: no visible
+content loss, overlap or clipping was demonstrated. Typography, cumulative line
+spacing, table/math geometry and review range/connector placement remain different.
+Ten DOCX numerical gates still fail; both decks pass unchanged thresholds.
+
+Strict reference preflight rejected the early cache's missing identity pins and
+incomplete/different declared Word modes. Ten fresh Word exports satisfy all eight
+readbacks; two fresh PowerPoint exports retain their earlier raster bytes. DOCX
+reference pixels changed, so their comparisons were recomputed. These numerical
+changes reflect refreshed references, not renderer changes. Raw prior reports stay
+retained; this checkpoint does not retroactively qualify their export settings.
+
+The content screen passes ten outcomes and leaves the complete report's two modes
+unresolved. Four rate/time fractions are present as separate glyph paints; its
+word-token counter fragments them. Cached field text also differs from displayed
+page-dependent values in both Word and candidate. The reviewed pages visibly retain
+those fractions, images and page fields. Raw field/token flags and audit exit 1
+remain recorded, with no screen or visual gate relabeled as passing.
+
+`NewFrozenAllocationRuntime.ps1` builds only the existing probe against the exact
+frozen DLL, verifies both copies and runs its self-test. One isolated cold plus one
+warm sample per outcome establishes a compound-document allocation baseline;
+`OperatingEnvelope.md` records its limits. Initial font preparation dominates the
+measured warm allocation; repeated layout is not established as the main cost.
+No speedup or stable timing claim follows from samples taken during Office exports.
+
+No library/root rebuild or local suite replay was performed. C78 source identity
+matches the green Windows/Ubuntu CI run 38992440492, including the full Windows
+skip-slow suite, portable rendering, package and tool checks. Its binaries are not
+claimed identical to the qualified local artifact. Evidence:
+`artifacts/composition-c1/checkpoint-79-evidence.json` and linked raw reports.
+The latest workspace scan is 9.190 GB; the loose 5 GB target remains unmet. Prior
+retirement rejections preserve originals and verified archives; no space reclaimed.
+
 C78 replaces the balloon formatter's run-only ownership check with the existing
 shared paragraph ownership check. An actual inserted numbering mark can coexist
 with run formatting without forcing a generic inserted-text summary. Source

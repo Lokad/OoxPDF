@@ -363,3 +363,53 @@ Fourteen infrastructure regressions pass on Windows and Linux, including large
 streams beyond the 64KiB scratch chunk and exact/zero limits. The earlier measured
 workloads contain no SVG groups; mixed SVG peak memory remains unmeasured.
 Evidence: `artifacts/plan-revision-20261005/rv07-e6/`.
+
+
+## Composed-document checkpoint, 2026-10-17
+
+C79 measures the qualified C78 library `ef2a1e999c8e2a8904c00dee41bf1bafd491f3d1`
+(SHA-256 `5B74B0ABF7479B21E01920EA54F7016606D2FD3C51DC960A14BBE9995C8DB0BC`).
+The seven existing public sources in
+`tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio-checkpoint.json` combine
+prose, numbering, tables, images, equations, navigation, static stories, notes,
+comments and fields, plus two distinct PPTX decks. Five DOCX inputs run as both
+Final/preserved and AllMarkup/Word-compatible. Every output matches the frozen CLI
+and staged serialization byte-for-byte. No library build or test-suite replay.
+
+The existing allocation probe was built separately with
+`tools/NewFrozenAllocationRuntime.ps1` and passed its self-test. Each outcome has
+one isolated-process cold conversion and one warm conversion, file output, under
+.NET 10.0.13, Windows 10.0.26200, 64-bit workstation GC/Interactive, 28 logical CPUs.
+The default resolver discovers 466 faces. These are calling-thread allocated
+volumes in MiB, not live heap, process memory or allocation on background threads.
+
+| Document | Pages | Cold Final / Review | Warm Final / Review |
+|---|---:|---:|---:|
+| Report | 2 | 551.28 / 555.72 | 30.19 / 33.71 |
+| Letter | 1 | 548.77 / 553.14 | 27.65 / 31.15 |
+| Specification | 2 | 553.85 / 558.31 | 32.77 / 36.32 |
+| Held-out memo | 2 | 550.13 / 554.47 | 29.01 / 32.41 |
+| Complete composed report | 2 | 557.59 / 562.53 | 35.52 / 39.50 |
+| Briefing deck | 1 | 523.04 | 6.31 |
+| Held-out deck | 1 | 535.39 | 16.02 |
+
+Standalone initial DOCX font-resource preparation allocates 22.79–24.49 MiB;
+coordinated layout plus its inspection snapshot allocates 26.08–33.08 MiB.
+Those diagnostic stages overlap and must not be added; they do not count layout
+invocations. For the report Final, standalone kerning preparation allocates
+5,755,968 bytes for Calibri regular, 5,763,264 for Calibri bold and 4,848,568 for
+Cambria Math, with 248,759 / 259,942 / 207,042 resulting pairs. This identifies
+font preparation as a bounded investigation; it does not demonstrate that repeated
+layout is the dominant cost or justify an unbounded parsed-font cache.
+
+The report Final cold sample allocates 551.28 MiB while sampling 116.97 MiB managed
+heap peak, 218.74 MiB private memory and a 5.52 MiB post-GC retained delta. Allocation
+churn and retained/peak memory are distinct. Sampling can miss brief peaks. Office
+exports ran concurrently, so reported wall times are descriptive only: no stable
+benchmark, speedup claim or cross-host conclusion. Repeat uncontended samples before
+accepting an optimization on timing grounds. Stage and output checks remain valid.
+
+Evidence: `artifacts/composition-c1/checkpoint-79-allocation-final.json`,
+`checkpoint-79-allocation-review.json`, `checkpoint-79-allocation-summary.json` and
+`checkpoint-79-allocation-runtime/identity.json` (all under the same directory).
+Keep the existing independent visual thresholds and explicit failed gates.
