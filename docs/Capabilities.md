@@ -203,8 +203,10 @@ widths/gaps (including explicit defaults). Shared font metrics, child glyph owne
 Supported equation sequences compose with prose, pictures, bookmarks and actual
 inserted/deleted owners across body, simple cells and direct headers/footers.
 Final preserves supported empty bar-fraction structure after deleting its text;
-authored empty fractions use the same metric-only placeholders. Partial-empty
-arguments, empty stacks and richer unsupported revision structures retain fallback.
+authored empty fractions use the same metric-only placeholders. Partial-empty bar-fraction arguments also retain metric-only geometry. Nonempty
+literal math-run insertions/deletions preserve source-specific review ink and other
+arguments. Empty or structurally different inner revision wrappers, empty stacks
+and richer unsupported revision structures retain fallback.
 
 Explicitly hidden empty matrix cells retain metric-only placeholder geometry,
 including empty rows and columns; visible-placeholder and wholly empty grids

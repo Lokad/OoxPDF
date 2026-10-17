@@ -11,9 +11,16 @@ In Final, deleting a supported bar fraction's text preserves its empty arguments
 and structural rule. Authored empty bar fractions share the same metric-only
 placeholder measurement as hidden matrix cells, without a dummy glyph or PDF font
 subset. Controls at 9/11/18pt retain the same independent Word rasters for deleted
-text and authored empty structure. Partial-empty arguments, empty stacks and
-unsupported richer revision structures retain fallback. Approximation diagnostics
+text and authored empty structure. A partial empty bar-fraction argument also retains its placeholder geometry.
+Empty stacks and unsupported richer revision structures retain fallback. Approximation diagnostics
 and failed visual thresholds remain separate from content/geometry checks.
+
+Nonempty literal run insertions/deletions inside a supported formula preserve
+actual run ownership and affect only their glyph ink in Word-compatible Review.
+Final filters deleted text while retaining supported fraction structure and other
+arguments. Independent numerator controls cover body/cell/header/footer placement;
+bookmarks and splitting the mathematical run preserve geometry. Empty or
+structurally different inner revision wrappers retain explicit fallback.
 
 Numbered paragraphs retain supported explicit math zones alongside prose and
 inline pictures. The list label owns only the first authored row: its formulas

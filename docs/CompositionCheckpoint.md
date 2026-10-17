@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+C89 composes tracked literal runs inside supported mathematics. Recognized
+nonempty insertion/deletion wrappers use the existing iterative parser and declared
+view filtering. Eligibility and author order require actual measured run identities
+and source positions; a discovery hint alone cannot qualify metadata. Glyphs retain
+their source revision, so review color/strikes affect only changed numerator text.
+The denominator and structural rule retain their own ink. Shared placeholders now
+also measure a partial empty bar-fraction argument after Final deletion. Empty or
+structurally different inner revision wrappers and empty stacks retain fallback.
+
+Sixteen strict Word outcomes cover all four containers and both presets. All sixteen
+MAEs improve and all sixteen raw gates still fail unchanged thresholds, without new
+components. Inserted/Review mathematics retains eighteen glyphs; Final deletion
+retains its denominator and fourteen unchanged glyphs. Maximum X/Y residuals are
+0.591/0.768pt. Five same-scale crop pairs reviewed; typography/review annotations
+remain approximate. Bookmarks and splitting prose or the revised mathematical run
+retain geometry/ink. The older whole-equation Final deletion now also uses the
+one-point geometry assertion without its previous retained-scope exclusion.
+
+One artifact passes all 52 Windows checks once and 26 Ubuntu checks/26 explicit
+skips once. Two parent failures demonstrate actual missing glyphs. All twelve
+freshly converted portfolio PDFs retain accepted bytes/comparisons; ten DOCX gates
+fail/two decks pass. Seventeen assets/four smoke PDFs transfer without root build
+or suite replay. Root fab2c593; evidence:
+`artifacts/composition-c1/math-run-revisions-evidence.json`.
+C88 CI 39006770470 is green. The 05:45Z footprint is 9.700GB/460,567 files,
+zero errors; the loose cap remains unmet. No blocked retirement was retried.
+
 C88 preserves empty bar-fraction structure after deleting its mathematical text
 in Final. Independent Word rasters at 9/11/18pt equal authored empty fractions;
 removing the equation equals an empty row and differs. Word keeps the structural
@@ -26,7 +53,7 @@ twelve freshly converted portfolio PDFs retain accepted bytes/comparisons; ten
 DOCX gates fail and both decks pass. Seventeen assets/four smoke PDFs transfer
 without root build/suite replay. Root 1b5b99f7; evidence:
 `artifacts/composition-c1/empty-fractions-evidence.json`.
-C87 CI 39005833382 is green on both platforms; work continues during C88 CI.
+C88 CI 39006770470 is green on both platforms.
 
 C87 renders supported source-owned inserted/deleted equations through the shared
 inline path. Actual wrapper/run revision identities and source positions establish
