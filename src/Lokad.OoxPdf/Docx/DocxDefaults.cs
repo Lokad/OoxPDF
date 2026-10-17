@@ -13,4 +13,8 @@ internal static class DocxDefaults
     // (bodysize probes 2026-09-07: styles-less and styles-without-size-or-defaults emit 12pt bodies
     // at unsized runs while sized runs keep direct size).
     public const double UnstyledRunFontSizePoints = 12d;
+
+    // A declared document run-default owner supplies 10pt when its size is
+    // omitted. This differs from the style-less 12pt fallback above.
+    internal const double OwnedRunDefaultFontSizePoints = 10d;
 }

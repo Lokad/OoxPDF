@@ -5400,5 +5400,32 @@
     "DocxDeferredMixedEndnote",
     "DocxContinuedMixedEndnote",
     "DocxInlineCompositionFittingEndnotes"
+  ],
+  "docx-run-default-owner-size": [
+    "DocxInlineCompositionRunDefaults",
+    "PortableRenderingRunDefaultOwners",
+    "DocxReaderSizesListLabelFromNumberingThenParagraphStyle",
+    "DocxReaderSizesListLabelFromDocumentDefaults",
+    "DocxReaderFallsBackToTwelvePointsWithoutStyleOrDefaultSize",
+    "DocxReaderPrefersDocumentDefaultsOverUnstyledCellFallback",
+    "DocxReaderCascadesParagraphSpacingAndRunSizeThroughBasedOnStyles",
+    "DocxReaderCascadesRunFontTokensFromStyles",
+    "DocxReaderCascadesRunFontTokensThroughBasedOnStyles",
+    "DocxReaderMarksUnstyledScriptRunsWithDocumentDefaultBase",
+    "DocxReaderTableStyleCascadesBasedOnProperties",
+    "DocxReaderTableStyleAppliesParagraphAndRunProperties",
+    "DocxReaderTableStyleAppliesComplexScriptRunPropertiesByScriptSlot",
+    "DocxReaderTableStyleRunPropertiesStayBelowParagraphAndCharacterStyles",
+    "DocxReaderDocumentDefaultOwnerControlsUnspecifiedLineSpacing",
+    "DocxReaderUsesWordDefaultAutoLineSpacingWhenLineTokenIsAbsent",
+    "DocxReaderSizesUnresolvableRunsAtTwelvePoints",
+    "DocxReaderResolvesUnstyledRunsThroughNormalStyle",
+    "DocxReaderAlwaysEmitsParagraphMarkRunForEmptyParagraphs",
+    "DocxReaderSizesRunlessFieldPlaceholderThroughStyleCascade",
+    "DocxTerminalTableMarkFollowsUnsizedRunResolution",
+    "DocxLineSpacingInheritance",
+    "DocxReaderEmitsAutomaticFootnoteAndEndnoteMarkersWithCascadeAlignment",
+    "DocxPlainFootnoteKerningRetainsStyleCascadeAndExplicitZero",
+    "DocxOrdinaryKerningReadsBasedOnCascadeAndExplicitZero"
   ]
 }

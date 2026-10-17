@@ -1,0 +1,893 @@
+{
+  "Provenance": "Twenty-four independent Word16 exports across12 public owner controls, two families and both presets. Body/cell/header/footer/footnote roles pin implicit10pt versus unowned12pt; explicit11pt default/direct15pt override. Word9.96/11.04 map to nominal10/11 within its observed0.06pt PDF size quantization; strict visual thresholds remain separate.",
+  "Rows": [
+    {
+      "Id": "run-default-owner-calibri-no-styles",
+      "Mode": "final-preserve",
+      "Owner": "no-styles",
+      "Family": "Calibri",
+      "InputSha256": "9CFD391B818E8BBEF96DD29935C25E2DD540B6564A7719644BED0E310BB7D7D2",
+      "ReferenceSha256": "664D932EA786BF443AE4234B147EEEB5D3F70EEADFB6AB6C3E9B0E7AA9827527",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 12.0,
+      "HasRunDefaultOwner": false,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-no-styles",
+      "Mode": "all-word-compatible",
+      "Owner": "no-styles",
+      "Family": "Calibri",
+      "InputSha256": "9CFD391B818E8BBEF96DD29935C25E2DD540B6564A7719644BED0E310BB7D7D2",
+      "ReferenceSha256": "A4AD42A54266744F0324C5CC39023C3F38994A9769BC84A2217A34F15378E773",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 12.0,
+      "HasRunDefaultOwner": false,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-empty-styles",
+      "Mode": "final-preserve",
+      "Owner": "empty-styles",
+      "Family": "Calibri",
+      "InputSha256": "4402D7520608852F675BF9C7B4DD9BF40DB38A1248BABE8C9BBF81043B5BD9E3",
+      "ReferenceSha256": "7588EDD329CC30EA9878C2F84EF9B6245C01442DB70A548D25E9EDB2F968BD62",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 12.0,
+      "HasRunDefaultOwner": false,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-empty-styles",
+      "Mode": "all-word-compatible",
+      "Owner": "empty-styles",
+      "Family": "Calibri",
+      "InputSha256": "4402D7520608852F675BF9C7B4DD9BF40DB38A1248BABE8C9BBF81043B5BD9E3",
+      "ReferenceSha256": "20F443B075B3831D143249DB3C9571ED0CBC4AAC45701EA0AE59B4BF52366734",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 12.0,
+      "HasRunDefaultOwner": false,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-empty-doc-defaults",
+      "Mode": "final-preserve",
+      "Owner": "empty-doc-defaults",
+      "Family": "Calibri",
+      "InputSha256": "4D63EA5B281AF4AB2F68F3E9929034921FACB54ABB3FFEFB48144BB2BC330BDF",
+      "ReferenceSha256": "ADD58474D743127CB2FE8C99238C8E0696F0D72E65C3EB6989B86EAA4370BA7B",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 12.0,
+      "HasRunDefaultOwner": false,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-empty-doc-defaults",
+      "Mode": "all-word-compatible",
+      "Owner": "empty-doc-defaults",
+      "Family": "Calibri",
+      "InputSha256": "4D63EA5B281AF4AB2F68F3E9929034921FACB54ABB3FFEFB48144BB2BC330BDF",
+      "ReferenceSha256": "E52F9411B309EE6628AC835D593692F129B81C09B8F9902A195F075866A82EA0",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 12.0,
+      "HasRunDefaultOwner": false,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-empty-run-defaults",
+      "Mode": "final-preserve",
+      "Owner": "empty-run-defaults",
+      "Family": "Calibri",
+      "InputSha256": "186E6E5F8AEA566550EAE506D730FEC84F9151E7C9DC7EC0B4F3B7D49E6EAE71",
+      "ReferenceSha256": "F51B60C431A8913E876E0F2EEB31FA2230ECA9454D38EAE5F0F0625D4B11ED16",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 10.0,
+      "HasRunDefaultOwner": true,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 9.96
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-empty-run-defaults",
+      "Mode": "all-word-compatible",
+      "Owner": "empty-run-defaults",
+      "Family": "Calibri",
+      "InputSha256": "186E6E5F8AEA566550EAE506D730FEC84F9151E7C9DC7EC0B4F3B7D49E6EAE71",
+      "ReferenceSha256": "6AD774A241204A474BDEA24B21C308671C49CA50CDDD70C98B7864A4B58D31E4",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 10.0,
+      "HasRunDefaultOwner": true,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 9.96
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-run-default-container",
+      "Mode": "final-preserve",
+      "Owner": "run-default-container",
+      "Family": "Calibri",
+      "InputSha256": "66C2F1D954D500434717CD76A776A99EBA522A3275B491BC0313442555C17E74",
+      "ReferenceSha256": "A8444F03AD18A4244E6E3437EE97F5A7956FCD85D28BF7E667588BBDC95D6F61",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 10.0,
+      "HasRunDefaultOwner": true,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 9.96
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-run-default-container",
+      "Mode": "all-word-compatible",
+      "Owner": "run-default-container",
+      "Family": "Calibri",
+      "InputSha256": "66C2F1D954D500434717CD76A776A99EBA522A3275B491BC0313442555C17E74",
+      "ReferenceSha256": "722085A5729B01EE2C6FBB4841265EDDF62499060B93ED02CB6536D8C5A381BB",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 10.0,
+      "HasRunDefaultOwner": true,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 9.96
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-font-run-defaults",
+      "Mode": "final-preserve",
+      "Owner": "font-run-defaults",
+      "Family": "Calibri",
+      "InputSha256": "1420C7CED70E6A66F21843CD868CEBE241CCFA27382C15CA4CCC31F974B02EC8",
+      "ReferenceSha256": "9381D4C2D679FF5DFA8BA1AA9858FE5BBBDFF542AE59B4F5AB9551ABAA0C6761",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 10.0,
+      "HasRunDefaultOwner": true,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 9.96
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-font-run-defaults",
+      "Mode": "all-word-compatible",
+      "Owner": "font-run-defaults",
+      "Family": "Calibri",
+      "InputSha256": "1420C7CED70E6A66F21843CD868CEBE241CCFA27382C15CA4CCC31F974B02EC8",
+      "ReferenceSha256": "BD18D26D4D6F7388F2E1779A4B1BFE5679F90E092D2D775E3D348638A16DA3E6",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 10.0,
+      "HasRunDefaultOwner": true,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 9.96
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-sized-run-defaults",
+      "Mode": "final-preserve",
+      "Owner": "sized-run-defaults",
+      "Family": "Calibri",
+      "InputSha256": "758623D0046B13D4394AE7777DE37F41C76094F57A22D53D473A72BF4372FC95",
+      "ReferenceSha256": "079525496DF4B6D8918551FBCDD30B664147D880FFD7C4AA4B2419ADCAA4CF52",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 11.0,
+      "HasRunDefaultOwner": true,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 11.04
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 11.04
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 11.04
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 11.04
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-sized-run-defaults",
+      "Mode": "all-word-compatible",
+      "Owner": "sized-run-defaults",
+      "Family": "Calibri",
+      "InputSha256": "758623D0046B13D4394AE7777DE37F41C76094F57A22D53D473A72BF4372FC95",
+      "ReferenceSha256": "D2FB491DE3918916B87AB057254CA7DA7A738186D53096068A106D48B4269138",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 11.0,
+      "HasRunDefaultOwner": true,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 11.04
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 11.04
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 11.04
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 11.04
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-paragraph-defaults",
+      "Mode": "final-preserve",
+      "Owner": "paragraph-defaults",
+      "Family": "Calibri",
+      "InputSha256": "001959F40EE2B7314957AEB68C79620D7E273FD25622EF0A3F04EBABC4A837A8",
+      "ReferenceSha256": "677E2061658BAE0060FE791E24D1C26A1B94A68DDBE18A52AAF18815B8278238",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 12.0,
+      "HasRunDefaultOwner": false,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-paragraph-defaults",
+      "Mode": "all-word-compatible",
+      "Owner": "paragraph-defaults",
+      "Family": "Calibri",
+      "InputSha256": "001959F40EE2B7314957AEB68C79620D7E273FD25622EF0A3F04EBABC4A837A8",
+      "ReferenceSha256": "321657B2AF0D3F9597C4315328A201F99CDF1563D400C10BDA5D1F36A66F6A7D",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 12.0,
+      "HasRunDefaultOwner": false,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-normal-default-style",
+      "Mode": "final-preserve",
+      "Owner": "normal-default-style",
+      "Family": "Calibri",
+      "InputSha256": "B9C89C4671E63B3EE5858B5CF3AEC960110DBC1F8B91D1DEB722C9E26249BEAA",
+      "ReferenceSha256": "63B74C16E0AE5C9B06ACFB1D835817AE7747E5CE171BF9802815ED0F385B4CD0",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 12.0,
+      "HasRunDefaultOwner": false,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-calibri-normal-default-style",
+      "Mode": "all-word-compatible",
+      "Owner": "normal-default-style",
+      "Family": "Calibri",
+      "InputSha256": "B9C89C4671E63B3EE5858B5CF3AEC960110DBC1F8B91D1DEB722C9E26249BEAA",
+      "ReferenceSha256": "DC603179666870916532922B101D2EB69A90AD64F9C3380E3176891C37B10FE3",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 12.0,
+      "HasRunDefaultOwner": false,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-arial-no-styles",
+      "Mode": "final-preserve",
+      "Owner": "no-styles",
+      "Family": "Arial",
+      "InputSha256": "FDD799D937B291CBA81ED91465138194186A2684044221ED2F8C2DC32D1BDFAD",
+      "ReferenceSha256": "601D08B10994DC43DE691E969DF9582BD84B04EC76773FB8BC3AC06DC66CA83A",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 12.0,
+      "HasRunDefaultOwner": false,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-arial-no-styles",
+      "Mode": "all-word-compatible",
+      "Owner": "no-styles",
+      "Family": "Arial",
+      "InputSha256": "FDD799D937B291CBA81ED91465138194186A2684044221ED2F8C2DC32D1BDFAD",
+      "ReferenceSha256": "10B84B39F5282B822978364709D398FEF4E61F32EEB873448122327190505372",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 12.0,
+      "HasRunDefaultOwner": false,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 12
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-arial-font-run-defaults",
+      "Mode": "final-preserve",
+      "Owner": "font-run-defaults",
+      "Family": "Arial",
+      "InputSha256": "3DAE472859D35B3C91DDB1F517AD20D4E18D932AE1471CD055A0F9400EE31556",
+      "ReferenceSha256": "07A8B218565332562AE785C27CD588CCBC364F4EF948FAE00F834D1CD9C14546",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 10.0,
+      "HasRunDefaultOwner": true,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 9.96
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-arial-font-run-defaults",
+      "Mode": "all-word-compatible",
+      "Owner": "font-run-defaults",
+      "Family": "Arial",
+      "InputSha256": "3DAE472859D35B3C91DDB1F517AD20D4E18D932AE1471CD055A0F9400EE31556",
+      "ReferenceSha256": "9C5ECF234FD6EB0FDAF9D7F70F9F9A72D043434D2FDFC4E217423F44AEAD0715",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 10.0,
+      "HasRunDefaultOwner": true,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 9.96
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 9.96
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-arial-sized-run-defaults",
+      "Mode": "final-preserve",
+      "Owner": "sized-run-defaults",
+      "Family": "Arial",
+      "InputSha256": "B983CD2811A2D33472127B6098C8FA2FF59D9A8997AC312EE0E2191DE3C9AE79",
+      "ReferenceSha256": "EAD1B06F25F2539C7FA91FAC331DA8F7DF97672F6DCC5967BE3454475BBF13E3",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 11.0,
+      "HasRunDefaultOwner": true,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 11.04
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 11.04
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 11.04
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 11.04
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 11.04
+        }
+      ]
+    },
+    {
+      "Id": "run-default-owner-arial-sized-run-defaults",
+      "Mode": "all-word-compatible",
+      "Owner": "sized-run-defaults",
+      "Family": "Arial",
+      "InputSha256": "B983CD2811A2D33472127B6098C8FA2FF59D9A8997AC312EE0E2191DE3C9AE79",
+      "ReferenceSha256": "BA34885268EB27354BF2AEBF733591345CF30A190625AC129F2BD3560F8725F0",
+      "ExpectedPages": 1,
+      "NominalDefaultSize": 11.0,
+      "HasRunDefaultOwner": true,
+      "Samples": [
+        {
+          "Text": "Public header default",
+          "FontSize": 11.04
+        },
+        {
+          "Text": "Public footer default",
+          "FontSize": 11.04
+        },
+        {
+          "Text": "Public body default",
+          "FontSize": 11.04
+        },
+        {
+          "Text": "Public body explicit",
+          "FontSize": 15
+        },
+        {
+          "Text": "Public cell default",
+          "FontSize": 11.04
+        },
+        {
+          "Text": "Public footnote default",
+          "FontSize": 11.04
+        }
+      ]
+    }
+  ]
+}

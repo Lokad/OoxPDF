@@ -26,11 +26,16 @@ internal sealed partial class DocxReader
         using Stream stream = stylesPart.OpenRead();
         XDocument stylesXml = SafeXml.Load(stream, cancellationToken);
         OoxMarkupCompatibility.WarnMustUnderstandOnce(stylesXml, stylesPart.Name, diagnosticSink, warnedParts);
-        DocxResolvedRunProperties runDefaults = ReadRunProperties(stylesXml
+        XElement? runDefaultOwner = stylesXml
             .Root?
             .Element(WordprocessingNamespace + "docDefaults")
-            ?.Element(WordprocessingNamespace + "rPrDefault")
-            ?.Element(WordprocessingNamespace + "rPr"));
+            ?.Element(WordprocessingNamespace + "rPrDefault");
+        DocxResolvedRunProperties runDefaults = ReadRunProperties(runDefaultOwner?.Element(WordprocessingNamespace + "rPr"));
+        // Default-owner presence has semantics even for an empty rPrDefault.
+        // Put its implicit size beneath table/style/direct inheritance once,
+        // so body, cell and story readers resolve the same source cascade.
+        if (runDefaultOwner is not null && runDefaults.FontSize is null)
+            runDefaults = runDefaults with { FontSize = DocxDefaults.OwnedRunDefaultFontSizePoints };
         DocxResolvedParagraphProperties paragraphDefaults = ReadParagraphProperties(stylesXml
             .Root?
             .Element(WordprocessingNamespace + "docDefaults")

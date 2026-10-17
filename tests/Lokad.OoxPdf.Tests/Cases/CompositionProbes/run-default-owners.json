@@ -1,0 +1,218 @@
+[
+  {
+    "Id": "run-default-owner-calibri-no-styles",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/run-default-owner-calibri-no-styles.docx",
+    "Sha256": "9CFD391B818E8BBEF96DD29935C25E2DD540B6564A7719644BED0E310BB7D7D2",
+    "Family": "Calibri",
+    "Owner": "no-styles",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public body default",
+      "Public body explicit",
+      "Public cell default",
+      "Public header default",
+      "Public footer default",
+      "Public footnote default"
+    ]
+  },
+  {
+    "Id": "run-default-owner-calibri-empty-styles",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/run-default-owner-calibri-empty-styles.docx",
+    "Sha256": "4402D7520608852F675BF9C7B4DD9BF40DB38A1248BABE8C9BBF81043B5BD9E3",
+    "Family": "Calibri",
+    "Owner": "empty-styles",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public body default",
+      "Public body explicit",
+      "Public cell default",
+      "Public header default",
+      "Public footer default",
+      "Public footnote default"
+    ]
+  },
+  {
+    "Id": "run-default-owner-calibri-empty-doc-defaults",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/run-default-owner-calibri-empty-doc-defaults.docx",
+    "Sha256": "4D63EA5B281AF4AB2F68F3E9929034921FACB54ABB3FFEFB48144BB2BC330BDF",
+    "Family": "Calibri",
+    "Owner": "empty-doc-defaults",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public body default",
+      "Public body explicit",
+      "Public cell default",
+      "Public header default",
+      "Public footer default",
+      "Public footnote default"
+    ]
+  },
+  {
+    "Id": "run-default-owner-calibri-empty-run-defaults",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/run-default-owner-calibri-empty-run-defaults.docx",
+    "Sha256": "186E6E5F8AEA566550EAE506D730FEC84F9151E7C9DC7EC0B4F3B7D49E6EAE71",
+    "Family": "Calibri",
+    "Owner": "empty-run-defaults",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public body default",
+      "Public body explicit",
+      "Public cell default",
+      "Public header default",
+      "Public footer default",
+      "Public footnote default"
+    ]
+  },
+  {
+    "Id": "run-default-owner-calibri-run-default-container",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/run-default-owner-calibri-run-default-container.docx",
+    "Sha256": "66C2F1D954D500434717CD76A776A99EBA522A3275B491BC0313442555C17E74",
+    "Family": "Calibri",
+    "Owner": "run-default-container",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public body default",
+      "Public body explicit",
+      "Public cell default",
+      "Public header default",
+      "Public footer default",
+      "Public footnote default"
+    ]
+  },
+  {
+    "Id": "run-default-owner-calibri-font-run-defaults",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/run-default-owner-calibri-font-run-defaults.docx",
+    "Sha256": "1420C7CED70E6A66F21843CD868CEBE241CCFA27382C15CA4CCC31F974B02EC8",
+    "Family": "Calibri",
+    "Owner": "font-run-defaults",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public body default",
+      "Public body explicit",
+      "Public cell default",
+      "Public header default",
+      "Public footer default",
+      "Public footnote default"
+    ]
+  },
+  {
+    "Id": "run-default-owner-calibri-sized-run-defaults",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/run-default-owner-calibri-sized-run-defaults.docx",
+    "Sha256": "758623D0046B13D4394AE7777DE37F41C76094F57A22D53D473A72BF4372FC95",
+    "Family": "Calibri",
+    "Owner": "sized-run-defaults",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public body default",
+      "Public body explicit",
+      "Public cell default",
+      "Public header default",
+      "Public footer default",
+      "Public footnote default"
+    ]
+  },
+  {
+    "Id": "run-default-owner-calibri-paragraph-defaults",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/run-default-owner-calibri-paragraph-defaults.docx",
+    "Sha256": "001959F40EE2B7314957AEB68C79620D7E273FD25622EF0A3F04EBABC4A837A8",
+    "Family": "Calibri",
+    "Owner": "paragraph-defaults",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public body default",
+      "Public body explicit",
+      "Public cell default",
+      "Public header default",
+      "Public footer default",
+      "Public footnote default"
+    ]
+  },
+  {
+    "Id": "run-default-owner-calibri-normal-default-style",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/run-default-owner-calibri-normal-default-style.docx",
+    "Sha256": "B9C89C4671E63B3EE5858B5CF3AEC960110DBC1F8B91D1DEB722C9E26249BEAA",
+    "Family": "Calibri",
+    "Owner": "normal-default-style",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public body default",
+      "Public body explicit",
+      "Public cell default",
+      "Public header default",
+      "Public footer default",
+      "Public footnote default"
+    ]
+  },
+  {
+    "Id": "run-default-owner-arial-no-styles",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/run-default-owner-arial-no-styles.docx",
+    "Sha256": "FDD799D937B291CBA81ED91465138194186A2684044221ED2F8C2DC32D1BDFAD",
+    "Family": "Arial",
+    "Owner": "no-styles",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public body default",
+      "Public body explicit",
+      "Public cell default",
+      "Public header default",
+      "Public footer default",
+      "Public footnote default"
+    ]
+  },
+  {
+    "Id": "run-default-owner-arial-font-run-defaults",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/run-default-owner-arial-font-run-defaults.docx",
+    "Sha256": "3DAE472859D35B3C91DDB1F517AD20D4E18D932AE1471CD055A0F9400EE31556",
+    "Family": "Arial",
+    "Owner": "font-run-defaults",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public body default",
+      "Public body explicit",
+      "Public cell default",
+      "Public header default",
+      "Public footer default",
+      "Public footnote default"
+    ]
+  },
+  {
+    "Id": "run-default-owner-arial-sized-run-defaults",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/run-default-owner-arial-sized-run-defaults.docx",
+    "Sha256": "B983CD2811A2D33472127B6098C8FA2FF59D9A8997AC312EE0E2191DE3C9AE79",
+    "Family": "Arial",
+    "Owner": "sized-run-defaults",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public body default",
+      "Public body explicit",
+      "Public cell default",
+      "Public header default",
+      "Public footer default",
+      "Public footnote default"
+    ]
+  }
+]
