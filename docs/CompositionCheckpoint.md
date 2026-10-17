@@ -1,5 +1,46 @@
 # Composed-document reliability checkpoint
 
+C164 reuses measured cell content to project nested Review row and border flow.
+Nominal border widths/advances caused accumulated height error. Existing row
+measurements now supply source-ordered child reductions, following paragraphs and
+images, competing cell maxima and declared minima. The existing border transform
+paints printed widths. Measurements are retained only for scaled layouts; no
+extra font/text-layout pass, fitted offset or font/size guard is added. Incomplete
+source measurements, exact nested clips, fragments and unsupported ownership keep
+explicit fallbacks; shared ancestor clips gate complete publication.
+
+Forty Windows and31 Ubuntu checks pass, with nine native skips. Seventy-two
+synthetic combinations cover metrics, scales, multiple blocks/rows, competing
+cells, minima and border widths. One harness control initially used a200pt page
+for a468pt grid, changing wrapping. Fit the authored page before asserting pure
+vertical scaling:15 runtime assets/2,079 inputs match,39 Windows passes carry
+and only that method reruns. Ubuntu runs all40 exact methods once. Original
+counterexamples remain retained; no production correction or threshold change
+was needed for the control.
+
+Sixteen independent Word outcomes/eight sources retain32 formulas,16 pictures
+and six links. Row heights differ by at most0.125pt, following body Y by0.245pt,
+horizontal borderY by0.135pt and thickness by0.020pt. All seven changed Review
+MAEs improve; nine PDFs retain bytes, six failed metric components recover and
+all16 strict gates remain failed. Four changed unique regions were reviewed;
+three navigation Review pairs carry both PNG identities. Both independent Word/
+physical-flow observers fail on C162. Horizontal/font/balloon/destination residuals
+remain unaccepted, including outgoing Review targetY0.755pt.
+
+The shared-contract milestone measures fixed12 outcomes/7 sources/20 pages once
+on this artifact. Every PDF retains C158 bytes, every comparison reuses identity
+and20 prior reviewed page pairs carry. Ten DOCX failures/two deck passes/two report
+extraction flags remain. Seventeen assets/four exact smokes transfer without root
+build or suite/corpus replay. Root9f0cc81f; evidence
+artifacts/composition-c1/nested-border-pitch-evidence.json. C16239078220251 and
+C16339078499070 CI are green on both platforms. Next, exercise one compound report
+with body-nested mathematics/navigation alongside its existing notes/static stories.
+
+Bounded storage maintenance was rejected before process creation ("blocked by
+policy"):171 newly selected superseded snapshots/2,907 compiled files, zero
+removals or reclamation, no archive. All targets join the protected map (239);
+no alternative retirement is attempted. The loose5GB target remains unmet.
+
 C163 removes batch-specific Office reference copying from the comparison path.
 The existing command accepts multiple cache directories, checks source/mode/PDF
 pins and pinned export-log hashes, and rejects conflicting exports before any
