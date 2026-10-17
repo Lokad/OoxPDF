@@ -1,0 +1,145 @@
+[
+  {
+    "Id": "math-remaining-script-base-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-remaining-script-base-ins.docx",
+    "Sha256": "21BF0E890C663E7B7957613D7A70F980E8D7CF645A75666CF246BBB4C9CA43CB",
+    "SourceSha256": "CC36F49124C6AFB40D9A457A37B77CB1B31AE78D4C7B17E27B4D28DB1C2A1E0B",
+    "Role": "script-base",
+    "Kind": "ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-remaining-script-base-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-remaining-script-base-del.docx",
+    "Sha256": "9315784C6F36A423DBADC2E9965C50DC21ED8A63E5D4AB793250738B6E70A609",
+    "SourceSha256": "CC36F49124C6AFB40D9A457A37B77CB1B31AE78D4C7B17E27B4D28DB1C2A1E0B",
+    "Role": "script-base",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-remaining-script-base-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-remaining-script-base-empty.docx",
+    "Sha256": "9038CB2F1418FE604639AF6E7CBFC7E2EE17B33B82D77B1E40C3BC072F4C48DA",
+    "SourceSha256": "CC36F49124C6AFB40D9A457A37B77CB1B31AE78D4C7B17E27B4D28DB1C2A1E0B",
+    "Role": "script-base",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-remaining-nary-stacked-lower-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-remaining-nary-stacked-lower-ins.docx",
+    "Sha256": "603D7EF42E690888264B67F24E07DAAE956159C45853A3B1F7467E496E63304D",
+    "SourceSha256": "7845E8382E4F53814A1B3CB8CA8BE23B4594DFF8B245FDB9EA3198AC671EB2F0",
+    "Role": "nary-stacked-lower",
+    "Kind": "ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-remaining-nary-stacked-lower-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-remaining-nary-stacked-lower-del.docx",
+    "Sha256": "689D7C1EFC2162D95728CA6ED14623F01C580F06EBB3D4DDE5ED27B33CCBC526",
+    "SourceSha256": "7845E8382E4F53814A1B3CB8CA8BE23B4594DFF8B245FDB9EA3198AC671EB2F0",
+    "Role": "nary-stacked-lower",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-remaining-nary-stacked-lower-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-remaining-nary-stacked-lower-empty.docx",
+    "Sha256": "E8A6C4052D7F73F7B923419DB2C3EB28CC181697B9619955268E855152031A28",
+    "SourceSha256": "7845E8382E4F53814A1B3CB8CA8BE23B4594DFF8B245FDB9EA3198AC671EB2F0",
+    "Role": "nary-stacked-lower",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-remaining-nary-side-lower-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-remaining-nary-side-lower-ins.docx",
+    "Sha256": "EB766D3E8391ED5A5F04CF868ABCF74703248339DA218F7C3BAAFDC413F958E7",
+    "SourceSha256": "8C372339C2499A07C2B1D6896D5A69614257552E8965957CD86683882B08845B",
+    "Role": "nary-side-lower",
+    "Kind": "ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-remaining-nary-side-lower-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-remaining-nary-side-lower-del.docx",
+    "Sha256": "AA0F822F043AB5521CE5658210FD7F934DF59B26AFB5182E96108385B58CC515",
+    "SourceSha256": "8C372339C2499A07C2B1D6896D5A69614257552E8965957CD86683882B08845B",
+    "Role": "nary-side-lower",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-remaining-nary-side-lower-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-remaining-nary-side-lower-empty.docx",
+    "Sha256": "7A3A55B02110E3C77ABC7A290C60013123D61E65CDA41B9D99EB433E117351D9",
+    "SourceSha256": "8C372339C2499A07C2B1D6896D5A69614257552E8965957CD86683882B08845B",
+    "Role": "nary-side-lower",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-remaining-nary-stacked-upper-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-remaining-nary-stacked-upper-del.docx",
+    "Sha256": "C63D441E93B062577F6A188F79669065D2610E8E0E8A7AAD1A4D9EB3E2427732",
+    "SourceSha256": "7845E8382E4F53814A1B3CB8CA8BE23B4594DFF8B245FDB9EA3198AC671EB2F0",
+    "Role": "nary-stacked-upper",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-remaining-nary-stacked-upper-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-remaining-nary-stacked-upper-empty.docx",
+    "Sha256": "F81FD494567E4553ABA50AD69D8547A6FE6AC5CAB930328A4483E1AC0FAAE0D5",
+    "SourceSha256": "7845E8382E4F53814A1B3CB8CA8BE23B4594DFF8B245FDB9EA3198AC671EB2F0",
+    "Role": "nary-stacked-upper",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-remaining-nary-side-upper-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-remaining-nary-side-upper-del.docx",
+    "Sha256": "6490BE42849CDC81D3911E9D200FBD7176CDB5BAD76D9BE85AE8FB16E48BF28D",
+    "SourceSha256": "8C372339C2499A07C2B1D6896D5A69614257552E8965957CD86683882B08845B",
+    "Role": "nary-side-upper",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-remaining-nary-side-upper-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-remaining-nary-side-upper-empty.docx",
+    "Sha256": "7E59ACEC3B5F14578894B99D3B9037CF0379921FD463D1E4CCAF0B449EC8E553",
+    "SourceSha256": "8C372339C2499A07C2B1D6896D5A69614257552E8965957CD86683882B08845B",
+    "Role": "nary-side-upper",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  }
+]

@@ -7,12 +7,13 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static partial class DocxMathLayout
 {
+    private const int HiddenPlaceholderCodePoint = 0x2B1A;
     // Word retains the dotted-square's metrics while suppressing its paint.
     // Matrices and empty fraction arguments share this metric-only box.
     private static bool TryMeasureHiddenPlaceholder(OpenTypeFont font, double size, [NotNullWhen(true)] out DocxMathBox? box)
     {
         box = null;
-        ushort glyph = font.MapCodePoint(0x2B1A);
+        ushort glyph = font.MapCodePoint(HiddenPlaceholderCodePoint);
         if (glyph == 0 || !font.TryGetGlyphBounds(glyph, out var bounds)) return false;
         double scale = size / font.UnitsPerEm;
         double width = font.GetAdvanceWidth(glyph) * scale;

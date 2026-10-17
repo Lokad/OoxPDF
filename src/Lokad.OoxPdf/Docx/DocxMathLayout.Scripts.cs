@@ -38,9 +38,8 @@ internal static partial class DocxMathLayout
         // composition step cannot recurse through arbitrary authored nesting.
         bool measuredBase = fractionBase
             ? TryMeasure(baseEquation, resolveFont, token, out DocxMathBox? basis, out fallback)
-            : DocxMathRowLayout.TryMeasure(scripts.Base, resolveFont, token, out basis, out fallback, exportFontSize: true);
-        if (!measuredBase ||
-            basis is null || basis.Glyphs.Count == 0) { fallback ??= "EmptyMathScriptBase"; return false; }
+            : TryMeasureLiteralArgument(scripts.Base, resolveFont, font, size, 0, token, out basis, out fallback, out _, exportFontSize: true);
+        if (!measuredBase || basis is null) { fallback ??= "EmptyMathScriptBase"; return false; }
         if (basis.Glyphs.Any(glyph => !ReferenceEquals(glyph.Font.Font.Font, font)))
             { fallback = "MixedMathScriptBaseMetrics"; return false; }
         DocxMathBox? subscript = null, superscript = null;
@@ -50,23 +49,24 @@ internal static partial class DocxMathLayout
             superscript is null)) { fallback ??= "EmptyMathSuperscript"; return false; }
         double scale = size / font.UnitsPerEm;
         double Value(OpenTypeMathConstant field) => constants.GetValue(field) * scale;
-        bool boxBase = fractionBase || basis.Glyphs.Count != 1;
+        bool boxBase = fractionBase || basis.Glyphs.Count > 1;
         if (!boxBase)
         {
-            ushort glyph = basis.Glyphs[0].OriginalGlyph;
+            // An empty literal base is one metric-only placeholder atom,
+            // with the same extended-shape classification as its font glyph.
+            ushort glyph = basis.Glyphs.Count == 0 ? font.MapCodePoint(HiddenPlaceholderCodePoint) : basis.Glyphs[0].OriginalGlyph;
             if (!font.TryIsMathExtendedShape(glyph, out boxBase))
             { fallback = "InvalidMathExtendedShapeCoverage"; return false; }
         }
         GetScriptShifts(constants, size / font.UnitsPerEm, basis, subscript, superscript,
             boxBase, equation.Cramped, out double up, out double down);
-        DocxMathGlyphPlacement last = basis.Glyphs[^1];
-        ushort lastGlyph = last.OriginalGlyph;
+        DocxMathGlyphPlacement? last = basis.Glyphs.Count == 0 ? null : basis.Glyphs[^1];
         short correction = 0;
-        if (!fractionBase && !font.TryGetMathItalicCorrection(lastGlyph, out correction))
+        if (!fractionBase && last is not null && !font.TryGetMathItalicCorrection(last.OriginalGlyph, out correction))
         { fallback = "InvalidMathScriptItalicCorrection"; return false; }
-        double subX = basis.AdvanceWidth - correction * last.FontSize / font.UnitsPerEm;
+        double subX = basis.AdvanceWidth - (last is null ? 0d : correction * last.FontSize / font.UnitsPerEm);
         double supX = basis.AdvanceWidth;
-        if (basis.Glyphs.Count == 1)
+        if (basis.Glyphs.Count == 1 && last is not null)
         {
             if (subscript?.Glyphs.Count == 1)
             {
@@ -111,7 +111,7 @@ internal static partial class DocxMathLayout
             enclosureBelow = descent;
         }
         box = new DocxMathBox(width, above, below, glyphs)
-        { LogicalAdvance = advanceWidth == width ? null : advanceWidth, Rules = rules, ParentMetrics = basis.ParentMetrics,
+        { LogicalAdvance = advanceWidth == width ? null : advanceWidth, Rules = rules, ParentMetrics = basis.ParentMetrics ?? (basis.Glyphs.Count == 0 ? new(font, size) : null),
             EnclosureBelowBaseline = enclosureBelow };
         fallback = null;
         return true;

@@ -23,7 +23,7 @@ internal static partial class DocxInlineCompositionTests
                 (xml, w, m) =>
                 {
                     var equation = xml.Descendants(m + "oMath").First();
-                    if (role == "script") equation.Descendants(m + "sSubSup").Single().Element(m + "e")!.RemoveNodes();
+                    if (role == "script") equation.Descendants(m + "sSubSup").Single().Element(m + "e")!.ReplaceNodes(new XElement(m + "future"));
                     else equation.Descendants(m + "r").Remove();
                 });
             var diagnostics = new List<OoxPdfDiagnostic>();
@@ -32,7 +32,7 @@ internal static partial class DocxInlineCompositionTests
             var fonts = page.Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(font => font.Font).ToHashSet();
             TestAssert.True(!DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Any(show => fonts.Contains(show.Font)) &&
                 diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"),
-                "Empty script bases and wholly empty grids retain their explicit fallback: " + role);
+                "Unknown script bases and wholly empty grids retain their explicit fallback: " + role);
         }
     }
 }
