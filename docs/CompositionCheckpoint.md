@@ -1,5 +1,28 @@
 # Composed-document reliability checkpoint
 
+C116 reviews six retained revision-band Word edge gates using actual frozen mapped
+frames, which remain exact C104 identities. Occupied-frame, text-slot and scaled-
+padding alternatives fail existing gates and trade errors across stories. No
+production replacement is accepted; the3.660pt maximum residual remains. Evidence
+`artifacts/composition-c1/revision-band-frame-contract-review.json` distinguishes
+the legacy quarter-line/padding concern from a demonstrated new coordinate defect.
+No exports, conversions, builds or tests repeat for this analytical review.
+
+C117 measures the composed report and revision-composition report in both presets
+against the C115 library. Four isolated cold processes, one warmup and three warm
+samples per outcome retain all accepted PDF hashes; staged outputs also match.
+Calling-thread allocation is558.0-563.6MiB cold and35.9-40.5MiB warm. Standalone
+initial font-resource preparation is24.5-24.6MiB with466 discovered faces. These
+stages overlap and are not additive; repeated pagination is not established as
+the dominant cost. Timing is descriptive, with no speedup claim. The probe alone
+builds/self-tests; library, rendering suites and Office exports do not repeat.
+Evidence `artifacts/composition-c1/checkpoint-117-evidence.json`. Preserve bounded
+cache ownership and investigate specific font costs before new cache/framework work.
+
+C114 CI39031072723 is green on Windows and Ubuntu. C1154938873f is pushed; status
+check pending. Next bounded content probe: scripts in fraction arguments, using
+shared math-style contracts and explicit deeper fallbacks.
+
 C115 verifies the C114 mixed-control contract in supported cells and direct
 headers/footers. The visible script and plus sign coexist with a revised empty
 fraction in both orders and both public DOCX presets. No production change.
