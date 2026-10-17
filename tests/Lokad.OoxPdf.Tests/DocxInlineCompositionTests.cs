@@ -612,7 +612,7 @@ internal static partial class DocxInlineCompositionTests
             var marker = TestAssert.NotNull(reference.DisplayRun);
             TestAssert.True(marker.IsAutomaticNoteReferenceMarker && paragraph.InlineContent!.OfType<DocxInlineText>()
                 .Any(item => ReferenceEquals(item.Run, marker)), "Endnote markers retain their actual owned source run.");
-            foreach (string restart in new[] { "eachPage", "eachSect" })
+            foreach (string restart in new[] { "eachPage", "invalid" })
                 TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with
                     { InlineReferences = [reference with { NoteNumberRestartValue = restart }] }).Count);
             foreach (DocxTextRun? other in new DocxTextRun?[] { null, marker with { } })
@@ -1330,7 +1330,7 @@ internal static partial class DocxInlineCompositionTests
                 paragraph.Runs.Any(item => ReferenceEquals(item, run)) && run.Text == reference.DisplayText,
                 "Automatic footnote glyphs must have an explicit resolved source owner in the ordered content.");
             TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
-            foreach (string restart in new[] { "eachPage", "eachSect", "invalid" })
+            foreach (string restart in new[] { "eachPage", "invalid" })
                 TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with
                     { InlineReferences = [reference with { NoteNumberRestartValue = restart }] }).Count);
             TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with

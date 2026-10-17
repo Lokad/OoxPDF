@@ -1,0 +1,94 @@
+[
+  {
+    "Id": "math-section-notes-footnote-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-section-notes-footnote-body.docx",
+    "Sha256": "414ACDF0943EF1BC23C1B4B5B93FF97EB884EA143825D0CFC7C5F0F366425A27",
+    "SourceSha256": "70A13AE2267DFEE0FE60E128EFA9FF44CC751CB3B89260F2896244250DBCD1F1",
+    "Kind": "footnote",
+    "Container": "body",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedMarkers": [
+      "3",
+      "4",
+      "vii",
+      "viii"
+    ],
+    "ExpectedText": [
+      "Before formula:",
+      "Public destination 1.",
+      "Public destination 2.",
+      "Public destination 3.",
+      "Public destination 4."
+    ]
+  },
+  {
+    "Id": "math-section-notes-footnote-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-section-notes-footnote-cell.docx",
+    "Sha256": "810B3521B4390D3CCAE26A4B3B1530F6A7C5F9FC7A6BACF7138911F8053AB365",
+    "SourceSha256": "67F5F26A39FCDD6DB135E75069E8A2FAEC8286504506AFD595A84B151BCBADBE",
+    "Kind": "footnote",
+    "Container": "cell",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedMarkers": [
+      "3",
+      "4",
+      "vii",
+      "viii"
+    ],
+    "ExpectedText": [
+      "Before formula:",
+      "Public destination 1.",
+      "Public destination 2.",
+      "Public destination 3.",
+      "Public destination 4."
+    ]
+  },
+  {
+    "Id": "math-section-notes-endnote-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-section-notes-endnote-body.docx",
+    "Sha256": "09F1D0E1477C4132FB140679B7A344D8F7D5A8D1F3DF83E540887AA4BA88E1ED",
+    "SourceSha256": "129338958A0320D450ACFBB8708BEEDAFA40D1220048CDD5A4020FD628C3C047",
+    "Kind": "endnote",
+    "Container": "body",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedMarkers": [
+      "3",
+      "4",
+      "vii",
+      "viii"
+    ],
+    "ExpectedText": [
+      "Before formula:",
+      "Public destination 1.",
+      "Public destination 2.",
+      "Public destination 3.",
+      "Public destination 4."
+    ]
+  },
+  {
+    "Id": "math-section-notes-endnote-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-section-notes-endnote-cell.docx",
+    "Sha256": "9666940A0BC656E3D088433EA2770F133E9B546149474ED74B6101D148F9F298",
+    "SourceSha256": "77188225538B67E18FE897BAE9AE6F773276647506F21AF78FC559D05530F27E",
+    "Kind": "endnote",
+    "Container": "cell",
+    "HeldOut": false,
+    "ExpectedEquationCount": 8,
+    "ExpectedMarkers": [
+      "3",
+      "4",
+      "vii",
+      "viii"
+    ],
+    "ExpectedText": [
+      "Before formula:",
+      "Public destination 1.",
+      "Public destination 2.",
+      "Public destination 3.",
+      "Public destination 4."
+    ]
+  }
+]

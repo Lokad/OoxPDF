@@ -1,0 +1,213 @@
+{
+  "Source": "Independent Word 16 exports; normal-font fractions, two source-resolved sections and marker-to-prose geometry. Absolute visual failures remain separate.",
+  "Rows": [
+    {
+      "Id": "math-section-notes-footnote-body",
+      "Mode": "final-preserve",
+      "InputSha256": "414ACDF0943EF1BC23C1B4B5B93FF97EB884EA143825D0CFC7C5F0F366425A27",
+      "ReferencePdfSha256": "7847380A5B8B251B9A903366FBA39E7FB871FDCFAB3E448621D6CACB28D7DE91",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathOccurrences": 8,
+      "Pages": 2,
+      "ExpectedMarkers": [
+        "3",
+        "4",
+        "vii",
+        "viii"
+      ],
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-section-notes-footnote-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "414ACDF0943EF1BC23C1B4B5B93FF97EB884EA143825D0CFC7C5F0F366425A27",
+      "ReferencePdfSha256": "FB1C2B34DD08B7B7D598FB1D8C81B80685A75DF2C39307985F14222ADC7019A2",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathOccurrences": 8,
+      "Pages": 2,
+      "ExpectedMarkers": [
+        "3",
+        "4",
+        "vii",
+        "viii"
+      ],
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-section-notes-footnote-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "810B3521B4390D3CCAE26A4B3B1530F6A7C5F9FC7A6BACF7138911F8053AB365",
+      "ReferencePdfSha256": "EF6F232AD07ABDE1FA1FC147AF32B1F51ACF326549CCEA148FD5CECB2AA971ED",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathOccurrences": 8,
+      "Pages": 2,
+      "ExpectedMarkers": [
+        "3",
+        "4",
+        "vii",
+        "viii"
+      ],
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-section-notes-footnote-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "810B3521B4390D3CCAE26A4B3B1530F6A7C5F9FC7A6BACF7138911F8053AB365",
+      "ReferencePdfSha256": "0147F98D50655D40B995791A3FC53ADD061B08E50F1842C0FEE8CC2F13AB98CD",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathOccurrences": 8,
+      "Pages": 2,
+      "ExpectedMarkers": [
+        "3",
+        "4",
+        "vii",
+        "viii"
+      ],
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-section-notes-endnote-body",
+      "Mode": "final-preserve",
+      "InputSha256": "09F1D0E1477C4132FB140679B7A344D8F7D5A8D1F3DF83E540887AA4BA88E1ED",
+      "ReferencePdfSha256": "6DBA80767A6B134A4A7A8EB3A944140416BA5A56D1CC5F69B7D1FBFBDF73669D",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathOccurrences": 8,
+      "Pages": 2,
+      "ExpectedMarkers": [
+        "3",
+        "4",
+        "vii",
+        "viii"
+      ],
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-section-notes-endnote-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "09F1D0E1477C4132FB140679B7A344D8F7D5A8D1F3DF83E540887AA4BA88E1ED",
+      "ReferencePdfSha256": "0405BD70E7CFF55C40359661984C35966C8F0EB6253B97E09FFE1104C2E32B20",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathOccurrences": 8,
+      "Pages": 2,
+      "ExpectedMarkers": [
+        "3",
+        "4",
+        "vii",
+        "viii"
+      ],
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-section-notes-endnote-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "9666940A0BC656E3D088433EA2770F133E9B546149474ED74B6101D148F9F298",
+      "ReferencePdfSha256": "6A51B92EB43F80314E469F204F05F94E16251F4E68D07316179D35A637CF1BE7",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathOccurrences": 8,
+      "Pages": 2,
+      "ExpectedMarkers": [
+        "3",
+        "4",
+        "vii",
+        "viii"
+      ],
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    },
+    {
+      "Id": "math-section-notes-endnote-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "9666940A0BC656E3D088433EA2770F133E9B546149474ED74B6101D148F9F298",
+      "ReferencePdfSha256": "BAA18DBD49D0B2A17ECFA7CEFD98619E322764A754B4F57B06634B650D24C414",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathOccurrences": 8,
+      "Pages": 2,
+      "ExpectedMarkers": [
+        "3",
+        "4",
+        "vii",
+        "viii"
+      ],
+      "MarkerRaise": 3.9599999999999227,
+      "MarkerFontRatio": 0.6699999999999999
+    }
+  ]
+}

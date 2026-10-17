@@ -4766,5 +4766,24 @@
     "PortableRenderingExactRows",
     "DocxInlineCompositionCommentHighlightsMatchIndependentSelectionBounds",
     "PortableRenderingCommentSelectionUsesOccupiedLineFrame"
+  ],
+  "docx-section-note-math": [
+    "DocxInlineCompositionSectionNoteMath",
+    "PortableRenderingSectionNoteMathPreservesContentAndDestinations",
+    "DocxInlineCompositionAutomaticFootnotesRetainOwnedMarkerRuns",
+    "DocxInlineCompositionAutomaticFootnotesPreserveContentAndDestinations",
+    "DocxInlineCompositionFootnoteOwnershipSurvivesSharedRunsAndNumberStarts",
+    "DocxInlineCompositionEndnotesShareOwnedAutomaticReferenceRules",
+    "DocxInlineCompositionEndnoteRunSplittingRetainsSingleAndRepeatedMath",
+    "DocxInlineCompositionFootnoteMarkersMatchIndependentPrintedOffsets",
+    "DocxInlineCompositionEndnoteMarkersMatchIndependentPrintedOffsets",
+    "DocxInlineCompositionMathCannotEnterPlainTextCorrections",
+    "PortableRenderingAutomaticFootnotesPreserveMixedMathAndLinks",
+    "PortableRenderingAutomaticEndnotesPreserveMixedMathAndDestinations",
+    "DocxSectionNoteNumbers",
+    "DocxSingleSectionNoteNumbers",
+    "DocxSectionNoteNumberLinksKeepRepeatedLabelsDistinct",
+    "DocxReaderUsesSectionNoteDefaultsForBodyAndTableMarkers",
+    "DocxReaderEmitsAutomaticFootnoteAndEndnoteMarkersWithCascadeAlignment"
   ]
 }

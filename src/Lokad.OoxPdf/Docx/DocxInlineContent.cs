@@ -53,7 +53,9 @@ internal static class DocxInlineContent
     {
         run = reference.DisplayRun;
         return reference.Kind is (DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote) &&
-            reference.NoteNumberRestartValue is null or "continuous" &&
+            // Section counters are resolved by the reader; only page restarts
+            // still depend on measured placement. Marker ownership is shared.
+            reference.NoteNumberRestartValue is null or "continuous" or "eachSect" &&
             run is { IsAutomaticNoteReferenceMarker: true } && run.Text == reference.DisplayText;
     }
 
