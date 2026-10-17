@@ -1,0 +1,114 @@
+[
+  {
+    "Id": "remainder-placement-script-base-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/remainder-placement-script-base-body.docx",
+    "Sha256": "B2BAC7F04208C43BBFB0B499A2B0F59A568799D390F781AEB47ED7A66A04BECE",
+    "SourceSha256": "396DF62C526FF77B985D2A3E91A31AC3CA674DB590636327C1DAB8D753A7E183",
+    "FragmentSourceSha256": "9315784C6F36A423DBADC2E9965C50DC21ED8A63E5D4AB793250738B6E70A609",
+    "Role": "script-base",
+    "Story": "body",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "remainder-placement-script-base-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/remainder-placement-script-base-cell.docx",
+    "Sha256": "DA303114C603829AB8F372EFB31A2C370A08034DE39E521882D276AD9E6E89D7",
+    "SourceSha256": "BF6C08DB053F1A468F51500F5EFFB7975BC9CF0015A42D6DDCEE7864B36B43D5",
+    "FragmentSourceSha256": "9315784C6F36A423DBADC2E9965C50DC21ED8A63E5D4AB793250738B6E70A609",
+    "Role": "script-base",
+    "Story": "cell",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "remainder-placement-script-base-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/remainder-placement-script-base-header.docx",
+    "Sha256": "46E0DD79DE7E094C22C5C77F7EB54A68DC0305EF6DA6D97235DB6D77F29A2418",
+    "SourceSha256": "F3E14A9D03CB6DF8F9D9889C851CF3E1F02A03716721623FCD8FA878790744B8",
+    "FragmentSourceSha256": "9315784C6F36A423DBADC2E9965C50DC21ED8A63E5D4AB793250738B6E70A609",
+    "Role": "script-base",
+    "Story": "header",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "remainder-placement-script-base-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/remainder-placement-script-base-footer.docx",
+    "Sha256": "2944F41DBD858F593F7A960B8F9415D13EA2D4A8D068CB518479AB065DEF97AD",
+    "SourceSha256": "A355BF23D39DD8E6F59428ADEC85A1CF401DD69580BED41743F2BDEEDAE57040",
+    "FragmentSourceSha256": "9315784C6F36A423DBADC2E9965C50DC21ED8A63E5D4AB793250738B6E70A609",
+    "Role": "script-base",
+    "Story": "footer",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "remainder-placement-operator-limit-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/remainder-placement-operator-limit-body.docx",
+    "Sha256": "29AC9B93E043F4D2900AFEEEB2B9EA1ACCD3AB7A0F8F0D54C9C6DE4BCDD3BC62",
+    "SourceSha256": "396DF62C526FF77B985D2A3E91A31AC3CA674DB590636327C1DAB8D753A7E183",
+    "FragmentSourceSha256": "C63D441E93B062577F6A188F79669065D2610E8E0E8A7AAD1A4D9EB3E2427732",
+    "Role": "operator-limit",
+    "Story": "body",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "remainder-placement-operator-limit-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/remainder-placement-operator-limit-cell.docx",
+    "Sha256": "351B98D6F8E471C5B817C1F34D6F34D2937E51B40263A188722C007A1CF87308",
+    "SourceSha256": "BF6C08DB053F1A468F51500F5EFFB7975BC9CF0015A42D6DDCEE7864B36B43D5",
+    "FragmentSourceSha256": "C63D441E93B062577F6A188F79669065D2610E8E0E8A7AAD1A4D9EB3E2427732",
+    "Role": "operator-limit",
+    "Story": "cell",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "remainder-placement-operator-limit-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/remainder-placement-operator-limit-header.docx",
+    "Sha256": "84FA51D18CA24B4D0882746D5915560688D6E2D4A39207B8A83CDD7AFC7B80F4",
+    "SourceSha256": "F3E14A9D03CB6DF8F9D9889C851CF3E1F02A03716721623FCD8FA878790744B8",
+    "FragmentSourceSha256": "C63D441E93B062577F6A188F79669065D2610E8E0E8A7AAD1A4D9EB3E2427732",
+    "Role": "operator-limit",
+    "Story": "header",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "remainder-placement-operator-limit-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/remainder-placement-operator-limit-footer.docx",
+    "Sha256": "C5C87815C0FA68692299200A39B9ADF851F3754AE6C40A0D7985DD13F2F2D2DE",
+    "SourceSha256": "A355BF23D39DD8E6F59428ADEC85A1CF401DD69580BED41743F2BDEEDAE57040",
+    "FragmentSourceSha256": "C63D441E93B062577F6A188F79669065D2610E8E0E8A7AAD1A4D9EB3E2427732",
+    "Role": "operator-limit",
+    "Story": "footer",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]

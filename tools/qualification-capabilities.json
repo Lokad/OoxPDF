@@ -3204,5 +3204,9 @@
     "MathFontFractionScript",
     "DocxNativeEmptyHiddenNary",
     "DocxNativeStoredHiddenNary"
+  ],
+  "docx-remainder-placement": [
+    "DocxInlineCompositionMathRemaindersKeepMixedStoryContentAndInk",
+    "PortableRenderingMathRemaindersKeepMixedStoryContentAndInk"
   ]
 }
