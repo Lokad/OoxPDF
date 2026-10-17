@@ -1,5 +1,35 @@
 # Composed-document reliability checkpoint
 
+C129 selects tracked row property markers through existing markup visibility before
+conditional styling, child reads and layout. Cancellation remains checked for rows
+and property iteration. Actually visible deleted rows keep their independent math
+owners; moving/unknown owners and deleting cell wrappers stay staged.
+
+Four sources/eight independent Word outcomes remove deleted prose/images from all
+four Final views and restore four equations in each review view. A middle deleted
+row preserves both neighboring rows; header/footer controls preserve body text.
+All eight MAEs improve, with no new failed components. Two strict gates pass. The
+sole-row Final image is pixel-identical to Word; its raw ForegroundRecall gate
+remains failed because the blank-image metric is undefined. Mixed survivor-row
+typography and all four review matrix/rule gates remain failed; review math max
+0.572pt X/1.778pt Y, prose2.172pt Y. Seven distinct visual pairs reviewed; one more
+carries by raster identity. No numerical threshold change.
+
+One frozen Release artifact passes108 Windows and82 Ubuntu checks/26 native skips,
+once each. Reader tests cover all four API modes; Office comparisons cover the two
+public presets. Parent checks fail on retained images/prose. Two exact-source Word
+exports and two earlier parent screens are reused; six new exports/parent outcomes
+and eight final candidate conversions complete the batch. Source-backed parent
+carry stays explicit. Reusable manifests now express per-mode expectations and an
+intentionally empty math view. Raw hidden-row/unused-header diagnostics stay.
+
+Seventeen assets/four smokes transfer without root build/suite replay. The finite
+portfolio carries by source inference and original report Review/deck identities.
+Rootae220f68; `artifacts/composition-c1/row-visibility-evidence.json`. C128
+CI39042102010 green on both platforms. Latest workspace scan10.892GB/541,429 files;
+automatic review rejected retirement of two obsolete unqualified compiled snapshots
+before process creation, deleting nothing. Their protected map/evidence remain.
+
 C128 replaces blanket row/cell revision exclusions with non-deleting source-owner
 rules. Supported insertions and current property geometry keep the actual child
 paragraph/equation ownership. Deleting, moving and unknown kinds stay staged.
