@@ -1,5 +1,35 @@
 # Composed-document reliability checkpoint
 
+C137 admits exact-row projection only when complete occupied/visible inline
+frames fit the prospective cell after border advance. Tight source clips,
+incomplete/overflowing frames and complex/fragmented rows retain fallback. Every
+row validates before mutation; cancellation stays checked. Shared pure clip and
+inline-extent calculations serve placement and painting; existing border advance
+arithmetic is consolidated without changing its value.
+
+Twelve independent controls reuse two references/add ten fit/clip/border/flow
+exports. Eight comparisons improve, four deliberately clipped PDFs stay exact,
+no new failed components. Fitting math errors fall3.333pt to1.441pt; balloon tops
+are within0.778pt and following prose within0.186pt. All strict/full one-point
+gates still fail. Twelve visual pairs reviewed, plus clipped-margin detail.
+Raw clipped text operations are not visible-content proof. One default Final
+clipping peer is byte-identical; no new twelve-document portfolio replay.
+
+The first capability batch passes81 Windows/70 Ubuntu checks but exposes the
+fixture's wrong expected image count for the wholly clipped24pt row. Word/parent/
+candidate all omit that image. Only metadata changes:17 runtime assets/1,973 other
+inputs stay exact, no library/test rebuild or conversion replay. Only two affected
+observers repeat; final83 Windows/71 Ubuntu/twelve native skips. The parent fails
+the independent frame regression. Seventeen assets/four smokes transfer without
+root build/suite replay. Rootbc835e3d;
+`artifacts/composition-c1/exact-row-frames-evidence.json`. C135/C136 CI39050721245
+is green on both platforms.
+
+Storage review confirms existing freezing already shares1,973 unchanged files/
+17.6MB by file identity; only66,838B metadata is new. An input-cache redesign is
+unnecessary. Retained report copies warrant a bounded inventory; prospective
+copy savings are not reclaimed disk space. Protected retirements remain untouched.
+
 C136 refreshes the fixed twelve outcomes with the accepted C135 artifact:
 seven source documents/twenty pages retain accepted PDF and reference identities.
 Twelve comparisons and twenty previously reviewed page pairs carry, without Office
