@@ -1,0 +1,42 @@
+[
+  {
+    "Id": "endnote-boundary-no-image",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/endnote-boundary-no-image.docx",
+    "Sha256": "56BD86964C10A605C3E8B0F39D4737DD3C16E787D9EB9A4B77B50B9197E26DF7",
+    "SourceSha256": "87B6EA350F80A6C11C17C9FA01E30DA19255D01C6F0AE31B63E5580B3131595C",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Delta.",
+      "Public note calculation"
+    ]
+  },
+  {
+    "Id": "endnote-boundary-one-paragraph",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/endnote-boundary-one-paragraph.docx",
+    "Sha256": "7725CE5CABAC6683863E68ED23284EADC0D2F08850137573969AAE7D4554AE19",
+    "SourceSha256": "87B6EA350F80A6C11C17C9FA01E30DA19255D01C6F0AE31B63E5580B3131595C",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Delta.",
+      "Public note calculation"
+    ]
+  },
+  {
+    "Id": "endnote-placement-plain-custom",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/note-custom-mark-endnote.docx",
+    "Sha256": "BD0F7BE2640553AA381E472DE6E4F94CB6479222284B09ABE249F6FABA50303F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedImagePlacements": 0,
+    "ExpectedText": [
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  }
+]

@@ -326,7 +326,9 @@ internal sealed partial class DocxLayoutEngine
                 // A trailing paragraph owns this start boundary independently
                 // of earlier tables or print scaling. Complete note-flow and
                 // mixed-footnote admission retain their existing qualification.
-                bool FollowsBodyParagraph() => CanUseTrailingParagraphEndnoteStart(activePage,
+                bool fittingEndnoteBoundaries = CanUseFittingEndnoteBoundaries(document, activePage, activePlacedStories,
+                    documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken);
+                bool FollowsBodyParagraph() => fittingEndnoteBoundaries || CanUseTrailingParagraphEndnoteStart(activePage,
                     activePlacedStories, documentEndSeparatorLayout, printScale, documentEndStories);
                 if (FollowsBodyParagraph() || CanUseNominalNoteSeparatorFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories))
                 {
@@ -452,7 +454,7 @@ internal sealed partial class DocxLayoutEngine
                 bool plainEndnoteFrame = plainEndnoteTypography &&
                     (!hasFootnotes || DocxPlainBodyFrame.IsEligible(document));
                 bool plainEndnoteFlow = plainEndnoteFrame && !hasFootnotes;
-                bool collapseEndnoteBoundaries = plainEndnoteFrame &&
+                bool collapseEndnoteBoundaries = fittingEndnoteBoundaries || plainEndnoteFrame &&
                     cursorTop - completeEndnoteHeight >= Math.Max(FrameBottom(),
                         activePlacedStories.Where(s => s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
                             .Select(s => s.TopY).DefaultIfEmpty(activePage.MarginBottom).Max());
