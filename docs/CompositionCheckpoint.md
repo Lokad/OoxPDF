@@ -1,5 +1,34 @@
 # Composed-document reliability checkpoint
 
+C82 retains inserted pictures' actual run styles and paints Word-compatible
+review indicators from the existing text measurer, author registry and final image
+geometry. No separate font cache or unused picture-only face is embedded. Shared
+inline planning also retains preceding picture advance: adjacent source pictures
+no longer occupy the same X in body, cell, header and footer painting.
+
+Fourteen strict Word controls include ten new placement/style/shared-run references
+and four retained references. Native relative indicator metrics, pinned portable
+fonts, fallback ink, image ownership, ordering and following text pass. Windows
+qualifies 42 methods (40 carried through an identical DLL plus two observer
+corrections); Ubuntu passes 33 with nine explicit skips, one invocation. Both new
+regressions fail on C81 through actual rendering. Raw failed runs remain retained.
+
+All fourteen visual gates still fail unchanged thresholds: three MAEs improve,
+nine worsen and two stay equal, with no new failure components. Every text-operation
+set retains geometry and ink after resolving one harmless font-resource alias.
+Ten single-picture PDFs retain bytes through the overlap repair. Same-scale review
+confirms restored second-picture visibility in body/cell/header and the Arial14
+indicator. It also establishes two inherited residuals: review picture frames are
+36 points versus Word's 27.32, and footer content is below the viewport (baseline
+-35.242 versus Word's 130.03). Passing emitted-content checks do not qualify that
+footer as visible. C83 prioritizes its shared static-frame ownership repair.
+
+Seventeen assets/four smoke PDFs transfer without root build or suite replay.
+Complete-report Final and the held-out deck retain bytes; seven-source portfolio
+comparisons carry by explicit source scope, not a new full-corpus identity claim.
+Root b36146b2; evidence: `artifacts/composition-c1/picture-revision-evidence.json`.
+The repaired C81 CI run 38996975092 is green on both platforms.
+
 C81 shares the retained source-author registry between comment slots and final
 Word-compatible insertion/deletion glyph and decoration painting. Classic colors,
 unknown/move-owner fallbacks and derived numbering-change colors keep their
