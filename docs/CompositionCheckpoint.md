@@ -1,5 +1,29 @@
 # Composed-document reliability checkpoint
 
+C139 fixes confirmed equation loss beside section-restarted footnotes/endnotes.
+The reader already resolves section counters; shared marker ownership now admits
+those labels. Page-dependent and unknown restarts retain fallback. No font, size
+or document-shape condition is added. Four two-section body/cell controls cover
+decimal/Roman starts, run splitting and four distinct note destinations in both
+DOCX modes. Thirty Windows and24 Ubuntu checks pass/six native skips, once each.
+A missing namespace import caused an initial harness build failure; no artifact
+was frozen. An Ubuntu invocation first supplied a report instead of a method
+array; no tests ran until the corrected invocation. These records remain retained.
+
+Eight independent Word outcomes restore all eight fractions each; all eight
+visual comparisons improve without new failed components. Math origins are
+within0.465pt X/0.025pt Y, markers0.069pt Y, footnote prose0.087pt Y. All eight
+strict gates still fail. Endnote prose retains6.284pt body/17.059pt cell Y errors;
+this separate placement defect is the next bounded investigation. Eight Final
+page pairs reviewed; eight Review pairs carry by reference/candidate PNG identity.
+The parent fails the content regression with zero of eight fractions.
+
+One committed artifact transfers17 assets/four identical smokes with no root
+build/suite replay. The portfolio's five DOCX sources have no restart metadata;
+prior milestone outcomes carry by source scope, plus unchanged report/deck smokes.
+No new full portfolio pass is claimed. Roote0689b40;
+`artifacts/composition-c1/section-note-math-evidence.json`.
+
 C138 adds manifest-driven outcome joining for one frozen runtime. It validates
 input/runtime/PDF identities and missing/conflicting outcomes before publishing,
 copies independent PDFs and inspection summaries, and retains source provenance
