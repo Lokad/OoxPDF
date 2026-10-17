@@ -5543,6 +5543,36 @@
     "DocxInlineCompositionFittingNestedEndnotes",
     "DocxScaledFootnoteExactAdvanceMatchesIndependentOffice",
     "DocxScaledFootnoteAdmissionMatchesIndependentPageMembership",
-    "PortableRenderingScaledFootnoteSharesPrintedBodyCapacity"
+    "PortableRenderingScaledFootnoteSharesPrintedBodyCapacity",
+    "DocxPageFootnoteNumbersKeepExcludedSettingsAndStories",
+    "DocxPageFootnoteNumbersUseCompleteCellOwnershipAndKeepTypographyScope"
+  ],
+  "docx-review-nested-placement": [
+    "DocxInlineCompositionReviewNestedPlacement",
+    "DocxInlineCompositionNestedCellNeighbors",
+    "PortableRenderingNestedCellNeighbors",
+    "DocxInlineCompositionNestedMath",
+    "PortableRenderingNestedMath",
+    "DocxInlineCompositionNestedNavigation",
+    "PortableRenderingNestedNavigation",
+    "DocxInlineCompositionFittingNestedEndnotes",
+    "DocxInlineCompositionOrderedPictureTranslationKeepsClipsAndFallbacks",
+    "DocxInlineCompositionScaledCellStruts",
+    "DocxReviewTableCellInsetsUsePrintedFontSize",
+    "DocxReviewTableBorderAdvancesUsePrintScale",
+    "DocxReviewTableBorderScalingKeepsExtremePrintScaleFallback",
+    "DocxReviewTableCorrectionPreservesSurroundingTextFlow",
+    "DocxReviewWrappedTableCellsUsePrintedInsetsAndRetainLinePitch",
+    "DocxReviewTablePagination",
+    "DocxReviewTableSplitProjection",
+    "DocxTableLayoutStagePreservesMixedCellBodyOrderAroundNestedTables",
+    "DocxTableLayoutStagePlacesNestedTableBelowBreakSpillRow",
+    "DocxWordCompatibleAllMarkupScalesNestedTableCellSpacing",
+    "DocxWordCompatibleAllMarkupLaysOutIndentedNestedTableInNarrowedBody",
+    "DocxRendererEmitsTableCellInternalHyperlinkDestinations",
+    "DocxRendererEmitsTableCellExternalHyperlinkAnnotations",
+    "DocxWordCompatibleAllMarkupUsesEmittedAdvanceForTableCellHyperlinkAnnotations",
+    "DocxPageFootnoteNumbersKeepExcludedSettingsAndStories",
+    "DocxPageFootnoteNumbersUseCompleteCellOwnershipAndKeepTypographyScope"
   ]
 }

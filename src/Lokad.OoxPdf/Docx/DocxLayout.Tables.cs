@@ -26,59 +26,69 @@ internal sealed partial class DocxLayoutEngine
         }
 
         var rows = new List<(DocxTableRowLayout Row, double[] Insets)>();
+        var nestedInsets = new Dictionary<DocxTableRowLayout, double[]>(ReferenceEqualityComparer.Instance);
+        bool hasNestedRows = items.Skip(firstItem).OfType<DocxTableRowLayout>()
+            .Any(row => row.Cells.Any(cell => cell.NestedRows.Count != 0));
         double highestBaseline = double.NegativeInfinity;
         double firstCellInset = 0d;
         bool scaleSimpleBorders = DocxTableBorderGeometry.TryResolveReviewPaintScale(printScale, out _);
-        for (int itemIndex = firstItem; itemIndex < items.Count; itemIndex++)
+        bool TryCollectRow(DocxTableRowLayout row, bool nested)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (items[itemIndex] is not DocxTableRowLayout row ||
-                row.FragmentCount != 1 && !(allowPageBoundaryFragments && row.FragmentReason == "PageBoundary") ||
+            if (row.FragmentCount != 1 && !(allowPageBoundaryFragments && !nested && row.FragmentReason == "PageBoundary") ||
                 !HasAutomaticTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue) &&
                 !HasMinimumTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue) &&
-                !HasExactTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue))
-            {
-                return;
-            }
-
+                !HasExactTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue)) return false;
             var insets = new double[row.Cells.Count];
             for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 DocxTableCellLayout cell = row.Cells[cellIndex];
                 IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell.VisualCell));
-                if (cell.TextLines.Count == 0 || !HasOrderedPictureLineOwners(cell, cancellationToken) || cell.InlineTextBoxes.Count != 0 ||
-                    cell.NestedRows.Count != 0 || cell.Cell.HasVerticalMerge || paragraphs.Count == 0 ||
+                if (cell.TextLines.Count == 0 && cell.NestedRows.Count == 0 ||
+                    !HasOrderedPictureLineOwners(cell, cancellationToken) || cell.InlineTextBoxes.Count != 0 ||
+                    cell.Cell.HasVerticalMerge ||
+                    hasNestedRows && !DocxMathParagraphPolicy.IsSupportedCellProperties(cell.VisualCell) ||
                     paragraphs.Any(paragraph => paragraph.EffectiveProperties.LineSpacingPoints is not null) ||
                     !string.IsNullOrEmpty(cell.VisualCell.VerticalAlignmentValue) &&
-                    !string.Equals(cell.VisualCell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase))
-                {
-                    return;
-                }
-
+                    !string.Equals(cell.VisualCell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase)) return false;
                 double inset = ResolveTableCellFirstBaselineInset(paragraphs, measurer);
-                if (inset == 0d && cell.TextLines[0].InlineFrame?.TextBaselineInset is { } measuredInset)
-                    inset = measuredInset / printScale;
-                if (!double.IsFinite(inset) || inset <= 0d)
+                if (cell.TextLines.Count != 0)
                 {
-                    return;
+                    if (inset == 0d && cell.TextLines[0].InlineFrame?.TextBaselineInset is { } measuredInset)
+                        inset = measuredInset / printScale;
+                    if (!double.IsFinite(inset) || inset <= 0d) return false;
+                    if (cell.TextLines[0].BaselineY > highestBaseline)
+                    {
+                        highestBaseline = cell.TextLines[0].BaselineY;
+                        firstCellInset = inset;
+                    }
                 }
-
                 insets[cellIndex] = inset;
                 if (cell.VisualCell.Borders.Any(border => DocxTableBorderGeometry.ResolveVisibleWidth(border) > 0d &&
-                    !string.Equals(border.Value, "single", StringComparison.OrdinalIgnoreCase)))
+                    !string.Equals(border.Value, "single", StringComparison.OrdinalIgnoreCase))) scaleSimpleBorders = false;
+                foreach (var child in cell.NestedRows)
                 {
+                    // Nested border pitch is still measured in the legacy frame.
+                    // Preserve it for the complete subtree until source-ordered
+                    // height reclamation has independent qualification.
                     scaleSimpleBorders = false;
-                }
-                if (cell.TextLines[0].BaselineY > highestBaseline)
-                {
-                    highestBaseline = cell.TextLines[0].BaselineY;
-                    firstCellInset = inset;
+                    if (!TryCollectRow(child, true)) return false;
                 }
             }
-
-            rows.Add((row, insets));
+            if (nested) nestedInsets.Add(row, insets);
+            else rows.Add((row, insets));
+            return true;
         }
+        for (int itemIndex = firstItem; itemIndex < items.Count; itemIndex++)
+        {
+            if (items[itemIndex] is not DocxTableRowLayout row || !TryCollectRow(row, false)) return;
+        }
+
+        // Exact subtree clips retain the existing placement until complete
+        // source-ordered nested height reclamation is qualified with them.
+        if (hasNestedRows && rows.Select(pair => pair.Row).Concat(nestedInsets.Keys)
+            .Any(row => HasExactTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue))) return;
 
         // Validate every exact frame before translating any earlier row. Tight
         // source clips and incomplete/overflowing occupied frames keep their
@@ -107,48 +117,71 @@ internal sealed partial class DocxLayoutEngine
             return;
         }
 
-        double previousBorderAdvanceCorrection = 0d;
-        for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
+        DocxTableRowLayout MapRow(DocxTableRowLayout row, double[] insets,
+            double ownedCorrection, double borderCorrection)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            (DocxTableRowLayout row, double[] insets) = rows[rowIndex];
-            double borderAdvanceCorrection = ResolveReviewRowBorderAdvance(row,
-                rowIndex == rows.Count - 1, scaleSimpleBorders, printScale);
-            var cells = new DocxTableCellLayout[row.Cells.Count];
             bool fragmentInsetsAlreadyPrinted = row.FragmentCount > 1 &&
                 row.Cells.All(cell => HasNaturalReviewCellLineMetrics(cell.VisualCell));
+            var cells = new DocxTableCellLayout[row.Cells.Count];
             for (int cellIndex = 0; cellIndex < cells.Length; cellIndex++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 DocxTableCellLayout cell = row.Cells[cellIndex];
-                double baselineCorrection = (fragmentInsetsAlreadyPrinted ? 0d : insets[cellIndex] * (1d - printScale)) -
-                    originCorrection + previousBorderAdvanceCorrection;
-                // Ordered inline frames already measure a printed baseline.
-                // Translate their container origin with the row, without applying
-                // the nominal text-inset conversion a second time.
-                double ownedFrameCorrection = -originCorrection + previousBorderAdvanceCorrection;
+                // Legacy text converts its nominal inset once. Measured inline
+                // frames already own a printed inset and only translate with
+                // their container, at every depth in the same source frame.
+                double baselineCorrection = (fragmentInsetsAlreadyPrinted ? 0d : insets[cellIndex] * (1d - printScale)) + ownedCorrection;
                 cells[cellIndex] = cell with
                 {
-                    Y = cell.Y - originCorrection + previousBorderAdvanceCorrection + borderAdvanceCorrection,
-                    Height = cell.Height - borderAdvanceCorrection,
+                    Y = cell.Y + ownedCorrection + borderCorrection,
+                    Height = cell.Height - borderCorrection,
                     TextLines = cell.TextLines.Select(line => line with { BaselineY = line.BaselineY +
-                        (line.InlineFrame is null ? baselineCorrection : ownedFrameCorrection) }).ToArray(),
+                        (line.InlineFrame is null ? baselineCorrection : ownedCorrection) }).ToArray(),
                     InlineImages = cell.InlineImages.Count == 0 ? cell.InlineImages :
-                        cell.InlineImages.Select(image => image.Translate(0d, ownedFrameCorrection)).ToArray()
+                        cell.InlineImages.Select(image => image.Translate(0d, ownedCorrection)).ToArray(),
+                    NestedTableRows = cell.NestedRows.Count == 0 ? cell.NestedRows :
+                        cell.NestedRows.Select(child => MapRow(child, nestedInsets[child], ownedCorrection, 0d)).ToArray()
                 };
             }
-
-            items[firstItem + rowIndex] = row with
+            return row with
             {
-                Y = row.Y - originCorrection + previousBorderAdvanceCorrection + borderAdvanceCorrection,
-                Height = row.Height - borderAdvanceCorrection,
-                FullRowHeight = row.FullRowHeight - borderAdvanceCorrection,
+                Y = row.Y + ownedCorrection + borderCorrection,
+                Height = row.Height - borderCorrection,
+                FullRowHeight = row.FullRowHeight - borderCorrection,
                 Cells = cells,
                 ReviewBorderPrintScale = scaleSimpleBorders ? printScale : 1d
             };
-            previousBorderAdvanceCorrection += borderAdvanceCorrection;
-
         }
+        var replacements = new DocxTableRowLayout[rows.Count];
+        double previousBorderAdvanceCorrection = 0d;
+        for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
+        {
+            (DocxTableRowLayout row, double[] insets) = rows[rowIndex];
+            double borderAdvanceCorrection = ResolveReviewRowBorderAdvance(row,
+                rowIndex == rows.Count - 1, scaleSimpleBorders, printScale);
+            var mapped = MapRow(row, insets,
+                -originCorrection + previousBorderAdvanceCorrection, borderAdvanceCorrection);
+            if (hasNestedRows && DocxTableCellClipGeometry.EnumerateCellLines(mapped, null, cancellationToken).LongCount() !=
+                CountLines(row)) return;
+            replacements[rowIndex] = mapped;
+            previousBorderAdvanceCorrection += borderAdvanceCorrection;
+        }
+        for (int rowIndex = 0; rowIndex < replacements.Length; rowIndex++)
+            items[firstItem + rowIndex] = replacements[rowIndex];
         cursorY += previousBorderAdvanceCorrection;
+
+        long CountLines(DocxTableRowLayout row)
+        {
+            long count = 0;
+            foreach (var cell in row.Cells)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                count += cell.TextLines.Count;
+                foreach (var child in cell.NestedRows) count += CountLines(child);
+            }
+            return count;
+        }
     }
 
     private static bool HasExactTableRowHeight(double? height, string? rule) =>
