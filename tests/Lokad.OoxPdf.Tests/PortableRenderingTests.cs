@@ -16,6 +16,13 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingRowVisibilityKeepsIndependentContentViews() =>
+        DocxInlineCompositionTests.CheckEquationRevisions(new PinnedResolver(mathFont: true), false,
+            "row-visibility-office.json", splitMathRuns: true);
+
+    public static void PortableRenderingRowVisibilityFinalPaintOmitsDeletedContent() =>
+        DocxInlineCompositionTests.CheckFinalRowVisibility(new PinnedResolver(mathFont: true));
+
     public static void PortableRenderingTableMathMetadataKeepsContentInkAndSourceOrder() =>
         DocxInlineCompositionTests.CheckEquationRevisions(new PinnedResolver(mathFont: true), false,
             "table-math-metadata-office.json", splitMathRuns: true,

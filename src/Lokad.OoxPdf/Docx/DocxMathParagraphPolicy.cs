@@ -52,12 +52,14 @@ internal static class DocxMathParagraphPolicy
         cell.TextDirectionValue is null or "lrTb" &&
         cell.BodyElements.All(child => child is DocxParagraphElement);
 
-    // An insertion or a change to the resolved container properties does not
-    // replace the child paragraph's source owner. Paragraph eligibility still
-    // checks its actual revisions; deleting/moving table owners stay staged.
+    // The reader selects visible rows before layout. Row insertion/deletion
+    // markers and resolved property changes do not replace child source owners.
+    // Paragraph eligibility still checks its actual revisions; moving/unknown
+    // owners and deleting cell wrappers retain their staged fallback.
     private static bool HasSupportedTableContentRevisions(IReadOnlyList<DocxRevisionInfo> revisions,
         DocxRevisionKind propertiesKind) => revisions.All(revision =>
-            revision.Kind == DocxRevisionKind.Insertion || revision.Kind == propertiesKind);
+            revision.Kind == DocxRevisionKind.Insertion || revision.Kind == propertiesKind ||
+            propertiesKind == DocxRevisionKind.TableRowPropertiesChange && revision.Kind == DocxRevisionKind.Deletion);
 
     public static IEnumerable<(DocxParagraph Paragraph, bool HasPageInputs)> EnumerateStaticPreparationCandidates(DocxDocument document, CancellationToken token)
     {

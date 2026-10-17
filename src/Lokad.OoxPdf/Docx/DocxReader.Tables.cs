@@ -60,7 +60,8 @@ internal sealed partial class DocxReader
             .ToArray() ?? [];
         bool hasExplicitGrid = columns.Count != 0;
         var rows = new List<DocxTableRow>();
-        DocxRevisionScopedElement[] rowElements = EnumerateRevisionScopedChildren(table.Elements(), markupMode, WordprocessingNamespace + "tr").ToArray();
+        DocxRevisionScopedElement[] rowElements = EnumerateRevisionScopedChildren(table.Elements(), markupMode, WordprocessingNamespace + "tr")
+            .Where(row => IsIncludedTableRow(row.Element, markupMode, cancellationToken)).ToArray();
         for (int rowIndex = 0; rowIndex < rowElements.Length; rowIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -251,6 +252,19 @@ internal sealed partial class DocxReader
         {
             Revisions = tableRevisions
         };
+    }
+
+    private static bool IsIncludedTableRow(XElement row, OoxPdfDocxMarkupMode mode, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (row.Element(WordprocessingNamespace + "trPr") is not { } properties) return true;
+        foreach (XElement revision in properties.Elements())
+        {
+            token.ThrowIfCancellationRequested();
+            if ((revision.Name == WordprocessingNamespace + "ins" || revision.Name == WordprocessingNamespace + "del") &&
+                !IsIncludedRevisionContainer(revision, mode)) return false;
+        }
+        return true;
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.

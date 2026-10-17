@@ -615,3 +615,51 @@ for story in ["header", "footer"]:
 (output / "table-math-metadata.json").write_text(json.dumps(
     [row for row in table_revision_rows if row["Role"] != "row-del"], indent=2) + "\n", encoding="utf-8")
 print("Pinned ten table-owner revision composition probes; nine retain visible equations in both presets")
+
+# Row markers select the visible grid before child content is read or measured.
+row_visibility_rows = []
+for shape in ["sole", "middle", "header", "footer"]:
+    source = output / ("table-math-revision-" + (shape + "-row-ins" if shape in ["header", "footer"] else "row-del") + ".docx")
+    with ZipFile(source) as z:
+        entries = {name: z.read(name) for name in z.namelist()}
+    part = "word/" + (shape + "1" if shape in ["header", "footer"] else "document") + ".xml"
+    xml = E.fromstring(entries[part])
+    table = next(xml.iter(w + "tbl"))
+    row = table.find(w + "tr")
+    if shape in ["header", "footer"]:
+        row.find(w + "trPr").find(w + "ins").tag = w + "del"
+    if shape == "middle":
+        for position, text in [(0, "Retained row before."), (2, "Retained row after.")]:
+            retained = E.Element(w + "tr")
+            cell = E.SubElement(retained, w + "tc")
+            cell.append(deepcopy(row.find(w + "tc").find(w + "tcPr")))
+            run = E.SubElement(E.SubElement(cell, w + "p"), w + "r")
+            properties = E.SubElement(run, w + "rPr")
+            E.SubElement(properties, w + "rFonts", {w + "ascii": "Calibri", w + "hAnsi": "Calibri"})
+            E.SubElement(properties, w + "sz", {w + "val": "22"})
+            E.SubElement(run, w + "t").text = text
+            if position == 0:
+                table.insert(list(table).index(row), retained)
+            else:
+                table.append(retained)
+    if shape == "sole":
+        target = source
+    else:
+        entries[part] = E.tostring(xml, encoding="utf-8", xml_declaration=True)
+        target = output / ("row-visibility-" + shape + "-deleted.docx")
+        with ZipFile(target, "w", ZIP_DEFLATED) as z:
+            for name, data in sorted(entries.items()):
+                info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+                info.compress_type = ZIP_DEFLATED
+                z.writestr(info, data)
+    final_text = ["Retained row before.", "Retained row after."] if shape == "middle" else ["Composed story."] if shape in ["header", "footer"] else []
+    row_visibility_rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
+        Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
+        SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(), Shape=shape,
+        HeldOut=False, ExpectedEquationCount=4, ExpectedText=["share the same input series."],
+        ProsePrefixes=["Summary:", "governs"], RuleRegion=[120, 0, 210, 792], RuleFillColor="g:0",
+        ExpectedByMode={"final-preserve": dict(ExpectedEquationCount=0, ExpectedMathGlyphCount=0,
+            ImageCount=0, ExpectedText=final_text, ProsePrefixes=[], RuleRegion=None),
+            "all-word-compatible": dict(ExpectedMathGlyphCount=21)}))
+(output / "row-visibility.json").write_text(json.dumps(row_visibility_rows, indent=2) + "\n", encoding="utf-8")
+print("Pinned four row-deletion visibility and independent child-content controls")

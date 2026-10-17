@@ -3,6 +3,8 @@
 Usage: python tools/NewCompositionMathReference.py MANIFEST REFERENCES OUTPUT
 Uses Cambria Math runs; mixed normal-font formulas need their own source audit.
 Does not export Office, inspect PDFs or build the library.
+ExpectedByMode can overlay expected metadata; ExpectedMathGlyphCount=0 pins a
+view where tracked content is intentionally absent.
 """
 from pathlib import Path
 import hashlib
@@ -26,6 +28,7 @@ def main():
     for source in read(manifest):
         assert sha(root / source["Input"]) == source["Sha256"], "Source identity differs"
         for mode in ["final-preserve", "all-word-compatible"]:
+            outcome = source | source.get("ExpectedByMode", {}).get(mode, {})
             run = references / (source["Id"] + "-" + mode)
             pin = read(run / "source-identity.json")
             assert pin["InputSha256"] == source["Sha256"] and pin["Mode"] == mode
@@ -42,7 +45,10 @@ def main():
             text_operations = read(run / "inspect/text-operations.json")
             math = [row for row in text_operations
                     if (row["PageNumber"], row["Font"]) in fonts]
-            assert math and {row["PageNumber"] for row in math} == {1}, "Expected single-page math control"
+            if outcome.get("ExpectedMathGlyphCount") == 0:
+                assert not math, "Expected a view without mathematical content"
+            else:
+                assert math and {row["PageNumber"] for row in math} == {1}, "Expected single-page math control"
             anchors = []
             offset = 0
             for row in math:
@@ -50,32 +56,34 @@ def main():
                 anchors.append(dict(Offset=offset, Text=text, X=row["EffectiveX"], Y=row["EffectiveY"],
                                     FontSize=row["FontSize"], FillColor=row["FillColor"]))
                 offset += len(text)
+            if "ExpectedMathGlyphCount" in outcome:
+                assert offset == outcome["ExpectedMathGlyphCount"], "Independent math count differs"
             rows.append(dict(Id=source["Id"], Mode=mode, InputSha256=source["Sha256"],
                              ReferencePdfSha256=pin["PdfSha256"], OfficeView=expected,
                              MathText="".join(row["Text"] for row in anchors), MathGlyphCount=offset,
-                             ImageCount=source.get("ImageCount", 1), ExpectedText=source["ExpectedText"],
+                             ImageCount=outcome.get("ImageCount", 1), ExpectedText=outcome["ExpectedText"],
                              Anchors=anchors))
-            if source.get("ProsePrefixes"):
+            if outcome.get("ProsePrefixes"):
                 prose = []
-                for prefix in source["ProsePrefixes"]:
+                for prefix in outcome["ProsePrefixes"]:
                     matches = [row for row in text_operations if row["DecodedText"].lstrip().startswith(prefix)]
                     assert len(matches) == 1, "Prose anchor must identify one independent run"
                     row = matches[0]
                     prose.append(dict(Prefix=prefix, X=row["EffectiveX"], Y=row["EffectiveY"]))
                 rows[-1]["ProseAnchors"] = prose
-            if source.get("RuleRegion"):
-                left, bottom, right, top = source["RuleRegion"]
+            if outcome.get("RuleRegion"):
+                left, bottom, right, top = outcome["RuleRegion"]
                 graphics = read(run / "inspect/graphics-operations.json")
                 rules = [row for row in graphics if row["Kind"] == "Fill" and
                          left < row["MinX"] < right and bottom < row["MinY"] < top and
                          1 < row["MaxX"] - row["MinX"] < 50 and 0 < row["MaxY"] - row["MinY"] < 2 and
-                         (not source.get("RuleFillColor") or row["FillColor"] == source["RuleFillColor"])]
+                         (not outcome.get("RuleFillColor") or row["FillColor"] == outcome["RuleFillColor"])]
                 assert len(rules) == 1, "Expected one source-region rule"
                 rows[-1]["RuleBoxes"] = [dict(X=row["MinX"], Y=row["MinY"], Width=row["MaxX"] - row["MinX"],
                                               Height=row["MaxY"] - row["MinY"], FillColor=row["FillColor"]) for row in rules]
                 rows[-1]["TotalThinRules"] = sum(row["Kind"] == "Fill" and 1 < row["MaxX"] - row["MinX"] < 50 and
                                                 0 < row["MaxY"] - row["MinY"] < 2 for row in graphics)
-                if source.get("RuleFillColor"):
+                if outcome.get("RuleFillColor"):
                     rows[-1]["BlackThinRules"] = sum(row["Kind"] == "Fill" and row["FillColor"] == "g:0" and
                                                     1 < row["MaxX"] - row["MinX"] < 50 and 0 < row["MaxY"] - row["MinY"] < 2
                                                     for row in graphics)

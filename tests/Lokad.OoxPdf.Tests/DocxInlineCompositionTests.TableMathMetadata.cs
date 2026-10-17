@@ -13,7 +13,7 @@ internal static partial class DocxInlineCompositionTests
             includeCase: id => !id.EndsWith("-cell-ins", StringComparison.Ordinal) && !id.EndsWith("-cell-del", StringComparison.Ordinal));
     }
 
-    public static void DocxInlineCompositionTableMathMetadataKeepsChildOwnersAndDeletingFallback()
+    public static void DocxInlineCompositionTableMathMetadataKeepsChildOwnersAndMovingFallback()
     {
         foreach (string role in new[] { "row-ins", "row-format", "cell-format", "cell-ins", "cell-del",
             "header-row-ins", "header-cell-format", "footer-row-ins", "footer-cell-format" })
@@ -34,10 +34,12 @@ internal static partial class DocxInlineCompositionTests
                 "Non-deleting table metadata retains each actual child's equation and preparation owner.");
         }
         var deleted = ReadMutation("CompositionProbes/table-math-revision-row-del", OoxPdfDocxMarkupMode.AllMarkup, false, false);
-        TestAssert.True(!DocxMathParagraphPolicy.IsSupportedSimpleRow(deleted.Tables.Single().Rows.Single()),
-            "Deleting table owners retain the staged fallback until row visibility is independently handled.");
+        TestAssert.True(DocxMathParagraphPolicy.IsSupportedSimpleRow(deleted.Tables.Single().Rows.Single()),
+            "An actually visible deleted row keeps its independent child content owners.");
         var inserted = ReadMutation("CompositionProbes/table-math-revision-row-ins", OoxPdfDocxMarkupMode.Final, false, false);
         var source = inserted.Tables.Single().Rows.Single();
+        var moved = source with { Revisions = [source.Revisions.Single() with { Kind = DocxRevisionKind.MoveFrom }] };
+        TestAssert.True(!DocxMathParagraphPolicy.IsSupportedSimpleRow(moved), "Moving table owners retain their staged fallback.");
         var unknown = source with { Revisions = [source.Revisions.Single() with { Kind = (DocxRevisionKind)int.MaxValue }] };
         TestAssert.True(!DocxMathParagraphPolicy.IsSupportedSimpleRow(unknown), "Unknown owner kinds retain complete fallback.");
     }

@@ -23,13 +23,14 @@ def main():
     for reference in read(golden)["Rows"]:
         key = reference["Id"], reference["Mode"]
         assert identities[key]["InputSha256"] == reference["InputSha256"], "Input identity differs"
-        text = read(candidates / (key[0] + "-" + key[1]) / "inspect/text-operations.json")
+        text_path = candidates / (key[0] + "-" + key[1]) / "inspect/text-operations.json"
+        text = read(text_path) if text_path.is_file() else []
         math = [row for row in text if row["Font"].startswith("Eq")]
         assert len(math) == reference["MathGlyphCount"], "Math content count differs"
         actual = unicodedata.normalize("NFKC", "".join(row["DecodedText"] for row in math))
         assert actual == reference["MathText"], "Math content differs"
-        dx = max(abs(math[anchor["Offset"]]["EffectiveX"] - anchor["X"]) for anchor in reference["Anchors"])
-        dy = max(abs(math[anchor["Offset"]]["EffectiveY"] - anchor["Y"]) for anchor in reference["Anchors"])
+        dx = max((abs(math[anchor["Offset"]]["EffectiveX"] - anchor["X"]) for anchor in reference["Anchors"]), default=0)
+        dy = max((abs(math[anchor["Offset"]]["EffectiveY"] - anchor["Y"]) for anchor in reference["Anchors"]), default=0)
         prose = []
         for anchor in reference.get("ProseAnchors", []):
             matches = [row for row in text if anchor["Prefix"] in row["DecodedText"]]

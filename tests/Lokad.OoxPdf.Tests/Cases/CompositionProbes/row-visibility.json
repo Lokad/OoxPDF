@@ -1,0 +1,153 @@
+[
+  {
+    "Id": "table-math-revision-row-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/table-math-revision-row-del.docx",
+    "Sha256": "4B1CEB3B062A3DAD3B6C9FD753368B50A9224264B9284692FC0D482CB8CC0162",
+    "SourceSha256": "4B1CEB3B062A3DAD3B6C9FD753368B50A9224264B9284692FC0D482CB8CC0162",
+    "Shape": "sole",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0",
+    "ExpectedByMode": {
+      "final-preserve": {
+        "ExpectedEquationCount": 0,
+        "ExpectedMathGlyphCount": 0,
+        "ImageCount": 0,
+        "ExpectedText": [],
+        "ProsePrefixes": [],
+        "RuleRegion": null
+      },
+      "all-word-compatible": {
+        "ExpectedMathGlyphCount": 21
+      }
+    }
+  },
+  {
+    "Id": "row-visibility-middle-deleted",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/row-visibility-middle-deleted.docx",
+    "Sha256": "BD2F6E220EB2570C0D57E67F40B551D16C6C96AA354A6775653B51A5F983240B",
+    "SourceSha256": "4B1CEB3B062A3DAD3B6C9FD753368B50A9224264B9284692FC0D482CB8CC0162",
+    "Shape": "middle",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0",
+    "ExpectedByMode": {
+      "final-preserve": {
+        "ExpectedEquationCount": 0,
+        "ExpectedMathGlyphCount": 0,
+        "ImageCount": 0,
+        "ExpectedText": [
+          "Retained row before.",
+          "Retained row after."
+        ],
+        "ProsePrefixes": [],
+        "RuleRegion": null
+      },
+      "all-word-compatible": {
+        "ExpectedMathGlyphCount": 21
+      }
+    }
+  },
+  {
+    "Id": "row-visibility-header-deleted",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/row-visibility-header-deleted.docx",
+    "Sha256": "40B385B40418172BD4432924F59BDBA93DC565F12664BDBFCC3CA12D0B4059DD",
+    "SourceSha256": "8656546E9E91F561D9DD4AD9A61854CBC11443FCABECEE81DCB788CDEA143202",
+    "Shape": "header",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0",
+    "ExpectedByMode": {
+      "final-preserve": {
+        "ExpectedEquationCount": 0,
+        "ExpectedMathGlyphCount": 0,
+        "ImageCount": 0,
+        "ExpectedText": [
+          "Composed story."
+        ],
+        "ProsePrefixes": [],
+        "RuleRegion": null
+      },
+      "all-word-compatible": {
+        "ExpectedMathGlyphCount": 21
+      }
+    }
+  },
+  {
+    "Id": "row-visibility-footer-deleted",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/row-visibility-footer-deleted.docx",
+    "Sha256": "7A1AAB91B171663B621EA3657BDC6E9FDE4DF2BD8505A255A78B8747A5EFC935",
+    "SourceSha256": "758FDE4FC66D4B07FEEE5ED47580AC03A8CB7CB6C74E69B9D28D6D07EFA436A4",
+    "Shape": "footer",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0",
+    "ExpectedByMode": {
+      "final-preserve": {
+        "ExpectedEquationCount": 0,
+        "ExpectedMathGlyphCount": 0,
+        "ImageCount": 0,
+        "ExpectedText": [
+          "Composed story."
+        ],
+        "ProsePrefixes": [],
+        "RuleRegion": null
+      },
+      "all-word-compatible": {
+        "ExpectedMathGlyphCount": 21
+      }
+    }
+  }
+]

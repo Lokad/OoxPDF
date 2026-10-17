@@ -30,6 +30,9 @@ foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Js
     $modes = if ($isDocx) { @('final-preserve','all-word-compatible') } else { @('presentation') }
     if ($isDocx -and $DocxPreset -ne 'Both') { $modes = if ($DocxPreset -eq 'Final') { @('final-preserve') } else { @('all-word-compatible') } }
     foreach ($mode in $modes) {
+        $modeExpected = if ($document.ExpectedByMode) { $document.ExpectedByMode.PSObject.Properties[$mode].Value } else { $null }
+        $expectedText = if ($modeExpected -and $modeExpected.PSObject.Properties['ExpectedText']) { @($modeExpected.ExpectedText) } else { @($document.ExpectedText) }
+        $expectedEquations = if ($modeExpected -and $modeExpected.PSObject.Properties['ExpectedEquationCount']) { $modeExpected.ExpectedEquationCount } else { $document.ExpectedEquationCount }
         $run = Join-Path $output ($document.Id + '-' + $mode)
         New-Item -ItemType Directory -Path $run | Out-Null
         $pdf = Join-Path $run 'candidate.pdf'
@@ -55,14 +58,14 @@ foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Js
         $pageCount = @(Get-Content -LiteralPath (Join-Path $run 'inspect.log') | Where-Object { $_ -match '^\d+ \d+ obj: page$' }).Count
         if ($pageCount -lt 1) { throw ('No inspected PDF pages: ' + $document.Id) }
         $text = Normalize-Text (($operations.DecodedText) -join ' ')
-        $missing = @($document.ExpectedText | Where-Object { !$text.Contains((Normalize-Text $_), [StringComparison]::Ordinal) })
+        $missing = @($expectedText | Where-Object { !$text.Contains((Normalize-Text $_), [StringComparison]::Ordinal) })
         $diagnostics = @(Get-Content -LiteralPath $diagnosticsPath -Raw | ConvertFrom-Json)
         $ignoredMath = @($diagnostics | Where-Object { $_.Id -eq 'DOCX_UNSUPPORTED_EQUATION' }).Count
         $rows += [ordered]@{
             Id=$document.Id;Mode=$mode;HeldOut=$document.HeldOut;InputSha256=$document.Sha256
             PdfSha256=(Get-FileHash -LiteralPath $pdf).Hash;ColdProcessElapsedMs=$timer.Elapsed.TotalMilliseconds
             MissingExpectedText=$missing;IgnoredEquationDiagnostics=$ignoredMath
-            ExpectedSourceEquations=$document.ExpectedEquationCount
+            ExpectedSourceEquations=$expectedEquations
             MathematicalTextOperations=@($operations | Where-Object Font -Like 'Eq*').Count
             InspectedPages=$pageCount
             Diagnostics=$diagnostics;VisualStatus='Pending independent Office comparison; no visual pass claimed'
