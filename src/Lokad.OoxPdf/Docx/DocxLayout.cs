@@ -1394,7 +1394,7 @@ internal sealed partial class DocxLayoutEngine
 
             if (textMeasurer is not null && DocxMathParagraphPolicy.NeedsOrderedInlineLayout(paragraph, mathEquations))
             {
-                double firstInset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, textMeasurer, paragraphSpacingScale);
+                double firstInset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints);
                 double nextInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
                 double rightInset = GetParagraphRightInset(paragraph, paragraphSpacingScale);
                 double baseInset = DocxLineMetrics.ResolveUniformBodyTypographicBaselineInset(paragraph, paragraphFontSize, textMeasurer)
@@ -1496,7 +1496,7 @@ internal sealed partial class DocxLayoutEngine
             DocxMidLinePlan? midLinePlan = null;
             if (textMeasurer is not null && textSpans.Count > 0)
             {
-                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, textMeasurer, paragraphSpacingScale);
+                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints);
                 double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
                 double labelStartOffset = GetParagraphLabelStartOffset(paragraph, paragraphSpacingScale);
                 double paragraphX = x + textStartOffset;

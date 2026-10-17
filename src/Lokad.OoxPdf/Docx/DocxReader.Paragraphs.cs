@@ -14,7 +14,7 @@ internal sealed partial class DocxReader
         XElement paragraph,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
-        Dictionary<(string NumId, int Level), int> numberingCounters,
+        DocxNumberingCounters numberingCounters,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxTableCellStyle? tableCellStyle,
@@ -61,6 +61,12 @@ internal sealed partial class DocxReader
         AddRevisions(paragraphRevisions, ReadPropertyChangeRevisions(paragraphProperties));
         XElement? paragraphMarkRunProperties = paragraphProperties?.Element(WordprocessingNamespace + "rPr");
         IReadOnlyList<DocxRevisionInfo> paragraphMarkRevisions = ReadPropertyChangeRevisions(paragraphMarkRunProperties);
+        DocxRevisionInfo? numberingMarkInsertion = inheritedRevision is null &&
+            paragraphMarkRevisions is [{ Kind: DocxRevisionKind.Insertion, SourceElement: "ins" } insertion]
+            ? insertion : null;
+        bool? originalNumberingIncluded = inheritedRevision is not null ||
+            paragraphMarkRevisions.Count != 0 && numberingMarkInsertion is null
+            ? null : numberingMarkInsertion is null;
         bool hasDeletedParagraphMark = paragraphMarkRevisions.Any(revision => revision.Kind == DocxRevisionKind.Deletion && revision.SourceElement == "del");
         AddRevisions(paragraphRevisions, paragraphMarkRevisions);
         bool pageInstructionSeen = false;
@@ -293,7 +299,7 @@ internal sealed partial class DocxReader
         }
 
         if (listLabel is not null && retainedMark is not null && inheritedRevision is null &&
-            paragraphMarkRevisions is [{ Kind: DocxRevisionKind.Insertion, SourceElement: "ins" } markInsertion])
+            numberingMarkInsertion is { } markInsertion)
         {
             // The actual numbered mark owns prefix ink. Authored paragraph
             // underline is excluded; explicit level underline remains in Final.
@@ -511,7 +517,9 @@ internal sealed partial class DocxReader
 
         DocxListLabel? ResolveParagraphListLabel()
         {
-            var label = CreateListLabel(paragraphProperties, numbering, numberingCounters, styles, paragraphStyleId, tableCellStyle, paragraphMarkRun);
+            var label = CreateListLabel(paragraphProperties, numbering, numberingCounters, styles, paragraphStyleId, tableCellStyle, paragraphMarkRun,
+                DocxMarkupContext.FromMode(markupMode).AppliesInlineRevisionStyle,
+                originalNumberingIncluded, numberingMarkInsertion);
             // A marker without its own paragraph/mark revision owns the resolved
             // paragraph color, not the first text run's authored or review ink.
             // Word inherits underline only from the numbering level. Keep the

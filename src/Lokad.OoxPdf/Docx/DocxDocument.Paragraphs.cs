@@ -319,7 +319,13 @@ internal sealed record DocxListLabel(
     // Decoration and revision ownership are independent of the first text run.
     // Placement-time font/spacing decisions remain on the actual base run.
     public DocxTextRun? DecorationSource { get; init; }
+    public DocxNumberingChange? NumberingChange { get; init; }
+    public string DisplayText => (NumberingChange?.PreviousText ?? string.Empty) + Text;
 }
+
+// Derived original/current counters retain an actual source mark as their
+// trigger. They are not new source revisions and must not create balloons.
+internal sealed record DocxNumberingChange(string PreviousText, DocxRevisionInfo SourceMark);
 
 internal sealed record DocxNumberingIndent(
     double? LeftPoints,

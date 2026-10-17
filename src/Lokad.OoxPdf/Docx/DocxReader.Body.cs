@@ -47,7 +47,7 @@ internal sealed partial class DocxReader
             }
 
         var elements = new List<DocxBodyElement>();
-        var numberingCounters = new Dictionary<(string NumId, int Level), int>();
+        var numberingCounters = new DocxNumberingCounters();
         var inlineReferenceCounters = new DocxNoteReferenceCounters();
         DocxDocumentSettings authoredSettings = documentSettings;
         documentSettings = ResolveSingleSectionNoteReferenceSettings(document, documentSettings);

@@ -118,7 +118,7 @@ internal sealed partial class DocxReader
                 parsed.Xml.Root?.Elements() ?? [],
                 styles,
                 numbering,
-                new Dictionary<(string NumId, int Level), int>(),
+                new DocxNumberingCounters(),
                 package,
                 parsed.Relationships,
                 markupMode,
@@ -285,7 +285,7 @@ internal sealed partial class DocxReader
         OoxMarkupCompatibility.WarnMustUnderstandOnce(partXml, part.Name, diagnosticSink, warnedParts);
         IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(part.Name, cancellationToken)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
-        var numberingCounters = new Dictionary<(string NumId, int Level), int>();
+        var numberingCounters = new DocxNumberingCounters();
         var stories = new List<DocxRelatedStory>();
         HashSet<string> registeredSeparators = (settings?.Root?
             .Element(WordprocessingNamespace + (storyElementName + "Pr"))?
@@ -378,7 +378,7 @@ internal sealed partial class DocxReader
         XElement story,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
-        Dictionary<(string NumId, int Level), int> numberingCounters,
+        DocxNumberingCounters numberingCounters,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         OoxPdfDocxMarkupMode markupMode,

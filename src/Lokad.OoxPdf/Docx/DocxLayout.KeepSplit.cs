@@ -497,7 +497,7 @@ internal sealed partial class DocxLayoutEngine
                 double inlineInset = ResolveOrderedBodyBaselineInset(value, inlineSize, inlineHeight, textMeasurer);
                 double right = GetParagraphRightInset(value, paragraphSpacingScale);
                 double first = Math.Max(1d, availableWidth - right -
-                    GetParagraphFirstLineTextStartOffset(value, inlineSize, textMeasurer, paragraphSpacingScale));
+                    GetParagraphFirstLineTextStartOffset(value, inlineSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints));
                 double next = Math.Max(1d, availableWidth - right - GetParagraphTextStartOffset(value, paragraphSpacingScale));
                 if (TryMeasureOrderedInlineContent(value, mathEquations, textMeasurer, inlineSize, first, next,
                     inlineInset, inlineHeight, paragraphSpacingScale, cancellationToken, out var measured,
@@ -509,7 +509,7 @@ internal sealed partial class DocxLayoutEngine
             if (DocxMathParagraphPolicy.GetStandaloneRow(value) is not null)
                 return FitsMathDisplayWidth(value, math, availableWidth, paragraphSpacingScale) ? math.LineHeight * paragraphSpacingScale : regular;
             double size = GetParagraphFontSize(value);
-            double firstWidth = Math.Max(1d, availableWidth - GetParagraphFirstLineTextStartOffset(value, size, textMeasurer, paragraphSpacingScale) - GetParagraphRightInset(value, paragraphSpacingScale));
+            double firstWidth = Math.Max(1d, availableWidth - GetParagraphFirstLineTextStartOffset(value, size, textMeasurer, paragraphSpacingScale, defaultTabStopPoints) - GetParagraphRightInset(value, paragraphSpacingScale));
             double nextWidth = Math.Max(1d, availableWidth - GetParagraphTextStartOffset(value, paragraphSpacingScale) - GetParagraphRightInset(value, paragraphSpacingScale));
             IReadOnlyList<DocxTextSpan> spans = CreateTextSpans(value.Runs, pageNumber, null);
             DocxWrappedTextLine[] lines = WrapTextLines(spans, firstWidth, nextWidth, size, textMeasurer,
@@ -612,7 +612,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, null);
         if (textSpans.Count != 0)
         {
-            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, fixedScale);
+            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, fixedScale, defaultTabStopPoints);
             double firstParagraphWidth = Math.Max(1d, availableWidth - textStartOffset - GetParagraphRightInset(paragraph, fixedScale));
             double continuationParagraphWidth = Math.Max(1d, availableWidth - GetParagraphTextStartOffset(paragraph, fixedScale) - GetParagraphRightInset(paragraph, fixedScale));
             height += WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans)).Count() * lineHeight;
@@ -652,7 +652,7 @@ internal sealed partial class DocxLayoutEngine
         return Math.Max(0d, left + firstLine) * fixedScale;
     }
 
-    private static double GetParagraphFirstLineTextStartOffset(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer textMeasurer, double fixedScale)
+    private static double GetParagraphFirstLineTextStartOffset(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer textMeasurer, double fixedScale, double defaultTabStopPoints)
     {
         if (paragraph.ListLabel is null)
         {
@@ -673,18 +673,20 @@ internal sealed partial class DocxLayoutEngine
         if (IsNumberingTabSuffix(paragraph.ListLabel))
         {
             double textStart = GetParagraphTextStartOffset(paragraph, fixedScale);
-            return Math.Max(textStart, GetNumberingTabPosition() ?? 0d);
+            double preferred = Math.Max(textStart, GetNumberingTabPosition() ?? 0d);
+            if (paragraph.ListLabel.NumberingChange is null) return preferred;
+            double prefixEnd = GetParagraphLabelStartOffset(paragraph, fixedScale) +
+                MeasureListLabel(paragraph.ListLabel, paragraph.Runs.FirstOrDefault(), fontSize, textMeasurer);
+            return prefixEnd < preferred - .001d ? preferred : Math.Max(preferred,
+                ResolveNextTabStop(prefixEnd, ScaleTabStopPositions(paragraph.TabStops, fixedScale),
+                    defaultTabStopPoints * fixedScale).PositionPoints);
         }
 
         double gap = IsNumberingSpaceSuffix(paragraph.ListLabel)
             ? textMeasurer.MeasureText(paragraph.Runs.FirstOrDefault(), " ", fontSize)
             : 0d;
-        DocxTextRun labelRun = CreateListLabelRun(paragraph.ListLabel, paragraph.Runs.FirstOrDefault(), fontSize);
-        return Math.Max(
-            0d,
-            GetParagraphLabelStartOffset(paragraph, fixedScale) +
-                textMeasurer.MeasureText(labelRun, paragraph.ListLabel.Text, labelRun.EffectiveProperties.FontSize) +
-                gap);
+        return Math.Max(0d, GetParagraphLabelStartOffset(paragraph, fixedScale) +
+            MeasureListLabel(paragraph.ListLabel, paragraph.Runs.FirstOrDefault(), fontSize, textMeasurer) + gap);
 
         double? GetNumberingTabPosition()
         {
@@ -813,75 +815,91 @@ internal sealed partial class DocxLayoutEngine
         }
 
         string text = firstLine && paragraph.ListLabel is not null
-            ? paragraph.ListLabel.Text + GetListLabelTextSeparator(paragraph.ListLabel) + line.Text
+            ? paragraph.ListLabel.DisplayText + GetListLabelTextSeparator(paragraph.ListLabel) + line.Text
             : line.Text;
         return new DocxParagraphLineShape(text, effectiveX, effectiveWidth, segments);
 
         IReadOnlyList<DocxTextSegmentLayout> CreateNumberedLineSegments(DocxListLabel label, IReadOnlyList<DocxTextSpan> lineSpans, DocxTextRun styleRun)
         {
-            var numberedSegments = CreateListLabelSegments(label, styleRun, fontSize, labelX, textMeasurer).ToList();
+            var numberedSegments = CreateListLabelSegments(label, styleRun, fontSize, labelX, textMeasurer, lineX).ToList();
             numberedSegments.AddRange(CreateTextSegments(lineSpans, lineX, fontSize, textMeasurer, tabStops, defaultTabStopPoints));
             return numberedSegments;
         }
     }
 
     private static IReadOnlyList<DocxTextSegmentLayout> CreateListLabelSegments(
-        DocxListLabel label, DocxTextRun styleRun, double fontSize, double labelX, IDocxTextMeasurer textMeasurer)
+        DocxListLabel label, DocxTextRun styleRun, double fontSize, double labelX,
+        IDocxTextMeasurer textMeasurer, double textStartX)
     {
         DocxTextRun labelRun = CreateListLabelRun(label, styleRun, fontSize);
-        double labelFontSize = labelRun.EffectiveProperties.FontSize;
-        double labelWidth = textMeasurer.MeasureText(labelRun, label.Text, labelFontSize);
-        DocxTextEmissionPlan labelPlan = DocxTextEmissionPlanner.CreateForListLabel(labelRun, label);
-        var numberedSegments = new List<DocxTextSegmentLayout>
+        var segments = new List<DocxTextSegmentLayout>();
+        double cursor = labelX;
+        if (label.NumberingChange is { } change)
+            AddLabel(CreatePreviousListLabelRun(labelRun, change.PreviousText), DocxTextSegmentRole.NumberingChange);
+        AddLabel(labelRun, label.NumberingChange is null ? DocxTextSegmentRole.ListLabel : DocxTextSegmentRole.NumberingChange);
+        if (!label.SuffixValue.Equals("nothing", StringComparison.OrdinalIgnoreCase))
         {
-            new(
-                label.Text,
-                labelRun,
-                labelX,
-                labelWidth,
-                labelFontSize,
-                PdfCharacterSpacing: labelPlan.PdfCharacterSpacing,
-                PdfCharacterSpacingSource: labelPlan.PdfCharacterSpacingSource,
-                CompensatePdfCharacterSpacing: labelPlan.CompensatePdfCharacterSpacing,
-                SourceTextRunIndex: -1,
-                BaselineOffsetY: 0d,
-                SourceTextOffsetInRun: 0,
-                Role: DocxTextSegmentRole.ListLabel)
-        };
-
-        string GetListLabelPdfSeparator(DocxListLabel label)
-        {
-            return label.SuffixValue.Equals("nothing", StringComparison.OrdinalIgnoreCase) ? string.Empty : " ";
+            bool ownsReviewPrefix = label.NumberingChange is not null ||
+                label.DecorationSource is { Revision.Kind: DocxRevisionKind.Insertion, Underline: true };
+            DocxTextRun separatorRun = ownsReviewPrefix ? labelRun : ResolveListLabelBaseRun(label, styleRun)!;
+            double separatorSize = separatorRun.EffectiveProperties.FontSize;
+            double width = textMeasurer.MeasureText(separatorRun, " ", separatorSize);
+            if (ownsReviewPrefix) width = Math.Max(0d, textStartX - cursor);
+            segments.Add(new(" ", separatorRun, cursor, width, separatorSize,
+                SourceTextRunIndex: -1, BaselineOffsetY: 0d, PdfCharacterSpacing: 0d,
+                PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None,
+                CompensatePdfCharacterSpacing: true, SourceTextOffsetInRun: 0,
+                Role: label.NumberingChange is null ? DocxTextSegmentRole.ListSeparator : DocxTextSegmentRole.NumberingChange));
         }
+        return segments;
 
-        string separator = GetListLabelPdfSeparator(label);
-        if (separator.Length != 0)
+        void AddLabel(DocxTextRun run, DocxTextSegmentRole role)
         {
-            DocxTextRun separatorRun = ResolveListLabelBaseRun(label, styleRun)!;
-            double separatorFontSize = separatorRun.EffectiveProperties.FontSize;
-            double separatorX = labelX + labelWidth;
-            double separatorWidth = textMeasurer.MeasureText(separatorRun, separator, separatorFontSize);
-            numberedSegments.Add(new DocxTextSegmentLayout(separator, separatorRun, separatorX, separatorWidth, separatorFontSize, SourceTextRunIndex: -1, BaselineOffsetY: 0d, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, SourceTextOffsetInRun: 0, Role: DocxTextSegmentRole.ListSeparator));
+            double size = run.EffectiveProperties.FontSize;
+            double width = textMeasurer.MeasureText(run, run.Text, size);
+            var plan = DocxTextEmissionPlanner.CreateForListLabel(run, label);
+            segments.Add(new(run.Text, run, cursor, width, size,
+                PdfCharacterSpacing: plan.PdfCharacterSpacing, PdfCharacterSpacingSource: plan.PdfCharacterSpacingSource,
+                CompensatePdfCharacterSpacing: plan.CompensatePdfCharacterSpacing, SourceTextRunIndex: -1,
+                BaselineOffsetY: 0d, SourceTextOffsetInRun: 0, Role: role));
+            cursor += width;
         }
-
-        return numberedSegments;
     }
 
     private static double MeasureListLabel(DocxListLabel label, DocxTextRun? baseRun, double fontSize, IDocxTextMeasurer textMeasurer)
     {
-        DocxTextRun labelRun = CreateListLabelRun(label, baseRun, fontSize);
-        return textMeasurer.MeasureText(labelRun, label.Text, labelRun.EffectiveProperties.FontSize);
+        DocxTextRun run = CreateListLabelRun(label, baseRun, fontSize);
+        double width = textMeasurer.MeasureText(run, label.Text, run.EffectiveProperties.FontSize);
+        if (label.NumberingChange is { } change)
+        {
+            var previous = CreatePreviousListLabelRun(run, change.PreviousText);
+            width += textMeasurer.MeasureText(previous, previous.Text, previous.EffectiveProperties.FontSize);
+        }
+        return width;
     }
+
+    internal static DocxTextRun CreatePreviousListLabelRun(DocxTextRun run, string text) => run with
+    {
+        Text = text, Underline = false, UnderlineValue = null, UnderlineColorHex = null,
+        Strike = true, StrikeValue = "true", DoubleStrike = false, DoubleStrikeValue = null,
+        Revision = null, Revisions = []
+    };
 
     internal static DocxTextRun CreateListLabelRun(DocxListLabel label, DocxTextRun? baseRun, double fontSize)
     {
         // Typeface slots belong to the resolved label, including absent slots.
         // Merging them with the first text run would leak its direct formatting
         // into otherwise inherited or theme-based numbering faces.
-        return label.Style.ApplyTo(ResolveListLabelBaseRun(label, baseRun), label.Text, fontSize) with
+        var run = label.Style.ApplyTo(ResolveListLabelBaseRun(label, baseRun), label.Text, fontSize) with
         {
             FontFamily = label.Style.FontFamily,
             Fonts = label.Style.Fonts
+        };
+        return label.NumberingChange is null ? run : run with
+        {
+            Underline = true, UnderlineValue = "single", UnderlineColorHex = null,
+            Strike = false, StrikeValue = null, DoubleStrike = false, DoubleStrikeValue = null,
+            Revision = null, Revisions = []
         };
     }
 

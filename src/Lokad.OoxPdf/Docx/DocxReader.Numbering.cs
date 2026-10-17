@@ -47,7 +47,8 @@ internal sealed partial class DocxReader
     }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
-    private static DocxListLabel? CreateListLabel(XElement? paragraphProperties, DocxNumberingSet numbering, Dictionary<(string NumId, int Level), int> counters, DocxStyleSet styles, string? paragraphStyleId, DocxTableCellStyle? tableCellStyle, DocxResolvedRunProperties paragraphMarkRun)
+    private static DocxListLabel? CreateListLabel(XElement? paragraphProperties, DocxNumberingSet numbering, DocxNumberingCounters counters, DocxStyleSet styles, string? paragraphStyleId, DocxTableCellStyle? tableCellStyle, DocxResolvedRunProperties paragraphMarkRun,
+        bool trackOriginal, bool? originalIncluded, DocxRevisionInfo? markInsertion)
     {
         XElement? numberingProperties = paragraphProperties?.Element(WordprocessingNamespace + "numPr");
         string? numId = (string?)numberingProperties?
@@ -80,18 +81,58 @@ internal sealed partial class DocxReader
             return new DocxListLabel(bulletText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, labelStyle);
         }
 
-        var key = (numId, level);
         int start = numbering.StartOverrides.TryGetValue((numId, level), out int overriddenStart)
             ? overriddenStart
             : numberingLevel.Start;
-        counters[key] = counters.TryGetValue(key, out int current) ? current + 1 : start;
-        foreach (var resetKey in counters.Keys.Where(k => k.NumId == numId && k.Level > level).ToArray())
+        var change = counters.Advance(numId, level, start, numberingLevel.Text,
+            trackOriginal, originalIncluded, markInsertion);
+        string labelText = ResolveNumberingLevelText(numberingLevel.Text, numId, counters.Current);
+        return new DocxListLabel(labelText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, labelStyle)
         {
-            counters.Remove(resetKey);
+            NumberingChange = change
+        };
+    }
+
+    // One state per source story, shared with its tables. Original counters are
+    // allocated only when an inserted numbered mark makes the timelines differ.
+    private sealed class DocxNumberingCounters
+    {
+        public Dictionary<(string NumId, int Level), int> Current { get; } = new();
+        private Dictionary<(string NumId, int Level), int>? original;
+        private Dictionary<string, DocxRevisionInfo>? triggers;
+        private HashSet<string>? unsupportedOriginalLists;
+
+        public DocxNumberingChange? Advance(string numId, int level, int start, string pattern,
+            bool trackOriginal, bool? originalIncluded, DocxRevisionInfo? insertion)
+        {
+            if (trackOriginal)
+            {
+                if (originalIncluded is null)
+                    (unsupportedOriginalLists ??= new(StringComparer.Ordinal)).Add(numId);
+                else if (insertion is not null && unsupportedOriginalLists?.Contains(numId) != true)
+                {
+                    original ??= new(Current);
+                    (triggers ??= new(StringComparer.Ordinal))[numId] = insertion;
+                }
+            }
+            AdvanceCounter(Current, numId, level, start);
+            if (!trackOriginal || original is null) return null;
+            if (originalIncluded == true) AdvanceCounter(original, numId, level, start);
+            if (originalIncluded != true || unsupportedOriginalLists?.Contains(numId) == true ||
+                triggers is null || !triggers.TryGetValue(numId, out var trigger)) return null;
+            string previous = ResolveNumberingLevelText(pattern, numId, original);
+            string current = ResolveNumberingLevelText(pattern, numId, Current);
+            return previous == current ? null : new(previous, trigger);
         }
 
-        string labelText = ResolveNumberingLevelText(numberingLevel.Text, numId, counters);
-        return new DocxListLabel(labelText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, labelStyle);
+        private static void AdvanceCounter(Dictionary<(string NumId, int Level), int> values,
+            string numId, int level, int start)
+        {
+            var key = (numId, level);
+            values[key] = values.TryGetValue(key, out int value) ? value + 1 : start;
+            foreach (var child in values.Keys.Where(k => k.NumId == numId && k.Level > level).ToArray())
+                values.Remove(child);
+        }
     }
 
     private const double WordListLabelFallbackMaxPoints = 12d;

@@ -124,10 +124,12 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
         if (paragraph.ListLabel is not null)
         {
             DocxTextRun? firstRun = paragraph.Runs.FirstOrDefault();
-            yield return DocxLayoutEngine.CreateListLabelRun(
-                paragraph.ListLabel,
-                firstRun,
+            var labelRun = DocxLayoutEngine.CreateListLabelRun(
+                paragraph.ListLabel, firstRun,
                 firstRun?.EffectiveProperties.FontSize ?? DocxDefaults.FontSizePoints);
+            yield return labelRun;
+            if (paragraph.ListLabel.NumberingChange is { } change)
+                yield return DocxLayoutEngine.CreatePreviousListLabelRun(labelRun, change.PreviousText);
         }
     }
 

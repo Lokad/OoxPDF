@@ -1,0 +1,255 @@
+[
+  {
+    "Id": "numbering-mark-plain-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-mark-plain-body.docx",
+    "Sha256": "0EBD724796782501956C5A8062541C4EB61600A04C7A9C1B2E286FFAB4D6EA53",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "Kind": "plain",
+    "Story": "body",
+    "ExpectedEquationCount": 1,
+    "SelectedSourceEquations": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-mark-plain-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-mark-plain-cell.docx",
+    "Sha256": "793CAB9C98FCFF98A3A00C6CE8202A6C8FCCA4E5DEC318E7C1221D92CDC69641",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "Kind": "plain",
+    "Story": "cell",
+    "ExpectedEquationCount": 1,
+    "SelectedSourceEquations": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-mark-plain-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-mark-plain-header.docx",
+    "Sha256": "3CADEDED5191FA6CA2FD845BBF29960C8AB516DACBCBCC9E75E6029B1F101695",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "Kind": "plain",
+    "Story": "header",
+    "ExpectedEquationCount": 0,
+    "SelectedSourceEquations": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "list-decoration-mark-inserted",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/list-decoration-mark-inserted.docx",
+    "Sha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "Kind": "plain",
+    "Story": "footer",
+    "ExpectedEquationCount": 1,
+    "SelectedSourceEquations": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-mark-math-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-mark-math-body.docx",
+    "Sha256": "68FA15BAC620CCAF8900B80D49C32AF2CABE159DB87ED942EFE91E506F481DC5",
+    "SourceSha256": "6C8D5E61DCF547222CBC8373D2F57246D327CA7FE115009EC7FDF684D861C1D5",
+    "Kind": "math",
+    "Story": "body",
+    "ExpectedEquationCount": 5,
+    "SelectedSourceEquations": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-mark-math-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-mark-math-cell.docx",
+    "Sha256": "6E2C63D8C99903BA5CE4D2E93F5D53A633E6996D0D9E6E347A495CAF05C8C5EF",
+    "SourceSha256": "CD154F9695594985FEF82FC5C6F34021AFD07E9D25BE160F34C53E899E3110F4",
+    "Kind": "math",
+    "Story": "cell",
+    "ExpectedEquationCount": 5,
+    "SelectedSourceEquations": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-mark-math-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-mark-math-header.docx",
+    "Sha256": "6F00A4FCBC2204AEB333A2A7B80B3D0D74A4E063163614861BB9EDF19623D569",
+    "SourceSha256": "EFBBA4E653CA704936159ED3AA7F8EF68DBCCB5355A505B17888BA3E4C0ED8E2",
+    "Kind": "math",
+    "Story": "header",
+    "ExpectedEquationCount": 4,
+    "SelectedSourceEquations": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-mark-math-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-mark-math-footer.docx",
+    "Sha256": "7A7625608D331940F59B6E073D4E93BD818761844CBE269B1F2B3FD0A17DB2A1",
+    "SourceSha256": "377B83EBD37BAB7A16E493EC8BA725A28C8C7194E998E6547AEF3BA8D61A98CD",
+    "Kind": "math",
+    "Story": "footer",
+    "ExpectedEquationCount": 5,
+    "SelectedSourceEquations": 4,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-mark-decoration-mark-red-double",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-mark-decoration-mark-red-double.docx",
+    "Sha256": "BB697546127EC42EF7E98B70FE10C996CD83BF7328633531F78F2C4726C4EFA4",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "Kind": "plain",
+    "Story": "footer",
+    "ExpectedEquationCount": 1,
+    "SelectedSourceEquations": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-mark-decoration-level-green-none",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-mark-decoration-level-green-none.docx",
+    "Sha256": "0D094FB02A087C6D2E82A125687A16BE072A80E24ACBDCDFB35AF434B5899C3A",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "Kind": "plain",
+    "Story": "footer",
+    "ExpectedEquationCount": 1,
+    "SelectedSourceEquations": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-mark-decoration-level-green-double",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-mark-decoration-level-green-double.docx",
+    "Sha256": "10221163CC0C93D465B7D464F99257A7D79CA8A31C18566DC869F3FB734FFF99",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "Kind": "plain",
+    "Story": "footer",
+    "ExpectedEquationCount": 1,
+    "SelectedSourceEquations": 0,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-second-mark",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-second-mark.docx",
+    "Sha256": "D1CA8848E5B0DFC16FBA46014C624239936E07122A5FC238A589F167CEF197EA",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-two-marks",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-two-marks.docx",
+    "Sha256": "AB0B1729AA8250F7363FD58BC2CA7156342401B1C569429E108E309A5E6E4FA1",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-start-nine",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-start-nine.docx",
+    "Sha256": "60ED4EE844DAAC5A18022599F7FAB1F748D9093932348878597515F00395A7A9",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-space-suffix",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-space-suffix.docx",
+    "Sha256": "FFF77E819AE38ADB388016B81967CD002DBA60CB36D51CBF70EC97D30378EFA3",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-nothing-suffix",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-nothing-suffix.docx",
+    "Sha256": "F2FADB76663C1EB6EC1B28371790645BEF55621541B33E6AE10973BA5EA5139B",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-custom-tab",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-custom-tab.docx",
+    "Sha256": "FFACD291E29FBBCF738C86374E5C0105DBEE853A02EB6C58BA4AF79B65056155",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-independent-list",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-independent-list.docx",
+    "Sha256": "0C386B7488592DB125BA128AD74A11626FF3D7A00E31693D55EB4385CD9F46DD",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-custom-tab-wide",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-custom-tab-wide.docx",
+    "Sha256": "72E91544A552557CF926F313E8436B2E6A50BBDA06D5A02E71C57F2C1EDA5631",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-restart-list",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-restart-list.docx",
+    "Sha256": "4065EBC3F08A4A43756DD726220AE0D1513F946BF7FC4B4890AA4199B1B19002",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]

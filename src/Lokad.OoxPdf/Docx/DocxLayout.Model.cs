@@ -132,6 +132,8 @@ internal enum DocxTextSegmentRole
     Text,
     ListLabel,
     ListSeparator,
+    // Derived original/current counter ink, not an authored text revision.
+    NumberingChange,
     // Break-adjacent spacing rows retain their placement identity.
     BreakSpill
 }

@@ -1,0 +1,2341 @@
+{
+  "Source": "Independent Word 16; original/current numeric paints and paragraph starts, clean Final and visible Review. Two concrete-ID continuation outcomes remain explicitly unqualified.",
+  "Rows": [
+    {
+      "Id": "numbering-mark-plain-body",
+      "File": "numbering-mark-plain-body.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "0EBD724796782501956C5A8062541C4EB61600A04C7A9C1B2E286FFAB4D6EA53",
+      "ReferencePdfSha256": "C3EA144F78759F203A72999E4BD527A3C55676734A2A6D6E34433644FDC75A9E",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 690.1,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 690.1,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 690.1,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 670.66,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 670.66,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 670.66,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 651.22,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 651.22,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 651.22,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-plain-body",
+      "File": "numbering-mark-plain-body.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "0EBD724796782501956C5A8062541C4EB61600A04C7A9C1B2E286FFAB4D6EA53",
+      "ReferencePdfSha256": "157D1664A91536E688FDD674122484C906816F649C9E7051EA6973F5B8CBB317",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 690.1,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 690.1,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 690.1,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 670.66,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 670.66,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 670.66,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 670.66,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 651.22,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 651.22,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 651.22,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 651.22,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-plain-cell",
+      "File": "numbering-mark-plain-cell.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "793CAB9C98FCFF98A3A00C6CE8202A6C8FCCA4E5DEC318E7C1221D92CDC69641",
+      "ReferencePdfSha256": "504CF54F150EF92324BC19EFF68A97FCE905C0817B2C0AA465C0783F247A58A4",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 690.1,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 690.1,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 690.1,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 670.66,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 670.66,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 670.66,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 651.22,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 651.22,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 651.22,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-plain-cell",
+      "File": "numbering-mark-plain-cell.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "793CAB9C98FCFF98A3A00C6CE8202A6C8FCCA4E5DEC318E7C1221D92CDC69641",
+      "ReferencePdfSha256": "70D7D7CB0778FAF343C1E730B9B6D0990EACC80C8B19E739E0ACC4F01AA8A240",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 690.1,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 690.1,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 690.1,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 670.66,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 670.66,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 670.66,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 670.66,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 651.22,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 651.22,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 651.22,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 651.22,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-plain-header",
+      "File": "numbering-mark-plain-header.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "3CADEDED5191FA6CA2FD845BBF29960C8AB516DACBCBCC9E75E6029B1F101695",
+      "ReferencePdfSha256": "92A589E4DBBF3B6368410884A0C79298030E6274E1FCBF7BBCF5FD1E6483A802",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 745.56,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 745.56,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 745.56,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 726.12,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 726.12,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 726.12,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 706.66,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 706.66,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 706.66,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-plain-header",
+      "File": "numbering-mark-plain-header.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "3CADEDED5191FA6CA2FD845BBF29960C8AB516DACBCBCC9E75E6029B1F101695",
+      "ReferencePdfSha256": "B2D5CB7AEE4848F41642B10F2E4077DD93AE3C616F15EF63A61BD19F5BB3371C",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 745.56,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 745.56,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 745.56,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 726.12,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 726.12,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 726.12,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 726.12,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 706.66,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 706.66,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 706.66,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 706.66,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "list-decoration-mark-inserted",
+      "File": "list-decoration-mark-inserted.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+      "ReferencePdfSha256": "D0CFA443B8D6079F2B4395228EA5B680574DF636EF7530B6C7DA1AE6516941BD",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "list-decoration-mark-inserted",
+      "File": "list-decoration-mark-inserted.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+      "ReferencePdfSha256": "70BF1D4A2FB3C43DFA7C57A62D2D61A16F32A0AC9870BE0F1F9F1951E9160CC8",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-math-body",
+      "File": "numbering-mark-math-body.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "68FA15BAC620CCAF8900B80D49C32AF2CABE159DB87ED942EFE91E506F481DC5",
+      "ReferencePdfSha256": "FC34AA4CC9C9B45B263415D3A3600FF6539B7C8CE80A2AF67790BECD99E19B2A",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 706.9,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 706.9,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 706.9,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 680.74,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 680.74,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 680.74,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 649.66,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 649.66,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 649.66,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-math-body",
+      "File": "numbering-mark-math-body.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "68FA15BAC620CCAF8900B80D49C32AF2CABE159DB87ED942EFE91E506F481DC5",
+      "ReferencePdfSha256": "2659A42F048C55EB76D8C0C0E8E893AAD0537A9B475AA7A8F0DE9268CE009CB1",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 632.06,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 54.6,
+              "Y": 632.06,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 68.256,
+          "TextY": 632.06,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 612.22,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 54.6,
+              "Y": 612.22,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 60.984,
+              "Y": 612.22,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 68.256,
+          "TextY": 612.22,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 588.65,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 54.6,
+              "Y": 588.65,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 60.984,
+              "Y": 588.65,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 68.256,
+          "TextY": 588.65,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-math-cell",
+      "File": "numbering-mark-math-cell.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "6E2C63D8C99903BA5CE4D2E93F5D53A633E6996D0D9E6E347A495CAF05C8C5EF",
+      "ReferencePdfSha256": "F48FC602F9BFAB78E47F00C044E89836C19CA555AB967A8BBD20BE2DDD4402DF",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 706.9,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 706.9,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 706.9,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 680.74,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 680.74,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 680.74,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 649.66,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 649.66,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 649.66,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-math-cell",
+      "File": "numbering-mark-math-cell.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6E2C63D8C99903BA5CE4D2E93F5D53A633E6996D0D9E6E347A495CAF05C8C5EF",
+      "ReferencePdfSha256": "71B532F731E70C88D2D068DE15327431C1AF115C359DEDF039D4AC698415E557",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 632.06,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 54.6,
+              "Y": 632.06,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 68.256,
+          "TextY": 632.06,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 612.22,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 54.6,
+              "Y": 612.22,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 60.984,
+              "Y": 612.22,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 68.256,
+          "TextY": 612.22,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 588.65,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 54.6,
+              "Y": 588.65,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 60.984,
+              "Y": 588.65,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 68.256,
+          "TextY": 588.65,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-math-header",
+      "File": "numbering-mark-math-header.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "6F00A4FCBC2204AEB333A2A7B80B3D0D74A4E063163614861BB9EDF19623D569",
+      "ReferencePdfSha256": "8594AB38578C46A9E3665673F22C6C99B99A9A820632E58F049BB29AE0B28142",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 742.92,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 742.92,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 742.92,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 716.76,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 716.76,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 716.76,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 685.66,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 685.66,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 685.66,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-math-header",
+      "File": "numbering-mark-math-header.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6F00A4FCBC2204AEB333A2A7B80B3D0D74A4E063163614861BB9EDF19623D569",
+      "ReferencePdfSha256": "42609831B48763A8988C9360F69026BCE221F33B308A5A11CE1BF69BD3FC098D",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 659.35,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 54.6,
+              "Y": 659.35,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 68.256,
+          "TextY": 659.35,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 639.53,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 54.6,
+              "Y": 639.53,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 60.984,
+              "Y": 639.53,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 68.256,
+          "TextY": 639.53,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 615.96,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 54.6,
+              "Y": 615.96,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 60.984,
+              "Y": 615.96,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 68.256,
+          "TextY": 615.96,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-math-footer",
+      "File": "numbering-mark-math-footer.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "7A7625608D331940F59B6E073D4E93BD818761844CBE269B1F2B3FD0A17DB2A1",
+      "ReferencePdfSha256": "6361FDE775FB833930D47ACE77E6C8CAE4AAD845D990382E8C9F6311A2A02B31",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 102.14,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 102.14,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 102.14,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 75.984,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 75.984,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 75.984,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-math-footer",
+      "File": "numbering-mark-math-footer.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "7A7625608D331940F59B6E073D4E93BD818761844CBE269B1F2B3FD0A17DB2A1",
+      "ReferencePdfSha256": "4AD8E272FEB6726BCA903B6440212D48E46BC41FBBE937775ECDAB3FB730102E",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 173.45,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 54.6,
+              "Y": 173.45,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 68.256,
+          "TextY": 173.45,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 153.6,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 54.6,
+              "Y": 153.6,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 60.984,
+              "Y": 153.6,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 68.256,
+          "TextY": 153.6,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 130.03,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 54.6,
+              "Y": 130.03,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 60.984,
+              "Y": 130.03,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 68.256,
+          "TextY": 130.03,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-decoration-mark-red-double",
+      "File": "numbering-mark-decoration-mark-red-double.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "BB697546127EC42EF7E98B70FE10C996CD83BF7328633531F78F2C4726C4EFA4",
+      "ReferencePdfSha256": "C7B95A3B97725ED022B2BEA6E9398EF701B1651BFABF970A41DB709E42EF7C97",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.667,0.133,0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-decoration-mark-red-double",
+      "File": "numbering-mark-decoration-mark-red-double.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "BB697546127EC42EF7E98B70FE10C996CD83BF7328633531F78F2C4726C4EFA4",
+      "ReferencePdfSha256": "A67FFC963E23700FFBB8F616C00CE5E0258C602AE02C945A4F43BEF4B3D7444D",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-decoration-level-green-none",
+      "File": "numbering-mark-decoration-level-green-none.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "0D094FB02A087C6D2E82A125687A16BE072A80E24ACBDCDFB35AF434B5899C3A",
+      "ReferencePdfSha256": "1F7B521875834D916B4C11BD7B8D3EA41D610A4BC43FA833D5905A8A2990B6FA",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0,0.533,0.267"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.533,0.267"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.533,0.267"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-decoration-level-green-none",
+      "File": "numbering-mark-decoration-level-green-none.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "0D094FB02A087C6D2E82A125687A16BE072A80E24ACBDCDFB35AF434B5899C3A",
+      "ReferencePdfSha256": "04D31276473F033273FD26B50A6E86541CD91ECF0ED84793F2A02AA231DFF0BB",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-decoration-level-green-double",
+      "File": "numbering-mark-decoration-level-green-double.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "10221163CC0C93D465B7D464F99257A7D79CA8A31C18566DC869F3FB734FFF99",
+      "ReferencePdfSha256": "24A94AA265447DC511961E67164095F58361314E961C74EA6A215000AC28B64C",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0,0.533,0.267"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.533,0.267"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.533,0.267"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-mark-decoration-level-green-double",
+      "File": "numbering-mark-decoration-level-green-double.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "10221163CC0C93D465B7D464F99257A7D79CA8A31C18566DC869F3FB734FFF99",
+      "ReferencePdfSha256": "CE5F16632997DACDC90AB357A4E162A61EECD47347EE9D2B1DAB51A530979250",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-second-mark",
+      "File": "numbering-counter-second-mark.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "D1CA8848E5B0DFC16FBA46014C624239936E07122A5FC238A589F167CEF197EA",
+      "ReferencePdfSha256": "E1E78BB57BAA0C92A725780FE8F15D390C549FE4D07C688D73489DB6F6782302",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-second-mark",
+      "File": "numbering-counter-second-mark.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "D1CA8848E5B0DFC16FBA46014C624239936E07122A5FC238A589F167CEF197EA",
+      "ReferencePdfSha256": "7B7C3B9AF6A17D1BC49788F4E5094D8BD40CD3E840CC9CBBACD6A4BD787ED6CB",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-two-marks",
+      "File": "numbering-counter-two-marks.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "AB0B1729AA8250F7363FD58BC2CA7156342401B1C569429E108E309A5E6E4FA1",
+      "ReferencePdfSha256": "867C37588EA57562E77609D4659B0FFFCBFBC74B7EF0EB1BDFF20B5533944AC2",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-two-marks",
+      "File": "numbering-counter-two-marks.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "AB0B1729AA8250F7363FD58BC2CA7156342401B1C569429E108E309A5E6E4FA1",
+      "ReferencePdfSha256": "0B62202EA5069C4DCD3F4D087DA3743A5C4DB61CD389D4F7CF13DC8D8BBB4B7C",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-start-nine",
+      "File": "numbering-counter-start-nine.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "60ED4EE844DAAC5A18022599F7FAB1F748D9093932348878597515F00395A7A9",
+      "ReferencePdfSha256": "B0E66B7344EBA918F2196A0B355B2A12AF4CEA5ECA94EEC59BE50BA6F6D711F4",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "9.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "10.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "11.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-start-nine",
+      "File": "numbering-counter-start-nine.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "60ED4EE844DAAC5A18022599F7FAB1F748D9093932348878597515F00395A7A9",
+      "ReferencePdfSha256": "EA075A3BEE4422FE9A99F603B495AAF4AF566BADC9F30F086E2E3AE2B8CFCF4B",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "9.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "9.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "10.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 108.02,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "10.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "11.",
+              "X": 86.064,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 108.02,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-space-suffix",
+      "File": "numbering-counter-space-suffix.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "FFF77E819AE38ADB388016B81967CD002DBA60CB36D51CBF70EC97D30378EFA3",
+      "ReferencePdfSha256": "3BA560CA3CBDA5930808D2E824D81EDE7DCF76F46D4411E7113CBA7694F242B1",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 83.424,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 83.424,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 83.424,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-space-suffix",
+      "File": "numbering-counter-space-suffix.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "FFF77E819AE38ADB388016B81967CD002DBA60CB36D51CBF70EC97D30378EFA3",
+      "ReferencePdfSha256": "FC7CCF0E0D1999D86DAEDD387989DDE1CDCD829FB05377D2602A2E5D4C7EB674",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 83.424,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 91.824,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 91.824,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-nothing-suffix",
+      "File": "numbering-counter-nothing-suffix.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "F2FADB76663C1EB6EC1B28371790645BEF55621541B33E6AE10973BA5EA5139B",
+      "ReferencePdfSha256": "9D523E4CAB990FD4F7C3FFF5311783644A15E2D89F9F3CBB12FEBCE7B467477D",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 80.424,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 80.424,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 80.424,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-nothing-suffix",
+      "File": "numbering-counter-nothing-suffix.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F2FADB76663C1EB6EC1B28371790645BEF55621541B33E6AE10973BA5EA5139B",
+      "ReferencePdfSha256": "06DE7FF6EA115899506FA39B4B5E7EE4EC207DBD17AA6AC93E1FD7A97C9E91FF",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 80.424,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 88.704,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 88.704,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-custom-tab",
+      "File": "numbering-counter-custom-tab.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "FFACD291E29FBBCF738C86374E5C0105DBEE853A02EB6C58BA4AF79B65056155",
+      "ReferencePdfSha256": "A9637FA6867D59792067366F494D5190F94B0EE14BE4B7F92B9FED9388FC5990",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-custom-tab",
+      "File": "numbering-counter-custom-tab.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "FFACD291E29FBBCF738C86374E5C0105DBEE853A02EB6C58BA4AF79B65056155",
+      "ReferencePdfSha256": "254C2BC32E695B30D889986C59B0E0BF6378C95D632A32FE2A0D8BFADD183734",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-independent-list",
+      "File": "numbering-counter-independent-list.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "0C386B7488592DB125BA128AD74A11626FF3D7A00E31693D55EB4385CD9F46DD",
+      "ReferencePdfSha256": "91FE5B4B7927DA84BFD92CD9D5FB103C22CD4A736D88C4EAF50B7980F4E044DF",
+      "QualifiesInsertedMarkTimeline": false,
+      "Scope": "Deferred inherited concrete-ID continuation defect; both raw Word outcomes retained",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "3.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-independent-list",
+      "File": "numbering-counter-independent-list.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "0C386B7488592DB125BA128AD74A11626FF3D7A00E31693D55EB4385CD9F46DD",
+      "ReferencePdfSha256": "0083025BDBF022E013BAC51FAF03B0098086A9AAC03051B31228EBB4557B5508",
+      "QualifiesInsertedMarkTimeline": false,
+      "Scope": "Deferred inherited concrete-ID continuation defect; both raw Word outcomes retained",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "2.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "3.",
+              "X": 80.424,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-custom-tab-wide",
+      "File": "numbering-counter-custom-tab-wide.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "72E91544A552557CF926F313E8436B2E6A50BBDA06D5A02E71C57F2C1EDA5631",
+      "ReferencePdfSha256": "96A835A038403E74597A504590E5D48391309687234276C37CC80A562F9C643D",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "9.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "10.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "11.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-custom-tab-wide",
+      "File": "numbering-counter-custom-tab-wide.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "72E91544A552557CF926F313E8436B2E6A50BBDA06D5A02E71C57F2C1EDA5631",
+      "ReferencePdfSha256": "DD1E8868390DA58A9FC22EADE25F0942D774B9ADDFC5AA0589E25A0B24EB0539",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "9.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "9.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "10.",
+              "X": 80.424,
+              "Y": 64.344,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 96.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "10.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            },
+            {
+              "Text": "11.",
+              "X": 86.064,
+              "Y": 44.904,
+              "Fill": "rg:0,0.471,0.831"
+            }
+          ],
+          "TextX": 120.02,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-restart-list",
+      "File": "numbering-counter-restart-list.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "4065EBC3F08A4A43756DD726220AE0D1513F946BF7FC4B4890AA4199B1B19002",
+      "ReferencePdfSha256": "E09813759DCE500EEEED248F4B4EDFFB112A0F2605B86C82487A6906B4E1D7F6",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "9.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    },
+    {
+      "Id": "numbering-counter-restart-list",
+      "File": "numbering-counter-restart-list.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "4065EBC3F08A4A43756DD726220AE0D1513F946BF7FC4B4890AA4199B1B19002",
+      "ReferencePdfSha256": "E1388E7F364A7C486FCA683D01B9CEFBF20B7B42B44C1188AC5837617F277BCB",
+      "QualifiesInsertedMarkTimeline": true,
+      "Scope": "Inserted mark timeline",
+      "Paragraphs": [
+        {
+          "Y": 83.784,
+          "Paints": [
+            {
+              "Text": "9.",
+              "X": 72.024,
+              "Y": 83.784,
+              "Fill": "rg:0.82,0.204,0.22"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 83.784,
+          "TextPrefix": "Summary"
+        },
+        {
+          "Y": 64.344,
+          "Paints": [
+            {
+              "Text": "1.",
+              "X": 72.024,
+              "Y": 64.344,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 64.344,
+          "TextPrefix": "The two"
+        },
+        {
+          "Y": 44.904,
+          "Paints": [
+            {
+              "Text": "2.",
+              "X": 72.024,
+              "Y": 44.904,
+              "Fill": "g:0"
+            }
+          ],
+          "TextX": 90.024,
+          "TextY": 44.904,
+          "TextPrefix": "The trend"
+        }
+      ]
+    }
+  ]
+}

@@ -2324,7 +2324,7 @@ internal sealed partial class DocxLayoutEngine
                 double size = GetParagraphFontSize(paragraph);
                 double lineHeight = ResolveLineHeightProfile(paragraph, size, textMeasurer, selectMaxAcrossRuns: true).LineHeight;
                 double baseline = ResolveRelatedStoryBaselineOffset(paragraph, size, lineHeight, textMeasurer, DocxStoryId.Related(story.Kind).Kind);
-                double firstInset = GetParagraphFirstLineTextStartOffset(paragraph, size, textMeasurer, paragraphSpacingScale);
+                double firstInset = GetParagraphFirstLineTextStartOffset(paragraph, size, textMeasurer, paragraphSpacingScale, defaultTabStopPoints);
                 double nextInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
                 double rightInset = GetParagraphRightInset(paragraph, paragraphSpacingScale);
                 if (TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, size,

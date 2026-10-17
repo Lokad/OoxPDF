@@ -66,7 +66,7 @@ internal sealed partial class DocxRenderer
                 : color;
             double ResolveRevisionDecorationWidth()
             {
-                if (!useWordCompatibleRevisionDecorationProfile ||
+                if (!useWordCompatibleRevisionDecorationProfile || segment.Role != DocxTextSegmentRole.Text ||
                     !HasInsertionLikeRevisionKind(segment.StyleRun) ||
                     segment.Text.EnumerateRunes().Count() > 8)
                 {
@@ -254,7 +254,7 @@ internal sealed partial class DocxRenderer
                 RgbColor textColor = ResolveTextEmissionColor(
                     emissionStyleRun,
                     useWordCompatibleTextProfile,
-                    ReadColor(emissionEffective.ColorHex));
+                    ReadColor(emissionEffective.ColorHex), segment.Role);
                 string emittedText = ResolveStaticFieldPlaceholders(emissionStyleRun, part.Text, pageNumber, pageCount);
                 double emittedWidth = ResolveSubstitutedFieldEmissionWidth(part.Text, emittedText, emissionStyleRun, fontSize, fontResources.TextMeasurer, part.Width);
                 AddEmissionSegmentWithFontFallback(emissionSegments, new DocxTextEmissionSegment(
@@ -357,7 +357,7 @@ internal sealed partial class DocxRenderer
             RgbColor color = ResolveTextEmissionColor(
                 segment.StyleRun,
                 useWordCompatibleTextProfile,
-                ReadColor(effective.ColorHex));
+                ReadColor(effective.ColorHex), segment.Role);
             emissionSegments.Add(new DocxTextEmissionSegment(
                 " ",
                 segment.StyleRun,
@@ -387,8 +387,10 @@ internal sealed partial class DocxRenderer
     private static RgbColor ResolveTextEmissionColor(
         DocxTextRun styleRun,
         bool useWordCompatibleTextProfile,
-        RgbColor fallbackColor)
+        RgbColor fallbackColor, DocxTextSegmentRole role)
     {
+        if (role == DocxTextSegmentRole.NumberingChange)
+            return useWordCompatibleTextProfile ? new RgbColor(0, 120, 212) : new RgbColor(0, 0, 255);
         if (!useWordCompatibleTextProfile || !HasTextContentRevision(styleRun))
         {
             return fallbackColor;

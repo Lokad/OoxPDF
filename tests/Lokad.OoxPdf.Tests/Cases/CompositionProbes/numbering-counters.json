@@ -1,0 +1,101 @@
+[
+  {
+    "Id": "numbering-counter-second-mark",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-second-mark.docx",
+    "Sha256": "D1CA8848E5B0DFC16FBA46014C624239936E07122A5FC238A589F167CEF197EA",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-two-marks",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-two-marks.docx",
+    "Sha256": "AB0B1729AA8250F7363FD58BC2CA7156342401B1C569429E108E309A5E6E4FA1",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-start-nine",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-start-nine.docx",
+    "Sha256": "60ED4EE844DAAC5A18022599F7FAB1F748D9093932348878597515F00395A7A9",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-space-suffix",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-space-suffix.docx",
+    "Sha256": "FFF77E819AE38ADB388016B81967CD002DBA60CB36D51CBF70EC97D30378EFA3",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-nothing-suffix",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-nothing-suffix.docx",
+    "Sha256": "F2FADB76663C1EB6EC1B28371790645BEF55621541B33E6AE10973BA5EA5139B",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-custom-tab",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-custom-tab.docx",
+    "Sha256": "FFACD291E29FBBCF738C86374E5C0105DBEE853A02EB6C58BA4AF79B65056155",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-independent-list",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-independent-list.docx",
+    "Sha256": "0C386B7488592DB125BA128AD74A11626FF3D7A00E31693D55EB4385CD9F46DD",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-custom-tab-wide",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-custom-tab-wide.docx",
+    "Sha256": "72E91544A552557CF926F313E8436B2E6A50BBDA06D5A02E71C57F2C1EDA5631",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "numbering-counter-restart-list",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/numbering-counter-restart-list.docx",
+    "Sha256": "4065EBC3F08A4A43756DD726220AE0D1513F946BF7FC4B4890AA4199B1B19002",
+    "SourceSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+    "ExpectedEquationCount": 1,
+    "HeldOut": false,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]

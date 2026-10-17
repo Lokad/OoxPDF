@@ -521,7 +521,7 @@ internal sealed partial class DocxReader
             textBoxContent.Elements(),
             styles,
             numbering,
-            new Dictionary<(string NumId, int Level), int>(),
+            new DocxNumberingCounters(),
             package,
             relationships,
             markupMode,

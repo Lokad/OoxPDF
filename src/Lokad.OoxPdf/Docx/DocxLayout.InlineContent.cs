@@ -90,7 +90,7 @@ internal sealed partial class DocxLayoutEngine
         double baselineInset = paragraphInset * scale;
         double right = GetParagraphRightInset(paragraph, scale);
         double firstWidth = ResolveTableCellTextWrapWidth(cell, textWidth - right -
-            GetParagraphFirstLineTextStartOffset(paragraph, fontSize, context.TextMeasurer, scale));
+            GetParagraphFirstLineTextStartOffset(paragraph, fontSize, context.TextMeasurer, scale, context.DefaultTabStopPoints));
         double nextWidth = ResolveTableCellTextWrapWidth(cell, textWidth - right - GetParagraphTextStartOffset(paragraph, scale));
         return TryMeasureOrderedInlineContent(paragraph, context.MathEquations, context.TextMeasurer, fontSize,
             firstWidth, nextWidth, baselineInset, lineHeight, scale, context.CancellationToken, out lines,
@@ -109,7 +109,7 @@ internal sealed partial class DocxLayoutEngine
         List<DocxInlineSourceExtent>? sourceExtents = DocxInlineContent.RequiresMeasuredSourceRanges(paragraph) ? new() : null;
         var text = new System.Text.StringBuilder();
         if (measured.ListLabelSegments.Count != 0 && paragraph.ListLabel is { } label)
-            text.Append(label.Text).Append(label.SuffixValue switch { "nothing" => string.Empty, "space" => " ", _ => "\t" });
+            text.Append(label.DisplayText).Append(label.SuffixValue switch { "nothing" => string.Empty, "space" => " ", _ => "\t" });
         double offset = 0d;
         foreach (var fragment in measured.Fragments)
         {
@@ -733,7 +733,8 @@ internal sealed partial class DocxLayoutEngine
                 var style = paragraph.Runs.FirstOrDefault() ?? paragraph.ParagraphMarkRun ??
                     new DocxTextRun(string.Empty, fontSize, null, false, false, false, null, null);
                 labelSegments = CreateListLabelSegments(label, style, fontSize,
-                    GetParagraphLabelStartOffset(paragraph, scale), measurer);
+                    GetParagraphLabelStartOffset(paragraph, scale), measurer,
+                    GetParagraphFirstLineTextStartOffset(paragraph, fontSize, measurer, scale, defaultTabStopPoints));
                 above += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, measurer);
             }
             output.Add(new(current.ToArray(), advance, above, above + below)

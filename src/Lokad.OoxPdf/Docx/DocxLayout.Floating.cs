@@ -246,7 +246,7 @@ internal sealed partial class DocxLayoutEngine
         DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer, selectMaxAcrossRuns: story?.Kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote);
         double baseLineHeight = lineHeightProfile.LineHeight;
         DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
-        double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, fixedScale);
+        double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, fixedScale, defaultTabStopPoints);
         double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph, fixedScale);
         double labelStartOffset = GetParagraphLabelStartOffset(paragraph, fixedScale);
         double paragraphX = textStartOffset;

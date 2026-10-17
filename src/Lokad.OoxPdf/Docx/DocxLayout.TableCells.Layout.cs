@@ -195,7 +195,7 @@ internal sealed partial class DocxLayoutEngine
             DocxMidLinePlan? estimatePlan = null;
             if (textSpans.Count != 0)
             {
-                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, paragraphSpacingScale);
+                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints);
                 double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                 double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                 DocxWrappedTextLine[] estimateLines = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans)).ToArray();
@@ -520,7 +520,7 @@ internal sealed partial class DocxLayoutEngine
                     context.CancellationToken.ThrowIfCancellationRequested();
                     var line = orderedLines[index];
                     double inset = index == 0
-                        ? GetParagraphFirstLineTextStartOffset(paragraph, fontSize, measurer, context.ParagraphSpacingScale)
+                        ? GetParagraphFirstLineTextStartOffset(paragraph, fontSize, measurer, context.ParagraphSpacingScale, context.DefaultTabStopPoints)
                         : GetParagraphTextStartOffset(paragraph, context.ParagraphSpacingScale);
                     double available = Math.Max(1d, textWidth - inset - GetParagraphRightInset(paragraph, context.ParagraphSpacingScale));
                     double align = ResolveOrderedInlineAlignment(line, paragraph.Alignment, available);
@@ -549,7 +549,7 @@ internal sealed partial class DocxLayoutEngine
             else
             {
                 DocxTextRun firstRun = paragraph.Runs[0];
-                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, measurer, context.ParagraphSpacingScale);
+                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, measurer, context.ParagraphSpacingScale, context.DefaultTabStopPoints);
                 double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph, context.ParagraphSpacingScale);
                 double labelStartOffset = GetParagraphLabelStartOffset(paragraph, context.ParagraphSpacingScale);
                 double paragraphX = cellX + paddingLeft + textStartOffset;
@@ -946,7 +946,7 @@ internal sealed partial class DocxLayoutEngine
                 IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
                 if (textSpans.Count != 0)
                 {
-                    double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, paragraphSpacingScale);
+                    double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints);
                     double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                     double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                     DocxWrappedTextLine[] wrappedLines = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans)).ToArray();
@@ -1229,7 +1229,7 @@ internal sealed partial class DocxLayoutEngine
         DocxMidLinePlan? singlePlan = null;
         if (textSpans.Count != 0)
         {
-            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, context.TextMeasurer, context.ParagraphSpacingScale);
+            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, context.TextMeasurer, context.ParagraphSpacingScale, context.DefaultTabStopPoints);
             double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph, context.ParagraphSpacingScale));
             double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, context.ParagraphSpacingScale) - GetParagraphRightInset(paragraph, context.ParagraphSpacingScale));
             height += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, context.TextMeasurer);
