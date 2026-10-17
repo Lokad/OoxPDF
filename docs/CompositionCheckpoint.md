@@ -1,5 +1,29 @@
 # Composed-document reliability checkpoint
 
+C147 fixes numbering for one paragraph spanning physical pages. Four parent
+outcomes kept105-108 although every marker already shared its complete note's
+page. Numbering now resolves each measured glyph/note owner independently of
+other paragraph lines. Typography retains the same-paragraph-page guard; source/
+target completeness, cancellation and one bounded stable-page retry remain.
+
+51 Windows/45 Ubuntu checks/six native skips. Initial49 passes/two harness failures
+are retained; two corrected observers rerun with14 unchanged runtime assets and
+2,012 exact inputs. No library rebuild or passing Windows test replay after the
+harness correction. Four independent Word comparisons improve/no new components;
+all strict gates still fail. Five Final candidate pages/four Word page pairs plus
+the extra Calibri page reviewed; Review carries by Office/candidate PNG identity.
+Four destinations/authored runs survive. Alphabetic inventory matches Office;
+word splitting/reading order remain extraction limitations.
+
+Arial's two-page note membership matches Word. Calibri still produces three pages
+versus two, and both fonts leave large empty body regions before page breaks.
+These confirmed pagination/capacity defects remain C148's priority; this numbering
+fix does not establish document parity. Exact parent regression fails. Seventeen
+assets/four smokes transfer without root build/suite replay. Root29ae2905;
+`artifacts/composition-c1/spanning-page-numbering-evidence.json`. C146 CI is green
+on both platforms. Next: establish body admission/reserve ownership before changing
+natural-paragraph continuation geometry.
+
 C146 fixes automatic page numbering beside a custom mark. Four parent outcomes
 kept105-107 instead of09/09/10. Complete measured custom source/target glyph pages
 now participate in ownership, while only automatic references consume counters.
