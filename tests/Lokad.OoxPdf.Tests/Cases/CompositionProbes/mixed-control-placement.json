@@ -1,0 +1,152 @@
+[
+  {
+    "Id": "mixed-placement-cell-script-first",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-placement-cell-script-first.docx",
+    "Sha256": "1645765F4506C1BC8AEA3D50147408F5EDE4578275D27F9DCF23E7D8BDF68B03",
+    "SourceSha256": "08E3B9301D0566909A89941AD59ABC07AC9E9049B2B7EC4F0076D9BE3E30B8B8",
+    "ContentSourceSha256": "C0C956ABC17588064E3DDC7A2F2182D62CF3E2323C3459FC4386457DEC28A4D0",
+    "Story": "cell",
+    "Order": "script-first",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "mixed-placement-cell-fraction-first",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-placement-cell-fraction-first.docx",
+    "Sha256": "145892EA2ED3C5BFEDC975669B77591BEB358E0395D5E7C5583D92FEC5BF89CD",
+    "SourceSha256": "08E3B9301D0566909A89941AD59ABC07AC9E9049B2B7EC4F0076D9BE3E30B8B8",
+    "ContentSourceSha256": "12B263BA3DB522B102B4246D9672C26D0D70FD98917A1DB8165C46270806B86B",
+    "Story": "cell",
+    "Order": "fraction-first",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "mixed-placement-header-script-first",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-placement-header-script-first.docx",
+    "Sha256": "2A0A7EB3D9081336E069BD60AF4C3C6E940748B6E1B23EA90957496021639A3D",
+    "SourceSha256": "7A58C565993F5DC58DCB3BE53397D4F8FC81A407B46D6447A68745ED62268B07",
+    "ContentSourceSha256": "C0C956ABC17588064E3DDC7A2F2182D62CF3E2323C3459FC4386457DEC28A4D0",
+    "Story": "header",
+    "Order": "script-first",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "mixed-placement-header-fraction-first",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-placement-header-fraction-first.docx",
+    "Sha256": "83AEB5CB06F4F72E9F0D32CF32BB33CDB3CA78562920DEDE0C7F5E768DE67A16",
+    "SourceSha256": "7A58C565993F5DC58DCB3BE53397D4F8FC81A407B46D6447A68745ED62268B07",
+    "ContentSourceSha256": "12B263BA3DB522B102B4246D9672C26D0D70FD98917A1DB8165C46270806B86B",
+    "Story": "header",
+    "Order": "fraction-first",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "mixed-placement-footer-script-first",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-placement-footer-script-first.docx",
+    "Sha256": "F27F9915EB9BA60A9306A0F1708A0520D368EC93727EB8F5B8C1FDB29D40C321",
+    "SourceSha256": "7C594C15A2658C786620E0A01E5A84438AD26EE240364DC5B0F96C884406667A",
+    "ContentSourceSha256": "C0C956ABC17588064E3DDC7A2F2182D62CF3E2323C3459FC4386457DEC28A4D0",
+    "Story": "footer",
+    "Order": "script-first",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "mixed-placement-footer-fraction-first",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-placement-footer-fraction-first.docx",
+    "Sha256": "E56A06A3AFECF5468E87A0B37574EEF88D369C3B79C90B5FC8C5F975C5021B1F",
+    "SourceSha256": "7C594C15A2658C786620E0A01E5A84438AD26EE240364DC5B0F96C884406667A",
+    "ContentSourceSha256": "12B263BA3DB522B102B4246D9672C26D0D70FD98917A1DB8165C46270806B86B",
+    "Story": "footer",
+    "Order": "fraction-first",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  }
+]

@@ -16,6 +16,10 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingMixedControlPlacementKeepsContentRulesAndNeutralInk() =>
+        DocxInlineCompositionTests.CheckEquationRevisions(new PinnedResolver(mathFont: true), false,
+            "mixed-control-placement-office.json", splitMathRuns: true);
+
     public static void PortableRenderingMixedControlsKeepContentRulesAndNeutralRevisionInk() =>
         DocxInlineCompositionTests.CheckEquationRevisions(new PinnedResolver(mathFont: true), false,
             "mixed-controls-office.json", splitMathRuns: true);

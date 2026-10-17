@@ -3876,5 +3876,9 @@
     "PortableRenderingGlyphlessCompounds",
     "DocxInlineCompositionMixedControls",
     "PortableRenderingMixedControls"
+  ],
+  "docx-mixed-control-placement": [
+    "DocxInlineCompositionMixedControlPlacement",
+    "PortableRenderingMixedControlPlacement"
   ]
 }

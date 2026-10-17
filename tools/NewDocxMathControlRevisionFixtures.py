@@ -212,3 +212,36 @@ for order in ["script-first", "fraction-first"]:
                                RuleRegion=[120, 680, 210, 740], RuleFillColor="g:0"))
 (output / "mixed-controls.json").write_text(json.dumps(mixed_rows, indent=2) + "\n", encoding="utf-8")
 print("Pinned six mixed painted/metric-control compositions")
+
+# Move the same mixed contents into existing supported paragraph containers.
+placement_rows = []
+for story in ["cell", "header", "footer"]:
+    source = output / ("structural-placement-root-" + story + ".docx")
+    with ZipFile(source) as z:
+        original = {name: z.read(name) for name in z.namelist()}
+    for order in ["script-first", "fraction-first"]:
+        content_source = output / ("mixed-control-" + order + "-fraction-ins.docx")
+        with ZipFile(content_source) as z:
+            content = next(E.fromstring(z.read("word/document.xml")).iter(m + "oMath"))
+        entries = dict(original)
+        part = "word/" + {"header": "header1", "footer": "footer1"}.get(story, "document") + ".xml"
+        xml = E.fromstring(entries[part])
+        equation = next(xml.iter(m + "oMath"))
+        equation.clear()
+        equation.extend(deepcopy(list(content)))
+        entries[part] = E.tostring(xml, encoding="utf-8", xml_declaration=True)
+        target = output / ("mixed-placement-" + story + "-" + order + ".docx")
+        with ZipFile(target, "w", ZIP_DEFLATED) as z:
+            for name, data in sorted(entries.items()):
+                info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+                info.compress_type = ZIP_DEFLATED
+                z.writestr(info, data)
+        placement_rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
+                                   Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
+                                   SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(),
+                                   ContentSourceSha256=hashlib.sha256(content_source.read_bytes()).hexdigest().upper(),
+                                   Story=story, Order=order, HeldOut=False, ExpectedEquationCount=4,
+                                   ExpectedText=["share the same input series."], ProsePrefixes=["Summary:", "governs"],
+                                   RuleRegion=[120, 0, 210, 792], RuleFillColor="g:0"))
+(output / "mixed-control-placement.json").write_text(json.dumps(placement_rows, indent=2) + "\n", encoding="utf-8")
+print("Pinned six mixed-control cell/static-story placements")
