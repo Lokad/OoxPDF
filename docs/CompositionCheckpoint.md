@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+C83 admits actual source-owned inserted pictures to the existing semantic owner
+check and shared natural static-frame mapping. Aggregate/value-equal metadata,
+missing styles, wrong source positions, unsupported owners and declared/floating
+frames retain their guarded paths. Wrapping, image rectangles, clips and text now
+receive one physical header/footer mapping. No new font, size or document-shape
+qualification was added.
+
+Four independent Word header/footer controls restore visible picture/text content
+and print scaling. The shared-run footer baseline moves from -35.242 to 129.716
+points (Word 130.03). All four MAEs improve; their remaining gate failure is SSIM.
+Ten neighboring picture PDFs retain bytes and comparisons. All fourteen raw gates
+still fail unchanged thresholds. Four same-scale pairs were reviewed; body/cell
+picture scaling and review annotations remain separate residuals.
+
+Windows qualifies 40 exact methods: 39 retained through an identical DLL and one
+corrected ownership observer (plain paragraphs create ordered items lazily). Ubuntu
+passes 24 with sixteen explicit skips in one invocation. Two regressions fail on
+C82 through actual ownership/geometry checks. Failed evidence stays retained.
+
+One milestone conversion of the twelve fixed portfolio outcomes retains every
+accepted PDF byte; all comparisons reuse candidate/reference/threshold identities.
+Ten DOCX gates fail and two decks pass as before. Seventeen assets/four smoke PDFs
+transfer without root build or suite replay. Root 2a0b3abc; evidence:
+`artifacts/composition-c1/static-picture-frames-evidence.json`. The 03:53Z workspace
+scan reports 9.441 GB/449,573 files, zero errors; the loose target remains unmet.
+No blocked retirement was retried and no reclamation is claimed.
+
 C82 retains inserted pictures' actual run styles and paints Word-compatible
 review indicators from the existing text measurer, author registry and final image
 geometry. No separate font cache or unused picture-only face is embedded. Shared
