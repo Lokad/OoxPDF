@@ -4921,5 +4921,12 @@
     "DocxSectionNoteNumbers",
     "DocxSingleSectionNoteNumbers",
     "DocxElevenPoint"
+  ],
+  "docx-compound-page-note-observers": [
+    "DocxInlineCompositionPageNotesRenumberOwnedRunsWithoutDiscardingMath",
+    "DocxInlineCompositionPageNotesMatchIndependentLabelsAndRetainMathematics",
+    "PortableRenderingPageNotesPreserveLabelsMathAndDestinations",
+    "DocxInlineCompositionCompoundPageNotesRetainIndependentLabelsMathAndImages",
+    "PortableRenderingCompoundPageNotesPreserveLabelsMathAndImages"
   ]
 }

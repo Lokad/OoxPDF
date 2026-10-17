@@ -1,0 +1,121 @@
+{
+  "Source": "Independent Word exports: bookmarks enclose two normal-font fractions and a supported inline PNG in each page-note paragraph; source image counts are checked against visual references separately.",
+  "Rows": [
+    {
+      "Id": "math-page-notes-compound-calibri-12-zero",
+      "Mode": "final-preserve",
+      "InputSha256": "E8FB62A69DD4CC79C28925A944B27DD4C86965D70C39C156ECC90FF52EE62A81",
+      "ReferencePdfSha256": "2451D449B8FCFB771872C79864591D961DACD0FF6367127EDF77D2CA7D7E11D2",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "ExpectedDisplayedLabels": [
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10"
+      ],
+      "ExpectedEquations": 8,
+      "ExpectedPages": 2,
+      "ImagePlacements": 4
+    },
+    {
+      "Id": "math-page-notes-compound-calibri-12-zero",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E8FB62A69DD4CC79C28925A944B27DD4C86965D70C39C156ECC90FF52EE62A81",
+      "ReferencePdfSha256": "26CB6024C05CD3259895FF7CC1C3D2296430A6CD2CD40845C349EA5819EDD87A",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ExpectedDisplayedLabels": [
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10"
+      ],
+      "ExpectedEquations": 8,
+      "ExpectedPages": 2,
+      "ImagePlacements": 4
+    },
+    {
+      "Id": "math-page-notes-compound-arial-11-zero",
+      "Mode": "final-preserve",
+      "InputSha256": "AF30AACFB72D7D28EE20A2D7CBB2885C98CB294678D87CDC6A32C0C7B5DF7BBC",
+      "ReferencePdfSha256": "5B6EE5077F757D1D921DA6EF2F6B9EF1649B3C4971B98CEA0B230E4B5AAE6CF2",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "ExpectedDisplayedLabels": [
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10"
+      ],
+      "ExpectedEquations": 8,
+      "ExpectedPages": 2,
+      "ImagePlacements": 4
+    },
+    {
+      "Id": "math-page-notes-compound-arial-11-zero",
+      "Mode": "all-word-compatible",
+      "InputSha256": "AF30AACFB72D7D28EE20A2D7CBB2885C98CB294678D87CDC6A32C0C7B5DF7BBC",
+      "ReferencePdfSha256": "D9305E5468EBAA92D901A53A9C99FD59B89AAB8ED08D82E7963B1D44DEDDF784",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ExpectedDisplayedLabels": [
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10",
+        "09",
+        "10"
+      ],
+      "ExpectedEquations": 8,
+      "ExpectedPages": 2,
+      "ImagePlacements": 4
+    }
+  ]
+}
