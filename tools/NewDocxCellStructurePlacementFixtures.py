@@ -14,7 +14,7 @@ E.register_namespace("m", "http://schemas.openxmlformats.org/officeDocument/2006
 rows = []
 for kind in ["ins", "del"]:
     source = output / ("table-math-revision-cell-" + kind + ".docx")
-    for shape in ["original", "tall", "following"]:
+    for shape in ["original", "tall", "following", "default-minimum", "exact", "auto"]:
         target = source
         if shape != "original":
             with ZipFile(source) as z:
@@ -22,14 +22,17 @@ for kind in ["ins", "del"]:
             xml = E.fromstring(entries["word/document.xml"])
             table = next(xml.iter(w + "tbl"))
             row = table.find(w + "tr")
-            if shape == "tall":
+            if shape in ["tall", "default-minimum", "exact", "auto"]:
                 properties = row.find(w + "trPr")
                 if properties is None:
                     properties = E.Element(w + "trPr")
                     row.insert(0, properties)
                 for old in properties.findall(w + "trHeight"):
                     properties.remove(old)
-                E.SubElement(properties, w + "trHeight", {w + "val": "2880", w + "hRule": "atLeast"})
+                attributes = {w + "val": "2880"}
+                if shape != "default-minimum":
+                    attributes[w + "hRule"] = {"tall": "atLeast", "exact": "exact", "auto": "auto"}[shape]
+                E.SubElement(properties, w + "trHeight", attributes)
             else:
                 before = E.Element(w + "tr")
                 properties = E.SubElement(before, w + "trPr")
@@ -56,5 +59,7 @@ for kind in ["ins", "del"]:
             Kind=kind, Shape=shape, HeldOut=False, ExpectedEquationCount=4,
             ExpectedText=["share the same input series."], ProsePrefixes=["Summary:", "governs"],
             RuleRegion=[120, 0, 210, 792], RuleFillColor="g:0"))
-(output / "cell-structure-placement.json").write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
-print("Pinned six cell extent and preceding-row placement controls")
+placement = [row for row in rows if row["Shape"] in ["original", "tall", "following"]]
+(output / "cell-structure-placement.json").write_text(json.dumps(placement, indent=2) + "\n", encoding="utf-8")
+(output / "minimum-row-placement.json").write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
+print("Pinned six cell placement and six neighboring row-height rule controls")

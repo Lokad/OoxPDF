@@ -1,0 +1,137 @@
+{
+  "Scope": "Independent Word structural label geometry; exact-height projection stays an explicit unchanged fallback",
+  "Rows": [
+    {
+      "Id": "table-math-revision-cell-ins",
+      "Shape": "original",
+      "Kind": "ins",
+      "InputSha256": "8866EFF08FE42ECAC6C6E605DD274B80B52E92DF782FC06E9B5B9B70E1323417",
+      "ReferencePdfSha256": "3B1DE1D7207D647F6C9AE5C4F55F232E5515CB67EE9D899D238C6D9059938A59",
+      "LabelBaselineY": 632.88,
+      "BalloonTop": 641.98,
+      "BalloonBottom": 629.69,
+      "CheckNativeLabelGeometry": true
+    },
+    {
+      "Id": "cell-structure-placement-tall-ins",
+      "Shape": "tall",
+      "Kind": "ins",
+      "InputSha256": "F6294BA88BBFADA48C517F0EA1218C9204C62C5DF30FEED29DCDA0C4F12769AB",
+      "ReferencePdfSha256": "36FB80FF63E56A1080C30635C50265538E3D63AAC84EB595E08AD39D238D0AC3",
+      "LabelBaselineY": 632.88,
+      "BalloonTop": 641.98,
+      "BalloonBottom": 629.69,
+      "CheckNativeLabelGeometry": true
+    },
+    {
+      "Id": "cell-structure-placement-following-ins",
+      "Shape": "following",
+      "Kind": "ins",
+      "InputSha256": "5802DA5445D773B1CE09B33E8C4938D36F09CADFAE01AA380AE976A70C4F73C4",
+      "ReferencePdfSha256": "B9D4A92E08F431C3DD1193B4157FE230EA5CBF42206C3EC78FF81790D1D0FCD1",
+      "LabelBaselineY": 602.57,
+      "BalloonTop": 611.66,
+      "BalloonBottom": 599.3,
+      "CheckNativeLabelGeometry": true
+    },
+    {
+      "Id": "cell-structure-placement-default-minimum-ins",
+      "Shape": "default-minimum",
+      "Kind": "ins",
+      "InputSha256": "E4EE20C70C9CE77834E8829D0B27D87AB17D1224F2B04F70E4A1BF7599349CA9",
+      "ReferencePdfSha256": "97A6C94201617413E7A4DE002A366E917906366222A6F6C9C8A15590474AEB4C",
+      "LabelBaselineY": 632.88,
+      "BalloonTop": 641.98,
+      "BalloonBottom": 629.69,
+      "CheckNativeLabelGeometry": true
+    },
+    {
+      "Id": "cell-structure-placement-exact-ins",
+      "Shape": "exact",
+      "Kind": "ins",
+      "InputSha256": "1C44B5413E01402E55BB83102A6F4B64647D890E741BE05B5B0AF94CD2968AC3",
+      "ReferencePdfSha256": "8C1AABAD635FDCBA7B537D2F694DEAF38BA06E86345D2125400921F48C1AF76C",
+      "LabelBaselineY": 632.88,
+      "BalloonTop": 641.98,
+      "BalloonBottom": 629.69,
+      "CheckNativeLabelGeometry": false
+    },
+    {
+      "Id": "cell-structure-placement-auto-ins",
+      "Shape": "auto",
+      "Kind": "ins",
+      "InputSha256": "57F16B56BB22328B37B1A47C619EF803D48C066A8771A6033A1166A18B3E9E53",
+      "ReferencePdfSha256": "686F9810E0D9E02E1DAB475FCB24B1172A1123C6D520CA014CC5F1B862950201",
+      "LabelBaselineY": 632.88,
+      "BalloonTop": 641.98,
+      "BalloonBottom": 629.69,
+      "CheckNativeLabelGeometry": true
+    },
+    {
+      "Id": "table-math-revision-cell-del",
+      "Shape": "original",
+      "Kind": "del",
+      "InputSha256": "2D5023D163FC5C0D9F0E088F3B33958C5D9074B0298D8F365D3EFCE0A3822105",
+      "ReferencePdfSha256": "BD92DBBCEC2230E9A523876875B2685427ECC0E73F818D96C9B0AEA890224007",
+      "LabelBaselineY": 632.88,
+      "BalloonTop": 641.98,
+      "BalloonBottom": 629.69,
+      "CheckNativeLabelGeometry": true
+    },
+    {
+      "Id": "cell-structure-placement-tall-del",
+      "Shape": "tall",
+      "Kind": "del",
+      "InputSha256": "67EBFCA093C5E8CA8064777C164FB9DAA71A60336B7E0E30B4F708E3136AB398",
+      "ReferencePdfSha256": "19CBF5FC5716B4267D58D375E8725D67495300CE92B496FB47C372210B9D6534",
+      "LabelBaselineY": 632.88,
+      "BalloonTop": 641.98,
+      "BalloonBottom": 629.69,
+      "CheckNativeLabelGeometry": true
+    },
+    {
+      "Id": "cell-structure-placement-following-del",
+      "Shape": "following",
+      "Kind": "del",
+      "InputSha256": "7FD8E59E03BC57D097554C44D5FFC89DB1D88AAC1414A5F624483D13A03BB82F",
+      "ReferencePdfSha256": "31D0E0253395FCB3DE552BAE9650C9156EE634799E36C97106C105B299CF55C9",
+      "LabelBaselineY": 602.57,
+      "BalloonTop": 611.66,
+      "BalloonBottom": 599.3,
+      "CheckNativeLabelGeometry": true
+    },
+    {
+      "Id": "cell-structure-placement-default-minimum-del",
+      "Shape": "default-minimum",
+      "Kind": "del",
+      "InputSha256": "78E2CC2623FB7FAAA84DF7EF2E6130BBF1F5419C7B3268722426A52922A6B1FF",
+      "ReferencePdfSha256": "76008755C35AC014E31B27E1C502B74C06FE8974415B206AD119BBD7F15BFD4D",
+      "LabelBaselineY": 632.88,
+      "BalloonTop": 641.98,
+      "BalloonBottom": 629.69,
+      "CheckNativeLabelGeometry": true
+    },
+    {
+      "Id": "cell-structure-placement-exact-del",
+      "Shape": "exact",
+      "Kind": "del",
+      "InputSha256": "91A4637D4BD3E45590097681D2DE1B04A60AEE774A08CBFA67EDBEFF50A6B71D",
+      "ReferencePdfSha256": "731F87E1FF39608FC4015A6223A770CC567E544F41F510D1530365C8FE9A243C",
+      "LabelBaselineY": 632.88,
+      "BalloonTop": 641.98,
+      "BalloonBottom": 629.69,
+      "CheckNativeLabelGeometry": false
+    },
+    {
+      "Id": "cell-structure-placement-auto-del",
+      "Shape": "auto",
+      "Kind": "del",
+      "InputSha256": "43CA9F9F4DE3D0FA4EBF659324A36FCB3A5BB2F51B4BA7EFF9CB5D84AA1F60A7",
+      "ReferencePdfSha256": "76111C83E3086B8DBCB17ABA1504FB8A53F174057A2C9AA6017A4C19ED9E2607",
+      "LabelBaselineY": 632.88,
+      "BalloonTop": 641.98,
+      "BalloonBottom": 629.69,
+      "CheckNativeLabelGeometry": true
+    }
+  ]
+}

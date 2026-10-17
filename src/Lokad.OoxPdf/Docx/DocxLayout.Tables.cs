@@ -34,7 +34,8 @@ internal sealed partial class DocxLayoutEngine
             cancellationToken.ThrowIfCancellationRequested();
             if (items[itemIndex] is not DocxTableRowLayout row ||
                 row.FragmentCount != 1 && !(allowPageBoundaryFragments && row.FragmentReason == "PageBoundary") ||
-                row.HeightRuleValue is not null || row.DeclaredHeightPoints is not null)
+                !HasAutomaticTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue) &&
+                !HasMinimumTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue))
             {
                 return;
             }
@@ -1102,6 +1103,10 @@ internal sealed partial class DocxLayoutEngine
         double declaredHeight = string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase)
             ? 0d
             : row.HeightPoints ?? 0d;
+        // Declared minima and exact heights share the source-to-print scale;
+        // measured child frames already carry their physical dimensions.
+        if (HasMinimumTableRowHeight(row.HeightPoints, row.HeightRuleValue))
+            declaredHeight *= fixedScale;
         if (row.HeightPoints is not null &&
             !string.Equals(row.HeightRuleValue, "auto", StringComparison.OrdinalIgnoreCase))
         {

@@ -48,6 +48,15 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(ReferenceEquals(row, fallback[0]) && ReferenceEquals(invalid, fallback[1]) && cursor == 0d,
                 "An unowned picture retains the whole table fallback before any earlier row is mutated.");
         }
+        foreach (string rule in new[] { "exact", "unknown" })
+        {
+            var guarded = row with { RowIndex = 1, HeightRuleValue = rule, DeclaredHeightPoints = 30d };
+            var fallback = new List<DocxLayoutItem> { row, guarded };
+            cursor = 0d;
+            DocxLayoutEngine.ApplyReviewTableBaselineGeometry(fallback, 0, 12d, measurer, .75d, ref cursor, default);
+            TestAssert.True(ReferenceEquals(row, fallback[0]) && ReferenceEquals(guarded, fallback[1]) && cursor == 0d,
+                "An exact or unknown height retains the complete table fallback before any earlier row is mutated.");
+        }
         using var canceled = new CancellationTokenSource(); canceled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() =>
             DocxLayoutEngine.ApplyReviewTableBaselineGeometry(items, 0, 12d, measurer, .75d, ref cursor, canceled.Token));
