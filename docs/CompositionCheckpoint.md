@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+C74 retains the actual inserted numbering mark through the existing paragraph-
+mark run. Shared revision ownership admits that source independently of visible
+text; copied/misplaced metadata, deleted marks, unnumbered marks and unrelated
+revisions retain their fallbacks. Eight static outcomes recover their first
+number, and eight mixed-math outcomes recover the omitted first formula, from
+14 to 18 mathematical text operations. Body/cell/header/footer controls cover
+both presets; all sixteen first numbers meet the existing one-point Word frame
+tolerance. Fourteen fresh Word exports and two retained references qualify that
+content/geometry result.
+
+Qualification passes 156 Windows methods and 119 Ubuntu methods/37 explicit skips.
+The two new rendering checks initially counted shared source stories repeatedly;
+only those checks rerun after reference-identity enumeration, carrying 154 Windows
+results on the same DLL. Ubuntu runs once; two checks fail on the parent. Twelve
+MAEs improve and four remain identical. Recall improves in eleven, stays identical
+in four and decreases by .006 in footer Review; no new gate component fails. All
+sixteen gates still fail unchanged thresholds. Three page pairs were reviewed.
+Marker decoration and Word's old/new review counters remain explicit defects;
+recovering the first number does not qualify those behaviors.
+
+The five fixed/complete DOCX sources contain no inserted paragraph marks or block
+insertions. Their prior ten comparisons are reused by source-backed scope
+exclusion, without new corpus conversions or a new PDF-identity claim. Routine
+portfolio inspection now writes summaries by default, with `-IncludeRawStreams`
+for focused audits. A math/image PDF retains identical text/graphics/font reports
+while avoiding eighteen raw files. Evidence:
+`artifacts/composition-c1/numbering-mark-evidence.json` and linked reports.
+
 C73 gives unchanged, text-bearing numbering markers the resolved paragraph color
 and numbering-level underline. First-run authored/review decoration stays on its
 source; existing marker-revision fallbacks and other decoration policies remain.
