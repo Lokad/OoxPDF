@@ -13,6 +13,6 @@ internal static partial class DocxMathLayout
         Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics = null) =>
         GetFraction(equation) is not null || GetScripts(equation) is not null || GetMatrix(equation, token) is not null
             ? TryMeasure(equation, resolveFont, token, out child, out fallback, metricFont, resolveControlFont, resolveControlMetrics, rowControlSize: spacingSize)
-            : DocxMathRowLayout.TryMeasure(equation.Content, resolveFont, token, out child, out fallback,
-                exportFontSize: true, operatorSpacingFontSize: spacingSize, neighbors: neighbors);
+            : TryMeasureLiteralArgument(equation.Content, resolveFont, metricFont, spacingSize, 0, token,
+                out child, out fallback, out _, exportFontSize: true, operatorSpacingFontSize: spacingSize, neighbors: neighbors);
 }

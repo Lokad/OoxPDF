@@ -20,6 +20,10 @@ internal static class PortableRenderingTests
         DocxInlineCompositionTests.CheckEquationRevisions(new PinnedResolver(mathFont: true), false,
             "remainder-placement-office.json", splitMathRuns: true);
 
+    public static void PortableRenderingEmptyMathBodiesKeepFunctionAndOperatorInk() =>
+        DocxInlineCompositionTests.CheckEquationRevisions(new PinnedResolver(mathFont: true), false,
+            "math-body-office.json", splitMathRuns: true);
+
     public static void PortableRenderingMathRemaindersKeepVisibleArgumentsAndInk() =>
         DocxInlineCompositionTests.CheckEquationRevisions(new PinnedResolver(mathFont: true), false,
             "math-remaining-office.json", splitMathRuns: true);

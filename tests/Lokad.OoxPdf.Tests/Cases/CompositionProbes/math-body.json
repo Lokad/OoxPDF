@@ -1,0 +1,68 @@
+[
+  {
+    "Id": "math-body-function-argument-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-body-function-argument-del.docx",
+    "Sha256": "850C1260554E544F9037327FC2B4CF9E651101DB6A2ECF93D9A1FB57B8B8F019",
+    "SourceSha256": "440C73C72A9B69030A06DF8188A2B2D3564A93B352993A2A31A15FC6F5E2C343",
+    "Role": "function-argument",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-body-function-argument-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-body-function-argument-empty.docx",
+    "Sha256": "D57D9E9561BE539547EFE3BCA26B516A1F309EDEBBD58D0B73329A77794F3F7D",
+    "SourceSha256": "440C73C72A9B69030A06DF8188A2B2D3564A93B352993A2A31A15FC6F5E2C343",
+    "Role": "function-argument",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-body-nary-stacked-body-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-body-nary-stacked-body-del.docx",
+    "Sha256": "D061229F799338C121A3C68667DF01CA522DFA0E1A50DC9938031CB14DB1BC6C",
+    "SourceSha256": "7845E8382E4F53814A1B3CB8CA8BE23B4594DFF8B245FDB9EA3198AC671EB2F0",
+    "Role": "nary-stacked-body",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-body-nary-stacked-body-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-body-nary-stacked-body-empty.docx",
+    "Sha256": "29F808C796621C1B3D589E243E4F62C73A24D3F48E1C5483DB5C338805B84EF5",
+    "SourceSha256": "7845E8382E4F53814A1B3CB8CA8BE23B4594DFF8B245FDB9EA3198AC671EB2F0",
+    "Role": "nary-stacked-body",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-body-nary-side-body-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-body-nary-side-body-del.docx",
+    "Sha256": "8631848D6CAD8FD7F001AD0467038D691CC9488A5E6BC91A88F381DE20EA8893",
+    "SourceSha256": "8C372339C2499A07C2B1D6896D5A69614257552E8965957CD86683882B08845B",
+    "Role": "nary-side-body",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-body-nary-side-body-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-body-nary-side-body-empty.docx",
+    "Sha256": "0FAAF876894421D3F6DF11C74EB07301B602F4F6AD7BEA36CDF1D7D61186C339",
+    "SourceSha256": "8C372339C2499A07C2B1D6896D5A69614257552E8965957CD86683882B08845B",
+    "Role": "nary-side-body",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  }
+]

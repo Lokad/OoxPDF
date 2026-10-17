@@ -23,7 +23,7 @@ internal static partial class DocxMathLayout
         if (GetDelimiter(argument) is null && GetFraction(argument) is null && GetScripts(argument) is null && GetMatrix(argument, token) is null &&
             !DocxMathRowLayout.TryGetRenderCodePoints(function.Argument, token, out _, out _)) { return false; }
         if (!TryGetRuns(equation with { Content = function.Name }, token, out var nameRuns) || nameRuns.Count == 0 ||
-            !TryGetRuns(argument, token, out var argumentRuns) || argumentRuns.Count == 0) { return false; }
+            !TryGetRuns(argument, token, out var argumentRuns)) { return false; }
         var result = new List<DocxMathRunSource>(nameRuns.Count + argumentRuns.Count);
         result.AddRange(nameRuns); result[0] = result[0] with { ControlOwners = [function] };
         result.AddRange(argumentRuns); runs = result;
@@ -54,7 +54,7 @@ internal static partial class DocxMathLayout
             ? TryMeasure(argumentEquation, resolveFont, token, out var argument, out fallback, font, resolveControlFont, resolveControlMetrics)
             : TryMeasureBoxArgument(argumentEquation, resolveFont, font, size, token, out argument, out fallback,
                 resolveControlFont: resolveControlFont, resolveControlMetrics: resolveControlMetrics);
-        if (!measured || argument is null || argument.Glyphs.Count == 0)
+        if (!measured || argument is null)
         { fallback ??= "UnsupportedMathFunctionArgument"; return false; }
         double gap = argument.Edges?.First == DocxMathRowLayout.AtomKind.Open ? 0d : size / 6d;
         double argumentX = name.AdvanceWidth + gap;

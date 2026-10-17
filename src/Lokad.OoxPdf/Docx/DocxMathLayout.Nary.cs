@@ -54,7 +54,7 @@ internal static partial class DocxMathLayout
         if (!(equation.Display && NaryLimitLocation(equation, nary) == "undOvr") && !HasValidScriptConstants(constants, equation.Cramped))
         { fallback = "InvalidMathNaryScriptConstants"; return false; }
         if (!TryMeasureBoxArgument(equation with { Content = nary.Body }, resolveFont, font, size, token,
-                out var body, out fallback) || body is null || body.Glyphs.Count == 0)
+                out var body, out fallback) || body is null)
         { fallback ??= "UnsupportedMathNaryBody"; return false; }
         DocxMathBox? lower = null, upper = null;
         if (nary.SubscriptHiddenValue != true &&
@@ -111,7 +111,7 @@ internal static partial class DocxMathLayout
         double advance = bodyX + body.AdvanceWidth;
         double width = Math.Max(advance, operatorX + bounds.XMax * scale);
         double above = Math.Max(0d, baseline + bounds.YMax * scale), below = Math.Max(0d, -baseline - bounds.YMin * scale);
-        RgbColor color = body.Glyphs[0].Color;
+        RgbColor color = body.Glyphs.Count == 0 ? default : body.Glyphs[0].Color;
         if (nary.ControlText is { } control) { color = default; RgbColor.TryParse(control.ColorHex, out color); }
         OoxConversionBudget.Current?.ChargeSceneNodes(1);
         var glyphs = new List<DocxMathGlyphPlacement> { new(point, point, resource, cid.ToString("X4", CultureInfo.InvariantCulture),

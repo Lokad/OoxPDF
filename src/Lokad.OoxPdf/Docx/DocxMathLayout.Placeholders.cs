@@ -9,7 +9,7 @@ internal static partial class DocxMathLayout
 {
     private const int HiddenPlaceholderCodePoint = 0x2B1A;
     // Word retains the dotted-square's metrics while suppressing its paint.
-    // Matrices and empty fraction arguments share this metric-only box.
+    // Supported empty argument roles share this metric-only box.
     private static bool TryMeasureHiddenPlaceholder(OpenTypeFont font, double size, [NotNullWhen(true)] out DocxMathBox? box)
     {
         box = null;
@@ -42,14 +42,15 @@ internal static partial class DocxMathLayout
     private static bool TryMeasureLiteralArgument(DocxMathRow row, Func<DocxMathRun, PdfFontResource?> resolveFont,
         OpenTypeFont font, double size, int scriptLevel, CancellationToken token,
         out DocxMathBox? box, out string? fallback, out bool empty,
-        bool allowArgumentSize = false, bool exportFontSize = false, double? operatorSpacingFontSize = null)
+        bool allowArgumentSize = false, bool exportFontSize = false, double? operatorSpacingFontSize = null,
+        DocxMathRowLayout.Neighbors neighbors = default)
     {
         empty = IsEmptyArgument(row, token, allowArgumentSize);
         if (!empty)
             return DocxMathRowLayout.TryMeasure(row, resolveFont, token, out box, out fallback, scriptLevel,
-                operatorSpacingFontSize: operatorSpacingFontSize, scriptMetricsFont: font, allowArgumentSize: allowArgumentSize, exportFontSize: exportFontSize);
+                operatorSpacingFontSize: operatorSpacingFontSize, scriptMetricsFont: font, allowArgumentSize: allowArgumentSize, exportFontSize: exportFontSize, neighbors: neighbors);
         box = null;
-        fallback = "MissingMathFractionPlaceholder";
+        fallback = "MissingMathArgumentPlaceholder";
         double argumentSize = size;
         if (scriptLevel != 0 && !DocxMathArgumentMetrics.TryGetScriptFontSize(font, size, scriptLevel, out argumentSize) ||
             !TryMeasureHiddenPlaceholder(font, OfficePdfTextEmissionProfile.FontSize(argumentSize), out box)) return false;
