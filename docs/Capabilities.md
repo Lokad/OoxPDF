@@ -198,7 +198,13 @@ as function arguments. Native matrices support nonempty literal
 or bounded fraction/stack/script cells in
 standalone/fitting-inline grids or bounded mixed rows, with centered or declared left/right/grouped columns,
 top/center/bottom base justification, default row spacing and authored column
-widths/gaps (including explicit defaults). Shared font metrics, child glyph ownership and source-order rules retain explicit fallbacks for stored hidden root degrees, other delimiter argument/shape profiles, assemblies, unsupported deeper/rich structures, operator breaking, multiple separate equations, inline/complex table cells and other stories. See [native DOCX equations](docx-equations.md) for independent Word evidence and remaining visual residuals.
+widths/gaps (including explicit defaults). Shared font metrics, child glyph ownership and source-order rules retain explicit fallbacks for stored hidden root degrees, other delimiter argument/shape profiles, assemblies, unsupported deeper/rich structures, unqualified operator breaking and nested/floating story combinations. See [native DOCX equations](docx-equations.md) for independent Word evidence and remaining visual residuals.
+
+Supported equation sequences compose with prose, pictures, bookmarks and actual
+inserted/deleted owners across body, simple cells and direct headers/footers.
+Final preserves supported empty bar-fraction structure after deleting its text;
+authored empty fractions use the same metric-only placeholders. Partial-empty
+arguments, empty stacks and richer unsupported revision structures retain fallback.
 
 Explicitly hidden empty matrix cells retain metric-only placeholder geometry,
 including empty rows and columns; visible-placeholder and wholly empty grids

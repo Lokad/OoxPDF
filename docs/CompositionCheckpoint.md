@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+C88 preserves empty bar-fraction structure after deleting its mathematical text
+in Final. Independent Word rasters at 9/11/18pt equal authored empty fractions;
+removing the equation equals an empty row and differs. Word keeps the structural
+bar as well as layout, correcting the earlier hypothesis of hidden metrics only.
+Matrix hidden cells and empty fraction arguments share the existing dotted-square
+metric box. Normal/empty fractions share composition and paragraph preparation.
+Metric-only font ownership adds no dummy glyph or PDF subset. Unsupported empty
+stacks, richer deletion structures and unknown properties retain fallback.
+
+Eleven independent Final frames supplement the neighboring sixteen equation
+outcomes. All nine affected MAEs improve; fourteen neighboring PDFs retain bytes.
+All 23 raw gates still fail unchanged thresholds without new components. Maximum
+first/following baseline residuals are 0.174/0.810pt; structural rule X/Y/width/height
+residuals stay within 0.501/0.153/0.090/0.031pt. Five same-scale crop pairs reviewed.
+The two new 18pt outputs retain raw full-phrase extraction flags from wrapped math
+paint order; separate prose/all-fourteen-math-glyph checks pass, without clearing
+those flags. Typography and visual failures remain explicit.
+
+Windows qualifies 47 focused methods (45 unchanged checks carried through identical
+runtime/input identities and two corrected prose observers). Ubuntu passes 22 with
+25 explicit skips in one invocation. Two parent failures establish actual baseline
+and missing-rule defects. Initial compile/observer failures remain retained. All
+twelve freshly converted portfolio PDFs retain accepted bytes/comparisons; ten
+DOCX gates fail and both decks pass. Seventeen assets/four smoke PDFs transfer
+without root build/suite replay. Root 1b5b99f7; evidence:
+`artifacts/composition-c1/empty-fractions-evidence.json`.
+C87 CI 39005833382 is green on both platforms; work continues during C88 CI.
+
 C87 renders supported source-owned inserted/deleted equations through the shared
 inline path. Actual wrapper/run revision identities and source positions establish
 ownership; aggregate/value-equal metadata, wrong positions and unsupported kinds
@@ -25,7 +53,7 @@ splits preserve all math geometry. Seven-source portfolio comparisons carry by
 absence of revised equation wrappers, not by a corpus replay claim. Seventeen
 assets/four smoke PDFs transfer without root build or suite replay. Root 142e320f;
 evidence: `artifacts/composition-c1/equation-revisions-evidence.json`.
-C86 CI 39005243891 remains running; Ubuntu has passed. Work continues meanwhile.
+C87 CI 39005833382 is green on both platforms.
 
 C86 shares actual non-rendering revision eligibility with Word change-bar
 classification, memoized within each painting conversion. Ordinary unscaled Final

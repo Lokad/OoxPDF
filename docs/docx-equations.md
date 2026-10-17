@@ -1,13 +1,19 @@
 # Native DOCX equations
 
-Plain inserted or deleted text no longer excludes adjacent unchanged equations.
-Reader publication and math preparation share a linear check that the actual
-revision metadata is owned by materialized text runs; those runs retain their
-existing inline style. Equation revisions, paragraph marks/property changes and
-move ranges retain explicit fallbacks. Word-compatible references explicitly use
-inline revision mode 1. Balloon deletions are a different view; the earlier large
-frame difference against mode 0 did not establish a library geometry defect.
-Filtered deletions in Final remain ordinary content.
+Supported equations retain actual inserted/deleted source ownership across body,
+simple cells and direct headers/footers. Word-compatible painting shares source
+author colors and deletion strike metrics; unowned metadata, move ranges and
+unsupported structural revisions retain explicit fallbacks. Adjacent revised text,
+bookmarks and unchanged-format run splits do not exclude supported mathematics.
+Independent references pin their Office view settings with each source/PDF.
+
+In Final, deleting a supported bar fraction's text preserves its empty arguments
+and structural rule. Authored empty bar fractions share the same metric-only
+placeholder measurement as hidden matrix cells, without a dummy glyph or PDF font
+subset. Controls at 9/11/18pt retain the same independent Word rasters for deleted
+text and authored empty structure. Partial-empty arguments, empty stacks and
+unsupported richer revision structures retain fallback. Approximation diagnostics
+and failed visual thresholds remain separate from content/geometry checks.
 
 Numbered paragraphs retain supported explicit math zones alongside prose and
 inline pictures. The list label owns only the first authored row: its formulas
