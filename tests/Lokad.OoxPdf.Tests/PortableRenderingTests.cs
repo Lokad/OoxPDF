@@ -729,7 +729,7 @@ internal static class PortableRenderingTests
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
                 .RenderBlankPages(document, null, default).ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
-            foreach (string glyph in new[] { "Î±", "+", "Î²", "=", "Î³" })
+            foreach (string glyph in new[] { "α", "+", "β", "=", "γ" })
                 TestAssert.Equal(1, text.Split(glyph, StringSplitOptions.None).Length - 1);
             TestAssert.Contains("Following prose.", text);
             CheckWrittenPages(pages);
@@ -746,7 +746,7 @@ internal static class PortableRenderingTests
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
                 .RenderBlankPages(document, null, default).ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
-            foreach (string glyph in new[] { "Î±", "+", "Î²", "=", "Î³" })
+            foreach (string glyph in new[] { "α", "+", "β", "=", "γ" })
                 TestAssert.Equal(1, text.Split(glyph, StringSplitOptions.None).Length - 1);
             TestAssert.Contains("Before", text);
             TestAssert.Contains("Following prose.", text);
