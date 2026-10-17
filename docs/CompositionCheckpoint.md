@@ -1,5 +1,21 @@
 # Composed-document reliability checkpoint
 
+C124 refreshes the finite portfolio using the accepted C123 artifact: twelve actual
+outcomes, seven sources and twenty inspected pages retain every accepted PDF byte.
+All reference and threshold identities match, so twelve comparisons and twenty
+reviewed page pairs carry without repeated Office exports, rasters or metrics.
+Ten DOCX strict gates fail and both decks pass. Ten content screens and two unresolved
+complete-report dynamic-field/math-tokenization flags carry; no fresh audit pass.
+
+The same artifact supplies four isolated compound allocation probes, one warmup
+and three warm samples each, retaining all four accepted PDF identities. Warm
+calling-thread totals remain35.9-40.5MiB; changes versus C117 range from minus3,120
+to plus15,488 bytes. Initial font preparation remains24.5-24.6MiB with466 faces.
+Diagnostic stages overlap and cannot be summed; no speedup or repeated-layout
+bottleneck is claimed. No library rebuild or suite replay. Evidence:
+`artifacts/composition-c1/checkpoint-124-evidence.json`. Matrix row/baseline residuals
+remain the next bounded geometry investigation.
+
 C123 consolidates actual child metric ownership across admitted math containers.
 An iterative source-order walk skips hidden operator roles. Metric-only root
 classification reuses discovered runs; child metrics share the conversion font cache.
