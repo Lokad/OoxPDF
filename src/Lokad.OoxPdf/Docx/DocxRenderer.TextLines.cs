@@ -65,15 +65,29 @@ internal sealed partial class DocxRenderer
         DocxMarkupContext markupContext,
         double pageHeight)
     {
-        // R12: page drawings arrive from the once-per-pass page index instead of
-        // re-filtering both drawing lists for every page.
+        return EnumerateRenderedPageLineSources(page, drawingPages.PageAll(pageIndex), markupContext, pageHeight)
+            .Select(source => source.Line);
+    }
+
+    // Every mapped line retains its placement container. A cell/textbox's local
+    // story kind cannot replace the header/footer/note that owns its print frame.
+    private static IEnumerable<(DocxTextLineLayout Line, DocxStoryId Owner)> EnumerateRenderedPageLineSources(
+        DocxLayoutPage page, IEnumerable<DocxFloatingDrawingLayout> floatingDrawings,
+        DocxMarkupContext markupContext, double pageHeight)
+    {
         FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
-        return EnumerateStaticTextLines(page, markupContext)
-            .Concat(EnumerateBodyTextLines(page))
-            .Concat(EnumerateMappedPlacedNoteStoryTextLines(page, map))
-            .Concat(EnumerateInlineTextBoxTextLines(page))
-            .Concat(EnumerateMappedFloatingDrawingTextBoxTextLines(drawingPages.PageAll(pageIndex), map))
-            .Concat(page.PlacedRelatedStories.SelectMany(story => EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, map)));
+        foreach (var source in EnumerateStaticLineSources(page, true, markupContext)) yield return source;
+        foreach (var line in EnumerateBodyTextLines(page)) yield return (line, DocxStoryId.Body());
+        foreach (var story in page.PlacedRelatedStories)
+            foreach (var line in EnumerateMappedPlacedNoteStoryTextLines(story, map))
+                yield return (line, DocxStoryId.Related(story.StoryLayout.Story.Kind));
+        foreach (var line in EnumerateInlineTextBoxTextLines(page)) yield return (line, DocxStoryId.Body());
+        foreach (var drawing in floatingDrawings)
+            foreach (var line in EnumerateMappedFloatingDrawingTextBoxTextLines([drawing], map))
+                yield return (line, drawing.Story ?? DocxStoryId.Body());
+        foreach (var story in page.PlacedRelatedStories)
+            foreach (var line in EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, map))
+                yield return (line, DocxStoryId.Related(story.StoryLayout.Story.Kind));
     }
 
     private static FloatingTextBoxEmissionMap? TryCreateFloatingTextBoxEmissionMap(DocxMarkupContext markupContext, double pageHeight)
@@ -201,44 +215,29 @@ internal sealed partial class DocxRenderer
         DocxMarkupContext markupContext,
         double pageHeight)
     {
-        FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
-        return EnumerateStaticTextLines(page, markupContext)
-            .Concat(EnumerateBodyTextLines(page))
-            .Concat(EnumerateMappedPlacedNoteStoryTextLines(page, map))
-            .Concat(EnumerateInlineTextBoxTextLines(page))
-            .Concat(EnumerateMappedFloatingDrawingTextBoxTextLines(floatingDrawings, map))
-            .Concat(page.PlacedRelatedStories.SelectMany(story => EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, map)));
+        return EnumerateRenderedPageLineSources(page, floatingDrawings, markupContext, pageHeight)
+            .Select(source => source.Line);
     }
 
     // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote and endnote stories
     // lay out unscaled in design space, so balloon anchors from their lines map
     // uniformly like their emission; other stories keep legacy coordinates.
     private static IEnumerable<DocxTextLineLayout> EnumerateMappedPlacedNoteStoryTextLines(
-        DocxLayoutPage page,
-        FloatingTextBoxEmissionMap? map)
+        DocxLayoutPage page, FloatingTextBoxEmissionMap? map) =>
+        page.PlacedRelatedStories.SelectMany(story => EnumerateMappedPlacedNoteStoryTextLines(story, map));
+
+    private static IEnumerable<DocxTextLineLayout> EnumerateMappedPlacedNoteStoryTextLines(
+        DocxPlacedRelatedStoryLayout story, FloatingTextBoxEmissionMap? map)
     {
-        foreach (DocxPlacedRelatedStoryLayout story in page.PlacedRelatedStories)
-        {
-            FloatingTextBoxEmissionMap? storyMap = null;
-            if (map is { } availableMap &&
-                story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
-            {
-                storyMap = availableMap;
-            }
-
-            foreach (DocxTextLineLayout line in story.TextLines)
-            {
-                yield return storyMap is { } lineMap ? lineMap.PrecompensateLine(line, 0d, 0d) : line;
-            }
-
-            foreach (DocxTableRowLayout row in story.TableRows)
-            {
-                foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
-                {
-                    yield return storyMap is { } cellMap ? cellMap.PrecompensateLine(cellLine, 0d, 0d) : cellLine;
-                }
-            }
-        }
+        FloatingTextBoxEmissionMap? storyMap = null;
+        if (map is { } availableMap &&
+            story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
+            storyMap = availableMap;
+        foreach (DocxTextLineLayout line in story.TextLines)
+            yield return storyMap is { } lineMap ? lineMap.PrecompensateLine(line, 0d, 0d) : line;
+        foreach (DocxTableRowLayout row in story.TableRows)
+            foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
+                yield return storyMap is { } cellMap ? cellMap.PrecompensateLine(cellLine, 0d, 0d) : cellLine;
     }
 
     // Inline-textbox content lives in absolute flow space (placed at layout time), so
@@ -353,28 +352,26 @@ internal sealed partial class DocxRenderer
         return adjustment == 0d ? line : TranslateTextLine(line, 0d, adjustment);
     }
 
-    private static IEnumerable<DocxTextLineLayout> EnumerateStaticTextLines(DocxLayoutPage page, bool includeTextBoxes, DocxMarkupContext? markupContext = null)
+    private static IEnumerable<DocxTextLineLayout> EnumerateStaticTextLines(DocxLayoutPage page, bool includeTextBoxes, DocxMarkupContext? markupContext = null) =>
+        EnumerateStaticLineSources(page, includeTextBoxes, markupContext).Select(source => source.Line);
+
+    private static IEnumerable<(DocxTextLineLayout Line, DocxStoryId Owner)> EnumerateStaticLineSources(
+        DocxLayoutPage page, bool includeTextBoxes, DocxMarkupContext? markupContext)
     {
         foreach (DocxTextLineLayout line in page.StaticTextLines)
-        {
-            yield return AdjustStaticTextLine(line, markupContext);
-        }
-
+            yield return (AdjustStaticTextLine(line, markupContext), line.Story ?? DocxStoryId.Body());
         if (includeTextBoxes)
-        {
-            foreach (DocxTextLineLayout boxLine in EnumerateStaticTextBoxLines(page))
+            foreach (var box in page.StaticInlineTextBoxes)
             {
-                yield return boxLine;
+                var owner = box.Story ?? DocxStoryId.Body();
+                foreach (var line in box.TextLines) yield return (line, owner);
+                foreach (var row in box.TableRows)
+                    foreach (var line in EnumerateTableRowTextLines(row)) yield return (line, owner);
             }
-        }
-
         foreach (DocxTableRowLayout row in page.StaticTableRows)
-        {
-            foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
-            {
-                yield return cellLine.StaticStoryUsesPhysicalY ? AdjustStaticTextLine(cellLine, markupContext) : cellLine;
-            }
-        }
+            foreach (DocxTextLineLayout line in EnumerateTableRowTextLines(row))
+                yield return (line.StaticStoryUsesPhysicalY ? AdjustStaticTextLine(line, markupContext) : line,
+                    row.Story ?? DocxStoryId.Body());
     }
 
     // Box-only static walk for comment suppression: static text comments keep

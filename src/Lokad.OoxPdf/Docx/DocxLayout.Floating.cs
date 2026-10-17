@@ -211,11 +211,15 @@ internal sealed partial class DocxLayoutEngine
     {
         double? hheaAscender = kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote
             ? DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, fontSize, textMeasurer, selectMaxHhea: false) : null;
-        return kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote or DocxStoryKind.TextBox &&
+        if (kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote or DocxStoryKind.TextBox &&
             textMeasurer is IDocxHheaLineGapProvider gapProvider &&
-            ResolveRelatedStoryFirstInsetPoints(paragraph, textMeasurer, gapProvider, kind is DocxStoryKind.TextBox) is double inset
-            ? inset : DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight,
-                IsExactLineSpacing(paragraph.EffectiveProperties), hheaAscender);
+            ResolveRelatedStoryFirstInsetPoints(paragraph, textMeasurer, gapProvider, kind is DocxStoryKind.TextBox) is double inset &&
+            double.IsFinite(inset) && inset >= 0d) return inset;
+        // Global font descenders may exceed the note metric frame. Such a hint
+        // cannot own a physical baseline; retain the existing measured fallback
+        // instead of making ordered inline content fail its extent invariants.
+        return DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight,
+            IsExactLineSpacing(paragraph.EffectiveProperties), hheaAscender);
     }
 
     private static (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> PlacedImages, double UsedHeight, double BaselineOffset) LayoutRelatedStoryParagraphTextLines(

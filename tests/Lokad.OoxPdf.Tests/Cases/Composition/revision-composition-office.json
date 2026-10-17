@@ -1,0 +1,94 @@
+{
+  "Rows": [
+    {
+      "Mode": "final-preserve",
+      "InputSha256": "65D6ED985CCF8064AB8F058129FCF940BD7A4883A8BB624098DD766E56795156",
+      "ReferencePdfSha256": "91C0909B86A465B41ED57EA2F3B60DFC61DD6A67198F19F43ABB378712D045B6",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "Pages": 2,
+      "FixedMath": "x+2ya+b=cx+2ya+b=cx+2yx+2y",
+      "RepeatedMathPerPage": "a+b=cratetime",
+      "WordMathGlyphs": 52,
+      "Bars": [],
+      "FixedRedMathGlyphs": 0,
+      "RepeatedRedMathGlyphsPerPage": 0,
+      "WordRedMathGlyphs": 0
+    },
+    {
+      "Mode": "all-word-compatible",
+      "InputSha256": "65D6ED985CCF8064AB8F058129FCF940BD7A4883A8BB624098DD766E56795156",
+      "ReferencePdfSha256": "87FC3C68B6684ABB7CB375127CF3898885AE5E09FBD1D1C1AA91418D08522A6C",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "Pages": 2,
+      "FixedMath": "x+2ya+b=cx+2ya+b=cx+2yx+2yx+2y",
+      "RepeatedMathPerPage": "a+b=cratetimeratetime",
+      "WordMathGlyphs": 72,
+      "Bars": [
+        {
+          "PageNumber": 1,
+          "X": 27.312,
+          "Y": 640.25,
+          "Width": 0.5279999999999987,
+          "Height": 14.279999999999973
+        },
+        {
+          "PageNumber": 1,
+          "X": 27.312,
+          "Y": 569.71,
+          "Width": 0.5279999999999987,
+          "Height": 19.847999999999956
+        },
+        {
+          "PageNumber": 1,
+          "X": 27.312,
+          "Y": 137.95,
+          "Width": 0.5279999999999987,
+          "Height": 22.464
+        },
+        {
+          "PageNumber": 2,
+          "X": 27.312,
+          "Y": 640.25,
+          "Width": 0.5279999999999987,
+          "Height": 14.279999999999973
+        },
+        {
+          "PageNumber": 2,
+          "X": 27.312,
+          "Y": 366.38,
+          "Width": 0.5279999999999987,
+          "Height": 23.567999999999984
+        },
+        {
+          "PageNumber": 2,
+          "X": 27.312,
+          "Y": 137.95,
+          "Width": 0.5279999999999987,
+          "Height": 22.464
+        }
+      ],
+      "FixedRedMathGlyphs": 12,
+      "RepeatedRedMathGlyphsPerPage": 13,
+      "WordRedMathGlyphs": 38
+    }
+  ],
+  "Scope": "Normal Arial rate/time formula operations supplement CambriaMath font filtering; source-backed counts verified against independent Word. Content presence does not prove reading order, ink or clipping."
+}

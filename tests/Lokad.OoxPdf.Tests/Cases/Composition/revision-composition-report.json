@@ -1,0 +1,14 @@
+[
+  {
+    "Id": "revision-composition-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/revision-composition-report.docx",
+    "Sha256": "65D6ED985CCF8064AB8F058129FCF940BD7A4883A8BB624098DD766E56795156",
+    "SourceSha256": "98980EB43EA8B9662666C026B7DD467F40D79A34E4A96F5805D032C192C8CEB3",
+    "HeldOut": false,
+    "ExpectedEquationCount": 10,
+    "ExpectedText": [
+      "All quantities in this synthetic example are illustrative.",
+      "Review section 12."
+    ]
+  }
+]

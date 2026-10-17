@@ -115,9 +115,7 @@ internal sealed partial class DocxRenderer
         }
 
         bool separateBodyBands = page.ColumnFrames.Count <= 1 &&
-            page.StaticTextLines.Count == 0 && page.StaticInlineImages.Count == 0 &&
-            page.StaticTableRows.Count == 0 && page.StaticInlineTextBoxes.Count == 0 &&
-            page.PlacedRelatedStories.Count == 0 && !drawingPages.PageAll(pageIndex).Any() &&
+            !drawingPages.PageAll(pageIndex).Any(drawing => !IsStaticStoryFloatingDrawing(drawing)) &&
             page.Items.All(item => item is DocxTextLineLayout { SourceParagraph: not null, SourceBlockIndex: >= 0 } line &&
                 (line.Story is null || line.Story?.Kind == DocxStoryKind.Body));
         if (separateBodyBands)
@@ -148,22 +146,21 @@ internal sealed partial class DocxRenderer
                 lastChangedBlock = sourceBlock;
             }
             PaintRevisionBounds();
-            return;
         }
 
-        foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(drawingPages, page, pageIndex, markupContext, page.Height))
+        var storyBounds = new Dictionary<DocxStoryId, (double Bottom, double Top)>();
+        foreach (var source in EnumerateRenderedPageLineSources(page, drawingPages.PageAll(pageIndex), markupContext, page.Height))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!HasTextLineRevision(line))
-            {
-                continue;
-            }
+            var line = source.Line;
+            var owner = RevisionBandOwner(source.Owner);
+            if (separateBodyBands && owner.Kind == DocxStoryKind.Body || !HasTextLineRevision(line)) continue;
 
             double scaledFontSize = line.FontSize * ResolveTextEmissionFontScale(markupContext);
             double height = Math.Max(6d, line.LineHeight ?? scaledFontSize * 1.2d);
             double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
             double y = baselineY - height * 0.25d;
-            IncludeRevisionBounds(y, height);
+            IncludeStoryBounds(owner, y, height);
         }
 
         foreach (DocxTableRowLayout row in EnumerateMarkupBalloonTableRows(page, drawingPages.PageAll(pageIndex)))
@@ -174,10 +171,24 @@ internal sealed partial class DocxRenderer
                 continue;
             }
 
-            IncludeRevisionBounds(row.Y, Math.Max(6d, row.Height));
+            IncludeStoryBounds(RevisionBandOwner(row.Story ?? DocxStoryId.Body()), row.Y, Math.Max(6d, row.Height));
+        }
+        foreach (var bounds in storyBounds.Values)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            bottom = bounds.Bottom; top = bounds.Top;
+            PaintRevisionBounds();
         }
 
-        PaintRevisionBounds();
+        void IncludeStoryBounds(DocxStoryId owner, double y, double height)
+        {
+            storyBounds[owner] = storyBounds.TryGetValue(owner, out var bounds)
+                ? (Math.Min(bounds.Bottom, y), Math.Max(bounds.Top, y + height)) : (y, y + height);
+        }
+
+        static DocxStoryId RevisionBandOwner(DocxStoryId owner) =>
+            owner.Kind is DocxStoryKind.Header or DocxStoryKind.Footer or DocxStoryKind.Footnote or DocxStoryKind.Endnote
+                ? owner : DocxStoryId.Body();
 
         bool HasTableRowRevision(DocxTableRowLayout row)
         {
