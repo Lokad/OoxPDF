@@ -1,5 +1,31 @@
 # Composed-document reliability checkpoint
 
+C133 fixes two shared table-frame defects: declared minima stayed in source
+points while exact heights already used the review scale, and baseline projection
+rejected automatic/minimum declarations despite measured physical child frames.
+Recognized minima now consume the existing scale once and share the automatic
+projection. Exact/unknown heights and complex/fragmented cell fallbacks remain;
+all rows validate before mutation and cancellation stays checked. No fitted offset
+or extra font/size/document-shape guard is introduced.
+
+Twelve independent review outcomes reuse six references and add six neighboring
+height-rule exports. Eight comparisons improve; four PDFs remain exact, including
+both exact-height controls. All content/ink survives. Ten automatic/minimum labels
+are within0.271pt of Word; changed math errors fall to1.212pt and prose to0.539pt.
+Unchanged exact-height controls retain3.061pt math/1.665pt label errors. All twelve
+strict/full one-point gates remain failed; no new failed components or relaxed
+thresholds. Six distinct visual pairs reviewed, six carry by raster identity.
+One default Final control also remains byte-identical.
+
+One frozen Release artifact passes78 Windows/69 Ubuntu checks/nine native skips,
+once per platform. Both new regressions fail on the parent. Seventeen assets/four
+smokes transfer without root rebuild/suite replay. The seven portfolio sources
+contain no declared table heights; C131 carries by explicit source inference and
+original report Review/deck smokes, without twelve conversions. Root18a4d363;
+`artifacts/composition-c1/minimum-row-placement-evidence.json`. C132 CI39047234888
+is green on both platforms. Next is source-backed connector placement: centered
+body-crossing connectors, type colors and balloon frame height remain visible.
+
 C132 assigns structural cell labels to their printed cell top, independently
 of connector anchors. Six independent row-height/preceding-row controls confirm
 that Word retains this owner. One preferred-top rule also preserves existing
