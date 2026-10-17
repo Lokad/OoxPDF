@@ -1,0 +1,54 @@
+[
+  {
+    "Id": "mixed-nested-cell-plain",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-nested-cell-plain.docx",
+    "Sha256": "04EEC1FA2B4BF52B88D5C1BC74AF43315E1614BDB9B9308D1CCC5E958295B3C4",
+    "SourceSha256": "048B348CE50D20E4AAF2E3A25A8BBE69B860534EB22ED42BD73A2CD4022EC07D",
+    "Placement": "plain",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "mixed-nested-cell-before",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-nested-cell-before.docx",
+    "Sha256": "DAC24A6B1843C59CD5FF29E1CD5F778389E90E1A8B73D1FA31C6B6015A1A9729",
+    "SourceSha256": "048B348CE50D20E4AAF2E3A25A8BBE69B860534EB22ED42BD73A2CD4022EC07D",
+    "Placement": "before",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public nested cell"
+    ]
+  },
+  {
+    "Id": "mixed-nested-cell-after",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-nested-cell-after.docx",
+    "Sha256": "DBD00FC93A05B1D8219BAC42992919F61D7A4CF3CBA514C399D2234067BC58E8",
+    "SourceSha256": "048B348CE50D20E4AAF2E3A25A8BBE69B860534EB22ED42BD73A2CD4022EC07D",
+    "Placement": "after",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public nested cell",
+      "Public outer tail"
+    ]
+  },
+  {
+    "Id": "mixed-nested-cell-inside",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-nested-cell-inside.docx",
+    "Sha256": "31D2508A4A35796FA84FCD22CC372E487C9B690270BF5862571ADDAFE8FA0494",
+    "SourceSha256": "048B348CE50D20E4AAF2E3A25A8BBE69B860534EB22ED42BD73A2CD4022EC07D",
+    "Placement": "inside",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public outer tail",
+      "Public outer head"
+    ]
+  }
+]

@@ -298,7 +298,8 @@ internal sealed partial class DocxLayoutEngine
             pageNumber: context.PageNumber,
             pageCount: context.PageCount,
             paragraphSpacingScale: context.ParagraphSpacingScale,
-            cancellationToken: CancellationToken.None);
+            mathEquations: context.MathEquations,
+            cancellationToken: context.CancellationToken);
         return frame.RowHeights.Sum();
     }
 
@@ -1074,7 +1075,9 @@ internal sealed partial class DocxLayoutEngine
         int? pageNumber,
         int? pageCount,
         double paragraphSpacingScale,
-        DocxTableCellTextLinesMemo? cellMemo = null)
+        DocxTableCellTextLinesMemo? cellMemo = null,
+        IReadOnlyDictionary<DocxParagraph, DocxInlineParagraphFrame>? orderedParagraphFrames = null,
+        CancellationToken cancellationToken = default)
     {
         IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
         if (textMeasurer is null || !bodyElements.OfType<DocxTableElement>().Any())
@@ -1088,7 +1091,8 @@ internal sealed partial class DocxLayoutEngine
             ParagraphSpacingScale: paragraphSpacingScale,
             PageNumber: pageNumber,
             PageCount: pageCount,
-            CellMemo: cellMemo);
+            CellMemo: cellMemo,
+            CancellationToken: cancellationToken);
 
         double paddingLeft = ResolveTableCellHorizontalEdgeInset(cell, "left", cell.Margins.LeftPoints, paragraphSpacingScale);
         double paddingRight = ResolveTableCellHorizontalEdgeInset(cell, "right", cell.Margins.RightPoints, paragraphSpacingScale);
@@ -1100,6 +1104,7 @@ internal sealed partial class DocxLayoutEngine
         int nestedTableIndex = 0;
         foreach (DocxBodyElement bodyElement in bodyElements)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (bodyElement is DocxTableElement tableElement)
             {
                 cursorY -= pendingSpacingAfter;
@@ -1117,10 +1122,11 @@ internal sealed partial class DocxLayoutEngine
                     pageNumber: pageNumber,
                     pageCount: pageCount,
                     paragraphSpacingScale: paragraphSpacingScale,
-                    cancellationToken: CancellationToken.None);
+                    cancellationToken: cancellationToken);
                 int nestedPageNumber = pageNumber ?? pageIndex + 1;
                 for (int rowIndex = 0; rowIndex < tableElement.Table.Rows.Count; rowIndex++)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     double rowHeight = frame.RowHeights[rowIndex];
                     nestedRows.Add(CreateTableRowLayout(
                         tableElement.Table,
@@ -1182,7 +1188,11 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            cursorY -= MeasureTableCellParagraphContentHeight(cell, paragraph, textWidth, context);
+            // Reuse the occupied frame already measured and placed by the text
+            // walk; the legacy text-only estimate cannot measure mixed math.
+            cursorY -= orderedParagraphFrames is not null && orderedParagraphFrames.TryGetValue(paragraph, out var paragraphFrame)
+                ? paragraphFrame.OccupiedHeight
+                : MeasureTableCellParagraphContentHeight(cell, paragraph, textWidth, context);
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
         }

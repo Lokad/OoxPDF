@@ -5427,5 +5427,26 @@
     "DocxReaderEmitsAutomaticFootnoteAndEndnoteMarkersWithCascadeAlignment",
     "DocxPlainFootnoteKerningRetainsStyleCascadeAndExplicitZero",
     "DocxOrdinaryKerningReadsBasedOnCascadeAndExplicitZero"
+  ],
+  "docx-nested-cell-neighbors": [
+    "DocxInlineCompositionNestedCellNeighbors",
+    "PortableRenderingNestedCellNeighbors",
+    "DocxTableMath",
+    "DocxStaticTableMath",
+    "DocxInlineCompositionNoteTables",
+    "PortableRenderingNoteTableComposition",
+    "DocxTableLayoutStageLaysOutNestedTableCellBodies",
+    "DocxTableLayoutStagePreservesMixedCellBodyOrderAroundNestedTables",
+    "DocxTableLayoutStagePlacesNestedTableBelowBreakSpillRow",
+    "DocxTableLayoutStageKeepsNestedTablesOnAuthoredSideOfPageBreak",
+    "DocxTableLayoutStagePartitionsNestedTablesAcrossCompetingCellPageBreaks",
+    "DocxTableLayoutStageSplitsNestedTableRowsAcrossCompetingCellPageBreak",
+    "DocxWordCompatibleAllMarkupScalesNestedTableCellSpacing",
+    "DocxWordCompatibleAllMarkupLaysOutIndentedNestedTableInNarrowedBody",
+    "DocxAllMarkupRendererPlacesNestedTableRevisionBalloons",
+    "DocxReaderTableInventoryIncludesNestedTableCellBodies",
+    "DocxBlockTraversalAndFontPlanIncludeNestedTableCellBody",
+    "DocxInlineCompositionFittingEndnotesRetain",
+    "DocxDocumentEndnoteBoundariesRetainUnqualifiedStoryFallbacks"
   ]
 }

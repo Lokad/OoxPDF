@@ -25,8 +25,9 @@ internal static class DocxMathParagraphPolicy
         }
     }
 
-    // The same simple cell contract applies in body and page-owned static stories.
-    // Nested/rich cells retain their existing whole-owner fallback.
+    // A nested table does not replace its surrounding paragraph owners. Prepare
+    // those direct paragraphs under the shared cell properties; nested content
+    // retains its own staged fallback and is not traversed here.
     private static IEnumerable<DocxParagraph> EnumerateSupportedTableParagraphs(DocxTable table, CancellationToken token)
     {
         foreach (DocxTableRow row in table.Rows)
@@ -36,8 +37,9 @@ internal static class DocxMathParagraphPolicy
             foreach (DocxTableCell cell in row.Cells)
             {
                 token.ThrowIfCancellationRequested();
-                if (!IsSupportedSimpleCell(cell)) { continue; }
-                foreach (DocxParagraph paragraph in cell.Paragraphs)
+                if (!HasSupportedCellProperties(cell) ||
+                    !cell.BodyElements.All(child => child is DocxParagraphElement or DocxTableElement)) { continue; }
+                foreach (DocxParagraph paragraph in DocxTableCellContent.GetParagraphs(cell))
                 { token.ThrowIfCancellationRequested(); yield return paragraph; }
             }
         }
@@ -47,10 +49,12 @@ internal static class DocxMathParagraphPolicy
         HasSupportedTableContentRevisions(row.Revisions, DocxRevisionKind.TableRowPropertiesChange);
 
     public static bool IsSupportedSimpleCell(DocxTableCell cell) =>
+        HasSupportedCellProperties(cell) && cell.BodyElements.All(child => child is DocxParagraphElement);
+
+    private static bool HasSupportedCellProperties(DocxTableCell cell) =>
         !cell.HasVerticalMerge && !cell.FitText &&
         HasSupportedTableContentRevisions(cell.Revisions, DocxRevisionKind.TableCellPropertiesChange) &&
-        cell.TextDirectionValue is null or "lrTb" &&
-        cell.BodyElements.All(child => child is DocxParagraphElement);
+        cell.TextDirectionValue is null or "lrTb";
 
     // The reader selects visible rows before layout. Row insertion/deletion
     // markers and resolved property changes do not replace child source owners.

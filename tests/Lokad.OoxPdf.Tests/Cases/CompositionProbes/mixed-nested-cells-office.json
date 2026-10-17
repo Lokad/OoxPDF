@@ -1,0 +1,341 @@
+{
+  "Scope": "Direct paragraphs beside plain nested tables; inside-nested mathematics remains a diagnosed content gap",
+  "Rows": [
+    {
+      "Id": "mixed-nested-cell-plain",
+      "Mode": "final-preserve",
+      "InputSha256": "04EEC1FA2B4BF52B88D5C1BC74AF43315E1614BDB9B9308D1CCC5E958295B3C4",
+      "ReferencePdfSha256": "1567DD640714E49B30416B55ADE1AD7D84630105D71FB6FDF47927B5D594D0FE",
+      "ExpectedEquations": 2,
+      "AcceptedPaintedEquations": 2,
+      "ImagePlacements": 1,
+      "ExpectedText": [],
+      "Math": [
+        {
+          "Text": "rate",
+          "X": 108.38,
+          "Y": 708.58
+        },
+        {
+          "Text": "time",
+          "X": 107.66,
+          "Y": 695.5
+        },
+        {
+          "Text": "rate",
+          "X": 126.38,
+          "Y": 708.58
+        },
+        {
+          "Text": "time",
+          "X": 125.66,
+          "Y": 695.5
+        }
+      ],
+      "Prose": []
+    },
+    {
+      "Id": "mixed-nested-cell-plain",
+      "Mode": "all-word-compatible",
+      "InputSha256": "04EEC1FA2B4BF52B88D5C1BC74AF43315E1614BDB9B9308D1CCC5E958295B3C4",
+      "ReferencePdfSha256": "F8085D7639CA39BE1A7F1F5982FD50F0BF4B3B6B592F6FC0254A96F6C3618BC4",
+      "ExpectedEquations": 2,
+      "AcceptedPaintedEquations": 2,
+      "ImagePlacements": 1,
+      "ExpectedText": [],
+      "Math": [
+        {
+          "Text": "rate",
+          "X": 82.2,
+          "Y": 633.34
+        },
+        {
+          "Text": "time",
+          "X": 81.648,
+          "Y": 623.4
+        },
+        {
+          "Text": "rate",
+          "X": 95.832,
+          "Y": 633.34
+        },
+        {
+          "Text": "time",
+          "X": 95.304,
+          "Y": 623.4
+        }
+      ],
+      "Prose": []
+    },
+    {
+      "Id": "mixed-nested-cell-before",
+      "Mode": "final-preserve",
+      "InputSha256": "DAC24A6B1843C59CD5FF29E1CD5F778389E90E1A8B73D1FA31C6B6015A1A9729",
+      "ReferencePdfSha256": "A6B128EBBE75C8388725029FF144E3770D1F0564BABDE63C01B7B6FB262B9588",
+      "ExpectedEquations": 2,
+      "AcceptedPaintedEquations": 2,
+      "ImagePlacements": 1,
+      "ExpectedText": [
+        "Public nested cell"
+      ],
+      "Math": [
+        {
+          "Text": "rate",
+          "X": 108.38,
+          "Y": 693.82
+        },
+        {
+          "Text": "time",
+          "X": 107.66,
+          "Y": 680.74
+        },
+        {
+          "Text": "rate",
+          "X": 126.38,
+          "Y": 693.82
+        },
+        {
+          "Text": "time",
+          "X": 125.66,
+          "Y": 680.74
+        }
+      ],
+      "Prose": [
+        {
+          "Text": "Public nested cell",
+          "X": 72.504,
+          "Y": 707.74
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-cell-before",
+      "Mode": "all-word-compatible",
+      "InputSha256": "DAC24A6B1843C59CD5FF29E1CD5F778389E90E1A8B73D1FA31C6B6015A1A9729",
+      "ReferencePdfSha256": "C7615F5545CDCB4167695314D57D71B925266E35B92B7038D01E1D1F7D072C5C",
+      "ExpectedEquations": 2,
+      "AcceptedPaintedEquations": 2,
+      "ImagePlacements": 1,
+      "ExpectedText": [
+        "Public nested cell"
+      ],
+      "Math": [
+        {
+          "Text": "rate",
+          "X": 82.2,
+          "Y": 622.13
+        },
+        {
+          "Text": "time",
+          "X": 81.648,
+          "Y": 612.22
+        },
+        {
+          "Text": "rate",
+          "X": 95.832,
+          "Y": 622.13
+        },
+        {
+          "Text": "time",
+          "X": 95.304,
+          "Y": 612.22
+        }
+      ],
+      "Prose": [
+        {
+          "Text": "Public nested cell",
+          "X": 54.984,
+          "Y": 632.69
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-cell-after",
+      "Mode": "final-preserve",
+      "InputSha256": "DBD00FC93A05B1D8219BAC42992919F61D7A4CF3CBA514C399D2234067BC58E8",
+      "ReferencePdfSha256": "18B1095B8C556B148AB4B6E5899CCF7DC748E2A3EC2C0FDEA50D402183A6D3A2",
+      "ExpectedEquations": 2,
+      "AcceptedPaintedEquations": 2,
+      "ImagePlacements": 1,
+      "ExpectedText": [
+        "Public nested cell",
+        "Public outer tail"
+      ],
+      "Math": [
+        {
+          "Text": "rate",
+          "X": 108.38,
+          "Y": 708.58
+        },
+        {
+          "Text": "time",
+          "X": 107.66,
+          "Y": 695.5
+        },
+        {
+          "Text": "rate",
+          "X": 126.38,
+          "Y": 708.58
+        },
+        {
+          "Text": "time",
+          "X": 125.66,
+          "Y": 695.5
+        }
+      ],
+      "Prose": [
+        {
+          "Text": "Public nested cell",
+          "X": 72.504,
+          "Y": 683.62
+        },
+        {
+          "Text": "Public outer tail",
+          "X": 71.664,
+          "Y": 669.22
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-cell-after",
+      "Mode": "all-word-compatible",
+      "InputSha256": "DBD00FC93A05B1D8219BAC42992919F61D7A4CF3CBA514C399D2234067BC58E8",
+      "ReferencePdfSha256": "F1C78826F8777C637219912FD3DB86CED80EB262D5BB8424547A39500CC9CC2D",
+      "ExpectedEquations": 2,
+      "AcceptedPaintedEquations": 2,
+      "ImagePlacements": 1,
+      "ExpectedText": [
+        "Public nested cell",
+        "Public outer tail"
+      ],
+      "Math": [
+        {
+          "Text": "rate",
+          "X": 82.2,
+          "Y": 633.34
+        },
+        {
+          "Text": "time",
+          "X": 81.648,
+          "Y": 623.4
+        },
+        {
+          "Text": "rate",
+          "X": 95.832,
+          "Y": 633.34
+        },
+        {
+          "Text": "time",
+          "X": 95.304,
+          "Y": 623.4
+        }
+      ],
+      "Prose": [
+        {
+          "Text": "Public nested cell",
+          "X": 54.984,
+          "Y": 614.4
+        },
+        {
+          "Text": "Public outer tail",
+          "X": 54.336,
+          "Y": 603.48
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-cell-inside",
+      "Mode": "final-preserve",
+      "InputSha256": "31D2508A4A35796FA84FCD22CC372E487C9B690270BF5862571ADDAFE8FA0494",
+      "ReferencePdfSha256": "D165F9C7DF105D75426D7093789332646A3D72D766B34945EFB4800CC152A1A6",
+      "ExpectedEquations": 2,
+      "AcceptedPaintedEquations": 0,
+      "ImagePlacements": 1,
+      "ExpectedText": [
+        "Public outer tail",
+        "Public outer head"
+      ],
+      "Math": [
+        {
+          "Text": "rate",
+          "X": 109.22,
+          "Y": 694.3
+        },
+        {
+          "Text": "time",
+          "X": 108.5,
+          "Y": 681.22
+        },
+        {
+          "Text": "rate",
+          "X": 127.22,
+          "Y": 694.3
+        },
+        {
+          "Text": "time",
+          "X": 126.5,
+          "Y": 681.22
+        }
+      ],
+      "Prose": [
+        {
+          "Text": "Public outer head",
+          "X": 71.664,
+          "Y": 708.22
+        },
+        {
+          "Text": "Public outer tail",
+          "X": 71.664,
+          "Y": 669.22
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-cell-inside",
+      "Mode": "all-word-compatible",
+      "InputSha256": "31D2508A4A35796FA84FCD22CC372E487C9B690270BF5862571ADDAFE8FA0494",
+      "ReferencePdfSha256": "B601753F476615AEB92DF68069161C0DA8F6DDC9E56E20EAAB253EC746644E1B",
+      "ExpectedEquations": 2,
+      "AcceptedPaintedEquations": 0,
+      "ImagePlacements": 1,
+      "ExpectedText": [
+        "Public outer tail",
+        "Public outer head"
+      ],
+      "Math": [
+        {
+          "Text": "rate",
+          "X": 82.824,
+          "Y": 622.51
+        },
+        {
+          "Text": "time",
+          "X": 82.272,
+          "Y": 612.58
+        },
+        {
+          "Text": "rate",
+          "X": 96.48,
+          "Y": 622.51
+        },
+        {
+          "Text": "time",
+          "X": 95.928,
+          "Y": 612.58
+        }
+      ],
+      "Prose": [
+        {
+          "Text": "Public outer head",
+          "X": 54.336,
+          "Y": 633.05
+        },
+        {
+          "Text": "Public outer tail",
+          "X": 54.336,
+          "Y": 603.48
+        }
+      ]
+    }
+  ]
+}
