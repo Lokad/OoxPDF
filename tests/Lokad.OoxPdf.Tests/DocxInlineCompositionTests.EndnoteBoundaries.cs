@@ -10,9 +10,9 @@ internal static partial class DocxInlineCompositionTests
 {
     public static void DocxInlineCompositionFittingEndnotesOwnBoundariesWithoutChangingTypography()
     {
-        foreach (string container in new[] { "paragraph", "table" })
+        foreach (string fixture in new[] { "mixed-note-endnote-paragraph", "mixed-note-endnote-table", "mixed-nested-math-endnote" })
         {
-            var source = ReadMutation("CompositionProbes/mixed-note-endnote-" + container, OoxPdfDocxMarkupMode.Final, false, false);
+            var source = ReadMutation("CompositionProbes/" + fixture, OoxPdfDocxMarkupMode.Final, false, false);
             var math = DocxBlockTraversal.EnumerateBodyParagraphs(source.RelatedStories.Single(story => story.Id == "37"))
                 .SelectMany(paragraph => paragraph.Equations).ToDictionary(equation => equation,
                     equation => new DocxPreparedMathParagraph(equation, new(18d, 9d, 4d, []), 12d, 16d));
@@ -30,9 +30,9 @@ internal static partial class DocxInlineCompositionTests
 
     public static void DocxInlineCompositionFittingEndnotesRetainComplexFrameFallbacks()
     {
-        foreach (string variant in new[] { "keep", "overflow", "static", "scaled", "clipped", "nested" })
+        foreach (string variant in new[] { "keep", "overflow", "static", "scaled", "clipped", "nested-clipped" })
         {
-            bool table = variant is "clipped" or "nested";
+            bool table = variant is "clipped" or "nested-clipped";
             var source = ReadMutation("CompositionProbes/mixed-note-endnote-" + (table ? "table" : "paragraph"),
                 OoxPdfDocxMarkupMode.Final, false, false, (xml, w, _) =>
                 {
@@ -42,10 +42,12 @@ internal static partial class DocxInlineCompositionTests
                         .Value += string.Concat(Enumerable.Repeat(" Additional note words.", 200));
                     if (variant == "clipped") story.Element(w + "tbl")!.Element(w + "tr")!.AddFirst(new XElement(w + "trPr",
                         new XElement(w + "trHeight", new XAttribute(w + "val", "20"), new XAttribute(w + "hRule", "exact"))));
-                    if (variant == "nested")
+                    if (variant == "nested-clipped")
                     {
                         var paragraph = story.Element(w + "tbl")!.Descendants(w + "tc").Single().Element(w + "p")!;
-                        paragraph.ReplaceWith(new XElement(w + "tbl", new XElement(w + "tr", new XElement(w + "tc", paragraph))));
+                        paragraph.ReplaceWith(new XElement(w + "tbl", new XElement(w + "tr",
+                            new XElement(w + "trPr", new XElement(w + "trHeight", new XAttribute(w + "val", "20"), new XAttribute(w + "hRule", "exact"))),
+                            new XElement(w + "tc", paragraph))));
                     }
                 }, partOverride: "word/endnotes.xml");
             if (variant == "static") source = source with { HeaderParagraphs = [DocxTests.CreateDocxLayoutParagraph("Public header", 12d, 14d)] };
@@ -63,8 +65,13 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxInlineCompositionFittingEndnotesMatchIndependentBodyAndStoryBoundaries()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent endnote boundaries use installed Windows fonts.");
+        CheckFittingEndnoteBoundaries("endnote-fitting-office.json");
+    }
+
+    private static void CheckFittingEndnoteBoundaries(string referenceFile)
+    {
         string folder = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
-        using var golden = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, "endnote-fitting-office.json")));
+        using var golden = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, referenceFile)));
         foreach (var row in golden.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string input = Path.Combine(folder, row.GetProperty("CaseRelativePath").GetString()!);

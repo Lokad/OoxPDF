@@ -1,0 +1,50 @@
+[
+  {
+    "Id": "mixed-nested-math-endnote",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-nested-math-endnote.docx",
+    "Sha256": "D82C0ECA804C470491C2479F786B5D47DCCF04265E47ED9586727409D2A7773C",
+    "Container": "endnote",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public note calculation",
+      "Public note outer tail",
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "mixed-nested-math-footnote",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-nested-math-footnote.docx",
+    "Sha256": "3B7D1CAB0618B50504E38F26B4CA57D654460E93F7791CDBACA4CC95FE5532B6",
+    "Container": "footnote",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public note calculation",
+      "Public note outer tail",
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  },
+  {
+    "Id": "mixed-note-endnote-table",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-note-endnote-table.docx",
+    "Sha256": "F663443874A0FB61E8514D5B57F63D20EDF6C8627AD8105E1B134FE984138810",
+    "SourceSha256": "BD0F7BE2640553AA381E472DE6E4F94CB6479222284B09ABE249F6FABA50303F",
+    "DonorSha256": "E8FB62A69DD4CC79C28925A944B27DD4C86965D70C39C156ECC90FF52EE62A81",
+    "TableSourceSha256": "BD0D2EF6D5EECB1D6A17F50CF85F0C7D29560C04DD0094050E7E4BCEC593BC82",
+    "Kind": "endnote",
+    "Container": "table",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedImagePlacements": 1,
+    "ExpectedText": [
+      "Public note calculation",
+      "Public destination Alpha.",
+      "Public destination Delta."
+    ]
+  }
+]

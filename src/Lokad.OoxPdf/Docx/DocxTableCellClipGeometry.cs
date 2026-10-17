@@ -17,7 +17,7 @@ internal static class DocxTableCellClipGeometry
         }
     }
 
-    private static IEnumerable<(DocxTextLineLayout Line, DocxTableCellClipSnapshot? Clip)> EnumerateCellLines(
+    internal static IEnumerable<(DocxTextLineLayout Line, DocxTableCellClipSnapshot? Clip)> EnumerateCellLines(
         DocxTableRowLayout row, DocxTableCellClipSnapshot? parent, CancellationToken token)
     {
         const double roundoff = .000001d;

@@ -3,7 +3,7 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed partial class DocxLayoutEngine
 {
     // A complete measured block owns paragraph boundaries even when its middle
-    // contains supported inline objects or a simple table. This admission does
+    // contains supported inline objects or complete nested tables. This admission does
     // not change typography or the separately qualified continuation policies.
     private static bool CanUseFittingEndnoteBoundaries(DocxDocument document, DocxLayoutPage page,
         IReadOnlyList<DocxPlacedRelatedStoryLayout> placed, DocxRelatedStoryLayout? separator,
@@ -53,48 +53,64 @@ internal sealed partial class DocxLayoutEngine
                     (paragraph.Images.Count == 0 && paragraph.Equations.Count == 0 || frame);
             }
             foreach (var line in story.TextLines) if (!Index(line)) return false;
-            foreach (var row in story.TableRows)
+            long expectedCellLines = 0;
+            bool CompleteRows(IReadOnlyList<DocxTableRowLayout> rows)
             {
-                token.ThrowIfCancellationRequested();
-                if (row.FragmentCount != 1) return false;
-                foreach (var cell in row.Cells)
+                foreach (var row in rows)
                 {
                     token.ThrowIfCancellationRequested();
-                    if (cell.NestedRows.Count != 0) return false;
-                    var clip = DocxTableCellClipGeometry.Resolve(row, cell);
-                    foreach (var line in cell.TextLines)
+                    if (row.FragmentCount != 1) return false;
+                    foreach (var cell in row.Cells)
                     {
                         token.ThrowIfCancellationRequested();
-                        if (!DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double bottom, out double top) ||
-                            bottom < clip.Y - .000001d || top > clip.Y + clip.Height + .000001d || !Index(line)) return false;
+                        expectedCellLines += cell.TextLines.Count;
+                        if (!CompleteRows(cell.NestedRows)) return false;
                     }
                 }
+                return true;
             }
-            foreach (var element in story.Story.BodyElements)
+            if (!CompleteRows(story.TableRows)) return false;
+            long visibleCellLines = 0;
+            foreach (var row in story.TableRows)
+            foreach (var owner in DocxTableCellClipGeometry.EnumerateCellLines(row, null, token))
             {
                 token.ThrowIfCancellationRequested();
-                if (element.Revisions.Count != 0) return false;
-                if (element is DocxParagraphElement paragraph)
+                visibleCellLines++;
+                if (!Index(owner.Line)) return false;
+            }
+            // A surviving first line cannot stand in for a partly clipped
+            // paragraph. Every measured line must survive all ancestor clips.
+            if (visibleCellLines != expectedCellLines) return false;
+            bool Elements(IReadOnlyList<DocxBodyElement> elements)
+            {
+                foreach (var element in elements)
                 {
-                    if (!Paragraph(paragraph.Paragraph)) return false;
-                }
-                else if (element is DocxTableElement table)
-                {
-                    if (table.Table.Revisions.Count != 0) return false;
-                    foreach (var row in table.Table.Rows)
+                    token.ThrowIfCancellationRequested();
+                    if (element.Revisions.Count != 0) return false;
+                    if (element is DocxParagraphElement paragraph)
                     {
-                        token.ThrowIfCancellationRequested();
-                        if (row.Revisions.Count != 0 || !DocxMathParagraphPolicy.IsSupportedSimpleRow(row)) return false;
-                        foreach (var cell in row.Cells)
+                        if (!Paragraph(paragraph.Paragraph)) return false;
+                    }
+                    else if (element is DocxTableElement table)
+                    {
+                        if (table.Table.Revisions.Count != 0) return false;
+                        foreach (var row in table.Table.Rows)
                         {
                             token.ThrowIfCancellationRequested();
-                            if (cell.Revisions.Count != 0 || !DocxMathParagraphPolicy.IsSupportedSimpleCell(cell)) return false;
-                            foreach (var source in cell.Paragraphs) if (!Paragraph(source)) return false;
+                            if (row.Revisions.Count != 0 || !DocxMathParagraphPolicy.IsSupportedSimpleRow(row)) return false;
+                            foreach (var cell in row.Cells)
+                            {
+                                token.ThrowIfCancellationRequested();
+                                if (cell.Revisions.Count != 0 || !DocxMathParagraphPolicy.IsSupportedCellProperties(cell) ||
+                                    !Elements(DocxTableCellContent.GetBodyElements(cell))) return false;
+                            }
                         }
                     }
+                    else return false;
                 }
-                else return false;
+                return true;
             }
+            if (!Elements(story.Story.BodyElements)) return false;
         }
         return true;
     }

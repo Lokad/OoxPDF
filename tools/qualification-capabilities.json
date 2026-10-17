@@ -5479,5 +5479,27 @@
     "DocxNativeScaledStaticFrames",
     "DocxInlineCompositionStaticSourceFrames",
     "PortableRenderingStaticSourceFrames"
+  ],
+  "docx-nested-endnote-boundaries": [
+    "DocxInlineCompositionFittingNestedEndnotes",
+    "DocxInlineCompositionFittingEndnotes",
+    "DocxDocumentEndnoteBoundaries",
+    "DocxDocumentEndnotesFollowTrailingBodySpacingAtNominalScale",
+    "DocxDocumentEndnoteWrappedBoundaries",
+    "DocxDocumentEndnoteDestinations",
+    "DocxContinuedEndnote",
+    "DocxFittingMixedEndnote",
+    "DocxDeferredMixedEndnote",
+    "DocxContinuedMixedEndnote",
+    "DocxCompleteEndnoteKerningRetainsMalformedAndUnqualifiedFallbacks",
+    "DocxInlineCompositionNestedMath",
+    "PortableRenderingNestedMath",
+    "DocxInlineCompositionNoteTables",
+    "PortableRenderingNoteTableComposition",
+    "DocxDocumentEndnoteSeparatorIsPlacedWithRuleMark",
+    "DocxEndnoteSeparatorIgnores",
+    "DocxRendererEmitsPlacedEndnoteExternalHyperlinkAnnotations",
+    "DocxInlineCompositionEndnotesShareOwnedAutomaticReferenceRules",
+    "PortableRenderingAutomaticEndnotesPreserveMixedMathAndDestinations"
   ]
 }

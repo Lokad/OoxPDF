@@ -1,0 +1,139 @@
+{
+  "Provenance": "Reuse C158 pinned independent Word exports without re-export. Same half-point body/story/math geometry invariants and unchanged strict visual thresholds.",
+  "Rows": [
+    {
+      "Id": "mixed-nested-math-endnote",
+      "Mode": "final-preserve",
+      "CaseRelativePath": "mixed-nested-math-endnote.docx",
+      "InputSha256": "D82C0ECA804C470491C2479F786B5D47DCCF04265E47ED9586727409D2A7773C",
+      "ReferenceSha256": "29AEB9426F6AC265D892DB07999CC13195BD35838B8A08C7BB7E103F3D396613",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 2,
+      "BodyAnchor": {
+        "PageNumber": 2,
+        "Text": "Delta public body before note",
+        "X": 72.024,
+        "Y": 693.94
+      },
+      "NoteAnchors": [
+        {
+          "PageNumber": 2,
+          "Text": "Public destination Alpha.",
+          "X": 78.744,
+          "Y": 664.66
+        },
+        {
+          "PageNumber": 2,
+          "Text": "Public destination Bravo.",
+          "X": 80.184,
+          "Y": 587.26
+        },
+        {
+          "PageNumber": 2,
+          "Text": "Public destination Charlie.",
+          "X": 82.944,
+          "Y": 572.62
+        },
+        {
+          "PageNumber": 2,
+          "Text": "Public destination Delta.",
+          "X": 82.944,
+          "Y": 557.98
+        }
+      ],
+      "MathAnchors": [
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 185.78,
+          "Y": 650.5
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 185.06,
+          "Y": 637.42
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 261.65,
+          "Y": 650.5
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 260.93,
+          "Y": 637.42
+        }
+      ]
+    },
+    {
+      "Id": "mixed-nested-math-endnote",
+      "Mode": "all-word-compatible",
+      "CaseRelativePath": "mixed-nested-math-endnote.docx",
+      "InputSha256": "D82C0ECA804C470491C2479F786B5D47DCCF04265E47ED9586727409D2A7773C",
+      "ReferenceSha256": "9118FEF9A231EBE693DBD9993E0910EDFE0D383D800D45F9F6682A97A980CA22",
+      "ExpectedPages": 2,
+      "ExpectedEquations": 2,
+      "BodyAnchor": {
+        "PageNumber": 2,
+        "Text": "Delta public body before note",
+        "X": 72.024,
+        "Y": 693.94
+      },
+      "NoteAnchors": [
+        {
+          "PageNumber": 2,
+          "Text": "Public destination Alpha.",
+          "X": 78.744,
+          "Y": 664.66
+        },
+        {
+          "PageNumber": 2,
+          "Text": "Public destination Bravo.",
+          "X": 80.184,
+          "Y": 587.26
+        },
+        {
+          "PageNumber": 2,
+          "Text": "Public destination Charlie.",
+          "X": 82.944,
+          "Y": 572.62
+        },
+        {
+          "PageNumber": 2,
+          "Text": "Public destination Delta.",
+          "X": 82.944,
+          "Y": 557.98
+        }
+      ],
+      "MathAnchors": [
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 185.78,
+          "Y": 650.5
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 185.06,
+          "Y": 637.42
+        },
+        {
+          "PageNumber": 2,
+          "Text": "rate",
+          "X": 261.65,
+          "Y": 650.5
+        },
+        {
+          "PageNumber": 2,
+          "Text": "time",
+          "X": 260.93,
+          "Y": 637.42
+        }
+      ]
+    }
+  ]
+}
