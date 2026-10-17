@@ -4299,5 +4299,9 @@
     "DocxMathNeutralArgumentProperties",
     "DocxInlineCompositionExplicitControls",
     "PortableRenderingExplicitControls"
+  ],
+  "docx-explicit-control-placement": [
+    "DocxInlineCompositionExplicitControlPlacement",
+    "PortableRenderingExplicitControlPlacement"
   ]
 }

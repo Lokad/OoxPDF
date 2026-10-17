@@ -1,0 +1,131 @@
+[
+  {
+    "Id": "explicit-placement-cell-script",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/explicit-placement-cell-script.docx",
+    "Sha256": "62388CD9F984FFC1BE7CFF49CC592F6DE18B709BA78A9BE2AF83D86C1E81E861",
+    "SourceSha256": "08E3B9301D0566909A89941AD59ABC07AC9E9049B2B7EC4F0076D9BE3E30B8B8",
+    "ContentSourceSha256": "E00F65D0F491EE001F05289ECC510F37E16CE87A7F0527EE0C4F95AEEB6CC1F9",
+    "Story": "cell",
+    "Role": "script",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "explicit-placement-cell-fraction",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/explicit-placement-cell-fraction.docx",
+    "Sha256": "46ACCC0891E77CDC721BD6585587969B99500A003939A9E41631E92F7DFCA3A5",
+    "SourceSha256": "08E3B9301D0566909A89941AD59ABC07AC9E9049B2B7EC4F0076D9BE3E30B8B8",
+    "ContentSourceSha256": "659CE7C6C6846066249D3769A38335364C6BAE8A9551728CD6197BC2BA44FFF9",
+    "Story": "cell",
+    "Role": "fraction",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "explicit-placement-header-script",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/explicit-placement-header-script.docx",
+    "Sha256": "F8CBB6455B25B1B4FE1515EC2CFE07235420ADB22737C0B3C17FAC3240375F01",
+    "SourceSha256": "7A58C565993F5DC58DCB3BE53397D4F8FC81A407B46D6447A68745ED62268B07",
+    "ContentSourceSha256": "E00F65D0F491EE001F05289ECC510F37E16CE87A7F0527EE0C4F95AEEB6CC1F9",
+    "Story": "header",
+    "Role": "script",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "explicit-placement-header-fraction",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/explicit-placement-header-fraction.docx",
+    "Sha256": "601CFAEB5BD4D50B52AF17AEBD7757740BF5817EDB205F682426337D920F56A0",
+    "SourceSha256": "7A58C565993F5DC58DCB3BE53397D4F8FC81A407B46D6447A68745ED62268B07",
+    "ContentSourceSha256": "659CE7C6C6846066249D3769A38335364C6BAE8A9551728CD6197BC2BA44FFF9",
+    "Story": "header",
+    "Role": "fraction",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "explicit-placement-footer-script",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/explicit-placement-footer-script.docx",
+    "Sha256": "C3988736943ABF639EA7C66B6B9F78CD0FA4BDC45C8837F51CE0A0A7DE3E16AE",
+    "SourceSha256": "7C594C15A2658C786620E0A01E5A84438AD26EE240364DC5B0F96C884406667A",
+    "ContentSourceSha256": "E00F65D0F491EE001F05289ECC510F37E16CE87A7F0527EE0C4F95AEEB6CC1F9",
+    "Story": "footer",
+    "Role": "script",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "explicit-placement-footer-fraction",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/explicit-placement-footer-fraction.docx",
+    "Sha256": "DE6E9D3FE94CF439EB5E03E1D9B21B91998492A152AA5F5361561A63352054F3",
+    "SourceSha256": "7C594C15A2658C786620E0A01E5A84438AD26EE240364DC5B0F96C884406667A",
+    "ContentSourceSha256": "659CE7C6C6846066249D3769A38335364C6BAE8A9551728CD6197BC2BA44FFF9",
+    "Story": "footer",
+    "Role": "fraction",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  }
+]
