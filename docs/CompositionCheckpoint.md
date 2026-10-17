@@ -1,5 +1,29 @@
 # Composed-document reliability checkpoint
 
+C109 fixes wrapper-only content loss in supported compound script/fraction rows.
+Insertion syntax now reuses the ordinary literal/control grammar and actual source
+owners. Both orders retain all eight formerly omitted glyphs in both presets.
+Unknown, mixed-unknown and nested wrappers retain explicit fallback; unsupported
+Final compound deletion preserves traversed source rather than dropping structure.
+
+Four sources/eight strict Word outcomes pass all one-point anchors: math max
+0.136pt X / 0.459pt Y, prose max 0.169pt X / 0.046pt Y. Both inserted Final PDFs
+are byte-identical to unwrapped controls. Four MAEs improve; four ordinary PDFs
+remain exact. All eight strict raster gates stay failed without new components.
+Four crop pairs reviewed; bookmark/run splitting preserves content, ink and placement.
+
+One frozen Release artifact passes 32 Windows methods and 23 Ubuntu checks/nine
+native skips, one invocation each. Two parent checks fail on actual 22-versus-14
+glyph counts. A test-only compile error is corrected before qualification; retained
+validation-tool/path setup failures require no conversion or test replay. Seven
+original sources contain no revisions, so twelve accepted portfolio comparisons
+carry by source audit. Seventeen assets/four smoke PDFs transfer without root build
+or suite replay. Root c8238f8f; evidence
+`artifacts/composition-c1/compound-revision-rows-evidence.json`.
+C108 CI39025340929 is green on both platforms. Workspace at 10:39Z is 10.360GB /
+505,752 files, no errors; the loose 5GB target remains unmet. Rejected retirements
+remain untouched; no reclamation is claimed.
+
 C108 qualifies literal matrix-cell deletions across body, table cell, direct header
 and footer paragraphs through unchanged C107 production. Four actual literal owners
 retain an unrevised metric control. Final keeps blank slots; Review keeps source
