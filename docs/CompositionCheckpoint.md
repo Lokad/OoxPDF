@@ -1,5 +1,35 @@
 # Composed-document reliability checkpoint
 
+C114 retains an empty fraction beside a visible script and plus sign. Shared
+preparation resolves its actual metric owner through the existing conversion cache
+without an unused subset. Revision ownership follows actual controls independently
+of painted literals; ordinary neighbors cannot create review ink. The existing
+parent-metric preference and deeper/unknown fallbacks remain intact.
+
+Six sources/twelve independent Word outcomes expose ten omissions of four visible
+glyphs and a bar. All ten affected rule/anchor gates pass: math max0.106pt X /0.423pt
+Y, prose0.130pt /0.010pt. Ten MAEs improve; two visible Review PDFs retain exact
+bytes. Their0.108pt width residual and differing strike segmentation remain failed
+in the raw rule report. All twelve strict raster gates fail without new components.
+Six crop pairs reviewed; bookmarks/run splitting preserve content and placement.
+
+Qualification is84 Windows passes and58 Ubuntu passes/26 native skips on one
+production Release artifact. Two new observers initially equate Word's three
+overlapping run/operator strikes with four generated glyph strikes. The harness
+now counts black structural bars and margin bars exactly and checks revision-strike
+presence plus actual glyph author ink. Raw gates and numerical thresholds remain
+unchanged. A test-only rebuild proves library/CLI/all1,837 input identities; carry
+80 Windows/56 Ubuntu passes and rerun only four/two observers. Two invocations each;
+failed reports retained. Both parent checks fail expected18 versus14 glyphs.
+
+Seven exact portfolio sources have no revisions or empty fraction/script/matrix
+controls, including inside painted equations. C111's twelve actual accepted PDF
+comparisons carry by source inference. Seventeen assets/four integration PDFs
+transfer without root build/suite replay. The inherited unused-header diagnostic
+remains source-classified; no diagnostic policy change. Rootef9f052e; evidence
+`artifacts/composition-c1/mixed-controls-evidence.json`. C113 CI39030203632 is green
+on Windows and Ubuntu. Next: the same mixed controls in cells/direct static stories.
+
 C113 publishes ordered actual math controls independently of literal run presence.
 Shared metric-only preparation resolves each control font; occupied geometry drives
 placement and edges. Supported flat Final deletion retains actual control frames
