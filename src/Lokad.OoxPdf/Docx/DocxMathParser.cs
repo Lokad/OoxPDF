@@ -23,13 +23,12 @@ internal static partial class DocxMathParser
             string name = element.Name.LocalName;
             bool revisionSource = !item.InsideRevision && includeRevision is not null && element.Name.Namespace == WordprocessingNamespace &&
                 name is "ins" or "del";
-            bool revisionRun = revisionSource && element.HasElements && element.Elements().All(child =>
-                    child.Name == MathNamespace + "r" && child.Elements(MathNamespace + "t").Any(text => text.Value.Length != 0));
-            bool structuralRevision = revisionSource && element.Elements().Count() == 1 &&
+            bool revisionRow = revisionSource && element.HasElements && element.Elements().All(IsRevisionContent);
+            bool structuralRevision = revisionRow && element.Elements().Count() == 1 &&
                 element.Elements().Single().Name.Namespace == MathNamespace &&
                 IsControl(element.Elements().Single().Name.LocalName);
-            bool revisionRow = revisionRun || structuralRevision;
-            bool retainDeletedFrame = structuralRevision && preserveDeletedStructure && name == "del" && !includeRevision!(element);
+            bool retainDeletedFrame = revisionRow && preserveDeletedStructure && name == "del" && !includeRevision!(element) &&
+                element.Elements().Any(child => IsControl(child.Name.LocalName));
             if (revisionRow && !item.Expanded && !includeRevision!(element) && !retainDeletedFrame)
             {
                 nodes.Add(element, new DocxMathRow([]));
@@ -58,16 +57,8 @@ internal static partial class DocxMathParser
                 // grammar. Ownership already lives on actual control/literal sources.
                 var child = element.Elements().Single();
                 node = nodes[child];
-                if (retainDeletedFrame)
-                {
-                    var retained = DocxMathLayout.RemoveDeletedLiteralMathText(
-                        new(new([node]), 0, 0, false, null, null, null), cancellationToken);
-                    node = retained is { Children.Count: 1 } ? retained.Children[0] :
-                        new DocxMathUnsupported(name, element.Name.NamespaceName, null,
-                            [new(child.Name.LocalName, child.Name.NamespaceName, node)]);
-                }
             }
-            else if (revisionRun)
+            else if (revisionRow)
                 node = new DocxMathRow(ContentChildren(element).Select(child => nodes[child]).ToArray());
             else if (IsRow(name) && (name != "deg" || element.Parent?.Name == MathNamespace + "rad") &&
                 (name != "fName" || element.Parent?.Name == MathNamespace + "func"))
@@ -150,7 +141,16 @@ internal static partial class DocxMathParser
                     ContentChildren(element).Select(child => new DocxMathChild(
                         child.Name.LocalName, child.Name.NamespaceName, nodes[child])).ToArray());
             }
-            nodes.Add(element, structuralRevision ? node : node with { PropertiesXml = ReadProperties(element) });
+            if (retainDeletedFrame)
+            {
+                var retained = DocxMathLayout.RemoveDeletedLiteralMathText(
+                    new(new([node]), 0, 0, false, null, null, null), cancellationToken);
+                node = retained is { Children.Count: 1 } ? retained.Children[0] :
+                    new DocxMathUnsupported(name, element.Name.NamespaceName, null,
+                        ContentChildren(element).Select(child => new DocxMathChild(
+                            child.Name.LocalName, child.Name.NamespaceName, nodes[child])).ToArray());
+            }
+            nodes.Add(element, revisionRow ? node : node with { PropertiesXml = ReadProperties(element) });
         }
 
         return nodes[equation] as DocxMathRow ?? new DocxMathRow([nodes[equation]]);
@@ -171,6 +171,9 @@ internal static partial class DocxMathParser
     // A single control has the same grammar inside an admitted revision wrapper.
     // Role rows and orphan matrix rows still require their actual source parent.
     private static bool IsControl(string name) => name is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary" or "func" or "m";
+    private static bool IsRevisionContent(XElement element) => element.Name.Namespace == MathNamespace &&
+        (IsControl(element.Name.LocalName) || element.Name.LocalName == "r" &&
+            element.Elements(MathNamespace + "t").Any(text => text.Value.Length != 0));
     private static bool IsContainer(string name) => IsRow(name) || IsControl(name) || name == "mr";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
     private static IEnumerable<XElement> ContentChildren(XElement element) => element.Elements().Where(child => !IsProperty(child));

@@ -69,10 +69,10 @@ internal static partial class DocxInlineCompositionTests
                     var control = wrapper.Elements().Single();
                     if (variant == 0) control.ReplaceWith(new XElement(m + "future"));
                     else if (variant == 1) control.ReplaceWith(new XElement(w + "ins", new XAttribute(w + "id", "999"), new XElement(control)));
-                    else wrapper.Add(new XElement(control));
+                    else wrapper.Add(new XElement(m + "future"));
                 });
                 TestAssert.True(!DocxMathLayout.TryGetRuns(source.Paragraphs.First().Equations.Single(), default, out _),
-                    "Unknown, nested and multiple structural wrapper children keep explicit whole-equation fallback.");
+                    "Unknown, nested and mixed unknown wrapper children keep explicit whole-equation fallback.");
             }
         }
         var deeper = ReadMutation("CompositionProbes/math-fragment-root-del", OoxPdfDocxMarkupMode.Final, false, false, (xml, w, m) =>

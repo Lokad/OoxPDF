@@ -2,6 +2,7 @@
 from pathlib import Path
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 from xml.etree import ElementTree as E
+from copy import deepcopy
 import hashlib
 import json
 
@@ -91,3 +92,41 @@ for story in ["body", "cell", "header", "footer"]:
                           ExpectedText=["share the same input series."], ProsePrefixes=["Summary:", "governs"]))
 (output / "matrix-cell-revisions.json").write_text(json.dumps(cell_rows, indent=2) + "\n", encoding="utf-8")
 print("Pinned four literal cell revisions across body/cell/header/footer")
+
+source = output / "math-control-revision-script.docx"
+with ZipFile(source) as z:
+    compound_entries = {name: z.read(name) for name in z.namelist()}
+with ZipFile(output / "equation-revision-body-ins.docx") as z:
+    fraction = next(E.fromstring(z.read("word/document.xml")).iter(m + "f"))
+compound_rows = []
+for order in ["script-first", "fraction-first"]:
+    for kind in ["ordinary", "inserted"]:
+        entries = dict(compound_entries)
+        xml = E.fromstring(entries["word/document.xml"])
+        equation = next(xml.iter(m + "oMath"))
+        script = equation.find(w + "ins").find(m + "sSubSup")
+        equation.clear()
+        plus = E.Element(m + "r")
+        E.SubElement(plus, m + "t").text = "+"
+        nodes = [script, plus, deepcopy(fraction)] if order == "script-first" else [deepcopy(fraction), plus, script]
+        if kind == "ordinary":
+            equation.extend(nodes)
+        else:
+            E.SubElement(equation, w + "ins", {
+                w + "id": "998", w + "author": "Compound Math Reviewer",
+                w + "date": "2026-10-17T00:00:00Z",
+            }).extend(nodes)
+        entries["word/document.xml"] = E.tostring(xml, encoding="utf-8", xml_declaration=True)
+        target = output / ("compound-revision-" + order + "-" + kind + ".docx")
+        with ZipFile(target, "w", ZIP_DEFLATED) as z:
+            for name, data in sorted(entries.items()):
+                info = ZipInfo(name, (2026, 10, 17, 0, 0, 0))
+                info.compress_type = ZIP_DEFLATED
+                z.writestr(info, data)
+        compound_rows.append(dict(Id=target.stem, Input=target.relative_to(root).as_posix(),
+                                  Sha256=hashlib.sha256(target.read_bytes()).hexdigest().upper(),
+                                  SourceSha256=hashlib.sha256(source.read_bytes()).hexdigest().upper(),
+                                  Order=order, Kind=kind, HeldOut=False, ExpectedEquationCount=4,
+                                  ExpectedText=["share the same input series."], ProsePrefixes=["Summary:", "governs"]))
+(output / "compound-revisions.json").write_text(json.dumps(compound_rows, indent=2) + "\n", encoding="utf-8")
+print("Pinned four compound control rows with and without insertion wrappers")

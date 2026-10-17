@@ -3693,5 +3693,28 @@
   "docx-matrix-cell-revisions": [
     "DocxInlineCompositionMatrixCellRevisions",
     "PortableRenderingMatrixCellRevisions"
+  ],
+  "docx-compound-revision-rows": [
+    "DocxInlineCompositionControlRevisions",
+    "PortableRenderingControlRevisions",
+    "DocxInlineCompositionStructuralFragments",
+    "PortableRenderingStructuralFragments",
+    "DocxMathReader",
+    "DocxMathMatrixMalformedAndOrphanRowsRetainTraversedSource",
+    "DocxMathMatrixDeepTraversalAndCancellationRemainIterative",
+    "DocxInlineCompositionMathRunRevisions",
+    "PortableRenderingMathRunRevisions",
+    "DocxInlineCompositionEquationRevisions",
+    "PortableRenderingEquationRevisions",
+    "DocxInlineCompositionWholeStructuralRevisions",
+    "PortableRenderingWholeStructuralRevisions",
+    "DocxInlineCompositionCompleteRevisionsKeepDistinctWordStoryBands",
+    "PortableRenderingCompleteRevisionsKeepContentInkAndStoryBands",
+    "DocxInlineCompositionCompoundRevisions",
+    "PortableRenderingCompoundRevisions",
+    "DocxInlineCompositionEmptyMatrices",
+    "PortableRenderingEmptyMatrices",
+    "DocxInlineCompositionMatrixCellRevisions",
+    "PortableRenderingMatrixCellRevisions"
   ]
 }

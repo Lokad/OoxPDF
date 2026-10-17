@@ -1,0 +1,70 @@
+[
+  {
+    "Id": "compound-revision-script-first-ordinary",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/compound-revision-script-first-ordinary.docx",
+    "Sha256": "C2EBFC5CCA771EDE652FF7F041A85C65141A0FD61E03422865DA69D1F4764A89",
+    "SourceSha256": "4803537023354C890DDFBB4E224C7D7649135EEF92F048F6958042166FA214AC",
+    "Order": "script-first",
+    "Kind": "ordinary",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "compound-revision-script-first-inserted",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/compound-revision-script-first-inserted.docx",
+    "Sha256": "D2EF8CAC2634DD0495C8C5C3B527481E21DA705F57207E3F674EF4B8B56CB976",
+    "SourceSha256": "4803537023354C890DDFBB4E224C7D7649135EEF92F048F6958042166FA214AC",
+    "Order": "script-first",
+    "Kind": "inserted",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "compound-revision-fraction-first-ordinary",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/compound-revision-fraction-first-ordinary.docx",
+    "Sha256": "E0A3F6C09333A1BE016EC78E32D81667BB07D7AA7B32BE65BC966DD86C26F9E3",
+    "SourceSha256": "4803537023354C890DDFBB4E224C7D7649135EEF92F048F6958042166FA214AC",
+    "Order": "fraction-first",
+    "Kind": "ordinary",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "compound-revision-fraction-first-inserted",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/compound-revision-fraction-first-inserted.docx",
+    "Sha256": "FBB41F9E71715B5A52FAB02F6CC1D6E0D1260FDB18528BAB69A5F44501E1AB43",
+    "SourceSha256": "4803537023354C890DDFBB4E224C7D7649135EEF92F048F6958042166FA214AC",
+    "Order": "fraction-first",
+    "Kind": "inserted",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  }
+]
