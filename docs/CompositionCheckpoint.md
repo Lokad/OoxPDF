@@ -1,5 +1,26 @@
 # Composed-document reliability checkpoint
 
+C108 qualifies literal matrix-cell deletions across body, table cell, direct header
+and footer paragraphs through unchanged C107 production. Four actual literal owners
+retain an unrevised metric control. Final keeps blank slots; Review keeps source
+ink/strikes. Bookmarks and unchanged-format run splitting preserve placement.
+
+Four sources/eight strict Word outcomes pass all one-point anchor gates: math max
+0.501pt X / 0.401pt Y, prose max 0.567pt X / 0.398pt Y. Eight crop pairs reviewed;
+all eight strict raster gates remain failed. Three new Windows checks and two
+Ubuntu checks/one native skip run once each. Exact production/CLI/1,796 existing
+input identities carry C107's 65 Windows and 46 Ubuntu/19 skips without replay.
+Only tests rebuild. Twelve accepted portfolio comparisons carry through the same
+identity/source audit; seventeen assets/four smoke PDFs transfer without root build.
+
+Separate whole-control probes do not justify a shared deletion-frame rule: empty
+and font-bearing control properties differ in Word. Their cause remains unverified,
+raw observations retained, and no narrowly qualified runtime branch is added.
+A reusable summary command records existing inspected math/prose gates, including
+failures, without conversion or PDF parsing. Root af06b6cc; evidence
+`artifacts/composition-c1/matrix-cell-revisions-evidence.json`.
+C107 CI39024753073 is green on both platforms.
+
 C107 retains authored-empty matrix slots through existing hidden-placeholder
 measurement and shared metric-only font preparation. Actual control/paragraph
 metrics own advance and occupied height; no dummy run, placeholder glyph or math
