@@ -3662,5 +3662,32 @@
     "PortableRenderingWholeStructuralRevisions",
     "DocxInlineCompositionCompleteRevisionsKeepDistinctWordStoryBands",
     "PortableRenderingCompleteRevisionsKeepContentInkAndStoryBands"
+  ],
+  "docx-empty-matrices": [
+    "DocxInlineCompositionControlRevisions",
+    "PortableRenderingControlRevisions",
+    "DocxInlineCompositionStructuralFragments",
+    "PortableRenderingStructuralFragments",
+    "DocxMathReader",
+    "DocxMathMatrixMalformedAndOrphanRowsRetainTraversedSource",
+    "DocxMathMatrixDeepTraversalAndCancellationRemainIterative",
+    "DocxInlineCompositionMathRunRevisions",
+    "PortableRenderingMathRunRevisions",
+    "DocxInlineCompositionEquationRevisions",
+    "PortableRenderingEquationRevisions",
+    "DocxInlineCompositionWholeStructuralRevisions",
+    "PortableRenderingWholeStructuralRevisions",
+    "DocxInlineCompositionCompleteRevisionsKeepDistinctWordStoryBands",
+    "PortableRenderingCompleteRevisionsKeepContentInkAndStoryBands",
+    "DocxInlineCompositionEmptyMatrices",
+    "PortableRenderingEmptyMatrices",
+    "MathFontMatrix",
+    "DocxNativeMatrix",
+    "DocxNativeFunctionMatrix",
+    "DocxMathMatrix",
+    "DocxInlineCompositionStructuralPaint",
+    "PortableRenderingStructuralPaint",
+    "DocxInlineCompositionEmptyFraction",
+    "PortableRenderingEmptyFractions"
   ]
 }

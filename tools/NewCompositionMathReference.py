@@ -39,7 +39,8 @@ def main():
             fonts = {(row["PageNumber"], row["ResourceName"])
                      for row in read(run / "inspect/font-resources.json")
                      if "CambriaMath" in row["BaseFont"]}
-            math = [row for row in read(run / "inspect/text-operations.json")
+            text_operations = read(run / "inspect/text-operations.json")
+            math = [row for row in text_operations
                     if (row["PageNumber"], row["Font"]) in fonts]
             assert math and {row["PageNumber"] for row in math} == {1}, "Expected single-page math control"
             anchors = []
@@ -54,6 +55,14 @@ def main():
                              MathText="".join(row["Text"] for row in anchors), MathGlyphCount=offset,
                              ImageCount=source.get("ImageCount", 1), ExpectedText=source["ExpectedText"],
                              Anchors=anchors))
+            if source.get("ProsePrefixes"):
+                prose = []
+                for prefix in source["ProsePrefixes"]:
+                    matches = [row for row in text_operations if row["DecodedText"].lstrip().startswith(prefix)]
+                    assert len(matches) == 1, "Prose anchor must identify one independent run"
+                    row = matches[0]
+                    prose.append(dict(Prefix=prefix, X=row["EffectiveX"], Y=row["EffectiveY"]))
+                rows[-1]["ProseAnchors"] = prose
     output.write_text(json.dumps(dict(Rows=rows), indent=2) + "\n", encoding="utf-8")
     print("Pinned", len(rows), "independent math outcomes without exporting or rebuilding")
 

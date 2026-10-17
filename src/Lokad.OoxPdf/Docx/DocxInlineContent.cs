@@ -193,7 +193,7 @@ internal static class DocxInlineContent
         var seen = new HashSet<DocxRevisionInfo>(ReferenceEqualityComparer.Instance);
         if (runs.Count == 0)
         {
-            if (DocxMathLayout.GetStandalonePaintControl(equation, token)?.ControlText is not { } control || !AddOwner(control)) return false;
+            if (DocxMathLayout.GetStandaloneControl(equation, token)?.ControlText is not { } control || !AddOwner(control)) return false;
         }
         else foreach (var source in runs)
         {

@@ -4,13 +4,14 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static partial class DocxMathLayout
 {
-    // A supported structural symbol owns paint even when all its literal
-    // children are empty. No synthetic source run or recursive discovery.
-    internal static IDocxMathControl? GetStandalonePaintControl(DocxEquation equation, CancellationToken token)
+    // A supported control owns metrics and any structural paint even when its
+    // literal children are empty. No synthetic source run or recursive discovery.
+    internal static IDocxMathControl? GetStandaloneControl(DocxEquation equation, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
         if (GetRadical(equation) is { } radical) return radical;
         if (GetNary(equation, token) is { } nary) return nary;
+        if (GetMatrix(equation, token) is { } matrix) return matrix;
         return GetDelimiter(equation);
     }
 

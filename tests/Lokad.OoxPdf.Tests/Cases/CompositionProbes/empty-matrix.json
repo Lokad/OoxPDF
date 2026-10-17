@@ -1,0 +1,87 @@
+[
+  {
+    "Id": "math-matrix-deleted-11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-matrix-deleted-11.docx",
+    "Sha256": "986F4DDF5C8BC3197FA7E68C54E8BB62DB09BCEFC0FE16F8D41086A502C8AC4E",
+    "SourceSha256": "F6A6C8D64EBA84C75A4BA519E33032913A73DDF977CC13937847B927D424FFD6",
+    "ControlSize": 11,
+    "Kind": "deleted",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "math-matrix-authored-empty-11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-matrix-authored-empty-11.docx",
+    "Sha256": "2AF2D7CF1541DC3BFDCA8BC4DFB13844EBCDCE07A881A7A791CB3426E07191F1",
+    "SourceSha256": "F6A6C8D64EBA84C75A4BA519E33032913A73DDF977CC13937847B927D424FFD6",
+    "ControlSize": 11,
+    "Kind": "authored-empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "math-matrix-implicit-empty-11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-matrix-implicit-empty-11.docx",
+    "Sha256": "9ADDEBAD2DE05FD0363AABF89E7E947679B6D07B4BE38EFC4F18D8CCCBA44D71",
+    "SourceSha256": "F6A6C8D64EBA84C75A4BA519E33032913A73DDF977CC13937847B927D424FFD6",
+    "ControlSize": 11,
+    "Kind": "implicit-empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "math-matrix-deleted-18",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-matrix-deleted-18.docx",
+    "Sha256": "4C309F97D8D22112AB4FEB7D03BA872A75B65C6C645446CF3E284EF83436CC1D",
+    "SourceSha256": "F6A6C8D64EBA84C75A4BA519E33032913A73DDF977CC13937847B927D424FFD6",
+    "ControlSize": 18,
+    "Kind": "deleted",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  },
+  {
+    "Id": "math-matrix-authored-empty-18",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-matrix-authored-empty-18.docx",
+    "Sha256": "81323A808A49531751FDA6DB02A35150A1F317FC6899AAC3847D7F7DA697990B",
+    "SourceSha256": "F6A6C8D64EBA84C75A4BA519E33032913A73DDF977CC13937847B927D424FFD6",
+    "ControlSize": 18,
+    "Kind": "authored-empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ]
+  }
+]

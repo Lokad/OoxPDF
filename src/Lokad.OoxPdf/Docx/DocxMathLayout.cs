@@ -73,7 +73,6 @@ internal static partial class DocxMathLayout
                 if (!AddBoxArgumentRows(cell))
                 { runs = []; return false; }
             }
-            if (rows.Count == 0) { runs = []; return false; }
             controlOwner = matrix;
         }
         else if (GetScripts(equation) is { } scripts)

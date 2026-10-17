@@ -209,11 +209,17 @@ internal static class DocxMathMatrixLayoutTests
                     "Known visibility settings preserve the independent Word-equivalent empty slots.");
             reference = box;
         }
-        foreach (var invalid in new[] { matrix with { Rows = [new([empty, empty, empty])] },
-            matrix with { Rows = [new([empty with { PropertiesXml = ["<future/>"] }, empty, literal])] } })
+        foreach (var invalid in new[] { matrix with { Rows = [new([empty with { PropertiesXml = ["<future/>"] }, empty, literal])] } })
             TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(invalid), CancellationToken.None, out _) &&
                 !DocxMathLayout.TryMeasure(Equation(invalid), _ => resource, CancellationToken.None, out var absent, out _, resolveControlMetrics: _ => font) && absent is null,
-                "Unknown empty-cell properties and wholly empty grids retain complete fallback.");
+                "Unknown empty-cell properties retain complete fallback.");
+        var allEmpty = Equation(matrix with { Rows = [new([empty, empty, empty])] });
+        TestAssert.True(DocxMathLayout.TryGetRuns(allEmpty, default, out var emptySources) && emptySources.Count == 0 &&
+            DocxMathLayout.TryMeasure(allEmpty, _ => throw new InvalidOperationException("No literal font source exists."),
+                default, out var emptyBox, out _, resolveControlMetrics: _ => font) && emptyBox is { Glyphs.Count: 0, Width: > 0d },
+            "All-empty slots use their actual control/paragraph metrics without inventing painted source runs.");
+        TestAssert.True(!DocxMathLayout.TryMeasure(allEmpty, _ => resource, default, out _, out _),
+            "An all-empty grid still requires a metric owner, not a fabricated literal font lookup.");
         TestAssert.True(!DocxMathLayout.TryMeasure(Equation(matrix), _ => resource, CancellationToken.None, out var missing, out _,
             resolveControlMetrics: _ => MathFont()) && missing is null, "Missing placeholder metrics cannot invent an empty width or publish partial cells.");
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();

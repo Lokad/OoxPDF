@@ -21,7 +21,7 @@ internal static partial class DocxInlineCompositionTests
             var equation = document.Paragraphs.Single(p => p.Equations.Count != 0).Equations.Single();
             TestAssert.True(DocxMathLayout.TryGetRuns(equation, default, out var runs), "Known empty literal roles retain bounded discovery.");
             TestAssert.Equal(role == "function-name" ? 1 : 0, runs.Count);
-            var control = DocxMathLayout.GetStandalonePaintControl(equation, default);
+            var control = DocxMathLayout.GetStandaloneControl(equation, default);
             if (role == "function-name")
                 TestAssert.True(control is null, "An invisible function name retains its actual argument source.");
             else
@@ -34,7 +34,7 @@ internal static partial class DocxInlineCompositionTests
             }).Paragraphs.Single(p => p.Equations.Count != 0).Equations.Single();
             TestAssert.True(!DocxMathLayout.TryGetRuns(unknown, default, out _), "Unknown children cannot masquerade as an empty argument.");
             using var canceled = new CancellationTokenSource(); canceled.Cancel();
-            TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.GetStandalonePaintControl(equation, canceled.Token));
+            TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.GetStandaloneControl(equation, canceled.Token));
         }
     }
 

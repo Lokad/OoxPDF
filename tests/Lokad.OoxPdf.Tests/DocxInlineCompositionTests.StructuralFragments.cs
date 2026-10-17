@@ -37,7 +37,7 @@ internal static partial class DocxInlineCompositionTests
                     retained.Revision is null && DocxMathLayout.TryGetRuns(retained, default, out var runs) && runs.Count == 0,
                     "Final preserves the supported frame without deleted literal ink or author metadata.");
                 TestAssert.True(role == "fraction" ? DocxMathLayout.IsEmptyFraction(retained) :
-                    DocxMathLayout.GetStandalonePaintControl(retained, default) is not null,
+                    DocxMathLayout.GetStandaloneControl(retained, default) is not null,
                     "Deletion retains actual supported structural paint, including a glyphless fraction rule.");
                 TestAssert.True(!DocxRenderer.BuildWordReviewAuthorPalette(final, [], default).AuthorSlots.ContainsKey("Whole Math Reviewer"),
                     "Excluded fragment owners cannot reserve Final author ink.");

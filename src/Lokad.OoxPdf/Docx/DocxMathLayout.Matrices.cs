@@ -11,6 +11,10 @@ internal static partial class DocxMathLayout
     // retaining the same metric box. Unknown properties remain rejected above.
     private static bool IsEmptyMatrixCell(DocxMathRow cell, CancellationToken token) => IsEmptyArgument(cell, token);
 
+    internal static bool IsEmptyMatrix(DocxEquation equation, CancellationToken token) =>
+        GetMatrix(equation, token) is { } matrix &&
+        matrix.Rows.All(row => row.Cells.All(cell => IsEmptyMatrixCell(cell, token)));
+
     private static DocxMathMatrix? GetMatrix(DocxEquation equation, CancellationToken token) =>
         GetSupportedMatrix(GetSingleSupportedChild(equation), token);
 
@@ -61,13 +65,14 @@ internal static partial class DocxMathLayout
         Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics, double? rowControlSize = null)
     {
         box = null;
-        if (!TryGetRuns(equation, token, out var sources) || sources.Count == 0)
+        if (!TryGetRuns(equation, token, out var sources))
         { fallback = "UnsupportedMathMatrixSource"; return false; }
         OpenTypeFont? font = resolveControlMetrics is not null ? resolveControlMetrics(matrix) :
-            resolveControlFont is not null ? resolveControlFont(matrix)?.Font.Font : resolveFont(sources[0].Run)?.Font.Font;
+            resolveControlFont is not null ? resolveControlFont(matrix)?.Font.Font :
+            sources.Count == 0 ? null : resolveFont(sources[0].Run)?.Font.Font;
         if (font is null || !font.TryGetMathConstants(out var constants))
         { fallback = "MissingMathMatrixMetrics"; return false; }
-        double size = rowControlSize ?? matrix.ControlText?.FontSize ?? equation.ParentFontSize ?? sources[0].Run.Text.FontSize;
+        double size = rowControlSize ?? ResolveControlSize(matrix, equation, sources);
         if (!double.IsFinite(size) || size <= 0d)
         { fallback = "InvalidMathMatrixSize"; return false; }
         if (!TryResolveMatrixSpacing(matrix, size, out double minimumWidth, out double gap))

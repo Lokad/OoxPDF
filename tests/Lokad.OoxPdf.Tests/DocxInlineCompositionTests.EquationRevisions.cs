@@ -50,13 +50,15 @@ internal static partial class DocxInlineCompositionTests
     }
 
     internal static void CheckEquationRevisions(IFontResolver? resolver, bool compareGeometry,
-        string referenceFile = "equation-revisions-office.json", bool splitMathRuns = false, bool horizontalGeometryOnly = false)
+        string referenceFile = "equation-revisions-office.json", bool splitMathRuns = false, bool horizontalGeometryOnly = false,
+        Func<string, bool>? includeCase = null)
     {
         string folder = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
         using var golden = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, referenceFile)));
         foreach (var row in golden.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string id = row.GetProperty("Id").GetString()!;
+            if (includeCase is not null && !includeCase(id)) continue;
             string fixture = row.TryGetProperty("Fixture", out var authored) ? authored.GetString()! : "CompositionProbes/" + id;
             string input = Path.GetFullPath(Path.Combine(folder, "..", fixture + ".docx"));
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
@@ -94,6 +96,29 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(expectedGlyphs, math.Length);
                 TestAssert.Equal(row.GetProperty("MathText").GetString(), string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
                 TestAssert.Equal(row.TryGetProperty("ImageCount", out var images) ? images.GetInt32() : 1, page.Images.Count);
+                if (compareGeometry && row.TryGetProperty("ProseAnchors", out var proseAnchors))
+                {
+                    var proseShows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
+                        .Where(show => !fonts.Contains(show.Font)).ToArray();
+                    foreach (var anchor in proseAnchors.EnumerateArray())
+                    {
+                        string prefix = anchor.GetProperty("Prefix").GetString()!;
+                        string proseText = string.Concat(proseShows.Select(show => show.Text));
+                        int offset = proseText.IndexOf(prefix, StringComparison.Ordinal);
+                        TestAssert.True(offset >= 0 && offset == proseText.LastIndexOf(prefix, StringComparison.Ordinal),
+                            "An independent prose anchor identifies one source prefix across unchanged-format run splitting.");
+                        int index = 0;
+                        while (offset >= proseShows[index].Text.Length) offset -= proseShows[index++].Text.Length;
+                        var show = proseShows[index];
+                        string leading = show.Text[..offset];
+                        TestAssert.True(leading.AsSpan().IsWhiteSpace(),
+                            "A prose origin is a source boundary or follows whitespace, without arbitrary in-run positioning.");
+                        double x = show.X + show.Font.MeasureTextPoints(leading, show.Size, kerningEnabled: false);
+                        TestAssert.True(Math.Abs(x - anchor.GetProperty("X").GetDouble()) < 1d &&
+                            Math.Abs(show.Y - anchor.GetProperty("Y").GetDouble()) < 1d,
+                            "Metric-only content retains independent Word prose geometry: " + id + "/" + mode + "/" + prefix);
+                    }
+                }
                 foreach (string prose in row.TryGetProperty("ExpectedText", out var expectedText)
                     ? expectedText.EnumerateArray().Select(value => value.GetString()!) : ["share the same input series."])
                     TestAssert.Contains(prose, DocxPageFootnoteNumberingTests.DecodeText(page));

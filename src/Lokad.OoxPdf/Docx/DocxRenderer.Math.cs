@@ -143,13 +143,16 @@ internal sealed partial class DocxRenderer
                 DocxEquation equation = sourceEquation.Display == displayStyle
                     ? sourceEquation : sourceEquation with { Display = displayStyle };
                 if (!DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
-                if (DocxMathLayout.IsEmptyFraction(equation))
+                if (DocxMathLayout.IsEmptyFraction(equation) || DocxMathLayout.IsEmptyMatrix(equation, token))
                 {
                     // No painted source glyphs: load only the existing conversion
                     // metric owner, without creating a PDF subset or glyph map.
-                    var metricFace = resolver.Resolve(new FontRequest(document.Settings.MathFontFamily ?? "Cambria Math"));
+                    var metricControl = DocxMathLayout.GetStandaloneControl(equation, token);
+                    var metricFace = resolver.Resolve(new FontRequest(metricControl?.ControlFontFamily ??
+                        document.Settings.MathFontFamily ?? "Cambria Math"));
                     var metricFont = LoadFont(metricFace, fontCache, token);
-                    if (DocxMathLayout.TryMeasure(equation, _ => null, token, out var emptyBox, out _, metricFont) &&
+                    if (DocxMathLayout.TryMeasure(equation, _ => null, token, out var emptyBox, out _, metricFont,
+                        resolveControlMetrics: _ => metricFont) &&
                         emptyBox is not null && TryPrepareMathParagraph(paragraph, equation, sourceEquation, emptyBox, token, out var emptyLayout))
                         (metricOnlyLayouts ??= new(ReferenceEqualityComparer.Instance)).Add(sourceEquation, emptyLayout!);
                     continue;
@@ -164,7 +167,7 @@ internal sealed partial class DocxRenderer
                 }
                 bool valid = true;
                 if (mathRuns.Count == 0 &&
-                    (DocxMathLayout.GetStandalonePaintControl(equation, token) is not { } paintControl || !TryPrepareControl(paintControl)))
+                    (DocxMathLayout.GetStandaloneControl(equation, token) is not { } controlOwner || !TryPrepareControl(controlOwner)))
                     continue;
                 foreach (DocxMathRunSource source in mathRuns)
                 {
