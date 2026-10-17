@@ -26,6 +26,9 @@ internal sealed record DocxMarkupContext(
     // per conversion from the laid-out related stories. Empty until the renderer
     // attaches document state; readers fall back to slot 0 (the review color).
     public DocxReviewAuthorPalette? WordReviewAuthorPalette { get; init; }
+    // Owned by one painting conversion, with entries only for actual empty-run
+    // owners. Reuse classification across pages without rescanning long runs.
+    public Dictionary<DocxParagraph, bool>? NonRenderingRevisionParagraphs { get; init; }
     public IReadOnlyDictionary<string, int> CommentAuthorPaletteSlots { get; init; } = new Dictionary<string, int>();
     // RV06: resolved Segoe UI Bold face for balloon titles (Office sets titles in Segoe
     // UI Bold, bodies in the document face). Null keeps the label face everywhere.

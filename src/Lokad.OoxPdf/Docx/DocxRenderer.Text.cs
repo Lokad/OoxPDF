@@ -805,7 +805,7 @@ internal sealed partial class DocxRenderer
         }
 
         IReadOnlyList<DocxRevisionInfo> lineRevisions = markupContext.DrawsChangeBars && !UsesWordCompatibleAllMarkupTextProfile(markupContext)
-            ? CollectTextLineRevisions(line)
+            ? CollectTextLineRevisions(line, markupContext)
             : [];
         if (markupContext.DrawsChangeBars &&
             lineRevisions.Count != 0 &&

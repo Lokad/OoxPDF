@@ -3024,5 +3024,30 @@
     "DocxCoveredRunsSkipFallbackProgramLoads",
     "PortableRenderingBrokenLiteralsSurviveCellAndStaticPlacement",
     "PortableRenderingInlineLiteralOperatorBreakPreservesContent"
+  ],
+  "docx-revision-neutrality": [
+    "DocxRevisionNeutrality",
+    "PortableRenderingRevisionNeutrality",
+    "DocxElevenPoint",
+    "DocxOrdinaryMinimumSpacing",
+    "DocxMinimumBeforeLeading",
+    "DocxContextualMinimum",
+    "DocxMarkedMinimumLeading",
+    "DocxReviewEmptyRunOwners",
+    "PortableRenderingEmptyRunOwners",
+    "DocxInlineCompositionTextRevision",
+    "DocxInlineCompositionRunFormatting",
+    "DocxReviewNonTextAuthors",
+    "PortableRenderingNonTextReviewAuthors",
+    "DocxConversionLoadsEachFontProgramOnce",
+    "DocxCoveredRunsSkipFallbackProgramLoads",
+    "PortableRenderingBrokenLiteralsSurviveCellAndStaticPlacement",
+    "PortableRenderingInlineLiteralOperatorBreakPreservesContent",
+    "DocxRevisionBarHorizontalFramesMatchIndependentWord",
+    "PortableRenderingRevisionBarsKeepIndependentPageFrames",
+    "DocxWordCompatibleRevisionBars",
+    "DocxWordCompatibleAllMarkupPaintsPageRevisionBar",
+    "DocxSimpleMarkupRendererDrawsChangeBars",
+    "DocxSimpleMarkupRendererDrawsTableRowChangeBars"
   ]
 }

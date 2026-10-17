@@ -1,0 +1,449 @@
+{
+  "Scope": "Independent Word Final and print-review output is raster-identical within each source-size group, across plain/empty/styled-empty source runs. Actual text baselines are retained, not inferred from candidate output.",
+  "Rows": [
+    {
+      "Id": "revision-neutrality-11-control",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-11-control.docx",
+      "Sha256": "DF90A4B7DB9165BF1305446950E5E52794D01F31D6AC4F49D116FE0112F69058",
+      "Pair": "minimum-11",
+      "Variant": "control",
+      "HeldOut": false,
+      "ExpectedEquationCount": 0,
+      "ExpectedText": [
+        "Public first paragraph AVATAR To Wa.",
+        "Public second paragraph."
+      ],
+      "Mode": "final-preserve",
+      "InputSha256": "DF90A4B7DB9165BF1305446950E5E52794D01F31D6AC4F49D116FE0112F69058",
+      "ReferencePdfSha256": "22214EB21FC9E3CBA587C2A5FF9BB0E53C8F7A1D2099D5C76CA2B436E4C44D74",
+      "ReferenceRasterSha256": "299AED92A03768FA0D8F92E5CE96FA68C5D2639048DB00CD38B2C2735D9405F0",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "TextBaselines": [
+        {
+          "Text": "Public first paragraph AVATAR To Wa.",
+          "Y": 707.02
+        },
+        {
+          "Text": "Public second paragraph.",
+          "Y": 691.06
+        }
+      ]
+    },
+    {
+      "Id": "revision-neutrality-11-control",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-11-control.docx",
+      "Sha256": "DF90A4B7DB9165BF1305446950E5E52794D01F31D6AC4F49D116FE0112F69058",
+      "Pair": "minimum-11",
+      "Variant": "control",
+      "HeldOut": false,
+      "ExpectedEquationCount": 0,
+      "ExpectedText": [
+        "Public first paragraph AVATAR To Wa.",
+        "Public second paragraph."
+      ],
+      "Mode": "all-word-compatible",
+      "InputSha256": "DF90A4B7DB9165BF1305446950E5E52794D01F31D6AC4F49D116FE0112F69058",
+      "ReferencePdfSha256": "2D6E6124A99FC3C1FF41DCAFED63A47DDB591DD383A1721A1A0CB7413BCE42D2",
+      "ReferenceRasterSha256": "299AED92A03768FA0D8F92E5CE96FA68C5D2639048DB00CD38B2C2735D9405F0",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "TextBaselines": [
+        {
+          "Text": "Public first paragraph AVATAR To Wa.",
+          "Y": 707.02
+        },
+        {
+          "Text": "Public second paragraph.",
+          "Y": 691.06
+        }
+      ]
+    },
+    {
+      "Id": "revision-neutrality-11-empty",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-11-empty.docx",
+      "Sha256": "D3FB9EABF5F9731EBBCC15A6036CBE304C0048BFC590FAA03470FDF9957C7A01",
+      "Pair": "minimum-11",
+      "Variant": "empty",
+      "HeldOut": false,
+      "ExpectedEquationCount": 0,
+      "ExpectedText": [
+        "Public first paragraph AVATAR To Wa.",
+        "Public second paragraph."
+      ],
+      "Mode": "final-preserve",
+      "InputSha256": "D3FB9EABF5F9731EBBCC15A6036CBE304C0048BFC590FAA03470FDF9957C7A01",
+      "ReferencePdfSha256": "AA08BDAB449A31CB837D37429DBD5003EF5E44301FB0117B0A77A982B1AFBEA2",
+      "ReferenceRasterSha256": "299AED92A03768FA0D8F92E5CE96FA68C5D2639048DB00CD38B2C2735D9405F0",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "TextBaselines": [
+        {
+          "Text": "Public first paragraph AVATAR To Wa.",
+          "Y": 707.02
+        },
+        {
+          "Text": "Public second paragraph.",
+          "Y": 691.06
+        }
+      ]
+    },
+    {
+      "Id": "revision-neutrality-11-empty",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-11-empty.docx",
+      "Sha256": "D3FB9EABF5F9731EBBCC15A6036CBE304C0048BFC590FAA03470FDF9957C7A01",
+      "Pair": "minimum-11",
+      "Variant": "empty",
+      "HeldOut": false,
+      "ExpectedEquationCount": 0,
+      "ExpectedText": [
+        "Public first paragraph AVATAR To Wa.",
+        "Public second paragraph."
+      ],
+      "Mode": "all-word-compatible",
+      "InputSha256": "D3FB9EABF5F9731EBBCC15A6036CBE304C0048BFC590FAA03470FDF9957C7A01",
+      "ReferencePdfSha256": "7A4C9DEE988444A0382C6C34E809A845CE8F0696EC9E0E8CB068A2C893DAD60A",
+      "ReferenceRasterSha256": "299AED92A03768FA0D8F92E5CE96FA68C5D2639048DB00CD38B2C2735D9405F0",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "TextBaselines": [
+        {
+          "Text": "Public first paragraph AVATAR To Wa.",
+          "Y": 707.02
+        },
+        {
+          "Text": "Public second paragraph.",
+          "Y": 691.06
+        }
+      ]
+    },
+    {
+      "Id": "revision-neutrality-11-empty-style",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-11-empty-style.docx",
+      "Sha256": "873AF5815034B652CE5475B7459031C3D2060D4DDD7711EE9BF9F2AA15E19B2E",
+      "Pair": "minimum-11",
+      "Variant": "empty-style",
+      "HeldOut": false,
+      "ExpectedEquationCount": 0,
+      "ExpectedText": [
+        "Public first paragraph AVATAR To Wa.",
+        "Public second paragraph."
+      ],
+      "Mode": "final-preserve",
+      "InputSha256": "873AF5815034B652CE5475B7459031C3D2060D4DDD7711EE9BF9F2AA15E19B2E",
+      "ReferencePdfSha256": "F6AF3F3B17D956551BEAF74DF8B8120DC1E82F4F0CD61BF0E7832AB252FF0C6F",
+      "ReferenceRasterSha256": "299AED92A03768FA0D8F92E5CE96FA68C5D2639048DB00CD38B2C2735D9405F0",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "TextBaselines": [
+        {
+          "Text": "Public first paragraph AVATAR To Wa.",
+          "Y": 707.02
+        },
+        {
+          "Text": "Public second paragraph.",
+          "Y": 691.06
+        }
+      ]
+    },
+    {
+      "Id": "revision-neutrality-11-empty-style",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-11-empty-style.docx",
+      "Sha256": "873AF5815034B652CE5475B7459031C3D2060D4DDD7711EE9BF9F2AA15E19B2E",
+      "Pair": "minimum-11",
+      "Variant": "empty-style",
+      "HeldOut": false,
+      "ExpectedEquationCount": 0,
+      "ExpectedText": [
+        "Public first paragraph AVATAR To Wa.",
+        "Public second paragraph."
+      ],
+      "Mode": "all-word-compatible",
+      "InputSha256": "873AF5815034B652CE5475B7459031C3D2060D4DDD7711EE9BF9F2AA15E19B2E",
+      "ReferencePdfSha256": "D599D1A6BB15170CB6349034AE4988ECC53AD4CA58FB13C869809AAF2F1E14B0",
+      "ReferenceRasterSha256": "299AED92A03768FA0D8F92E5CE96FA68C5D2639048DB00CD38B2C2735D9405F0",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "TextBaselines": [
+        {
+          "Text": "Public first paragraph AVATAR To Wa.",
+          "Y": 707.02
+        },
+        {
+          "Text": "Public second paragraph.",
+          "Y": 691.06
+        }
+      ]
+    },
+    {
+      "Id": "revision-neutrality-12-control",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-12-control.docx",
+      "Sha256": "39D86E4E31DC6356DA641189EA71E2577FDAB4BF10EDBA341376B8F64D6BEA4C",
+      "Pair": "minimum-12",
+      "Variant": "control",
+      "HeldOut": false,
+      "ExpectedEquationCount": 0,
+      "ExpectedText": [
+        "Public first paragraph AVATAR To Wa.",
+        "Public second paragraph."
+      ],
+      "Mode": "final-preserve",
+      "InputSha256": "39D86E4E31DC6356DA641189EA71E2577FDAB4BF10EDBA341376B8F64D6BEA4C",
+      "ReferencePdfSha256": "F31A724D4728CEA92F6DFE37930AA02D73138279CF0267E70B272BD21E42C095",
+      "ReferenceRasterSha256": "E0DD31EFF5BB2AFE2DF064961A0495A906A2EB40CD4093F2B9494553F278C358",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "TextBaselines": [
+        {
+          "Text": "Public first paragraph AVATAR To Wa.",
+          "Y": 705.22
+        },
+        {
+          "Text": "Public second paragraph.",
+          "Y": 687.22
+        }
+      ]
+    },
+    {
+      "Id": "revision-neutrality-12-control",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-12-control.docx",
+      "Sha256": "39D86E4E31DC6356DA641189EA71E2577FDAB4BF10EDBA341376B8F64D6BEA4C",
+      "Pair": "minimum-12",
+      "Variant": "control",
+      "HeldOut": false,
+      "ExpectedEquationCount": 0,
+      "ExpectedText": [
+        "Public first paragraph AVATAR To Wa.",
+        "Public second paragraph."
+      ],
+      "Mode": "all-word-compatible",
+      "InputSha256": "39D86E4E31DC6356DA641189EA71E2577FDAB4BF10EDBA341376B8F64D6BEA4C",
+      "ReferencePdfSha256": "FA33347084A4E52D061A62F079F7D08042A3DA35B3F670F4DDB1A767E30FED71",
+      "ReferenceRasterSha256": "E0DD31EFF5BB2AFE2DF064961A0495A906A2EB40CD4093F2B9494553F278C358",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "TextBaselines": [
+        {
+          "Text": "Public first paragraph AVATAR To Wa.",
+          "Y": 705.22
+        },
+        {
+          "Text": "Public second paragraph.",
+          "Y": 687.22
+        }
+      ]
+    },
+    {
+      "Id": "revision-neutrality-12-empty",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-12-empty.docx",
+      "Sha256": "A6582C8028D2D7BEED4511888A548F3553C20D2CF7CDB3162C3DB72A77617C0A",
+      "Pair": "minimum-12",
+      "Variant": "empty",
+      "HeldOut": false,
+      "ExpectedEquationCount": 0,
+      "ExpectedText": [
+        "Public first paragraph AVATAR To Wa.",
+        "Public second paragraph."
+      ],
+      "Mode": "final-preserve",
+      "InputSha256": "A6582C8028D2D7BEED4511888A548F3553C20D2CF7CDB3162C3DB72A77617C0A",
+      "ReferencePdfSha256": "07A226A2ECB001EAF0480CDF90F0F6A50EE0C48A5F5AC0AB42A6E32EC631C2B7",
+      "ReferenceRasterSha256": "E0DD31EFF5BB2AFE2DF064961A0495A906A2EB40CD4093F2B9494553F278C358",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "TextBaselines": [
+        {
+          "Text": "Public first paragraph AVATAR To Wa.",
+          "Y": 705.22
+        },
+        {
+          "Text": "Public second paragraph.",
+          "Y": 687.22
+        }
+      ]
+    },
+    {
+      "Id": "revision-neutrality-12-empty",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-12-empty.docx",
+      "Sha256": "A6582C8028D2D7BEED4511888A548F3553C20D2CF7CDB3162C3DB72A77617C0A",
+      "Pair": "minimum-12",
+      "Variant": "empty",
+      "HeldOut": false,
+      "ExpectedEquationCount": 0,
+      "ExpectedText": [
+        "Public first paragraph AVATAR To Wa.",
+        "Public second paragraph."
+      ],
+      "Mode": "all-word-compatible",
+      "InputSha256": "A6582C8028D2D7BEED4511888A548F3553C20D2CF7CDB3162C3DB72A77617C0A",
+      "ReferencePdfSha256": "8F335634655F87857F10A1E37F2C7357F2A417C32094F58C627AF06CE9E46612",
+      "ReferenceRasterSha256": "E0DD31EFF5BB2AFE2DF064961A0495A906A2EB40CD4093F2B9494553F278C358",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "TextBaselines": [
+        {
+          "Text": "Public first paragraph AVATAR To Wa.",
+          "Y": 705.22
+        },
+        {
+          "Text": "Public second paragraph.",
+          "Y": 687.22
+        }
+      ]
+    },
+    {
+      "Id": "revision-neutrality-12-empty-style",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-12-empty-style.docx",
+      "Sha256": "461FD463D5D7A4E0476E2E8D9DCB8C438C4A7F955F9884D9E7A199B213CECF77",
+      "Pair": "minimum-12",
+      "Variant": "empty-style",
+      "HeldOut": false,
+      "ExpectedEquationCount": 0,
+      "ExpectedText": [
+        "Public first paragraph AVATAR To Wa.",
+        "Public second paragraph."
+      ],
+      "Mode": "final-preserve",
+      "InputSha256": "461FD463D5D7A4E0476E2E8D9DCB8C438C4A7F955F9884D9E7A199B213CECF77",
+      "ReferencePdfSha256": "0A82C9089DA3BE92AD49398C2887E134D2D179B265728AE8712DE8217A632B4D",
+      "ReferenceRasterSha256": "E0DD31EFF5BB2AFE2DF064961A0495A906A2EB40CD4093F2B9494553F278C358",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "TextBaselines": [
+        {
+          "Text": "Public first paragraph AVATAR To Wa.",
+          "Y": 705.22
+        },
+        {
+          "Text": "Public second paragraph.",
+          "Y": 687.22
+        }
+      ]
+    },
+    {
+      "Id": "revision-neutrality-12-empty-style",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-12-empty-style.docx",
+      "Sha256": "461FD463D5D7A4E0476E2E8D9DCB8C438C4A7F955F9884D9E7A199B213CECF77",
+      "Pair": "minimum-12",
+      "Variant": "empty-style",
+      "HeldOut": false,
+      "ExpectedEquationCount": 0,
+      "ExpectedText": [
+        "Public first paragraph AVATAR To Wa.",
+        "Public second paragraph."
+      ],
+      "Mode": "all-word-compatible",
+      "InputSha256": "461FD463D5D7A4E0476E2E8D9DCB8C438C4A7F955F9884D9E7A199B213CECF77",
+      "ReferencePdfSha256": "0E5A4EC20BEB65F10507E28A87AF1EE6EEE5E5C01230F3CA3E41206C5265EE3F",
+      "ReferenceRasterSha256": "E0DD31EFF5BB2AFE2DF064961A0495A906A2EB40CD4093F2B9494553F278C358",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "TextBaselines": [
+        {
+          "Text": "Public first paragraph AVATAR To Wa.",
+          "Y": 705.22
+        },
+        {
+          "Text": "Public second paragraph.",
+          "Y": 687.22
+        }
+      ]
+    }
+  ]
+}

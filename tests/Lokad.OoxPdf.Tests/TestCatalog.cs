@@ -33,6 +33,7 @@ internal static class TestCatalog
         .. FromType(ClassifyDocx, typeof(DocxTests)),
         .. FromType("docx-images", typeof(DocxImagesTests)),
         .. FromType("docx-images", typeof(DocxPictureRevisionTests)),
+        .. FromType("docx-text", typeof(DocxRevisionNeutralityTests)),
         .. FromType("docx-images", typeof(DocxImageParagraphAdvanceTests)),
         .. FromType("docx-math", typeof(DocxMathTests)),
         .. FromType("docx-math", typeof(DocxNativeMathTests)),

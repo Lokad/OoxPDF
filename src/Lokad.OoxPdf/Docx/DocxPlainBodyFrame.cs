@@ -12,8 +12,9 @@ internal static class DocxPlainBodyFrame
     internal static bool HasPlainBody(DocxDocument document) =>
         document.FinalSectionBreak is { Revisions.Count: 0 } &&
         document.Settings.MirrorMargins != true && document.FloatingDrawings.Count == 0 &&
-        document.BodyElements.Count != 0 && document.BodyElements.All(e => e.Revisions.Count == 0 &&
-            e is DocxParagraphElement or DocxPageBreakElement) &&
+        document.BodyElements.Count != 0 && document.BodyElements.All(e =>
+            e is DocxParagraphElement paragraph ? DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph.Paragraph, e.Revisions) :
+            e is DocxPageBreakElement && e.Revisions.Count == 0) &&
         document.Paragraphs.All(IsPlainParagraph);
 
     internal static bool HasAutomaticLineFlow(DocxParagraph paragraph) =>
@@ -29,7 +30,7 @@ internal static class DocxPlainBodyFrame
 
     internal static bool HasPlainTextContent(DocxParagraph p) =>
         p.Images.Count == 0 && p.InlineTextBoxes.Count == 0 && p.Equations.Count == 0 &&
-        p.FieldReferences.Count == 0 && p.CommentRanges.Count == 0 && p.Revisions.Count == 0 &&
+        p.FieldReferences.Count == 0 && p.CommentRanges.Count == 0 && DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(p, p.Revisions) &&
         p.RevisionRanges.Count == 0 && !p.HasDeletedParagraphMark && p.DeletedText.Length == 0 &&
         p.ListLabel is null && p.Hyperlinks.Count == 0 && p.BookmarkAnchors.Count == 0 &&
         p.Runs.All(r => r.Revision is null && r.Revisions.Count == 0 &&

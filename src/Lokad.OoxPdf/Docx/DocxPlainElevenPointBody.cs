@@ -4,7 +4,7 @@ internal static class DocxPlainElevenPointBody
 {
     internal static bool IsEligible(DocxDocument document, DocxLayout layout)
     {
-        bool ordinary = document.RelatedStories.Count == 0 && document.Paragraphs.All(p => p.InlineReferences.Count == 0);
+        bool ordinary = DocxMinimumBodyLineLeading.IsOrdinaryBody(document);
         if (!(ordinary ? DocxPlainBodyFrame.IsEligible(document) : DocxPageFootnoteNumbering.IsEligibleDocument(document)) ||
             !DocxPlainFootnoteKerning.HasSingleLineBody(layout) ||
             layout.Pages.Any(p => p.ColumnFrames.Count > 1 || p.StaticTextLines.Count != 0 || p.StaticInlineImages.Count != 0) ||

@@ -485,8 +485,10 @@ internal sealed partial class DocxRenderer
         DocxMarkupContext context, OoxPdfDocxMarkupGeometryMode geometry, CancellationToken cancellationToken, int? pageCount = null)
     {
         var layout = CreateCompleteNoteReservedLayout(document, fonts, context, geometry, cancellationToken, pageCount);
-        return context.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
-            context.WordCompatiblePrintScale == 1d && fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
+        bool unscaledMinimumLeading = context.WordCompatiblePrintScale == 1d &&
+            (context.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ||
+                context.Mode == OoxPdfDocxMarkupMode.Final && DocxMinimumBodyLineLeading.IsOrdinaryBody(document));
+        return unscaledMinimumLeading && fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
             DocxMinimumBodyLineLeading.TryCreateLayout(document, layout, out var adjusted) ? adjusted : layout;
     }
 
@@ -1110,6 +1112,8 @@ internal sealed partial class DocxRenderer
         markupContext = markupContext with
         {
             WordReviewAuthorPalette = reviewAuthors,
+            NonRenderingRevisionParagraphs = markupContext.DrawsChangeBars && UsesWordCompatibleAllMarkupTextProfile(markupContext)
+                ? new(ReferenceEqualityComparer.Instance) : null,
             CommentAuthorPaletteSlots = reviewAuthors?.CommentSlots ??
                 BuildCommentAuthorPaletteSlots(SelectCommentAuthorsForPalette(layout.RelatedStories))
         };

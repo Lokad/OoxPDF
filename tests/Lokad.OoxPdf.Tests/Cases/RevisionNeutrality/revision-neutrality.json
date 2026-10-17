@@ -1,0 +1,80 @@
+[
+  {
+    "Id": "revision-neutrality-11-control",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-11-control.docx",
+    "Sha256": "DF90A4B7DB9165BF1305446950E5E52794D01F31D6AC4F49D116FE0112F69058",
+    "Pair": "minimum-11",
+    "Variant": "control",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public first paragraph AVATAR To Wa.",
+      "Public second paragraph."
+    ]
+  },
+  {
+    "Id": "revision-neutrality-11-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-11-empty.docx",
+    "Sha256": "D3FB9EABF5F9731EBBCC15A6036CBE304C0048BFC590FAA03470FDF9957C7A01",
+    "Pair": "minimum-11",
+    "Variant": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public first paragraph AVATAR To Wa.",
+      "Public second paragraph."
+    ]
+  },
+  {
+    "Id": "revision-neutrality-11-empty-style",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-11-empty-style.docx",
+    "Sha256": "873AF5815034B652CE5475B7459031C3D2060D4DDD7711EE9BF9F2AA15E19B2E",
+    "Pair": "minimum-11",
+    "Variant": "empty-style",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public first paragraph AVATAR To Wa.",
+      "Public second paragraph."
+    ]
+  },
+  {
+    "Id": "revision-neutrality-12-control",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-12-control.docx",
+    "Sha256": "39D86E4E31DC6356DA641189EA71E2577FDAB4BF10EDBA341376B8F64D6BEA4C",
+    "Pair": "minimum-12",
+    "Variant": "control",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public first paragraph AVATAR To Wa.",
+      "Public second paragraph."
+    ]
+  },
+  {
+    "Id": "revision-neutrality-12-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-12-empty.docx",
+    "Sha256": "A6582C8028D2D7BEED4511888A548F3553C20D2CF7CDB3162C3DB72A77617C0A",
+    "Pair": "minimum-12",
+    "Variant": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public first paragraph AVATAR To Wa.",
+      "Public second paragraph."
+    ]
+  },
+  {
+    "Id": "revision-neutrality-12-empty-style",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/RevisionNeutrality/revision-neutrality-12-empty-style.docx",
+    "Sha256": "461FD463D5D7A4E0476E2E8D9DCB8C438C4A7F955F9884D9E7A199B213CECF77",
+    "Pair": "minimum-12",
+    "Variant": "empty-style",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public first paragraph AVATAR To Wa.",
+      "Public second paragraph."
+    ]
+  }
+]

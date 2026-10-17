@@ -152,6 +152,21 @@ internal static class DocxInlineContent
         return false;
     }
 
+    internal static bool HasOnlyNonRenderingRevisionMetadata(DocxParagraph paragraph,
+        IReadOnlyList<DocxRevisionInfo>? revisions = null)
+    {
+        var source = revisions ?? paragraph.Revisions;
+        if (source.Count == 0) return true;
+        if (paragraph.NonRenderingRunOwners.Count == 0 || paragraph.RevisionRanges.Count != 0 ||
+            paragraph.HasDeletedParagraphMark ||
+            paragraph.Runs.Any(run => run.Revision is not null || run.Revisions.Count != 0) ||
+            paragraph.Images.Any(image => image.Revisions.Count != 0) ||
+            paragraph.Equations.Any(equation => equation.Revision is not null) ||
+            paragraph.InlineTextBoxes.Any(box => box.Revisions.Count != 0) ||
+            paragraph.ParagraphMarkRun is { } mark && (mark.Revision is not null || mark.Revisions.Count != 0)) return false;
+        return HasSupportedRunRevisionOwners(source, [], default, nonRenderingRunOwners: paragraph.NonRenderingRunOwners);
+    }
+
     public static bool HasSupportedParagraphRevisionOwners(DocxParagraph paragraph, CancellationToken token,
         IReadOnlyList<DocxRevisionInfo>? revisions = null) =>
         HasSupportedRunRevisionOwners(revisions ?? paragraph.Revisions, paragraph.Runs, token,

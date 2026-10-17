@@ -4,11 +4,13 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxMinimumBodyLineLeading
 {
+    internal static bool IsOrdinaryBody(DocxDocument document) =>
+        document.RelatedStories.Count == 0 && document.Paragraphs.All(p => p.InlineReferences.Count == 0);
+
     internal static bool TryCreateLayout(DocxDocument document, DocxLayout source, out DocxLayout adjusted)
     {
         adjusted = source;
-        bool ordinaryBody = document.RelatedStories.Count == 0 &&
-            document.Paragraphs.All(p => p.InlineReferences.Count == 0);
+        bool ordinaryBody = IsOrdinaryBody(document);
         if (!(ordinaryBody ? DocxPlainBodyFrame.IsEligible(document) : DocxPageFootnoteNumbering.IsEligibleDocument(document)) ||
             !DocxPlainFootnoteKerning.HasSingleLineBody(source) ||
             source.Pages.Any(p => p.ColumnFrames.Count > 1 || p.StaticTextLines.Count != 0 || p.StaticInlineImages.Count != 0) ||
