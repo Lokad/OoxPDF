@@ -1,5 +1,28 @@
 # Composed-document reliability checkpoint
 
+C126 makes fractions and scripts reuse the existing validated control-property owner
+and actual run/font metadata. Scripts retain typed invalid-property state instead
+of excluding every authored property. Unknown/malformed properties and deeper
+structures keep explicit fallbacks; raw XML remains. No geometry offsets or native
+code are introduced.
+
+Eight sources/sixteen independent Word outcomes restore every omitted equation.
+Four earlier exact-source exports are reused; twelve new exports complete empty/
+painted controls at both sizes and both public presets. All sixteen MAEs improve,
+with no new failure components. All strict raster and full one-point gates remain
+failed: matrix row/baseline and rule residuals reach2.821pt Y. Eight crop pairs are
+reviewed; the other eight carry by identical Final/Review rasters. Content and ink
+are restored without claiming geometry parity.
+
+One frozen Release artifact passes175 Windows and109 Ubuntu checks/66 native skips,
+once each. Parent checks fail expected17 versus14 glyphs. Seventeen assets/four
+smoke PDFs transfer without root build/suite replay. Seven exact portfolio sources
+contain no affected property owners; C124's twelve outcomes carry by source-backed
+inference, with original composed-report Review/deck PDF identities smoked. Existing
+visual failures and two extraction flags stay. Root1f8f7714; evidence
+`artifacts/composition-c1/explicit-control-evidence.json`. C123/C124 CI39037534189/
+39038260535 are green on both platforms.
+
 C125 inspects actual matrix/child frames without changing production. Ten independent
 Word Final counterfactuals vary matrix/child control sizes and row placement. The
 residual depends on both; a uniform row gap or font-size substitution is not
