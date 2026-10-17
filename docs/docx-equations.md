@@ -37,6 +37,11 @@ approximate; strict visual gates stay failed. Empty bases/operator limits also p
 content and source ink in these mixed containers. Two operator-cell outcomes retain
 a 1.163pt horizontal group-start residual; the one-point geometry gate stays failed.
 
+Empty literal function arguments and n-ary bodies now share the same metric-only
+argument measurement. Function names, operators and remaining limits stay visible,
+including Final deletion, with independently validated source ink and group starts.
+An empty function name or a wholly control-only equation retains explicit fallback.
+
 Numbered paragraphs retain supported explicit math zones alongside prose and
 inline pictures. The list label owns only the first authored row: its formulas
 use inline sizing, while a later math-only row after a hard break owns display

@@ -1,5 +1,26 @@
 # Composed-document reliability checkpoint
 
+C94 restores function names and n-ary operators/remaining limits when a literal
+argument/body is empty. Three Word roles show identical deleted/authored-empty
+Final rasters. Shared box-argument measurement reuses metric-only literals and
+forwards existing neighbor/operator spacing; no font/size/container-specific guard.
+Unknown, deeper, missing-metric/encoding and control-only fallbacks remain.
+
+Six sources/twelve strict Word outcomes retain exact content/ink and bookmark/run
+split invariants. Nine MAEs improve; three PDFs stay exact. Group-start residuals
+stay within 0.111pt X/0.235pt Y. Four crop pairs reviewed; all twelve strict gates
+remain failed unchanged with no new failure components or relaxed thresholds.
+
+One frozen Release artifact passes 117 exact Windows checks once. Ubuntu passes
+73 and explicitly skips 44 native checks once. Selection includes font and native
+neighbors for shared function/delimiter/radical/n-ary/matrix argument behavior.
+Two parent checks fail on actual missing function glyphs. Twelve fresh portfolio
+PDFs retain accepted bytes; comparisons and unresolved content flags carry by
+identity. Seventeen assets/four smoke PDFs transfer without root rebuild or suite
+replay. Root a49f1333; evidence:
+`artifacts/composition-c1/empty-math-bodies-evidence.json`.
+C92 CI39011336511 is green on both platforms; C93 CI39011779448 is running.
+
 C93 checks the unchanged C92 binary with empty script bases and operator limits
 beside prose, images, links, numbering and other formulas across body/cells/direct
 headers/footers. Sixteen independent Word outcomes preserve exact content and ink;

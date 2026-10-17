@@ -215,6 +215,11 @@ layout, including empty rows/columns. Empty literal script bases and visible n-a
 geometry and remaining source content, including Final deletion. Wholly empty/control-only
 discovery and unknown properties retain fallback.
 
+Empty literal function arguments and n-ary bodies retain shared metric-only
+geometry and remaining names/operators/limits, including Final deletion. Source ink
+and group starts have independent Word controls; empty function names and wholly
+control-only discovery remain staged.
+
 Bounded matrices also render inside ready-made round/square delimiters, retaining
 independent metric and paint owners. Fence variant and vertical-layout residuals
 remain explicit; arbitrary deeper delimiter nesting retains fallback.
