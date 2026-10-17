@@ -316,10 +316,9 @@ internal sealed record DocxListLabel(
     DocxNumberingIndent Indent,
     DocxTextRunStyle Style)
 {
-    // Decoration source for an unchanged marker: resolved paragraph color,
-    // no inherited underline, and separately retained authored decorations.
+    // Decoration and revision ownership are independent of the first text run.
     // Placement-time font/spacing decisions remain on the actual base run.
-    public DocxTextRun? UnmarkedTextStyle { get; init; }
+    public DocxTextRun? DecorationSource { get; init; }
 }
 
 internal sealed record DocxNumberingIndent(

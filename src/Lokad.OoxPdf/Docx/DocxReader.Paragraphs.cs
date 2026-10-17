@@ -292,6 +292,39 @@ internal sealed partial class DocxReader
             retainedMark = null;
         }
 
+        if (listLabel is not null && retainedMark is not null && inheritedRevision is null &&
+            paragraphMarkRevisions is [{ Kind: DocxRevisionKind.Insertion, SourceElement: "ins" } markInsertion])
+        {
+            // The actual numbered mark owns prefix ink. Authored paragraph
+            // underline is excluded; explicit level underline remains in Final.
+            // Review decoration overrides level decoration, as it does in Word.
+            bool review = DocxMarkupContext.FromMode(markupMode).AppliesInlineRevisionStyle;
+            var markInk = ApplyMarkupRevisionStyle(paragraphMarkRun with
+            {
+                Underline = false,
+                UnderlineValue = null,
+                UnderlineColorHex = null
+            }, markInsertion, markupMode);
+            listLabel = listLabel with
+            {
+                DecorationSource = retainedMark with
+                {
+                    Revision = markInsertion,
+                    Revisions = paragraphMarkRevisions,
+                    ColorHex = markInk.ColorHex,
+                    Underline = markInk.Underline ?? false,
+                    UnderlineValue = markInk.UnderlineValue,
+                    UnderlineColorHex = markInk.UnderlineColorHex
+                },
+                Style = review ? listLabel.Style with
+                {
+                    Underline = true,
+                    UnderlineValue = "single",
+                    UnderlineColorHex = null
+                } : listLabel.Style
+            };
+        }
+
         return new DocxParagraph(
             runs,
             images,
@@ -487,12 +520,14 @@ internal sealed partial class DocxReader
                 (unmarkedListTextStyle is { } captured && captured.SourceRunIndex != runs[0].SourceRunIndex)) return label;
             return label with
             {
-                UnmarkedTextStyle = (unmarkedListTextStyle ?? runs[0]) with
+                DecorationSource = (unmarkedListTextStyle ?? runs[0]) with
                 {
                     ColorHex = paragraphMarkRun.ColorHex,
                     Underline = false,
                     UnderlineValue = null,
-                    UnderlineColorHex = null
+                    UnderlineColorHex = null,
+                    Revision = null,
+                    Revisions = []
                 }
             };
         }

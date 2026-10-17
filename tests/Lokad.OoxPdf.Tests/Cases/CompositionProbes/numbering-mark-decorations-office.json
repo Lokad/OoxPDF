@@ -1,0 +1,1054 @@
+{
+  "Source": "Independent Word 16 Final/visible Review, retained reference identity and device-fill/underline geometry.",
+  "Scope": "First actual inserted numbering mark; old/new following counter pairs remain a separate gap.",
+  "Rows": [
+    {
+      "Id": "numbering-mark-plain-body",
+      "File": "numbering-mark-plain-body.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "0EBD724796782501956C5A8062541C4EB61600A04C7A9C1B2E286FFAB4D6EA53",
+      "ReferencePdfSha256": "C3EA144F78759F203A72999E4BD527A3C55676734A2A6D6E34433644FDC75A9E",
+      "FirstMarkerColor": "000000",
+      "DeviceFill": "g:0",
+      "UnderlineLines": 0,
+      "X": 72.024,
+      "Y": 690.1,
+      "UnderlinePaths": [],
+      "NumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-plain-body",
+      "File": "numbering-mark-plain-body.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "0EBD724796782501956C5A8062541C4EB61600A04C7A9C1B2E286FFAB4D6EA53",
+      "ReferencePdfSha256": "157D1664A91536E688FDD674122484C906816F649C9E7051EA6973F5B8CBB317",
+      "FirstMarkerColor": "D13438",
+      "DeviceFill": "rg:0.82,0.204,0.22",
+      "UnderlineLines": 1,
+      "X": 72.024,
+      "Y": 690.1,
+      "UnderlinePaths": [
+        {
+          "PageNumber": 1,
+          "ObjectNumber": 4,
+          "Generation": 0,
+          "Kind": "Fill",
+          "Operator": "f*",
+          "SegmentCount": 4,
+          "MoveCount": 1,
+          "LineCount": 3,
+          "CurveCount": 0,
+          "CloseCount": 1,
+          "MinX": 72.024,
+          "MinY": 688.06,
+          "MaxX": 90.024,
+          "MaxY": 688.9,
+          "LineWidth": 1,
+          "StrokeColor": "",
+          "FillColor": "rg:0.82,0.204,0.22",
+          "Dash": "",
+          "LineCap": 0,
+          "LineJoin": 0,
+          "PathCommands": [
+            {
+              "Operator": "m",
+              "Values": [
+                72.024,
+                688.06
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                90.024,
+                688.06
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                90.024,
+                688.9
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                72.024,
+                688.9
+              ]
+            },
+            {
+              "Operator": "h",
+              "Values": []
+            }
+          ]
+        }
+      ],
+      "NumericPaints": 5
+    },
+    {
+      "Id": "numbering-mark-plain-cell",
+      "File": "numbering-mark-plain-cell.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "793CAB9C98FCFF98A3A00C6CE8202A6C8FCCA4E5DEC318E7C1221D92CDC69641",
+      "ReferencePdfSha256": "504CF54F150EF92324BC19EFF68A97FCE905C0817B2C0AA465C0783F247A58A4",
+      "FirstMarkerColor": "000000",
+      "DeviceFill": "g:0",
+      "UnderlineLines": 0,
+      "X": 72.024,
+      "Y": 690.1,
+      "UnderlinePaths": [],
+      "NumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-plain-cell",
+      "File": "numbering-mark-plain-cell.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "793CAB9C98FCFF98A3A00C6CE8202A6C8FCCA4E5DEC318E7C1221D92CDC69641",
+      "ReferencePdfSha256": "70D7D7CB0778FAF343C1E730B9B6D0990EACC80C8B19E739E0ACC4F01AA8A240",
+      "FirstMarkerColor": "D13438",
+      "DeviceFill": "rg:0.82,0.204,0.22",
+      "UnderlineLines": 1,
+      "X": 72.024,
+      "Y": 690.1,
+      "UnderlinePaths": [
+        {
+          "PageNumber": 1,
+          "ObjectNumber": 4,
+          "Generation": 0,
+          "Kind": "Fill",
+          "Operator": "f*",
+          "SegmentCount": 4,
+          "MoveCount": 1,
+          "LineCount": 3,
+          "CurveCount": 0,
+          "CloseCount": 1,
+          "MinX": 72.024,
+          "MinY": 688.06,
+          "MaxX": 90.024,
+          "MaxY": 688.9,
+          "LineWidth": 1,
+          "StrokeColor": "",
+          "FillColor": "rg:0.82,0.204,0.22",
+          "Dash": "",
+          "LineCap": 0,
+          "LineJoin": 0,
+          "PathCommands": [
+            {
+              "Operator": "m",
+              "Values": [
+                72.024,
+                688.06
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                90.024,
+                688.06
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                90.024,
+                688.9
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                72.024,
+                688.9
+              ]
+            },
+            {
+              "Operator": "h",
+              "Values": []
+            }
+          ]
+        }
+      ],
+      "NumericPaints": 5
+    },
+    {
+      "Id": "numbering-mark-plain-header",
+      "File": "numbering-mark-plain-header.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "3CADEDED5191FA6CA2FD845BBF29960C8AB516DACBCBCC9E75E6029B1F101695",
+      "ReferencePdfSha256": "92A589E4DBBF3B6368410884A0C79298030E6274E1FCBF7BBCF5FD1E6483A802",
+      "FirstMarkerColor": "000000",
+      "DeviceFill": "g:0",
+      "UnderlineLines": 0,
+      "X": 72.024,
+      "Y": 745.56,
+      "UnderlinePaths": [],
+      "NumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-plain-header",
+      "File": "numbering-mark-plain-header.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "3CADEDED5191FA6CA2FD845BBF29960C8AB516DACBCBCC9E75E6029B1F101695",
+      "ReferencePdfSha256": "B2D5CB7AEE4848F41642B10F2E4077DD93AE3C616F15EF63A61BD19F5BB3371C",
+      "FirstMarkerColor": "D13438",
+      "DeviceFill": "rg:0.82,0.204,0.22",
+      "UnderlineLines": 1,
+      "X": 72.024,
+      "Y": 745.56,
+      "UnderlinePaths": [
+        {
+          "PageNumber": 1,
+          "ObjectNumber": 4,
+          "Generation": 0,
+          "Kind": "Fill",
+          "Operator": "f*",
+          "SegmentCount": 4,
+          "MoveCount": 1,
+          "LineCount": 3,
+          "CurveCount": 0,
+          "CloseCount": 1,
+          "MinX": 72.024,
+          "MinY": 743.52,
+          "MaxX": 90.024,
+          "MaxY": 744.36,
+          "LineWidth": 1,
+          "StrokeColor": "",
+          "FillColor": "rg:0.82,0.204,0.22",
+          "Dash": "",
+          "LineCap": 0,
+          "LineJoin": 0,
+          "PathCommands": [
+            {
+              "Operator": "m",
+              "Values": [
+                72.024,
+                743.52
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                90.024,
+                743.52
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                90.024,
+                744.36
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                72.024,
+                744.36
+              ]
+            },
+            {
+              "Operator": "h",
+              "Values": []
+            }
+          ]
+        }
+      ],
+      "NumericPaints": 5
+    },
+    {
+      "Id": "list-decoration-mark-inserted",
+      "File": "list-decoration-mark-inserted.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+      "ReferencePdfSha256": "D0CFA443B8D6079F2B4395228EA5B680574DF636EF7530B6C7DA1AE6516941BD",
+      "FirstMarkerColor": "000000",
+      "DeviceFill": "g:0",
+      "UnderlineLines": 0,
+      "X": 72.024,
+      "Y": 83.784,
+      "UnderlinePaths": [],
+      "NumericPaints": 3
+    },
+    {
+      "Id": "list-decoration-mark-inserted",
+      "File": "list-decoration-mark-inserted.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "09C0A74148DB34EB59221EDAAAA710A54C2B81EBC305B38F8232FA02D4727B75",
+      "ReferencePdfSha256": "70BF1D4A2FB3C43DFA7C57A62D2D61A16F32A0AC9870BE0F1F9F1951E9160CC8",
+      "FirstMarkerColor": "D13438",
+      "DeviceFill": "rg:0.82,0.204,0.22",
+      "UnderlineLines": 1,
+      "X": 72.024,
+      "Y": 83.784,
+      "UnderlinePaths": [
+        {
+          "PageNumber": 1,
+          "ObjectNumber": 4,
+          "Generation": 0,
+          "Kind": "Fill",
+          "Operator": "f*",
+          "SegmentCount": 4,
+          "MoveCount": 1,
+          "LineCount": 3,
+          "CurveCount": 0,
+          "CloseCount": 1,
+          "MinX": 72.024,
+          "MinY": 81.744,
+          "MaxX": 90.024,
+          "MaxY": 82.58397,
+          "LineWidth": 1,
+          "StrokeColor": "",
+          "FillColor": "rg:0.82,0.204,0.22",
+          "Dash": "",
+          "LineCap": 0,
+          "LineJoin": 0,
+          "PathCommands": [
+            {
+              "Operator": "m",
+              "Values": [
+                72.024,
+                81.744
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                90.024,
+                81.744
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                90.024,
+                82.58397
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                72.024,
+                82.58397
+              ]
+            },
+            {
+              "Operator": "h",
+              "Values": []
+            }
+          ]
+        }
+      ],
+      "NumericPaints": 5
+    },
+    {
+      "Id": "numbering-mark-math-body",
+      "File": "numbering-mark-math-body.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "68FA15BAC620CCAF8900B80D49C32AF2CABE159DB87ED942EFE91E506F481DC5",
+      "ReferencePdfSha256": "FC34AA4CC9C9B45B263415D3A3600FF6539B7C8CE80A2AF67790BECD99E19B2A",
+      "FirstMarkerColor": "000000",
+      "DeviceFill": "g:0",
+      "UnderlineLines": 0,
+      "X": 72.024,
+      "Y": 706.9,
+      "UnderlinePaths": [],
+      "NumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-math-body",
+      "File": "numbering-mark-math-body.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "68FA15BAC620CCAF8900B80D49C32AF2CABE159DB87ED942EFE91E506F481DC5",
+      "ReferencePdfSha256": "2659A42F048C55EB76D8C0C0E8E893AAD0537A9B475AA7A8F0DE9268CE009CB1",
+      "FirstMarkerColor": "D13438",
+      "DeviceFill": "rg:0.82,0.204,0.22",
+      "UnderlineLines": 1,
+      "X": 54.6,
+      "Y": 632.06,
+      "UnderlinePaths": [
+        {
+          "PageNumber": 1,
+          "ObjectNumber": 4,
+          "Generation": 0,
+          "Kind": "Fill",
+          "Operator": "f*",
+          "SegmentCount": 4,
+          "MoveCount": 1,
+          "LineCount": 3,
+          "CurveCount": 0,
+          "CloseCount": 1,
+          "MinX": 54.6,
+          "MinY": 630.5,
+          "MaxX": 68.256,
+          "MaxY": 631.148,
+          "LineWidth": 1,
+          "StrokeColor": "",
+          "FillColor": "rg:0.82,0.204,0.22",
+          "Dash": "",
+          "LineCap": 0,
+          "LineJoin": 0,
+          "PathCommands": [
+            {
+              "Operator": "m",
+              "Values": [
+                54.6,
+                630.5
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                68.256,
+                630.5
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                68.256,
+                631.148
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                54.6,
+                631.148
+              ]
+            },
+            {
+              "Operator": "h",
+              "Values": []
+            }
+          ]
+        }
+      ],
+      "NumericPaints": 5
+    },
+    {
+      "Id": "numbering-mark-math-cell",
+      "File": "numbering-mark-math-cell.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "6E2C63D8C99903BA5CE4D2E93F5D53A633E6996D0D9E6E347A495CAF05C8C5EF",
+      "ReferencePdfSha256": "F48FC602F9BFAB78E47F00C044E89836C19CA555AB967A8BBD20BE2DDD4402DF",
+      "FirstMarkerColor": "000000",
+      "DeviceFill": "g:0",
+      "UnderlineLines": 0,
+      "X": 72.024,
+      "Y": 706.9,
+      "UnderlinePaths": [],
+      "NumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-math-cell",
+      "File": "numbering-mark-math-cell.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6E2C63D8C99903BA5CE4D2E93F5D53A633E6996D0D9E6E347A495CAF05C8C5EF",
+      "ReferencePdfSha256": "71B532F731E70C88D2D068DE15327431C1AF115C359DEDF039D4AC698415E557",
+      "FirstMarkerColor": "D13438",
+      "DeviceFill": "rg:0.82,0.204,0.22",
+      "UnderlineLines": 1,
+      "X": 54.6,
+      "Y": 632.06,
+      "UnderlinePaths": [
+        {
+          "PageNumber": 1,
+          "ObjectNumber": 4,
+          "Generation": 0,
+          "Kind": "Fill",
+          "Operator": "f*",
+          "SegmentCount": 4,
+          "MoveCount": 1,
+          "LineCount": 3,
+          "CurveCount": 0,
+          "CloseCount": 1,
+          "MinX": 54.6,
+          "MinY": 630.5,
+          "MaxX": 68.256,
+          "MaxY": 631.148,
+          "LineWidth": 1,
+          "StrokeColor": "",
+          "FillColor": "rg:0.82,0.204,0.22",
+          "Dash": "",
+          "LineCap": 0,
+          "LineJoin": 0,
+          "PathCommands": [
+            {
+              "Operator": "m",
+              "Values": [
+                54.6,
+                630.5
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                68.256,
+                630.5
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                68.256,
+                631.148
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                54.6,
+                631.148
+              ]
+            },
+            {
+              "Operator": "h",
+              "Values": []
+            }
+          ]
+        }
+      ],
+      "NumericPaints": 5
+    },
+    {
+      "Id": "numbering-mark-math-header",
+      "File": "numbering-mark-math-header.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "6F00A4FCBC2204AEB333A2A7B80B3D0D74A4E063163614861BB9EDF19623D569",
+      "ReferencePdfSha256": "8594AB38578C46A9E3665673F22C6C99B99A9A820632E58F049BB29AE0B28142",
+      "FirstMarkerColor": "000000",
+      "DeviceFill": "g:0",
+      "UnderlineLines": 0,
+      "X": 72.024,
+      "Y": 742.92,
+      "UnderlinePaths": [],
+      "NumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-math-header",
+      "File": "numbering-mark-math-header.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6F00A4FCBC2204AEB333A2A7B80B3D0D74A4E063163614861BB9EDF19623D569",
+      "ReferencePdfSha256": "42609831B48763A8988C9360F69026BCE221F33B308A5A11CE1BF69BD3FC098D",
+      "FirstMarkerColor": "D13438",
+      "DeviceFill": "rg:0.82,0.204,0.22",
+      "UnderlineLines": 1,
+      "X": 54.6,
+      "Y": 659.35,
+      "UnderlinePaths": [
+        {
+          "PageNumber": 1,
+          "ObjectNumber": 4,
+          "Generation": 0,
+          "Kind": "Fill",
+          "Operator": "f*",
+          "SegmentCount": 4,
+          "MoveCount": 1,
+          "LineCount": 3,
+          "CurveCount": 0,
+          "CloseCount": 1,
+          "MinX": 54.6,
+          "MinY": 657.82,
+          "MaxX": 68.256,
+          "MaxY": 658.44401,
+          "LineWidth": 1,
+          "StrokeColor": "",
+          "FillColor": "rg:0.82,0.204,0.22",
+          "Dash": "",
+          "LineCap": 0,
+          "LineJoin": 0,
+          "PathCommands": [
+            {
+              "Operator": "m",
+              "Values": [
+                54.6,
+                657.82
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                68.256,
+                657.82
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                68.256,
+                658.44401
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                54.6,
+                658.44401
+              ]
+            },
+            {
+              "Operator": "h",
+              "Values": []
+            }
+          ]
+        }
+      ],
+      "NumericPaints": 5
+    },
+    {
+      "Id": "numbering-mark-math-footer",
+      "File": "numbering-mark-math-footer.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "7A7625608D331940F59B6E073D4E93BD818761844CBE269B1F2B3FD0A17DB2A1",
+      "ReferencePdfSha256": "6361FDE775FB833930D47ACE77E6C8CAE4AAD845D990382E8C9F6311A2A02B31",
+      "FirstMarkerColor": "000000",
+      "DeviceFill": "g:0",
+      "UnderlineLines": 0,
+      "X": 72.024,
+      "Y": 102.14,
+      "UnderlinePaths": [],
+      "NumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-math-footer",
+      "File": "numbering-mark-math-footer.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "7A7625608D331940F59B6E073D4E93BD818761844CBE269B1F2B3FD0A17DB2A1",
+      "ReferencePdfSha256": "4AD8E272FEB6726BCA903B6440212D48E46BC41FBBE937775ECDAB3FB730102E",
+      "FirstMarkerColor": "D13438",
+      "DeviceFill": "rg:0.82,0.204,0.22",
+      "UnderlineLines": 1,
+      "X": 54.6,
+      "Y": 173.45,
+      "UnderlinePaths": [
+        {
+          "PageNumber": 1,
+          "ObjectNumber": 4,
+          "Generation": 0,
+          "Kind": "Fill",
+          "Operator": "f*",
+          "SegmentCount": 4,
+          "MoveCount": 1,
+          "LineCount": 3,
+          "CurveCount": 0,
+          "CloseCount": 1,
+          "MinX": 54.6,
+          "MinY": 171.89,
+          "MaxX": 68.256,
+          "MaxY": 172.53801,
+          "LineWidth": 1,
+          "StrokeColor": "",
+          "FillColor": "rg:0.82,0.204,0.22",
+          "Dash": "",
+          "LineCap": 0,
+          "LineJoin": 0,
+          "PathCommands": [
+            {
+              "Operator": "m",
+              "Values": [
+                54.6,
+                171.89
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                68.256,
+                171.89
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                68.256,
+                172.53801
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                54.6,
+                172.53801
+              ]
+            },
+            {
+              "Operator": "h",
+              "Values": []
+            }
+          ]
+        }
+      ],
+      "NumericPaints": 5
+    },
+    {
+      "Id": "numbering-mark-decoration-mark-red-double",
+      "File": "numbering-mark-decoration-mark-red-double.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "BB697546127EC42EF7E98B70FE10C996CD83BF7328633531F78F2C4726C4EFA4",
+      "ReferencePdfSha256": "C7B95A3B97725ED022B2BEA6E9398EF701B1651BFABF970A41DB709E42EF7C97",
+      "FirstMarkerColor": "AA2200",
+      "DeviceFill": "rg:0.667,0.133,0",
+      "UnderlineLines": 0,
+      "X": 72.024,
+      "Y": 83.784,
+      "UnderlinePaths": [],
+      "NumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-decoration-mark-red-double",
+      "File": "numbering-mark-decoration-mark-red-double.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "BB697546127EC42EF7E98B70FE10C996CD83BF7328633531F78F2C4726C4EFA4",
+      "ReferencePdfSha256": "A67FFC963E23700FFBB8F616C00CE5E0258C602AE02C945A4F43BEF4B3D7444D",
+      "FirstMarkerColor": "D13438",
+      "DeviceFill": "rg:0.82,0.204,0.22",
+      "UnderlineLines": 1,
+      "X": 72.024,
+      "Y": 83.784,
+      "UnderlinePaths": [
+        {
+          "PageNumber": 1,
+          "ObjectNumber": 4,
+          "Generation": 0,
+          "Kind": "Fill",
+          "Operator": "f*",
+          "SegmentCount": 4,
+          "MoveCount": 1,
+          "LineCount": 3,
+          "CurveCount": 0,
+          "CloseCount": 1,
+          "MinX": 72.024,
+          "MinY": 81.744,
+          "MaxX": 90.024,
+          "MaxY": 82.58397,
+          "LineWidth": 1,
+          "StrokeColor": "",
+          "FillColor": "rg:0.82,0.204,0.22",
+          "Dash": "",
+          "LineCap": 0,
+          "LineJoin": 0,
+          "PathCommands": [
+            {
+              "Operator": "m",
+              "Values": [
+                72.024,
+                81.744
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                90.024,
+                81.744
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                90.024,
+                82.58397
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                72.024,
+                82.58397
+              ]
+            },
+            {
+              "Operator": "h",
+              "Values": []
+            }
+          ]
+        }
+      ],
+      "NumericPaints": 5
+    },
+    {
+      "Id": "numbering-mark-decoration-level-green-none",
+      "File": "numbering-mark-decoration-level-green-none.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "0D094FB02A087C6D2E82A125687A16BE072A80E24ACBDCDFB35AF434B5899C3A",
+      "ReferencePdfSha256": "1F7B521875834D916B4C11BD7B8D3EA41D610A4BC43FA833D5905A8A2990B6FA",
+      "FirstMarkerColor": "008844",
+      "DeviceFill": "rg:0,0.533,0.267",
+      "UnderlineLines": 0,
+      "X": 72.024,
+      "Y": 83.784,
+      "UnderlinePaths": [],
+      "NumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-decoration-level-green-none",
+      "File": "numbering-mark-decoration-level-green-none.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "0D094FB02A087C6D2E82A125687A16BE072A80E24ACBDCDFB35AF434B5899C3A",
+      "ReferencePdfSha256": "04D31276473F033273FD26B50A6E86541CD91ECF0ED84793F2A02AA231DFF0BB",
+      "FirstMarkerColor": "D13438",
+      "DeviceFill": "rg:0.82,0.204,0.22",
+      "UnderlineLines": 1,
+      "X": 72.024,
+      "Y": 83.784,
+      "UnderlinePaths": [
+        {
+          "PageNumber": 1,
+          "ObjectNumber": 4,
+          "Generation": 0,
+          "Kind": "Fill",
+          "Operator": "f*",
+          "SegmentCount": 4,
+          "MoveCount": 1,
+          "LineCount": 3,
+          "CurveCount": 0,
+          "CloseCount": 1,
+          "MinX": 72.024,
+          "MinY": 81.744,
+          "MaxX": 90.024,
+          "MaxY": 82.58397,
+          "LineWidth": 1,
+          "StrokeColor": "",
+          "FillColor": "rg:0.82,0.204,0.22",
+          "Dash": "",
+          "LineCap": 0,
+          "LineJoin": 0,
+          "PathCommands": [
+            {
+              "Operator": "m",
+              "Values": [
+                72.024,
+                81.744
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                90.024,
+                81.744
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                90.024,
+                82.58397
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                72.024,
+                82.58397
+              ]
+            },
+            {
+              "Operator": "h",
+              "Values": []
+            }
+          ]
+        }
+      ],
+      "NumericPaints": 5
+    },
+    {
+      "Id": "numbering-mark-decoration-level-green-double",
+      "File": "numbering-mark-decoration-level-green-double.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "10221163CC0C93D465B7D464F99257A7D79CA8A31C18566DC869F3FB734FFF99",
+      "ReferencePdfSha256": "24A94AA265447DC511961E67164095F58361314E961C74EA6A215000AC28B64C",
+      "FirstMarkerColor": "008844",
+      "DeviceFill": "rg:0,0.533,0.267",
+      "UnderlineLines": 2,
+      "X": 72.024,
+      "Y": 83.784,
+      "UnderlinePaths": [
+        {
+          "PageNumber": 1,
+          "ObjectNumber": 4,
+          "Generation": 0,
+          "Kind": "Fill",
+          "Operator": "f*",
+          "SegmentCount": 4,
+          "MoveCount": 1,
+          "LineCount": 3,
+          "CurveCount": 0,
+          "CloseCount": 1,
+          "MinX": 72.024,
+          "MinY": 82.824,
+          "MaxX": 80.424,
+          "MaxY": 83.18405,
+          "LineWidth": 1,
+          "StrokeColor": "",
+          "FillColor": "rg:0,0.533,0.267",
+          "Dash": "",
+          "LineCap": 0,
+          "LineJoin": 0,
+          "PathCommands": [
+            {
+              "Operator": "m",
+              "Values": [
+                72.024,
+                82.824
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                80.424,
+                82.824
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                80.424,
+                83.18405
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                72.024,
+                83.18405
+              ]
+            },
+            {
+              "Operator": "h",
+              "Values": []
+            }
+          ]
+        },
+        {
+          "PageNumber": 1,
+          "ObjectNumber": 4,
+          "Generation": 0,
+          "Kind": "Fill",
+          "Operator": "f*",
+          "SegmentCount": 4,
+          "MoveCount": 1,
+          "LineCount": 3,
+          "CurveCount": 0,
+          "CloseCount": 1,
+          "MinX": 72.024,
+          "MinY": 81.504,
+          "MaxX": 80.424,
+          "MaxY": 81.86405,
+          "LineWidth": 1,
+          "StrokeColor": "",
+          "FillColor": "rg:0,0.533,0.267",
+          "Dash": "",
+          "LineCap": 0,
+          "LineJoin": 0,
+          "PathCommands": [
+            {
+              "Operator": "m",
+              "Values": [
+                72.024,
+                81.504
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                80.424,
+                81.504
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                80.424,
+                81.86405
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                72.024,
+                81.86405
+              ]
+            },
+            {
+              "Operator": "h",
+              "Values": []
+            }
+          ]
+        }
+      ],
+      "NumericPaints": 3
+    },
+    {
+      "Id": "numbering-mark-decoration-level-green-double",
+      "File": "numbering-mark-decoration-level-green-double.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "10221163CC0C93D465B7D464F99257A7D79CA8A31C18566DC869F3FB734FFF99",
+      "ReferencePdfSha256": "CE5F16632997DACDC90AB357A4E162A61EECD47347EE9D2B1DAB51A530979250",
+      "FirstMarkerColor": "D13438",
+      "DeviceFill": "rg:0.82,0.204,0.22",
+      "UnderlineLines": 1,
+      "X": 72.024,
+      "Y": 83.784,
+      "UnderlinePaths": [
+        {
+          "PageNumber": 1,
+          "ObjectNumber": 4,
+          "Generation": 0,
+          "Kind": "Fill",
+          "Operator": "f*",
+          "SegmentCount": 4,
+          "MoveCount": 1,
+          "LineCount": 3,
+          "CurveCount": 0,
+          "CloseCount": 1,
+          "MinX": 72.024,
+          "MinY": 81.744,
+          "MaxX": 90.024,
+          "MaxY": 82.58397,
+          "LineWidth": 1,
+          "StrokeColor": "",
+          "FillColor": "rg:0.82,0.204,0.22",
+          "Dash": "",
+          "LineCap": 0,
+          "LineJoin": 0,
+          "PathCommands": [
+            {
+              "Operator": "m",
+              "Values": [
+                72.024,
+                81.744
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                90.024,
+                81.744
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                90.024,
+                82.58397
+              ]
+            },
+            {
+              "Operator": "l",
+              "Values": [
+                72.024,
+                82.58397
+              ]
+            },
+            {
+              "Operator": "h",
+              "Values": []
+            }
+          ]
+        }
+      ],
+      "NumericPaints": 5
+    }
+  ]
+}

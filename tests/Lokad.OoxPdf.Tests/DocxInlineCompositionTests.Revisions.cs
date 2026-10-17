@@ -54,8 +54,14 @@ internal static partial class DocxInlineCompositionTests
                 });
             var paragraph = document.Paragraphs.First(p => p.Equations.Count != 0);
             var label = DocxLayoutEngine.CreateListLabelRun(paragraph.ListLabel!, paragraph.Runs[0], 11d);
-            TestAssert.True(paragraph.ListLabel!.UnmarkedTextStyle is null && label.Revision is not null && label.Underline,
-                "A paragraph/mark revision can own the label; retain that existing path rather than borrowing text-only ownership.");
+            TestAssert.True(label.Revision is not null && label.Underline,
+                "A paragraph/mark revision owns the label independently of text-only ownership.");
+            if (paragraphMark)
+                TestAssert.True(ReferenceEquals(label.Revision, paragraph.ParagraphMarkRun!.Revisions.Single()),
+                    "The actual paragraph-mark insertion owns the prefix, even beside a different inserted text run.");
+            else
+                TestAssert.True(paragraph.ListLabel!.DecorationSource is null,
+                    "Whole-paragraph revisions retain their independently qualified path.");
         }
     }
 

@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingNumberingMarkDecorationsKeepSourceOwners() =>
+        DocxInlineCompositionTests.CheckNumberingMarkDecorations(new PinnedResolver(mathFont: true), render: true);
+
     public static void PortableRenderingNumberingMarkOwnersKeepVisibleContent() =>
         DocxInlineCompositionTests.CheckNumberingMarkContent(new PinnedResolver(mathFont: true));
 

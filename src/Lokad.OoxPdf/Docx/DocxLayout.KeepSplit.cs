@@ -887,20 +887,21 @@ internal sealed partial class DocxLayoutEngine
 
     private static DocxTextRun? ResolveListLabelBaseRun(DocxListLabel label, DocxTextRun? baseRun)
     {
-        if (baseRun is null || label.UnmarkedTextStyle is not { } source) return baseRun;
-        // Keep placement-time font/size/spacing decisions. Restore only the
-        // formatting changed by ApplyMarkupRevisionStyle, including null color.
+        if (baseRun is null || label.DecorationSource is not { } source) return baseRun;
+        // Keep placement-time font/size/spacing decisions while taking ink and
+        // revision ownership from the marker's own source, including null color.
         return baseRun with
         {
             ColorHex = source.ColorHex,
             Underline = source.Underline,
             UnderlineValue = source.UnderlineValue,
+            UnderlineColorHex = source.UnderlineColorHex,
             Strike = source.Strike,
             StrikeValue = source.StrikeValue,
             DoubleStrike = source.DoubleStrike,
             DoubleStrikeValue = source.DoubleStrikeValue,
-            Revision = null,
-            Revisions = []
+            Revision = source.Revision,
+            Revisions = source.Revisions
         };
     }
 
