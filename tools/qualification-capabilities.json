@@ -2828,5 +2828,31 @@
     "PortableRenderingNumberingMark",
     "DocxInlineCompositionRunFormattingMath",
     "PortableRenderingDefaultMathComposesAcrossStories"
+  ],
+  "docx-nontext-review-authors": [
+    "DocxReviewNonTextAuthors",
+    "PortableRenderingNonTextReviewAuthors",
+    "DocxReviewCommentAuthors",
+    "PortableRenderingReviewAuthors",
+    "DocxCommentAuthorPalette",
+    "DocxWordCompatibleBalloonsUseFirstSeenAuthorColors",
+    "DocxInlineCompositionCommentsPreserveMathematicsAndCaptions",
+    "DocxInlineCompositionCommentHighlightsMatchIndependentSelectionBounds",
+    "DocxInlineCompositionFormattingBalloonDescriptions",
+    "PortableRenderingFormattingBalloonDescriptions",
+    "DocxInlineCompositionMarkFormattingBalloons",
+    "PortableRenderingMarkFormattingBalloons",
+    "DocxWordCompatibleAllMarkupRendersReaderCommentRangeFill",
+    "DocxWordCompatibleAllMarkupUsesOfficeRevisionDecorationColor",
+    "DocxMarkupRevisionColorsUseStableAuthorBuckets",
+    "DocxMarkupRevisionColorsUseDominantAuthorBucketIndependentOfOrder",
+    "DocxMarkupModesFilterStaticAndRelatedStoryRevisions",
+    "DocxMarkupFinalViewMergesDeletedParagraphMarksAndKeepsSpans",
+    "DocxMarkupModesPreserveDeletedRunParagraphMarkAndTableContent",
+    "DocxLayoutStageEmitsEmptyParagraphMarkSpaceLine",
+    "DocxReaderAlwaysEmitsParagraphMarkRunForEmptyParagraphs",
+    "DocxReviewTerminalSpacePreservesResolvedParagraphMarkSize",
+    "DocxReaderRetainsOneToFiveCommentBalloonParagraphMarks",
+    "DocxReviewAutofitMeasuresCommentDisplayLabelAtParagraphMarkSize"
   ]
 }

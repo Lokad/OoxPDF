@@ -286,8 +286,7 @@ internal sealed partial class DocxReader
                             Equals(run.EffectiveProperties.Fonts, firstCommentRun.EffectiveProperties.Fonts)));
             });
         DocxTextRun? retainedMark = retainCommentMark || inlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment) ||
-            listLabel is not null && paragraphMarkRevisions.Any(revision =>
-                revision.Kind == DocxRevisionKind.Insertion && revision.SourceElement == "ins")
+            paragraphMarkRevisions.Count != 0
             ? CreateResolvedTextRun(retainCommentMark ? " " : string.Empty, paragraphMarkRun,
                 CreateRunStyleResolution(paragraphMarkRunProperties, paragraphStyleId, null, styles, tableCellStyle?.Run),
                 false, -1, 0, inheritedRevision, MergeRevisionLists(inheritedRevision, paragraphMarkRevisions))

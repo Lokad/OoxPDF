@@ -1,0 +1,356 @@
+{
+  "Scope": "Independent Word 16 review comment colors; empty insertion remains a confirmed unrepresented source-owner residual.",
+  "Rows": [
+    {
+      "Id": "nontext-author-none",
+      "Kind": "none",
+      "InputSha256": "E809E7157DB6428F981EB7985C1C994E79978B0EF8838E8345973B208954856F",
+      "ReferencePdfSha256": "E00DD025D2980DC55F9E432DFC159DDD7B993A7443232F28356DB12AE329A579",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        248,
+        220,
+        221
+      ],
+      "StrokeRgb": [
+        209,
+        52,
+        56
+      ],
+      "QualifiesRetainedOwners": true
+    },
+    {
+      "Id": "nontext-author-numbered-mark",
+      "Kind": "numbered-mark",
+      "InputSha256": "F78D968C8444AE961E050DFB67337FDCE37241A602FABB32335C11B29EA9283E",
+      "ReferencePdfSha256": "30F29F2D9E7A6AFC39D11C68DB2AFF4BB739F69A5A867DA50DE67FE4770A0260",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        213,
+        237,
+        255
+      ],
+      "StrokeRgb": [
+        0,
+        120,
+        212
+      ],
+      "QualifiesRetainedOwners": true
+    },
+    {
+      "Id": "nontext-author-paragraph-mark",
+      "Kind": "paragraph-mark",
+      "InputSha256": "1E6DF9F97EAE89942C1D84B9F5D1F7DEB86F565A4663A96F499E096379BDBD87",
+      "ReferencePdfSha256": "C99E6EB5FF0186B6758186729C804477A4B2329209BD11573F890BF33CAF4E46",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        213,
+        237,
+        255
+      ],
+      "StrokeRgb": [
+        0,
+        120,
+        212
+      ],
+      "QualifiesRetainedOwners": true
+    },
+    {
+      "Id": "nontext-author-run-format",
+      "Kind": "run-format",
+      "InputSha256": "19FDD2CD2D45DBF0DDE2EB95A04B70E2720C463A87190FB68FDD2EC8A028DD49",
+      "ReferencePdfSha256": "140E5443B7DD7F0086D444505727DACBC2E2D8E5DF160C4A13C7112CF8E7CE1A",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        213,
+        237,
+        255
+      ],
+      "StrokeRgb": [
+        0,
+        120,
+        212
+      ],
+      "QualifiesRetainedOwners": true
+    },
+    {
+      "Id": "nontext-author-image-insertion",
+      "Kind": "image-insertion",
+      "InputSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+      "ReferencePdfSha256": "559E3524D479C64E93684ACCA98CF2415A9FE829E3B70B971EDA32019A90BF0D",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        213,
+        237,
+        255
+      ],
+      "StrokeRgb": [
+        0,
+        120,
+        212
+      ],
+      "QualifiesRetainedOwners": true
+    },
+    {
+      "Id": "nontext-author-empty-insertion",
+      "Kind": "empty-insertion",
+      "InputSha256": "05FF567B9CE505A96620980E8A1234BA0689F557A3F6A02FAE5EB904CB204EEA",
+      "ReferencePdfSha256": "A285AE783256AA66F00E1FD18E06BA335F273A211AF3426D2E7FA1156A6730E6",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        213,
+        237,
+        255
+      ],
+      "StrokeRgb": [
+        0,
+        120,
+        212
+      ],
+      "QualifiesRetainedOwners": false
+    },
+    {
+      "Id": "nontext-author-text-insertion",
+      "Kind": "text-insertion",
+      "InputSha256": "AEA0D4241E7F008824BB058FD489B28FCCCF47E11A8872CF060BB305F4B2FD3F",
+      "ReferencePdfSha256": "AC520F18E3745477DB484439E863642A733ACF866267D45689528D128B80967A",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        213,
+        237,
+        255
+      ],
+      "StrokeRgb": [
+        0,
+        120,
+        212
+      ],
+      "QualifiesRetainedOwners": true
+    },
+    {
+      "Id": "nontext-author-same-author-mark",
+      "Kind": "same-author-mark",
+      "InputSha256": "967E1395CFA4D3A8110D44CA873417866BD59B953AACDD6B4FC16DF60F70C6A2",
+      "ReferencePdfSha256": "ADAC915B35298AA939AFEEEB4B0EC803A7EC6560112544E0E478FABA3039E7F7",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        248,
+        220,
+        221
+      ],
+      "StrokeRgb": [
+        209,
+        52,
+        56
+      ],
+      "QualifiesRetainedOwners": true
+    },
+    {
+      "Id": "nontext-author-mark-with-text",
+      "Kind": "mark-with-text",
+      "InputSha256": "1B6A1072BF0D39160C7B13650BAFE9F4D74428AE3E0F3E44E57CBA53DA33BCD3",
+      "ReferencePdfSha256": "7C15BDC89DC14AF1259185F1D391A5FBC26CCDA8730B9B4DEA39D4A72719E870",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        248,
+        220,
+        221
+      ],
+      "StrokeRgb": [
+        209,
+        52,
+        56
+      ],
+      "QualifiesRetainedOwners": true
+    },
+    {
+      "Id": "nontext-author-image-before-text",
+      "Kind": "image-before-text",
+      "InputSha256": "18C015E5E57343628A7AC279F6902B29A86EBBC93049109BCAAE839B9982B9CC",
+      "ReferencePdfSha256": "1EEC212373E6B112546952836145F67EBF71F8BFC33AD40D91668DD948995AF7",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        248,
+        220,
+        221
+      ],
+      "StrokeRgb": [
+        209,
+        52,
+        56
+      ],
+      "QualifiesRetainedOwners": true
+    },
+    {
+      "Id": "nontext-author-image-after-text",
+      "Kind": "image-after-text",
+      "InputSha256": "6ED5623D7FDD5B31E5E0952678B3C61DB833225F10AB386347D09AA705C6960A",
+      "ReferencePdfSha256": "40AD910BCB08A999C99E21527F9AB27EE496952DE540FA8DBFE6BE8097F54FF8",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        213,
+        237,
+        255
+      ],
+      "StrokeRgb": [
+        0,
+        120,
+        212
+      ],
+      "QualifiesRetainedOwners": true
+    },
+    {
+      "Id": "nontext-author-format-before-text",
+      "Kind": "format-before-text",
+      "InputSha256": "8B92521E2539FE2410861BCCB49CB958AB58E77FED392026C0DC2FE37D7F901D",
+      "ReferencePdfSha256": "ABD375A28A93E1905678DE44C41A781675AB2C90122E73D6B7D147E84125CC67",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        248,
+        220,
+        221
+      ],
+      "StrokeRgb": [
+        209,
+        52,
+        56
+      ],
+      "QualifiesRetainedOwners": true
+    },
+    {
+      "Id": "nontext-author-format-after-text",
+      "Kind": "format-after-text",
+      "InputSha256": "57A45DAC016C195576680360DDD0DA0F8661E9FB854FD13526815961E834435C",
+      "ReferencePdfSha256": "1253A79095A4C89C0660B356A6CEF87CA1DD930D2D02BADE0B297E4F08F105A8",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        213,
+        237,
+        255
+      ],
+      "StrokeRgb": [
+        0,
+        120,
+        212
+      ],
+      "QualifiesRetainedOwners": true
+    }
+  ]
+}

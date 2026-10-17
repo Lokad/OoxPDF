@@ -74,39 +74,64 @@ internal sealed partial class DocxRenderer
         DocxDocument document, IEnumerable<(string? Id, string? Author)> comments, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        return BuildCommentAuthorPaletteSlotsCore(comments, TextRevisionAuthors(), token);
+        return BuildCommentAuthorPaletteSlotsCore(comments, SourceRevisionAuthors(), token);
 
-        IEnumerable<string?> TextRevisionAuthors()
+        IEnumerable<string?> SourceRevisionAuthors()
         {
             foreach (var paragraph in DocxBlockTraversal.EnumerateSourceParagraphs(document))
             {
                 token.ThrowIfCancellationRequested();
-                foreach (var run in paragraph.Runs)
+                // The mark's properties precede the paragraph's inline owners.
+                // Aggregate paragraph metadata cannot establish source ownership.
+                if (paragraph.ParagraphMarkRun is { } mark)
+                    foreach (var revision in RunRevisions(mark))
+                        if (RegistersAuthor(revision)) yield return revision.Author;
+                foreach (var owner in InlineRevisionOwners().OrderBy(owner => owner.SourceRunIndex))
                 {
                     token.ThrowIfCancellationRequested();
-                    if (run.Text.Length == 0) continue;
-                    if (run.Revision is { Kind: DocxRevisionKind.Insertion or DocxRevisionKind.Deletion } revision)
-                        yield return revision.Author;
-                    foreach (var item in run.Revisions)
+                    if (RegistersAuthor(owner.Revision)) yield return owner.Revision.Author;
+                }
+
+                IEnumerable<(int SourceRunIndex, DocxRevisionInfo Revision)> InlineRevisionOwners()
+                {
+                    foreach (var run in paragraph.Runs)
                     {
                         token.ThrowIfCancellationRequested();
-                        if (item.Kind is DocxRevisionKind.Insertion or DocxRevisionKind.Deletion) yield return item.Author;
+                        if (run.Text.Length == 0) continue;
+                        foreach (var revision in RunRevisions(run)) yield return (run.SourceRunIndex, revision);
+                    }
+                    foreach (var image in paragraph.Images)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        foreach (var revision in image.Revisions)
+                        { token.ThrowIfCancellationRequested(); yield return (image.SourceRunIndex, revision); }
                     }
                 }
             }
         }
+
+        IEnumerable<DocxRevisionInfo> RunRevisions(DocxTextRun run)
+        {
+            token.ThrowIfCancellationRequested();
+            if (run.Revision is { } primary) yield return primary;
+            foreach (var revision in run.Revisions)
+            { token.ThrowIfCancellationRequested(); yield return revision; }
+        }
+
+        static bool RegistersAuthor(DocxRevisionInfo revision) => revision.Kind is
+            DocxRevisionKind.Insertion or DocxRevisionKind.Deletion or DocxRevisionKind.RunPropertiesChange;
     }
 
     private static IReadOnlyDictionary<string, int> BuildCommentAuthorPaletteSlotsCore(
         IEnumerable<(string? Id, string? Author)> commentsInFileOrder,
-        IEnumerable<string?> textRevisionAuthors, CancellationToken token)
+        IEnumerable<string?> sourceRevisionAuthors, CancellationToken token)
     {
         var slotsById = new Dictionary<string, int>(StringComparer.Ordinal);
         var slotByAuthor = new Dictionary<string, int>(StringComparer.Ordinal);
-        // Word registers source text-revision authors before comment authors,
+        // Word registers retained source-revision authors before comment authors,
         // independently of their anchor order. Name casing remains identity;
         // the legacy revision-color hash still uses its case-folded key.
-        foreach (string? author in textRevisionAuthors)
+        foreach (string? author in sourceRevisionAuthors)
         {
             token.ThrowIfCancellationRequested();
             string key = NormalizeReviewAuthorIdentity(author);
