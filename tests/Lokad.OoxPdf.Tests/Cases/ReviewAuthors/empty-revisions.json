@@ -1,0 +1,74 @@
+[
+  {
+    "Id": "nontext-author-empty-insertion",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/nontext-author-empty-insertion.docx",
+    "Sha256": "05FF567B9CE505A96620980E8A1234BA0689F557A3F6A02FAE5EB904CB204EEA",
+    "SourceSha256": "201EEFC0969A39E392FE50CB94FA6D7402DB65A212A3EF102A32345B6A29E569",
+    "Kind": "empty-insertion",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ],
+    "ExpectedEmptyOwners": 1
+  },
+  {
+    "Id": "empty-revision-before-text",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/empty-revision-before-text.docx",
+    "Sha256": "3A0A1A4D30217C18CD6A3AC6E3CFDED357427E89B8802510AAB78F73C4AA69BE",
+    "SourceSha256": "05FF567B9CE505A96620980E8A1234BA0689F557A3F6A02FAE5EB904CB204EEA",
+    "Kind": "before-text",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedEmptyOwners": 1,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor.",
+      "Other inserted phrase."
+    ]
+  },
+  {
+    "Id": "empty-revision-after-text",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/empty-revision-after-text.docx",
+    "Sha256": "F26D5B44EE2924259D944B5703B3B6EF6650E300942F29190FD86FF19AEF3591",
+    "SourceSha256": "05FF567B9CE505A96620980E8A1234BA0689F557A3F6A02FAE5EB904CB204EEA",
+    "Kind": "after-text",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedEmptyOwners": 1,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor.",
+      "Other inserted phrase."
+    ]
+  },
+  {
+    "Id": "empty-revision-with-math",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/empty-revision-with-math.docx",
+    "Sha256": "F6864BDB5AC329AEB5B93E07DEAE2D72D83678A2858599D87D0A81491E0AB863",
+    "SourceSha256": "05FF567B9CE505A96620980E8A1234BA0689F557A3F6A02FAE5EB904CB204EEA",
+    "Kind": "with-math",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedEmptyOwners": 1,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "empty-revision-plain-math",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/empty-revision-plain-math.docx",
+    "Sha256": "3F0DC7CCDF9FC0CC4C0A435141B5B41F24D2FFB8ECE96C46F3833474529B80D3",
+    "SourceSha256": "E809E7157DB6428F981EB7985C1C994E79978B0EF8838E8345973B208954856F",
+    "Kind": "plain-math",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedEmptyOwners": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  }
+]

@@ -42,6 +42,7 @@ internal sealed partial class DocxReader
             styles,
             tableCellStyle?.Paragraph);
         var runs = new List<DocxTextRun>();
+        List<DocxNonRenderingRunOwner>? nonRenderingRunOwners = null;
         DocxTextRun? unmarkedListTextStyle = null;
         var images = new List<DocxInlineImage>();
         var equations = new List<DocxEquation>();
@@ -359,7 +360,7 @@ internal sealed partial class DocxReader
             // eligibility separately requires the actual page inputs.
             InlineContent = inlineItems is not null && DocxInlineContent.HasSourceFieldResults(fieldReferences, runs) && DocxInlineContent.HasSupportedReferences(inlineReferences, runs) &&
                 inlineTextBoxes.Count == 0 && DocxInlineContent.HasSupportedRunRevisionOwners(paragraphRevisions, runs, cancellationToken,
-                    listLabel is null ? null : retainedMark, images)
+                    listLabel is null ? null : retainedMark, images, nonRenderingRunOwners)
                 ? inlineItems : null,
             InlineReferences = inlineReferences,
             CommentRanges = commentRanges,
@@ -368,6 +369,7 @@ internal sealed partial class DocxReader
             Hyperlinks = hyperlinkSpans,
             BookmarkAnchors = bookmarkAnchors,
             Revisions = paragraphRevisions,
+            NonRenderingRunOwners = nonRenderingRunOwners is null ? [] : nonRenderingRunOwners,
             HasDeletedParagraphMark = hasDeletedParagraphMark,
             DeletedText = deletedText.ToString(),
             ParagraphMarkFontSize = paragraphMarkRun.FontSize ?? DocxDefaults.UnstyledRunFontSizePoints,
@@ -611,6 +613,12 @@ internal sealed partial class DocxReader
             IReadOnlyList<DocxRevisionInfo> effectiveRevisions = MergeRevisionLists(revision, runRevisions);
             CaptureUnmarkedListTextStyle(text, resolvedRun, runStyleResolution, currentSourceRunIndex, revision);
             resolvedRun = ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode);
+            if (effectiveRevisions.Count != 0 && text.Length == 0 && run.Elements().All(child =>
+                child.Name == WordprocessingNamespace + "rPr" ||
+                (child.Name == WordprocessingNamespace + "t" || child.Name == WordprocessingNamespace + "delText") && child.Value.Length == 0))
+            {
+                (nonRenderingRunOwners ??= []).Add(new(currentSourceRunIndex, effectiveRevisions));
+            }
 
             if (run.Elements().Any(IsComplexFieldMarkupElement))
             {

@@ -1,5 +1,5 @@
 {
-  "Scope": "Independent Word 16 review comment colors; empty insertion remains a confirmed unrepresented source-owner residual.",
+  "Scope": "Independent Word16 review comment colors, including actual empty source-run ownership.",
   "Rows": [
     {
       "Id": "nontext-author-none",
@@ -161,7 +161,7 @@
         120,
         212
       ],
-      "QualifiesRetainedOwners": false
+      "QualifiesRetainedOwners": true
     },
     {
       "Id": "nontext-author-text-insertion",

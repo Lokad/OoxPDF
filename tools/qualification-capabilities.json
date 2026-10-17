@@ -3001,5 +3001,28 @@
     "DocxTableLayoutStageKeepsCellImagesOnAuthoredSideOfPageBreak",
     "DocxTableLayoutStagePlacesCellBlockImageBelowBreakSpillRow",
     "DocxTablePictureRotationSharesTheAlignedCellContentClip"
+  ],
+  "docx-empty-revision-owners": [
+    "DocxReviewEmptyRunOwners",
+    "PortableRenderingEmptyRunOwners",
+    "DocxReviewNonTextAuthors",
+    "PortableRenderingNonTextReviewAuthors",
+    "DocxReviewRevisionInk",
+    "PortableRenderingRevisionAuthorInk",
+    "DocxPictureRevisionEligibilityRequiresActualImageOwnership",
+    "DocxPictureRevisionMarkersMatchIndependentWord",
+    "PortableRenderingPictureRevisionMarkers",
+    "DocxInlineCompositionTextRevision",
+    "DocxInlineCompositionRunFormatting",
+    "DocxInlineCompositionCommentsPreserveMathematicsAndCaptions",
+    "DocxInlineCompositionCommentHighlightsMatchIndependentSelectionBounds",
+    "DocxInlineCompositionNumberingMarkOwners",
+    "PortableRenderingNumberingMarkOwners",
+    "DocxInlineCompositionMarkFormattingBalloons",
+    "PortableRenderingMarkFormattingBalloons",
+    "DocxConversionLoadsEachFontProgramOnce",
+    "DocxCoveredRunsSkipFallbackProgramLoads",
+    "PortableRenderingBrokenLiteralsSurviveCellAndStaticPlacement",
+    "PortableRenderingInlineLiteralOperatorBreakPreservesContent"
   ]
 }

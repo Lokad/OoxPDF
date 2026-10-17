@@ -1,0 +1,171 @@
+{
+  "Scope": "Strict independent Word comment range fill and source-text ink for actual empty insertion ordering and fraction composition; current source and eight-value view readback pinned.",
+  "Rows": [
+    {
+      "Id": "nontext-author-empty-insertion",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/nontext-author-empty-insertion.docx",
+      "Sha256": "05FF567B9CE505A96620980E8A1234BA0689F557A3F6A02FAE5EB904CB204EEA",
+      "SourceSha256": "201EEFC0969A39E392FE50CB94FA6D7402DB65A212A3EF102A32345B6A29E569",
+      "Kind": "empty-insertion",
+      "HeldOut": false,
+      "ExpectedEquationCount": 0,
+      "ExpectedText": [
+        "Public owner paragraph.",
+        "Public comment anchor."
+      ],
+      "ExpectedEmptyOwners": 1,
+      "InputSha256": "05FF567B9CE505A96620980E8A1234BA0689F557A3F6A02FAE5EB904CB204EEA",
+      "ReferencePdfSha256": "A285AE783256AA66F00E1FD18E06BA335F273A211AF3426D2E7FA1156A6730E6",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        213,
+        237,
+        255
+      ],
+      "OtherTextInk": []
+    },
+    {
+      "Id": "empty-revision-before-text",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/empty-revision-before-text.docx",
+      "Sha256": "3A0A1A4D30217C18CD6A3AC6E3CFDED357427E89B8802510AAB78F73C4AA69BE",
+      "SourceSha256": "05FF567B9CE505A96620980E8A1234BA0689F557A3F6A02FAE5EB904CB204EEA",
+      "Kind": "before-text",
+      "HeldOut": false,
+      "ExpectedEquationCount": 0,
+      "ExpectedEmptyOwners": 1,
+      "ExpectedText": [
+        "Public owner paragraph.",
+        "Public comment anchor.",
+        "Other inserted phrase."
+      ],
+      "InputSha256": "3A0A1A4D30217C18CD6A3AC6E3CFDED357427E89B8802510AAB78F73C4AA69BE",
+      "ReferencePdfSha256": "3C445BCE0F6EB39678CD986FD9EA46E662DF1CF6156A3CDABAC3AD018F84DFA1",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        248,
+        220,
+        221
+      ],
+      "OtherTextInk": [
+        "rg:0,0.471,0.831"
+      ]
+    },
+    {
+      "Id": "empty-revision-after-text",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/empty-revision-after-text.docx",
+      "Sha256": "F26D5B44EE2924259D944B5703B3B6EF6650E300942F29190FD86FF19AEF3591",
+      "SourceSha256": "05FF567B9CE505A96620980E8A1234BA0689F557A3F6A02FAE5EB904CB204EEA",
+      "Kind": "after-text",
+      "HeldOut": false,
+      "ExpectedEquationCount": 0,
+      "ExpectedEmptyOwners": 1,
+      "ExpectedText": [
+        "Public owner paragraph.",
+        "Public comment anchor.",
+        "Other inserted phrase."
+      ],
+      "InputSha256": "F26D5B44EE2924259D944B5703B3B6EF6650E300942F29190FD86FF19AEF3591",
+      "ReferencePdfSha256": "C25741F92E044956E985936A135E511B23AAADAA59F2D0A31AE9EFB6548F1114",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        213,
+        237,
+        255
+      ],
+      "OtherTextInk": [
+        "rg:0.82,0.204,0.22"
+      ]
+    },
+    {
+      "Id": "empty-revision-with-math",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/empty-revision-with-math.docx",
+      "Sha256": "F6864BDB5AC329AEB5B93E07DEAE2D72D83678A2858599D87D0A81491E0AB863",
+      "SourceSha256": "05FF567B9CE505A96620980E8A1234BA0689F557A3F6A02FAE5EB904CB204EEA",
+      "Kind": "with-math",
+      "HeldOut": false,
+      "ExpectedEquationCount": 1,
+      "ExpectedEmptyOwners": 1,
+      "ExpectedText": [
+        "Public owner paragraph.",
+        "Public comment anchor."
+      ],
+      "InputSha256": "F6864BDB5AC329AEB5B93E07DEAE2D72D83678A2858599D87D0A81491E0AB863",
+      "ReferencePdfSha256": "3B590072B79644333AE50EDF4ACF1BD28F8F9601B2B1A2972D0030E465103132",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        213,
+        237,
+        255
+      ],
+      "OtherTextInk": []
+    },
+    {
+      "Id": "empty-revision-plain-math",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/empty-revision-plain-math.docx",
+      "Sha256": "3F0DC7CCDF9FC0CC4C0A435141B5B41F24D2FFB8ECE96C46F3833474529B80D3",
+      "SourceSha256": "E809E7157DB6428F981EB7985C1C994E79978B0EF8838E8345973B208954856F",
+      "Kind": "plain-math",
+      "HeldOut": false,
+      "ExpectedEquationCount": 1,
+      "ExpectedEmptyOwners": 0,
+      "ExpectedText": [
+        "Public owner paragraph.",
+        "Public comment anchor."
+      ],
+      "InputSha256": "3F0DC7CCDF9FC0CC4C0A435141B5B41F24D2FFB8ECE96C46F3833474529B80D3",
+      "ReferencePdfSha256": "C6A33515148ACA13B2E3E94A964A02851CA52E8036DB709648602FB9F651549F",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "FillRgb": [
+        248,
+        220,
+        221
+      ],
+      "OtherTextInk": []
+    }
+  ]
+}

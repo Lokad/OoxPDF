@@ -24,7 +24,7 @@ internal static partial class DocxCommentsTests
     {
         using var golden = ReadNonTextAuthorGolden();
         foreach (var row in golden.RootElement.GetProperty("Rows").EnumerateArray().Where(row =>
-            row.GetProperty("Kind").GetString() is "numbered-mark" or "paragraph-mark" or "run-format" or "image-insertion"))
+            row.GetProperty("Kind").GetString() is "numbered-mark" or "paragraph-mark" or "run-format" or "image-insertion" or "empty-insertion"))
         {
             var source = ReadNonTextAuthorSource(row, OoxPdfDocxMarkupMode.AllMarkup);
             var owner = DocxBlockTraversal.EnumerateBodyParagraphs(source).First();
@@ -32,6 +32,7 @@ internal static partial class DocxCommentsTests
             {
                 Runs = owner.Runs.Select(run => run with { Revision = null, Revisions = [] }).ToArray(),
                 Images = owner.Images.Select(image => image with { Revisions = [] }).ToArray(),
+                NonRenderingRunOwners = [],
                 ParagraphMarkRun = owner.ParagraphMarkRun is { } mark ? mark with { Revision = null, Revisions = [] } : null
             };
             TestAssert.True(unowned.Revisions.Count != 0, "The control must retain aggregate metadata after its actual owners are removed.");

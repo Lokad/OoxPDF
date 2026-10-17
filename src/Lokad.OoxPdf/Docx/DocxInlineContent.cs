@@ -155,10 +155,11 @@ internal static class DocxInlineContent
     public static bool HasSupportedParagraphRevisionOwners(DocxParagraph paragraph, CancellationToken token,
         IReadOnlyList<DocxRevisionInfo>? revisions = null) =>
         HasSupportedRunRevisionOwners(revisions ?? paragraph.Revisions, paragraph.Runs, token,
-            paragraph.ListLabel is null ? null : paragraph.ParagraphMarkRun, paragraph.Images);
+            paragraph.ListLabel is null ? null : paragraph.ParagraphMarkRun, paragraph.Images, paragraph.NonRenderingRunOwners);
 
     public static bool HasSupportedRunRevisionOwners(IReadOnlyList<DocxRevisionInfo> revisions,
-        IReadOnlyList<DocxTextRun> runs, CancellationToken token, DocxTextRun? numberingMark = null, IReadOnlyList<DocxInlineImage>? images = null)
+        IReadOnlyList<DocxTextRun> runs, CancellationToken token, DocxTextRun? numberingMark = null, IReadOnlyList<DocxInlineImage>? images = null,
+        IReadOnlyList<DocxNonRenderingRunOwner>? nonRenderingRunOwners = null)
     {
         if (revisions.Count == 0) return true;
         var remaining = new HashSet<DocxRevisionInfo>(ReferenceEqualityComparer.Instance);
@@ -182,6 +183,14 @@ internal static class DocxInlineContent
             foreach (var item in run.Revisions)
             { token.ThrowIfCancellationRequested(); remaining.Remove(item); }
         }
+        if (nonRenderingRunOwners is not null)
+            foreach (var owner in nonRenderingRunOwners)
+            {
+                token.ThrowIfCancellationRequested();
+                if (owner.SourceRunIndex < 0) continue;
+                foreach (var item in owner.Revisions)
+                { token.ThrowIfCancellationRequested(); remaining.Remove(item); }
+            }
         // A picture-only run retains its resolved source owner even without
         // printable text. Consume only that actual image's insertion metadata;
         // aggregate or value-equal revisions cannot invent ownership.

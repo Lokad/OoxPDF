@@ -51,6 +51,9 @@ internal sealed record DocxParagraph(
     public IReadOnlyList<DocxHyperlinkSpan> Hyperlinks { get; init; } = [];
     public IReadOnlyList<DocxBookmarkAnchor> BookmarkAnchors { get; init; } = [];
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
+    // Actual empty source runs own review metadata without contributing visible
+    // text, font resources or layout metrics.
+    public IReadOnlyList<DocxNonRenderingRunOwner> NonRenderingRunOwners { get; init; } = [];
     public bool HasDeletedParagraphMark { get; init; }
 
     // Hidden deletions/move-from text in Final/Simple views still size Office
@@ -85,6 +88,8 @@ internal sealed record DocxParagraph(
         WordWrapValue,
         StyleResolution);
 }
+
+internal sealed record DocxNonRenderingRunOwner(int SourceRunIndex, IReadOnlyList<DocxRevisionInfo> Revisions);
 
 internal sealed record DocxEffectiveParagraphProperties(
     string? StyleId,

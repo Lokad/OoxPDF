@@ -107,6 +107,13 @@ internal sealed partial class DocxRenderer
                         if (run.Text.Length == 0) continue;
                         foreach (var revision in RunRevisions(run)) yield return (run.SourceRunIndex, revision);
                     }
+                    foreach (var owner in paragraph.NonRenderingRunOwners)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (owner.SourceRunIndex < 0) continue;
+                        foreach (var revision in owner.Revisions)
+                        { token.ThrowIfCancellationRequested(); yield return (owner.SourceRunIndex, revision); }
+                    }
                     foreach (var image in paragraph.Images)
                     {
                         token.ThrowIfCancellationRequested();
