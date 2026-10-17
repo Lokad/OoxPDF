@@ -1,0 +1,93 @@
+[
+  {
+    "Id": "final-equation-flow-removed",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/final-equation-flow-removed.docx",
+    "Sha256": "21A0FB52F5536118CF6CDFDD54A02B2A251358F9B8D3F78077E9685EA13FD04A",
+    "SourceSha256": "5FB2BB15C4C981208EFC02520EB099675DEEF138128738EE07B74C56ED0620E9",
+    "FontSize": 11,
+    "Kind": "removed",
+    "HeldOut": false,
+    "ExpectedEquationCount": 3,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "final-equation-flow-empty-row",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/final-equation-flow-empty-row.docx",
+    "Sha256": "02C39DAB4B306AED14F8838393F53671728FA7362639E2B78410DCBF3A6B4C04",
+    "SourceSha256": "5FB2BB15C4C981208EFC02520EB099675DEEF138128738EE07B74C56ED0620E9",
+    "FontSize": 11,
+    "Kind": "empty-row",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "final-equation-flow-empty-fraction",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/final-equation-flow-empty-fraction.docx",
+    "Sha256": "F5517F0E7C9110F810F45CC2581752A89EE998EADE7C3B87E66A3BD60C46ABF5",
+    "SourceSha256": "5FB2BB15C4C981208EFC02520EB099675DEEF138128738EE07B74C56ED0620E9",
+    "FontSize": 11,
+    "Kind": "empty-fraction",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "final-equation-flow-deleted-9",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/final-equation-flow-deleted-9.docx",
+    "Sha256": "F15583BF9C97CF4B382E201F92E50748142690D5B432BD4D6650C0468DD61A3B",
+    "SourceSha256": "5FB2BB15C4C981208EFC02520EB099675DEEF138128738EE07B74C56ED0620E9",
+    "FontSize": 9,
+    "Kind": "deleted",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "final-equation-flow-empty-fraction-9",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/final-equation-flow-empty-fraction-9.docx",
+    "Sha256": "F541C7C82590AC17B8EDC941EAB10B5586DCCB32C11BA7561BAE2D90624317B5",
+    "SourceSha256": "5FB2BB15C4C981208EFC02520EB099675DEEF138128738EE07B74C56ED0620E9",
+    "FontSize": 9,
+    "Kind": "empty-fraction",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "final-equation-flow-deleted-18",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/final-equation-flow-deleted-18.docx",
+    "Sha256": "D62BBCD2389BB04A6721F28560470336B8B28E6E9A2150AA355F79C51BA8D22B",
+    "SourceSha256": "5FB2BB15C4C981208EFC02520EB099675DEEF138128738EE07B74C56ED0620E9",
+    "FontSize": 18,
+    "Kind": "deleted",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "final-equation-flow-empty-fraction-18",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/final-equation-flow-empty-fraction-18.docx",
+    "Sha256": "F5B929F78638923F48FDC855FF0D0E8797A571296BB3E3EFB48B1A38ED7BFE2A",
+    "SourceSha256": "5FB2BB15C4C981208EFC02520EB099675DEEF138128738EE07B74C56ED0620E9",
+    "FontSize": 18,
+    "Kind": "empty-fraction",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]

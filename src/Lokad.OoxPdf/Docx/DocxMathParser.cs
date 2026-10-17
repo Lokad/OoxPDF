@@ -61,6 +61,7 @@ internal static partial class DocxMathParser
             {
                 node = new DocxMathFraction(numerator, denominator, PropertyValue(element, "fPr", "type"))
                 {
+                    ControlText = readRun(element, string.Empty),
                     HasUnsupportedProperties = element.Elements().Any(child => IsProperty(child) && child.Name != MathNamespace + "fPr") ||
                         element.Element(MathNamespace + "fPr")?.Elements().Any(child => child.Name != MathNamespace + "type") == true
                 };

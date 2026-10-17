@@ -1,0 +1,256 @@
+{
+  "Rows": [
+    {
+      "Id": "final-equation-flow-removed",
+      "InputSha256": "21A0FB52F5536118CF6CDFDD54A02B2A251358F9B8D3F78077E9685EA13FD04A",
+      "ReferencePdfSha256": "B7F672B9497D32A0B78B129C4AD569F53534DD0087F22E0FA9D63121FA735B2F",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "HasStructuralRule": false,
+      "SummaryBaseline": 709.54,
+      "FollowingBaseline": 687.46
+    },
+    {
+      "Id": "final-equation-flow-empty-row",
+      "InputSha256": "02C39DAB4B306AED14F8838393F53671728FA7362639E2B78410DCBF3A6B4C04",
+      "ReferencePdfSha256": "59575A79245FCDA5ABD096D9B73191B0F61D6F02DC434FD434E7FDD3C05EF63B",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "HasStructuralRule": false,
+      "SummaryBaseline": 709.54,
+      "FollowingBaseline": 687.46
+    },
+    {
+      "Id": "final-equation-flow-empty-fraction",
+      "InputSha256": "F5517F0E7C9110F810F45CC2581752A89EE998EADE7C3B87E66A3BD60C46ABF5",
+      "ReferencePdfSha256": "874D1588688F2876E360280BCF5917DFE5D3D192DA28C7133B7C5DB28A384794",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "HasStructuralRule": true,
+      "SummaryBaseline": 705.7,
+      "FollowingBaseline": 681.1,
+      "Rule": {
+        "X": 137.9,
+        "Y": 708.46,
+        "Width": 7.319999999999993,
+        "Height": 0.7199999999999136
+      }
+    },
+    {
+      "Id": "final-equation-flow-deleted-9",
+      "InputSha256": "F15583BF9C97CF4B382E201F92E50748142690D5B432BD4D6650C0468DD61A3B",
+      "ReferencePdfSha256": "66E3832AAB3C2C175251E2824240AA0B4DA40A80742093C500B0822455D6EDE8",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "HasStructuralRule": true,
+      "SummaryBaseline": 708.34,
+      "FollowingBaseline": 687.1,
+      "Rule": {
+        "X": 129.26,
+        "Y": 710.62,
+        "Width": 6.0,
+        "Height": 0.6000000000000227
+      }
+    },
+    {
+      "Id": "final-equation-flow-empty-fraction-9",
+      "InputSha256": "F541C7C82590AC17B8EDC941EAB10B5586DCCB32C11BA7561BAE2D90624317B5",
+      "ReferencePdfSha256": "1CBA389BEBDAE64C3A4FCF7EBDF3DE2ED942DDDA827B8FD2406EF7497508FFF3",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "HasStructuralRule": true,
+      "SummaryBaseline": 708.34,
+      "FollowingBaseline": 687.1,
+      "Rule": {
+        "X": 129.26,
+        "Y": 710.62,
+        "Width": 6.0,
+        "Height": 0.6000000000000227
+      }
+    },
+    {
+      "Id": "final-equation-flow-deleted-18",
+      "InputSha256": "D62BBCD2389BB04A6721F28560470336B8B28E6E9A2150AA355F79C51BA8D22B",
+      "ReferencePdfSha256": "D5917246713CBD44882C327CAAFBCB97ABFBEA619E232207999847AA5281E919",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "HasStructuralRule": true,
+      "SummaryBaseline": 696.58,
+      "FollowingBaseline": 638.26,
+      "Rule": {
+        "X": 168.5,
+        "Y": 701.14,
+        "Width": 12.0,
+        "Height": 1.2000000000000455
+      }
+    },
+    {
+      "Id": "final-equation-flow-empty-fraction-18",
+      "InputSha256": "F5B929F78638923F48FDC855FF0D0E8797A571296BB3E3EFB48B1A38ED7BFE2A",
+      "ReferencePdfSha256": "C784FAE10F73944DB4C6E02CA730BBECF8B339ECC201FAABFCF940D5674371B8",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "HasStructuralRule": true,
+      "SummaryBaseline": 696.58,
+      "FollowingBaseline": 638.26,
+      "Rule": {
+        "X": 168.5,
+        "Y": 701.14,
+        "Width": 12.0,
+        "Height": 1.2000000000000455
+      }
+    },
+    {
+      "Id": "equation-revision-body-del",
+      "InputSha256": "5FB2BB15C4C981208EFC02520EB099675DEEF138128738EE07B74C56ED0620E9",
+      "ReferencePdfSha256": "87C3C7CC34AEB6405EB7D018A23C8574EFBBC865612A6279E663A64E1FAF4F3A",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "HasStructuralRule": true,
+      "SummaryBaseline": 705.7,
+      "FollowingBaseline": 681.1,
+      "Rule": {
+        "X": 137.9,
+        "Y": 708.46,
+        "Width": 7.319999999999993,
+        "Height": 0.7199999999999136
+      }
+    },
+    {
+      "Id": "equation-revision-cell-del",
+      "InputSha256": "44878CE586845173CCD9CBFC8F673342DC04D5A0B35843C146DA41635482C201",
+      "ReferencePdfSha256": "9AE7A05197BE5735F4AF6EB097B93F9EE7115F83C0DC5723D378993E171D7DE5",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "HasStructuralRule": true,
+      "SummaryBaseline": 705.7,
+      "FollowingBaseline": 681.1,
+      "Rule": {
+        "X": 137.9,
+        "Y": 708.46,
+        "Width": 7.319999999999993,
+        "Height": 0.7199999999999136
+      }
+    },
+    {
+      "Id": "equation-revision-header-del",
+      "InputSha256": "F59022281BE62E4633459A310F85F3DD856D83CB11386FD3B41053D341B72E35",
+      "ReferencePdfSha256": "BB86B0FAE55C5487244C67E424CBB36087F1764A058ADD7C81C86501DC45044D",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "HasStructuralRule": true,
+      "SummaryBaseline": 741.72,
+      "FollowingBaseline": 717.12,
+      "Rule": {
+        "X": 137.9,
+        "Y": 744.48,
+        "Width": 7.319999999999993,
+        "Height": 0.7200000000000273
+      }
+    },
+    {
+      "Id": "equation-revision-footer-del",
+      "InputSha256": "6660F3E5310701B8C0EA2DC047C87A4E80256A6BCF5A0CEB98080DCBC1A73476",
+      "ReferencePdfSha256": "AB49DFC166E70E781485ADB4B1414E4A11FB20BB7AC14E27D7DDCC22EC1726DD",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "HasStructuralRule": true,
+      "SummaryBaseline": 100.58,
+      "FollowingBaseline": 75.984,
+      "Rule": {
+        "X": 137.9,
+        "Y": 103.34,
+        "Width": 7.319999999999993,
+        "Height": 0.7199700000000036
+      }
+    }
+  ]
+}

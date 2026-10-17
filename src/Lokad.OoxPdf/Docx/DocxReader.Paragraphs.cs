@@ -201,6 +201,15 @@ internal sealed partial class DocxReader
                     }
                 }
 
+                // Final suppresses deleted mathematical text, while Word keeps
+                // a supported fraction's empty argument frame and structural rule.
+                if (markupMode == OoxPdfDocxMarkupMode.Final && container.Name == WordprocessingNamespace + "del")
+                    foreach (XElement child in container.Elements())
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (child.Name == MathNamespace + "oMath" || child.Name == MathNamespace + "oMathPara")
+                            AddEquation(child, revision: null, removeDeletedText: true);
+                    }
                 return;
             }
 
@@ -405,7 +414,7 @@ internal sealed partial class DocxReader
             return inlineItems!.Count;
         }
 
-        void AddEquation(XElement container, DocxRevisionInfo? revision)
+        void AddEquation(XElement container, DocxRevisionInfo? revision, bool removeDeletedText = false)
         {
             EnsureInlineContent();
             bool display = container.Name == MathNamespace + "oMathPara";
@@ -413,8 +422,15 @@ internal sealed partial class DocxReader
             foreach (XElement equation in display ? container.Elements(MathNamespace + "oMath") : new[] { container })
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                var content = DocxMathParser.Read(equation, ReadMathRun, cancellationToken);
+                if (removeDeletedText)
+                {
+                    var source = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null, null);
+                    if (DocxMathLayout.RemoveDeletedFractionText(source, cancellationToken) is not { } empty) continue;
+                    content = empty;
+                }
                 equations.Add(new DocxEquation(
-                    DocxMathParser.Read(equation, ReadMathRun, cancellationToken),
+                    content,
                     runs.Count, sourceRunIndex, display,
                     (string?)properties?.Element(MathNamespace + "jc")?.Attribute(MathNamespace + "val"),
                     properties?.ToString(SaveOptions.DisableFormatting), revision)

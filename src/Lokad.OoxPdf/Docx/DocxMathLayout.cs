@@ -1,5 +1,6 @@
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
+using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Docx;
 
@@ -195,6 +196,8 @@ internal static partial class DocxMathLayout
             return TryMeasureStructuredRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont, resolveControlFont, resolveControlMetrics);
         if (GetFraction(equation) is not { } fraction)
             return DocxMathRowLayout.TryMeasure(equation.Content, resolveFont, token, out box, out fallback);
+        if (IsEmptyFraction(equation))
+            return TryMeasureEmptyFraction(equation, fraction, parentMetricsFont, token, out box, out fallback);
         box = null;
         int scriptLevel = equation.Display ? 0 : 1;
         if (!TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> sources) || sources.Count == 0)
@@ -218,6 +221,15 @@ internal static partial class DocxMathLayout
             glyph.FontSize != size) || sources.Any(source => !source.Run.NormalText &&
                 !ReferenceEquals(resolveFont(source.Run)?.Font.Font, metricOwner)))
         { fallback = "MixedMathFractionMetrics"; return false; }
+        return TryComposeFraction(equation, fraction, metricOwner, constants, parentSize, numerator, denominator,
+            first.Color, sources.Any(source => source.Run.NormalText), token, out box, out fallback);
+    }
+
+    private static bool TryComposeFraction(DocxEquation equation, DocxMathFraction fraction, OpenTypeFont metricOwner,
+        OpenTypeMathConstants constants, double parentSize, DocxMathBox numerator, DocxMathBox denominator,
+        RgbColor ruleColor, bool useParentMetrics, CancellationToken token, out DocxMathBox? box, out string? fallback)
+    {
+        box = null;
         double scale = parentSize / metricOwner.UnitsPerEm;
         bool stack = fraction.TypeValue == "noBar";
         double axis = 0d, thickness = 0d, numeratorShift, denominatorShift;
@@ -256,10 +268,10 @@ internal static partial class DocxMathLayout
         Append(denominator, -denominatorShift);
         if (!stack) { OoxConversionBudget.Current?.ChargeSceneNodes(1); }
         box = new DocxMathBox(width, above, below, glyphs)
-        { Rules = stack ? [] : [new DocxMathRulePlacement(0d, axis - thickness / 2d, width, thickness, first.Color)],
+        { Rules = stack ? [] : [new DocxMathRulePlacement(0d, axis - thickness / 2d, width, thickness, ruleColor)],
             EnclosureHeight = above + below,
             Edges = new(DocxMathRowLayout.AtomKind.Inner, DocxMathRowLayout.AtomKind.Inner, false),
-            ParentMetrics = sources.Any(source => source.Run.NormalText) ? new(metricOwner, parentSize) : null };
+            ParentMetrics = useParentMetrics ? new(metricOwner, parentSize) : null };
         fallback = null;
         return true;
 

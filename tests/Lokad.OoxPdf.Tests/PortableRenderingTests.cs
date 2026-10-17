@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingEmptyFractionsKeepStructureWithoutGlyphs() =>
+        DocxInlineCompositionTests.CheckEmptyFractions(new PinnedResolver(mathFont: true), false);
+
     public static void PortableRenderingEquationRevisionsKeepVisibleContentAndOwners() =>
         DocxInlineCompositionTests.CheckEquationRevisions(new PinnedResolver(mathFont: true), false);
 

@@ -42,6 +42,8 @@ internal sealed record DocxMathRun(DocxTextRun Text, string? MathStyleValue, str
 internal sealed record DocxMathFraction(DocxMathRow Numerator, DocxMathRow Denominator, string? TypeValue) : DocxMathNode
 {
     public bool HasUnsupportedProperties { get; init; }
+    // Empty arguments still have the authored control's metric/ink purpose.
+    public DocxTextRun? ControlText { get; init; }
 }
 internal sealed record DocxMathScripts(DocxMathRow Base, DocxMathRow? Subscript, DocxMathRow? Superscript) : DocxMathNode;
 internal interface IDocxMathControl

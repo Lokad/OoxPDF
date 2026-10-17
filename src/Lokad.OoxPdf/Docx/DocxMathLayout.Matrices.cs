@@ -96,17 +96,8 @@ internal static partial class DocxMathLayout
                     OoxConversionBudget.Current?.ChargeSceneNodes(1);
                     if (placeholder is null)
                     {
-                        // Word retains the dotted-square placeholder's layout
-                        // metrics when its paint is hidden. The control remains
-                        // metric-only: no glyph mapping or PDF subset is needed.
-                        ushort glyph = font.MapCodePoint(0x2B1A);
-                        if (glyph == 0 || !font.TryGetGlyphBounds(glyph, out var bounds))
+                        if (!TryMeasureHiddenPlaceholder(font, glyphSize, out placeholder))
                         { fallback = "MissingMathMatrixPlaceholderMetrics"; return false; }
-                        double scale = glyphSize / font.UnitsPerEm;
-                        double placeholderWidth = font.GetAdvanceWidth(glyph) * scale;
-                        if (!double.IsFinite(placeholderWidth) || placeholderWidth <= 0d)
-                        { fallback = "InvalidMathMatrixPlaceholderMetrics"; return false; }
-                        placeholder = new(placeholderWidth, Math.Max(0d, bounds.YMax * scale), Math.Max(0d, -bounds.YMin * scale), []);
                     }
                     measured[c] = placeholder; widths[c] = Math.Max(widths[c], placeholder.AdvanceWidth);
                     rowAbove[r] = Math.Max(rowAbove[r], placeholder.AboveBaseline); rowBelow[r] = Math.Max(rowBelow[r], placeholder.BelowBaseline);

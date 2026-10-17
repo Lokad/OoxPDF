@@ -100,6 +100,7 @@ internal sealed partial class DocxRenderer
         List<PdfFontResource> resources, CancellationToken token, int? pageCount, List<DocxEquation> deferredPageCountEquations)
     {
         var candidates = new List<(DocxParagraph Paragraph, DocxEquation Equation, DocxEquation SourceEquation, OpenTypeFont? ParentMetrics, IReadOnlyList<OpenTypeFont> ControlFaces)>();
+        Dictionary<DocxEquation, DocxPreparedMathParagraph>? metricOnlyLayouts = null;
         var groups = new Dictionary<(string StableId, int FaceIndex), (OpenTypeFont Font, Dictionary<ushort, int> Glyphs)>();
         var runKeys = new Dictionary<DocxMathRun, (string StableId, int FaceIndex)>();
         var controlFaces = new Dictionary<OpenTypeFont, (Dictionary<ushort, int> Glyphs, Dictionary<ushort, int> Operators, HashSet<int> Characters)>(ReferenceEqualityComparer.Instance);
@@ -135,6 +136,17 @@ internal sealed partial class DocxRenderer
                 DocxEquation equation = sourceEquation.Display == displayStyle
                     ? sourceEquation : sourceEquation with { Display = displayStyle };
                 if (!DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
+                if (DocxMathLayout.IsEmptyFraction(equation))
+                {
+                    // No painted source glyphs: load only the existing conversion
+                    // metric owner, without creating a PDF subset or glyph map.
+                    var metricFace = resolver.Resolve(new FontRequest(document.Settings.MathFontFamily ?? "Cambria Math"));
+                    var metricFont = LoadFont(metricFace, fontCache, token);
+                    if (DocxMathLayout.TryMeasure(equation, _ => null, token, out var emptyBox, out _, metricFont) &&
+                        emptyBox is not null && TryPrepareMathParagraph(paragraph, equation, sourceEquation, emptyBox, token, out var emptyLayout))
+                        (metricOnlyLayouts ??= new(ReferenceEqualityComparer.Instance)).Add(sourceEquation, emptyLayout!);
+                    continue;
+                }
                 OpenTypeFont? parentMetrics = null;
                 List<OpenTypeFont>? controlOwners = null;
                 if (DocxMathLayout.NeedsParentFractionMetrics(equation, mathRuns, token))
@@ -251,7 +263,7 @@ internal sealed partial class DocxRenderer
             fonts.Add(group.Key, resource);
             resources.Add(resource);
         }
-        var layouts = new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance);
+        var layouts = metricOnlyLayouts ?? new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance);
         foreach (var candidate in candidates)
         {
             token.ThrowIfCancellationRequested();
@@ -261,12 +273,8 @@ internal sealed partial class DocxRenderer
                 control => controlKeys.TryGetValue(control, out var controlKey) && fonts.TryGetValue(controlKey, out var resource) ? resource : null,
                 control => controlKeys.TryGetValue(control, out var controlKey) && fontCache.TryGetValue(controlKey, out var metricFont) ? metricFont : null) ||
                 box is null || box.Glyphs.Count == 0) { continue; }
-            double lineSpacingFactor = 1d;
-            if (candidate.Equation.Display && !DocxMathParagraphPolicy.TryGetDisplayLineSpacingFactor(candidate.Paragraph, out lineSpacingFactor))
-                { continue; }
-            if (!DocxMathLayout.TryGetLineMetrics(box, token, out double above, out double lineHeight, lineSpacingFactor)) { continue; }
-            layouts.Add(candidate.SourceEquation, new(candidate.SourceEquation, box, above, lineHeight)
-                { UsesDisplayStyle = candidate.Equation.Display });
+            if (TryPrepareMathParagraph(candidate.Paragraph, candidate.Equation, candidate.SourceEquation, box, token, out var prepared))
+                layouts.Add(candidate.SourceEquation, prepared!);
         }
         return layouts;
     }
@@ -275,6 +283,17 @@ internal sealed partial class DocxRenderer
     {
         if (glyphs.TryGetValue(glyph, out int previous) && previous != point) { return false; }
         glyphs[glyph] = point;
+        return true;
+    }
+
+    private static bool TryPrepareMathParagraph(DocxParagraph paragraph, DocxEquation measured, DocxEquation source,
+        DocxMathBox box, CancellationToken token, out DocxPreparedMathParagraph? prepared)
+    {
+        prepared = null;
+        double factor = 1d;
+        if (measured.Display && !DocxMathParagraphPolicy.TryGetDisplayLineSpacingFactor(paragraph, out factor) ||
+            !DocxMathLayout.TryGetLineMetrics(box, token, out double above, out double height, factor)) return false;
+        prepared = new(source, box, above, height) { UsesDisplayStyle = measured.Display };
         return true;
     }
 }
