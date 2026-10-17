@@ -5603,5 +5603,9 @@
     "DocxPageFootnoteNumbersKeepExcludedSettingsAndStories",
     "DocxPageFootnoteNumbersUseCompleteCellOwnershipAndKeepTypographyScope",
     "DocxInlineCompositionNestedBorderPitch"
+  ],
+  "docx-nested-report": [
+    "DocxInlineCompositionNestedReport",
+    "PortableRenderingNestedReport"
   ]
 }

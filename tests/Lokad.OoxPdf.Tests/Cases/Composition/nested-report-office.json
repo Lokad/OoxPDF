@@ -1,0 +1,67 @@
+{
+  "Scope": "Independent two-preset Word report page/source facts; retained raw geometry/visual failures do not become content passes.",
+  "Rows": [
+    {
+      "Mode": "final-preserve",
+      "InputSha256": "9B907564FC68DA3439B773366A6D81F8E8F1389DA94C56E819AB08C88E638A73",
+      "ReferencePdfSha256": "59A1AD84D3F0DAE45C9F59EE2A6B8FBB2AE54D136EAEAEB61C8B5BDB482EFFB1",
+      "Pages": 2,
+      "BodyMath": {
+        "x+2y": 3,
+        "a+b=c": 2,
+        "ratetime": 2
+      },
+      "HeaderMathPerPage": {
+        "a+b=c": 1
+      },
+      "Images": 2,
+      "InternalLinksIncludingFootnote": 2,
+      "ExternalLink": "https://example.org/method",
+      "NestedText": [
+        {
+          "Text": "Calculation summary",
+          "Page": 1,
+          "X": 71.664,
+          "Y": 525.19
+        },
+        {
+          "Text": "Detail: review the accepted ratio.",
+          "Page": 1,
+          "X": 71.664,
+          "Y": 474.67
+        }
+      ]
+    },
+    {
+      "Mode": "all-word-compatible",
+      "InputSha256": "9B907564FC68DA3439B773366A6D81F8E8F1389DA94C56E819AB08C88E638A73",
+      "ReferencePdfSha256": "248A3855EDA804268CA5E712CB9460EBDF0EAEB51FDB95A4010A13046B68C8B1",
+      "Pages": 2,
+      "BodyMath": {
+        "x+2y": 3,
+        "a+b=c": 2,
+        "ratetime": 2
+      },
+      "HeaderMathPerPage": {
+        "a+b=c": 1
+      },
+      "Images": 2,
+      "InternalLinksIncludingFootnote": 2,
+      "ExternalLink": "https://example.org/method",
+      "NestedText": [
+        {
+          "Text": "Calculation summary",
+          "Page": 1,
+          "X": 54.336,
+          "Y": 494.26
+        },
+        {
+          "Text": "Detail: review the accepted ratio.",
+          "Page": 1,
+          "X": 54.336,
+          "Y": 455.95
+        }
+      ]
+    }
+  ]
+}

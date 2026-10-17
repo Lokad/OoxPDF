@@ -1,0 +1,35 @@
+[
+  {
+    "Id": "composed-nested-navigation-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/composed-nested-navigation-report.docx",
+    "Sha256": "9B907564FC68DA3439B773366A6D81F8E8F1389DA94C56E819AB08C88E638A73",
+    "HeldOut": false,
+    "BaseInput": "tests/Lokad.OoxPdf.Tests/Cases/Composition/report.docx",
+    "BaseInputSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "NestedInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/nested-math-navigation-outgoing.docx",
+    "NestedInputSha256": "B42DD5B0001F7323B1D81F303EE778772705D528D4CFC96CA8E9899BE425D323",
+    "ExpectedEquationCount": 8,
+    "ExpectedInlineImageCount": 2,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "Inventory availability",
+      "Calculation summary",
+      "Detail: review the accepted ratio.",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "Features": [
+      "original report tables/numbering/footnote/comment/header/footer",
+      "nested fractions and illustration",
+      "internal link from a fraction to an enclosing-cell bookmark",
+      "mixed Calibri/Arial/Cambria Math source metrics"
+    ],
+    "SourceFacts": {
+      "BodyEquations": 7,
+      "HeaderEquationsPerPage": 1,
+      "SourceFootnotes": 1,
+      "NestedFractionLinks": 1,
+      "NestedBookmark": "NestedCalculationDetails"
+    }
+  }
+]
