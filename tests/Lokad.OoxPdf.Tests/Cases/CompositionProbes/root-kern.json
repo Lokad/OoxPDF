@@ -1,0 +1,68 @@
+[
+  {
+    "Id": "root-kern-display-cube",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/docx-omml-root-degree-display-cube.docx",
+    "Sha256": "9D28A9E6D1060DA3D5C8857F867ECB1FAD2E9AC8A130E16D8E82DEC7AA97882A",
+    "Fixture": "docx-omml-root-degree-display-cube",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "root-kern-inline-cube",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/docx-omml-root-degree-inline-cube.docx",
+    "Sha256": "4A870071BCC87616215747F8E712615E76F87F4824C6C123E441CA56DAEE31C5",
+    "Fixture": "docx-omml-root-degree-inline-cube",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "root-kern-display-large-control",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/docx-omml-root-degree-display-large-control.docx",
+    "Sha256": "0455774939411DB3B518A8509D83256C4021589547EE51A3217DBB135480B901",
+    "Fixture": "docx-omml-root-degree-display-large-control",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "root-kern-inline-large-control",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/docx-omml-root-degree-inline-large-control.docx",
+    "Sha256": "081E74D28943B4D585E5759C955424C7730B3C43073954886805F227D10AFF4F",
+    "Fixture": "docx-omml-root-degree-inline-large-control",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "root-kern-display-expression",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/docx-omml-root-degree-display-expression.docx",
+    "Sha256": "08DCFC18F4DB4B1B5F371EA66EB337A6A577CD62AD0BF070B018E5620F6248CB",
+    "Fixture": "docx-omml-root-degree-display-expression",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "root-kern-inline-expression",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/docx-omml-root-degree-inline-expression.docx",
+    "Sha256": "F779DC9F976BBA9A495E825E6BFE649943407541F5D3CD975771A61476B6D99F",
+    "Fixture": "docx-omml-root-degree-inline-expression",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ]
+  }
+]

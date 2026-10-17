@@ -1,0 +1,426 @@
+{
+  "Rows": [
+    {
+      "Id": "root-kern-display-cube",
+      "Fixture": "docx-omml-root-degree-display-cube",
+      "Mode": "final-preserve",
+      "InputSha256": "9D28A9E6D1060DA3D5C8857F867ECB1FAD2E9AC8A130E16D8E82DEC7AA97882A",
+      "ReferencePdfSha256": "4CFB152829802E421FB95D124466A15EB6CBC12943F41770658CA4D886D11241",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+13",
+      "MathGlyphCount": 5,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 288.65,
+          "Y": 706.42,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 296.57,
+          "Y": 706.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 306.29,
+          "Y": 706.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 317.93,
+          "Y": 706.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "3",
+          "X": 288.17,
+          "Y": 713.5,
+          "FontSize": 6.96,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "root-kern-inline-cube",
+      "Fixture": "docx-omml-root-degree-inline-cube",
+      "Mode": "final-preserve",
+      "InputSha256": "4A870071BCC87616215747F8E712615E76F87F4824C6C123E441CA56DAEE31C5",
+      "ReferencePdfSha256": "F824A66D1006CC478D769F818A58C1D5A94ED5750D4BB9BE39348538369A68A2",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+13",
+      "MathGlyphCount": 5,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 153.02,
+          "Y": 706.42,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 160.94,
+          "Y": 707.02,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 170.66,
+          "Y": 707.02,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 182.3,
+          "Y": 707.02,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "3",
+          "X": 152.54,
+          "Y": 713.5,
+          "FontSize": 6.96,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "root-kern-display-large-control",
+      "Fixture": "docx-omml-root-degree-display-large-control",
+      "Mode": "final-preserve",
+      "InputSha256": "0455774939411DB3B518A8509D83256C4021589547EE51A3217DBB135480B901",
+      "ReferencePdfSha256": "1525DBE35629B8B906108C56D3B480FA9C2AF03BBDAD925967F0016E57C17A0A",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+13",
+      "MathGlyphCount": 5,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 283.85,
+          "Y": 697.3,
+          "FontSize": 20.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 297.05,
+          "Y": 698.86,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 308.21,
+          "Y": 698.86,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 321.67,
+          "Y": 698.86,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "3",
+          "X": 285.17,
+          "Y": 708.94,
+          "FontSize": 6.96,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "root-kern-inline-large-control",
+      "Fixture": "docx-omml-root-degree-inline-large-control",
+      "Mode": "final-preserve",
+      "InputSha256": "081E74D28943B4D585E5759C955424C7730B3C43073954886805F227D10AFF4F",
+      "ReferencePdfSha256": "A8B8AAB8CED4ECD7387EE319A19AA281FF296932D203B943CFB8FE5E0D61616C",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+13",
+      "MathGlyphCount": 5,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 151.82,
+          "Y": 697.3,
+          "FontSize": 20.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 165.02,
+          "Y": 698.86,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 176.3,
+          "Y": 698.86,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 189.74,
+          "Y": 698.86,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "3",
+          "X": 153.14,
+          "Y": 708.94,
+          "FontSize": 6.96,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "root-kern-display-expression",
+      "Fixture": "docx-omml-root-degree-display-expression",
+      "Mode": "final-preserve",
+      "InputSha256": "08DCFC18F4DB4B1B5F371EA66EB337A6A577CD62AD0BF070B018E5620F6248CB",
+      "ReferencePdfSha256": "BE45034DF155A1A03AD31CBA606933664831F4907989C3AEF3352966E5FBEA9B",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+1n+1",
+      "MathGlyphCount": 7,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 293.69,
+          "Y": 706.42,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 301.61,
+          "Y": 706.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 311.45,
+          "Y": 706.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 323.11,
+          "Y": 706.54,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "n",
+          "X": 283.13,
+          "Y": 713.5,
+          "FontSize": 6.96,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "+",
+          "X": 288.17,
+          "Y": 713.5,
+          "FontSize": 6.96,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "1",
+          "X": 293.33,
+          "Y": 713.5,
+          "FontSize": 6.96,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "root-kern-inline-expression",
+      "Fixture": "docx-omml-root-degree-inline-expression",
+      "Mode": "final-preserve",
+      "InputSha256": "F779DC9F976BBA9A495E825E6BFE649943407541F5D3CD975771A61476B6D99F",
+      "ReferencePdfSha256": "6303C3E120F16FA084AC848C00E145DA6C48CE255B2CBB2D881A8BCAABB328AC",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u221an+1n+1",
+      "MathGlyphCount": 7,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 163.1,
+          "Y": 706.42,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "n",
+          "X": 171.02,
+          "Y": 707.02,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 180.86,
+          "Y": 707.02,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 192.53,
+          "Y": 707.02,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 4,
+          "Text": "n",
+          "X": 152.54,
+          "Y": 713.5,
+          "FontSize": 6.96,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "+",
+          "X": 157.58,
+          "Y": 713.5,
+          "FontSize": 6.96,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "1",
+          "X": 162.86,
+          "Y": 713.5,
+          "FontSize": 6.96,
+          "FillColor": "g:0"
+        }
+      ]
+    }
+  ]
+}

@@ -50,7 +50,7 @@ internal static partial class DocxInlineCompositionTests
     }
 
     internal static void CheckEquationRevisions(IFontResolver? resolver, bool compareGeometry,
-        string referenceFile = "equation-revisions-office.json", bool splitMathRuns = false)
+        string referenceFile = "equation-revisions-office.json", bool splitMathRuns = false, bool horizontalGeometryOnly = false)
     {
         string folder = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
         using var golden = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, referenceFile)));
@@ -102,7 +102,7 @@ internal static partial class DocxInlineCompositionTests
                     {
                         int index = anchors[a].TryGetProperty("Offset", out var offset) ? offset.GetInt32() : a;
                         TestAssert.True(Math.Abs(math[index].X - anchors[a].GetProperty("X").GetDouble()) < 1d &&
-                            Math.Abs(math[index].Y - anchors[a].GetProperty("Y").GetDouble()) < 1d,
+                            (horizontalGeometryOnly || Math.Abs(math[index].Y - anchors[a].GetProperty("Y").GetDouble()) < 1d),
                             "Revised equations retain independent Word container geometry: " + id + "/" + mode + "/" + index);
                     }
                 for (int i = 0; i < math.Length; i++)

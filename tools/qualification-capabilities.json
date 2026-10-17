@@ -3347,5 +3347,19 @@
     "PortableRenderingStructuralPaint",
     "DocxInlineCompositionMathRoles",
     "PortableRenderingMathRoles"
+  ],
+  "docx-root-degree-kerns": [
+    "DocxInlineCompositionEmptyRootDegrees",
+    "PortableRenderingEmptyRootDegrees",
+    "MathFontRadical",
+    "DocxMathRadical",
+    "DocxNativeRoot",
+    "DocxNativeAuthoredRoot",
+    "DocxNativeRadicals",
+    "DocxInlineCompositionStructuralPaint",
+    "PortableRenderingStructuralPaint",
+    "DocxInlineCompositionMathRoles",
+    "PortableRenderingMathRoles",
+    "DocxInlineCompositionRootDegreeKerns"
   ]
 }

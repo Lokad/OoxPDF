@@ -60,7 +60,9 @@ internal static partial class DocxMathLayout
                     out degree, out fallback, out _, exportFontSize: true, allowArgumentSize: true) || degree is null)
             { fallback ??= "UnsupportedMathRadicalDegree"; return false; }
             degreeX = Math.Max(0d, constants.GetValue(OpenTypeMathConstant.RadicalKernBeforeDegree) * scale);
-            rootX = degreeX + degree.AdvanceWidth + Math.Max(-degree.AdvanceWidth,
+            // Signed overlap belongs to the complete root origin. A narrow
+            // degree may start to its right while the group stays nonnegative.
+            rootX = Math.Max(0d, degreeX + degree.AdvanceWidth +
                 constants.GetValue(OpenTypeMathConstant.RadicalKernAfterDegree) * scale);
             degreeY = baseline + bounds.YMin * glyphScale +
                 constants.RadicalDegreeBottomRaisePercent / 100d * (bounds.YMax - bounds.YMin) * glyphScale + degree.BelowBaseline;

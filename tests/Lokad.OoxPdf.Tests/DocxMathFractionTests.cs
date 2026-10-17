@@ -382,6 +382,34 @@ internal static class DocxMathFractionTests
         }
     }
 
+    public static void MathFontRadicalDegreeSignedOverlapKeepsGroupOriginNonnegative()
+    {
+        byte[] bytes = RadicalFontBytes();
+        var range = TestFontBuilder.GetTableRange(bytes, "MATH");
+        byte[] math = bytes.AsSpan(range.Offset, range.Length).ToArray();
+        BinaryPrimitives.WriteInt16BigEndian(math.AsSpan(18 + (int)OpenTypeMathConstant.RadicalKernBeforeDegree * 4), 100);
+        BinaryPrimitives.WriteInt16BigEndian(math.AsSpan(18 + (int)OpenTypeMathConstant.RadicalKernAfterDegree * 4), -500);
+        var font = OpenTypeFont.Load(TestFontBuilder.ReplaceTable(bytes, "MATH", math));
+        var resource = new PdfFontResource("DegreeOverlap", PdfEmbeddedFont.CreateForGlyphMappings(font,
+            new[] { (font.MapCodePoint('B'), (int)'B'), (font.MapCodePoint('+'), (int)'+'),
+                (font.MapCodePoint('C'), (int)'C'), ((ushort)130, 0x221A), ((ushort)128, 0x221A) }, default));
+        var source = RadicalEquation(12d);
+        var root = (DocxMathRadical)source.Content.Children[0];
+        foreach (string text in new[] { "B", "B+C" })
+        {
+            TestAssert.True(DocxMathLayout.TryMeasure(source with { Content = new([root with { DegreeHidden = false, Degree = Row(text) }]) },
+                _ => resource, default, out var box, out var fallback), fallback ?? "Signed degree overlap retains a measured box.");
+            var measured = TestAssert.NotNull(box);
+            var degree = measured.Glyphs.Skip(4).ToArray();
+            TestAssert.True(measured.Glyphs.All(glyph => glyph.X >= 0d) && measured.AdvanceWidth > 0d,
+                "The complete group retains nonnegative origins and positive advance.");
+            TestAssert.True(text.Length == 1 ? degree[0].X - measured.Glyphs[0].X > 1e-6d : measured.Glyphs[0].X - degree[0].X > 1e-6d,
+                "A narrow degree can overlap past the root origin; a wider degree retains its leading space.");
+            TestAssert.True(measured.Rules[0].X == measured.Glyphs[1].X,
+                "The root, radicand and overbar retain shared translation.");
+        }
+    }
+
     public static void MathFontRadicalDegreesUseRoleSizingKernsAndInkExtents()
     {
         byte[] bytes=RadicalFontBytes();
