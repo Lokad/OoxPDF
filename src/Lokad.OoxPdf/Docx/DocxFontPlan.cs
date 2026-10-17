@@ -22,11 +22,11 @@ internal sealed record DocxResolvedRunTypeface(
 
 internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
 {
-    public static DocxFontPlan Create(DocxDocument document, IFontResolver fontResolver, CancellationToken cancellationToken, bool includeReviewAutofitMarks = false)
+    public static DocxFontPlan Create(DocxDocument document, IFontResolver fontResolver, CancellationToken cancellationToken, bool includeReviewSources = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<DocxTextRun> runs = DocxBlockTraversal.EnumerateSourceParagraphs(document)
-            .SelectMany(paragraph => GetParagraphFontRuns(paragraph, includeReviewAutofitMarks))
+            .SelectMany(paragraph => GetParagraphFontRuns(paragraph, includeReviewSources))
             // Body column-break marks consume a font-dependent pitch after the
             // frame turn, even though their empty text never emits glyphs.
             .Concat(document.BodyElements.OfType<DocxManualBreakElement>()
@@ -109,17 +109,24 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
         return candidate is not null && candidate.Equals(family, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static IEnumerable<DocxTextRun> GetParagraphFontRuns(DocxParagraph paragraph, bool includeReviewAutofitMarks = false)
+    private static IEnumerable<DocxTextRun> GetParagraphFontRuns(DocxParagraph paragraph, bool includeReviewSources = false)
     {
+        HashSet<DocxTextRun>? pictureOwners = includeReviewSources && paragraph.Images.Any(image => image.SourceRunStyle is not null)
+            ? new(ReferenceEqualityComparer.Instance) : null;
         foreach (DocxTextRun run in paragraph.Runs)
         {
+            pictureOwners?.Add(run);
             yield return run;
         }
 
-        if (includeReviewAutofitMarks && paragraph.ParagraphMarkRun is { } markRun)
+        if (includeReviewSources && paragraph.ParagraphMarkRun is { } markRun)
         {
             yield return markRun;
         }
+
+        if (pictureOwners is not null)
+            foreach (var image in paragraph.Images)
+                if (image.SourceRunStyle is { } imageStyle && pictureOwners.Add(imageStyle)) yield return imageStyle;
 
         if (paragraph.ListLabel is not null)
         {
@@ -158,6 +165,16 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         this.fontResolver = fontResolver;
         this.resolveSourceAdvances = resolveSourceAdvances;
         fonts = sharedFonts ?? new();
+    }
+
+    public bool TryGetUnderlineRuleMetrics(DocxTextRun? run, out double positionEm, out double thicknessEm)
+    {
+        positionEm = thicknessEm = 0d;
+        OpenTypeFont? font = ResolveFont(run);
+        if (font is null || font.UnitsPerEm == 0) return false;
+        positionEm = (double)font.Post.UnderlinePosition / font.UnitsPerEm;
+        thicknessEm = Math.Abs((double)font.Post.UnderlineThickness) / font.UnitsPerEm;
+        return true;
     }
 
     public bool TryGetStrikeoutRuleMetrics(DocxTextRun? run, out double positionEm, out double thicknessEm)

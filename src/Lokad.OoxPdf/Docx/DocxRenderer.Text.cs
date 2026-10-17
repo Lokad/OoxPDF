@@ -104,7 +104,7 @@ internal sealed partial class DocxRenderer
         Action<OoxPdfDiagnostic>? diagnosticSink,
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
-        ref int imageIndex)
+        ref int imageIndex, DocxFontResources fontResources, DocxMarkupContext markupContext)
     {
         cancellationToken.ThrowIfCancellationRequested();
         // A resolved rotation uses the whole paragraph line frame, rather than
@@ -121,6 +121,28 @@ internal sealed partial class DocxRenderer
                 image.LineFrame, requireLineFrame: true);
         }
         finally { if (clipped) graphics.RestoreState(); }
+        // Review ink sits outside the picture clip, within its container's clip.
+        RenderInsertedPictureIndicator(image, fontResources, graphics, markupContext);
+    }
+
+    private static void RenderInsertedPictureIndicator(DocxInlineImageLayout image, DocxFontResources fonts,
+        PdfGraphicsBuilder graphics, DocxMarkupContext context)
+    {
+        if (!UsesWordCompatibleAllMarkupTextProfile(context) || image.Image.RotationDegrees != 0d ||
+            image.Width <= 0d || image.Image.SourceRunStyle is not { } style) return;
+        var owner = image.Image.Revisions.FirstOrDefault(revision => revision.Kind == DocxRevisionKind.Insertion);
+        if (owner is null || !TryResolveReviewAuthorColor(owner, context, out var color)) return;
+        double size = style.EffectiveProperties.FontSize * ResolveTextEmissionFontScale(context);
+        if (fonts.TextMeasurer is { } measurer && measurer.TryGetUnderlineRuleMetrics(style, out double positionEm, out double thicknessEm))
+        {
+            double thickness = ResolveDecorationThickness(thicknessEm * size, true);
+            double y = image.Y + positionEm * size;
+            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+            graphics.FillRectangle(image.X, y - thickness / 2d, image.Width, thickness);
+        }
+        else
+            RenderFallbackTextDecorations(style with { Underline = true, UnderlineValue = "single", UnderlineColorHex = null,
+                Strike = false, DoubleStrike = false }, image.X, image.Width, size, image.Y, color, graphics);
     }
 
     private static void AddEmissionSegmentWithFontFallback(
@@ -386,14 +408,21 @@ internal sealed partial class DocxRenderer
     {
         if (!UsesWordCompatibleAllMarkupTextProfile(context) ||
             segment.Role == DocxTextSegmentRole.NumberingChange ||
-            context.WordReviewAuthorPalette is not { } palette) return segment.Color;
+            context.WordReviewAuthorPalette is null) return segment.Color;
         var run = segment.StyleRun;
         DocxRevisionInfo? owner = run.Revision is { Kind: DocxRevisionKind.Insertion or DocxRevisionKind.Deletion } primary
             ? primary : run.Revisions.FirstOrDefault(revision => revision.Kind is DocxRevisionKind.Insertion or DocxRevisionKind.Deletion);
-        if (owner is null || !palette.AuthorSlots.TryGetValue(NormalizeReviewAuthorIdentity(owner.Author), out int slot))
-            return segment.Color;
-        var color = CommentAuthorStrokePalette[PositivePaletteIndex(slot, CommentAuthorStrokePalette.Length)];
-        return new(color.Red, color.Green, color.Blue);
+        return owner is not null && TryResolveReviewAuthorColor(owner, context, out var color) ? color : segment.Color;
+    }
+
+    private static bool TryResolveReviewAuthorColor(DocxRevisionInfo owner, DocxMarkupContext context, out RgbColor color)
+    {
+        color = default;
+        if (context.WordReviewAuthorPalette is not { } palette ||
+            !palette.AuthorSlots.TryGetValue(NormalizeReviewAuthorIdentity(owner.Author), out int slot)) return false;
+        var rgb = CommentAuthorStrokePalette[PositivePaletteIndex(slot, CommentAuthorStrokePalette.Length)];
+        color = new(rgb.Red, rgb.Green, rgb.Blue);
+        return true;
     }
 
     private static RgbColor ResolveTextEmissionColor(

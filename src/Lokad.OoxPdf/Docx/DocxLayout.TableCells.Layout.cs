@@ -695,7 +695,7 @@ internal sealed partial class DocxLayoutEngine
                             // images anchor by the line baseline instead of hanging a full height below it.
                             placedImages.Add(new DocxInlineImageLayout(
                                 placed.Image,
-                                lineX + beforeWidth,
+                                lineX + beforeWidth + placed.AdvanceBefore,
                                 cursorY - lineBaselineTransition,
                                 placed.Width,
                                 placed.Height,

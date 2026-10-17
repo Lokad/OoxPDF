@@ -555,7 +555,7 @@ internal sealed partial class DocxLayoutEngine
                             double beforeWidth = MeasureStaticTextSpans(SliceTextSpans(line.Spans, 0, placed.LineCharOffset), textMeasurer);
                             images.Add(new DocxInlineImageLayout(
                                 placed.Image,
-                                lineX + beforeWidth,
+                                lineX + beforeWidth + placed.AdvanceBefore,
                                 staticSingleLineHeight.HasValue || staticLineHeightSource == DocxLineHeightSource.ExactLineSpacing
                                     ? staticBaselineY : staticBaselineY - placed.Height,
                                 placed.Width,
@@ -567,7 +567,7 @@ internal sealed partial class DocxLayoutEngine
                             {
                                 LineFrame = DocxPictureLineFrame.FromLine(cursorY, staticLineHeight, extraAbove, staticLineIndex == staticLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d),
                                 ClipBounds = staticLineHeightSource == DocxLineHeightSource.ExactLineSpacing
-                                    ? new PdfRectangle(lineX + beforeWidth, staticBaselineY, placed.Width, Math.Min(placed.Height, Math.Max(0d, cursorY - staticBaselineY)))
+                                    ? new PdfRectangle(lineX + beforeWidth + placed.AdvanceBefore, staticBaselineY, placed.Width, Math.Min(placed.Height, Math.Max(0d, cursorY - staticBaselineY)))
                                     : null
                             });
                             placedStaticImages.Add(placed.Image);

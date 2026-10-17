@@ -26,6 +26,14 @@ internal interface IDocxTextMeasurer
         return false;
     }
 
+    // Rule geometry belongs to the owning run's resolved font. Providers
+    // without usable font metrics retain the existing fallback decoration.
+    bool TryGetUnderlineRuleMetrics(DocxTextRun? run, out double positionEm, out double thicknessEm)
+    {
+        positionEm = thicknessEm = 0d;
+        return false;
+    }
+
     // RV06 separator-bottom probes (Word 16.0): the Office footnote gap above the
     // body equals one single-spaced line box minus the first-baseline inset, so it
     // derives from the mark font. Providers without font metrics keep the default,
@@ -550,6 +558,13 @@ internal sealed class DocxFallbackTextMeasurer : IDocxTextMeasurer, IDocxLineMet
 // documents measure each run with the face that emits it.
 internal sealed class MissingFontRoutingMeasurer(IDocxTextMeasurer? inner, DocxFallbackTextMeasurer fallback, IReadOnlyDictionary<DocxTextRun, PdfFallbackFontResource> fallbackFaces) : IDocxTextMeasurer, IDocxLineMetricsProvider, IDocxStaticTextMetricsProvider
 {
+    public bool TryGetUnderlineRuleMetrics(DocxTextRun? run, out double positionEm, out double thicknessEm)
+    {
+        positionEm = thicknessEm = 0d;
+        return inner is not null && (run is null || !fallbackFaces.ContainsKey(run)) &&
+            inner.TryGetUnderlineRuleMetrics(run, out positionEm, out thicknessEm);
+    }
+
     public double MeasureText(DocxTextRun? run, string text, double fontSize)
     {
         if (run is not null && fallbackFaces.ContainsKey(run))

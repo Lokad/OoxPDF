@@ -1,0 +1,365 @@
+{
+  "Scope": "Word 16 inserted-picture revision rectangles relative to source-backed image clip; ten independent controls, six new references and four existing references reused.",
+  "Rows": [
+    {
+      "Id": "nontext-author-image-insertion",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/nontext-author-image-insertion.docx",
+      "InputSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+      "ReferencePdfSha256": "559E3524D479C64E93684ACCA98CF2415A9FE829E3B70B971EDA32019A90BF0D",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClip": [
+        137.69,
+        628.3,
+        165.01,
+        641.96
+      ],
+      "Marker": [
+        137.62,
+        626.88,
+        27.311999999999983,
+        0.52800000000002
+      ],
+      "OffsetX": -0.06999999999999318,
+      "OffsetY": -1.419999999999959,
+      "FillRgb": [
+        209,
+        52,
+        56
+      ],
+      "Variant": "body"
+    },
+    {
+      "Id": "nontext-author-image-before-text",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/nontext-author-image-before-text.docx",
+      "InputSha256": "18C015E5E57343628A7AC279F6902B29A86EBBC93049109BCAAE839B9982B9CC",
+      "ReferencePdfSha256": "1EEC212373E6B112546952836145F67EBF71F8BFC33AD40D91668DD948995AF7",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClip": [
+        137.69,
+        628.3,
+        165.01,
+        641.96
+      ],
+      "Marker": [
+        137.62,
+        626.88,
+        27.311999999999983,
+        0.52800000000002
+      ],
+      "OffsetX": -0.06999999999999318,
+      "OffsetY": -1.419999999999959,
+      "FillRgb": [
+        209,
+        52,
+        56
+      ],
+      "Variant": "body"
+    },
+    {
+      "Id": "nontext-author-image-after-text",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/nontext-author-image-after-text.docx",
+      "InputSha256": "6ED5623D7FDD5B31E5E0952678B3C61DB833225F10AB386347D09AA705C6960A",
+      "ReferencePdfSha256": "40AD910BCB08A999C99E21527F9AB27EE496952DE540FA8DBFE6BE8097F54FF8",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClip": [
+        214.41,
+        628.3,
+        241.73,
+        641.96
+      ],
+      "Marker": [
+        214.25,
+        626.88,
+        27.312000000000012,
+        0.52800000000002
+      ],
+      "OffsetX": -0.1599999999999966,
+      "OffsetY": -1.419999999999959,
+      "FillRgb": [
+        0,
+        120,
+        212
+      ],
+      "Variant": "body"
+    },
+    {
+      "Id": "revision-ink-deletion-after-image",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/revision-ink-deletion-after-image.docx",
+      "InputSha256": "7214FD2A3FA86F0121DE4B40601A16BE03FF75959BB70FD6525DC4163FB9CF26",
+      "ReferencePdfSha256": "8D5EC031A9B250C0A6C0842A19C651D8EDFFAC21B363A9BBFEF68E65671CE2E8",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClip": [
+        137.69,
+        628.3,
+        165.01,
+        641.96
+      ],
+      "Marker": [
+        137.62,
+        626.88,
+        27.311999999999983,
+        0.52800000000002
+      ],
+      "OffsetX": -0.06999999999999318,
+      "OffsetY": -1.419999999999959,
+      "FillRgb": [
+        209,
+        52,
+        56
+      ],
+      "Variant": "body"
+    },
+    {
+      "Id": "picture-revision-cell",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-cell.docx",
+      "InputSha256": "A250D937424C928E7E9A6EE5BDBB7262C56CFD864C0B564A63D51F01CF089220",
+      "ReferencePdfSha256": "3D42A276E61C5A1E7BCE664720F2DBF4FB3BDAFA12F7D037151F6949CA18CE82",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClip": [
+        137.69,
+        628.3,
+        165.01,
+        641.96
+      ],
+      "Marker": [
+        137.62,
+        626.88,
+        27.311999999999983,
+        0.52800000000002
+      ],
+      "OffsetX": -0.06999999999999318,
+      "OffsetY": -1.419999999999959,
+      "FillRgb": [
+        209,
+        52,
+        56
+      ],
+      "Variant": "cell"
+    },
+    {
+      "Id": "picture-revision-header",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-header.docx",
+      "InputSha256": "1D8FC8688FBEDEC07BB074B0B1D584EA01764E005B8F5AD87FDC23326E1A3427",
+      "ReferencePdfSha256": "523AD0E4EE4208F827DFAFA1031B515D7150A4CA513F3A206F6835B97E5DF37B",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClip": [
+        137.69,
+        655.62,
+        165.01,
+        669.241
+      ],
+      "Marker": [
+        137.62,
+        654.17,
+        27.311999999999983,
+        0.5520000000000209
+      ],
+      "OffsetX": -0.06999999999999318,
+      "OffsetY": -1.4500000000000455,
+      "FillRgb": [
+        209,
+        52,
+        56
+      ],
+      "Variant": "header"
+    },
+    {
+      "Id": "picture-revision-footer",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-footer.docx",
+      "InputSha256": "7A63CF24F3880A02BD169945F1E5139AE0ED85E7CCDC27A3E0AD5938C61EC52C",
+      "ReferencePdfSha256": "24FA8E9D39F778D20215CBD78A4013572ED8AA0987024B9E29E09AD536CE2C0C",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClip": [
+        137.69,
+        129.67,
+        165.01,
+        143.33
+      ],
+      "Marker": [
+        137.62,
+        128.57,
+        27.311999999999983,
+        0.5520000000000209
+      ],
+      "OffsetX": -0.06999999999999318,
+      "OffsetY": -1.0999999999999943,
+      "FillRgb": [
+        209,
+        52,
+        56
+      ],
+      "Variant": "footer"
+    },
+    {
+      "Id": "picture-revision-arial14",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-arial14.docx",
+      "InputSha256": "D90AE113804BCF15EA701181C092F363A152AE14C8DF55033AAF27F6872157A4",
+      "ReferencePdfSha256": "85B1FF300AA89E4592BB970747017E9C0C1432DF780B2832BE54F32D17F531CB",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClip": [
+        137.69,
+        628.3,
+        165.01,
+        641.96
+      ],
+      "Marker": [
+        137.62,
+        626.42,
+        27.311999999999983,
+        0.8160100000000057
+      ],
+      "OffsetX": -0.06999999999999318,
+      "OffsetY": -1.8799999999999955,
+      "FillRgb": [
+        209,
+        52,
+        56
+      ],
+      "Variant": "arial14"
+    },
+    {
+      "Id": "picture-revision-calibri18",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-calibri18.docx",
+      "InputSha256": "EFA780BC6892B307E65BCD28A7763373BDEEDD3752FDBC41BED783AE52213008",
+      "ReferencePdfSha256": "0791A3AD7802FEC72392A7DCBF4019F572840A006E6961F257C9D2C77EE431E4",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClip": [
+        137.69,
+        628.3,
+        165.01,
+        641.96
+      ],
+      "Marker": [
+        137.62,
+        625.87,
+        27.311999999999983,
+        0.9120000000000346
+      ],
+      "OffsetX": -0.06999999999999318,
+      "OffsetY": -2.42999999999995,
+      "FillRgb": [
+        209,
+        52,
+        56
+      ],
+      "Variant": "calibri18"
+    },
+    {
+      "Id": "picture-revision-authored-double-green",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-authored-double-green.docx",
+      "InputSha256": "EC134F3C365C4EA7AFD07A6E4AC57F7665B25FB289C4DA331FDD10E04026B46D",
+      "ReferencePdfSha256": "8E2548B3E2E0A155999386A6E6A81991D1BE7EC96E83AB5881BB6C6E46A8E142",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClip": [
+        137.69,
+        628.3,
+        165.01,
+        641.96
+      ],
+      "Marker": [
+        137.62,
+        626.88,
+        27.311999999999983,
+        0.52800000000002
+      ],
+      "OffsetX": -0.06999999999999318,
+      "OffsetY": -1.419999999999959,
+      "FillRgb": [
+        209,
+        52,
+        56
+      ],
+      "Variant": "authored-double-green"
+    }
+  ]
+}

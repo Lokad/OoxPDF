@@ -434,7 +434,7 @@ internal sealed partial class DocxLayoutEngine
                     double beforeWidth = MeasureMidLineBeforeWidth(line.Spans, placed.LineCharOffset, paragraph, firstLine, lineIndex == lines.Length - 1, paragraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, fixedScale), defaultTabStopPoints * fixedScale, pageNumber, storyMidLinePlan?.LineImageWidths[lineIndex] ?? 0d);
                     placedImages.Add(new DocxInlineImageLayout(
                         placed.Image,
-                        lineX + beforeWidth,
+                        lineX + beforeWidth + placed.AdvanceBefore,
                         // RV05 calibration (Word 16.0 fnimg probe): Office footnote image bottoms sit
                         // at the text baseline (image cm bottom 85.7 against baseline 85.584), so
                         // related-story midline images anchor by the line baseline like cells.

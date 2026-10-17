@@ -739,8 +739,11 @@ internal sealed partial class DocxRenderer
         OpenTypeFont font,
         double fontSize,
         bool useWordCompatibleRevisionDecorationProfile)
+        => ResolveDecorationThickness(Math.Abs(metricValue) * fontSize / font.UnitsPerEm, useWordCompatibleRevisionDecorationProfile);
+
+    private static double ResolveDecorationThickness(double fontThickness, bool useWordCompatibleRevisionDecorationProfile)
     {
-        double thickness = Math.Max(0.25d, Math.Abs(metricValue) * fontSize / font.UnitsPerEm);
+        double thickness = Math.Max(0.25d, fontThickness);
         return useWordCompatibleRevisionDecorationProfile
             ? Math.Max(WordCompatibleAllMarkupRevisionDecorationThicknessPoints, thickness)
             : thickness;

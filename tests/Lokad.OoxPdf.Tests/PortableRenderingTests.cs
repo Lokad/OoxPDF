@@ -16,6 +16,12 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingPictureRevisionSharedRunsKeepBothImagesAndText() =>
+        DocxPictureRevisionTests.CheckSharedPictures(new PinnedResolver());
+
+    public static void PortableRenderingPictureRevisionMarkersKeepSourceOwners() =>
+        DocxPictureRevisionTests.CheckRendering(new PinnedResolver(), false);
+
     public static void PortableRenderingRevisionAuthorInkMatchesWordSourceOrder() =>
         DocxCommentsTests.CheckReviewRevisionInk(new PinnedResolver());
 

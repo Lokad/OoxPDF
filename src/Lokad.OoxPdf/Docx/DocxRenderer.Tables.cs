@@ -117,7 +117,7 @@ internal sealed partial class DocxRenderer
                     // Pictures share the cell clip used by text, including aligned
                     // and repeated paragraphs.
                     placedImage = placedImage with { LineFrame = new DocxPictureLineFrame(clip.Y, clip.Height) };
-                    RenderInlineImage(placedImage, graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex);
+                    RenderInlineImage(placedImage, graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex, fontResources, markupContext);
                 }
 
                 foreach (DocxInlineTextBoxLayout textBox in cellLayout.InlineTextBoxes)

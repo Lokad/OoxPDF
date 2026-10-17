@@ -477,7 +477,9 @@ internal sealed partial class DocxReader
                 }
 
                 AddFieldPlaceholderRun(firstRun, placeholder, fieldSourceRunIndex, revision, kind);
-                images.AddRange(ReadInlineImages(firstRun, package, relationships, revision, fieldSourceRunIndex));
+                foreach (var image in ReadInlineImages(firstRun, package, relationships, revision, fieldSourceRunIndex))
+                    images.Add(revision?.Kind == DocxRevisionKind.Insertion && runs.Count > fieldTextRunIndex
+                        ? image with { SourceRunStyle = runs[fieldTextRunIndex] } : image);
                 AddFieldReference(
                     kind,
                     DocxFieldSourceKind.Simple,
@@ -620,7 +622,7 @@ internal sealed partial class DocxReader
                     revision,
                     effectiveRevisions,
                     ref currentPageInstructionSeen);
-                images.AddRange(ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex));
+                AddRunImages();
                 inlineTextBoxes.AddRange(ReadInlineTextBoxes(run, styles, numbering, package, relationships, markupMode, revision, cancellationToken));
                 PublishInlineRunItems(firstRun, firstImage);
                 return;
@@ -677,9 +679,23 @@ internal sealed partial class DocxReader
                     runs: runs);
             }
 
-            images.AddRange(ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex));
+            AddRunImages();
             inlineTextBoxes.AddRange(ReadInlineTextBoxes(run, styles, numbering, package, relationships, markupMode, revision, cancellationToken));
             PublishInlineRunItems(firstRun, firstImage);
+
+            void AddRunImages()
+            {
+                var parsed = ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex);
+                if (parsed.Count == 0) return;
+                if (revision?.Kind != DocxRevisionKind.Insertion) { images.AddRange(parsed); return; }
+                var style = runs.Count > firstRun ? runs[firstRun] : CreateResolvedTextRun(string.Empty,
+                    resolvedRun, runStyleResolution, false, currentSourceRunIndex, 0, revision, effectiveRevisions);
+                foreach (var image in parsed)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    images.Add(image with { SourceRunStyle = style });
+                }
+            }
         }
 
         void AddParagraphDisplayText(string text, int currentSourceRunIndex, int sourceTextOffset, DocxResolvedRunProperties resolvedRun, DocxRunStyleResolution runStyleResolution, DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo> effectiveRevisions, DocxFieldKind? fieldKind = null)

@@ -1,0 +1,129 @@
+{
+  "Scope": "Independent Word clip geometry for two inline pictures sharing a run with source text; body/cell/header/footer. All four print adjacent images without overlap.",
+  "Rows": [
+    {
+      "Id": "picture-revision-shared-run-body",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-shared-run-body.docx",
+      "InputSha256": "3410D6335566F0A544CBA03ECB39B43785168EC67303BC10A1BACAEE8DD3B804",
+      "ReferencePdfSha256": "BF9192644C5291A4F1C33A5CE3235540215F05A135F75B4F55EE507B44C3A3B1",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClips": [
+        [
+          137.69,
+          628.3,
+          165.01,
+          641.96
+        ],
+        [
+          165.01,
+          628.3,
+          192.33,
+          641.96
+        ]
+      ],
+      "FirstToSecondAdvance": 27.319999999999993
+    },
+    {
+      "Id": "picture-revision-shared-run-cell",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-shared-run-cell.docx",
+      "InputSha256": "569C34CD0FDD8A283A4D402ECF0032FA613DB6ABF1AD582009D73B61CCE5DF39",
+      "ReferencePdfSha256": "8D07E357CD694993D40B12C947ADDA40991139F8E3EED42A4A232ADA8AC480B2",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClips": [
+        [
+          137.69,
+          628.3,
+          165.01,
+          641.96
+        ],
+        [
+          165.01,
+          628.3,
+          192.33,
+          641.96
+        ]
+      ],
+      "FirstToSecondAdvance": 27.319999999999993
+    },
+    {
+      "Id": "picture-revision-shared-run-header",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-shared-run-header.docx",
+      "InputSha256": "E2744FDD36D14A45F1702195EC15E087320D26B1D41C0BD948E89279165C9E65",
+      "ReferencePdfSha256": "FC8EFA58F88B3EE4A0607A61F7AB143635AC37C416D52415A38246C5EA235BBF",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClips": [
+        [
+          137.69,
+          655.62,
+          165.01,
+          669.241
+        ],
+        [
+          165.01,
+          655.62,
+          192.33,
+          669.241
+        ]
+      ],
+      "FirstToSecondAdvance": 27.319999999999993
+    },
+    {
+      "Id": "picture-revision-shared-run-footer",
+      "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-shared-run-footer.docx",
+      "InputSha256": "2D78EF8B5021564CDA48286412A1DB664CF8B21248FB3DCBB710F9A7F546C51B",
+      "ReferencePdfSha256": "63A461200BBB459C4ED52BB05DD46B5E5CD2969E6621EEE1299728E704A6365E",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "ImageClips": [
+        [
+          137.69,
+          129.67,
+          165.01,
+          143.33
+        ],
+        [
+          165.01,
+          129.67,
+          192.33,
+          143.33
+        ]
+      ],
+      "FirstToSecondAdvance": 27.319999999999993
+    }
+  ]
+}

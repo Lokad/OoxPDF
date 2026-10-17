@@ -1648,7 +1648,7 @@ internal sealed partial class DocxLayoutEngine
                             // instead of hanging a full height below it (cell path precedent).
                             lineImages.Add(new DocxInlineImageLayout(
                                 placed.Image,
-                                lineX + beforeWidth,
+                                lineX + beforeWidth + placed.AdvanceBefore,
                                 textBaselineY,
                                 placed.Width,
                                 placed.Height,

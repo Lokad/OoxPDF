@@ -1,0 +1,183 @@
+[
+  {
+    "Id": "nontext-author-image-insertion",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/nontext-author-image-insertion.docx",
+    "Sha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "SourceSha256": "201EEFC0969A39E392FE50CB94FA6D7402DB65A212A3EF102A32345B6A29E569",
+    "Kind": "image-insertion",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "nontext-author-image-before-text",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/nontext-author-image-before-text.docx",
+    "Sha256": "18C015E5E57343628A7AC279F6902B29A86EBBC93049109BCAAE839B9982B9CC",
+    "SourceSha256": "201EEFC0969A39E392FE50CB94FA6D7402DB65A212A3EF102A32345B6A29E569",
+    "Kind": "image-before-text",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "nontext-author-image-after-text",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/nontext-author-image-after-text.docx",
+    "Sha256": "6ED5623D7FDD5B31E5E0952678B3C61DB833225F10AB386347D09AA705C6960A",
+    "SourceSha256": "201EEFC0969A39E392FE50CB94FA6D7402DB65A212A3EF102A32345B6A29E569",
+    "Kind": "image-after-text",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "revision-ink-deletion-after-image",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ReviewAuthors/revision-ink-deletion-after-image.docx",
+    "Sha256": "7214FD2A3FA86F0121DE4B40601A16BE03FF75959BB70FD6525DC4163FB9CF26",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor.",
+      "Other deleted phrase."
+    ]
+  },
+  {
+    "Id": "picture-revision-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-cell.docx",
+    "Sha256": "A250D937424C928E7E9A6EE5BDBB7262C56CFD864C0B564A63D51F01CF089220",
+    "SourceSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "Variant": "cell",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "picture-revision-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-header.docx",
+    "Sha256": "1D8FC8688FBEDEC07BB074B0B1D584EA01764E005B8F5AD87FDC23326E1A3427",
+    "SourceSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "Variant": "header",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "picture-revision-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-footer.docx",
+    "Sha256": "7A63CF24F3880A02BD169945F1E5139AE0ED85E7CCDC27A3E0AD5938C61EC52C",
+    "SourceSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "Variant": "footer",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "picture-revision-arial14",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-arial14.docx",
+    "Sha256": "D90AE113804BCF15EA701181C092F363A152AE14C8DF55033AAF27F6872157A4",
+    "SourceSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "Variant": "arial14",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "picture-revision-calibri18",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-calibri18.docx",
+    "Sha256": "EFA780BC6892B307E65BCD28A7763373BDEEDD3752FDBC41BED783AE52213008",
+    "SourceSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "Variant": "calibri18",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "picture-revision-authored-double-green",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-authored-double-green.docx",
+    "Sha256": "EC134F3C365C4EA7AFD07A6E4AC57F7665B25FB289C4DA331FDD10E04026B46D",
+    "SourceSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "Variant": "authored-double-green",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "picture-revision-shared-run-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-shared-run-body.docx",
+    "Sha256": "3410D6335566F0A544CBA03ECB39B43785168EC67303BC10A1BACAEE8DD3B804",
+    "SourceSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "Variant": "shared-run-body",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "picture-revision-shared-run-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-shared-run-cell.docx",
+    "Sha256": "569C34CD0FDD8A283A4D402ECF0032FA613DB6ABF1AD582009D73B61CCE5DF39",
+    "SourceSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "Variant": "shared-run-cell",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "picture-revision-shared-run-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-shared-run-header.docx",
+    "Sha256": "E2744FDD36D14A45F1702195EC15E087320D26B1D41C0BD948E89279165C9E65",
+    "SourceSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "Variant": "shared-run-header",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  },
+  {
+    "Id": "picture-revision-shared-run-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/PictureRevisions/picture-revision-shared-run-footer.docx",
+    "Sha256": "2D78EF8B5021564CDA48286412A1DB664CF8B21248FB3DCBB710F9A7F546C51B",
+    "SourceSha256": "D17D4F0A50ED8C8491F06A61F2839ACB049196CCC1255802924FB40F18639136",
+    "Variant": "shared-run-footer",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public owner paragraph.",
+      "Public comment anchor."
+    ]
+  }
+]

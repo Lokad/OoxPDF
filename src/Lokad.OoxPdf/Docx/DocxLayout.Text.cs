@@ -694,7 +694,7 @@ internal sealed partial class DocxLayoutEngine
     // RV05: ordered inline atoms (body path). Images carrying a recorded source run
     // in a text-mixed paragraph attach to the wrapped line spanning their character
     // offset instead of emitting as blocks after paragraph text.
-    private sealed record DocxMidLineImage(DocxInlineImage Image, int LineCharOffset, double Width, double Height);
+    private sealed record DocxMidLineImage(DocxInlineImage Image, int LineCharOffset, double Width, double Height, double AdvanceBefore);
     private sealed record DocxMidLinePlan(List<DocxMidLineImage>[] ImagesByLine, double[] LineImageWidths, double[] ShiftAboveHeights, bool[] PlacedMask);
     private static DocxMidLinePlan? CreateMidLinePlan(
         DocxParagraph paragraph,
@@ -745,7 +745,10 @@ internal sealed partial class DocxLayoutEngine
             imagesByLine[lineIndex] = new List<DocxMidLineImage>();
             shiftAboveHeights[lineIndex] = 0d;
         }
-        foreach ((int imageIndex, DocxInlineImage image) in affined)
+        foreach ((int imageIndex, DocxInlineImage image) in affined
+            .OrderBy(item => item.Image.SourceRunIndex)
+            .ThenBy(item => item.Image.SourceTextOffsetInRun)
+            .ThenBy(item => item.Image.SourceOrderInRun))
         {
             int position = ResolveInlineImageCharOffset(paragraph, textSpans, image);
             // RV05: image-driven breaking can start a line exactly at the image offset;
@@ -780,7 +783,9 @@ internal sealed partial class DocxLayoutEngine
             double maxWidth = targetLine == 0 ? firstLineMaxWidth : continuationLineMaxWidth;
             double width = Math.Min(maxWidth, image.WidthPoints);
             double height = image.HeightPoints * width / Math.Max(1d, image.WidthPoints);
-            imagesByLine[targetLine].Add(new DocxMidLineImage(image, lineOffset, width, height));
+            // Text-prefix measurement excludes pictures. Retain their preceding
+            // advance once, so every container places the ordered objects alike.
+            imagesByLine[targetLine].Add(new DocxMidLineImage(image, lineOffset, width, height, lineImageWidths[targetLine]));
             lineImageWidths[targetLine] += width;
             // RV05 calibration (Word 16.0): the image top pins to the natural line top,
             // so the baseline drops by image height minus ascent; the advance below never grows.
