@@ -1,5 +1,37 @@
 # Composed-document reliability checkpoint
 
+C148 removes an extra Calibri page and large unused body regions in natural
+paragraphs with multiple notes. Block-wide registration reserved future markers
+and repeated separators (161.1875pt on page one). Complete one-line body notes
+now register at their measured source fragments and share one separator. Completed
+active records retire per page; the coordinator skips its redundant reserve retry.
+No font/size/count rule is added. Split/complex stories, section/column changes,
+keep chains, static frames and unowned source markers retain existing paths.
+Preflight skips documents without footnotes and checks cancellation during scans.
+
+All four independent Word controls now agree on two pages, note membership and
+09/10 labels. Source/target marker geometry is within0.147pt X/0.283pt Y. Four
+comparisons improve; all strict typography/spacing gates still fail unchanged
+thresholds. Four Final page pairs reviewed/four Review pairs carry by raster
+identity. Four destinations/authored digits survive; alphabetic inventory does
+not establish complete word extraction or reading order. Parent geometry fails.
+
+Final qualification:97 Windows passes/two unchanged Aptos failures;90 Ubuntu
+passes/nine native skips. Both Aptos continuation-head failures reproduce the
+same details on C147; they remain failures. An unexpectedly slow direct Windows
+run retains40 completed passes and resumes only59 unreported methods with the
+usual isolated temporary directory. No completed final passing method is replayed.
+The late cancellation/fast-path source changes justify final-artifact qualification.
+
+Final twelve portfolio outcomes/seven sources/twenty pages and eight compound
+math/image/bookmark/custom-note PDFs retain accepted bytes. Office comparisons
+and reviewed pages carry by identity: ten DOCX failures/two deck passes/two report
+extraction flags remain. No new full content audit. Seventeen assets/four smokes
+transfer without root build/suite replay. Root0ba654ef;
+`artifacts/composition-c1/complete-note-admission-evidence.json`. C147 CI is green.
+Next: mixed formulas/images/bookmarks in one naturally paginated note paragraph;
+prefer harness-only qualification if the accepted library already composes them.
+
 C147 fixes numbering for one paragraph spanning physical pages. Four parent
 outcomes kept105-108 although every marker already shared its complete note's
 page. Numbering now resolves each measured glyph/note owner independently of
