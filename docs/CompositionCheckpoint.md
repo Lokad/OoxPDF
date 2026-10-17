@@ -1,5 +1,47 @@
 # Composed-document reliability checkpoint
 
+C100 fixes confirmed whole-equation loss inside insertion/deletion wrappers in
+`oMathPara`. One actual source owner survives iterative traversal. Known literal
+root, delimiter and n-ary deletion frames retain structural paint in Final; their
+Review symbols keep authored ink while literal text receives author color/strike.
+Empty structural controls retain actual ownership without invented source runs.
+Unknown/deeper/nested compositions keep explicit fallbacks.
+
+Eleven mixed sources yield twenty-two independent Office outcomes: all MAEs improve,
+all one-point group gates pass (0.683pt X / 0.584pt Y maximum), and all strict raster
+gates remain failed without new components. Six crop pairs reviewed. Four deleted
+roles retain one strike per actual revised literal glyph, with structural symbols
+unstruck. Three empty structural insertions still draw an extra Review margin bar
+absent in Word; this confirmed residual is the next bounded semantic task. The
+unused related-header warning remains distinct from printed content.
+
+One production Release artifact qualifies 142 Windows methods and 89 Ubuntu passes/
+53 native skips. Three synthetic equality assertions initially included distinct
+source-owner identity in geometry; a harness-only correction compares painted
+fields and asserts actual ownership separately. Only four changed checks rerun;
+138 Windows and 85 Ubuntu passes carry by unchanged production/helpers/inputs.
+Both platforms use two invocations; raw failures retained. Two parent regressions
+fail with actual 14-versus-18 missing math glyphs. All twelve fixed portfolio PDFs
+retain accepted bytes; independent comparisons reuse exact identities. Seventeen
+assets/four smoke PDFs transfer without root rebuild or suite replay. Root 7f7f2b8d;
+evidence: `artifacts/composition-c1/whole-structural-revisions-evidence.json`.
+Previous C98 CI39015102889 is green on both platforms.
+
+C99 retains a bounded vertical-root investigation with no production correction.
+Twelve independent inline/display controls vary structural/body sizes and descender
+ink. Body baseline residual reaches 3.658pt; a uniform size offset is not supported
+by the countercontrols. In the inspected descender case, embedded Word root/body
+and degree glyph bounds match the installed Cambria Math outlines and units.
+Font mismatch is not established there; the frame/clearance cause remains unverified.
+
+The [OpenType MATH specification](https://learn.microsoft.com/en-us/typography/opentype/spec/math)
+provides placement parameters rather than a complete layout algorithm. Keep
+independent Office output and raw numerical failures; no fitted font/size branch.
+References/parent output: `artifacts/composition-c1/root-frame-office` and
+`root-frame-parent`; findings: `root-frame-evidence.json`. Continue with whole-equation
+revision composition, where the reader's fraction-only filtering may omit visible
+structural content. No new qualification or geometry pass is claimed here.
+
 C98 clamps the complete radical origin after signed degree overlap. A narrow
 degree can begin to its right while the complete group stays nonnegative; wider
 degrees retain leading space. Root, radicand and bar retain shared translation.

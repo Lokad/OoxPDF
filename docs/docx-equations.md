@@ -7,6 +7,16 @@ unsupported structural revisions retain explicit fallbacks. Adjacent revised tex
 bookmarks and unchanged-format run splits do not exclude supported mathematics.
 Independent references pin their Office view settings with each source/PDF.
 
+Whole-equation insertion/deletion wrappers inside `oMathPara` retain supported
+root, delimiter and n-ary content, alongside prose, numbering, images and other
+formulas. Final preserves known literal deletion frames and structural paint;
+Review keeps structural symbols in authored ink while literal text receives the
+actual author's color and deletion strike. Structural-only insertions retain
+actual control ownership without invented text. Independent group gates pass
+within 0.683pt X / 0.584pt Y; strict raster gates remain failed. Empty structural
+insertions still have an extra Review margin bar. Unknown/deeper/nested wrappers
+retain explicit fallback.
+
 In Final, deleting a supported bar fraction's text preserves its empty arguments
 and structural rule. Authored empty bar fractions share the same metric-only
 placeholder measurement as hidden matrix cells, without a dummy glyph or PDF font
