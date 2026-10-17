@@ -1,5 +1,38 @@
 # Composed-document reliability checkpoint
 
+C77 resolves numbering definitions before advancing shared source timelines.
+Concrete IDs sharing a definition continue its sequence; explicit starts apply on
+first use in each current/original timeline. Matching valid NSIDs identify the
+first XML definition, including its formatting, independently of paragraph-reference
+order. Zero/case, distinct definitions/NSIDs, conflicting level text, returned IDs,
+instance overrides and marked/unmarked controls establish those semantic rules.
+Word SaveAs preserves the concrete IDs in the original failing control; ignored
+normalized copies/source XML retain that independent preparation evidence.
+
+Twenty-eight fresh Word exports and four C76 references qualify 32 outcomes: all
+116 numeric paints match text/color and the unchanged one-point geometry tolerance
+(maximum X/Y deltas .113/.619pt). Both previously unqualified continuation outcomes
+now match numeric content in Final and Review. Twenty-six MAEs/recalls improve,
+six remain identical with unchanged PDF bytes, and no new gate component fails.
+All 32 visual gates still fail unchanged thresholds. Two page pairs were reviewed;
+this does not qualify whole-document typography, geometry or richer multilevel
+restart interactions beyond existing neighboring coverage.
+
+One frozen Release artifact passes 165 Windows checks and 125 Ubuntu checks/40
+explicit skips, each in one invocation; two new rendering checks fail on C76.
+Seventeen assets/four smoke PDFs transfer without a root rebuild or suite replay.
+A conservative package-wide audit finds no shared used instances or duplicate
+NSIDs in the five fixed/complete DOCX inputs. Prior ten corpus comparisons carry
+by source-scope inference, without new corpus conversions/PDF-identity claims.
+C76 CI is green on both platforms (38990293304). Evidence:
+`artifacts/composition-c1/numbering-continuation-evidence.json` and linked reports.
+
+Workspace retirement of 68 archived superseded compiled files was rejected by
+automatic approval review before process creation as "blocked by policy". All
+originals and the verified archive remain; no bytes are claimed reclaimed. The
+four exact snapshot names are added to the blocked-target map and must not be
+retried. Evidence: `c76-superseded-compiled-retirement-rejected.json`.
+
 C76 keeps separate current/original numbering timelines after actual inserted
 numbering marks. Original state is allocated lazily, shared through source-story
 tables and invalidated for unsupported original ownership. Derived counters retain
