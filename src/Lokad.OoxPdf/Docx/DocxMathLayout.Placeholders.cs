@@ -21,9 +21,9 @@ internal static partial class DocxMathLayout
         return true;
     }
 
-    private static bool IsEmptyArgument(DocxMathRow row, CancellationToken token = default)
+    private static bool IsEmptyArgument(DocxMathRow row, CancellationToken token = default, bool allowArgumentSize = false)
     {
-        if (!row.HasSupportedProperties) return false;
+        if (!row.HasSupportedProperties && !(allowArgumentSize && row.HasKnownArgumentProperties)) return false;
         if (row.Children.Count == 0) return true;
         // Ordinary visible rows exit without allocating a traversal stack.
         if (row.Children.Any(node => node is DocxMathRun run && run.Text.Text.Length != 0)) return false;
@@ -38,14 +38,15 @@ internal static partial class DocxMathLayout
         return true;
     }
 
-    private static bool TryMeasureFractionArgument(DocxMathRow row, Func<DocxMathRun, PdfFontResource?> resolveFont,
+    private static bool TryMeasureLiteralArgument(DocxMathRow row, Func<DocxMathRun, PdfFontResource?> resolveFont,
         OpenTypeFont font, double size, int scriptLevel, CancellationToken token,
-        out DocxMathBox? box, out string? fallback, out bool empty)
+        out DocxMathBox? box, out string? fallback, out bool empty,
+        bool allowArgumentSize = false, bool exportFontSize = false, double? operatorSpacingFontSize = null)
     {
-        empty = IsEmptyArgument(row, token);
+        empty = IsEmptyArgument(row, token, allowArgumentSize);
         if (!empty)
             return DocxMathRowLayout.TryMeasure(row, resolveFont, token, out box, out fallback, scriptLevel,
-                operatorSpacingFontSize: size, scriptMetricsFont: font);
+                operatorSpacingFontSize: operatorSpacingFontSize, scriptMetricsFont: font, allowArgumentSize: allowArgumentSize, exportFontSize: exportFontSize);
         box = null;
         fallback = "MissingMathFractionPlaceholder";
         double argumentSize = size;

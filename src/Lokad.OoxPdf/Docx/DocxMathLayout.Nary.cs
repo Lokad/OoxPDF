@@ -58,9 +58,9 @@ internal static partial class DocxMathLayout
         { fallback ??= "UnsupportedMathNaryBody"; return false; }
         DocxMathBox? lower = null, upper = null;
         if (nary.SubscriptHiddenValue != true &&
-            (!TryMeasureScriptArgument(nary.Subscript, resolveFont, font, token, out lower, out fallback) || lower is null || lower.Glyphs.Count == 0) ||
+            (!TryMeasureScriptArgument(nary.Subscript, resolveFont, font, size, token, out lower, out fallback) || lower is null || lower.Glyphs.Count == 0) ||
             nary.SuperscriptHiddenValue != true &&
-            (!TryMeasureScriptArgument(nary.Superscript, resolveFont, font, token, out upper, out fallback) || upper is null || upper.Glyphs.Count == 0))
+            (!TryMeasureScriptArgument(nary.Superscript, resolveFont, font, size, token, out upper, out fallback) || upper is null || upper.Glyphs.Count == 0))
         { fallback ??= "UnsupportedMathNaryLimit"; return false; }
         int point = char.ConvertToUtf32(nary.CharacterValue!, 0);
         ushort canonical = font.MapCodePoint(point);

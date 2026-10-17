@@ -1,0 +1,65 @@
+[
+  {
+    "Id": "math-role-script-authored-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-role-script-authored-empty.docx",
+    "Sha256": "CC42E815C5AE628BDD11240D42D7771560DCCD884E4209505C2044EB8522F83C",
+    "SourceSha256": "CC36F49124C6AFB40D9A457A37B77CB1B31AE78D4C7B17E27B4D28DB1C2A1E0B",
+    "Role": "script",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-role-matrix-authored-empty",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-role-matrix-authored-empty.docx",
+    "Sha256": "BA6FDD927B62D2C52801E57B260C738D57014734E5D04A34C9E97F91673108D1",
+    "SourceSha256": "307E6866893377F7EC6EF10925FE181912DEF94BA96A2B74918FF89CF6E02B9E",
+    "Role": "matrix",
+    "Kind": "empty",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-role-script-sub-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-role-script-sub-del.docx",
+    "Sha256": "DCA10C14E6B53AF931AD7FF7057F3AF8224D804B0BA200266C4136228EEB282A",
+    "SourceSha256": "CC36F49124C6AFB40D9A457A37B77CB1B31AE78D4C7B17E27B4D28DB1C2A1E0B",
+    "Role": "script",
+    "Kind": "sub-deletion",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-role-matrix-empty-off",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/docx-omml-matrix-empty-display-diagonal-off.docx",
+    "Sha256": "7A8DB78FD7094BC0DF8A28AD6946B879F9C04E95DABECA1AB949C9E6DE8EAFA2",
+    "Role": "matrix",
+    "Kind": "off",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-role-matrix-empty-omitted",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/docx-omml-matrix-empty-display-diagonal-omitted.docx",
+    "Sha256": "2790E63A64CDEFC24060ED166306D9D0D4C6BF6ECC557620D6C71283907E0AF1",
+    "Role": "matrix",
+    "Kind": "omitted",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-role-matrix-empty-hidden",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/docx-omml-matrix-empty-display-diagonal.docx",
+    "Sha256": "A1F4C95D2E94E86957AE7947537D4BCD226CA5B0B7D67ED3C76F756FC83088BA",
+    "Role": "matrix",
+    "Kind": "hidden",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  }
+]

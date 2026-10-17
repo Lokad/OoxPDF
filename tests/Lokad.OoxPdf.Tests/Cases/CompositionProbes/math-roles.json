@@ -1,0 +1,90 @@
+[
+  {
+    "Id": "math-role-literal-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-role-literal-ins.docx",
+    "Sha256": "F391ED13821725754041C096DDBAFFA4503F08278B14C477E59150A15D6B672B",
+    "SourceSha256": "016296B43F021EFCCBB40A0F6699660D6DC93D8D2EFAD67A42ED15796CD10897",
+    "Role": "literal",
+    "Kind": "ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-role-literal-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-role-literal-del.docx",
+    "Sha256": "08BA97979764A2826E70C78262BE7EE342DA90A6305D887A0A24920FC01AA29E",
+    "SourceSha256": "016296B43F021EFCCBB40A0F6699660D6DC93D8D2EFAD67A42ED15796CD10897",
+    "Role": "literal",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-role-script-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-role-script-ins.docx",
+    "Sha256": "75FE6C868533FA06EE018219FF60B3B2480C4530871525095043C0469DD2C576",
+    "SourceSha256": "CC36F49124C6AFB40D9A457A37B77CB1B31AE78D4C7B17E27B4D28DB1C2A1E0B",
+    "Role": "script",
+    "Kind": "ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-role-script-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-role-script-del.docx",
+    "Sha256": "2C7B721828592CC614E77B040D11DD6346DE03E9DB71B8C615D9126A4D90C535",
+    "SourceSha256": "CC36F49124C6AFB40D9A457A37B77CB1B31AE78D4C7B17E27B4D28DB1C2A1E0B",
+    "Role": "script",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-role-root-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-role-root-ins.docx",
+    "Sha256": "A61E8EC3036F6DDCE5808BA8F831E1F7774EE1861A68D9C75D957CFE51A36C06",
+    "SourceSha256": "D0E09DA5A2CBFDDA268FF2E2C5F993B268C3D2742EA762E39DDF0DA80D547455",
+    "Role": "root",
+    "Kind": "ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-role-root-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-role-root-del.docx",
+    "Sha256": "82328CBE48D400A8C33E6C1F4BB9B43B8256987C4F1A9BE29679CB9AA1FF075B",
+    "SourceSha256": "D0E09DA5A2CBFDDA268FF2E2C5F993B268C3D2742EA762E39DDF0DA80D547455",
+    "Role": "root",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-role-matrix-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-role-matrix-ins.docx",
+    "Sha256": "A009EFFC17DE2D2275FB4CDBD79356B9506597DDDD7F42FFF9D3F9F52AFC7EA9",
+    "SourceSha256": "307E6866893377F7EC6EF10925FE181912DEF94BA96A2B74918FF89CF6E02B9E",
+    "Role": "matrix",
+    "Kind": "ins",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  },
+  {
+    "Id": "math-role-matrix-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-role-matrix-del.docx",
+    "Sha256": "5F4D581DAFE84AE29DD998C546E8684EED02C40AE9D65DC2AF373095BAB32E75",
+    "SourceSha256": "307E6866893377F7EC6EF10925FE181912DEF94BA96A2B74918FF89CF6E02B9E",
+    "Role": "matrix",
+    "Kind": "del",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": []
+  }
+]

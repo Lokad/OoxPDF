@@ -339,11 +339,12 @@ internal static class DocxNativeMathTests
         }
     }
 
-    public static void DocxNativeMatrixHiddenEmptyCellsRetainSparseMeaningAndVisibilityFallback()
+    public static void DocxNativeMatrixEmptyCellsRetainSparseMeaningAndKnownVisibility()
     {
         RequireMathFont();
         foreach ((string suffix, string meaning) in new[] { ("display-diagonal", "ad"), ("inline-antidiagonal", "bc"),
-            ("display-empty-column", "abcd"), ("inline-empty-row", "abcd"), ("inline-first-empty-control20", "bcd"), ("inline-normal-diagonal", "ad") })
+            ("display-empty-column", "abcd"), ("inline-empty-row", "abcd"), ("inline-first-empty-control20", "bcd"), ("inline-normal-diagonal", "ad"),
+            ("display-diagonal-off", "ad"), ("display-diagonal-omitted", "ad") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
             var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-empty-" + suffix), diagnostics.Add, CancellationToken.None).Single();
@@ -352,12 +353,6 @@ internal static class DocxNativeMathTests
                 "Hidden empty cells retain the surrounding painted source and explicit row/column slots.");
             if (suffix == "inline-normal-diagonal") TestAssert.True(page.Fonts.Where(f => f.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).All(f =>
                 f.Font.Font.FamilyName.Contains("Arial", StringComparison.OrdinalIgnoreCase)), "Empty slots do not publish the metric-only Cambria font.");
-        }
-        foreach (string suffix in new[] { "display-diagonal-off", "display-diagonal-omitted" })
-        {
-            var diagnostics = new List<OoxPdfDiagnostic>();
-            Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-empty-" + suffix), diagnostics.Add, CancellationToken.None).Single();
-            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"), "Visible-placeholder grids retain their full fallback.");
         }
     }
 

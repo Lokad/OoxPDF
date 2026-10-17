@@ -1,0 +1,1352 @@
+{
+  "Rows": [
+    {
+      "Id": "math-role-literal-ins",
+      "Fixture": "CompositionProbes/math-role-literal-ins",
+      "Mode": "final-preserve",
+      "InputSha256": "F391ED13821725754041C096DDBAFFA4503F08278B14C477E59150A15D6B672B",
+      "ReferencePdfSha256": "ADE3718E9B5F87331957DA27046A0B4E00F1351E67EC0ED736BA62FB112E3DBE",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "x\u2212y",
+      "MathGlyphCount": 3,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 284.93,
+          "Y": 738.82,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "\u2212",
+          "X": 293.57,
+          "Y": 738.82,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "y",
+          "X": 304.13,
+          "Y": 738.82,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-literal-ins",
+      "Fixture": "CompositionProbes/math-role-literal-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F391ED13821725754041C096DDBAFFA4503F08278B14C477E59150A15D6B672B",
+      "ReferencePdfSha256": "2AECCB060327F4B3376EFFA1505A86BC51B0458B77F6885B96F436CBE347176A",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x\u2212y",
+      "MathGlyphCount": 3,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 284.93,
+          "Y": 738.82,
+          "FontSize": 11.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Offset": 1,
+          "Text": "\u2212",
+          "X": 293.57,
+          "Y": 738.82,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "y",
+          "X": 304.13,
+          "Y": 738.82,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-literal-del",
+      "Fixture": "CompositionProbes/math-role-literal-del",
+      "Mode": "final-preserve",
+      "InputSha256": "08BA97979764A2826E70C78262BE7EE342DA90A6305D887A0A24920FC01AA29E",
+      "ReferencePdfSha256": "B3B9805313C445D35BCF88D5D0DAD516B6452566FEAD8EBD32749B4A708A723A",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u2212y",
+      "MathGlyphCount": 2,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u2212",
+          "X": 290.45,
+          "Y": 738.82,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "y",
+          "X": 298.73,
+          "Y": 738.82,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-literal-del",
+      "Fixture": "CompositionProbes/math-role-literal-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "08BA97979764A2826E70C78262BE7EE342DA90A6305D887A0A24920FC01AA29E",
+      "ReferencePdfSha256": "97D95C07C5F70A28D1A2DDFB74755CD8AD2E50ADFD58443A9CE6048F39C62565",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "x\u2212y",
+      "MathGlyphCount": 3,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 284.93,
+          "Y": 738.82,
+          "FontSize": 11.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Offset": 1,
+          "Text": "\u2212",
+          "X": 293.57,
+          "Y": 738.82,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "y",
+          "X": 304.13,
+          "Y": 738.82,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-script-ins",
+      "Fixture": "CompositionProbes/math-role-script-ins",
+      "Mode": "final-preserve",
+      "InputSha256": "75FE6C868533FA06EE018219FF60B3B2480C4530871525095043C0469DD2C576",
+      "ReferencePdfSha256": "C6128BF296ECA33E68694C539936C6473C87C696A74E44E54B73389461646639",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u03b1i2",
+      "MathGlyphCount": 3,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u03b1",
+          "X": 291.53,
+          "Y": 738.1,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "i",
+          "X": 298.13,
+          "Y": 735.46,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 298.73,
+          "Y": 742.54,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-script-ins",
+      "Fixture": "CompositionProbes/math-role-script-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "75FE6C868533FA06EE018219FF60B3B2480C4530871525095043C0469DD2C576",
+      "ReferencePdfSha256": "6F8561D0A13D56B5D25330F0549A71BEFCDF3C00A8030E946E72DC1A5066C076",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "\u03b1i2",
+      "MathGlyphCount": 3,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u03b1",
+          "X": 291.53,
+          "Y": 738.1,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "i",
+          "X": 298.13,
+          "Y": 735.46,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 298.73,
+          "Y": 742.54,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-script-del",
+      "Fixture": "CompositionProbes/math-role-script-del",
+      "Mode": "final-preserve",
+      "InputSha256": "2C7B721828592CC614E77B040D11DD6346DE03E9DB71B8C615D9126A4D90C535",
+      "ReferencePdfSha256": "870D5154DD79D22AFDF62140F09D892831C2870391781396D6DA328EE482E5D7",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u03b1i",
+      "MathGlyphCount": 2,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u03b1",
+          "X": 290.21,
+          "Y": 737.02,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "i",
+          "X": 296.81,
+          "Y": 734.38,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-script-del",
+      "Fixture": "CompositionProbes/math-role-script-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "2C7B721828592CC614E77B040D11DD6346DE03E9DB71B8C615D9126A4D90C535",
+      "ReferencePdfSha256": "10AA46770CCED90DA705FE6EAFA70E19917F11EDF7B6C46A3B1D3AB7844224BC",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "\u03b1i2",
+      "MathGlyphCount": 3,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u03b1",
+          "X": 291.53,
+          "Y": 738.1,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "i",
+          "X": 298.13,
+          "Y": 735.46,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 298.73,
+          "Y": 742.54,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-root-ins",
+      "Fixture": "CompositionProbes/math-role-root-ins",
+      "Mode": "final-preserve",
+      "InputSha256": "A61E8EC3036F6DDCE5808BA8F831E1F7774EE1861A68D9C75D957CFE51A36C06",
+      "ReferencePdfSha256": "924DEF50733349F95CD7D2581125769E10F8091D05A00C19398F2AD201FD2358",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u221ax+1",
+      "MathGlyphCount": 4,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 281.45,
+          "Y": 736.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "x",
+          "X": 288.65,
+          "Y": 736.9,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 297.29,
+          "Y": 736.9,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 307.97,
+          "Y": 736.9,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-root-ins",
+      "Fixture": "CompositionProbes/math-role-root-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "A61E8EC3036F6DDCE5808BA8F831E1F7774EE1861A68D9C75D957CFE51A36C06",
+      "ReferencePdfSha256": "2523AADFCD3836F42D871C07B183967CBE4144FFE3C0C7AD200820A0E43571CA",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "\u221ax+1",
+      "MathGlyphCount": 4,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 281.45,
+          "Y": 736.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "x",
+          "X": 288.65,
+          "Y": 736.9,
+          "FontSize": 11.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 297.29,
+          "Y": 736.9,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 307.97,
+          "Y": 736.9,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-root-del",
+      "Fixture": "CompositionProbes/math-role-root-del",
+      "Mode": "final-preserve",
+      "InputSha256": "82328CBE48D400A8C33E6C1F4BB9B43B8256987C4F1A9BE29679CB9AA1FF075B",
+      "ReferencePdfSha256": "63CF7C7488A4CE37155A49A15E2B59E87615ADC968B905A4BBEEFC7BD0CCFF15",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u221a+1",
+      "MathGlyphCount": 3,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 286.97,
+          "Y": 736.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 294.17,
+          "Y": 736.9,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "1",
+          "X": 302.45,
+          "Y": 736.9,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-root-del",
+      "Fixture": "CompositionProbes/math-role-root-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "82328CBE48D400A8C33E6C1F4BB9B43B8256987C4F1A9BE29679CB9AA1FF075B",
+      "ReferencePdfSha256": "775B16877B0740E6727ECF85B8273FA2DC7A667C1D166CB0DC1ADBEF78663829",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "\u221ax+1",
+      "MathGlyphCount": 4,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 281.45,
+          "Y": 736.66,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "x",
+          "X": 288.65,
+          "Y": 736.9,
+          "FontSize": 11.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 297.29,
+          "Y": 736.9,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "1",
+          "X": 307.97,
+          "Y": 736.9,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-matrix-ins",
+      "Fixture": "CompositionProbes/math-role-matrix-ins",
+      "Mode": "final-preserve",
+      "InputSha256": "A009EFFC17DE2D2275FB4CDBD79356B9506597DDDD7F42FFF9D3F9F52AFC7EA9",
+      "ReferencePdfSha256": "1F8275FAE456DA47AACF685AF008E9990444C3DC6FD5CDC08DAF960D654E1F67",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "abbcccd",
+      "MathGlyphCount": 7,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 156.86,
+          "Y": 709.78,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "bb",
+          "X": 180.86,
+          "Y": 709.78,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "ccc",
+          "X": 151.82,
+          "Y": 695.62,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 183.74,
+          "Y": 695.62,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-matrix-ins",
+      "Fixture": "CompositionProbes/math-role-matrix-ins",
+      "Mode": "all-word-compatible",
+      "InputSha256": "A009EFFC17DE2D2275FB4CDBD79356B9506597DDDD7F42FFF9D3F9F52AFC7EA9",
+      "ReferencePdfSha256": "08028BA1FB4C03860A991B194B099AA58F532BAD43921E5482D3E47288C221AE",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "abbcccd",
+      "MathGlyphCount": 7,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 156.86,
+          "Y": 709.78,
+          "FontSize": 12,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Offset": 1,
+          "Text": "bb",
+          "X": 180.86,
+          "Y": 709.78,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "ccc",
+          "X": 151.82,
+          "Y": 695.62,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 183.74,
+          "Y": 695.62,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-matrix-del",
+      "Fixture": "CompositionProbes/math-role-matrix-del",
+      "Mode": "final-preserve",
+      "InputSha256": "5F4D581DAFE84AE29DD998C546E8684EED02C40AE9D65DC2AF373095BAB32E75",
+      "ReferencePdfSha256": "F7669407265E8EEA70278DDB0060781696E21EAEA19CA8658F9FE9274AD12990",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "bbcccd",
+      "MathGlyphCount": 6,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "bb",
+          "X": 180.86,
+          "Y": 708.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "ccc",
+          "X": 151.82,
+          "Y": 694.78,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "d",
+          "X": 183.74,
+          "Y": 694.78,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-matrix-del",
+      "Fixture": "CompositionProbes/math-role-matrix-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "5F4D581DAFE84AE29DD998C546E8684EED02C40AE9D65DC2AF373095BAB32E75",
+      "ReferencePdfSha256": "3D1C0E565A2F95F957C73AE15E5008DB06445B44FDE3FD19ED8506361382E1AC",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "abbcccd",
+      "MathGlyphCount": 7,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 156.86,
+          "Y": 709.78,
+          "FontSize": 12,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Offset": 1,
+          "Text": "bb",
+          "X": 180.86,
+          "Y": 709.78,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 3,
+          "Text": "ccc",
+          "X": 151.82,
+          "Y": 695.62,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 183.74,
+          "Y": 695.62,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-script-authored-empty",
+      "Fixture": "CompositionProbes/math-role-script-authored-empty",
+      "Mode": "final-preserve",
+      "InputSha256": "CC42E815C5AE628BDD11240D42D7771560DCCD884E4209505C2044EB8522F83C",
+      "ReferencePdfSha256": "2748142FE9C1CE953A7177F47BD6E81F204B5AB107C342B1D5C1DA2121A27109",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u03b1i",
+      "MathGlyphCount": 2,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u03b1",
+          "X": 290.21,
+          "Y": 737.02,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "i",
+          "X": 296.81,
+          "Y": 734.38,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-script-authored-empty",
+      "Fixture": "CompositionProbes/math-role-script-authored-empty",
+      "Mode": "all-word-compatible",
+      "InputSha256": "CC42E815C5AE628BDD11240D42D7771560DCCD884E4209505C2044EB8522F83C",
+      "ReferencePdfSha256": "ED4100A9D1B7038786F93AE0AE0F6F83524126698FE6A2134843FF7DBD4D0D00",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "\u03b1i",
+      "MathGlyphCount": 2,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u03b1",
+          "X": 290.21,
+          "Y": 737.02,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "i",
+          "X": 296.81,
+          "Y": 734.38,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-matrix-authored-empty",
+      "Fixture": "CompositionProbes/math-role-matrix-authored-empty",
+      "Mode": "final-preserve",
+      "InputSha256": "BA6FDD927B62D2C52801E57B260C738D57014734E5D04A34C9E97F91673108D1",
+      "ReferencePdfSha256": "E2F282BFBA609592D71F8517B0CCCBEA4C0926B7F1A581A262E8D37BED05923E",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "bbcccd",
+      "MathGlyphCount": 6,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "bb",
+          "X": 180.86,
+          "Y": 708.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "ccc",
+          "X": 151.82,
+          "Y": 694.78,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "d",
+          "X": 183.74,
+          "Y": 694.78,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-matrix-authored-empty",
+      "Fixture": "CompositionProbes/math-role-matrix-authored-empty",
+      "Mode": "all-word-compatible",
+      "InputSha256": "BA6FDD927B62D2C52801E57B260C738D57014734E5D04A34C9E97F91673108D1",
+      "ReferencePdfSha256": "9C56756962A1C1E4D0133F67ADD63C5A4102F2D21AA8C2C8E495ABCB0743F5F6",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "bbcccd",
+      "MathGlyphCount": 6,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "bb",
+          "X": 180.86,
+          "Y": 708.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 2,
+          "Text": "ccc",
+          "X": 151.82,
+          "Y": 694.78,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 5,
+          "Text": "d",
+          "X": 183.74,
+          "Y": 694.78,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-script-sub-del",
+      "Fixture": "CompositionProbes/math-role-script-sub-del",
+      "Mode": "final-preserve",
+      "InputSha256": "DCA10C14E6B53AF931AD7FF7057F3AF8224D804B0BA200266C4136228EEB282A",
+      "ReferencePdfSha256": "B0EB03EC8B31FBCC9C0C4261294BDE73519ED83E2ED16727895F50AD5613C802",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "\u03b12",
+      "MathGlyphCount": 2,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u03b1",
+          "X": 290.45,
+          "Y": 737.74,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "2",
+          "X": 297.65,
+          "Y": 742.54,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-script-sub-del",
+      "Fixture": "CompositionProbes/math-role-script-sub-del",
+      "Mode": "all-word-compatible",
+      "InputSha256": "DCA10C14E6B53AF931AD7FF7057F3AF8224D804B0BA200266C4136228EEB282A",
+      "ReferencePdfSha256": "B26DFA062FD92438BC7C3C44F27C4BDD29CC3A3C12FA4543791DB236100D4648",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "\u03b1i2",
+      "MathGlyphCount": 3,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u03b1",
+          "X": 291.53,
+          "Y": 738.1,
+          "FontSize": 11.04,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "i",
+          "X": 298.13,
+          "Y": 735.46,
+          "FontSize": 8.04,
+          "FillColor": "rg:0.82,0.204,0.22"
+        },
+        {
+          "Offset": 2,
+          "Text": "2",
+          "X": 298.73,
+          "Y": 742.54,
+          "FontSize": 8.04,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-matrix-empty-off",
+      "Fixture": "docx-omml-matrix-empty-display-diagonal-off",
+      "Mode": "final-preserve",
+      "InputSha256": "7A8DB78FD7094BC0DF8A28AD6946B879F9C04E95DABECA1AB949C9E6DE8EAFA2",
+      "ReferencePdfSha256": "2945DBBF2468E240BE2C370524F58979C8FF65CF9A301D907E646EA36B5D2742",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "ad",
+      "MathGlyphCount": 2,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 291.05,
+          "Y": 708.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "d",
+          "X": 313.85,
+          "Y": 694.78,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-matrix-empty-off",
+      "Fixture": "docx-omml-matrix-empty-display-diagonal-off",
+      "Mode": "all-word-compatible",
+      "InputSha256": "7A8DB78FD7094BC0DF8A28AD6946B879F9C04E95DABECA1AB949C9E6DE8EAFA2",
+      "ReferencePdfSha256": "4EF5655B40E35AFE547C677295EA5E94B393F9E969237CE1ADDAC62F3828B9AF",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "ad",
+      "MathGlyphCount": 2,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 291.05,
+          "Y": 708.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "d",
+          "X": 313.85,
+          "Y": 694.78,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-matrix-empty-omitted",
+      "Fixture": "docx-omml-matrix-empty-display-diagonal-omitted",
+      "Mode": "final-preserve",
+      "InputSha256": "2790E63A64CDEFC24060ED166306D9D0D4C6BF6ECC557620D6C71283907E0AF1",
+      "ReferencePdfSha256": "68ADB6460CCD79C78751D73371B126F2B78D684617D94CC2CDDD389A1ABF4958",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "ad",
+      "MathGlyphCount": 2,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 291.05,
+          "Y": 708.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "d",
+          "X": 313.85,
+          "Y": 694.78,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-matrix-empty-omitted",
+      "Fixture": "docx-omml-matrix-empty-display-diagonal-omitted",
+      "Mode": "all-word-compatible",
+      "InputSha256": "2790E63A64CDEFC24060ED166306D9D0D4C6BF6ECC557620D6C71283907E0AF1",
+      "ReferencePdfSha256": "39E6D6BE1D621B9316B19E0E1DFA60F586977A2F391B5C6892A7F7D68DC6D606",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "ad",
+      "MathGlyphCount": 2,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 291.05,
+          "Y": 708.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "d",
+          "X": 313.85,
+          "Y": 694.78,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-matrix-empty-hidden",
+      "Fixture": "docx-omml-matrix-empty-display-diagonal",
+      "Mode": "final-preserve",
+      "InputSha256": "A1F4C95D2E94E86957AE7947537D4BCD226CA5B0B7D67ED3C76F756FC83088BA",
+      "ReferencePdfSha256": "97F62170613842560B9DF95771F3BDFD94E62C2360A702F73E74AA68938D11C3",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "MathText": "ad",
+      "MathGlyphCount": 2,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 291.05,
+          "Y": 708.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "d",
+          "X": 313.85,
+          "Y": 694.78,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    },
+    {
+      "Id": "math-role-matrix-empty-hidden",
+      "Fixture": "docx-omml-matrix-empty-display-diagonal",
+      "Mode": "all-word-compatible",
+      "InputSha256": "A1F4C95D2E94E86957AE7947537D4BCD226CA5B0B7D67ED3C76F756FC83088BA",
+      "ReferencePdfSha256": "720133B3C68CA17E354CFD3E7260EBA0A79D0DE7AB268B21C2E70A8F72749400",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "MathText": "ad",
+      "MathGlyphCount": 2,
+      "ImageCount": 0,
+      "ExpectedText": [
+        "Following prose."
+      ],
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 291.05,
+          "Y": 708.94,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        },
+        {
+          "Offset": 1,
+          "Text": "d",
+          "X": 313.85,
+          "Y": 694.78,
+          "FontSize": 12,
+          "FillColor": "g:0"
+        }
+      ]
+    }
+  ]
+}

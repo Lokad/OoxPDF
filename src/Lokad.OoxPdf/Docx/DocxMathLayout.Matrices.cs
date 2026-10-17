@@ -7,8 +7,9 @@ internal static partial class DocxMathLayout
 {
     private enum MatrixColumnAlignment { Center, Left, Right }
 
-    private static bool IsHiddenEmptyMatrixCell(DocxMathMatrix matrix, DocxMathRow cell) =>
-        matrix.HidePlaceholdersValue == true && cell.Children.Count == 0 && cell.HasSupportedProperties;
+    // Word's PDF hides placeholder paint for every known plcHide value while
+    // retaining the same metric box. Unknown properties remain rejected above.
+    private static bool IsEmptyMatrixCell(DocxMathRow cell, CancellationToken token) => IsEmptyArgument(cell, token);
 
     private static DocxMathMatrix? GetMatrix(DocxEquation equation, CancellationToken token) =>
         GetSupportedMatrix(GetSingleSupportedChild(equation), token);
@@ -91,7 +92,7 @@ internal static partial class DocxMathLayout
             for (int c = 0; c < columns; c++)
             {
                 token.ThrowIfCancellationRequested();
-                if (IsHiddenEmptyMatrixCell(matrix, matrix.Rows[r].Cells[c]))
+                if (IsEmptyMatrixCell(matrix.Rows[r].Cells[c], token))
                 {
                     OoxConversionBudget.Current?.ChargeSceneNodes(1);
                     if (placeholder is null)

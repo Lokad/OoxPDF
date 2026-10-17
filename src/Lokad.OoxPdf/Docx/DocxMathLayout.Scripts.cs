@@ -44,10 +44,10 @@ internal static partial class DocxMathLayout
         if (basis.Glyphs.Any(glyph => !ReferenceEquals(glyph.Font.Font.Font, font)))
             { fallback = "MixedMathScriptBaseMetrics"; return false; }
         DocxMathBox? subscript = null, superscript = null;
-        if (scripts.Subscript is { } sub && (!TryMeasureScriptArgument(sub, resolveFont, font, token, out subscript, out fallback) ||
-            subscript is null || subscript.Glyphs.Count == 0)) { fallback ??= "EmptyMathSubscript"; return false; }
-        if (scripts.Superscript is { } sup && (!TryMeasureScriptArgument(sup, resolveFont, font, token, out superscript, out fallback) ||
-            superscript is null || superscript.Glyphs.Count == 0)) { fallback ??= "EmptyMathSuperscript"; return false; }
+        if (scripts.Subscript is { } sub && (!TryMeasureScriptArgument(sub, resolveFont, font, size, token, out subscript, out fallback) ||
+            subscript is null)) { fallback ??= "EmptyMathSubscript"; return false; }
+        if (scripts.Superscript is { } sup && (!TryMeasureScriptArgument(sup, resolveFont, font, size, token, out superscript, out fallback) ||
+            superscript is null)) { fallback ??= "EmptyMathSuperscript"; return false; }
         double scale = size / font.UnitsPerEm;
         double Value(OpenTypeMathConstant field) => constants.GetValue(field) * scale;
         bool boxBase = fractionBase || basis.Glyphs.Count != 1;
@@ -132,12 +132,12 @@ internal static partial class DocxMathLayout
     }
 
     private static bool TryMeasureScriptArgument(DocxMathRow argument, Func<DocxMathRun, PdfFontResource?> resolveFont,
-        OpenTypeFont metricFont, CancellationToken token, out DocxMathBox? child, out string? fallback)
+        OpenTypeFont metricFont, double size, CancellationToken token, out DocxMathBox? child, out string? fallback)
     {
         child = null; fallback = "UnsupportedMathScriptArgument";
         return DocxMathArgumentMetrics.TryGetScriptLevel(argument, out int level) &&
-            DocxMathRowLayout.TryMeasure(argument, resolveFont, token, out child, out fallback, scriptLevel: level,
-                exportFontSize: true, allowArgumentSize: true, scriptMetricsFont: metricFont);
+            TryMeasureLiteralArgument(argument, resolveFont, metricFont, size, level, token, out child, out fallback, out _,
+                exportFontSize: true, allowArgumentSize: true);
     }
 
     private static bool HasValidScriptConstants(OpenTypeMathConstants constants, bool cramped)

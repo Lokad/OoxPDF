@@ -69,11 +69,7 @@ internal static partial class DocxMathLayout
             foreach (var cell in row.Cells)
             {
                 token.ThrowIfCancellationRequested();
-                if (cell.Children.Count == 0)
-                {
-                    if (IsHiddenEmptyMatrixCell(matrix, cell)) { continue; }
-                    runs = []; return false;
-                }
+                if (IsEmptyMatrixCell(cell, token)) { continue; }
                 if (!AddBoxArgumentRows(cell))
                 { runs = []; return false; }
             }
@@ -209,10 +205,10 @@ internal static partial class DocxMathLayout
         OpenTypeFont? metricOwner = parentMetricsFont ?? resolveFont(sources[0].Run)?.Font.Font;
         if (metricOwner is null || !metricOwner.TryGetMathConstants(out OpenTypeMathConstants constants))
         { fallback = "MissingMathFractionConstants"; return false; }
-        if (!TryMeasureFractionArgument(fraction.Numerator, resolveFont, metricOwner, parentSize, scriptLevel, token,
-                out DocxMathBox? numerator, out fallback, out bool emptyNumerator) ||
-            !TryMeasureFractionArgument(fraction.Denominator, resolveFont, metricOwner, parentSize, scriptLevel, token,
-                out DocxMathBox? denominator, out fallback, out bool emptyDenominator) ||
+        if (!TryMeasureLiteralArgument(fraction.Numerator, resolveFont, metricOwner, parentSize, scriptLevel, token,
+                out DocxMathBox? numerator, out fallback, out bool emptyNumerator, operatorSpacingFontSize: parentSize) ||
+            !TryMeasureLiteralArgument(fraction.Denominator, resolveFont, metricOwner, parentSize, scriptLevel, token,
+                out DocxMathBox? denominator, out fallback, out bool emptyDenominator, operatorSpacingFontSize: parentSize) ||
             numerator is null || denominator is null || numerator.Glyphs.Count == 0 && denominator.Glyphs.Count == 0)
         { fallback ??= "EmptyMathFraction"; return false; }
         bool hasEmptyArgument = emptyNumerator || emptyDenominator;
