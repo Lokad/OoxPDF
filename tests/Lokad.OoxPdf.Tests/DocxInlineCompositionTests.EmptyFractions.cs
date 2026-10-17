@@ -27,7 +27,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(0, unsupported.Paragraphs.First().Equations.Count);
         }
         using var canceled = new CancellationTokenSource(); canceled.Cancel();
-        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.RemoveDeletedFractionText(equation, canceled.Token));
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.RemoveDeletedLiteralMathText(equation, canceled.Token));
     }
 
     public static void DocxInlineCompositionEmptyFractionsMatchIndependentWord()

@@ -81,7 +81,7 @@ internal static partial class DocxMathLayout
         { color = default; Lokad.OoxPdf.Pptx.RgbColor.TryParse(control.ColorHex, out color); }
         OoxConversionBudget.Current?.ChargeSceneNodes(2);
         glyphs.Add(new(0x221A, 0x221A, resource, cid.ToString("X4", CultureInfo.InvariantCulture), glyphSize, rootX, baseline,
-            childX - rootX, color) { OriginalGlyph = selected.Glyph });
+            childX - rootX, color) { OriginalGlyph = selected.Glyph, ControlOwner = radical });
         foreach (var glyph in child.Glyphs) { token.ThrowIfCancellationRequested(); glyphs.Add(glyph with { X = glyph.X + childX }); }
         if (degree is not null)
             foreach (var glyph in degree.Glyphs)

@@ -62,10 +62,37 @@ internal static partial class DocxMathLayout
     internal static bool IsEmptyFraction(DocxEquation equation) => GetFraction(equation) is { ControlText: not null, TypeValue: null or "bar" } fraction &&
         IsEmptyArgument(fraction.Numerator) && IsEmptyArgument(fraction.Denominator);
 
-    internal static DocxMathRow? RemoveDeletedFractionText(DocxEquation equation, CancellationToken token)
+    internal static DocxMathRow? RemoveDeletedLiteralMathText(DocxEquation equation, CancellationToken token)
     {
-        if (GetFraction(equation) is not { TypeValue: null or "bar" } fraction || !TryGetRuns(equation, token, out _)) return null;
-        return new([fraction with { Numerator = new([]), Denominator = new([]) }]);
+        token.ThrowIfCancellationRequested();
+        if (!TryGetRuns(equation, token, out _)) return null;
+        DocxMathNode? retained = null;
+        if (GetFraction(equation) is { TypeValue: null or "bar" } fraction)
+            retained = fraction with { Numerator = Empty(fraction.Numerator), Denominator = Empty(fraction.Denominator) };
+        else if (GetRadical(equation) is { } radical && Literal(radical.Radicand) && Literal(radical.Degree, true))
+            retained = radical with { Radicand = Empty(radical.Radicand), Degree = Empty(radical.Degree) };
+        else if (GetNary(equation, token) is { } nary && Literal(nary.Body) && Literal(nary.Subscript, true) && Literal(nary.Superscript, true))
+            retained = nary with { Body = Empty(nary.Body), Subscript = Empty(nary.Subscript), Superscript = Empty(nary.Superscript) };
+        else if (GetDelimiter(equation) is { } delimiter)
+        {
+            var arguments = new List<DocxMathRow>(delimiter.Arguments.Count);
+            foreach (var argument in delimiter.Arguments)
+            {
+                token.ThrowIfCancellationRequested();
+                if (!Literal(argument)) return null;
+                arguments.Add(Empty(argument));
+            }
+            retained = delimiter with { Arguments = arguments };
+        }
+        return retained is null ? null : new([retained]);
+
+        bool Literal(DocxMathRow row, bool argumentSize = false) =>
+            DocxMathRowLayout.TryGetRenderCodePoints(row, token, out _, out _, allowArgumentSize: argumentSize);
+        DocxMathRow Empty(DocxMathRow row)
+        {
+            token.ThrowIfCancellationRequested();
+            return row with { Children = [] };
+        }
     }
 
     private static bool TryMeasureEmptyFraction(DocxEquation equation, DocxMathFraction fraction, OpenTypeFont? font,

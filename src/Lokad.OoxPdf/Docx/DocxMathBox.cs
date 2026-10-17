@@ -8,6 +8,8 @@ internal sealed record DocxMathGlyphPlacement(
     double FontSize, double X, double BaselineY, double Advance, RgbColor Color)
 {
     public DocxRevisionInfo? Revision { get; init; }
+    // Structural symbols keep authored ink; revision ink belongs to literal text.
+    public IDocxMathControl? ControlOwner { get; init; }
     public ushort OriginalGlyph { get; init; }
     public double TextShear { get; init; }
 }

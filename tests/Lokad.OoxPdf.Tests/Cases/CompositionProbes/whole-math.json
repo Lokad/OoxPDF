@@ -1,0 +1,156 @@
+[
+  {
+    "Id": "whole-math-root-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-root-ins.docx",
+    "Sha256": "C90403AAD9339111440F1C81F0A12E417541B00E9F3481A27DDC19A8F3030E2C",
+    "SourceSha256": "F7A0FB003131799C176861A747EA4B7071CB8237D2545FF8935286DEC2CA3FED",
+    "Role": "root",
+    "Kind": "ins",
+    "Empty": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "whole-math-root-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-root-del.docx",
+    "Sha256": "060E6065D4F3AAFE3EF7D9C4ABDC035118ADE1822117906D101CA47D8168417D",
+    "SourceSha256": "F7A0FB003131799C176861A747EA4B7071CB8237D2545FF8935286DEC2CA3FED",
+    "Role": "root",
+    "Kind": "del",
+    "Empty": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "whole-math-delimiter-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-delimiter-ins.docx",
+    "Sha256": "90AA652A52BCC0491F3CF4A6F02BACB24B2223CE52BA5A74BDF2A40383717F80",
+    "SourceSha256": "E8031ADE843870797BCC65448D2950108B225636A3489DB87070B843C4FAE0D2",
+    "Role": "delimiter",
+    "Kind": "ins",
+    "Empty": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "whole-math-delimiter-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-delimiter-del.docx",
+    "Sha256": "B9738F5C2068412EDA8F564ED57A876175A67D2A9BE004937DF8FAE1F4A9BD49",
+    "SourceSha256": "E8031ADE843870797BCC65448D2950108B225636A3489DB87070B843C4FAE0D2",
+    "Role": "delimiter",
+    "Kind": "del",
+    "Empty": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "whole-math-operator-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-operator-ins.docx",
+    "Sha256": "5DF1AA34B405FD196C0FCE98F44E6DBA5DECF5591648E4BF1F7F0642A56CE3AF",
+    "SourceSha256": "C27E9B191527E9BC614A1CEBD517852A6421B291ABEEB5AE51E128B9D043ED32",
+    "Role": "operator",
+    "Kind": "ins",
+    "Empty": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "whole-math-operator-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-operator-del.docx",
+    "Sha256": "577D7CF08D4E5E30A647D27C3E16BA4DD3581651C0EE64E6E2A8ADC7643592AD",
+    "SourceSha256": "C27E9B191527E9BC614A1CEBD517852A6421B291ABEEB5AE51E128B9D043ED32",
+    "Role": "operator",
+    "Kind": "del",
+    "Empty": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "whole-math-root-degree-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-root-degree-ins.docx",
+    "Sha256": "8A122624086E2711D2897B2871F8B9994F01264E6D83EAE6CA19F8C795989F77",
+    "SourceSha256": "F7A0FB003131799C176861A747EA4B7071CB8237D2545FF8935286DEC2CA3FED",
+    "Role": "root-degree",
+    "Kind": "ins",
+    "Empty": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "whole-math-root-degree-del",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-root-degree-del.docx",
+    "Sha256": "603757174863F2F0CA6ECAAA4599ADFB11FD4F4D13546A797AD73F8C8481C2C4",
+    "SourceSha256": "F7A0FB003131799C176861A747EA4B7071CB8237D2545FF8935286DEC2CA3FED",
+    "Role": "root-degree",
+    "Kind": "del",
+    "Empty": false,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "whole-math-empty-root-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-empty-root-ins.docx",
+    "Sha256": "9594C6412B6AA521AB7375CE87A3DEBF8A533F0AA8B3B7DD27E0AB530B47AB49",
+    "SourceSha256": "F7A0FB003131799C176861A747EA4B7071CB8237D2545FF8935286DEC2CA3FED",
+    "Role": "root",
+    "Kind": "ins",
+    "Empty": true,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "whole-math-empty-delimiter-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-empty-delimiter-ins.docx",
+    "Sha256": "6206445C0A5605FD8AE9239811A1A984EDD1EBC39EE0903387AA3BF856634187",
+    "SourceSha256": "E8031ADE843870797BCC65448D2950108B225636A3489DB87070B843C4FAE0D2",
+    "Role": "delimiter",
+    "Kind": "ins",
+    "Empty": true,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  },
+  {
+    "Id": "whole-math-empty-operator-ins",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/whole-math-empty-operator-ins.docx",
+    "Sha256": "B63DF4EFA05CEC515EBB40ADC3E88B12E52F3159DAD1B4501D49AF244196A1FA",
+    "SourceSha256": "C27E9B191527E9BC614A1CEBD517852A6421B291ABEEB5AE51E128B9D043ED32",
+    "Role": "operator",
+    "Kind": "ins",
+    "Empty": true,
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ]
+  }
+]

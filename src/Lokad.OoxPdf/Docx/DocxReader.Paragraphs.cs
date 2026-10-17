@@ -201,8 +201,8 @@ internal sealed partial class DocxReader
                     }
                 }
 
-                // Final suppresses deleted mathematical text, while Word keeps
-                // a supported fraction's empty argument frame and structural rule.
+                // Final suppresses deleted mathematical text while supported
+                // literal argument frames and structural paint remain.
                 if (markupMode == OoxPdfDocxMarkupMode.Final && container.Name == WordprocessingNamespace + "del")
                     foreach (XElement child in container.Elements())
                     {
@@ -421,23 +421,26 @@ internal sealed partial class DocxReader
             XElement? properties = display ? container.Element(MathNamespace + "oMathParaPr") : null;
             Dictionary<XElement, DocxRevisionInfo>? mathRunRevisions = null;
             bool hasMathRunRevisions = false;
-            foreach (XElement equation in display ? container.Elements(MathNamespace + "oMath") : new[] { container })
+            DocxRevisionInfo? equationRevision = revision;
+            foreach (var sourceEquation in EnumerateMathEquations(container, revision, removeDeletedText, markupMode, cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                XElement equation = sourceEquation.Element;
+                equationRevision = sourceEquation.Revision;
                 hasMathRunRevisions = false;
                 var content = DocxMathParser.Read(equation, ReadMathRun, cancellationToken,
                     wrapper => IsIncludedRevisionContainer(wrapper, markupMode));
-                if (removeDeletedText)
+                if (sourceEquation.RemoveDeletedText)
                 {
                     var source = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null, null);
-                    if (DocxMathLayout.RemoveDeletedFractionText(source, cancellationToken) is not { } empty) continue;
+                    if (DocxMathLayout.RemoveDeletedLiteralMathText(source, cancellationToken) is not { } empty) continue;
                     content = empty;
                 }
                 equations.Add(new DocxEquation(
                     content,
                     runs.Count, sourceRunIndex, display,
                     (string?)properties?.Element(MathNamespace + "jc")?.Attribute(MathNamespace + "val"),
-                    properties?.ToString(SaveOptions.DisableFormatting), revision)
+                    properties?.ToString(SaveOptions.DisableFormatting), equationRevision)
                 {
                     ParentFontSize = ResolveRunProperties(null, paragraphStyleId, null, styles, tableCellStyle?.Run).FontSize
                         ?? DocxDefaults.UnstyledRunFontSizePoints,
@@ -449,7 +452,7 @@ internal sealed partial class DocxReader
 
             DocxTextRun ReadMathRun(XElement run, string text)
             {
-                DocxRevisionInfo? owner = revision;
+                DocxRevisionInfo? owner = equationRevision;
                 XElement? wrapper = run.Ancestors().TakeWhile(parent => parent.Name != MathNamespace + "oMath")
                     .FirstOrDefault(parent => parent.Name.Namespace == WordprocessingNamespace && parent.Name.LocalName is "ins" or "del");
                 if (wrapper is not null)

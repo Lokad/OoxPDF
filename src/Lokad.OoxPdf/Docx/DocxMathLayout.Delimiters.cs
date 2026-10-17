@@ -131,7 +131,7 @@ internal static partial class DocxMathLayout
             delimiterHeight = Math.Max(delimiterHeight, (bounds.YMax - bounds.YMin) * scale);
             OoxConversionBudget.Current?.ChargeSceneNodes(1);
             glyphs.Add(new(point, point, resource, cid.ToString("X4", CultureInfo.InvariantCulture), glyphSize,
-                advance, baseline, glyphAdvance, color) { OriginalGlyph = glyph });
+                advance, baseline, glyphAdvance, color) { OriginalGlyph = glyph, ControlOwner = delimiter });
             width = Math.Max(width, advance + bounds.XMax * scale);
             above = Math.Max(above, baseline + bounds.YMax * scale);
             below = Math.Max(below, -baseline - bounds.YMin * scale);

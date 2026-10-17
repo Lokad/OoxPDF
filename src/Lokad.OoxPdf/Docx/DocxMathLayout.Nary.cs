@@ -115,7 +115,7 @@ internal static partial class DocxMathLayout
         if (nary.ControlText is { } control) { color = default; RgbColor.TryParse(control.ColorHex, out color); }
         OoxConversionBudget.Current?.ChargeSceneNodes(1);
         var glyphs = new List<DocxMathGlyphPlacement> { new(point, point, resource, cid.ToString("X4", CultureInfo.InvariantCulture),
-            glyphSize, operatorX, baseline, operatorAdvance, color) { OriginalGlyph = variant.Glyph } };
+            glyphSize, operatorX, baseline, operatorAdvance, color) { OriginalGlyph = variant.Glyph, ControlOwner = nary } };
         var rules = new List<DocxMathRulePlacement>();
         Append(body, bodyX, 0d);
         if (upper is not null) { Append(upper, upperX, upperY); }

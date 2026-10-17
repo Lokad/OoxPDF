@@ -179,27 +179,33 @@ internal static class DocxInlineContent
         owners = [];
         token.ThrowIfCancellationRequested();
         if (equation.Revision is null && !equation.HasRunRevisions) return true;
-        if (equation.SourceRunIndex < 0 || !DocxMathLayout.TryGetRuns(equation, token, out var runs) || runs.Count == 0) return false;
+        if (equation.SourceRunIndex < 0 || !DocxMathLayout.TryGetRuns(equation, token, out var runs)) return false;
         var actual = new List<DocxRevisionInfo>();
         var seen = new HashSet<DocxRevisionInfo>(ReferenceEqualityComparer.Instance);
-        foreach (var source in runs)
+        if (runs.Count == 0)
+        {
+            if (DocxMathLayout.GetStandalonePaintControl(equation, token)?.ControlText is not { } control || !AddOwner(control)) return false;
+        }
+        else foreach (var source in runs)
         {
             token.ThrowIfCancellationRequested();
-            var run = source.Run.Text;
-            if (run.SourceRunIndex != equation.SourceRunIndex ||
-                equation.Revision is { } wrapper && !ReferenceEquals(run.Revision, wrapper)) return false;
-            if (run.Revision is not { } revision)
-            {
-                if (run.Revisions.Count != 0) return false;
-                continue;
-            }
-            if (revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion) ||
-                run.Revisions.Count == 0 || run.Revisions.Any(owner => !ReferenceEquals(owner, revision))) return false;
-            if (seen.Add(revision)) actual.Add(revision);
+            if (!AddOwner(source.Run.Text)) return false;
         }
         if (equation.Revision is { } primary && !seen.Contains(primary)) return false;
         owners = actual;
         return true;
+
+        bool AddOwner(DocxTextRun run)
+        {
+            token.ThrowIfCancellationRequested();
+            if (run.SourceRunIndex != equation.SourceRunIndex ||
+                equation.Revision is { } wrapper && !ReferenceEquals(run.Revision, wrapper)) return false;
+            if (run.Revision is not { } revision) return run.Revisions.Count == 0;
+            if (revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion) ||
+                run.Revisions.Count == 0 || run.Revisions.Any(owner => !ReferenceEquals(owner, revision))) return false;
+            if (seen.Add(revision)) actual.Add(revision);
+            return true;
+        }
     }
 
     public static bool HasSupportedRunRevisionOwners(IReadOnlyList<DocxRevisionInfo> revisions,

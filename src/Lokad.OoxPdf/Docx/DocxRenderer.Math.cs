@@ -96,6 +96,7 @@ internal sealed partial class DocxRenderer
     private static Func<DocxMathGlyphPlacement, (RgbColor Color, bool Strike)> CreateMathRevisionInk(
         DocxRevisionInfo? equationOwner, DocxMarkupContext context) => glyph =>
     {
+        if (glyph.ControlOwner is not null) return (glyph.Color, false);
         var revision = glyph.Revision ?? equationOwner;
         return revision is not null && TryResolveReviewAuthorColor(revision, context, out var color)
             ? (color, revision.Kind == DocxRevisionKind.Deletion) : (glyph.Color, false);

@@ -78,7 +78,7 @@ internal static class DocxMathNaryTests
             TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var inherited, out var reason), reason ?? "Expected document-owned limits.");
             TestAssert.True(DocxMathLayout.TryMeasure(equation with { Content = new([nary with { LimitLocationValue = location }]) },
                 _ => resource, CancellationToken.None, out var explicitBox, out _), "Expected equivalent explicit placement.");
-            TestAssert.True(TestAssert.NotNull(inherited).Glyphs.SequenceEqual(TestAssert.NotNull(explicitBox).Glyphs) && nary.LimitLocationValue is null,
+            TestAssert.True(PaintPlacements(TestAssert.NotNull(inherited)).SequenceEqual(PaintPlacements(TestAssert.NotNull(explicitBox))) && nary.LimitLocationValue is null,
                 "Resolution reuses placement without overwriting the authored node or consuming unrelated invalid integral defaults.");
             var invalid = equation with { LimitSettings = Settings("<m:naryLim m:val='bad'/>") };
             TestAssert.True(!DocxMathLayout.TryMeasure(invalid, _ => resource, CancellationToken.None, out var absent, out _) && absent is null,
@@ -108,7 +108,7 @@ internal static class DocxMathNaryTests
                 resolveControlFont: _ => parent), reason ?? "Expected native stacked limits.");
             var measured = TestAssert.NotNull(box);
             TestAssert.Equal(char.ConvertFromUtf32(point) + "BCB", string.Concat(measured.Glyphs.Select(g => char.ConvertFromUtf32(g.SourceCodePoint))));
-            TestAssert.True(ReferenceEquals(measured.Glyphs[0].Font, parent) && measured.Glyphs[0].OriginalGlyph == 128 &&
+            TestAssert.True(ReferenceEquals(measured.Glyphs[0].Font, parent) && measured.Glyphs[0].OriginalGlyph == 128 && ReferenceEquals(measured.Glyphs[0].ControlOwner, nary) &&
                 measured.Glyphs.Skip(1).All(g => ReferenceEquals(g.Font, text)) && measured.Glyphs[2].BaselineY > 0 &&
                 measured.Glyphs[3].BaselineY < 0 && measured.ParentMetrics?.Size == 12d,
                 "Selected operator variants and independently encoded children share one bounded occupied frame.");
@@ -163,7 +163,7 @@ internal static class DocxMathNaryTests
             if (!display)
             {
                 if (firstInline is null) firstInline = measured;
-                else TestAssert.True(firstInline.Glyphs.SequenceEqual(measured.Glyphs), "Inline undOvr and subSup share Office's side-limit placement.");
+                else TestAssert.True(PaintPlacements(firstInline).SequenceEqual(PaintPlacements(measured)), "Inline undOvr and subSup share Office's side-limit placement.");
             }
         }
         var invalidFont = OpenTypeFont.Load(FontBytes(0x2211, invalidScriptConstants: true));
@@ -172,6 +172,11 @@ internal static class DocxMathNaryTests
         TestAssert.True(!DocxMathLayout.TryMeasure(Equation(Nary("\u2211") with { LimitLocationValue = "subSup" }), _ => invalid,
             CancellationToken.None, out var absent, out _) && absent is null, "Malformed script constants retain complete fallback for n-ary side limits.");
     }
+
+    // Equivalent authored controls have distinct source owners. Compare every
+    // painted placement field while qualifying that ownership separately.
+    private static IEnumerable<DocxMathGlyphPlacement> PaintPlacements(DocxMathBox box) =>
+        box.Glyphs.Select(glyph => glyph with { ControlOwner = null });
 
     private static DocxEquation Equation(DocxMathNary nary) => new(new([nary]), 0, 0, true, null, null, null) { ParentFontSize = 12d };
     public static void MathFontNaryExplicitGrowthFitsBodyHeightAndRetainsBoundedVariantFallback()
@@ -189,7 +194,7 @@ internal static class DocxMathNaryTests
             var measured = TestAssert.NotNull(box);
             TestAssert.Equal((ushort)(grow == true ? 127 : 128), measured.Glyphs[0].OriginalGlyph);
             if (grow is null) fixedBox = measured;
-            else if (grow == false) TestAssert.True(TestAssert.NotNull(fixedBox).Glyphs.SequenceEqual(measured.Glyphs),
+            else if (grow == false) TestAssert.True(PaintPlacements(TestAssert.NotNull(fixedBox)).SequenceEqual(PaintPlacements(measured)),
                 "Omitted n-ary growth and explicit off retain the same minimum display variant, unlike omitted delimiter growth.");
         }
         var tooTall = Nary("\u2211") with { Body = Body(100d), GrowValue = true };
