@@ -1,5 +1,25 @@
 # Composed-document reliability checkpoint
 
+C153 closes two retained Aptos fixture failures without a production metric change.
+The original style-less sources resolved to Times New Roman before the supplied
+Aptos measurer fallback; synthetic separator marks also own document defaults.
+Both controls now share their exact original public source with an explicit Aptos
+document-default test resolver and a complete font-owner assertion. Fresh Word
+retains24 head lines/last21/separator682.54/first664.18. Qualified native output is
+24/21/682.520/664.119, with every original numerical assertion unchanged.
+
+Only the two corrected methods run: Windows2 passes/Ubuntu2 native skips. Fourteen
+runtime assets/2,029 prior inputs are exact, and the106 prior qualified methods'
+helpers are unchanged. C152106 Windows/93 Ubuntu passes/13 skips carry; combined
+108/93/15. No library/CLI build, passing suite or rendering replay. Seventeen
+assets/two integration smokes transfer without root build. Rootdf981703;
+`artifacts/composition-c1/aptos-head-fixture-evidence.json`. C152 CI39067792661 is green.
+
+A separate styles/defaults counterfactual changes Word paragraph flow to27 head
+lines. It is retained, not used to qualify the original24-line control. Existing
+visual failures, portfolio scopes and extraction flags stay explicit. Next:
+probe equations/images/bookmarks inside note tables before changing admission.
+
 C152 restores capacity when body notes and a cell note coexist. Four independent
 Word outcomes confirm correct parent page counts/counters but63.247-73.488pt of
 unused first-page capacity. Measured body-line registration now coexists with
