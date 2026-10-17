@@ -1,0 +1,92 @@
+[
+  {
+    "Id": "glyphless-fraction-inline-numerator",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/glyphless-fraction-inline-numerator.docx",
+    "Sha256": "7A69D78B9F9382741E20C18B90B75DB37689214C91E35F003AEAF4EC85932CFC",
+    "SourceSha256": "0F2A22C849D1CADE6484D1BDC288A0D958EA0FA6B8D9EB2857A4D63D1DA64401",
+    "Style": "inline",
+    "Role": "numerator",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "glyphless-fraction-inline-denominator",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/glyphless-fraction-inline-denominator.docx",
+    "Sha256": "8E8D681E31A71CA49B3E9B3DA650511ECBFD6F3286E8662EF938430C6494F94D",
+    "SourceSha256": "DD9059E59EF017E2C7D2F6696504259DED1A166BF4BF03877A6A147ED4DECEC4",
+    "Style": "inline",
+    "Role": "denominator",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [
+      "Summary:",
+      "governs"
+    ],
+    "RuleRegion": [
+      120,
+      0,
+      210,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "glyphless-fraction-display-numerator",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/glyphless-fraction-display-numerator.docx",
+    "Sha256": "F16E4831C97107C41E2CDC6209C891BCD864AF474196C5A61249BDD9B833A94A",
+    "SourceSha256": "44F55DC9D85424BEB01A89C2C40653534FCF5B562E63338664DC8D9CE286D884",
+    "Style": "display",
+    "Role": "numerator",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [],
+    "RuleRegion": [
+      285,
+      0,
+      330,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  },
+  {
+    "Id": "glyphless-fraction-display-denominator",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/glyphless-fraction-display-denominator.docx",
+    "Sha256": "4056179948DDAC0DECE042F67BD99E291CA3EFCACDED6A0C456C692FC573DE18",
+    "SourceSha256": "BA3FF947AEDE86301AA870C2135DB97AFD4BA0FD41728339801C3AC08BE0A38C",
+    "Style": "display",
+    "Role": "denominator",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedText": [
+      "share the same input series."
+    ],
+    "ProsePrefixes": [],
+    "RuleRegion": [
+      285,
+      0,
+      330,
+      792
+    ],
+    "RuleFillColor": "g:0"
+  }
+]

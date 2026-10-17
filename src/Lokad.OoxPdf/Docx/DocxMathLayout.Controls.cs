@@ -60,7 +60,9 @@ internal static partial class DocxMathLayout
         }
         return metricOnly;
 
-        bool MetricOnly(DocxEquation source) => IsEmptyFraction(source) || IsEmptyMatrix(source, token) || IsEmptyScripts(source, token);
+        bool MetricOnly(DocxEquation source) => IsEmptyFraction(source) || IsEmptyMatrix(source, token) || IsEmptyScripts(source, token) ||
+            GetFraction(source) is { ControlText: not null, TypeValue: null or "bar" } &&
+                TryGetRuns(source, token, out var sources) && sources.All(item => item.Run.Text.Text.Length == 0);
     }
 
     private static PdfFontResource? ResolveControlResource(IDocxMathControl control,

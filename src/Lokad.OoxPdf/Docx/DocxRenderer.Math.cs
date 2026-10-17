@@ -144,7 +144,7 @@ internal sealed partial class DocxRenderer
                     ? sourceEquation : sourceEquation with { Display = displayStyle };
                 if (!DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
                 var metricControls = DocxMathLayout.GetMetricOnlyControls(equation, mathRuns, token);
-                if (mathRuns.Count == 0 && metricControls.Count != 0)
+                if (!mathRuns.Any(source => source.Run.Text.Text.Length != 0) && metricControls.Count != 0)
                 {
                     // No painted source glyphs: load only the existing conversion
                     // metric owner, without creating a PDF subset or glyph map.
@@ -187,6 +187,7 @@ internal sealed partial class DocxRenderer
                         if (!TryPrepareControl(control)) { valid = false; break; }
                     if (!valid) { break; }
                     DocxMathRun run = source.Run;
+                    if (run.Text.Text.Length == 0) continue;
                     string family = run.NormalText
                         ? run.ExplicitFontFamily ?? run.Text.FontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math"
                         : (run.NormalTextValue is false ? null : run.ExplicitFontFamily) ?? document.Settings.MathFontFamily ?? "Cambria Math";

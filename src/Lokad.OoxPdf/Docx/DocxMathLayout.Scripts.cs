@@ -32,17 +32,21 @@ internal static partial class DocxMathLayout
         if (!TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> sources) ||
             sources.Count == 0 && !IsEmptyScripts(equation, token))
         { fallback = "UnsupportedMathScriptSource"; return false; }
-        OpenTypeFont? font = sources.Count == 0 ? resolveControlMetrics?.Invoke(scripts) : resolveFont(sources[0].Run)?.Font.Font;
+        bool metricOnly = IsEmptyScripts(equation, token);
+        var firstSource = sources.FirstOrDefault(source => source.Run.Text.Text.Length != 0);
+        OpenTypeFont? font = metricOnly ? resolveControlMetrics?.Invoke(scripts) :
+            firstSource is null ? null : resolveFont(firstSource.Run)?.Font.Font;
         if (font is null || !font.TryGetMathConstants(out OpenTypeMathConstants constants))
         { fallback = "MissingMathScriptConstants"; return false; }
         if (!HasValidScriptConstants(constants, equation.Cramped))
         { fallback = "InvalidMathScriptConstants"; return false; }
-        double size = sources.Count == 0 ? ResolveControlSize(scripts, equation, sources) : sources[0].Run.Text.FontSize;
+        double size = metricOnly ? ResolveControlSize(scripts, equation, sources) : firstSource!.Run.Text.FontSize;
         if (!double.IsFinite(size) || size <= 0d)
         { fallback = "InvalidMathScriptSize"; return false; }
         foreach (DocxMathRunSource source in sources)
         {
             token.ThrowIfCancellationRequested();
+            if (source.Run.Text.Text.Length == 0) continue;
             if (source.Run.Text.FontSize != size || !source.Run.NormalText && !ReferenceEquals(resolveFont(source.Run)?.Font.Font, font))
             { fallback = "MixedMathScriptMetrics"; return false; }
         }

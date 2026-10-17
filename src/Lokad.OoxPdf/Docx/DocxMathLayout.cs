@@ -209,33 +209,41 @@ internal static partial class DocxMathLayout
                 token, out box, out fallback);
         box = null;
         int scriptLevel = equation.Display ? 0 : 1;
-        if (!TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> sources) || sources.Count == 0)
+        if (!TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> sources))
         { fallback = "UnsupportedMathFractionSource"; return false; }
-        double childNominal = sources[0].Run.Text.FontSize;
-        double parentSize = equation.ParentFontSize ?? childNominal;
-        if (!double.IsFinite(parentSize) || parentSize <= 0d || sources.Any(source => source.Run.Text.FontSize != childNominal))
+        var firstSource = sources.FirstOrDefault(source => source.Run.Text.Text.Length != 0);
+        bool metricOnly = firstSource is null;
+        if (metricOnly && (fraction.TypeValue == "noBar" || fraction.ControlText is null ||
+            !DocxMathRowLayout.HasSupportedTextFormatting(fraction.ControlText, allowBold: false)))
+        { fallback = "UnsupportedEmptyFractionControl"; return false; }
+        double childNominal = firstSource?.Run.Text.FontSize ?? ResolveControlSize(fraction, equation, sources);
+        double parentSize = metricOnly ? childNominal : equation.ParentFontSize ?? childNominal;
+        if (!double.IsFinite(parentSize) || parentSize <= 0d || sources.Any(source =>
+            source.Run.Text.Text.Length != 0 && source.Run.Text.FontSize != childNominal))
         { fallback = "MixedMathFractionMetrics"; return false; }
-        OpenTypeFont? metricOwner = parentMetricsFont ?? resolveFont(sources[0].Run)?.Font.Font;
+        OpenTypeFont? metricOwner = parentMetricsFont ?? (metricOnly ? resolveControlMetrics?.Invoke(fraction) :
+            resolveFont(firstSource!.Run)?.Font.Font);
         if (metricOwner is null || !metricOwner.TryGetMathConstants(out OpenTypeMathConstants constants))
         { fallback = "MissingMathFractionConstants"; return false; }
         if (!TryMeasureFractionArgument(fraction.Numerator, denominator: false, out DocxMathBox? numerator, out fallback, out bool emptyNumerator) ||
             !TryMeasureFractionArgument(fraction.Denominator, denominator: true, out DocxMathBox? denominator, out fallback, out bool emptyDenominator) ||
-            numerator is null || denominator is null || numerator.Glyphs.Count == 0 && denominator.Glyphs.Count == 0)
+            numerator is null || denominator is null)
         { fallback ??= "EmptyMathFraction"; return false; }
         bool hasEmptyArgument = emptyNumerator || emptyDenominator;
         if (hasEmptyArgument && (fraction.TypeValue == "noBar" || fraction.ControlText is null ||
             !DocxMathRowLayout.HasSupportedTextFormatting(fraction.ControlText, allowBold: false)))
         { fallback = "UnsupportedEmptyFractionControl"; return false; }
-        DocxMathGlyphPlacement first = numerator.Glyphs.Count != 0 ? numerator.Glyphs[0] : denominator.Glyphs[0];
+        DocxMathGlyphPlacement? first = numerator.Glyphs.FirstOrDefault() ?? denominator.Glyphs.FirstOrDefault();
         // Uniform source nominal size was checked above. Distinct emitted
         // sizes now belong to the supported argument/script roles.
-        if (sources.Any(source => !source.Run.NormalText &&
+        if (sources.Any(source => source.Run.Text.Text.Length != 0 && !source.Run.NormalText &&
                 !ReferenceEquals(resolveFont(source.Run)?.Font.Font, metricOwner)))
         { fallback = "MixedMathFractionMetrics"; return false; }
-        var ruleColor = first.Color;
-        if (hasEmptyArgument) RgbColor.TryParse(fraction.ControlText!.ColorHex, out ruleColor);
+        var ruleColor = first?.Color ?? default;
+        if (hasEmptyArgument || metricOnly) RgbColor.TryParse(fraction.ControlText!.ColorHex, out ruleColor);
         return TryComposeFraction(equation, fraction, metricOwner, constants, parentSize, numerator, denominator,
-            ruleColor, hasEmptyArgument || sources.Any(source => source.Run.NormalText), token, out box, out fallback);
+            ruleColor, hasEmptyArgument || metricOnly || sources.Any(source => source.Run.Text.Text.Length != 0 && source.Run.NormalText),
+            token, out box, out fallback);
 
         bool TryMeasureFractionArgument(DocxMathRow argument, bool denominator, out DocxMathBox? child,
             out string? reason, out bool empty)
@@ -321,7 +329,7 @@ internal static partial class DocxMathLayout
 
     public static bool NeedsParentFractionMetrics(DocxEquation equation, IReadOnlyList<DocxMathRunSource> runs,
         CancellationToken token = default) =>
-        runs.Any(source => source.Run.NormalText) &&
+        runs.Any(source => source.Run.Text.Text.Length != 0 && source.Run.NormalText) &&
             (GetFraction(equation) is not null || GetStructuredRow(equation, token)?.Parts.Any(part => part.Structure is DocxMathFraction) == true);
 
     private static DocxMathNode? GetSingleSupportedChild(DocxEquation equation) =>
