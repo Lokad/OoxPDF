@@ -1,5 +1,23 @@
 # Composed-document reliability checkpoint
 
+C201 completes content-audit batches spanning accepted Office caches. Use one
+`--references <cache> [<cache> ...]` argument; existing single-root commands remain
+valid. Preflight every present entry against comparison-pinned PDF identity;
+missing/stale entries cannot hide behind a valid cache. Identical duplicates are
+allowed, selected paths/supplied roots recorded. Existing source/runtime/PDF/
+inspector/output identity checks and all gate semantics remain. No new framework.
+
+Sixteen tool checks pass on Windows/Ubuntu, including two new resolver checks.
+The existing C200 eight-outcome batch now completes across both Office roots with
+zero source-prose/simple-math/Office-word deficits; all eight complex-math screens
+and failed visual gates remain. Single-root CLI compatibility retains all four
+prior content/unresolved/visual results. Both audit runs return1 for retained
+complex flags; the earlier incomplete lookup stays recorded. No conversion or
+library build. All17 assets/src-tests Git trees remain qualified C200 identities;
+carry31 Windows/17 Ubuntu/14 skips without rebuilding or replaying the suite/corpus.
+Evidence multi-reference-audit-evidence.json and minimum-line-math-content-audit-
+complete.json. Continue minimum-slot wrapping/compound boundaries on frozen C200.
+
 C200 restores supported math when paragraphs use content-driven minimum line
 spacing. Merely adding atLeast12/72pt drops all three inline/display equations;
 cell/header parents also omit all math, and a compound image/math paragraph loses
