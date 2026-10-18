@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+C177 removes the shared ASCII restriction for bounded simple-line text.
+Ten independent Word outcomes keep minimum-paragraph baselines unchanged when
+only an automatic-height neighbor changes to precomposed Latin, Greek or Cyrillic.
+C176 instead shifts unrelated11/12pt paragraphs5.35-6.57pt(max6.732pt error).
+One shared rule admits letters in Latin/Greek/Cyrillic blocks while preserving
+combining/bidi/complex/unknown text, invalid-scalar and control fallbacks. Existing
+source, object, font/size/slot/spacing rules remain; no fitted correction or
+per-document branch. Existing ASCII/CR/LF behavior is unchanged.
+
+175 Windows/152 Ubuntu checks pass,23 native skips. An initial172-method run
+finds one obsolete Greek-exclusion assertion; it now tests combining text. Three
+neighboring minimum-flow tests are added. Only those four methods run again per
+platform:14 non-harness assets/2,137 inputs match, with no passing-check replay.
+An earlier test compile error and initial assertion failures remain recorded.
+All three new regressions fail C176. Ten Word exports occur once before five
+exact-byte promotions;2,130 old inputs retain hashes, seven public inputs added.
+Max independent anchor error is0.188pt, with zero unchanged-paragraph displacement.
+Five unique full-page pairs reviewed/five other outcomes carried by both raster
+hashes show no new clipping. All ten content screens pass; all ten strict raster
+gates retain typography failures without threshold changes.
+
+All16 portfolio PDFs/30 reviewed pairs/comparisons preserve identities;14 DOCX
+strict failures, two deck passes and six raw flags carry.17 assets/four smoke
+PDFs transfer without root build, suite or corpus replay. Root107b0dfa; evidence
+artifacts/composition-c1/simple-script-evidence.json. C176 CI39090961063 is green.
+Next, investigate bounded mixed fraction/script/matrix arguments in radical and
+n-ary containers; prefer confirmed content omissions to fitted residual offsets.
+
 C176 removes two rendering eligibility couplings. Independent Word output
 confirms that a bookmark in an automatic-height neighbor leaves every measured
 minimum-paragraph baseline unchanged. C175 instead disables whole-document
