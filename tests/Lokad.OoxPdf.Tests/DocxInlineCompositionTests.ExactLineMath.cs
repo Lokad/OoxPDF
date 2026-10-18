@@ -55,7 +55,8 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(48d, source.LineSpacingPoints);
                 if (resolver is not null) continue;
                 var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[0], usePageCoordinates: true).ToArray();
-                var summary = shows.First(show => show.Text.StartsWith("Summary:", StringComparison.Ordinal));
+                var summary = shows.GroupBy(show => show.Y).Select(line => line.OrderBy(show => show.X).ToArray())
+                    .First(line => string.Concat(line.Select(show => show.Text)).StartsWith("Summary:", StringComparison.Ordinal))[0];
                 TestAssert.True(Math.Abs(summary.Y - row.GetProperty("SummaryY").GetDouble()) < 1d,
                     "Exact source baseline retains the independent one-point Word gate, including review scaling.");
                 var target = shows.Where(show => pages[0].Fonts.Any(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal) &&
@@ -63,10 +64,14 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(row.GetProperty("TargetMathText").GetString(),
                     string.Concat(target.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
                 TestAssert.Equal(row.GetProperty("MathAnchors").GetArrayLength(), target.Length);
+                // The glyph reader maps origins but intentionally retains raw Tf
+                // sizes. Compare Word's physical size after the page print map.
+                double printScale = final ? 1d : DocxRenderer.ResolveWordCompatiblePrintScale(document,
+                    DocxMarkupContext.FromMode(mode, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
                 foreach (var pair in target.Zip(row.GetProperty("MathAnchors").EnumerateArray()))
                     TestAssert.True(Math.Abs(pair.First.X - pair.Second.GetProperty("X").GetDouble()) < 1d &&
                         Math.Abs(pair.First.Y - pair.Second.GetProperty("Y").GetDouble()) < 1d &&
-                        Math.Abs(pair.First.Size - pair.Second.GetProperty("Size").GetDouble()) < .1d,
+                        Math.Abs(pair.First.Size * printScale - pair.Second.GetProperty("Size").GetDouble()) < .1d,
                         "Restored formula glyphs keep independent Word geometry and authored size in both presets.");
             }
         }
