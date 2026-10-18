@@ -1,5 +1,38 @@
 # Composed-document reliability checkpoint
 
+C194 renders standalone display integrals through shared n-ary contracts.
+Previously both limit placements lose all4 mathematical symbols in both public
+presets. Admission alone restores text but leaves9.7pt flow error. Independent
+Word font subsets match the larger original Cambria Math6.99 glyph03505, rather
+than the first prototype03504. Display fitting now retains both font display/
+subformula minima; selected-glyph italic correction shifts stacked limits in
+opposite half amounts, translating the complete group nonnegative before its
+body. No fitted/font/size/document branch. Inline and ordinary sum/product
+behavior retain existing output. The font-author guide documents the Office
+subformula-floor behavior; this is an Office-compatibility rule, not a reinterpretation
+of the normative MATH field names. See [font-author guidance](https://github.com/notofonts/math/blob/main/documentation/building-math-fonts/index.md)
+and [MATH glyph corrections](https://learn.microsoft.com/en-us/typography/opentype/spec/math#mathitalicscorrectioninfo-table).
+
+Four independent Word exports once/two exact-byte promotions;2,179 old inputs
+unchanged/four added. All four complete mathematical1pt groups pass:16 restored
+symbols,maxX0.064/maxY0.096pt,following prose0.114pt.38 Windows/22 Ubuntu checks
+qualify with16 native skips, one exact invocation/platform/Release artifact.
+Three new observers fail C192 semantically. Signed/wide limit ownership, both
+font minima, malformed/encoding and existing work/cancellation fallbacks qualify.
+Old negative grammar explicitly uses unsupported double integral; missing
+display CID still keeps complete fallback. No post-freeze harness correction.
+
+All30 accepted PDFs remain identical, carrying30 comparisons/56 reviewed pixel
+pairs. Two unique new Word/candidate pairs reviewed/two preset outcomes carry
+both raster hashes; two pinned portable pages reviewed. Eight independent
+scalar inventories retain operator/body/limits. No new clipping observed. Four
+strict failures remain(foreground recall in all,stackedSSIM in two), as do raw
+complex-math flags/audit exit1. Source-prose/simple-math/Office-word deficits and
+unsupported warnings are zero; content/origin gates do not relabel visual gates.
+17 assets/four smokes match without root build/suite/corpus replay.
+Rootb2430418; display-integral-evidence.json. C192 CI39103199815 is green; continue
+bounded inherited-limit placement review during the next scoped CI run.
+
 C193 finds no real-font source/operator alias reproduction in a bounded scan.
 Cambria Math and pinned DejaVu each cover fourteen common controls/eighty-eight
 ready variants; canonical glyphs and non-private Unicode aliases are also checked.
