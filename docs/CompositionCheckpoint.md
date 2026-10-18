@@ -1,5 +1,13 @@
 # Composed-document reliability checkpoint
 
+C193 finds no real-font source/operator alias reproduction in a bounded scan.
+Cambria Math and pinned DejaVu each cover fourteen common controls/eighty-eight
+ready variants; canonical glyphs and non-private Unicode aliases are also checked.
+Existing synthetic alias guards remain intentional. Other fonts/custom/private-use
+controls stay unverified. No code change, build, conversion, test or Office/raster
+work. Evidence operator-alias-composition-review.json. C192 is pushed as7b44ade8;
+continue the explicitly staged display-integral combination while CI runs.
+
 C192 reduces measured font allocation with immutable kerning maps. Private
 key/value arrays and stable fixed-width ordering preserve signed advances,
 source last-wins/zero semantics and existing pair/coverage/work bounds. Added
