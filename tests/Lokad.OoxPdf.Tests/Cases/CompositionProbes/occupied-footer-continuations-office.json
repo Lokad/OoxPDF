@@ -12,7 +12,8 @@
           "Page": 2,
           "NoteY": 107.41998291015625,
           "FooterY": 87.9840087890625,
-          "NumberedParagraphs": 0
+          "NumberedParagraphs": 0,
+          "FirstNoteY": 107.41998291015625
         }
       ]
     },
@@ -27,7 +28,8 @@
           "Page": 2,
           "NoteY": 177.46002197265625,
           "FooterY": 162.70001220703125,
-          "NumberedParagraphs": 0
+          "NumberedParagraphs": 0,
+          "FirstNoteY": 177.46002197265625
         }
       ]
     },
@@ -42,19 +44,22 @@
           "Page": 2,
           "NoteY": 107.41998291015625,
           "FooterY": 87.9840087890625,
-          "NumberedParagraphs": 17
+          "NumberedParagraphs": 17,
+          "FirstNoteY": 437.7099914550781
         },
         {
           "Page": 3,
           "NoteY": 107.41998291015625,
           "FooterY": 87.9840087890625,
-          "NumberedParagraphs": 31
+          "NumberedParagraphs": 31,
+          "FirstNoteY": 690.3400268554688
         },
         {
           "Page": 4,
           "NoteY": 107.41998291015625,
           "FooterY": 87.9840087890625,
-          "NumberedParagraphs": 16
+          "NumberedParagraphs": 16,
+          "FirstNoteY": 398.8299865722656
         }
       ]
     },
@@ -69,19 +74,22 @@
           "Page": 2,
           "NoteY": 177.46002197265625,
           "FooterY": 162.70001220703125,
-          "NumberedParagraphs": 17
+          "NumberedParagraphs": 17,
+          "FirstNoteY": 427.9200134277344
         },
         {
           "Page": 3,
           "NoteY": 177.46002197265625,
           "FooterY": 162.70001220703125,
-          "NumberedParagraphs": 31
+          "NumberedParagraphs": 31,
+          "FirstNoteY": 619.489990234375
         },
         {
           "Page": 4,
           "NoteY": 177.46002197265625,
           "FooterY": 162.70001220703125,
-          "NumberedParagraphs": 16
+          "NumberedParagraphs": 16,
+          "FirstNoteY": 398.4200134277344
         }
       ]
     }

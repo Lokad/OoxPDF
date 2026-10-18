@@ -1845,7 +1845,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         // Normalize once, including when the separator-less path dispatches.
-        ResolveOwnedInlineFootnoteFrame(page, footnoteStories, printScale,
+        bool ownedInlineFrame = ResolveOwnedInlineFootnoteFrame(page, footnoteStories, printScale,
             ref sharedContentTop, ref footerKeepOut, availableFooterKeepOut);
 
         DocxLayoutPage activePage = outputPages[outputIndex];
@@ -1885,6 +1885,16 @@ internal sealed partial class DocxLayoutEngine
         if (sharedContentTop is not null)
         {
             storiesTop = Math.Min(storiesTop, sharedContentTop.Value);
+        }
+        if (!ownedInlineFrame && placementFooter is not null &&
+            TryResolveFootnoteBodyBottom(activePage, printScale, null, out double bodyBottom))
+        {
+            // Body geometry owns the boundary even when note typography keeps
+            // its fallback. Derive it from placed content so admission's prior
+            // separator reserve is not subtracted a second time.
+            double headCharge = ResolveParagraphBoundarySeparatorHeight(separatorLayout, activePage,
+                separatorMeasurer, footnoteStories.Select(s => s.StoryLayout).ToArray());
+            storiesTop = Math.Min(storiesTop, bodyBottom - headCharge);
         }
         // RV06 p1-position probes (Word 16.0): Office seats the overflowing head block
         // bottom-up (storiesTop = margin + takeHeight), so absolute positions match instead

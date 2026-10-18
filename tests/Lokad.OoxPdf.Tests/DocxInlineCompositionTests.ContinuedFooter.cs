@@ -46,6 +46,7 @@ internal static partial class DocxInlineCompositionTests
                     string Text((Lokad.OoxPdf.Pdf.PdfEmbeddedFont Font, string Text, double Size, double X, double Y)[] line) => string.Concat(line.Select(show => show.Text));
                     var note = lines.Where(line => Text(line).StartsWith("All quantities", StringComparison.Ordinal) ||
                         Text(line).StartsWith("Public continuation note line", StringComparison.Ordinal)).ToArray();
+                    int priorCount = seen.Count;
                     foreach (Match match in Regex.Matches(string.Join(" ", lines.Select(Text)), @"Public\s+continuation\s+note\s+line\s+(\d\d):"))
                         seen.Add(int.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture));
                     if (note.Length == 0) continue;
@@ -53,8 +54,16 @@ internal static partial class DocxInlineCompositionTests
                     TestAssert.True(note.SelectMany(line => line).SelectMany(show => OccupiedFooterInk(show, scale)).Min() >
                         footer.SelectMany(show => OccupiedFooterInk(show, scale)).Max(),
                         "Every source note page, including dedicated continuations, clears measured footer prose ink.");
+                    var body = lines.FirstOrDefault(line => Text(line).StartsWith("Review conclusion:", StringComparison.Ordinal));
+                    if (body is not null)
+                        TestAssert.True(note.SelectMany(line => line).SelectMany(show => OccupiedFooterInk(show, scale)).Max() <
+                            body.SelectMany(show => OccupiedFooterInk(show, scale)).Min(),
+                            "The measured body-to-note boundary clears body prose independently of typography eligibility.");
                     if (resolver is not null) continue;
                     var expected = row.GetProperty("NotePages").EnumerateArray().Single(p => p.GetProperty("Page").GetInt32() == index + 1);
+                    TestAssert.Equal(expected.GetProperty("NumberedParagraphs").GetInt32(), seen.Count - priorCount);
+                    TestAssert.True(Math.Abs(note[0][0].Y - expected.GetProperty("FirstNoteY").GetDouble()) < 1d,
+                        "The independent first-note baseline and source page membership use the shared physical boundary.");
                     TestAssert.True(Math.Abs(note[^1][0].Y - expected.GetProperty("NoteY").GetDouble()) < 1d &&
                         Math.Abs(footer[0].Y - expected.GetProperty("FooterY").GetDouble()) < 1d,
                         "Last-note and footer baselines retain independent one-point Word bounds on every page.");

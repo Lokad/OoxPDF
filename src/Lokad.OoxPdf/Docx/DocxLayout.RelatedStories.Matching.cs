@@ -165,8 +165,15 @@ internal sealed partial class DocxLayoutEngine
         out double top)
     {
         top = 0d;
-        if (!double.IsFinite(printScale) || printScale <= 0d || page.ColumnFrames.Count > 1 || notes.Count == 0 ||
-            !notes.All(note => HasOwnedInlineNoteFlowStory(note.StoryLayout))) return false;
+        return notes.Count != 0 && notes.All(note => HasOwnedInlineNoteFlowStory(note.StoryLayout)) &&
+            TryResolveFootnoteBodyBottom(page, printScale, sharedContentTop, out top);
+    }
+
+    private static bool TryResolveFootnoteBodyBottom(DocxLayoutPage page, double printScale,
+        double? sharedContentTop, out double top)
+    {
+        top = 0d;
+        if (!double.IsFinite(printScale) || printScale <= 0d || page.ColumnFrames.Count > 1) return false;
         if (page.Items.Count == 0)
         {
             top = page.Height - page.MarginTop;
