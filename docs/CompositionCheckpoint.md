@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+C172 repairs complete-note body/target spacing ownership. Eight independent
+Word Final probes expose three C171 pagination errors and up to12.050pt note-Y
+error: required body paragraph after-space was omitted while optional final note
+space was reserved. Source-owned admission now excludes only the final note's
+trailing space, retaining inter-note space; final body lines clear their measured
+paragraph boundary without consuming spacing twice. Placement clears the same
+measured separator line, and existing slice fitting consumes available trailing
+space. No fitted offset, font/size predicate, synthetic marker or new mode.
+
+114 Windows/97 Ubuntu checks pass,17 native skips, one exact capability invocation
+each. The native Word observer fails C171; its portable neighbor passes both
+builds and covers48 capacities/modes/target-space layouts. All eight probes now
+match Word page counts, with maximum0.085pt note-Y error. Both inherited compact
+controls improve6.050 to0.085pt.19 probe/four control page pairs and note crops
+were reviewed, with no demonstrated new clipping. Eight independent Office exports
+were made once before byte-identical public promotion; none repeated. All ten
+control raster gates retain typography/math residuals. Eight raw probe screens
+retain complex-math flags, with zero source/Office prose or simple-math deficits.
+
+The nine-source/sixteen-outcome portfolio keeps all30 pages,16 prior PDF identities,
+16 comparisons and30 reviewed pairs. Fourteen DOCX strict failures, two deck
+passes and six raw screens remain unchanged.17 assets/four integration smokes
+transfer without root rebuild, suite or corpus replay; all2,105 old input hashes
+match, ten public inputs added. Root7e3f69a3; evidence
+artifacts/composition-c1/compact-note-spacing-evidence.json. C171 CI39085911167
+is green on both platforms. Next, use independent controls to test automatic
+note-target and shared-batch reserve routing; the concern is not yet a defect.
+
 C171 resolves C170's three-versus-two-page defect through source-owned note
 admission. Legacy block admission excludes a new block's own note reserve after
 existing content. Its complete one-line path was disabled by unrelated static
