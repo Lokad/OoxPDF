@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+C219 restores64 missing glyphs caused by unused tab-stop metadata. Shared
+resolution retains the source leader; ordered composition validates the stops
+actually consumed, including a line retry. Bars and unknown kinds keep the
+paragraph-owner fallback because they may draw independently. Active decimal/
+leader stops, overlapping aligned fields and out-of-frame cases stay staged.
+No font/size/document guard, new rendering framework, quota or unsafe/native code.
+
+One frozen Release artifact qualifies10 Windows/6 Ubuntu checks, four native
+skips, one exact invocation/platform and no repair. Three observers fail C216.
+Unused forward, behind-cursor and cleared stops retain complete measured geometry
+and prepared owners at two scales. Existing wrap, active fallback, cancellation,
+right/center fields, source cursors and link neighbors qualify. Independent Word
+field offsets retain their0.2pt gates; pinned portable content runs on both hosts.
+All2,226 old input pins stay unchanged and four public inputs are added.
+
+All eight frozen PDFs equal their original supported controls. Four comparisons
+reuse identity; four new paired pages are reviewed and all eight pairs retain
+both PNG hashes. Four C218 Word exports are reused without further export. All
+eight strict visual gates remain failed; the Word cell-frame shift0.84/about
+0.65pt remains unverified and receives no fitted correction. Fixed ordinary
+sources contain no inline tabs, excluding an unrelated corpus/deck replay.
+
+Root eda06270; consumed-tab-ownership-evidence.json. Transfer verifies17 assets/
+four smoke PDFs without root build or suite replay. C216 CI39127757053 is green
+on both platforms. Push and continue C220's bounded justified mixed-content
+review against the frozen artifact while CI runs. Alignment remains an
+architectural concern until a source transformation demonstrates content loss.
+
 C218 confirms another supported-feature composition omission on frozen C216.
 An unused720pt decimal stop in a body paragraph or dotted-leader stop in a cell
 removes both supported formulas in both presets:64 missing glyphs. Original
