@@ -1,5 +1,25 @@
 # Composed-document reliability checkpoint
 
+C204 extends the frozen C203 check to two unchanged image/math note holdouts,
+with and without a three-line minimum-height footer. Four native conversions and
+four independent Word exports run once, with no builds or suite replay. Both
+presets preserve all 32 mathematical glyphs, the inline image and Word's two-page
+split. The image-only note keeps selected prose baselines within 0.367 pt; Final's
+footer variant stays within 0.14 pt. Strict visual failures remain recorded.
+
+Word-compatible markup exposes a confirmed visible omission: all three footer
+lines paint below the page (first baseline -12.279 pt versus Word 155.16 pt),
+while the note is 15.389 pt too low. Two C200 parent conversions reproduce the
+same off-page footer; this predates C203. Reviewed Final/review tail bands retain
+the missing-footer evidence. C205 will use separate plain header/footer controls
+and the existing content-driven frame rule; keep these compound inputs unchanged.
+Evidence owned-note-composition-boundary-evidence.json and its observations.
+
+C203's 56 retained review pairs now also pin both original raster identities and
+the comparison reuse chains; no repeated rasterization. The infrequent C204
+workspace scan reports 13.302 GB/712,552 files, zero errors. The loose 5 GB target
+remains unmet; no rejected retirement was retried or space reclamation claimed.
+
 C203 fixes a confirmed continuation defect in a minimum-height footnote with
 ordinary prose and two supported fractions. All content was present, but the
 note split 3/1 lines in Final or 4/0 in Word-compatible markup instead of Word's
