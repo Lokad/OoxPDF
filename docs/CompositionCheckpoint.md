@@ -1,5 +1,16 @@
 # Composed-document reliability checkpoint
 
+C188 finds no defect in the all-unavailable mixed-content fallback. Eight
+initial and eight ordered body/cell outcomes reuse C187: complete equation
+removal and unknown equation produce identical page content in both presets,
+including prose, explicit left tabs, line breaks and one painted image. Controls
+have zero unsupported warnings; unknown equations retain one. Existing static
+missing-font coverage carries unchanged frozen identity. No production/harness
+change, build, suite replay, Office export or raster. Bounded transformations
+do not establish arbitrary unsupported-document equivalence. Evidence:
+unavailable-math-fallback-evidence.json. C186/C187 is pushed; CI39100480675 is
+running while the next bounded delimiter investigation proceeds.
+
 C186/C187 closes the portable root omission in the composed skewed-cell
 specification. Word/native already show three pages/all84 body+15 header math
 symbols; pinned DejaVu cannot select the required2,924-unit root above its2,867
