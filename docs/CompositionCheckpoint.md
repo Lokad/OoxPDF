@@ -1,5 +1,37 @@
 # Composed-document reliability checkpoint
 
+C185 renders bounded skewed fractions with actual source/control ownership.
+Full-size literal arguments meet font-defined MATH gaps around the math axis;
+the slash uses its authored control font/size/ink and the existing encoded
+vertical-variant path. Shared fraction discovery retains nested controls.
+Unknown, empty/deeper arguments and missing CIDs retain complete fallback,
+cancellation and cumulative work checks. No fitted offset or font/size branch.
+
+Twelve C184 Word exports carry by identity; four new independent exports cover
+8pt arguments and a20pt red slash with12pt black children in11pt prose. Two
+new inputs promote byte-for-byte;2,164 prior input pins unchanged/four added.
+All16 full mathematical-content/origin gates pass(78 glyphs,maxX0.179/maxY0.462pt).
+Ten outcomes restore30 mathematical glyphs. Source-prose/simple-math/Word-token
+deficits and unsupported warnings are zero. All16 strict raster failures and
+ten raw complex-math flags/audit exit1 remain. Four new unique full-page pairs
+reviewed; six control outcomes and six other outcomes carry both raster hashes.
+No new clipping observed; structural red ink/black children remain visible.
+
+88 Windows/61 Ubuntu checks qualify(27 native skips). A missing new-class
+registration stops the first catalogue before any tests. The registered set
+passes87 Windows/60 Ubuntu checks; one new assertion wrongly expects normalized
+RGB1 and nominal20 instead of byte255 and independently observed PDF20.04.
+Only that assertion is corrected/requalified once per platform; both initial
+failures remain. Library/14 non-test assets and2,168 inputs remain identical
+across harness corrections. Three new observers fail C184; its unavailable-box
+regression now uses an explicitly unknown future type, while full original
+skewed content is checked separately. No lost negative grammar coverage.
+
+All20 retained complete-document PDFs are unchanged;20 comparisons/42 reviewed
+page-pair outcomes reused.17 transferred assets/four smokes match; no root build/
+suite/corpus replay. Root8a04f663; skewed-fraction-evidence.json. C184 CI39095880193
+is green. Continue the complete-document combination before wider nesting.
+
 C184 preserves supported equations beside an unsupported item. A second skewed
 fraction made the original fraction disappear from otherwise eligible body and
 cell paragraphs in both presets; headers already retained it. The shared ordered
