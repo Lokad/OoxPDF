@@ -2968,10 +2968,19 @@ internal static class DocxFootnotesTests
             }
         }
         DocxLayout consumed = engine.Create(Compose(100, true), measurer, default);
+        DocxLayout uniformlyConsumed = engine.Create(Compose(100, false), measurer, default);
         TestAssert.Equal(baseline.Pages.Count, consumed.Pages.Count);
-        TestAssert.True(baseline.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))
+        TestAssert.True(uniformlyConsumed.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))
             .SequenceEqual(consumed.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))),
-            "A static variant consuming the complete frame retains bounded legacy placement.");
+            "An unusable selected frame shares bounded fallback placement with uniformly unusable footer frames.");
+        var consumedStories = consumed.Pages.SelectMany(p => p.PlacedRelatedStories)
+            .Where(s => s.StoryLayout.Story.IsNormalStoryType).ToArray();
+        TestAssert.True(consumedStories.All(s => !s.UsesPlainFootnoteFrame),
+            "Unusable static variants do not admit note typography.");
+        foreach (var group in consumedStories.GroupBy(s => s.StoryLayout.Story.Id))
+            TestAssert.True(expected[group.Key!].SequenceEqual(group.SelectMany(s => s.StoryLayout.TextLines)
+                .Select(l => (l.Text, l.SourceParagraph, l.SourceLineIndex))),
+                "Fallback placement retains every canonical source line and paragraph owner exactly once.");
         TestAssert.Equal(1, fittingBaseline.Pages.Count);
         TestAssert.True(fittingBaseline.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))
             .SequenceEqual(fitting.Pages.SelectMany(p => p.PlacedRelatedStories).Select(s => (s.TopY, s.Height, s.ContentTopOffset))),
