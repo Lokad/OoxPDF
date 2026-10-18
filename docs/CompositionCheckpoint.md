@@ -1,5 +1,48 @@
 # Composed-document reliability checkpoint
 
+## C231: ordinary note frames and explicit reservation/source ownership (2026-10-18)
+
+Placement accepts a usable measured ordinary margin independently of footer
+intrusion and typography. Explicit already-placed source progress prevents a
+narrowed remainder at paragraph-local line zero being treated as a fresh head.
+The original-footer sibling now matches Word21/32/11 in both presets; rich-footer
+controls retain17/31/16. All64 paragraphs survive once/in order and first/last
+note/footer origins retain1pt bounds. No font/size/document-shape exception.
+
+C229 CI39139224596 caught three real complete-admission regressions, independently
+reproduced on first C231. Placement now receives existing separator reservation
+ownership, preventing a second charge. Final frozen8a5edf7a qualifies49 Windows/
+36 Ubuntu passes,13 native-font skips, once per final platform. Exact selection
+adds four complete-batch/minimum-bookmark neighbors. These independent Word page/
+baseline gates are preserved. Production correction required a final affected
+qualification; earlier failed artifacts/reports are retained.
+
+The first45-method qualification had44 Windows/33 Ubuntu passes,11 native skips
+and one assertion failure each: it compared an unusable-footer fallback with the
+corrected ordinary baseline. Read-only prior/current numerical traces prove the
+actual unusable fallback unchanged. The assertion now compares two explicit
+unusable controls and verifies complete source ownership/typography fallback.
+14 runtime assets/all2,248 input pins remain identical through that test-only
+repair; only the corrected method reran per platform. That interim result was
+superseded by the separate production reservation fix and final49-method result.
+
+2,245 older pins unchanged/two source manifest/Office JSONs updated/one public
+source added; deterministic fixture regeneration retains every source byte.
+Six existing Word views reused. All six final PDFs match first C231, so all six
+comparisons reuse PDF/threshold identity; no new exports or raster comparisons.
+Six strict visual failures remain. Source prose/simple math deficits are zero,
+with four raw rate/time Word prose screens retained. Twenty paired PNG hashes/
+chains retained; two ordinary-footer first-note pairs and one of five portable
+pages reviewed. Both strengthened observers fail accepted C229.
+
+Eight fixed DOCX PDFs were measured once at this broader placement milestone;
+all retain accepted bytes. The final pure cap-ownership bypass is nonbinding on
+those unchanged outputs, requiring no portfolio replay. PPTX remains unchanged.
+17 assets/four root smoke PDFs match, no root build/suite. Library/CLI Release
+builds have zero warnings/errors; tests retain two inherited nullable warnings.
+Root6430a1e0, libraryF68C774CA58682BD3F1B758DA5EB4C43813F76CF9EFB06C5D5E45BDF93C5CC8C.
+Evidence: note-reservation-ownership-evidence.json. C232 checks two plain-note owners.
+
 ## C230: ordinary-footer sibling exposes placement dependency (2026-10-18)
 
 Removing only the added mixed footer paragraph restores the original report
