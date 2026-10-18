@@ -3,7 +3,9 @@ import sys
 sys.dont_write_bytecode = True
 from xml.etree import ElementTree as E
 import unittest
-from AuditCompositionContent import unresolved_fields, validate_outcome_modes
+from pathlib import Path
+from tempfile import TemporaryDirectory, gettempdir
+from AuditCompositionContent import unresolved_fields, validate_outcome_modes, resolve_reference, sha
 
 W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 
@@ -14,6 +16,50 @@ def complex_field(instruction=' REF Target ', result='North', packed=False):
     children = ['<w:fldChar w:fldCharType="begin"/>', f'<w:instrText>{instruction}</w:instrText>',
                 '<w:fldChar w:fldCharType="separate"/>', f'<w:t>{result}</w:t>', '<w:fldChar w:fldCharType="end"/>']
     return '<w:r>'+''.join(children)+'</w:r>' if packed else ''.join('<w:r>'+child+'</w:r>' for child in children)
+
+class ReferenceResolutionTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = TemporaryDirectory(prefix='ooxpdf-audit-reference-')
+        self.root = Path(self.temporary.name).resolve()
+        self.assertEqual(Path(gettempdir()).resolve(), self.root.parent)
+        self.assertTrue(self.root.name.startswith('ooxpdf-audit-reference-'))
+        self.addCleanup(self.temporary.cleanup)
+        self.first, self.second = self.root / 'first', self.root / 'second'
+        self.first.mkdir()
+        self.second.mkdir()
+
+    def pdf(self, root, identifier, content=b'Pinned reference'):
+        folder = root / (identifier + '-final-preserve')
+        folder.mkdir(exist_ok=True)
+        pdf = folder / 'reference.pdf'
+        pdf.write_bytes(content)
+        return pdf
+
+    def test_single_multiple_and_identical_cache_entries(self):
+        first = self.pdf(self.first, 'report')
+        second = self.pdf(self.second, 'specification', b'Other pinned reference')
+        self.assertEqual(first, resolve_reference([self.first], 'report', 'final-preserve', sha(first)))
+        roots = [self.first, self.second]
+        self.assertEqual(first, resolve_reference(roots, 'report', 'final-preserve', sha(first)))
+        self.assertEqual(second, resolve_reference(roots, 'specification', 'final-preserve', sha(second)))
+        duplicate = self.pdf(self.second, 'report')
+        self.assertEqual(first, resolve_reference(roots, 'report', 'final-preserve', sha(first)))
+        self.assertEqual(duplicate, resolve_reference(list(reversed(roots)), 'report', 'final-preserve', sha(first)))
+
+    def test_missing_and_conflicting_entries_cannot_hide_beside_valid_cache(self):
+        first = self.pdf(self.first, 'report')
+        roots = [self.first, self.second]
+        with self.assertRaisesRegex(ValueError, 'Reference PDF missing'):
+            resolve_reference(roots, 'missing', 'final-preserve', sha(first))
+        (self.second / 'report-final-preserve').mkdir()
+        with self.assertRaisesRegex(ValueError, 'Reference PDF missing'):
+            resolve_reference(roots, 'report', 'final-preserve', sha(first))
+        self.pdf(self.second, 'report', b'Stale reference')
+        with self.assertRaisesRegex(ValueError, 'Reference PDF identity differs'):
+            resolve_reference(roots, 'report', 'final-preserve', sha(first))
+        with self.assertRaisesRegex(ValueError, 'Reference PDF identity differs'):
+            resolve_reference(list(reversed(roots)), 'report', 'final-preserve', sha(first))
+
 
 class CachedFieldAuditTests(unittest.TestCase):
     def test_selected_presets_preserve_presentation_and_default_both(self):

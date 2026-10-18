@@ -29,6 +29,25 @@ def read(path):
     return json.loads(path.read_text(encoding="utf-8-sig"))
 
 
+def resolve_reference(directories, identifier, mode, expected_hash):
+    """Every present explicit cache entry must match the compared PDF identity."""
+    folder = identifier + "-" + mode
+    matches = []
+    for directory in directories:
+        source = directory / folder
+        if not source.exists():
+            continue
+        pdf = source / "reference.pdf"
+        if not pdf.is_file():
+            raise ValueError("Reference PDF missing: " + str(pdf))
+        if sha(pdf) != expected_hash:
+            raise ValueError("Reference PDF identity differs: " + str(pdf))
+        matches.append(pdf)
+    if not matches:
+        raise ValueError("Reference PDF missing: " + folder)
+    return matches[0]
+
+
 def normalize(value):
     return unicodedata.normalize("NFKC", value).replace("\u2019", "'")
 
@@ -197,14 +216,19 @@ def validate_outcome_modes(cases, outcomes, comparisons):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ("artifact", "candidate", "references", "inspector", "cache", "output"):
+    for name in ("artifact", "candidate", "inspector", "cache", "output"):
         parser.add_argument("--" + name, required=True, type=Path)
+    parser.add_argument("--references", required=True, nargs="+", type=Path,
+                        help="Explicit Office cache roots; every present entry must match the compared PDF")
     parser.add_argument("--manifest", default="tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json",
                         help="Public fixture manifest relative to the input root")
     parser.add_argument("--input-root", type=Path,
                         help="Optional clean tracked public inputs; reuse the frozen runtime without rebuilding")
     args = parser.parse_args()
-    artifact, candidate, references = args.artifact.resolve(), args.candidate.resolve(), args.references.resolve()
+    artifact, candidate = args.artifact.resolve(), args.candidate.resolve()
+    references = [directory.resolve(strict=True) for directory in args.references]
+    if any(not directory.is_dir() for directory in references):
+        raise ValueError("Reference roots must be directories")
     inspector = args.inspector.resolve()
     pin = read(artifact / "identity.json")
     library = artifact / "src/Lokad.OoxPdf/bin/Release/net10.0/Lokad.OoxPdf.dll"
@@ -241,6 +265,8 @@ def main():
     validate_outcome_modes(cases, outcomes, comparisons)
     if comparisons["CandidateLibrarySha256"] != pin["LibrarySha256"]:
         raise ValueError("Comparison library identity differs")
+    reference_pdfs = {(row["Id"], row["Mode"]): resolve_reference(references, row["Id"], row["Mode"],
+        compared[row["Id"], row["Mode"]]["ReferencePdfSha256"]) for row in outcomes["Rows"]}
     rows = []
     for outcome in outcomes["Rows"]:
         identifier, mode = outcome["Id"], outcome["Mode"]
@@ -254,7 +280,7 @@ def main():
             raise ValueError("Public source identity differs")
         folder = identifier + "-" + mode
         run = candidate / folder
-        pdf, reference = run / "candidate.pdf", references / folder / "reference.pdf"
+        pdf, reference = run / "candidate.pdf", reference_pdfs[identifier, mode]
         if sha(pdf) != outcome["PdfSha256"] or comparison["CandidatePdfSha256"] != sha(pdf) or comparison["ReferencePdfSha256"] != sha(reference):
             raise ValueError("Comparison PDF identities differ")
         operations_path = run / "inspect/text-operations.json"
@@ -276,6 +302,7 @@ def main():
         observed_math = Counter({expression: math_stream.count(expression) for expression in expressions})
         rows.append({"Id": identifier, "Mode": mode, "HeldOut": case["HeldOut"], "InputSha256": sha(source),
                      "CandidatePdfSha256": sha(pdf), "ReferencePdfSha256": sha(reference),
+                     "ReferenceSourceDirectory": str(reference.parent),
                      "CandidateOperationsSha256": sha(operations_path), "ReferenceOperationsSha256": office_ops_hash,
                      "ReferencePages": pages, "CandidatePages": outcome["InspectedPages"],
                      "SourceProseTokens": sum(prose.values()), "SourceParts": parts,
@@ -293,6 +320,7 @@ def main():
               "ToolSha256": sha(Path(__file__)),
               "FrozenRevision": pin["Revision"], "LibrarySha256": pin["LibrarySha256"], "InspectorSha256": inspector_hash,
               "ManifestSha256": sha(manifest), "Conversions": 0, "LibraryBuilds": 0,
+              "ReferenceDirectories": [str(directory) for directory in references],
               "InputRoot": str(inputs), "InputRevision": input_revision,
               "Rows": rows}
     if args.output.exists():
