@@ -1,0 +1,134 @@
+[
+  {
+    "Id": "partial-math-body-control",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/partial-math-body-control.docx",
+    "Sha256": "7367937727D1C51E71843ED45A165B2BC381F46F95E92CDDCCC0EDF25AF1F868",
+    "SourceSha256": "FFFCECCC3DD4F72C7013F6E8760CF376B673D6FE5E6AC1D47199DC566CAC9213",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before formula:",
+      "Between formulae:",
+      "after formula.",
+      "Following prose."
+    ],
+    "Container": "body",
+    "UnsupportedNeighbor": false
+  },
+  {
+    "Id": "partial-math-body-unsupported",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/partial-math-body-unsupported.docx",
+    "Sha256": "2637A68BD493B5537B292F58F9BDF458F046D35A3CBD9B0FFDB5843E45ADE07B",
+    "SourceSha256": "FFFCECCC3DD4F72C7013F6E8760CF376B673D6FE5E6AC1D47199DC566CAC9213",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Before formula:",
+      "Between formulae:",
+      "after formula.",
+      "Following prose."
+    ],
+    "Container": "body",
+    "UnsupportedNeighbor": true
+  },
+  {
+    "Id": "partial-math-cell-control",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/partial-math-cell-control.docx",
+    "Sha256": "D61921B3D63E6767D3653806A50CD3E44C14F15EF5434318BEF9B5382EE54752",
+    "SourceSha256": "FFFCECCC3DD4F72C7013F6E8760CF376B673D6FE5E6AC1D47199DC566CAC9213",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before formula:",
+      "Between formulae:",
+      "after formula.",
+      "Following prose."
+    ],
+    "Container": "cell",
+    "UnsupportedNeighbor": false
+  },
+  {
+    "Id": "partial-math-cell-unsupported",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/partial-math-cell-unsupported.docx",
+    "Sha256": "28C72EFF75D15A64C44CFB93D4B3240B09BCBA632EBF64712453DF65FD8F4EDB",
+    "SourceSha256": "FFFCECCC3DD4F72C7013F6E8760CF376B673D6FE5E6AC1D47199DC566CAC9213",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Before formula:",
+      "Between formulae:",
+      "after formula.",
+      "Following prose."
+    ],
+    "Container": "cell",
+    "UnsupportedNeighbor": true
+  },
+  {
+    "Id": "partial-math-header-control",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/partial-math-header-control.docx",
+    "Sha256": "9D3BF7AF6CA3971DC0EFD023AD88B7C4AA7E87E41690FAECBA1394323DB69E47",
+    "SourceSha256": "FFFCECCC3DD4F72C7013F6E8760CF376B673D6FE5E6AC1D47199DC566CAC9213",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before formula:",
+      "Between formulae:",
+      "after formula.",
+      "Following prose."
+    ],
+    "Container": "header",
+    "UnsupportedNeighbor": false
+  },
+  {
+    "Id": "partial-math-header-unsupported",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/partial-math-header-unsupported.docx",
+    "Sha256": "4416F82EA00AE1B8FC60020F10E9376C875FD6DAABA221B67C2BCDE975B8EEAC",
+    "SourceSha256": "FFFCECCC3DD4F72C7013F6E8760CF376B673D6FE5E6AC1D47199DC566CAC9213",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Before formula:",
+      "Between formulae:",
+      "after formula.",
+      "Following prose."
+    ],
+    "Container": "header",
+    "UnsupportedNeighbor": true
+  },
+  {
+    "Id": "skewed-fraction-small8",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/skewed-fraction-small8.docx",
+    "Sha256": "DFA9E86F7451B54CCF4E99EB1B4425AD5AA2C75877083B194B3199CE365711FD",
+    "SourceSha256": "2637A68BD493B5537B292F58F9BDF458F046D35A3CBD9B0FFDB5843E45ADE07B",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before formula:",
+      "Between formulae:",
+      "after formula.",
+      "Following prose."
+    ],
+    "Container": "body",
+    "BodySize": 8,
+    "ChildSize": 8,
+    "ControlSize": 8
+  },
+  {
+    "Id": "skewed-fraction-control20",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/skewed-fraction-control20.docx",
+    "Sha256": "2721E6115B2CE060D165A8830DBF080EBC81CF977C4A95B9E981EF13690CB1C7",
+    "SourceSha256": "2637A68BD493B5537B292F58F9BDF458F046D35A3CBD9B0FFDB5843E45ADE07B",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before formula:",
+      "Between formulae:",
+      "after formula.",
+      "Following prose."
+    ],
+    "Container": "body",
+    "BodySize": 11,
+    "ChildSize": 12,
+    "ControlSize": 20
+  }
+]

@@ -1,0 +1,681 @@
+{
+  "Scope": "Independent full mathematical content and one-point origins. Twelve C184 reference exports reused by exact source/PDF pins; four new source/control-size exports once. Unknown-type fallback is tested separately.",
+  "Rows": [
+    {
+      "Id": "partial-math-body-control",
+      "Mode": "final-preserve",
+      "MathText": "a+bc",
+      "MathGlyphCount": 4,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 151.82,
+          "Y": 712.66
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 157.34,
+          "Y": 712.66
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 163.58,
+          "Y": 712.66
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 158.06,
+          "Y": 699.58
+        }
+      ],
+      "InputSha256": "7367937727D1C51E71843ED45A165B2BC381F46F95E92CDDCCC0EDF25AF1F868",
+      "ReferencePdfSha256": "38B07D1B4A23E7E6BE354756927A36CD338FFD2326D2C9F3A6A2FD514EB9C3BD",
+      "ExportLogSha256": "780ACA54794E26B1E128AC78CCA075F156C61719EBE52D4FBF2864DC2A90228E",
+      "Container": "body",
+      "UnsupportedDiagnostics": 0
+    },
+    {
+      "Id": "partial-math-body-control",
+      "Mode": "all-word-compatible",
+      "MathText": "a+bc",
+      "MathGlyphCount": 4,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 151.82,
+          "Y": 712.66
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 157.34,
+          "Y": 712.66
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 163.58,
+          "Y": 712.66
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 158.06,
+          "Y": 699.58
+        }
+      ],
+      "InputSha256": "7367937727D1C51E71843ED45A165B2BC381F46F95E92CDDCCC0EDF25AF1F868",
+      "ReferencePdfSha256": "A0609A5CFCF7783D596E9B839717D851898084D832E828EEA3038BE3F910DF12",
+      "ExportLogSha256": "7D3D827A04C2B207D0B54702386C68A5FDE1B304A7D573BD3D0575A09111612D",
+      "Container": "body",
+      "UnsupportedDiagnostics": 0
+    },
+    {
+      "Id": "partial-math-body-unsupported",
+      "Mode": "final-preserve",
+      "MathText": "a+bcpq\u2044",
+      "MathGlyphCount": 7,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 151.82,
+          "Y": 712.66
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 157.34,
+          "Y": 712.66
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 163.58,
+          "Y": 712.66
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 158.06,
+          "Y": 699.58
+        },
+        {
+          "Offset": 4,
+          "Text": "p",
+          "X": 268.25,
+          "Y": 711.94
+        },
+        {
+          "Offset": 5,
+          "Text": "q",
+          "X": 279.77,
+          "Y": 702.94
+        },
+        {
+          "Offset": 6,
+          "Text": "\u2044",
+          "X": 274.13,
+          "Y": 705.58
+        }
+      ],
+      "InputSha256": "2637A68BD493B5537B292F58F9BDF458F046D35A3CBD9B0FFDB5843E45ADE07B",
+      "ReferencePdfSha256": "4B999CADE9380C7371BF1C621DF0A98969AC5CBAC10F4700D8B8724655C2179E",
+      "ExportLogSha256": "2BE9478F660616D10BB04F6B3DA9A39D1B76D23AB9C6983387A53CFA9E7FAAB3",
+      "Container": "body",
+      "UnsupportedDiagnostics": 0
+    },
+    {
+      "Id": "partial-math-body-unsupported",
+      "Mode": "all-word-compatible",
+      "MathText": "a+bcpq\u2044",
+      "MathGlyphCount": 7,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 151.82,
+          "Y": 712.66
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 157.34,
+          "Y": 712.66
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 163.58,
+          "Y": 712.66
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 158.06,
+          "Y": 699.58
+        },
+        {
+          "Offset": 4,
+          "Text": "p",
+          "X": 268.25,
+          "Y": 711.94
+        },
+        {
+          "Offset": 5,
+          "Text": "q",
+          "X": 279.77,
+          "Y": 702.94
+        },
+        {
+          "Offset": 6,
+          "Text": "\u2044",
+          "X": 274.13,
+          "Y": 705.58
+        }
+      ],
+      "InputSha256": "2637A68BD493B5537B292F58F9BDF458F046D35A3CBD9B0FFDB5843E45ADE07B",
+      "ReferencePdfSha256": "4D1303CF7C9CF1204EE196C034AC4A46E3FF1828251A9363393812AA54DEC5B4",
+      "ExportLogSha256": "A4AB88B46921F27A37B2516FB7E31A52FA6552986E236EEFC091B4597782EEA3",
+      "Container": "body",
+      "UnsupportedDiagnostics": 0
+    },
+    {
+      "Id": "partial-math-cell-control",
+      "Mode": "final-preserve",
+      "MathText": "a+bc",
+      "MathGlyphCount": 4,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 151.82,
+          "Y": 712.66
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 157.34,
+          "Y": 712.66
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 163.58,
+          "Y": 712.66
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 158.06,
+          "Y": 699.58
+        }
+      ],
+      "InputSha256": "D61921B3D63E6767D3653806A50CD3E44C14F15EF5434318BEF9B5382EE54752",
+      "ReferencePdfSha256": "24355EF15FC94D50620B01D02F57C21BE308096399E36EFE2A1C7C29A7299EED",
+      "ExportLogSha256": "6FEE8A62D8C858439C1BD019AAC6D051547D199ED6006172C8AD88557F4F0C50",
+      "Container": "cell",
+      "UnsupportedDiagnostics": 0
+    },
+    {
+      "Id": "partial-math-cell-control",
+      "Mode": "all-word-compatible",
+      "MathText": "a+bc",
+      "MathGlyphCount": 4,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 151.82,
+          "Y": 712.66
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 157.34,
+          "Y": 712.66
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 163.58,
+          "Y": 712.66
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 158.06,
+          "Y": 699.58
+        }
+      ],
+      "InputSha256": "D61921B3D63E6767D3653806A50CD3E44C14F15EF5434318BEF9B5382EE54752",
+      "ReferencePdfSha256": "DA0B9F0B504E46650CA05EEBAD20E4239733748D1D360758C14F299F8B4526E8",
+      "ExportLogSha256": "F9B7BDBD76ABD5EFB9D0669304D679C2459541EEF943733D00E3893CDA30891F",
+      "Container": "cell",
+      "UnsupportedDiagnostics": 0
+    },
+    {
+      "Id": "partial-math-cell-unsupported",
+      "Mode": "final-preserve",
+      "MathText": "a+bcpq\u2044",
+      "MathGlyphCount": 7,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 151.82,
+          "Y": 712.66
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 157.34,
+          "Y": 712.66
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 163.58,
+          "Y": 712.66
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 158.06,
+          "Y": 699.58
+        },
+        {
+          "Offset": 4,
+          "Text": "p",
+          "X": 268.25,
+          "Y": 711.94
+        },
+        {
+          "Offset": 5,
+          "Text": "q",
+          "X": 279.77,
+          "Y": 702.94
+        },
+        {
+          "Offset": 6,
+          "Text": "\u2044",
+          "X": 274.13,
+          "Y": 705.58
+        }
+      ],
+      "InputSha256": "28C72EFF75D15A64C44CFB93D4B3240B09BCBA632EBF64712453DF65FD8F4EDB",
+      "ReferencePdfSha256": "581E44A9488532A82D18D3BFC9E754B9927DFC169674A36462DAF53AA3564134",
+      "ExportLogSha256": "E2C1F3848D374F6D61CF66B7628C5907EF8FB4F2C5BEE4663657C6A01CF19E09",
+      "Container": "cell",
+      "UnsupportedDiagnostics": 0
+    },
+    {
+      "Id": "partial-math-cell-unsupported",
+      "Mode": "all-word-compatible",
+      "MathText": "a+bcpq\u2044",
+      "MathGlyphCount": 7,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 151.82,
+          "Y": 712.66
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 157.34,
+          "Y": 712.66
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 163.58,
+          "Y": 712.66
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 158.06,
+          "Y": 699.58
+        },
+        {
+          "Offset": 4,
+          "Text": "p",
+          "X": 268.25,
+          "Y": 711.94
+        },
+        {
+          "Offset": 5,
+          "Text": "q",
+          "X": 279.77,
+          "Y": 702.94
+        },
+        {
+          "Offset": 6,
+          "Text": "\u2044",
+          "X": 274.13,
+          "Y": 705.58
+        }
+      ],
+      "InputSha256": "28C72EFF75D15A64C44CFB93D4B3240B09BCBA632EBF64712453DF65FD8F4EDB",
+      "ReferencePdfSha256": "94092E7791DEA087FFB706C3A13660F84C558E9AF2D10925A07119D6A06F8749",
+      "ExportLogSha256": "71E17E59F21DF10E37A8F12C586110F887DBE27672EE21EAEE3A72A6D2A5AD77",
+      "Container": "cell",
+      "UnsupportedDiagnostics": 0
+    },
+    {
+      "Id": "partial-math-header-control",
+      "Mode": "final-preserve",
+      "MathText": "a+bc",
+      "MathGlyphCount": 4,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 151.82,
+          "Y": 748.68
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 157.34,
+          "Y": 748.68
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 163.58,
+          "Y": 748.68
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 158.06,
+          "Y": 735.6
+        }
+      ],
+      "InputSha256": "9D3BF7AF6CA3971DC0EFD023AD88B7C4AA7E87E41690FAECBA1394323DB69E47",
+      "ReferencePdfSha256": "B2DA03E3DD878915A1A07DBED3F8E020933C52EEF9966241640B1600EB97F698",
+      "ExportLogSha256": "E9C49AF73C9BB3ACA7298103FC1D74F6527834FF209909FC7B3B3D81B10F3DD2",
+      "Container": "header",
+      "UnsupportedDiagnostics": 0
+    },
+    {
+      "Id": "partial-math-header-control",
+      "Mode": "all-word-compatible",
+      "MathText": "a+bc",
+      "MathGlyphCount": 4,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 151.82,
+          "Y": 748.68
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 157.34,
+          "Y": 748.68
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 163.58,
+          "Y": 748.68
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 158.06,
+          "Y": 735.6
+        }
+      ],
+      "InputSha256": "9D3BF7AF6CA3971DC0EFD023AD88B7C4AA7E87E41690FAECBA1394323DB69E47",
+      "ReferencePdfSha256": "B4953FE0402CA561DE4590BDBD8045D55CB7DFE3C32391CFCCED98D2CD877994",
+      "ExportLogSha256": "1D6B824FA808C5539F27CEA06BEBD51056AE8F8AFD1C1B169DE6B036CDCA2165",
+      "Container": "header",
+      "UnsupportedDiagnostics": 0
+    },
+    {
+      "Id": "partial-math-header-unsupported",
+      "Mode": "final-preserve",
+      "MathText": "a+bcpq\u2044",
+      "MathGlyphCount": 7,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 151.82,
+          "Y": 748.68
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 157.34,
+          "Y": 748.68
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 163.58,
+          "Y": 748.68
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 158.06,
+          "Y": 735.6
+        },
+        {
+          "Offset": 4,
+          "Text": "p",
+          "X": 268.25,
+          "Y": 747.96
+        },
+        {
+          "Offset": 5,
+          "Text": "q",
+          "X": 279.77,
+          "Y": 738.96
+        },
+        {
+          "Offset": 6,
+          "Text": "\u2044",
+          "X": 274.13,
+          "Y": 741.6
+        }
+      ],
+      "InputSha256": "4416F82EA00AE1B8FC60020F10E9376C875FD6DAABA221B67C2BCDE975B8EEAC",
+      "ReferencePdfSha256": "1B23B00A88A0880CB2C0B91CAA1CD7FD99301CACEAEE68173420E28E7E8AE5CD",
+      "ExportLogSha256": "A616F9FC3F332279946F2B2A29A1923CF3A3174B0C01CEDB29E860776467530A",
+      "Container": "header",
+      "UnsupportedDiagnostics": 0
+    },
+    {
+      "Id": "partial-math-header-unsupported",
+      "Mode": "all-word-compatible",
+      "MathText": "a+bcpq\u2044",
+      "MathGlyphCount": 7,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "a",
+          "X": 151.82,
+          "Y": 748.68
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 157.34,
+          "Y": 748.68
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 163.58,
+          "Y": 748.68
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 158.06,
+          "Y": 735.6
+        },
+        {
+          "Offset": 4,
+          "Text": "p",
+          "X": 268.25,
+          "Y": 747.96
+        },
+        {
+          "Offset": 5,
+          "Text": "q",
+          "X": 279.77,
+          "Y": 738.96
+        },
+        {
+          "Offset": 6,
+          "Text": "\u2044",
+          "X": 274.13,
+          "Y": 741.6
+        }
+      ],
+      "InputSha256": "4416F82EA00AE1B8FC60020F10E9376C875FD6DAABA221B67C2BCDE975B8EEAC",
+      "ReferencePdfSha256": "0D6F1B8C4A8057CFA8942613F1DFE8BAF2E393971345159240BF53E15A11B17D",
+      "ExportLogSha256": "AEF086BFD6807B606557F7694B472388C0EED2A472BB86E3796CE57D248B0966",
+      "Container": "header",
+      "UnsupportedDiagnostics": 0
+    },
+    {
+      "Id": "skewed-fraction-small8",
+      "Mode": "final-preserve",
+      "MathText": "pq\u2044",
+      "MathGlyphCount": 3,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "p",
+          "X": 191.45,
+          "Y": 714.12
+        },
+        {
+          "Offset": 1,
+          "Text": "q",
+          "X": 200.57,
+          "Y": 707.86
+        },
+        {
+          "Offset": 2,
+          "Text": "\u2044",
+          "X": 194.93,
+          "Y": 709.06
+        }
+      ],
+      "InputSha256": "DFA9E86F7451B54CCF4E99EB1B4425AD5AA2C75877083B194B3199CE365711FD",
+      "ReferencePdfSha256": "EEA3E7A2569B2C2DF645277FFEF704E70B871AD5878C40A691A62EB745504E9F",
+      "ExportLogSha256": "87C4D6CF9DB01FC1357AD12E6AA4AD54D5B139ADB74CECCA7AED60B0EB9D5461",
+      "Container": "body",
+      "UnsupportedDiagnostics": 0
+    },
+    {
+      "Id": "skewed-fraction-small8",
+      "Mode": "all-word-compatible",
+      "MathText": "pq\u2044",
+      "MathGlyphCount": 3,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "p",
+          "X": 191.45,
+          "Y": 714.12
+        },
+        {
+          "Offset": 1,
+          "Text": "q",
+          "X": 200.57,
+          "Y": 707.86
+        },
+        {
+          "Offset": 2,
+          "Text": "\u2044",
+          "X": 194.93,
+          "Y": 709.06
+        }
+      ],
+      "InputSha256": "DFA9E86F7451B54CCF4E99EB1B4425AD5AA2C75877083B194B3199CE365711FD",
+      "ReferencePdfSha256": "3AA26B95C97BF74D1B1353863C610C2A7EE76A2B21CADA610F2E3716816AE90C",
+      "ExportLogSha256": "2C1804306621C344A05F559944EB740DE49C963B155D0F8A4439CD45185526AC",
+      "Container": "body",
+      "UnsupportedDiagnostics": 0
+    },
+    {
+      "Id": "skewed-fraction-control20",
+      "Mode": "final-preserve",
+      "MathText": "pq\u2044",
+      "MathGlyphCount": 3,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "p",
+          "X": 236.33,
+          "Y": 709.9
+        },
+        {
+          "Offset": 1,
+          "Text": "q",
+          "X": 250.85,
+          "Y": 700.3
+        },
+        {
+          "Offset": 2,
+          "Text": "\u2044",
+          "X": 241.37,
+          "Y": 701.74
+        }
+      ],
+      "InputSha256": "2721E6115B2CE060D165A8830DBF080EBC81CF977C4A95B9E981EF13690CB1C7",
+      "ReferencePdfSha256": "EC718820996BE0FDCABB730370C3B6421C809B0CB436A40734F560C089B3FB1D",
+      "ExportLogSha256": "CBCDAE3395607657BB6EF198086C4FDE500E06DD371488FD11A3D9EF5B6A7419",
+      "Container": "body",
+      "UnsupportedDiagnostics": 0
+    },
+    {
+      "Id": "skewed-fraction-control20",
+      "Mode": "all-word-compatible",
+      "MathText": "pq\u2044",
+      "MathGlyphCount": 3,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "p",
+          "X": 236.33,
+          "Y": 709.9
+        },
+        {
+          "Offset": 1,
+          "Text": "q",
+          "X": 250.85,
+          "Y": 700.3
+        },
+        {
+          "Offset": 2,
+          "Text": "\u2044",
+          "X": 241.37,
+          "Y": 701.74
+        }
+      ],
+      "InputSha256": "2721E6115B2CE060D165A8830DBF080EBC81CF977C4A95B9E981EF13690CB1C7",
+      "ReferencePdfSha256": "DB98140DCB2F365EEA2ED84A2665A589B62B0D066458422D04779F490B698419",
+      "ExportLogSha256": "5BA5BFB7AE8DBAD84FE5169FE0FD47DE47080A418622732207DA8C006C724365",
+      "Container": "body",
+      "UnsupportedDiagnostics": 0
+    }
+  ]
+}

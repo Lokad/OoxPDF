@@ -16,9 +16,16 @@ internal static partial class DocxInlineCompositionTests
         CheckPartialMath(null);
     }
 
-    internal static void CheckPartialMath(IFontResolver? resolver)
+    public static void DocxInlineCompositionSkewedFractionsKeepIndependentOriginsAndControlOwners()
     {
-        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath("partial-math-office.json")));
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent skewed-fraction origins use installed Windows fonts.");
+        CheckPartialMath(null, renderSkewed: true);
+    }
+
+    internal static void CheckPartialMath(IFontResolver? resolver, bool renderSkewed = false)
+    {
+        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath(
+            renderSkewed ? "skewed-fraction-office.json" : "partial-math-office.json")));
         var controlOrigins = new Dictionary<string, string>();
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
@@ -31,7 +38,15 @@ internal static partial class DocxInlineCompositionTests
             var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
             foreach (bool transformed in new[] { false, true })
             {
-                var source = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed,
+                var source = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed, (xml, _, m) =>
+                {
+                    // The original skewed form now renders. Keep C184's missing-box
+                    // regression with a genuinely unknown type; its independent
+                    // reference asserts only the unchanged first fraction's origins.
+                    if (!renderSkewed)
+                        foreach (var type in xml.Descendants(m + "type").Where(type => (string?)type.Attribute(m + "val") == "skw"))
+                            type.SetAttributeValue(m + "val", "future");
+                },
                     partOverride: container == "header" ? "word/headerPartial.xml" : null);
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
@@ -53,7 +68,7 @@ internal static partial class DocxInlineCompositionTests
                     "Prepared siblings remain on their physical page.");
                 string origins = string.Join("|", math.Select(show => show.X.ToString("R", CultureInfo.InvariantCulture) + "," +
                     show.Y.ToString("R", CultureInfo.InvariantCulture)));
-                string key = container + "/" + preset;
+                string key = (renderSkewed ? id : container) + "/" + preset;
                 if (controlOrigins.TryGetValue(key, out string? control)) TestAssert.Equal(control, origins);
                 else controlOrigins.Add(key, origins);
                 if (resolver is not null) continue;

@@ -1136,7 +1136,7 @@ internal static class DocxMathFractionTests
         TestAssert.True(DocxMathLayout.TryGetRuns(equation with { Display = false }, CancellationToken.None, out var inline) &&
             inline.All(source => source.ScriptLevel == 1), "Inline fraction arguments retain their script-style ownership.");
         DocxMathFraction fraction = (DocxMathFraction)equation.Content.Children[0];
-        foreach (var unsupported in new[] { fraction with { TypeValue = "skw" }, fraction with { HasUnsupportedProperties = true },
+        foreach (var unsupported in new[] { fraction with { TypeValue = "future" }, fraction with { HasUnsupportedProperties = true },
             fraction with { Numerator = new([fraction]) } })
             TestAssert.True(!DocxMathLayout.TryGetRuns(equation with { Content = new([unsupported]) }, CancellationToken.None, out _),
                 "Unsupported fraction type, formatting or nested structure remains explicit.");
@@ -1157,7 +1157,7 @@ internal static class DocxMathFractionTests
         {
             ("<m:fPr><m:type m:val='bar'/></m:fPr>", true),
             ("<m:fPr><m:ctrlPr/></m:fPr>", true),
-            ("<m:fPr><m:type m:val='skw'/></m:fPr>", false)
+            ("<m:fPr><m:type m:val='future'/></m:fPr>", false)
         })
         {
             string xml = "<m:oMath xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'><m:f>" + properties +

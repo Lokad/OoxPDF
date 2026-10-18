@@ -311,7 +311,7 @@ internal static class DocxMathMatrixLayoutTests
         var fraction = new DocxMathFraction(new([Run("B")]), new([Run("C")]), "bar");
         var matrix = Matrix([Run("B"), Run("C")], [Run("C"), Run("B")]);
         foreach (DocxMathNode invalid in new DocxMathNode[] { fraction with { Numerator = new([fraction]) },
-            fraction with { TypeValue = "skw" }, new DocxMathScripts(new([matrix]), null, new([Run("B")])) })
+            fraction with { TypeValue = "future" }, new DocxMathScripts(new([matrix]), null, new([Run("B")])) })
         {
             var bad = matrix with { Rows = [matrix.Rows[0], new([new([Run("B")]), new([invalid])])] };
             TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(bad), CancellationToken.None, out _) &&

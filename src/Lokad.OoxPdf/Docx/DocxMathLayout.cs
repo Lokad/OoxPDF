@@ -81,7 +81,7 @@ internal static partial class DocxMathLayout
         }
         else if (GetFraction(equation) is { } fraction)
         {
-            if (!AddFractionArgumentRows(fraction.Numerator) || !AddFractionArgumentRows(fraction.Denominator))
+            if (!AddFractionRows(fraction, allowScripts: true))
             { runs = []; return false; }
         }
         else if (GetNary(equation, token) is { } nary)
@@ -141,12 +141,18 @@ internal static partial class DocxMathLayout
             return GetScripts(child) is { } childScripts ? AddScriptRows(childScripts) : AddArgumentRows(argument);
         }
 
-        bool AddFractionArgumentRows(DocxMathRow argument)
+        bool AddFractionRows(DocxMathFraction fraction, bool allowScripts = false)
         {
-            int level = equation.Display ? 0 : 1;
-            if (GetScriptArgument(argument) is { } child)
-                return AddScriptRows(child, level, literalBase: true);
-            return AddRow(argument, level, false);
+            int first = result.Count;
+            bool skewed = fraction.TypeValue == "skw";
+            int level = skewed || equation.Display ? 0 : 1;
+            if (!AddArgument(fraction.Numerator) || !AddArgument(fraction.Denominator)) return false;
+            if (skewed && result.Count > first)
+                result[first] = result[first] with { ControlOwners = [fraction, .. result[first].ControlOwners] };
+            return true;
+
+            bool AddArgument(DocxMathRow argument) => allowScripts && !skewed && GetScriptArgument(argument) is { } child
+                ? AddScriptRows(child, level, literalBase: true) : AddRow(argument, level, false);
         }
 
         bool AddScriptRows(DocxMathScripts script, int startingLevel = 0, bool literalBase = false)
@@ -167,8 +173,7 @@ internal static partial class DocxMathLayout
             // literal children. Discovery never recursively expands structures.
             if (GetFraction(equation with { Content = argument }) is { } fraction)
             {
-                int level = equation.Display ? 0 : 1;
-                return AddRow(fraction.Numerator, level, false) && AddRow(fraction.Denominator, level, false);
+                return AddFractionRows(fraction);
             }
             return AddRow(argument, 0, false);
         }
@@ -210,6 +215,8 @@ internal static partial class DocxMathLayout
             return TryMeasureStructuredRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont, resolveControlFont, resolveControlMetrics, rowControlSize);
         if (GetFraction(equation) is not { } fraction)
             return DocxMathRowLayout.TryMeasure(equation.Content, resolveFont, token, out box, out fallback);
+        if (fraction.TypeValue == "skw")
+            return TryMeasureSkewedFraction(equation, fraction, resolveFont, token, out box, out fallback, resolveControlFont);
         if (IsEmptyFraction(equation))
             return TryMeasureEmptyFraction(equation, fraction, parentMetricsFont ?? resolveControlMetrics?.Invoke(fraction),
                 token, out box, out fallback);
@@ -330,7 +337,7 @@ internal static partial class DocxMathLayout
     private static DocxMathFraction? GetFraction(DocxEquation equation) => GetSupportedFraction(GetSingleSupportedChild(equation));
 
     private static DocxMathFraction? GetSupportedFraction(DocxMathNode? node) =>
-        node is DocxMathFraction { HasUnsupportedProperties: false, TypeValue: null or "bar" or "noBar" } fraction
+        node is DocxMathFraction { HasUnsupportedProperties: false, TypeValue: null or "bar" or "noBar" or "skw" } fraction
             ? fraction : null;
 
     public static bool NeedsParentFractionMetrics(DocxEquation equation, IReadOnlyList<DocxMathRunSource> runs,
