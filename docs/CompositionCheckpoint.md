@@ -1,5 +1,35 @@
 # Composed-document reliability checkpoint
 
+C178 restores bounded mixed arguments in existing math containers. Six public
+controls put literal neighbors around supported fractions/scripts/matrices inside
+radicals, n-ary operators, delimiters and function applications. C177 successfully
+converts both presets but omits all twelve whole equations. Discovery and
+measurement now share bounded mixed arguments through the existing ordered row
+composer. Fraction/script/matrix child grammars still reject deeper containers
+or cells and unknown properties; missing-CID, cancellation and cumulative-work
+fallbacks remain. No fitted offsets or new layout framework.
+
+One frozen Release artifact passes112 Windows/83 Ubuntu checks,29 native skips,
+once each. All three new low-level/native/portable observers fail C177. Twelve
+independent Word exports occur once before six exact-byte public promotions;
+2,137 old inputs retain hashes, eight added. All twelve formulas/112 mathematical
+glyphs are restored; existing one-point geometry gates pass(maxX0.716/maxY0.567pt,
+following prose0.195pt). Six unique full-page pairs reviewed/six outcomes carried
+through both raster hashes show no new clipping. All twelve strict raster gates
+retain foreground-recall failures; four also retain structural-similarity failure.
+All twelve raw complex-math flags and two raw sin-token deficits remain. Word
+emits sin in one operation, candidate as three glyphs; exact math sequences and
+reviewed pages confirm visible content. Source-prose/simple-math deficits are zero.
+No threshold changes or pass relabeling.
+
+All16 portfolio PDFs/30 reviewed pairs/comparisons preserve identities;14 DOCX
+strict failures, two deck passes and six raw flags carry.17 assets/four smokes
+transfer without root build, suite or corpus replay. Qualified PDFs equal the
+measured prototype. Roota2914f7d; evidence
+artifacts/composition-c1/mixed-box-argument-evidence.json. C177 CI39091746268 is
+running. Next, exercise accepted mixed arguments in one realistic composed report
+while reusing the qualified library and existing capability evidence.
+
 C177 removes the shared ASCII restriction for bounded simple-line text.
 Ten independent Word outcomes keep minimum-paragraph baselines unchanged when
 only an automatic-height neighbor changes to precomposed Latin, Greek or Cyrillic.
