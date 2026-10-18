@@ -1,5 +1,22 @@
 # Composed-document reliability checkpoint
 
+## C232: two plain-note owners reveal overlap and reordered tails (2026-10-18)
+
+A source-only report variant splits64 numbered paragraphs evenly across two
+normal note owners, adding a second body reference and one public intro. Mutation
+reversal restores every original body/note node; other parts remain unchanged.
+Frozen C231 produces both presets without builds/test replay; two new Word views
+are exported once. Word retains four pages and numbered membership20/31/13.
+Candidate also has four pages/all64 paragraphs once, but paints both note heads
+at identical baselines, overlapping20 paragraph pairs and reordering the first
+tail after the second note. Review page2 visually confirms unreadable overlap.
+Both strict gates fail; eight paired PNG hashes retained, one pair reviewed.
+Drain ownership of unplaced heads is still tied to typography admission, while
+shared dedicated draining is limited to inline-owned stories. C233 will separate
+those contracts for bounded paragraph notes and retain complex-source fallbacks.
+Evidence: two-plain-notes-observations.json. C231CI39140627108 is still running,
+Ubuntu green; no full-CI success claim yet.
+
 ## C231: ordinary note frames and explicit reservation/source ownership (2026-10-18)
 
 Placement accepts a usable measured ordinary margin independently of footer
