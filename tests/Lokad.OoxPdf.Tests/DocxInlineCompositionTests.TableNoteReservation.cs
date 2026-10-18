@@ -45,12 +45,23 @@ internal static partial class DocxInlineCompositionTests
                     var lines = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key)
                         .Select(group => group.OrderBy(show => show.X).ToArray()).ToArray();
                     string[] text = lines.Select(line => string.Concat(line.Select(show => show.Text))).ToArray();
+                    int priorCount = seen.Count;
                     foreach (Match match in Regex.Matches(string.Join(" ", text), @"Public\s+continuation\s+note\s+line\s+(\d\d):"))
                         seen.Add(int.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture));
                     int[] noteIndices = Enumerable.Range(0, lines.Length).Where(i => text[i].StartsWith("All quantities", StringComparison.Ordinal) ||
                         text[i].StartsWith("Second public continuation note.", StringComparison.Ordinal) ||
                         text[i].StartsWith("Public continuation note line", StringComparison.Ordinal)).ToArray();
                     if (noteIndices.Length == 0) continue;
+                    if (index == 0)
+                    {
+                        var tableProse = Enumerable.Range(0, lines.Length).Where(i => text[i].Contains("Observed series", StringComparison.Ordinal) ||
+                            text[i].Contains("Additional note", StringComparison.Ordinal)).SelectMany(i => lines[i]);
+                        var tableMath = shows.Where(show => page.Fonts.Any(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal) &&
+                            ReferenceEquals(resource.Font, show.Font)));
+                        TestAssert.True(noteIndices.SelectMany(i => lines[i]).SelectMany(show => OccupiedFooterInk(show, scale)).Max() <
+                            tableProse.Concat(tableMath).SelectMany(show => OccupiedFooterInk(show, scale)).Min(),
+                            "The first note clears actual table prose and mathematical ink, including denominator descent.");
+                    }
                     var footer = lines[Array.FindIndex(text, t => t.StartsWith("Public synthetic composition portfolio", StringComparison.Ordinal))];
                     TestAssert.True(noteIndices.SelectMany(i => lines[i]).SelectMany(show => OccupiedFooterInk(show, scale)).Min() >
                         footer.SelectMany(show => OccupiedFooterInk(show, scale)).Max(), "Table-owned notes clear the occupied footer.");
@@ -65,16 +76,28 @@ internal static partial class DocxInlineCompositionTests
                         heads++;
                         var target = page.Annotations.Single(link => link.Destination?.PageIndex == index).Destination!.Value;
                         TestAssert.True(target.Top > lines[lineIndex][0].Y, "The automatic target lands above its own first note baseline.");
-                        if (resolver is null) TestAssert.Equal(head.GetProperty("Page").GetInt32(), index + 1);
+                        if (resolver is null)
+                        {
+                            TestAssert.Equal(head.GetProperty("Page").GetInt32(), index + 1);
+                            TestAssert.True(Math.Abs(lines[lineIndex][0].Y - head.GetProperty("BaselineY").GetDouble()) < 1d,
+                                "The note head retains its independent one-point Word baseline.");
+                            TestAssert.True(target.Top is { } destination && Math.Abs(destination - head.GetProperty("DestinationY").GetDouble()) < 1d,
+                                "The automatic target retains its independent one-point Word origin.");
+                        }
+                    }
+                    if (resolver is null)
+                    {
+                        var expected = row.GetProperty("NotePages").EnumerateArray().Single(p => p.GetProperty("Page").GetInt32() == index + 1);
+                        TestAssert.True(seen.Skip(priorCount).SequenceEqual(expected.GetProperty("Numbers").EnumerateArray().Select(n => n.GetInt32())),
+                            "Every page retains Word's independent source-paragraph membership.");
                     }
                 }
                 TestAssert.Equal(2, heads);
                 TestAssert.True(seen.SequenceEqual(expectedNumbers), "Every source paragraph survives once, following reference order rather than note XML order.");
                 TestAssert.Equal(22 + 5 * pages.Length, mathCount);
                 TestAssert.Equal(2, pages.Sum(page => page.Annotations.Count(link => link.Destination is not null)));
-                if (resolver is null)
+                if (resolver is null) TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);
                 {
-                    TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);
                     var firstPage = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[0], usePageCoordinates: true).ToArray();
                     TestAssert.True(firstPage.GroupBy(show => show.Y).Any(line => string.Concat(line.OrderBy(show => show.X).Select(show => show.Text)).Contains("Observed series", StringComparison.Ordinal)),
                         "The reference-bearing table row stays on Word's first page instead of following isolated header pages.");

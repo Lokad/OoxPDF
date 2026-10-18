@@ -1841,7 +1841,7 @@ internal sealed partial class DocxLayoutEngine
         {
             storiesTop = Math.Min(storiesTop, sharedContentTop.Value);
         }
-        if (!ownedInlineFrame && !hasSourceOwnedReserve && placementFooter is not null &&
+        if (!ownedInlineFrame && !hasSourceOwnedReserve &&
             TryResolveFootnoteBodyBottom(activePage, printScale, null, out double bodyBottom))
         {
             // Body geometry owns the boundary even when note typography keeps

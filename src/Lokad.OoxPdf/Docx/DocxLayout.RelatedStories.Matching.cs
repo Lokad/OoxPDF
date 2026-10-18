@@ -180,7 +180,14 @@ internal sealed partial class DocxLayoutEngine
             top = page.Height - page.MarginTop;
             return double.IsFinite(top);
         }
-        if (page.Items.Any(item => item is not (DocxTextLineLayout or DocxTableRowLayout)) ||
+        // A placed row owns its complete occupied frame, with no pending
+        // paragraph spacing outside it. Paragraph ends still need their
+        // source-backed after-spacing contract before this frame can be used.
+        var finalItem = page.Items.MinBy(item => GetVerticalBounds(item).Y);
+        if (page.Items.Any(item => item is not (DocxTextLineLayout or DocxTableRowLayout or DocxInlineImageLayout) ||
+                item is DocxInlineImageLayout image && (!double.IsFinite(image.Y) || !double.IsFinite(image.Height) || image.Height <= 0d)) ||
+            !(finalItem is DocxTableRowLayout { Height: > 0d } row &&
+                double.IsFinite(row.Y) && double.IsFinite(row.Height)) &&
             !HasNumericTrailingBodyAfterSpacing(page)) return false;
         double bodyBottom = sharedContentTop ?? page.Items.Min(item =>
             item is DocxTextLineLayout line && DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double bottom, out _)

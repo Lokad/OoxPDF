@@ -74,12 +74,14 @@
         {
           "Prefix": "Second public continuation note.",
           "Page": 1,
-          "BaselineY": 508.3900146484375
+          "BaselineY": 508.3900146484375,
+          "DestinationY": 518.0
         },
         {
           "Prefix": "All quantities in this synthetic example are illustrative.",
           "Page": 3,
-          "BaselineY": 430.6300048828125
+          "BaselineY": 430.6300048828125,
+          "DestinationY": 441.0
         }
       ],
       "NotePages": [
@@ -169,7 +171,7 @@
         }
       ],
       "ReferencePdfSha256": "427C88E252CF06776B1601916B7B48039C1A47651D1E32EC093987D3D80EB2CD",
-      "Scope": "Page count and reference/head pages are asserted. Full Word paragraph membership/baselines remain retained visual residuals."
+      "Scope": "Independent Word page count, reference/head pages, paragraph membership, head and link origins asserted; stricter visual thresholds remain unchanged."
     },
     {
       "Mode": "all-word-compatible",
@@ -178,12 +180,14 @@
         {
           "Prefix": "Second public continuation note.",
           "Page": 1,
-          "BaselineY": 481.510009765625
+          "BaselineY": 481.510009765625,
+          "DestinationY": 489.0
         },
         {
           "Prefix": "All quantities in this synthetic example are illustrative.",
           "Page": 3,
-          "BaselineY": 422.5400085449219
+          "BaselineY": 422.5400085449219,
+          "DestinationY": 430.0
         }
       ],
       "NotePages": [
@@ -273,7 +277,7 @@
         }
       ],
       "ReferencePdfSha256": "3083D25ECE85B6351B135BF5C41BEBD600E46096491419926F6EB5552C7E25F7",
-      "Scope": "Page count and reference/head pages are asserted. Full Word paragraph membership/baselines remain retained visual residuals."
+      "Scope": "Independent Word page count, reference/head pages, paragraph membership, head and link origins asserted; stricter visual thresholds remain unchanged."
     }
   ]
 }
