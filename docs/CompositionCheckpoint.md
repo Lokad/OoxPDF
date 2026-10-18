@@ -1,5 +1,34 @@
 # Composed-document reliability checkpoint
 
+C181 restores bounded mixed matrix-cell content. Three public controls put
+literal neighbors around fractions/scripts, including mixed cells separated by
+ordinary cells. C180 omits all six whole equations. Shared discovery now appends
+each source role in authored order, removing the deferred row list and separate
+argument-source bucket. Cells share bounded mixed fractions/scripts with outer
+boxes while still rejecting nested grids/deeper containers, unknown properties
+and late missing encodings. Cancellation/work bounds remain.
+
+One frozen Release artifact passes120 Windows/88 Ubuntu checks,32 native skips,
+once each. All three new low-level/native/portable observers fail C180. Six Word
+exports occur once before three exact-byte promotions;2,148 old inputs retain
+hashes, five added. All six formulas/64 mathematical glyphs are restored in exact
+source order; prose/simple-math/Office-word deficits are zero. Three unique
+full-page pairs reviewed/three outcomes carried by both raster hashes show no
+new clipping. Four existing1pt glyph/following-prose gates pass; the two multi-row
+outcomes retain max glyphY2.132pt/following-prose2.337pt failures. Their occupied
+row-frame cause remains unverified. Content observers do not claim geometry
+passes. All six strict raster failures/raw complex-math flags remain; no fitted
+offset or threshold change.
+
+All30 existing PDFs(12 isolated controls/16 portfolio/two complete specifications)
+preserve identities;30 comparisons/48 reviewed page-pair outcomes carry. All ten
+complete-specification1pt groups still pass. Fixed portfolio retains14 DOCX
+strict failures/two deck passes/six raw flags.17 assets/four smokes transfer
+without root build/suite/corpus replay. Root2f5b6a13; evidence
+artifacts/composition-c1/mixed-matrix-cell-evidence.json. Next, decompose the
+multi-row occupied-frame residual against retained C174 controls before changing
+matrix geometry; do not repeat the rejected ordinary-cell strut prototype.
+
 C180 fixes nested mixed-row control-size ownership. The shared box caller
 supplies a12pt container size, but structured-row dispatch drops it and uses the
 11pt paragraph nominal size. Isolated12pt controls hide this mismatch. Forward
