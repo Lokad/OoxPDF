@@ -1,5 +1,7 @@
 # Composed-document reliability checkpoint
 
+C237 table-reference holdout (read-only, 2026-10-18): moving only note2's existing label/reference into the report's last ordinary table cell preserves all other package parts and reverses reference order to2/1. Frozen C236 emits6pages in each preset versus Word4: the table header is isolated onp2 and its reference/head arrives onp3 rather thanp1. All64numbered note paragraphs survive once in reference order33-64/1-32, and each automatic link reaches its own head. Both strict visual gates remain failed;8paired/4unmatched candidate rasters pinned and Finalp2pair reviewed. Two Office exports once; no library build or suite. Whole-story table pre-reservation is a suspected cause pending a prototype, not yet a proven fix. Evidence artifacts/composition-c1/table-note-reference-observations.json.
+
 ## C236: reuse measured stories within fixed-input placement retry (2026-10-18)
 
 One coordinator-owned width dictionary now spans the two header/footer placement
