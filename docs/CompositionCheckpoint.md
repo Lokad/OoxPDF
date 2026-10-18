@@ -1,5 +1,36 @@
 # Composed-document reliability checkpoint
 
+## C223: printed font ownership in hyperlink line tiling (2026-10-18)
+
+Confirmed C222 review-cell annotation gap is closed. The next-line legacy top
+used source font size beside placed baselines and printed current glyph size.
+Shared tiling now applies the existing print scale once to that next-line size;
+no font/point/container exception. All380 previously excluded source character
+baseline origins are covered. Review-cell Word vertical rectangle edge delta
+falls to0.052pt; horizontal trailing-space bounds remain unresolved. Body review
+keeps its0.874pt vertical residual and byte-identical PDF. Both Final PDFs also
+remain identical; the fourth PDF changes only annotation rectangle arrays.
+
+Frozen production d0e2e673, final harness df36b777.20 Windows/15 Ubuntu checks,
+five native skips. Initial Windows result19pass/1new portable harness failure:
+it incorrectly required Word's line count despite pinned-font wrapping. Exact
+native Word counts/gates stay unchanged; only portable count was corrected.
+14 production/runtime assets and2,239 public pins unchanged; only that corrected
+Windows entry rerun. Ubuntu ran the complete exact set once. Two observers fail
+C221 using five independently copied inputs.2,235 old pins unchanged/four inputs
+added. Release builds pass; two inherited nullable test warnings, library/CLI clean.
+
+Four cached C222 Office views reused, no exports. All text/font/graphics JSON
+identities remain exact, carrying64 Word math anchors and source/image checks.
+Three comparisons reused/one fresh; all four candidate/Word PNG pairs equal their
+reviewed C222 hashes. All strict failures remain. One portable review-cell page
+viewed; its sixteen lines differ from Word's twelve. The fixed four DOCX source
+links all take unchanged qualified body boxes, proved by four layout preparations;
+no ordinary portfolio replay.17 assets/four smokes match after transfer, without
+root build/suite replay. Root bcfc8487; printed-link-frames-evidence.json and
+printed-link-frames-transfer/. Next: two bounded related/static-story linked-inline
+holdouts on this artifact, retaining independent Office geometry and all limits.
+
 ## C222: justified linked-picture body/cell holdouts (2026-10-18)
 
 Two source-only heldouts combine wrapped justified prose, an unchanged image,
