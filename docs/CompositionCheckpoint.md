@@ -1,5 +1,43 @@
 # Composed-document reliability checkpoint
 
+## C233: ordered plain-note batches and uncapped source admission (2026-10-18)
+
+The C232 overlap/order defect closes: deferred heads remain owned by the drain,
+plain paragraph notes share a bounded continuation batch and one separator, and
+source progress/placement remain separate from typography admission. Existing
+plain paragraph semantics and non-rendering metadata qualify the batch; keeps,
+contextual/unknown spacing, tables, floating/rich content retain explicit existing
+fallbacks. Cancellation remains checked. Both presets match Word20/31/13, all64
+paragraphs once/in order, without overlapping note containers. The second head
+agrees−0.011/+0.241pt; four automatic note links target the correct pages within1pt.
+
+One bounded two-outcome prototype preceded freezing. The first frozen50-method
+qualification exposed a real legacy capacity defect: page-capped painting height
+could admit all43remaining lines rather than the independently validated17.
+Whole-note admission now uses uncapped measured source height in both separator
+routes; continued seating retains full after-spacing. A five-method mutable probe
+confirmed both legacy take controls, the owner model and native/portable controls.
+This production correction required final frozen qualification, not an assertion
+change. Initial49Windows/36Ubuntu passes,13native skips and one failure each remain
+retained. Final frozen24f3ce2d passes50Windows/37Ubuntu,13native skips, once per
+final platform. Three strengthened observers fail accepted C231.
+
+2,246 public pins unchanged/two source manifest/Office JSONs updated/one public
+source added, with byte-identical deterministic fixture regeneration. Eight old
+Word views reused, no new exports. Six earlier note PDFs retain bytes; six
+comparisons reuse PDF/threshold identity and two fresh comparisons keep all eight
+strict visual failures. Source prose/simple math deficits are zero; four raw
+rate/time Word prose screens remain.28paired PNG hashes/chains retained; Final
+page3/Reviewpage2pairs and portablepage4of5 reviewed. FixedC231portfolio outputs
+have no pending note tails, leaving the new drain branch unreachable; their
+whole source heights already fit, so no fixed portfolio replay is required.
+
+17assets/four root smoke PDFs match, no root build/suite. Library/CLI Release
+builds have zero warnings/errors; tests retain two inherited nullable warnings.
+Root5986a1b9, library5B3FA19D981EA6976B37655079F1CEFA6D9293FBF2690C045AED3171D3C46CC5.
+Evidence: plain-note-batches-capacity-evidence.json. C231CI39140627108 is green on
+both platforms, including broader/package checks. C234 measures compound-note costs.
+
 ## C232: two plain-note owners reveal overlap and reordered tails (2026-10-18)
 
 A source-only report variant splits64 numbered paragraphs evenly across two
