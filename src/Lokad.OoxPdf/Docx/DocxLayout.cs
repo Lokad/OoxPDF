@@ -1074,11 +1074,13 @@ internal sealed partial class DocxLayoutEngine
 
                 DocxRelatedStoryLayout narrowedLayout = NarrowStoryTextLinesForOffset(inFlight.StoryLayout, inFlight.PlacedLineCount);
                 double[] narrowedLineBoxes = GetStoryTextLineBoxHeights(narrowedLayout);
-                Func<DocxLayoutPage, int, int, double>? tailFrameBottom =
+                Func<DocxLayoutPage, int, int, double>? qualifiedTailFrameBottom =
                     CanUsePlainFootnoteStaticFrame(document, tailPage, separatorMeasurerForNotes, paragraphSpacingScale, cancellationToken)
                         ? ResolveFooterKeepOut : null;
+                var tailFrameBottom = ResolveFootnotePlacementFooter(tailPage, tailPageIndex + 1, pages.Count,
+                    qualifiedTailFrameBottom, ResolveNoteFooterKeepOut);
                 tailCursorTop = PlaceContinuationSeparatorIfNeeded(pages, ref tailPageIndex, ref tailPage, ref tailPlacedStories, tailCursorTop, inFlight.SourceBlockIndex, narrowedLayout, 0, narrowedLineBoxes, inFlight.ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale, frameBottom: tailFrameBottom);
-                PlaceRelatedStorySlices(pages, ref tailPageIndex, ref tailPage, ref tailPlacedStories, ref tailCursorTop, narrowedLayout, inFlight.SourceBlockIndex, insertContinuationAfterActivePage: true, inFlight.ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale, ResolveHeaderKeepOut, stopAfterCurrentPage: false, inFlight: inFlight, frameBottom: tailFrameBottom);
+                PlaceRelatedStorySlices(pages, ref tailPageIndex, ref tailPage, ref tailPlacedStories, ref tailCursorTop, narrowedLayout, inFlight.SourceBlockIndex, insertContinuationAfterActivePage: true, inFlight.ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale, ResolveHeaderKeepOut, stopAfterCurrentPage: false, inFlight: inFlight, frameBottom: tailFrameBottom, usesPlainFootnoteFrame: qualifiedTailFrameBottom is not null);
             }
         }
 

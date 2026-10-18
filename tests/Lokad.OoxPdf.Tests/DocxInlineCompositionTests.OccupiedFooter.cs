@@ -50,7 +50,7 @@ internal static partial class DocxInlineCompositionTests
                 var footer = lines.First(line => string.Concat(line.Select(show => show.Text)).StartsWith("Public synthetic composition portfolio", StringComparison.Ordinal));
                 double scale = final ? 1d : DocxRenderer.ResolveWordCompatiblePrintScale(document,
                     DocxMarkupContext.FromMode(mode, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
-                TestAssert.True(note.SelectMany(show => Ink(show, scale)).Min() > footer.SelectMany(show => Ink(show, scale)).Max(),
+                TestAssert.True(note.SelectMany(show => OccupiedFooterInk(show, scale)).Min() > footer.SelectMany(show => OccupiedFooterInk(show, scale)).Max(),
                     "Actual note and footer prose ink must remain disjoint after physical placement, with native or portable fonts.");
                 if (resolver is not null) continue;
                 TestAssert.Equal(2, pages.Length);
@@ -77,17 +77,17 @@ internal static partial class DocxInlineCompositionTests
         }
 
         static double Number(Match match, string group) => double.Parse(match.Groups[group].Value, System.Globalization.CultureInfo.InvariantCulture);
+    }
 
-        static IEnumerable<double> Ink((PdfEmbeddedFont Font, string Text, double Size, double X, double Y) show, double scale)
+    private static IEnumerable<double> OccupiedFooterInk((PdfEmbeddedFont Font, string Text, double Size, double X, double Y) show, double scale)
+    {
+        var font = show.Font.Font;
+        foreach (var rune in show.Text.EnumerateRunes())
         {
-            var font = show.Font.Font;
-            foreach (var rune in show.Text.EnumerateRunes())
-            {
-                if (Rune.IsWhiteSpace(rune)) continue;
-                TestAssert.True(font.TryGetGlyphBounds(font.MapCodePoint(rune.Value), out var bounds), "Resolved source prose has measurable ink bounds.");
-                yield return show.Y + bounds.YMin * show.Size * scale / font.UnitsPerEm;
-                yield return show.Y + bounds.YMax * show.Size * scale / font.UnitsPerEm;
-            }
+            if (Rune.IsWhiteSpace(rune)) continue;
+            TestAssert.True(font.TryGetGlyphBounds(font.MapCodePoint(rune.Value), out var bounds), "Resolved source prose has measurable ink bounds.");
+            yield return show.Y + bounds.YMin * show.Size * scale / font.UnitsPerEm;
+            yield return show.Y + bounds.YMax * show.Size * scale / font.UnitsPerEm;
         }
     }
 }

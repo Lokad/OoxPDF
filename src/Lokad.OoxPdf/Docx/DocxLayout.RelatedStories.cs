@@ -353,6 +353,17 @@ internal sealed partial class DocxLayoutEngine
                 if (partialMixedEndnoteHead && footerKeepOut is { } mixedFooterBottom)
                     endnoteFrameBottom = (p, number, count) => Math.Max(mixedFooterBottom(p, number, count),
                         ResolveFootnoteOccupiedTop(p, p.PlacedRelatedStories, separatorMeasurer, printScale));
+                else if (hasFootnotes)
+                {
+                    // Fallback endnotes still clear occupied footnote containers.
+                    // A raised footnote must not create apparent space underneath
+                    // it. This placement boundary does not admit typography/reflow.
+                    var qualifiedEndnoteFrameBottom = endnoteFrameBottom;
+                    endnoteFrameBottom = (p, number, count) => Math.Max(
+                        qualifiedEndnoteFrameBottom?.Invoke(p, number, count) ?? p.MarginBottom,
+                        p.PlacedRelatedStories.Where(s => s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
+                            .Select(s => s.TopY).DefaultIfEmpty(p.MarginBottom).Max());
+                }
                 if (documentEndSeparatorLayout is not null && documentEndStories.Count > 0)
                 {
                     // RV06 endnote probes: document-end endnotes draw the separator rule

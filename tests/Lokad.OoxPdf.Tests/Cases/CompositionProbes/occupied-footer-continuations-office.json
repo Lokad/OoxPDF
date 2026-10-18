@@ -1,0 +1,89 @@
+{
+  "Provenance": "Independent C226 Word16 exports, pinned in occupied-footer-continuation-evidence.json. Last-note/footer baselines retain1pt gates; page membership remains a separate unresolved comparison.",
+  "Rows": [
+    {
+      "Id": "occupied-footer-no-separator-report",
+      "Mode": "final-preserve",
+      "InputSha256": "5139F933EE6CE464DC71E44789FAB6FCED9E7887CC9D0A03E5F8DF289622C4ED",
+      "ReferencePdfSha256": "B7185053DC949E6CD746AE434FD0255D801EE92A6B89C58A48AC74C85CADB9C7",
+      "Pages": 2,
+      "NotePages": [
+        {
+          "Page": 2,
+          "NoteY": 107.41998291015625,
+          "FooterY": 87.9840087890625,
+          "NumberedParagraphs": 0
+        }
+      ]
+    },
+    {
+      "Id": "occupied-footer-no-separator-report",
+      "Mode": "all-word-compatible",
+      "InputSha256": "5139F933EE6CE464DC71E44789FAB6FCED9E7887CC9D0A03E5F8DF289622C4ED",
+      "ReferencePdfSha256": "3FC90CF7A7993647AEF06412A04438629D2896F87CECA702A13BF42951816C05",
+      "Pages": 2,
+      "NotePages": [
+        {
+          "Page": 2,
+          "NoteY": 177.46002197265625,
+          "FooterY": 162.70001220703125,
+          "NumberedParagraphs": 0
+        }
+      ]
+    },
+    {
+      "Id": "occupied-footer-long-note-report",
+      "Mode": "final-preserve",
+      "InputSha256": "272F71136C38A31927A63956B68A422297DC1561FC2B1E14E3CE99BF63DA0B1B",
+      "ReferencePdfSha256": "A037290EEA2FF398D1E6B2F143BBABB5C14A16ED6D26527EFFFB0FE4FD244A43",
+      "Pages": 4,
+      "NotePages": [
+        {
+          "Page": 2,
+          "NoteY": 107.41998291015625,
+          "FooterY": 87.9840087890625,
+          "NumberedParagraphs": 17
+        },
+        {
+          "Page": 3,
+          "NoteY": 107.41998291015625,
+          "FooterY": 87.9840087890625,
+          "NumberedParagraphs": 31
+        },
+        {
+          "Page": 4,
+          "NoteY": 107.41998291015625,
+          "FooterY": 87.9840087890625,
+          "NumberedParagraphs": 16
+        }
+      ]
+    },
+    {
+      "Id": "occupied-footer-long-note-report",
+      "Mode": "all-word-compatible",
+      "InputSha256": "272F71136C38A31927A63956B68A422297DC1561FC2B1E14E3CE99BF63DA0B1B",
+      "ReferencePdfSha256": "69C9CAE63DDF66D34A36323A73EEF364769F3FA028CD97DB115FC6DF10665EC7",
+      "Pages": 4,
+      "NotePages": [
+        {
+          "Page": 2,
+          "NoteY": 177.46002197265625,
+          "FooterY": 162.70001220703125,
+          "NumberedParagraphs": 17
+        },
+        {
+          "Page": 3,
+          "NoteY": 177.46002197265625,
+          "FooterY": 162.70001220703125,
+          "NumberedParagraphs": 31
+        },
+        {
+          "Page": 4,
+          "NoteY": 177.46002197265625,
+          "FooterY": 162.70001220703125,
+          "NumberedParagraphs": 16
+        }
+      ]
+    }
+  ]
+}

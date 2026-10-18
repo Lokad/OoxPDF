@@ -1,0 +1,35 @@
+[
+  {
+    "Id": "occupied-footer-no-separator-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/occupied-footer-no-separator-report.docx",
+    "Sha256": "5139F933EE6CE464DC71E44789FAB6FCED9E7887CC9D0A03E5F8DF289622C4ED",
+    "SourceSha256": "A00F8CB9D1029CC7DADDDFB4BDE5F000A48683D74778E1FAE3A54D8DD613CD9F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 7,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "Inventory availability",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative.",
+      "The linked calculation"
+    ],
+    "Change": "Only remove the source separator story."
+  },
+  {
+    "Id": "occupied-footer-long-note-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/occupied-footer-long-note-report.docx",
+    "Sha256": "272F71136C38A31927A63956B68A422297DC1561FC2B1E14E3CE99BF63DA0B1B",
+    "SourceSha256": "A00F8CB9D1029CC7DADDDFB4BDE5F000A48683D74778E1FAE3A54D8DD613CD9F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 7,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "Inventory availability",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative.",
+      "The linked calculation",
+      "Public continuation note line 64: the footer must keep every source paragraph clear."
+    ],
+    "Change": "Only append64 short public paragraphs to the existing normal footnote; original note, body, images/math/links and footer remain."
+  }
+]
