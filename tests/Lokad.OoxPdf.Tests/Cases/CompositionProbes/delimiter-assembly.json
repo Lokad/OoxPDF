@@ -1,0 +1,44 @@
+[
+  {
+    "Id": "delimiter-assembly-child60",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/delimiter-assembly-child60.docx",
+    "Sha256": "0C0E49C3AFA63AABC3241BACDFC1FEB8398C83665E4B3FF43873DAE1CC11E21F",
+    "SourceSha256": "F94BAFB250EE318AA07335BAFAC44E175A97D6BD62BFE235A54A7A48563BB9CC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "ControlSize": 12,
+    "ChildSize": 60,
+    "Grow": true
+  },
+  {
+    "Id": "delimiter-assembly-child200",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/delimiter-assembly-child200.docx",
+    "Sha256": "A193868C0DDA0B99DD5AF84CE76BEC6338E9192D834838D7B059BACC412FB44E",
+    "SourceSha256": "F94BAFB250EE318AA07335BAFAC44E175A97D6BD62BFE235A54A7A48563BB9CC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "ControlSize": 12,
+    "ChildSize": 200,
+    "Grow": true
+  },
+  {
+    "Id": "delimiter-assembly-child60-fixed",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/delimiter-assembly-child60-fixed.docx",
+    "Sha256": "B4ACA9D57426C10AC6CBE3F9518A3D62187969ED4AFCE34F8F1A8A6EC7C46E15",
+    "SourceSha256": "F94BAFB250EE318AA07335BAFAC44E175A97D6BD62BFE235A54A7A48563BB9CC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "ControlSize": 12,
+    "ChildSize": 60,
+    "Grow": false
+  }
+]

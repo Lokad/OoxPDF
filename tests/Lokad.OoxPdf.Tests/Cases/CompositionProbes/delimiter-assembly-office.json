@@ -1,0 +1,769 @@
+{
+  "Source": "Independent Word16 exports, actual presets read back and pinned; growing-part Y/following flow retain explicit residuals under unchanged visual thresholds.",
+  "Rows": [
+    {
+      "Id": "delimiter-assembly-child60",
+      "Mode": "final-preserve",
+      "InputSha256": "0C0E49C3AFA63AABC3241BACDFC1FEB8398C83665E4B3FF43873DAE1CC11E21F",
+      "ReferencePdfSha256": "A67510245BE790AEEB31AA94579E0A6B7F518FFDA44FAA891917BB6E50F8BA6D",
+      "ChildSize": 60,
+      "Grow": true,
+      "MathText": "(A)",
+      "PhysicalGlyphOperations": 9,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "Text": "(",
+          "X": 151.82,
+          "Y": 646.66,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 673.18,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 674.5,
+          "Size": 12
+        },
+        {
+          "Offset": 3,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 687.94,
+          "Size": 12
+        },
+        {
+          "Offset": 4,
+          "Text": "A",
+          "X": 160.94,
+          "Y": 677.74,
+          "Size": 60
+        },
+        {
+          "Offset": 5,
+          "Text": ")",
+          "X": 198.41,
+          "Y": 646.66,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "Text": " ",
+          "X": 198.41,
+          "Y": 673.18,
+          "Size": 12
+        },
+        {
+          "Offset": 7,
+          "Text": " ",
+          "X": 198.41,
+          "Y": 674.5,
+          "Size": 12
+        },
+        {
+          "Offset": 8,
+          "Text": " ",
+          "X": 198.41,
+          "Y": 687.94,
+          "Size": 12
+        }
+      ],
+      "FollowingY": 635.26
+    },
+    {
+      "Id": "delimiter-assembly-child60",
+      "Mode": "all-word-compatible",
+      "InputSha256": "0C0E49C3AFA63AABC3241BACDFC1FEB8398C83665E4B3FF43873DAE1CC11E21F",
+      "ReferencePdfSha256": "BCB90B65A4FBA04124597350D0EDBD38535335166923E326365F19F6753CDCA5",
+      "ChildSize": 60,
+      "Grow": true,
+      "MathText": "(A)",
+      "PhysicalGlyphOperations": 9,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "Text": "(",
+          "X": 151.82,
+          "Y": 646.66,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 673.18,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 674.5,
+          "Size": 12
+        },
+        {
+          "Offset": 3,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 687.94,
+          "Size": 12
+        },
+        {
+          "Offset": 4,
+          "Text": "A",
+          "X": 160.94,
+          "Y": 677.74,
+          "Size": 60
+        },
+        {
+          "Offset": 5,
+          "Text": ")",
+          "X": 198.41,
+          "Y": 646.66,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "Text": " ",
+          "X": 198.41,
+          "Y": 673.18,
+          "Size": 12
+        },
+        {
+          "Offset": 7,
+          "Text": " ",
+          "X": 198.41,
+          "Y": 674.5,
+          "Size": 12
+        },
+        {
+          "Offset": 8,
+          "Text": " ",
+          "X": 198.41,
+          "Y": 687.94,
+          "Size": 12
+        }
+      ],
+      "FollowingY": 635.26
+    },
+    {
+      "Id": "delimiter-assembly-child200",
+      "Mode": "final-preserve",
+      "InputSha256": "A193868C0DDA0B99DD5AF84CE76BEC6338E9192D834838D7B059BACC412FB44E",
+      "ReferencePdfSha256": "6725EC5A0FB8A3B96DA5C703FBE1D352DD74FAD9C3D3EA03184E348F68E77EB8",
+      "ChildSize": 200,
+      "Grow": true,
+      "MathText": "(A)",
+      "PhysicalGlyphOperations": 37,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "Text": "(",
+          "X": 151.82,
+          "Y": 457.87,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 484.39,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 497.11,
+          "Size": 12
+        },
+        {
+          "Offset": 3,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 509.83,
+          "Size": 12
+        },
+        {
+          "Offset": 4,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 522.43,
+          "Size": 12
+        },
+        {
+          "Offset": 5,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 535.15,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 547.78,
+          "Size": 12
+        },
+        {
+          "Offset": 7,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 560.5,
+          "Size": 12
+        },
+        {
+          "Offset": 8,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 573.22,
+          "Size": 12
+        },
+        {
+          "Offset": 9,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 585.82,
+          "Size": 12
+        },
+        {
+          "Offset": 10,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 598.54,
+          "Size": 12
+        },
+        {
+          "Offset": 11,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 611.14,
+          "Size": 12
+        },
+        {
+          "Offset": 12,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 623.86,
+          "Size": 12
+        },
+        {
+          "Offset": 13,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 636.58,
+          "Size": 12
+        },
+        {
+          "Offset": 14,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 649.18,
+          "Size": 12
+        },
+        {
+          "Offset": 15,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 661.9,
+          "Size": 12
+        },
+        {
+          "Offset": 16,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 674.5,
+          "Size": 12
+        },
+        {
+          "Offset": 17,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 688.06,
+          "Size": 12
+        },
+        {
+          "Offset": 18,
+          "Text": "A",
+          "X": 160.94,
+          "Y": 583.42,
+          "Size": 200.06
+        },
+        {
+          "Offset": 19,
+          "Text": ")",
+          "X": 285.65,
+          "Y": 457.87,
+          "Size": 12
+        },
+        {
+          "Offset": 20,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 484.39,
+          "Size": 12
+        },
+        {
+          "Offset": 21,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 497.11,
+          "Size": 12
+        },
+        {
+          "Offset": 22,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 509.83,
+          "Size": 12
+        },
+        {
+          "Offset": 23,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 522.43,
+          "Size": 12
+        },
+        {
+          "Offset": 24,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 535.15,
+          "Size": 12
+        },
+        {
+          "Offset": 25,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 547.78,
+          "Size": 12
+        },
+        {
+          "Offset": 26,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 560.5,
+          "Size": 12
+        },
+        {
+          "Offset": 27,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 573.22,
+          "Size": 12
+        },
+        {
+          "Offset": 28,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 585.82,
+          "Size": 12
+        },
+        {
+          "Offset": 29,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 598.54,
+          "Size": 12
+        },
+        {
+          "Offset": 30,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 611.14,
+          "Size": 12
+        },
+        {
+          "Offset": 31,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 623.86,
+          "Size": 12
+        },
+        {
+          "Offset": 32,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 636.58,
+          "Size": 12
+        },
+        {
+          "Offset": 33,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 649.18,
+          "Size": 12
+        },
+        {
+          "Offset": 34,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 661.9,
+          "Size": 12
+        },
+        {
+          "Offset": 35,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 674.5,
+          "Size": 12
+        },
+        {
+          "Offset": 36,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 688.06,
+          "Size": 12
+        }
+      ],
+      "FollowingY": 446.47
+    },
+    {
+      "Id": "delimiter-assembly-child200",
+      "Mode": "all-word-compatible",
+      "InputSha256": "A193868C0DDA0B99DD5AF84CE76BEC6338E9192D834838D7B059BACC412FB44E",
+      "ReferencePdfSha256": "D5FC6A9333A00458443171FEBB263B610E0D43CC3289AD2DC12D3B2758C732BB",
+      "ChildSize": 200,
+      "Grow": true,
+      "MathText": "(A)",
+      "PhysicalGlyphOperations": 37,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "Text": "(",
+          "X": 151.82,
+          "Y": 457.87,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 484.39,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 497.11,
+          "Size": 12
+        },
+        {
+          "Offset": 3,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 509.83,
+          "Size": 12
+        },
+        {
+          "Offset": 4,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 522.43,
+          "Size": 12
+        },
+        {
+          "Offset": 5,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 535.15,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 547.78,
+          "Size": 12
+        },
+        {
+          "Offset": 7,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 560.5,
+          "Size": 12
+        },
+        {
+          "Offset": 8,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 573.22,
+          "Size": 12
+        },
+        {
+          "Offset": 9,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 585.82,
+          "Size": 12
+        },
+        {
+          "Offset": 10,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 598.54,
+          "Size": 12
+        },
+        {
+          "Offset": 11,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 611.14,
+          "Size": 12
+        },
+        {
+          "Offset": 12,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 623.86,
+          "Size": 12
+        },
+        {
+          "Offset": 13,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 636.58,
+          "Size": 12
+        },
+        {
+          "Offset": 14,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 649.18,
+          "Size": 12
+        },
+        {
+          "Offset": 15,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 661.9,
+          "Size": 12
+        },
+        {
+          "Offset": 16,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 674.5,
+          "Size": 12
+        },
+        {
+          "Offset": 17,
+          "Text": " ",
+          "X": 151.82,
+          "Y": 688.06,
+          "Size": 12
+        },
+        {
+          "Offset": 18,
+          "Text": "A",
+          "X": 160.94,
+          "Y": 583.42,
+          "Size": 200.06
+        },
+        {
+          "Offset": 19,
+          "Text": ")",
+          "X": 285.65,
+          "Y": 457.87,
+          "Size": 12
+        },
+        {
+          "Offset": 20,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 484.39,
+          "Size": 12
+        },
+        {
+          "Offset": 21,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 497.11,
+          "Size": 12
+        },
+        {
+          "Offset": 22,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 509.83,
+          "Size": 12
+        },
+        {
+          "Offset": 23,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 522.43,
+          "Size": 12
+        },
+        {
+          "Offset": 24,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 535.15,
+          "Size": 12
+        },
+        {
+          "Offset": 25,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 547.78,
+          "Size": 12
+        },
+        {
+          "Offset": 26,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 560.5,
+          "Size": 12
+        },
+        {
+          "Offset": 27,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 573.22,
+          "Size": 12
+        },
+        {
+          "Offset": 28,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 585.82,
+          "Size": 12
+        },
+        {
+          "Offset": 29,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 598.54,
+          "Size": 12
+        },
+        {
+          "Offset": 30,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 611.14,
+          "Size": 12
+        },
+        {
+          "Offset": 31,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 623.86,
+          "Size": 12
+        },
+        {
+          "Offset": 32,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 636.58,
+          "Size": 12
+        },
+        {
+          "Offset": 33,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 649.18,
+          "Size": 12
+        },
+        {
+          "Offset": 34,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 661.9,
+          "Size": 12
+        },
+        {
+          "Offset": 35,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 674.5,
+          "Size": 12
+        },
+        {
+          "Offset": 36,
+          "Text": " ",
+          "X": 285.65,
+          "Y": 688.06,
+          "Size": 12
+        }
+      ],
+      "FollowingY": 446.47
+    },
+    {
+      "Id": "delimiter-assembly-child60-fixed",
+      "Mode": "final-preserve",
+      "InputSha256": "B4ACA9D57426C10AC6CBE3F9518A3D62187969ED4AFCE34F8F1A8A6EC7C46E15",
+      "ReferencePdfSha256": "D38644CDA8AC0968DC72BF3D1DEE6FA8F6E6A8A779341EB4B7774A879697EB67",
+      "ChildSize": 60,
+      "Grow": false,
+      "MathText": "(A)",
+      "PhysicalGlyphOperations": 3,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "Text": "(",
+          "X": 151.82,
+          "Y": 678.22,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "A",
+          "X": 156.86,
+          "Y": 677.74,
+          "Size": 60
+        },
+        {
+          "Offset": 2,
+          "Text": ")",
+          "X": 194.33,
+          "Y": 678.22,
+          "Size": 12
+        }
+      ],
+      "FollowingY": 663.1
+    },
+    {
+      "Id": "delimiter-assembly-child60-fixed",
+      "Mode": "all-word-compatible",
+      "InputSha256": "B4ACA9D57426C10AC6CBE3F9518A3D62187969ED4AFCE34F8F1A8A6EC7C46E15",
+      "ReferencePdfSha256": "C0819471213CF0F1595A7907D2CE72000FE716A0B032E8FAD095458A650DE3F9",
+      "ChildSize": 60,
+      "Grow": false,
+      "MathText": "(A)",
+      "PhysicalGlyphOperations": 3,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "Text": "(",
+          "X": 151.82,
+          "Y": 678.22,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "A",
+          "X": 156.86,
+          "Y": 677.74,
+          "Size": 60
+        },
+        {
+          "Offset": 2,
+          "Text": ")",
+          "X": 194.33,
+          "Y": 678.22,
+          "Size": 12
+        }
+      ],
+      "FollowingY": 663.1
+    }
+  ]
+}

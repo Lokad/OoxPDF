@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
@@ -119,23 +118,21 @@ internal static partial class DocxMathLayout
             if (character.Length == 0) { return true; }
             token.ThrowIfCancellationRequested();
             int point = Rune.GetRuneAt(character, 0).Value;
-            ushort glyph = font.MapCodePoint(point);
-            if (delimiter.GrowValue != false)
-            {
-                if (!font.TryGetNearestMathVerticalVariant(glyph, height / scale, token, out var variant)) { return false; }
-                glyph = variant.Glyph;
-            }
-            if (glyph == 0 || !font.TryGetGlyphBounds(glyph, out var bounds) || !resource.Font.TryGetEncodedCid(glyph, out ushort cid))
-            { return false; }
-            double baseline = axis - (bounds.YMax + bounds.YMin) / 2d * scale;
-            double glyphAdvance = font.GetAdvanceWidth(glyph) * scale;
-            delimiterHeight = Math.Max(delimiterHeight, (bounds.YMax - bounds.YMin) * scale);
-            OoxConversionBudget.Current?.ChargeSceneNodes(1);
-            glyphs.Add(new(point, point, resource, cid.ToString("X4", CultureInfo.InvariantCulture), glyphSize,
-                advance, baseline, glyphAdvance, color) { OriginalGlyph = glyph, ControlOwner = delimiter });
-            width = Math.Max(width, advance + bounds.XMax * scale);
-            above = Math.Max(above, baseline + bounds.YMax * scale);
-            below = Math.Max(below, -baseline - bounds.YMin * scale);
+            VerticalGlyphShape? shape;
+            bool measured = delimiter.GrowValue == false
+                ? TryMeasureFixedGlyphShape(resource, font.MapCodePoint(point), 0d, out shape)
+                : TryMeasureVerticalGlyphShape(resource, point, height / scale, scale, nearest: true, token, out shape);
+            if (!measured || shape is null) return false;
+            double baseline = axis - (shape.YMax + shape.YMin) / 2d * scale;
+            double glyphAdvance = shape.AdvanceWidth * scale;
+            delimiterHeight = Math.Max(delimiterHeight, (shape.YMax - shape.YMin) * scale);
+            OoxConversionBudget.Current?.ChargeSceneNodes(shape.Parts.Count == 0 ? 1 : shape.Parts.Count);
+            glyphs.Add(new(point, point, resource, shape.EncodedGlyph, glyphSize,
+                advance, baseline, glyphAdvance, color)
+                { OriginalGlyph = shape.Glyph, ControlOwner = delimiter, AssemblyParts = shape.Parts });
+            width = Math.Max(width, advance + shape.XMax * scale);
+            above = Math.Max(above, baseline + shape.YMax * scale);
+            below = Math.Max(below, -baseline - shape.YMin * scale);
             advance += glyphAdvance;
             return true;
         }

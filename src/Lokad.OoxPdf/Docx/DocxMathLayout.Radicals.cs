@@ -43,7 +43,7 @@ internal static partial class DocxMathLayout
         double extra = constants.GetValue(OpenTypeMathConstant.RadicalExtraAscender) * scale;
         double needed = child.AboveBaseline + (child.EnclosureBelowBaseline ?? child.BelowBaseline) + gap + rule;
         if (gap < 0d || rule <= 0d || extra < 0d || !double.IsFinite(needed) ||
-            !TryMeasureRadicalShape(resource, needed / glyphScale, glyphScale, token, out var shape))
+            !TryMeasureVerticalGlyphShape(resource, 0x221A, needed / glyphScale, glyphScale, nearest: false, token, out var shape))
         { fallback = "UnsupportedMathRadicalVariant"; return false; }
         gap += Math.Max(0d, shape.AdvanceHeight * glyphScale - needed) / 2d;
         double baseline = child.AboveBaseline + gap + rule - shape.YMax * glyphScale;

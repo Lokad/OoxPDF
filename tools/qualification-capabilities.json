@@ -6364,5 +6364,33 @@
     "VectorSoftMasksAdmitOnceAndRollbackResourcesTogether",
     "ShadingPatternsSnapshotAndRollbackWithFormResources",
     "PruneScalesAcrossManyResources"
+  ],
+  "docx-delimiter-assemblies": [
+    "MathFontVertical",
+    "MathFontDelimiter",
+    "MathFontFixedDelimiters",
+    "MathFontMixedDelimiter",
+    "MathFontMixedGrowthControls",
+    "MathFontRadical",
+    "DocxMathDelimiter",
+    "DocxNativeFractionDelimiters",
+    "DocxNativeMixedDelimiter",
+    "DocxNativeDelimiter",
+    "DocxNativeFixedDelimiter",
+    "DocxNativeLiteralDelimiter",
+    "DocxNativeRadicals",
+    "DocxInlineCompositionDelimiter",
+    "PortableRenderingDelimiter",
+    "DocxInlineCompositionRadical",
+    "PortableRenderingRadical",
+    "DocxInlineCompositionMixedArgumentSpecification",
+    "PortableRenderingMixedArgumentSpecification",
+    "DocxInlineCompositionStructuredCellSpecification",
+    "PortableRenderingStructuredCellSpecification",
+    "DocxInlineCompositionSkewedCellSpecification",
+    "PortableRenderingSkewedCellSpecification",
+    "DocxInlineCompositionOperatorMatrixSpecification",
+    "PortableRenderingOperatorMatrixSpecification",
+    "PdfActualText"
   ]
 }
