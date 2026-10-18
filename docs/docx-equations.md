@@ -109,7 +109,7 @@ Declared frames add 13 independent Word controls: all 40 math outlines match,
 within 0.05 pt horizontally and 0.18 pt vertically. Small exact rows use the
 existing cell clip. Zero exact height uses natural content height, fixing plain
 cells as well. The visual thresholds remain unchanged and unmet. Unknown,
-negative or unresolved heights, vertical merges, nested/nonparagraph cell
+negative or unresolved heights, unsupported merge owners, nested/nonparagraph cell
 content, fit/vertical text and revisions retain fallback. Fitting inline cell
 equations with plain prose share body wrapping. Multiple fitting inline equations
 and inline pictures now use shared ordered-fragment measurement and placement in
@@ -119,6 +119,10 @@ Source flags stay unchanged, including across bookmarks and run splitting.
 Wider display combinations and
 unfit objects retain fallback. Painted math-bearing rows are atomic, with wider fragmentation still
 unqualified.
+Explicit vertical-merge restart cells now retain supported mathematics. Preparation
+uses the original owning paragraph; continuation/unknown owners keep their existing
+fallback. Fraction controls preserve every glyph and relative one-point geometry,
+with absolute cell-margin and following-paragraph spacing residuals still recorded.
 Ordinary default/left tabs now share measured text/math/image advances across
 these containers. Fitting right/center tab fields also measure their complete
 text/math advance. Decimal tabs, leaders and wrapping/out-of-frame aligned fields

@@ -77,7 +77,7 @@ and minimum frames add 13 Word controls and 40 matching math outlines, within
 0.05 pt X / 0.18 pt Y. Small exact frames retain their authored clipping; zero
 exact height uses the natural content frame for both math and plain cells.
 Visual gates remain explicit needs-review. Unknown, negative or unresolved heights,
-vertical merges, nested cell content, fit text, vertical text and revisions keep
+unsupported merge owners, nested cell content, fit text, vertical text and revisions keep
 fallback. One fitting inline equation in plain cell prose reuses the body source-
 boundary wrapper and complete box; following prose can wrap. Six Word controls
 improve, with 22/22 matching outlines and residuals below 0.064 pt X / 0.352 pt Y.
@@ -87,6 +87,10 @@ layout and full-size fraction children while retaining its source inline flag.
 Eight Word controls improve with 30/30 matching outlines, within 0.155 pt X /
 0.340 pt Y; existing visual thresholds remain explicit.
 Math-bearing rows remain atomic; oversized-row and wider pagination are unqualified.
+Vertical-merge restart cells retain supported equations through their original
+source owner. Bounded fraction controls preserve all glyphs and one-point math
+geometry relative to cell prose. Absolute cell margins and following-paragraph
+spacing remain approximate; continuation ownership and placement guards remain.
 Standalone equations in plain direct header/footer paragraphs share prepared
 boxes, static height/body-frame ownership and footer block translation. Eight
 Word controls improve with 28/28 matching outlines and residuals within 0.155 pt X /
