@@ -1,5 +1,35 @@
 # Composed-document reliability checkpoint
 
+C207 closes the retained portable note/footer overlap through a shared metric
+family rule. The resolved face requests typographic metrics, but minimum static
+baselines subtracted its much larger Windows descender. Use the existing provider
+preference and complete finite typographic height/inset to derive descent, keeping
+the Windows fallback. Text and image planning share it. The measured occupied
+minimum box now also supplies footer admission and maps once for painting.
+Zero/exact/unknown/incomplete-metric and unmapped-frame fallbacks remain. No font
+name, numeric fitted offset or document-specific qualification.
+
+Two exact public controls change only the declared face to an Office-installed
+face requesting typographic metrics. Four Word exports run once. Their former
+13-18 pt errors fall within 0.458 pt for static baselines/0.14 pt for body origins;
+all four unchanged one-point groups pass. The portable note/footer baseline gap
+increases from 5.134 to 17.655 pt. A glyph-bounds regression checks actual prose
+ink separation in both presets and body/empty-tail cases without rewriting authored
+minima; four complete portable pages confirm clearance. Earlier failed portable
+evidence remains. All four new source/Office-word screens pass without deficits
+or unresolved features. All four new foreground/SSIM gates remain failed.
+
+One frozen Release artifact qualifies 39 Windows/25 Ubuntu checks with 14 native
+font skips, one exact invocation/platform and no harness repair. Three new or
+strengthened observers fail C206: Office baselines, glyph clearance and retained
+occupied-frame ownership. All 2,209 prior input pins remain/four added. Twenty
+neighboring PDFs/four compound outputs retain bytes, carrying 24 comparisons and
+42 reviewed pairs with both raster hashes. Four native static bands and four
+portable pages reviewed. Seventeen transferred assets/four smokes match; no root
+build or suite replay. Root792b53c3; typographic-static-minimums-evidence.json.
+C206 CI39115065520 is green on Windows/Ubuntu. Continue long/multiple owned-note
+holdouts on frozen C207 while CI runs.
+
 C206 makes owned footnote tails use the same bottom-anchored container as body
 pages. Removing only the following body paragraph previously raised the dedicated
 note tail 528.115 pt in Final/400.32 pt in review and hid all three review footer
