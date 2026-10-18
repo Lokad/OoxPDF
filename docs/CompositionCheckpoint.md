@@ -1,5 +1,22 @@
 # Composed-document reliability checkpoint
 
+C215 confirms a visible composition defect using frozen C214. Changing only
+three paragraph-spacing attributes from atLeast to exact makes all three
+supported equations disappear in body, cell and header controls. Both presets
+succeed with an unsupported/ignored diagnostic and retain prose. Eight outcomes
+lose12 math glyphs each. A composed report with one48pt exact paragraph loses
+four of32 glyphs in both presets. Fonts, sizes and source formulas are unchanged.
+
+Ten new Word exports are cached once with source/view/PDF/log pins. Word keeps
+all formulas:72pt slots fit, while12pt slots allow tall ink to overlap neighbors.
+This is paragraph line ownership, distinct from previously qualified exact-row
+clipping. A provisional shared fixed-slot prototype restores104 missing glyphs;
+eight ordinary controls have maximum independent mathX0.546pt/Y0.096pt. No
+font/size/document-shape fitting or threshold relaxation. C216 must qualify the
+final artifact and preserve the held-out report's scaled composition.
+Evidence: exact-line-math-composition-review.json. C214 CI39126058981 is green
+on both platforms, including broader/package checks.
+
 C214 removes the confirmed full-TTC copy before selected-face extraction.
 The shared source stays read-only; extraction creates the privately owned SFNT
 directly. Standalone fonts retain defensive copies and all parsers/subsetters
