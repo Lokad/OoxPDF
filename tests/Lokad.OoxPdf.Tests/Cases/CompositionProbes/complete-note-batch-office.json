@@ -1,0 +1,69 @@
+{
+  "Scope": "Four independent Word Final controls exported once before exact-byte promotion; no repeat exports.",
+  "Rows": [
+    {
+      "Id": "compound-automatic-note-after12",
+      "Input": "CompositionProbes/compound-automatic-note-after12.docx",
+      "InputSha256": "02F295FB2EE9069848A44733BFF36FA3C3A94C5FEE412D898E08F427C6A49542",
+      "ReferencePdfSha256": "3E1AD7F66C77E5036D8D27A036AB212085BA826E7A2869C0CB31CB3F4DE2638A",
+      "Pages": 2,
+      "MarkerText": "Review conclusion",
+      "MarkerY": 107.78,
+      "Notes": [
+        {
+          "Text": "All quantities",
+          "Y": 74.904
+        }
+      ]
+    },
+    {
+      "Id": "plain-automatic-note-after6",
+      "Input": "CompositionProbes/plain-automatic-note-after6.docx",
+      "InputSha256": "8609014F9A4BDB15B8F09EB3EC1102FC2107655BC181191D17E3EB11CB1467FC",
+      "ReferencePdfSha256": "1FAE6A4959E65EE53E622F937C900F733DA8A3B84214CF784BE1CC0F9BAB8D14",
+      "Pages": 1,
+      "MarkerText": "Public conclusion",
+      "MarkerY": 115.22,
+      "Notes": [
+        {
+          "Text": "All quantities",
+          "Y": 80.88
+        }
+      ]
+    },
+    {
+      "Id": "plain-automatic-note-after12",
+      "Input": "CompositionProbes/plain-automatic-note-after12.docx",
+      "InputSha256": "36C6279DB4D5DC8035A56A15DCCC6A1C903A9779B124DFCF7D5737F6731AB366",
+      "ReferencePdfSha256": "69CBCC1BFC654CD7F5F7A648E4DAEBD181EE578F790FB17F2249DF9FB59B0800",
+      "Pages": 1,
+      "MarkerText": "Public conclusion",
+      "MarkerY": 115.22,
+      "Notes": [
+        {
+          "Text": "All quantities",
+          "Y": 82.32
+        }
+      ]
+    },
+    {
+      "Id": "plain-automatic-batch-after12",
+      "Input": "CompositionProbes/plain-automatic-batch-after12.docx",
+      "InputSha256": "2986F0A186FBFA3CC557F3980244F06FF045E5C4EA17A959A2C3C4AECA52BB51",
+      "ReferencePdfSha256": "383BBA2C1143C078C42C27A418E44C62F6B915CF5179E0FD5C17FE93F380FA82",
+      "Pages": 1,
+      "MarkerText": "Public conclusion",
+      "MarkerY": 134.66,
+      "Notes": [
+        {
+          "Text": "All quantities",
+          "Y": 101.78
+        },
+        {
+          "Text": "Public second note",
+          "Y": 82.32
+        }
+      ]
+    }
+  ]
+}

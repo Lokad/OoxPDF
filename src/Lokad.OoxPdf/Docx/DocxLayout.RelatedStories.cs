@@ -661,6 +661,25 @@ internal sealed partial class DocxLayoutEngine
         return double.IsFinite(reserve);
     }
 
+    private static void FitCompleteFootnoteTrailingSpacing(List<DocxReferencedRelatedStoryLayout> notes, double capacity)
+    {
+        if (notes.Count == 0) return;
+        DocxReferencedRelatedStoryLayout final = notes[^1];
+        DocxTextLineLayout line = final.StoryLayout.TextLines.Single();
+        double after = Math.Max(0d, line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d);
+        double trim = Math.Min(after, Math.Max(0d, notes.Sum(note => note.StoryLayout.ContentHeight) - capacity));
+        if (trim <= 0d) return;
+        // Placement consumes the same optional final space as admission. Keep
+        // canonical source/layout records intact; only this page's take changes.
+        // Otherwise the plain-frame slicer can defer an already admitted line
+        // merely because its full trailing paragraph space does not fit.
+        notes[^1] = final with { StoryLayout = final.StoryLayout with
+        {
+            TextLines = [line with { ParagraphAfterSpacing = after - trim }],
+            ContentHeight = final.StoryLayout.ContentHeight - trim
+        }};
+    }
+
     private static bool TrySharedFootnoteFrameReserve(IEnumerable<InFlightRelatedStory> notes,
         DocxLayoutPage frame, IDocxTextMeasurer? measurer, CancellationToken cancellationToken, out double reserve)
     {

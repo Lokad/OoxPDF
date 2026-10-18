@@ -636,12 +636,16 @@ internal sealed partial class DocxLayoutEngine
 
         double FootnoteRemainderTotal()
         {
+            // Complete source owners already define their minimum shared head.
+            // A selected static frame supplies its origin, not a second reserve.
+            if (completeFootnoteAdmission is not null &&
+                TryCompleteFootnoteReserve(inFlightNotes.Values, out double ownedReserve,
+                    excludeFinalAfterSpacing: true)) return ownedReserve;
             if (GetCurrentPlainFootnoteFooterFrame() is { } frame &&
                 TrySharedFootnoteFrameReserve(inFlightNotes.Values, frame with { Items = currentItems.ToArray() },
                     separatorMeasurerForNotes, cancellationToken, out double sharedReserve)) return sharedReserve;
-            if ((completeFootnoteAdmission is not null || useCompleteFootnoteReserve) &&
-                TryCompleteFootnoteReserve(inFlightNotes.Values, out double completeReserve,
-                    excludeFinalAfterSpacing: completeFootnoteAdmission is not null))
+            if (useCompleteFootnoteReserve &&
+                TryCompleteFootnoteReserve(inFlightNotes.Values, out double completeReserve))
             {
                 return completeReserve;
             }
@@ -916,6 +920,12 @@ internal sealed partial class DocxLayoutEngine
             Func<DocxLayoutPage, int, int, double>? footnoteFrameBottom =
                 CanUsePlainFootnoteStaticFrame(document, templatePage, separatorMeasurer, paragraphSpacingScale, cancellationToken)
                     ? (p, _, _) => ResolveFooterKeepOut(p, templatePageNumber, templatePageNumber) : null;
+            if (completeFootnoteAdmission is not null)
+            {
+                double bottom = footnoteFrameBottom?.Invoke(templatePage, templatePageNumber, templatePageNumber) ?? templatePage.MarginBottom;
+                FitCompleteFootnoteTrailingSpacing(sharedBatch, cursorY - Math.Max(0d, pendingSpacingAfter) -
+                    completeFootnoteAdmission.SeparatorHeight - bottom);
+            }
             if (pageFootnoteStories.Count == 0 && templatePage.Items.Count == 0)
             {
                 DocxLayoutPage slicePage = headScratchPages[0];

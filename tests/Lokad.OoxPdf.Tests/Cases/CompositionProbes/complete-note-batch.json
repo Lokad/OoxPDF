@@ -1,0 +1,62 @@
+[
+  {
+    "Id": "compound-automatic-note-after12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/compound-automatic-note-after12.docx",
+    "Sha256": "02F295FB2EE9069848A44733BFF36FA3C3A94C5FEE412D898E08F427C6A49542",
+    "SourceSha256": "45328A7808432F2C18FF80E0F46547C6841C807B3D27DD89713368196033E8F4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": [
+      "Review conclusion:",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "PlainFrame": false,
+    "NoteCount": 1,
+    "FinalNoteAfterPoints": 12
+  },
+  {
+    "Id": "plain-automatic-note-after6",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/plain-automatic-note-after6.docx",
+    "Sha256": "8609014F9A4BDB15B8F09EB3EC1102FC2107655BC181191D17E3EB11CB1467FC",
+    "SourceSha256": "D7B869C53D801B3C861513B0489A5B45DF646751C4938710D1D8408CBBF4614E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public conclusion.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "PlainFrame": true,
+    "NoteCount": 1,
+    "FinalNoteAfterPoints": 6
+  },
+  {
+    "Id": "plain-automatic-note-after12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/plain-automatic-note-after12.docx",
+    "Sha256": "36C6279DB4D5DC8035A56A15DCCC6A1C903A9779B124DFCF7D5737F6731AB366",
+    "SourceSha256": "D7B869C53D801B3C861513B0489A5B45DF646751C4938710D1D8408CBBF4614E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public conclusion.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "PlainFrame": true,
+    "NoteCount": 1,
+    "FinalNoteAfterPoints": 12
+  },
+  {
+    "Id": "plain-automatic-batch-after12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/plain-automatic-batch-after12.docx",
+    "Sha256": "2986F0A186FBFA3CC557F3980244F06FF045E5C4EA17A959A2C3C4AECA52BB51",
+    "SourceSha256": "D7B869C53D801B3C861513B0489A5B45DF646751C4938710D1D8408CBBF4614E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public conclusion.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "PlainFrame": true,
+    "NoteCount": 2,
+    "FinalNoteAfterPoints": 12
+  }
+]
