@@ -1,5 +1,35 @@
 # Composed-document reliability checkpoint
 
+C214 removes the confirmed full-TTC copy before selected-face extraction.
+The shared source stays read-only; extraction creates the privately owned SFNT
+directly. Standalone fonts retain defensive copies and all parsers/subsetters
+retain independent buffers. Shared directory bounds, cache retention, fallbacks
+and cancellation remain; table copies now observe cancellation. No parsed-font
+cache, additional quota, dependency or unsafe/native library code.
+
+One frozen Release artifact qualifies33 Windows/31 Ubuntu checks, two native
+skips, one exact invocation/platform and no repair. All2,218 inputs retain pins.
+Three new portable observers cover sliced sources, concurrent independent
+ownership, byte-exact faces, unused collection padding, malformed collection
+extents and cancellation. The allocation observer fails C212 at4,204,672bytes.
+The original Ubuntu invocation used an unsupported JSON-report option: retain
+its observed complete31pass/0fail/2skip stdout result without suite replay.
+Builds pass; the unchanged test file retains two existing nullable warnings.
+
+Every one of eight fixed DOCX warm medians saves1,792,688bytes/conversion:
+5.53-7.60percent, matching the avoided1,792,664-byte native TTC plus array
+header. All eight whole/staged PDFs and715,743 pair entries/fingerprints across
+three native faces retain identity. Timing stays observational; no speedup or
+live-heap ceiling is claimed and preparation diagnostics remain non-additive.
+Both fixed PPTX PDFs and passing visual gates retain identity. Fourteen reviewed
+DOCX pairs/two deck pairs carry with both PNG hashes and comparison reuse chains;
+all eight DOCX strict failures remain. No new Office export or raster.
+
+Root06e8183a; collection-font-ownership-evidence.json. Transfer verifies17 assets
+and four smoke PDFs without root build, suite or full corpus replay. C212
+CI39124225988 is green. Push the bounded ownership batch and resume rendering
+composition work while CI runs; no additional speculative font cache.
+
 C213 records the four fixed mixed DOCX sources in Final/preserved and
 AllMarkup/Word-compatible without rebuilding the library. One process-cold
 conversion and three warm samples per input/preset use the existing isolated

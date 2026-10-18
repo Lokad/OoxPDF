@@ -1,5 +1,28 @@
 # Measured operating envelope
 
+## Collection-face ownership, 2026-10-18
+
+Qualified source `94454cae` (root `06e8183a`) extracts an owned face directly from
+read-only collection memory. Standalone font sources still receive defensive
+copies; bounded source caches and all parsing/work limits remain. No shared
+parsed-font cache or unsafe/native library code.
+
+The same eight C213 mixed-document outcomes, options and isolated three-sample
+warm methodology save exactly1,792,688bytes/conversion (decimal1.793MB), or
+5.53-7.60percent. This matches one avoided1,792,664-byte `cambria.ttc` copy plus
+its array header. Final medians now allocate21.811-27.272MB; AllMarkup medians
+25.059-30.617MB. All eight whole/staged PDF identities and three prepared native
+faces'715,743 kerning pairs/fingerprints remain unchanged. Timings are noisy
+and do not establish a speedup; calling-thread allocation is not a live-heap
+ceiling. Inclusive preparation diagnostics remain non-additive.
+
+One frozen Release artifact qualifies33 Windows/31 Ubuntu checks, two native
+skips. The synthetic4MiB padded-collection allocation observer fails the prior
+library; concurrent ownership, extents, cancellation and rendering neighbors
+qualify. Existing Office comparisons and failed DOCX thresholds carry by PDF
+identity; both fixed decks retain passing gates. No new Office export or raster.
+Evidence: `artifacts/composition-c1/collection-font-ownership-evidence.json`.
+
 ## Fixed mixed-document baseline, 2026-10-18
 
 The existing frozen C212 library (`89fe008b`, root `a2608a43`) renders the four
