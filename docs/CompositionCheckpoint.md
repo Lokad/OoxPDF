@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+C166 preserves the established body baseline origin after a fitting projected
+Review table. Resetting it to the next cell's font metrics caused a1.360pt overlap
+between separate tables and displaced following prose. Return the nominal origin
+only after complete projection and retain it only in the same page/column; page/
+column transitions and unprojected fallbacks keep resets. No fitted/font/size rule,
+new persistent state or additional measurement pass is added.
+
+53 Windows and40 Ubuntu checks pass, with13 native skips. Both new independent
+Word/physical-flow observers fail on C165. Four direct/paragraph-separated controls
+retain Word's gaps within0.012pt and following baseline within0.330pt, meeting the
+existing0.5pt gates.48 metric/scale/separator combinations cover heading, first-cell,
+second-cell and following-body transitions. All2,082 prior public inputs retain
+hashes; four new control/gold inputs are added.
+
+One committed Release artifact measures four controls plus the14-outcome/eight-
+source/24-page portfolio once. Five changed Review PDFs improve average image
+error, nine PDFs retain bytes and14 per-page text/font/size inventories match.
+Twelve portfolio DOCX strict failures/four raw extraction flags remain; both decks
+pass. All four new control visual gates remain failed. Thirteen new page pairs
+were reviewed and15 prior pairs carry by PDF identity; no new visible content
+omission or clipping is demonstrated. Width/font/balloon and absolute geometry
+residuals remain unaccepted.17 assets/four exact smokes transfer without root
+build, suite or corpus replay. Root14a8a836; evidence
+artifacts/composition-c1/table-frame-chain-evidence.json. C165 CI39081023994 is
+green on both platforms. Next, investigate the retained matrix cell-frame residual
+through independent existing controls before accepting another layout correction.
+
 C165 adds one realistic development report combining qualified nested fractions,
 an image and internal navigation with body tables, numbering, a footnote, comments
 and repeated header/footer content. It derives only from the original development
