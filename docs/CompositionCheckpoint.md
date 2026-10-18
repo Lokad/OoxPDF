@@ -1,5 +1,39 @@
 # Composed-document reliability checkpoint
 
+C170 adds a development specification combining qualified radical/matrix/sum/
+product formulas with tables, numbering, image, links, footnote, comments and
+static stories. It derives only from existing public development inputs. Two
+new Windows/one Ubuntu content observers pass, one native skip; C169's48 Windows/
+30 Ubuntu/18 skips carry by source/library identity.14 runtime assets/2,096 old
+inputs match; three new inputs/test code only. Bookmark/run-splitting transformations
+preserve mathematical origins, per-page character inventories and body formula/
+image/URI/note-link counts. Unit assertions do not freeze wrong candidate pagination.
+
+The complete document is not rendering-accepted: Word uses three pages in both
+presets, candidate two. Five body formulas survive, but Word paints43 mathematical
+glyphs versus38 because the candidate lacks the third header equation. The final
+note-marker paragraph/note and Review balloon stay on candidate page2 rather than
+Word page3. Both raw audits retain missing header/footer prose and one a+b=c
+repetition, plus complex-math flags. Both strict gates retain Pagination and their
+other failed components. Six reference-page rows were reviewed against four
+present candidate pages, explicitly showing both absent page3s. No clipping is
+demonstrated on present pages; body-source conservation is not an overall pass.
+
+Independent Final counterfactuals remove only the footnote reference or selected
+header/footer references; both engines then use two pages. First two-page math/
+table/prose flow remains close. Cause is unverified; investigate shared note/static
+admission before another typography refinement, with no fitted or document-specific
+offset. Evidence operator-matrix-specification-admission-probe.json remains ignored.
+
+The finite milestone contains16 outcomes/nine sources/28 candidate pages versus
+30 Word pages. Fourteen prior PDFs/24 reviewed pairs retain identities, all16
+comparisons reuse, fourteen DOCX gates fail and both decks pass. Four prior raw
+audit flags and two new failures remain. Production stays C169; only new observers
+run.17 assets/four smokes transfer without production/root build, old suite or
+corpus replay. Root735a6502; evidence
+artifacts/composition-c1/operator-matrix-specification-evidence.json. C168
+CI39083109530 is green; C16939083972564 is running while admission work continues.
+
 C169 shares bounded container/matrix source discovery between radicals and
 n-ary operators. C168 loses all six sum/product/inner-control formulas while
 Word paints seven glyphs each. The shared helper preserves ordered outer/matrix
