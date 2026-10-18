@@ -5,6 +5,40 @@ specific expansion, retention and output boundaries. Host capacity also includes
 runtime/JIT, resolver ownership, concurrent conversions, input/output owners and
 headroom. Office and PDFium validation processes are outside library measurements.
 
+## Immutable kerning maps, 2026-10-18
+
+Qualified library source `cefbdf99` (root `fbf76050`) keeps kerning pairs in
+private immutable key/value arrays. Stable fixed-width ordering preserves signed
+advances, source last-wins values and zero-record policy. Existing source-pair,
+coverage and work bounds remain; all added loops observe cancellation. No lazy
+shared cache, additional quota or unsafe/native code is introduced.
+
+| Compound source | Preset | Previous warm allocation (MB) | Current warm allocation (MB) | Reduction |
+|---|---|---:|---:|---:|
+| fixed report (2 pages) | Final | 31.645 | 25.915 | 18.11% |
+| fixed report (2 pages) | AllMarkup | 35.363 | 29.212 | 17.39% |
+| skewed-cell specification (3 pages) | Final | 36.225 | 30.494 | 15.82% |
+| skewed-cell specification (3 pages) | AllMarkup | 40.014 | 33.863 | 15.37% |
+
+MB is decimal. The existing probe reuses qualified libraries without rebuilding
+them: Windows/.NET10/default resolver (466 discovered faces), one isolated process
+per source/preset, file output, one cold/warmup and two measured warm conversions.
+Calling-thread allocation falls5.731-6.151MB per conversion. Whole/staged PDFs and
+715,743 pair entries across three native faces retain exact fingerprints.
+Standalone map allocation drops from4.85-5.76MB to3.19-3.80MB per face. Measured map
+construction times remain comparable; these samples do not establish a timing
+speedup or live-heap ceiling. Diagnostic stages overlap and are not additive.
+
+An earlier comparison-sort prototype was rejected: lower allocation accompanied
+4-6x slower map construction. Its source and measurements remain retained.
+66 Windows/56 Ubuntu checks qualify with10 native skips. Two inherited Linux
+Office-font assumptions reproduce on the prior library; only native-font
+preconditions change, preserving the numerical assertions. Library/14 non-test
+assets remain identical and only those two checks rerun. All30 selected PDFs
+retain identity and existing Office comparisons/failed visual gates carry.
+Evidence: `artifacts/composition-c1/kerning-storage-allocation-comparison.json`
+and `kerning-storage-evidence.json`. Earlier figures below remain historical.
+
 ## Conversion-owned font preparation, 2026-10-18
 
 Qualified source `83a86cf3` (root `9d41fdae`) reuses parsed fonts only within one
@@ -79,10 +113,10 @@ Measured frozen library `0fa503ac` (version 0.1.5), SHA-256 `5549559DD980AE5152C
 | letter | 44.68 | 49.21 | 60.7 | 82.9 |
 | specification | 49.76 | 54.34 | 59.7 | 76.4 |
 | technical-memo | 46.03 | 50.48 | 44.2 | 66.8 |
-| briefing-deck | 10.64 | — | 14.4 | — |
-| held-out-deck | 28.91 | — | 28.7 | — |
+| briefing-deck | 10.64 | â€” | 14.4 | â€” |
+| held-out-deck | 28.91 | â€” | 28.7 | â€” |
 
-MB is decimal. Every repeated output is stable and matches the accepted CLI PDF. Warm stage probes also reproduce the same complete PDF in all ten mode outcomes. For DOCX, warm rendering allocates 43.5–47.9 MB in Final and 47.9–52.4 MB in review mode; package opening uses about 0.15 MB, reading 0.60–0.94 MB and serialization 0.47–0.84 MB. The render phase includes font preparation, layout and painting. It does not identify repeated layout as the dominant cause.
+MB is decimal. Every repeated output is stable and matches the accepted CLI PDF. Warm stage probes also reproduce the same complete PDF in all ten mode outcomes. For DOCX, warm rendering allocates 43.5â€“47.9 MB in Final and 47.9â€“52.4 MB in review mode; package opening uses about 0.15 MB, reading 0.60â€“0.94 MB and serialization 0.47â€“0.84 MB. The render phase includes font preparation, layout and painting. It does not identify repeated layout as the dominant cause.
 
 The previous `0aeff058` baseline remains retained; these are updated workload observations, not an optimization comparison. Warm allocation ranges remain similar and three timing samples are too few to claim a speedup. The measurement reused the qualified library without a root rebuild.
 
@@ -102,9 +136,9 @@ process caches. Diagnostic stages overlap and must not be added together.
 
 | Diagnostic stage | Calling-thread allocation (decimal MB) |
 |---|---:|
-| Initial font-family plan | 0.058–0.079 |
-| Initial complete font resources | 39.85–40.43 |
-| Coordinated font/layout preparation plus inspection snapshot | 43.03–46.96 |
+| Initial font-family plan | 0.058â€“0.079 |
+| Initial complete font resources | 39.85â€“40.43 |
+| Coordinated font/layout preparation plus inspection snapshot | 43.03â€“46.96 |
 | Reparse the three prepared embedded SFNT faces | 37.28 |
 | Their isolated legacy kern/GPOS pair materialization | 32.32 |
 
@@ -139,13 +173,13 @@ No cache or production quota was added.
 | letter | 44.70 / 49.23 | 28.75 / 32.34 |
 | specification | 49.79 / 54.35 | 33.83 / 37.36 |
 | technical memo | 46.06 / 50.50 | 30.10 / 33.55 |
-| briefing deck | 10.64 / — | 6.72 / — |
-| held-out deck | 28.91 / — | 16.89 / — |
+| briefing deck | 10.64 / â€” | 6.72 / â€” |
+| held-out deck | 28.91 / â€” | 16.89 / â€” |
 
 These calling-thread allocation measurements use the attribution baseline above
 and the same ten inputs/modes, Windows/.NET/default resolver and one cold sample,
-one warmup and three warm samples. DOCX allocation falls 31–36%, and deck
-allocation 37–42%. All ten whole/staged PDFs retain their accepted hashes; these
+one warmup and three warm samples. DOCX allocation falls 31â€“36%, and deck
+allocation 37â€“42%. All ten whole/staged PDFs retain their accepted hashes; these
 outputs also supply corpus identity without another CLI conversion sweep.
 
 A separate matched sustained-warm report control (sixteen warmups, seven samples)
@@ -181,14 +215,14 @@ accepted fixed/complete-document PDFs. Office comparisons are not rerun.
 | letter | 28.92 / 32.67 | 30.5 / 46.5 |
 | specification | 34.00 / 37.64 | 45.4 / 61.9 |
 | technical memo | 30.28 / 33.78 | 46.2 / 46.6 |
-| briefing deck | 6.72 / — | 14.5 / — |
-| held-out deck | 16.89 / — | 14.3 / — |
+| briefing deck | 6.72 / â€” | 14.5 / â€” |
+| held-out deck | 16.89 / â€” | 14.3 / â€” |
 | complete static-cell report | 37.11 / 41.25 | 76.4 / 92.8 |
 
 The same Windows/.NET/default-resolver protocol measures one cold conversion,
 one warmup and three warm samples per input, sequentially in one process per mode.
 Later inputs reuse static caches. Initial DOCX font-resource preparation allocates
-23.90–25.67MB; inclusive coordinated layout/snapshot allocates 27.32–34.40MB.
+23.90â€“25.67MB; inclusive coordinated layout/snapshot allocates 27.32â€“34.40MB.
 These diagnostic stages overlap. They do not isolate coordinator repeats, which
 remain unproven as the main cost. The first report still reflects tiered warmup;
 three samples establish neither a speedup nor a timing regression. No production
@@ -224,9 +258,9 @@ All ranges below include every warm sample, using MiB = 1048576 bytes.
 
 | File-output pages | Warm calling-thread allocation | Warm managed heap peak | Post-GC retained delta | Warm wall time |
 |---:|---:|---:|---:|---:|
-| 400 | 15.96–15.99 MiB | 13.78–16.91 MiB | 442–454 KiB | 20.9–31.6 ms |
-| 800 | 30.69–30.72 MiB | 14.31–18.16 MiB | 860–872 KiB | 46.8–73.4 ms |
-| 1600 | 60.18–60.33 MiB | 18.97–21.91 MiB | 1697–1709 KiB | 95.0–165.9 ms |
+| 400 | 15.96â€“15.99 MiB | 13.78â€“16.91 MiB | 442â€“454 KiB | 20.9â€“31.6 ms |
+| 800 | 30.69â€“30.72 MiB | 14.31â€“18.16 MiB | 860â€“872 KiB | 46.8â€“73.4 ms |
+| 1600 | 60.18â€“60.33 MiB | 18.97â€“21.91 MiB | 1697â€“1709 KiB | 95.0â€“165.9 ms |
 
 Cold calling-thread allocation was 16.88 / 31.63 / 61.26 MiB respectively;
 cold managed heap peaks ranged from 16.66 to 21.76 MiB. These cold costs use
@@ -235,9 +269,9 @@ that included discovery of hundreds of installed faces.
 
 | 1600-page output mode | Warm calling-thread allocation | Warm managed heap peak | Sampled process private / working set |
 |---|---:|---:|---:|
-| File | 60.18–60.33 MiB | 18.97–21.91 MiB | 116.33–122.79 / 92.43–102.47 MiB |
-| Forward-only file-backed stream | 60.30–60.33 MiB | 19.10–21.83 MiB | 116.07–123.18 / 93.57–102.96 MiB |
-| Caller memory buffer | 62.42–62.57 MiB | 19.21–21.77 MiB | 116.12–133.27 / 93.58–104.05 MiB |
+| File | 60.18â€“60.33 MiB | 18.97â€“21.91 MiB | 116.33â€“122.79 / 92.43â€“102.47 MiB |
+| Forward-only file-backed stream | 60.30â€“60.33 MiB | 19.10â€“21.83 MiB | 116.07â€“123.18 / 93.57â€“102.96 MiB |
+| Caller memory buffer | 62.42â€“62.57 MiB | 19.21â€“21.77 MiB | 116.12â€“133.27 / 93.58â€“104.05 MiB |
 
 Buffered output adds approximately 2.2 MiB of allocated volume on this workload.
 Forward-only output rejects seek, position and length access and checks that
@@ -246,9 +280,9 @@ file output uses the file API and its publication path.
 
 | Parallel conversions | Batch managed heap peak | Sampled private / working set | Batch wall time |
 |---:|---:|---:|---:|
-| 1 | 19.62–20.93 MiB | 129.71–131.59 / 91.05–94.88 MiB | 92.4–101.9 ms |
-| 2 | 24.93–27.71 MiB | 146.75–147.79 / 99.90–102.49 MiB | 115.8–135.5 ms |
-| 4 | 38.80–41.50 MiB | 198.21–206.23 / 131.04–137.01 MiB | 189.3–208.6 ms |
+| 1 | 19.62â€“20.93 MiB | 129.71â€“131.59 / 91.05â€“94.88 MiB | 92.4â€“101.9 ms |
+| 2 | 24.93â€“27.71 MiB | 146.75â€“147.79 / 99.90â€“102.49 MiB | 115.8â€“135.5 ms |
+| 4 | 38.80â€“41.50 MiB | 198.21â€“206.23 / 131.04â€“137.01 MiB | 189.3â€“208.6 ms |
 
 Parallel wall times include task setup and output verification; batch peaks cover
 the whole batch, including those owners. Parallelism increases throughput here
@@ -293,35 +327,35 @@ retained deltas use KiB, and times use milliseconds.
 
 | GC | File-output pages | Calling-thread allocation | Managed heap peak | Post-GC retained delta | Wall time |
 |---|---:|---:|---:|---:|---:|
-| workstation | 400 | 16.15–16.15 | 13.85–16.58 | 434–450 | 20.8–31.6 |
-| workstation | 800 | 31.01–31.09 | 15.16–18.11 | 860–872 | 41.2–84.1 |
-| workstation | 1600 | 60.93–61.09 | 19.74–22.00 | 1689–1709 | 90.5–166.2 |
-| server | 400 | 16.15–16.17 | 3.95–17.30 | 436–452 | 26.2–37.6 |
-| server | 800 | 31.07–31.09 | 8.53–31.97 | 862–874 | 47.4–81.5 |
-| server | 1600 | 60.93–61.07 | 14.92–63.28 | 1699–1711 | 85.7–181.3 |
+| workstation | 400 | 16.15â€“16.15 | 13.85â€“16.58 | 434â€“450 | 20.8â€“31.6 |
+| workstation | 800 | 31.01â€“31.09 | 15.16â€“18.11 | 860â€“872 | 41.2â€“84.1 |
+| workstation | 1600 | 60.93â€“61.09 | 19.74â€“22.00 | 1689â€“1709 | 90.5â€“166.2 |
+| server | 400 | 16.15â€“16.17 | 3.95â€“17.30 | 436â€“452 | 26.2â€“37.6 |
+| server | 800 | 31.07â€“31.09 | 8.53â€“31.97 | 862â€“874 | 47.4â€“81.5 |
+| server | 1600 | 60.93â€“61.07 | 14.92â€“63.28 | 1699â€“1711 | 85.7â€“181.3 |
 
 The output-mode and concurrency tables use MiB for all memory columns.
 At 1600 pages, sampled process memory also differs by GC profile:
 
 | GC | Output mode | Calling-thread allocation | Managed heap peak | Private memory | Working set |
 |---|---|---:|---:|---:|---:|
-| workstation | file | 60.93–61.09 | 19.74–22.00 | 116.39–124.23 | 92.20–103.05 |
-| workstation | buffer | 63.16–63.31 | 19.01–21.79 | 116.53–134.30 | 93.91–106.14 |
-| workstation | forward-only | 60.93–61.09 | 19.38–21.94 | 116.46–124.03 | 94.11–106.08 |
-| server | file | 60.93–61.07 | 14.92–63.28 | 161.49–459.64 | 84.14–177.17 |
-| server | buffer | 63.16–63.31 | 12.44–64.76 | 161.55–456.75 | 83.45–173.16 |
-| server | forward-only | 60.93–61.10 | 13.41–61.76 | 161.07–419.06 | 82.78–174.52 |
+| workstation | file | 60.93â€“61.09 | 19.74â€“22.00 | 116.39â€“124.23 | 92.20â€“103.05 |
+| workstation | buffer | 63.16â€“63.31 | 19.01â€“21.79 | 116.53â€“134.30 | 93.91â€“106.14 |
+| workstation | forward-only | 60.93â€“61.09 | 19.38â€“21.94 | 116.46â€“124.03 | 94.11â€“106.08 |
+| server | file | 60.93â€“61.07 | 14.92â€“63.28 | 161.49â€“459.64 | 84.14â€“177.17 |
+| server | buffer | 63.16â€“63.31 | 12.44â€“64.76 | 161.55â€“456.75 | 83.45â€“173.16 |
+| server | forward-only | 60.93â€“61.10 | 13.41â€“61.76 | 161.07â€“419.06 | 82.78â€“174.52 |
 
 Each concurrency row covers three warmed 1600-page batches:
 
 | GC | Parallel conversions | Batch heap peak | Private memory | Working set | Batch wall time |
 |---|---:|---:|---:|---:|---:|
-| workstation | 1 | 20.44–21.09 | 130.07–131.88 | 91.17–93.20 | 101.5–103.9 |
-| workstation | 2 | 27.05–28.79 | 146.17–149.52 | 97.02–106.33 | 124.9–136.7 |
-| workstation | 4 | 38.70–42.97 | 211.10–211.98 | 135.19–137.89 | 194.1–206.1 |
-| server | 1 | 17.07–27.07 | 185.32–214.02 | 98.02–101.98 | 96.7–106.5 |
-| server | 2 | 32.02–35.60 | 210.42–210.70 | 109.82–112.11 | 108.9–120.4 |
-| server | 4 | 54.16–60.22 | 272.74–276.04 | 158.39–161.79 | 164.3–188.0 |
+| workstation | 1 | 20.44â€“21.09 | 130.07â€“131.88 | 91.17â€“93.20 | 101.5â€“103.9 |
+| workstation | 2 | 27.05â€“28.79 | 146.17â€“149.52 | 97.02â€“106.33 | 124.9â€“136.7 |
+| workstation | 4 | 38.70â€“42.97 | 211.10â€“211.98 | 135.19â€“137.89 | 194.1â€“206.1 |
+| server | 1 | 17.07â€“27.07 | 185.32â€“214.02 | 98.02â€“101.98 | 96.7â€“106.5 |
+| server | 2 | 32.02â€“35.60 | 210.42â€“210.70 | 109.82â€“112.11 | 108.9â€“120.4 |
+| server | 4 | 54.16â€“60.22 | 272.74â€“276.04 | 158.39â€“161.79 | 164.3â€“188.0 |
 
 Allocation volume and retained deltas are similar across these two profiles,
 while server GC has wider sampled heap ranges and higher sampled private memory.
@@ -429,8 +463,8 @@ volumes in MiB, not live heap, process memory or allocation on background thread
 | Briefing deck | 1 | 523.04 | 6.31 |
 | Held-out deck | 1 | 535.39 | 16.02 |
 
-Standalone initial DOCX font-resource preparation allocates 22.79–24.49 MiB;
-coordinated layout plus its inspection snapshot allocates 26.08–33.08 MiB.
+Standalone initial DOCX font-resource preparation allocates 22.79â€“24.49 MiB;
+coordinated layout plus its inspection snapshot allocates 26.08â€“33.08 MiB.
 Those diagnostic stages overlap and must not be added; they do not count layout
 invocations. For the report Final, standalone kerning preparation allocates
 5,755,968 bytes for Calibri regular, 5,763,264 for Calibri bold and 4,848,568 for

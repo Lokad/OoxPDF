@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+C192 reduces measured font allocation with immutable kerning maps. Private
+key/value arrays and stable fixed-width ordering preserve signed advances,
+source last-wins/zero semantics and existing pair/coverage/work bounds. Added
+loops check cancellation; no lazy cache, native/unsafe APIs or quota knobs. A
+comparison-sort prototype was rejected for4-6x slower map construction and remains
+retained. Final map times are comparable in these samples; no speedup claim.
+
+Two fixed compound sources/both presets retain all whole/staged PDF hashes and
+715,743 native face-pair fingerprints. Warm caller allocation falls5.731-6.151MB
+(15.37-18.11%). One existing probe assembly reuses the frozen library; no library
+rebuild. These are calling-thread observations, not live-heap ceilings; independent
+stages overlap and are not added. This is architecture cost, not a corruption
+claim. Public methodology/results are in docs/OperatingEnvelope.md.
+
+66 Windows/56 Ubuntu unique checks qualify with10 native skips. Initial Ubuntu
+has two failures from unguarded native Office font assumptions; both reproduce
+identically on C189. Add only nativeCalibri/Arial preconditions, retaining all
+numerical assertions. Test-only build preserves14 non-test assets/2,179 inputs;
+only those two checks rerun/platform, carrying64 unchanged methods. Initial
+failures remain. New small/large source tables cover signed limits, duplicate/
+zero policy, source ownership and concurrent readers. All30 selected PDFs retain
+C189 bytes;56 reviewed pixel-pair outcomes, independent references, raw audit flags
+and strict visual failures carry.17 assets/four smokes match without root build/
+suite/corpus replay, new Office exports or rasters. Rootfbf76050/harnessb8697218;
+kerning-storage-evidence.json. C189 CI39101904990 is green, including package and
+broader checks. Continue bounded alias-composition review during the next CI run.
+
 C191 records compound allocation cost before further optimization. One existing
 probe build runs against pinned C187/C189 libraries on the fixed report and
 skewed-cell specification, both public presets, isolated processes/file output,
