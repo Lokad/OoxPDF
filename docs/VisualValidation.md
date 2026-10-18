@@ -3619,3 +3619,31 @@ failures prevent freezing. Existing freeze/transfer commands retain ownership of
 asset/input checks and the small transfer smoke; no tests run during build/freeze.
 `TestQualificationBuild.ps1` exercises these guards using a tiny Git repository
 and fake commands, including paths with spaces, without compiling the library.
+
+For reviewed harness corrections, use `JoinQualificationTestReports.ps1 -Manifest
+<json> -OutputPath <fresh-json>`. The command verifies unchanged committed
+production source, runtime assets and public inputs across every declared frozen
+artifact. Only the test DLL, executable and PDB may differ; dependencies and
+runtime configuration remain protected. It retains source pins for failed
+attempts, requires complete exact-method coverage and requires initial failures
+to finish passed. Review the changed test code before joining its reports.
+
+Paths in this manifest are relative to its directory:
+
+```json
+{
+  "Platform": "Windows",
+  "Initial": { "Artifact": "frozen-before", "Report": "before/selection-000.json" },
+  "Repairs": [
+    { "Artifact": "frozen-after", "Report": "repair/selection-000.json" }
+  ],
+  "FinalArtifact": "frozen-after",
+  "ExpectedSelection": "selected-methods.json",
+  "CorrectedMethods": [ "ExactMethodName" ]
+}
+```
+
+`TestQualificationReportJoin.ps1` checks retained provenance and rejection of
+undeclared repairs, dropped methods, unresolved failures, changed inputs/runtime
+and changed production source using small local fixtures. CI runs it on both
+platforms without building or converting documents.
