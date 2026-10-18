@@ -48,5 +48,23 @@
     ],
     "Change": "Only remove the added mixed footer paragraph, restoring the original report footer; all64 note paragraphs and original body/static content remain.",
     "RestoreOriginalFooter": true
+  },
+  {
+    "Id": "two-plain-notes-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/two-plain-notes-report.docx",
+    "Sha256": "6A95182DBFBC624E4200A46490BD58024D8D2ECC29C845E5ECE3034911326074",
+    "SourceSha256": "0FB103F0938ABBB592F86504DCF09363FD739719E15AFB9A0CD374C9711D1C71",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "Inventory availability",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative.",
+      "Second public continuation note.",
+      "Public continuation note line 64: the footer must keep every source paragraph clear."
+    ],
+    "Change": "Split the64 source paragraphs evenly across two normal footnote owners, adding the second body reference and one public intro. Reversal restores every source paragraph and original document tree; all other parts unchanged.",
+    "SplitNoteOwners": true
   }
 ]

@@ -22,6 +22,7 @@ internal static partial class DocxInlineCompositionTests
             string id = row.GetProperty("Id").GetString()!;
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(),
                 Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(NestedMathCasePath(id + ".docx")))));
+            string? additionalNotePrefix = row.TryGetProperty("AdditionalNotePrefix", out var prefix) ? prefix.GetString() : null;
             bool final = row.GetProperty("Mode").GetString() == "final-preserve";
             var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
             foreach (bool transformed in new[] { false, true })
@@ -45,7 +46,8 @@ internal static partial class DocxInlineCompositionTests
                         .Select(group => group.OrderBy(show => show.X).ToArray()).ToArray();
                     string Text((Lokad.OoxPdf.Pdf.PdfEmbeddedFont Font, string Text, double Size, double X, double Y)[] line) => string.Concat(line.Select(show => show.Text));
                     var note = lines.Where(line => Text(line).StartsWith("All quantities", StringComparison.Ordinal) ||
-                        Text(line).StartsWith("Public continuation note line", StringComparison.Ordinal)).ToArray();
+                        Text(line).StartsWith("Public continuation note line", StringComparison.Ordinal) ||
+                        additionalNotePrefix is not null && Text(line).StartsWith(additionalNotePrefix, StringComparison.Ordinal)).ToArray();
                     int priorCount = seen.Count;
                     foreach (Match match in Regex.Matches(string.Join(" ", lines.Select(Text)), @"Public\s+continuation\s+note\s+line\s+(\d\d):"))
                         seen.Add(int.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture));
@@ -61,6 +63,12 @@ internal static partial class DocxInlineCompositionTests
                             "The measured body-to-note boundary clears body prose independently of typography eligibility.");
                     if (resolver is not null) continue;
                     var expected = row.GetProperty("NotePages").EnumerateArray().Single(p => p.GetProperty("Page").GetInt32() == index + 1);
+                    if (expected.TryGetProperty("AdditionalNoteY", out var extraY))
+                    {
+                        var extra = note.Single(line => Text(line).StartsWith(additionalNotePrefix!, StringComparison.Ordinal));
+                        TestAssert.True(Math.Abs(extra[0].Y - extraY.GetDouble()) < 1d,
+                            "The second source note head follows the preceding tail at its independent Word origin.");
+                    }
                     TestAssert.Equal(expected.GetProperty("NumberedParagraphs").GetInt32(), seen.Count - priorCount);
                     TestAssert.True(Math.Abs(note[0][0].Y - expected.GetProperty("FirstNoteY").GetDouble()) < 1d,
                         "The independent first-note baseline and source page membership use the shared physical boundary.");
@@ -69,7 +77,9 @@ internal static partial class DocxInlineCompositionTests
                         "Last-note and footer baselines retain independent one-point Word bounds on every page.");
                 }
                 TestAssert.Equal(22 + (row.TryGetProperty("StaticMathGlyphsPerPage", out var staticMath) ? staticMath.GetInt32() : 21) * pages.Length, mathCount);
-                TestAssert.True(seen.SequenceEqual(id.Contains("long-note", StringComparison.Ordinal) ? Enumerable.Range(1, 64) : []),
+                int expectedNumbered = row.TryGetProperty("NumberedParagraphCount", out var count) ? count.GetInt32() :
+                    id.Contains("long-note", StringComparison.Ordinal) ? 64 : 0;
+                TestAssert.True(seen.SequenceEqual(Enumerable.Range(1, expectedNumbered)),
                     "All64 numbered source paragraphs survive exactly once, in source order, across page turns.");
                 if (resolver is null) TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);
             }

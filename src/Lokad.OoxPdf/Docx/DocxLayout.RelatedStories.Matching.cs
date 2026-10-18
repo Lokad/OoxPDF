@@ -503,6 +503,26 @@ internal sealed partial class DocxLayoutEngine
         HasNoteParagraphFlowProperties(paragraph, allowSourceAffinedImages: true) &&
         DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) && double.IsFinite(story.ContentHeight);
 
+    private static bool HasParagraphNoteFlowStory(DocxRelatedStoryLayout story, CancellationToken token)
+    {
+        if (story.Story.BodyElements.Count == 0 || story.TextLines.Count == 0 ||
+            story.TableRows.Count != 0 || story.InlineImages.Count != 0 || story.FloatingDrawings.Count != 0 ||
+            !double.IsFinite(story.ContentHeight)) return false;
+        foreach (var element in story.Story.BodyElements)
+        {
+            token.ThrowIfCancellationRequested();
+            if (element is not DocxParagraphElement { Paragraph: var paragraph } ||
+                !DocxPlainBodyFrame.HasPlainTextContent(paragraph) || !IsPlainNoteFlowParagraph(paragraph) ||
+                !DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph, element.Revisions, token)) return false;
+        }
+        foreach (var line in story.TextLines)
+        {
+            token.ThrowIfCancellationRequested();
+            if (line.SourceParagraph is null) return false;
+        }
+        return true;
+    }
+
     private static bool IsPlainNoteFlowParagraph(DocxParagraph paragraph) =>
         HasNoteParagraphFlowProperties(paragraph) &&
         // Fixed boxes share paragraph ownership/flow, not content-driven metrics.

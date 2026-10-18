@@ -999,7 +999,8 @@ internal sealed partial class DocxLayoutEngine
                 pages[^1] = templatePage with { PlacedRelatedStories = harvestedStories.ToArray() };
             }
 
-            if (footnoteFrameBottom is not null)
+            if (ResolveFootnotePlacementFooter(templatePage, templatePageNumber, templatePageNumber,
+                footnoteFrameBottom, availableFootnoteFrameBottom) is not null)
             {
                 // The drain owns a rendered source reference even when its head
                 // cannot fit this page. The postpass must not insert a second owner.
@@ -1029,7 +1030,8 @@ internal sealed partial class DocxLayoutEngine
             var ownedTail = inFlightNotes.Values.Where(note => note.RemainingLineCount > 0 &&
                 note.Location.Reference.Id is { } id && placedStoryKeys.Contains((note.Location.Reference.Kind, id))).ToArray();
             if (tailPage.ColumnFrames.Count <= 1 && ownedTail.Length != 0 &&
-                ownedTail.All(note => HasOwnedInlineNoteFlowStory(note.StoryLayout)))
+                ownedTail.All(note => HasOwnedInlineNoteFlowStory(note.StoryLayout) ||
+                    HasParagraphNoteFlowStory(note.StoryLayout, cancellationToken)))
             {
                 // Dedicated continuations are footnote containers too. Reuse
                 // the same bottom-anchored batch and source paragraph slicing.
@@ -1043,9 +1045,14 @@ internal sealed partial class DocxLayoutEngine
                     long remaining = pending.Sum(note => (long)note.RemainingLineCount);
                     var stories = pending.Select(note => new DocxReferencedRelatedStoryLayout(note.Location,
                         NarrowStoryTextLinesForOffset(note.StoryLayout, note.PlacedLineCount))).ToArray();
+                    bool qualifiedTypography = pending.All(note => HasOwnedInlineNoteFlowStory(note.StoryLayout)) ||
+                        CanUsePlainFootnoteStaticFrame(document, tailPage, separatorMeasurerForNotes,
+                            paragraphSpacingScale, cancellationToken);
                     PlaceFootnoteStories(pages, tailPageIndex, tailPage, stories, pending[0].SeparatorLayout,
                         pending[0].ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale, ResolveHeaderKeepOut,
-                        sharedSlicePlacement: true, inFlightNotes: inFlightNotes, footerKeepOut: ResolveNoteFooterKeepOut);
+                        sharedSlicePlacement: true, inFlightNotes: inFlightNotes,
+                        footerKeepOut: qualifiedTypography ? ResolveNoteFooterKeepOut : null,
+                        availableFooterKeepOut: ResolveNoteFooterKeepOut);
                     tailPage = pages[tailPageIndex];
                     tailPlacedStories = tailPage.PlacedRelatedStories.ToList();
                     // An unusable static frame retains the existing progress

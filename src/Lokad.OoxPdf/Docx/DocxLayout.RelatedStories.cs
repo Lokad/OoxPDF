@@ -1863,7 +1863,7 @@ internal sealed partial class DocxLayoutEngine
         double cursorTop = frameBottom + bodyHeight;
         bool continuesHead = inFlightNotes is not null && footnoteStories[0].Location.Reference.Id is { } firstId &&
             inFlightNotes.TryGetValue((DocxRelatedStoryKind.Footnote, firstId), out InFlightRelatedStory? firstFlight) && firstFlight.SeparatorPlaced;
-        bool plainSharedHead = footerKeepOut is not null && continuesHead;
+        bool plainSharedHead = placementFooter is not null && continuesHead;
         double separatorHeight = frameBottom > activePage.MarginBottom || plainSharedHead
             ? ResolvePlainNoteSeparatorHeight(separatorLayout, activePage, separatorMeasurer,
                 footnoteStories.Select(s => s.StoryLayout).ToArray(), printScale)
@@ -1887,6 +1887,15 @@ internal sealed partial class DocxLayoutEngine
             ? ResolvePlainNoteSeparatorHeight(separatorLayout, activePage, separatorMeasurer,
                 footnoteStories.Select(s => s.StoryLayout).ToArray(), printScale) : separatorHeight;
         storiesTop = Math.Min(cursorTop, clampBodyBottom - separatorCharge);
+        if (plainSharedHead && !ownedInlineFrame)
+        {
+            // Continued paragraph batches share the same measured rule capacity
+            // as the single-story slicer, without charging a fresh-head inset.
+            double frameTop = Math.Min(activePage.Height - activePage.MarginTop,
+                headerKeepOut?.Invoke(activePage, pageNumberOverride ?? outputIndex + 1,
+                    pageCountOverride ?? outputPages.Count) ?? double.PositiveInfinity);
+            storiesTop = Math.Min(cursorTop, frameTop - ContinuationRuleOverhead(continuationSeparatorLayout, separatorMeasurer));
+        }
         if (sharedContentTop is not null)
         {
             storiesTop = Math.Min(storiesTop, sharedContentTop.Value);
@@ -1907,7 +1916,7 @@ internal sealed partial class DocxLayoutEngine
         // same clamped capacity, so take counts are unchanged; fitting stories keep the
         // legacy whole placement bit-identically.
         storiesTop = ResolveSeatedFootnoteTop(activePage, footnoteStories, storiesTop, frameBottom,
-            inFlightNotes, printScale, footerKeepOut is not null);
+            inFlightNotes, printScale, placementFooter is not null);
         bool sharesContinuationSeparator = plainSharedHead && continuationSeparatorLayout is { TextLines.Count: > 0 };
         bool drawHeadSeparator = !sharesContinuationSeparator;
         if (inFlightNotes is not null && !sharesContinuationSeparator)
@@ -1942,7 +1951,7 @@ internal sealed partial class DocxLayoutEngine
             InFlightRelatedStory? trackedStory = inFlightNotes is not null && story.Location.Reference.Id is not null && inFlightNotes.TryGetValue((story.Location.Reference.Kind, story.Location.Reference.Id), out InFlightRelatedStory? tracked) ? tracked : null;
             double storyHeight = ResolvePlacedStoryHeight(story.StoryLayout, activePage);
             if (trackedStory is not null && trackedStory.SeparatorPlaced && continuationSeparatorLayout is not null && continuationSeparatorLayout.TextLines.Count != 0 &&
-                (footerKeepOut is null || !sharedSeparatorPlaced))
+                (placementFooter is null || !sharedSeparatorPlaced))
             {
                 (DocxTextRun? continuationGapRun, double continuationGapFontSizePoints) = FindSeparatorMarkFont(continuationSeparatorLayout.TextLines);
                 double continuationGapPoints = ResolveSeparatorGapPoints(continuationGapRun, continuationGapFontSizePoints, separatorMeasurer);

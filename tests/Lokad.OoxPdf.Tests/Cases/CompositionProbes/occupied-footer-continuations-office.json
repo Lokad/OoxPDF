@@ -1,5 +1,5 @@
 {
-  "Provenance": "Independent C226/C230 Word16 exports; source/view/PDF/log pins retained in their evidence. First/last note/footer origins keep1pt gates; numbered paragraph page membership is exact.",
+  "Provenance": "Independent C226/C230/C232 Word16 exports; original source/view/PDF/log pins retained. Source membership and1pt first/last/additional-note/footer gates remain independent.",
   "Rows": [
     {
       "Id": "occupied-footer-no-separator-report",
@@ -156,6 +156,76 @@
       ],
       "StaticMathGlyphsPerPage": 5,
       "MetadataMutationPart": "word/header1.xml"
+    },
+    {
+      "Id": "two-plain-notes-report",
+      "Mode": "final-preserve",
+      "InputSha256": "6A95182DBFBC624E4200A46490BD58024D8D2ECC29C845E5ECE3034911326074",
+      "ReferencePdfSha256": "0A00E698B531C5DDC5F467F14BBA43C9D8BBC9A391F41416E708788A49A278C7",
+      "Pages": 4,
+      "NotePages": [
+        {
+          "Page": 2,
+          "FirstNoteY": 469.510009765625,
+          "NoteY": 80.90399169921875,
+          "FooterY": 44.90399169921875,
+          "NumberedParagraphs": 20
+        },
+        {
+          "Page": 3,
+          "FirstNoteY": 683.260009765625,
+          "NoteY": 80.90399169921875,
+          "FooterY": 44.90399169921875,
+          "NumberedParagraphs": 31,
+          "AdditionalNoteY": 450.07000732421875
+        },
+        {
+          "Page": 4,
+          "FirstNoteY": 314.0899963378906,
+          "NoteY": 80.90399169921875,
+          "FooterY": 44.90399169921875,
+          "NumberedParagraphs": 13
+        }
+      ],
+      "StaticMathGlyphsPerPage": 5,
+      "MetadataMutationPart": "word/header1.xml",
+      "NumberedParagraphCount": 64,
+      "AdditionalNotePrefix": "Second public continuation note."
+    },
+    {
+      "Id": "two-plain-notes-report",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6A95182DBFBC624E4200A46490BD58024D8D2ECC29C845E5ECE3034911326074",
+      "ReferencePdfSha256": "D142F116CD9FF7FCF59560BF4AD7A0BD44F7EE12BF6036FDE1EDE161B8DACDC0",
+      "Pages": 4,
+      "NotePages": [
+        {
+          "Page": 2,
+          "FirstNoteY": 452.0400085449219,
+          "NoteY": 157.3399658203125,
+          "FooterY": 130.030029296875,
+          "NumberedParagraphs": 20
+        },
+        {
+          "Page": 3,
+          "FirstNoteY": 614.1400146484375,
+          "NoteY": 157.3399658203125,
+          "FooterY": 130.030029296875,
+          "NumberedParagraphs": 31,
+          "AdditionalNoteY": 437.2799987792969
+        },
+        {
+          "Page": 4,
+          "FirstNoteY": 334.17999267578125,
+          "NoteY": 157.3399658203125,
+          "FooterY": 130.030029296875,
+          "NumberedParagraphs": 13
+        }
+      ],
+      "StaticMathGlyphsPerPage": 5,
+      "MetadataMutationPart": "word/header1.xml",
+      "NumberedParagraphCount": 64,
+      "AdditionalNotePrefix": "Second public continuation note."
     }
   ]
 }
