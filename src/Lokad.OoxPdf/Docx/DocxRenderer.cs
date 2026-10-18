@@ -541,7 +541,10 @@ internal sealed partial class DocxRenderer
         // plus one conditional displaced pass; no loop), and page/content charges apply
         // once per emitted final page in RenderParagraphs, never per pass.
         DocxLayoutEngine engine = new(geometryMode, markupContext.WordCompatiblePrintScale, markupContext.CommentMarkerLabels,
-            useCompleteFootnoteReserve, requestedGeometryMode: markupContext.GeometryMode, knownPageCount: pageCount);
+            useCompleteFootnoteReserve, requestedGeometryMode: markupContext.GeometryMode, knownPageCount: pageCount)
+        {
+            PlacementRelatedStoryMeasurements = new()
+        };
         IDocxTextMeasurer? scaledTextMeasurer = ResolveLayoutTextMeasurer(fontResources, markupContext);
         DocxLayout first = engine.Create(document, scaledTextMeasurer, cancellationToken, fontResources.TextMeasurer, mathEquations: fontResources.MathEquations);
         // Maps stay dense: explicitly unconstrained pages record zero so the

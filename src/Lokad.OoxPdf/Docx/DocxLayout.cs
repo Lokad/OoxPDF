@@ -239,6 +239,10 @@ internal sealed partial class DocxLayoutEngine
     private readonly bool useCompleteFootnoteReserve;
     private readonly int? knownPageCount;
 
+    // Owned by one placement-only retry scope with the same document, measurers,
+    // math plan and geometry. Never shared with another conversion/font retry.
+    internal Dictionary<double, IReadOnlyList<DocxRelatedStoryLayout>>? PlacementRelatedStoryMeasurements { private get; init; }
+
     private sealed record DocxPageGeometry(
         double Width,
         double Height,
@@ -342,7 +346,8 @@ internal sealed partial class DocxLayoutEngine
         bool UsesPrintedBodyFrame() => scaleBaselineOffsetTransitions &&
             paragraphSpacingScale < 1d && page.ColumnFrames.Count <= 1;
         IReadOnlyDictionary<DocxRelatedStory, DocxTextRun>? customNoteTargets = null;
-        var relatedStoryLayoutsByBodyWidth = new Dictionary<double, IReadOnlyList<DocxRelatedStoryLayout>>();
+        var relatedStoryLayoutsByBodyWidth = PlacementRelatedStoryMeasurements ??
+            new Dictionary<double, IReadOnlyList<DocxRelatedStoryLayout>>();
         var footnoteReserveHeightByBodyWidth = new Dictionary<double, IReadOnlyDictionary<int, double>>();
 
         IReadOnlyList<DocxRelatedStoryLayout> GetFootnoteStoryLayouts(DocxPageGeometry geometry)
