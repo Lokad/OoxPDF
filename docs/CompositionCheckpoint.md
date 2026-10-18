@@ -1,5 +1,20 @@
 # Composed-document reliability checkpoint
 
+C217 reuses frozen C216 for two held-out exact-slot combinations: a report
+paragraph containing math and an inline picture, and a wrapped footnote. Both
+presets retain32 math glyphs, all550/61 source-prose tokens and Word page counts
+(two/one). Four new Word exports are cached once. No production/test change,
+build, suite replay or whole-corpus qualification.
+
+Note math groups remain withinX0.171pt/Y0.399pt; note headY0.305pt and following
+bodyY0.128pt. The picture stays visible with colored-pixel edges within1pt.
+One neighboring table denominator retainsY1.014pt, narrowly failing the unchanged
+one-point gate; all four strict visual gates remain failed. Four paired target
+pages are reviewed and all six raster-pair hashes retained. Token counts do not
+establish reading order or clipping. No fitted correction is accepted.
+Evidence: exact-slot-holdouts-evidence.json. Continue C218's bounded unused-tab
+metadata review; treat content-loss risk as unverified until demonstrated.
+
 C216 restores104 missing math glyphs when paragraphs use exact line spacing.
 Finite positive fixed slots now share ordered inline composition, their authored
 physical advance and the existing exact text baseline. Measured ink may overhang
