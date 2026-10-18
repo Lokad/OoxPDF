@@ -72,7 +72,8 @@ internal static partial class DocxInlineCompositionTests
                 }
                 if (!transformed && !row.GetProperty("Page2RowsUnresolved").GetBoolean())
                 {
-                    var rows = shows.Where(item => item.Page == 2 && !item.Show.Text.StartsWith("Public review footer", StringComparison.Ordinal))
+                    var rows = shows.Where(item => item.Page == 2 && !string.IsNullOrWhiteSpace(item.Show.Text) &&
+                        !item.Show.Text.StartsWith("Public review footer", StringComparison.Ordinal))
                         .Select(item => item.Show.Y).Distinct().Count();
                     TestAssert.Equal(row.GetProperty("Page2NoteRows").GetInt32(), rows);
                 }
