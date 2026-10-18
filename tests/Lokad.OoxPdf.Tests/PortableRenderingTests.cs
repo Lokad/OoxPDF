@@ -25,6 +25,9 @@ internal static class PortableRenderingTests
     public static void PortableRenderingMixedMathPictureNotesRetainEverySourceOwner() =>
         DocxInlineCompositionTests.CheckPictureNoteBatches(new PinnedResolver(mathFont: true), "mixed-math-picture-note-report");
 
+    public static void PortableRenderingMinimumMixedNoteFramesRetainSourceAndInk() =>
+        DocxInlineCompositionTests.CheckMinimumMixedNoteFrames(new PinnedResolver(mathFont: true));
+
     public static void PortableRenderingImplicitFootnoteSeparatorKeepsTableAndNotesClear() =>
         DocxInlineCompositionTests.CheckTableNoteReferences(new PinnedResolver(mathFont: true),
             "table-note-without-separator-report", "table-note-without-separator-office.json");

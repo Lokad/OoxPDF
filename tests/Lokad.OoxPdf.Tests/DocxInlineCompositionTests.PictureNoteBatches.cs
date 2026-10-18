@@ -106,6 +106,7 @@ internal static partial class DocxInlineCompositionTests
                 var pictures = new List<(int Page, double X, double Y, double Width, double Height)>();
                 var seen = new List<int>();
                 var mathOrigins = new List<(int Page, string Text, double X, double Y)>();
+                var noteOrigins = new List<(int Number, int Page, double Y)>();
                 int heads = 0, math = 0, secondHeadPage = -1;
                 double scale = final ? 1d : DocxRenderer.ResolveWordCompatiblePrintScale(document,
                     DocxMarkupContext.FromMode(mode, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
@@ -124,6 +125,9 @@ internal static partial class DocxInlineCompositionTests
                     mathOrigins.AddRange(equationShows.Select(show => (index + 1, show.Text, show.X, show.Y)));
                     var lines = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).Select(group => group.OrderBy(show => show.X).ToArray()).ToArray();
                     var text = lines.Select(line => string.Concat(line.Select(show => show.Text))).ToArray();
+                    for (int line = 0; line < text.Length; line++)
+                        if (Regex.Match(text[line], @"^Public continuation note line (\d\d):") is { Success: true } numbered)
+                            noteOrigins.Add((int.Parse(numbered.Groups[1].Value, CultureInfo.InvariantCulture), index + 1, lines[line][0].Y));
                     int before = seen.Count;
                     foreach (Match match in Regex.Matches(string.Join(" ", text), @"Public\s+continuation\s+note\s+line\s+(\d\d):")) seen.Add(int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture));
                     var note = Enumerable.Range(0, lines.Length).Where(i => text[i].StartsWith("All quantities", StringComparison.Ordinal) ||
@@ -170,6 +174,11 @@ internal static partial class DocxInlineCompositionTests
                     }
                 originalPictures = pictures;
                 if (resolver is not null) continue;
+                if (row.TryGetProperty("NoteLineAnchors", out var noteAnchors))
+                    foreach (var anchor in noteAnchors.EnumerateArray())
+                        TestAssert.True(noteOrigins.Any(origin => origin.Number == anchor.GetProperty("Number").GetInt32() &&
+                            origin.Page == anchor.GetProperty("Page").GetInt32() && Math.Abs(origin.Y - anchor.GetProperty("Y").GetDouble()) < 1d),
+                            "Every numbered note paragraph retains its independent one-point Word baseline.");
                 if (row.TryGetProperty("MathAnchors", out var anchors))
                     foreach (var anchor in anchors.EnumerateArray())
                         TestAssert.True(mathOrigins.Any(origin => origin.Page == anchor.GetProperty("Page").GetInt32() &&

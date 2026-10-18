@@ -1,4 +1,5 @@
 using System.Text;
+using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
@@ -15,24 +16,10 @@ internal static partial class DocxInlineCompositionTests
 
     public static void DocxInlineCompositionMixedNoteFramesRequireCompleteMeasuredEquationOwners()
     {
-        var source = DocxTests.ReadDocx(NestedMathCasePath("mixed-math-picture-note-report.docx"), OoxPdfDocxMarkupMode.Final);
-        var originalStory = source.RelatedStories.Single(candidate => candidate.Kind == DocxRelatedStoryKind.Footnote && candidate.Id == "2");
-        var original = originalStory.Paragraphs[0];
-        var run = new DocxTextRun("A", 10d, null, false, false, false, null, "TestFont");
-        var equation = original.Equations.Single();
-        var font = new PdfFontResource("Eq1", PdfEmbeddedFont.Create(TestFontBuilder.LoadTestFont(),
-            run.Text.EnumerateRunes().Select(rune => rune.Value), default));
-        // One atomic portable measurement keeps the immutable source owner;
-        // rendering checks measure the fraction. Fragmented formulas retain
-        // their existing fallback in this bounded batch migration.
-        var literal = new DocxMathRow([new DocxMathRun(run, "p", null)]);
-        TestAssert.True(DocxMathRowLayout.TryMeasure(literal, _ => font, default, out var measured, out _), "Portable literal measurement is available.");
-        var prepared = new DocxPreparedMathParagraph(equation, TestAssert.NotNull(measured), 12d, 24d);
-        var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(source,
-            new DocxTests.FamilyWidthTextMeasurer(), default,
-            mathEquations: new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance) { [equation] = prepared });
-        var canonical = layout.RelatedStories.Single(s => ReferenceEquals(s.Story, originalStory));
+        var canonical = MeasureAtomicNoteBatchOwnershipControl("mixed-math-picture-note-report");
         var mathLine = canonical.TextLines.Single(line => line.InlineMath.Count != 0);
+        var prepared = mathLine.InlineMath[0].Math;
+        var equation = prepared.Equation;
         TestAssert.Equal(1, mathLine.InlineMath.Count);
         TestAssert.True(canonical.InlineImages.Single().LineFrame is null && mathLine.InlineFrame is not null,
             "An ordered paragraph owns its picture through the measured inline frame, without a second legacy image-growth charge.");
@@ -55,5 +42,31 @@ internal static partial class DocxInlineCompositionTests
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxLayoutEngine.HasParagraphNoteFlowStory(canonical, cancelled.Token));
+    }
+
+    private static DocxRelatedStoryLayout MeasureAtomicNoteBatchOwnershipControl(string fixture,
+        Action<XDocument, XNamespace, XNamespace>? change = null)
+    {
+        var source = change is null
+            ? DocxTests.ReadDocx(NestedMathCasePath(fixture + ".docx"), OoxPdfDocxMarkupMode.Final)
+            : ReadMutation("CompositionProbes/" + fixture, OoxPdfDocxMarkupMode.Final, false, false, change,
+                partOverride: "word/footnotes.xml");
+        var story = source.RelatedStories.Single(candidate => candidate.Kind == DocxRelatedStoryKind.Footnote && candidate.Id == "2");
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? equations = null;
+        if (story.Paragraphs[0].Equations.SingleOrDefault() is { } equation)
+        {
+            // One atomic portable measurement preserves immutable source owners;
+            // independent rendering checks measure the actual source fraction.
+            var run = new DocxTextRun("A", 10d, null, false, false, false, null, "TestFont");
+            var font = new PdfFontResource("Eq1", PdfEmbeddedFont.Create(TestFontBuilder.LoadTestFont(),
+                run.Text.EnumerateRunes().Select(rune => rune.Value), default));
+            TestAssert.True(DocxMathRowLayout.TryMeasure(new DocxMathRow([new DocxMathRun(run, "p", null)]),
+                _ => font, default, out var measured, out _), "Portable literal measurement is available.");
+            equations = new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
+                { [equation] = new(equation, TestAssert.NotNull(measured), 12d, 24d) };
+        }
+        var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default, mathEquations: equations);
+        return layout.RelatedStories.Single(candidate => ReferenceEquals(candidate.Story, story));
     }
 }

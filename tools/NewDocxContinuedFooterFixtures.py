@@ -20,7 +20,9 @@ for row in manifest:
     wrap_picture = row.get("WrapNotePictureParagraph", False)
     second_picture = row.get("AddSecondNotePicture", False)
     note_equation = row.get("AddInlineNoteEquation", False)
-    source = output / ("long-note-inline-picture-report.docx" if wrap_picture or second_picture or note_equation else
+    note_minimum = row.get("NoteMinimumPoints")
+    source = output / ("mixed-math-picture-note-report.docx" if note_minimum is not None else
+                       "long-note-inline-picture-report.docx" if wrap_picture or second_picture or note_equation else
                        "two-plain-notes-report.docx" if note_picture else
                        "table-note-reference-report.docx" if remove_separator else
                        "two-plain-notes-report.docx" if table_reference else
@@ -30,7 +32,15 @@ for row in manifest:
     with ZipFile(source) as archive:
         original = {name: archive.read(name) for name in archive.namelist()}
     parts = dict(original)
-    if wrap_picture or second_picture or note_equation:
+    if note_minimum is not None:
+        part = "word/footnotes.xml"
+        story = E.fromstring(parts[part])
+        intro = next(n for n in story if n.get(w + "id") == "2").find(w + "p")
+        assert intro.find(w + "pPr") is None
+        properties = E.Element(w + "pPr")
+        intro.insert(0, properties)
+        E.SubElement(properties, w + "spacing", {w + "line": str(int(note_minimum * 20)), w + "lineRule": "atLeast"})
+    elif wrap_picture or second_picture or note_equation:
         part = "word/footnotes.xml"
         story = E.fromstring(parts[part])
         note = next(n for n in story if n.get(w + "id") == "2")

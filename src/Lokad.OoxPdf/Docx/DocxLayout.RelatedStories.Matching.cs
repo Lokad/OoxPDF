@@ -532,9 +532,9 @@ internal sealed partial class DocxLayoutEngine
             if (paragraph.Images.Count != 0 || paragraph.Equations.Count != 0)
             {
                 // Classification does not alter source content or typography.
-                // Mixed automatic paragraphs need measured source-owned items;
-                // fixed/minimum and complex sources retain their fallback.
-                if (!DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph)) return false;
+                // Content-driven paragraphs need measured source-owned items;
+                // fixed and complex sources retain their fallback.
+                if (!DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph)) return false;
             }
             if (paragraph.Images.Count != 0)
             {
@@ -553,7 +553,12 @@ internal sealed partial class DocxLayoutEngine
         {
             token.ThrowIfCancellationRequested();
             if (line.SourceParagraph is null) return false;
-            if (line.SourceParagraph.Equations.Count != 0 && !HasUsableNoteInlineFrame(line)) return false;
+            // An authored mixed-content minimum needs a complete line frame;
+            // a legacy picture extent alone cannot establish its flow height.
+            bool requiresInlineFrame = line.SourceParagraph.Equations.Count != 0 ||
+                line.SourceParagraph.Images.Count != 0 && !DocxPlainBodyFrame.HasAutomaticLineFlow(line.SourceParagraph);
+            if (requiresInlineFrame && (line.InlineFrame is not { } frame || !HasUsableNoteInlineFrame(line) ||
+                line.SourceParagraph.LineSpacingPoints is { } minimum && frame.Height < minimum)) return false;
             if (line.Math is { } direct && !ConsumeMath(direct.Equation, line.SourceParagraph)) return false;
             foreach (var math in line.InlineMath)
             {
