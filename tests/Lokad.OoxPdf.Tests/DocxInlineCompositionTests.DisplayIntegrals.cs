@@ -22,6 +22,12 @@ internal static partial class DocxInlineCompositionTests
         CheckDisplayIntegrals(null, "multiple-integral-office.json");
     }
 
+    public static void DocxInlineCompositionMinimumLineMathKeepsWordSlotsAcrossContainers()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent minimum-slot origins require installed Windows fonts.");
+        CheckDisplayIntegrals(null, "minimum-line-math-office.json");
+    }
+
     internal static void CheckDisplayIntegrals(IFontResolver? resolver, string referenceFile = "display-integral-office.json")
     {
         using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath(referenceFile)));
@@ -36,8 +42,12 @@ internal static partial class DocxInlineCompositionTests
             foreach (bool transformed in new[] { false, true })
             {
                 var diagnostics = new List<OoxPdfDiagnostic>();
-                var document = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed);
-                var equations = document.Paragraphs.SelectMany(p => p.Equations).ToArray();
+                string? part = row.TryGetProperty("Part", out var partValue) ? partValue.GetString() : null;
+                var document = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed, partOverride: part);
+                var paragraphs = part?.StartsWith("word/header", StringComparison.Ordinal) == true
+                    ? DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, default).Select(owner => owner.Paragraph)
+                    : DocxBlockTraversal.EnumerateBodyParagraphs(document.BodyElements);
+                var equations = paragraphs.SelectMany(p => p.Equations).ToArray();
                 TestAssert.Equal(row.TryGetProperty("EquationCount", out var count) ? count.GetInt32() : 1, equations.Length);
                 TestAssert.Equal(row.TryGetProperty("DisplayEquationCount", out var displays) ? displays.GetInt32() : 1,
                     equations.Count(e => e.Display));
@@ -58,6 +68,13 @@ internal static partial class DocxInlineCompositionTests
                 if (originalOrigins is not null) TestAssert.Equal(originalOrigins, origins);
                 originalOrigins = origins;
                 TestAssert.Contains("Following prose.", DocxPageFootnoteNumberingTests.DecodeText(page));
+                if (row.TryGetProperty("BodyY", out var bodyY))
+                {
+                    TestAssert.Contains("Composed story.", DocxPageFootnoteNumberingTests.DecodeText(page));
+                    if (resolver is null)
+                        TestAssert.True(Math.Abs(shows.First(show => show.Text.StartsWith("Composed", StringComparison.Ordinal)).Y -
+                            bodyY.GetDouble()) < 1d, "The complete minimum header slot preserves Word body admission.");
+                }
                 if (resolver is not null) continue;
                 foreach (var anchor in row.GetProperty("PhysicalAnchors").EnumerateArray())
                 {

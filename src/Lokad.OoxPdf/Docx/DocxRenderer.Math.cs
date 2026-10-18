@@ -343,6 +343,13 @@ internal sealed partial class DocxRenderer
         double factor = 1d;
         if (measured.Display && !DocxMathParagraphPolicy.TryGetDisplayLineSpacingFactor(paragraph, out factor) ||
             !DocxMathLayout.TryGetLineMetrics(box, token, out double above, out double height, factor)) return false;
+        if (measured.Display && paragraph.LineSpacingPoints is { } minimum && minimum > height)
+        {
+            // A content-driven minimum grows the line slot before its baseline;
+            // intrinsic math ink and the descent floor remain unchanged.
+            above += minimum - height;
+            height = minimum;
+        }
         prepared = new(source, box, above, height) { UsesDisplayStyle = measured.Display };
         return true;
     }

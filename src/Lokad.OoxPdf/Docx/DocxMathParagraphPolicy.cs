@@ -138,8 +138,9 @@ internal static class DocxMathParagraphPolicy
     public static bool TryGetDisplayLineSpacingFactor(DocxParagraph paragraph, out double factor)
     {
         factor = 1d;
-        if (paragraph.Spacing.LineRuleValue is not (null or "auto") || paragraph.LineSpacingPoints is not null)
+        if (!DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph))
             return false;
+        if (!DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph)) { return true; }
         if (paragraph.Spacing.LineValue is null) { return true; }
         if (!int.TryParse(paragraph.Spacing.LineValue, System.Globalization.NumberStyles.Integer,
             System.Globalization.CultureInfo.InvariantCulture, out int line) || line <= 0) { return false; }
@@ -233,6 +234,8 @@ internal static class DocxMathParagraphPolicy
     public static bool NeedsOrderedInlineLayout(DocxParagraph paragraph,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? prepared = null) =>
         paragraph.Equations.Count > 1 || paragraph.Images.Count != 0 ||
+        paragraph.Equations.Count != 0 && paragraph.LineSpacingPoints is not null &&
+            DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) ||
         paragraph.Equations.Count != 0 && paragraph.CommentRanges.Count != 0 ||
         paragraph.Equations.Count != 0 && paragraph.InlineReferences.Any(reference =>
             reference.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote) ||
@@ -295,7 +298,7 @@ internal static class DocxMathParagraphPolicy
         if (GetInlineRow(paragraph) is { } inline) return [inline];
         if (!NeedsOrderedInlineLayout(paragraph) || !HasSupportedSourceOwner(paragraph, hasPageInputs, token) ||
             paragraph.InlineContent is null ||
-            paragraph.Spacing.LineRuleValue is not (null or "auto") || paragraph.LineSpacingPoints is not null) return [];
+            !DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph)) return [];
         // Source rows own resolved style: Word measures explicit formulas inline
         // beside visible text/pictures; math-only rows retain display measurement/alignment.
         var displayRows = paragraph.Equations.Any(equation => equation.Display)

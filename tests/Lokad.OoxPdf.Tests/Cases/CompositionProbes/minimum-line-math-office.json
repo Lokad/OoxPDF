@@ -1,0 +1,695 @@
+{
+  "Source": "Eight independent Word16 source/view/PDF-pinned exports. Only atLeast paragraph minimums and container placement differ from the supported integral controls; raw source math retained.",
+  "Rows": [
+    {
+      "Id": "math-minimum-line-12",
+      "Mode": "final-preserve",
+      "InputSha256": "18ACC059DCE03BBA3483C97DD02501699E2250F3D4A2D6096D461E2ACD95F01C",
+      "ReferencePdfSha256": "B8016612BD31087ED365CDAF57146643E6650A65C87689E0056BCB7481EFEDC6",
+      "Part": "word/document.xml",
+      "EquationCount": 3,
+      "DisplayEquationCount": 2,
+      "MinimumLineHeight": 12,
+      "MathText": "\u222b\u222bx10\u222b\u222bx10\u222b\u222bx10",
+      "FollowingY": 584.5,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 151.82,
+          "Y": 705.1,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 169.82,
+          "Y": 705.7,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 162.86,
+          "Y": 713.02,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "X": 160.46,
+          "Y": 700.78,
+          "Size": 8.52
+        },
+        {
+          "Offset": 4,
+          "X": 72.024,
+          "Y": 665.26,
+          "Size": 12
+        },
+        {
+          "Offset": 5,
+          "X": 91.344,
+          "Y": 665.26,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "X": 86.424,
+          "Y": 678.94,
+          "Size": 8.52
+        },
+        {
+          "Offset": 7,
+          "X": 81.984,
+          "Y": 653.86,
+          "Size": 8.52
+        },
+        {
+          "Offset": 8,
+          "X": 72.024,
+          "Y": 612.7,
+          "Size": 12
+        },
+        {
+          "Offset": 9,
+          "X": 88.464,
+          "Y": 612.7,
+          "Size": 12
+        },
+        {
+          "Offset": 10,
+          "X": 78.984,
+          "Y": 631.9,
+          "Size": 8.52
+        },
+        {
+          "Offset": 11,
+          "X": 74.544,
+          "Y": 595.9,
+          "Size": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "math-minimum-line-12",
+      "Mode": "all-word-compatible",
+      "InputSha256": "18ACC059DCE03BBA3483C97DD02501699E2250F3D4A2D6096D461E2ACD95F01C",
+      "ReferencePdfSha256": "029660648C924234709D8E35DBC9F703E01F1307BEBBDC5D412DD440451D19AD",
+      "Part": "word/document.xml",
+      "EquationCount": 3,
+      "DisplayEquationCount": 2,
+      "MinimumLineHeight": 12,
+      "MathText": "\u222b\u222bx10\u222b\u222bx10\u222b\u222bx10",
+      "FollowingY": 584.5,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 151.82,
+          "Y": 705.1,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 169.82,
+          "Y": 705.7,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 162.86,
+          "Y": 713.02,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "X": 160.46,
+          "Y": 700.78,
+          "Size": 8.52
+        },
+        {
+          "Offset": 4,
+          "X": 72.024,
+          "Y": 665.26,
+          "Size": 12
+        },
+        {
+          "Offset": 5,
+          "X": 91.344,
+          "Y": 665.26,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "X": 86.424,
+          "Y": 678.94,
+          "Size": 8.52
+        },
+        {
+          "Offset": 7,
+          "X": 81.984,
+          "Y": 653.86,
+          "Size": 8.52
+        },
+        {
+          "Offset": 8,
+          "X": 72.024,
+          "Y": 612.7,
+          "Size": 12
+        },
+        {
+          "Offset": 9,
+          "X": 88.464,
+          "Y": 612.7,
+          "Size": 12
+        },
+        {
+          "Offset": 10,
+          "X": 78.984,
+          "Y": 631.9,
+          "Size": 8.52
+        },
+        {
+          "Offset": 11,
+          "X": 74.544,
+          "Y": 595.9,
+          "Size": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "math-minimum-line-72",
+      "Mode": "final-preserve",
+      "InputSha256": "F64953E4D70D3AE990A5BB73068B8509132DE74A9B8EB413FBB8BBD04462FD21",
+      "ReferencePdfSha256": "7BDCF14B7AFF03D0801E3216CD0EF75D88FD5CE6791E74F114CEC2E98E91B1FE",
+      "Part": "word/document.xml",
+      "EquationCount": 3,
+      "DisplayEquationCount": 2,
+      "MinimumLineHeight": 72,
+      "MathText": "\u222b\u222bx10\u222b\u222bx10\u222b\u222bx10",
+      "FollowingY": 463.27,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 151.82,
+          "Y": 652.42,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 169.82,
+          "Y": 653.02,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 162.86,
+          "Y": 660.34,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "X": 160.46,
+          "Y": 648.1,
+          "Size": 8.52
+        },
+        {
+          "Offset": 4,
+          "X": 72.024,
+          "Y": 572.74,
+          "Size": 12
+        },
+        {
+          "Offset": 5,
+          "X": 91.344,
+          "Y": 572.74,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "X": 86.424,
+          "Y": 586.42,
+          "Size": 8.52
+        },
+        {
+          "Offset": 7,
+          "X": 81.984,
+          "Y": 561.34,
+          "Size": 8.52
+        },
+        {
+          "Offset": 8,
+          "X": 72.024,
+          "Y": 491.47,
+          "Size": 12
+        },
+        {
+          "Offset": 9,
+          "X": 88.464,
+          "Y": 491.47,
+          "Size": 12
+        },
+        {
+          "Offset": 10,
+          "X": 78.984,
+          "Y": 510.67,
+          "Size": 8.52
+        },
+        {
+          "Offset": 11,
+          "X": 74.544,
+          "Y": 474.67,
+          "Size": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "math-minimum-line-72",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F64953E4D70D3AE990A5BB73068B8509132DE74A9B8EB413FBB8BBD04462FD21",
+      "ReferencePdfSha256": "25B71BA722F227F677F03D5EC2529AFB9E32FF17554A3037DC026D3958A0A2F5",
+      "Part": "word/document.xml",
+      "EquationCount": 3,
+      "DisplayEquationCount": 2,
+      "MinimumLineHeight": 72,
+      "MathText": "\u222b\u222bx10\u222b\u222bx10\u222b\u222bx10",
+      "FollowingY": 463.27,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 151.82,
+          "Y": 652.42,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 169.82,
+          "Y": 653.02,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 162.86,
+          "Y": 660.34,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "X": 160.46,
+          "Y": 648.1,
+          "Size": 8.52
+        },
+        {
+          "Offset": 4,
+          "X": 72.024,
+          "Y": 572.74,
+          "Size": 12
+        },
+        {
+          "Offset": 5,
+          "X": 91.344,
+          "Y": 572.74,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "X": 86.424,
+          "Y": 586.42,
+          "Size": 8.52
+        },
+        {
+          "Offset": 7,
+          "X": 81.984,
+          "Y": 561.34,
+          "Size": 8.52
+        },
+        {
+          "Offset": 8,
+          "X": 72.024,
+          "Y": 491.47,
+          "Size": 12
+        },
+        {
+          "Offset": 9,
+          "X": 88.464,
+          "Y": 491.47,
+          "Size": 12
+        },
+        {
+          "Offset": 10,
+          "X": 78.984,
+          "Y": 510.67,
+          "Size": 8.52
+        },
+        {
+          "Offset": 11,
+          "X": 74.544,
+          "Y": 474.67,
+          "Size": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "math-minimum-line-72-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "5DB30EDEA3ECF491948D631FE423D4E1502A36225BD5CC1A23E6886AD24FE799",
+      "ReferencePdfSha256": "0F70C6CC7E865ED64995EC42C02BD2578F45F050024B85E8DA6FBEF8B02FB922",
+      "Part": "word/document.xml",
+      "EquationCount": 3,
+      "DisplayEquationCount": 2,
+      "MinimumLineHeight": 72,
+      "MathText": "\u222b\u222bx10\u222b\u222bx10\u222b\u222bx10",
+      "FollowingY": 463.27,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 151.82,
+          "Y": 652.42,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 169.82,
+          "Y": 653.02,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 162.86,
+          "Y": 660.34,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "X": 160.46,
+          "Y": 648.1,
+          "Size": 8.52
+        },
+        {
+          "Offset": 4,
+          "X": 72.024,
+          "Y": 572.74,
+          "Size": 12
+        },
+        {
+          "Offset": 5,
+          "X": 91.344,
+          "Y": 572.74,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "X": 86.424,
+          "Y": 586.42,
+          "Size": 8.52
+        },
+        {
+          "Offset": 7,
+          "X": 81.984,
+          "Y": 561.34,
+          "Size": 8.52
+        },
+        {
+          "Offset": 8,
+          "X": 72.024,
+          "Y": 491.47,
+          "Size": 12
+        },
+        {
+          "Offset": 9,
+          "X": 88.464,
+          "Y": 491.47,
+          "Size": 12
+        },
+        {
+          "Offset": 10,
+          "X": 78.984,
+          "Y": 510.67,
+          "Size": 8.52
+        },
+        {
+          "Offset": 11,
+          "X": 74.544,
+          "Y": 474.67,
+          "Size": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "math-minimum-line-72-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "5DB30EDEA3ECF491948D631FE423D4E1502A36225BD5CC1A23E6886AD24FE799",
+      "ReferencePdfSha256": "B7FC0BF5256834458E12A15EDF29B59916D16EB5227CA64A2F9A523AD1BC5859",
+      "Part": "word/document.xml",
+      "EquationCount": 3,
+      "DisplayEquationCount": 2,
+      "MinimumLineHeight": 72,
+      "MathText": "\u222b\u222bx10\u222b\u222bx10\u222b\u222bx10",
+      "FollowingY": 463.27,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 151.82,
+          "Y": 652.42,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 169.82,
+          "Y": 653.02,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 162.86,
+          "Y": 660.34,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "X": 160.46,
+          "Y": 648.1,
+          "Size": 8.52
+        },
+        {
+          "Offset": 4,
+          "X": 72.024,
+          "Y": 572.74,
+          "Size": 12
+        },
+        {
+          "Offset": 5,
+          "X": 91.344,
+          "Y": 572.74,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "X": 86.424,
+          "Y": 586.42,
+          "Size": 8.52
+        },
+        {
+          "Offset": 7,
+          "X": 81.984,
+          "Y": 561.34,
+          "Size": 8.52
+        },
+        {
+          "Offset": 8,
+          "X": 72.024,
+          "Y": 491.47,
+          "Size": 12
+        },
+        {
+          "Offset": 9,
+          "X": 88.464,
+          "Y": 491.47,
+          "Size": 12
+        },
+        {
+          "Offset": 10,
+          "X": 78.984,
+          "Y": 510.67,
+          "Size": 8.52
+        },
+        {
+          "Offset": 11,
+          "X": 74.544,
+          "Y": 474.67,
+          "Size": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "math-minimum-line-72-header",
+      "Mode": "final-preserve",
+      "InputSha256": "54D3060A025AAA0E146FF23AA6ECAB4AD079B2B0641D90C333C4302746EE0FC6",
+      "ReferencePdfSha256": "B9E5BFA51765E33E6FA913A074845821A1610C72D5D2A969F0086DCA95F2FDE8",
+      "Part": "word/headerMinimum.xml",
+      "EquationCount": 3,
+      "DisplayEquationCount": 2,
+      "MinimumLineHeight": 72,
+      "MathText": "\u222b\u222bx10\u222b\u222bx10\u222b\u222bx10",
+      "FollowingY": 499.27,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 151.82,
+          "Y": 688.42,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 169.82,
+          "Y": 689.02,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 162.86,
+          "Y": 696.34,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "X": 160.46,
+          "Y": 684.1,
+          "Size": 8.52
+        },
+        {
+          "Offset": 4,
+          "X": 72.024,
+          "Y": 608.74,
+          "Size": 12
+        },
+        {
+          "Offset": 5,
+          "X": 91.344,
+          "Y": 608.74,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "X": 86.424,
+          "Y": 622.42,
+          "Size": 8.52
+        },
+        {
+          "Offset": 7,
+          "X": 81.984,
+          "Y": 597.34,
+          "Size": 8.52
+        },
+        {
+          "Offset": 8,
+          "X": 72.024,
+          "Y": 527.47,
+          "Size": 12
+        },
+        {
+          "Offset": 9,
+          "X": 88.464,
+          "Y": 527.47,
+          "Size": 12
+        },
+        {
+          "Offset": 10,
+          "X": 78.984,
+          "Y": 546.7,
+          "Size": 8.52
+        },
+        {
+          "Offset": 11,
+          "X": 74.544,
+          "Y": 510.67,
+          "Size": 8.52
+        }
+      ],
+      "BodyY": 484.63
+    },
+    {
+      "Id": "math-minimum-line-72-header",
+      "Mode": "all-word-compatible",
+      "InputSha256": "54D3060A025AAA0E146FF23AA6ECAB4AD079B2B0641D90C333C4302746EE0FC6",
+      "ReferencePdfSha256": "52E53B93D29B11BC3E0364BF698B41747CFBD19E7A4BBAFD35A2643B552B1C14",
+      "Part": "word/headerMinimum.xml",
+      "EquationCount": 3,
+      "DisplayEquationCount": 2,
+      "MinimumLineHeight": 72,
+      "MathText": "\u222b\u222bx10\u222b\u222bx10\u222b\u222bx10",
+      "FollowingY": 499.27,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 151.82,
+          "Y": 688.42,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 169.82,
+          "Y": 689.02,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 162.86,
+          "Y": 696.34,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "X": 160.46,
+          "Y": 684.1,
+          "Size": 8.52
+        },
+        {
+          "Offset": 4,
+          "X": 72.024,
+          "Y": 608.74,
+          "Size": 12
+        },
+        {
+          "Offset": 5,
+          "X": 91.344,
+          "Y": 608.74,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "X": 86.424,
+          "Y": 622.42,
+          "Size": 8.52
+        },
+        {
+          "Offset": 7,
+          "X": 81.984,
+          "Y": 597.34,
+          "Size": 8.52
+        },
+        {
+          "Offset": 8,
+          "X": 72.024,
+          "Y": 527.47,
+          "Size": 12
+        },
+        {
+          "Offset": 9,
+          "X": 88.464,
+          "Y": 527.47,
+          "Size": 12
+        },
+        {
+          "Offset": 10,
+          "X": 78.984,
+          "Y": 546.7,
+          "Size": 8.52
+        },
+        {
+          "Offset": 11,
+          "X": 74.544,
+          "Y": 510.67,
+          "Size": 8.52
+        }
+      ],
+      "BodyY": 484.63
+    }
+  ]
+}

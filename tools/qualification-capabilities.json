@@ -6503,5 +6503,32 @@
     "PortableRenderingInheritedIntegralLimits",
     "DocxInlineCompositionMultipleIntegrals",
     "PortableRenderingMultipleIntegrals"
+  ],
+  "docx-math-minimum-slots": [
+    "DocxInlineCompositionMinimumLine",
+    "PortableRenderingMinimumLine",
+    "DocxInlineCompositionDisplayIntegrals",
+    "PortableRenderingDisplayIntegrals",
+    "DocxInlineCompositionMultipleIntegrals",
+    "PortableRenderingMultipleIntegrals",
+    "DocxInlineCompositionInheritedIntegralLimits",
+    "PortableRenderingInheritedIntegralLimits",
+    "DocxInlineCompositionPartialMathRequiresPreparedSourceOwnerAndKeepsFallbacks",
+    "PortableRenderingPartialMath",
+    "DocxInlineCompositionMixedBoxArguments",
+    "PortableRenderingMixedBoxArguments",
+    "DocxSyntheticAtLeastLineSpacingUsesMinimumAndNaturalLineHeight",
+    "DocxSyntheticExactLineHeightPositionsNextParagraph",
+    "DocxLineSpacingInheritance",
+    "DocxStaticFrameMapping",
+    "DocxNativeStaticMathRetainsStoryFlowAndPerPartDiagnosticScope",
+    "DocxNativeTableInlineMathRetainsProseWrappingAndWholeFallbacks",
+    "DocxNativeTableDisplayMathRetainsCellsProseAndDeclaredClips",
+    "DocxNativeDeclaredTableMathSharesHeightAlignmentAndSourceFallbacks",
+    "DocxNativeDisplaySpacingUsesTheMathFontLineRatherThanTheParentSize",
+    "DocxNativeDisplayMathCompressedAutomaticSlotsKeepTheirFallback",
+    "DocxNativeDisplayMathRetainsMeaningAndReportsPaintedContent",
+    "DocxNativeInlineMathRetainsLiteralMeaningAndSharedProseBaseline",
+    "DocxInlineCompositionOrderedPictureTranslationKeepsClipsAndFallbacks"
   ]
 }

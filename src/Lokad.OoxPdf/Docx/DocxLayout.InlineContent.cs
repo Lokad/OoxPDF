@@ -252,6 +252,13 @@ internal sealed partial class DocxLayoutEngine
                 !string.Equals(stop.Value, "clear", StringComparison.OrdinalIgnoreCase) ||
             stop.LeaderValue is not null && !string.Equals(stop.LeaderValue, "none", StringComparison.OrdinalIgnoreCase))) return false;
         if (!double.IsFinite(scale) || scale <= 0d) return false;
+        if (paragraph.LineSpacingPoints is not null && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph))
+        {
+            // Measure intrinsic fragments first; the completed row owns the
+            // paragraph minimum, including any empty leading before its baseline.
+            lineHeight = Math.Min(lineHeight, ResolveLineHeightProfile(paragraph with { LineSpacingPoints = 0d },
+                fontSize, measurer).LineHeight);
+        }
         var runIndices = new Dictionary<DocxTextRun, int>(ReferenceEqualityComparer.Instance);
         for (int index = 0; index < paragraph.Runs.Count; index++)
         {
@@ -745,6 +752,8 @@ internal sealed partial class DocxLayoutEngine
                     GetParagraphFirstLineTextStartOffset(paragraph, fontSize, measurer, scale, defaultTabStopPoints));
                 above += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, measurer);
             }
+            if (paragraph.LineSpacingPoints is { } minimum && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph))
+                above += Math.Max(0d, minimum * scale - above - below);
             output.Add(new(current.ToArray(), advance, above, above + below)
                 { DisplayAlignment = displayGroup ? DocxMathParagraphPolicy.ResolveDisplayAlignment(
                     current.Where(fragment => fragment.Math is not null).Select(fragment => fragment.Math!.Equation), token) : null,

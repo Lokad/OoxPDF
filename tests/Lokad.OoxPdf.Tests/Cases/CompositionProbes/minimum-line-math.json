@@ -1,0 +1,75 @@
+[
+  {
+    "Id": "math-minimum-line-12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-minimum-line-12.docx",
+    "Sha256": "18ACC059DCE03BBA3483C97DD02501699E2250F3D4A2D6096D461E2ACD95F01C",
+    "SourceSha256": "2F4D3FD3CA6B11B9AE03535885CBDF9C4C9C529E99618B09F6C0A9E82C7BDF41",
+    "HeldOut": false,
+    "ExpectedEquationCount": 3,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Side limits:",
+      "Stacked limits:",
+      "Following prose."
+    ],
+    "Container": "body",
+    "Part": "word/document.xml",
+    "MinimumLineHeight": 12
+  },
+  {
+    "Id": "math-minimum-line-72",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-minimum-line-72.docx",
+    "Sha256": "F64953E4D70D3AE990A5BB73068B8509132DE74A9B8EB413FBB8BBD04462FD21",
+    "SourceSha256": "2F4D3FD3CA6B11B9AE03535885CBDF9C4C9C529E99618B09F6C0A9E82C7BDF41",
+    "HeldOut": false,
+    "ExpectedEquationCount": 3,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Side limits:",
+      "Stacked limits:",
+      "Following prose."
+    ],
+    "Container": "body",
+    "Part": "word/document.xml",
+    "MinimumLineHeight": 72
+  },
+  {
+    "Id": "math-minimum-line-72-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-minimum-line-72-cell.docx",
+    "Sha256": "5DB30EDEA3ECF491948D631FE423D4E1502A36225BD5CC1A23E6886AD24FE799",
+    "SourceSha256": "2F4D3FD3CA6B11B9AE03535885CBDF9C4C9C529E99618B09F6C0A9E82C7BDF41",
+    "HeldOut": false,
+    "ExpectedEquationCount": 3,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Side limits:",
+      "Stacked limits:",
+      "Following prose."
+    ],
+    "Container": "cell",
+    "Part": "word/document.xml",
+    "MinimumLineHeight": 72
+  },
+  {
+    "Id": "math-minimum-line-72-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-minimum-line-72-header.docx",
+    "Sha256": "54D3060A025AAA0E146FF23AA6ECAB4AD079B2B0641D90C333C4302746EE0FC6",
+    "SourceSha256": "2F4D3FD3CA6B11B9AE03535885CBDF9C4C9C529E99618B09F6C0A9E82C7BDF41",
+    "HeldOut": false,
+    "ExpectedEquationCount": 3,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Side limits:",
+      "Stacked limits:",
+      "Following prose.",
+      "Composed story."
+    ],
+    "Container": "header",
+    "Part": "word/headerMinimum.xml",
+    "MinimumLineHeight": 72
+  }
+]
