@@ -68,6 +68,26 @@ internal static partial class DocxInlineCompositionTests
                 var actual = mathematicalText.GroupBy(character => character).ToDictionary(group => group.Key, group => group.Count());
                 TestAssert.Equal(expected.Count, actual.Count);
                 foreach (var item in expected) TestAssert.Equal(item.Value, actual.GetValueOrDefault(item.Key));
+                if (requireWordPageCount && resolver is null)
+                {
+                    foreach (var group in row.GetProperty("FormulaGroups").EnumerateArray())
+                    {
+                        string first = group.GetProperty("First").GetString()!;
+                        int page = group.GetProperty("Page").GetInt32() - 1;
+                        int start = Array.FindIndex(math, item => item.Page == page &&
+                            item.Show.Text.Normalize(NormalizationForm.FormKC) == first);
+                        TestAssert.True(start >= 0, "Every independent formula group retains its source start.");
+                        foreach (var anchor in group.GetProperty("Anchors").EnumerateArray())
+                        {
+                            var item = math[start + anchor.GetProperty("Offset").GetInt32()];
+                            TestAssert.Equal(page, item.Page);
+                            TestAssert.Equal(anchor.GetProperty("Text").GetString(), item.Show.Text.Normalize(NormalizationForm.FormKC));
+                            TestAssert.True(Math.Abs(item.Show.X - anchor.GetProperty("X").GetDouble()) < 1d &&
+                                Math.Abs(item.Show.Y - anchor.GetProperty("Y").GetDouble()) < 1d,
+                                "Composed formula origins retain the existing independent one-point gate.");
+                        }
+                    }
+                }
                 TestAssert.Equal(row.GetProperty("Images").GetInt32(), pages.Sum(page => page.Images.Sum(image => Regex.Matches(page.Content, "/" + Regex.Escape(image.ResourceName) + @"\s+Do\b").Count)));
                 var links = pages.SelectMany(page => page.Annotations).ToArray();
                 TestAssert.Equal(1, links.Count(link => link.Uri == row.GetProperty("ExternalLink").GetString()));

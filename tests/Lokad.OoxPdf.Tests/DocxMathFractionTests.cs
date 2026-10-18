@@ -9,6 +9,36 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontStructuredSequencesKeepExplicitRowSizeOwner()
+    {
+        var resource = RadicalResource(); var font = resource.Font.Font;
+        var matrix = new DocxMathMatrix([new([Row("B"), Row("C")])]);
+        var content = new DocxMathRow([Row("B+").Children[0], matrix, Row("+C").Children[0]]);
+        DocxMathBox Measure(double sourceSize, double? ownerSize)
+        {
+            var equation = new DocxEquation(content, 0, 0, false, null, null, null) { ParentFontSize = sourceSize };
+            TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, default, out var box, out var reason,
+                resolveControlMetrics: _ => font, rowControlSize: ownerSize), reason ?? "Expected a bounded mixed matrix row.");
+            return TestAssert.NotNull(box);
+        }
+        foreach (double owner in new[] { 12d, 20d })
+        {
+            var expected = Measure(12d, owner);
+            foreach (double source in new[] { 11d, 14d })
+            {
+                var actual = Measure(source, owner);
+                TestAssert.Equal(expected.AdvanceWidth, actual.AdvanceWidth);
+                TestAssert.Equal(expected.AboveBaseline, actual.AboveBaseline);
+                TestAssert.Equal(expected.BelowBaseline, actual.BelowBaseline);
+                TestAssert.True(expected.Glyphs.SequenceEqual(actual.Glyphs) && expected.Rules.SequenceEqual(actual.Rules),
+                    "The explicit row owner keeps child geometry and semantic spacing independent of paragraph nominal size.");
+                TestAssert.Equal(owner, actual.ParentMetrics!.Size);
+            }
+        }
+        TestAssert.Equal(11d, Measure(11d, null).ParentMetrics!.Size);
+        TestAssert.Equal(12d, Measure(12d, null).ParentMetrics!.Size);
+    }
+
     public static void MathFontMixedBoxArgumentsKeepSourceOrderAndCompleteBoundedFallbacks()
     {
         var resource = RadicalResource(); var font = resource.Font.Font;

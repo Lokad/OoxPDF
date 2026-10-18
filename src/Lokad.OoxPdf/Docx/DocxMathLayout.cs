@@ -213,7 +213,7 @@ internal static partial class DocxMathLayout
         if (GetRadical(equation) is { } radical)
             return TryMeasureRadical(equation, radical, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics);
         if (GetStructuredRow(equation, token) is { } compound)
-            return TryMeasureStructuredRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont, resolveControlFont, resolveControlMetrics);
+            return TryMeasureStructuredRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont, resolveControlFont, resolveControlMetrics, rowControlSize);
         if (GetFraction(equation) is not { } fraction)
             return DocxMathRowLayout.TryMeasure(equation.Content, resolveFont, token, out box, out fallback);
         if (IsEmptyFraction(equation))

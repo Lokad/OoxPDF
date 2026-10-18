@@ -1,5 +1,5 @@
 {
-  "Scope": "Independent Word three-page outcomes; all51 body and5/page static math glyphs. Raw raster and one-point formula-origin failures remain separate from content/page observers.",
+  "Scope": "Independent Word three-page/content and existing one-point formula-origin gates. Formula anchors use retained source/PDF/export pins; no repeat Office exports. Raw raster and extraction flags remain separate.",
   "Rows": [
     {
       "Id": "composed-mixed-argument-specification",
@@ -35,7 +35,343 @@
       "WordMathGlyphs": 66,
       "Images": 1,
       "ExternalLink": "https://example.org/method",
-      "InternalLinksIncludingFootnote": 1
+      "InternalLinksIncludingFootnote": 1,
+      "FormulaGroups": [
+        {
+          "First": "\u221a",
+          "Glyphs": 9,
+          "Page": 1,
+          "MathText": "\u221ax+abcd+y",
+          "Anchors": [
+            {
+              "Offset": 0,
+              "Text": "\u221a",
+              "X": 119.9,
+              "Y": 650.62
+            },
+            {
+              "Offset": 1,
+              "Text": "x",
+              "X": 128.9,
+              "Y": 650.14
+            },
+            {
+              "Offset": 2,
+              "Text": "+",
+              "X": 138.38,
+              "Y": 650.14
+            },
+            {
+              "Offset": 3,
+              "Text": "a",
+              "X": 150.02,
+              "Y": 656.5
+            },
+            {
+              "Offset": 4,
+              "Text": "b",
+              "X": 169.22,
+              "Y": 656.5
+            },
+            {
+              "Offset": 5,
+              "Text": "c",
+              "X": 150.5,
+              "Y": 642.34
+            },
+            {
+              "Offset": 6,
+              "Text": "d",
+              "X": 168.98,
+              "Y": 642.34
+            },
+            {
+              "Offset": 7,
+              "Text": "+",
+              "X": 178.94,
+              "Y": 650.14
+            },
+            {
+              "Offset": 8,
+              "Text": "y",
+              "X": 190.61,
+              "Y": 650.14
+            }
+          ]
+        },
+        {
+          "First": "\u2211",
+          "Glyphs": 11,
+          "Page": 1,
+          "MathText": "\u2211x+abcd+yni",
+          "Anchors": [
+            {
+              "Offset": 0,
+              "Text": "\u2211",
+              "X": 171.02,
+              "Y": 618.82
+            },
+            {
+              "Offset": 1,
+              "Text": "x",
+              "X": 187.22,
+              "Y": 618.34
+            },
+            {
+              "Offset": 2,
+              "Text": "+",
+              "X": 196.61,
+              "Y": 618.34
+            },
+            {
+              "Offset": 3,
+              "Text": "a",
+              "X": 208.25,
+              "Y": 624.7
+            },
+            {
+              "Offset": 4,
+              "Text": "b",
+              "X": 227.57,
+              "Y": 624.7
+            },
+            {
+              "Offset": 5,
+              "Text": "c",
+              "X": 208.85,
+              "Y": 610.54
+            },
+            {
+              "Offset": 6,
+              "Text": "d",
+              "X": 227.21,
+              "Y": 610.54
+            },
+            {
+              "Offset": 7,
+              "Text": "+",
+              "X": 237.29,
+              "Y": 618.34
+            },
+            {
+              "Offset": 8,
+              "Text": "y",
+              "X": 248.93,
+              "Y": 618.34
+            },
+            {
+              "Offset": 9,
+              "Text": "n",
+              "X": 179.54,
+              "Y": 623.26
+            },
+            {
+              "Offset": 10,
+              "Text": "i",
+              "X": 179.54,
+              "Y": 615.46
+            }
+          ]
+        },
+        {
+          "First": "s",
+          "Glyphs": 9,
+          "Page": 1,
+          "MathText": "sinx+ab+y",
+          "Anchors": [
+            {
+              "Offset": 0,
+              "Text": "s",
+              "X": 277.61,
+              "Y": 618.34
+            },
+            {
+              "Offset": 3,
+              "Text": "x",
+              "X": 294.77,
+              "Y": 618.34
+            },
+            {
+              "Offset": 4,
+              "Text": "+",
+              "X": 304.25,
+              "Y": 618.34
+            },
+            {
+              "Offset": 5,
+              "Text": "a",
+              "X": 315.89,
+              "Y": 625.42
+            },
+            {
+              "Offset": 6,
+              "Text": "b",
+              "X": 316.01,
+              "Y": 612.34
+            },
+            {
+              "Offset": 7,
+              "Text": "+",
+              "X": 324.07,
+              "Y": 618.34
+            },
+            {
+              "Offset": 8,
+              "Text": "y",
+              "X": 335.71,
+              "Y": 618.34
+            }
+          ]
+        },
+        {
+          "First": "(",
+          "Glyphs": 11,
+          "Page": 1,
+          "MathText": "(x+ab+c2+y)",
+          "Anchors": [
+            {
+              "Offset": 0,
+              "Text": "(",
+              "X": 320.47,
+              "Y": 586.66
+            },
+            {
+              "Offset": 1,
+              "Text": "x",
+              "X": 326.35,
+              "Y": 586.66
+            },
+            {
+              "Offset": 2,
+              "Text": "+",
+              "X": 335.83,
+              "Y": 586.66
+            },
+            {
+              "Offset": 3,
+              "Text": "a",
+              "X": 347.47,
+              "Y": 593.74
+            },
+            {
+              "Offset": 4,
+              "Text": "b",
+              "X": 347.59,
+              "Y": 580.66
+            },
+            {
+              "Offset": 5,
+              "Text": "+",
+              "X": 355.63,
+              "Y": 586.66
+            },
+            {
+              "Offset": 6,
+              "Text": "c",
+              "X": 367.27,
+              "Y": 586.66
+            },
+            {
+              "Offset": 7,
+              "Text": "2",
+              "X": 373.39,
+              "Y": 591.1
+            },
+            {
+              "Offset": 8,
+              "Text": "+",
+              "X": 381.43,
+              "Y": 586.66
+            },
+            {
+              "Offset": 9,
+              "Text": "y",
+              "X": 393.07,
+              "Y": 586.66
+            },
+            {
+              "Offset": 10,
+              "Text": ")",
+              "X": 400.03,
+              "Y": 586.66
+            }
+          ]
+        },
+        {
+          "First": "\u220f",
+          "Glyphs": 11,
+          "Page": 1,
+          "MathText": "\u220fx+abcd+yni",
+          "Anchors": [
+            {
+              "Offset": 0,
+              "Text": "\u220f",
+              "X": 364.75,
+              "Y": 529.87
+            },
+            {
+              "Offset": 1,
+              "Text": "x",
+              "X": 384.79,
+              "Y": 529.87
+            },
+            {
+              "Offset": 2,
+              "Text": "+",
+              "X": 394.27,
+              "Y": 529.87
+            },
+            {
+              "Offset": 3,
+              "Text": "a",
+              "X": 405.91,
+              "Y": 536.23
+            },
+            {
+              "Offset": 4,
+              "Text": "b",
+              "X": 425.11,
+              "Y": 536.23
+            },
+            {
+              "Offset": 5,
+              "Text": "c",
+              "X": 406.39,
+              "Y": 522.07
+            },
+            {
+              "Offset": 6,
+              "Text": "d",
+              "X": 424.87,
+              "Y": 522.07
+            },
+            {
+              "Offset": 7,
+              "Text": "+",
+              "X": 434.83,
+              "Y": 529.87
+            },
+            {
+              "Offset": 8,
+              "Text": "y",
+              "X": 446.47,
+              "Y": 529.87
+            },
+            {
+              "Offset": 9,
+              "Text": "n",
+              "X": 370.99,
+              "Y": 547.78
+            },
+            {
+              "Offset": 10,
+              "Text": "i",
+              "X": 372.19,
+              "Y": 514.51
+            }
+          ]
+        }
+      ]
     },
     {
       "Id": "composed-mixed-argument-specification",
@@ -71,7 +407,343 @@
       "WordMathGlyphs": 66,
       "Images": 1,
       "ExternalLink": "https://example.org/method",
-      "InternalLinksIncludingFootnote": 1
+      "InternalLinksIncludingFootnote": 1,
+      "FormulaGroups": [
+        {
+          "First": "\u221a",
+          "Glyphs": 9,
+          "Page": 1,
+          "MathText": "\u221ax+abcd+y",
+          "Anchors": [
+            {
+              "Offset": 0,
+              "Text": "\u221a",
+              "X": 90.936,
+              "Y": 588.46
+            },
+            {
+              "Offset": 1,
+              "Text": "x",
+              "X": 97.752,
+              "Y": 589.01
+            },
+            {
+              "Offset": 2,
+              "Text": "+",
+              "X": 104.95,
+              "Y": 589.01
+            },
+            {
+              "Offset": 3,
+              "Text": "a",
+              "X": 113.76,
+              "Y": 593.83
+            },
+            {
+              "Offset": 4,
+              "Text": "b",
+              "X": 128.33,
+              "Y": 593.83
+            },
+            {
+              "Offset": 5,
+              "Text": "c",
+              "X": 114.14,
+              "Y": 583.1
+            },
+            {
+              "Offset": 6,
+              "Text": "d",
+              "X": 128.16,
+              "Y": 583.1
+            },
+            {
+              "Offset": 7,
+              "Text": "+",
+              "X": 135.7,
+              "Y": 589.01
+            },
+            {
+              "Offset": 8,
+              "Text": "y",
+              "X": 144.53,
+              "Y": 589.01
+            }
+          ]
+        },
+        {
+          "First": "\u2211",
+          "Glyphs": 11,
+          "Page": 1,
+          "MathText": "\u2211x+abcd+yni",
+          "Anchors": [
+            {
+              "Offset": 0,
+              "Text": "\u2211",
+              "X": 129.7,
+              "Y": 564.62
+            },
+            {
+              "Offset": 1,
+              "Text": "x",
+              "X": 141.98,
+              "Y": 564.89
+            },
+            {
+              "Offset": 2,
+              "Text": "+",
+              "X": 149.09,
+              "Y": 564.89
+            },
+            {
+              "Offset": 3,
+              "Text": "a",
+              "X": 157.92,
+              "Y": 569.71
+            },
+            {
+              "Offset": 4,
+              "Text": "b",
+              "X": 172.56,
+              "Y": 569.71
+            },
+            {
+              "Offset": 5,
+              "Text": "c",
+              "X": 158.38,
+              "Y": 558.98
+            },
+            {
+              "Offset": 6,
+              "Text": "d",
+              "X": 172.3,
+              "Y": 558.98
+            },
+            {
+              "Offset": 7,
+              "Text": "+",
+              "X": 179.95,
+              "Y": 564.89
+            },
+            {
+              "Offset": 8,
+              "Text": "y",
+              "X": 188.76,
+              "Y": 564.89
+            },
+            {
+              "Offset": 9,
+              "Text": "n",
+              "X": 136.15,
+              "Y": 568.63
+            },
+            {
+              "Offset": 10,
+              "Text": "i",
+              "X": 136.15,
+              "Y": 562.7
+            }
+          ]
+        },
+        {
+          "First": "s",
+          "Glyphs": 9,
+          "Page": 1,
+          "MathText": "sinx+ab+y",
+          "Anchors": [
+            {
+              "Offset": 0,
+              "Text": "s",
+              "X": 210.53,
+              "Y": 564.89
+            },
+            {
+              "Offset": 3,
+              "Text": "x",
+              "X": 223.54,
+              "Y": 564.89
+            },
+            {
+              "Offset": 4,
+              "Text": "+",
+              "X": 230.74,
+              "Y": 564.89
+            },
+            {
+              "Offset": 5,
+              "Text": "a",
+              "X": 239.57,
+              "Y": 570.26
+            },
+            {
+              "Offset": 6,
+              "Text": "b",
+              "X": 239.64,
+              "Y": 560.33
+            },
+            {
+              "Offset": 7,
+              "Text": "+",
+              "X": 245.74,
+              "Y": 564.89
+            },
+            {
+              "Offset": 8,
+              "Text": "y",
+              "X": 254.57,
+              "Y": 564.89
+            }
+          ]
+        },
+        {
+          "First": "(",
+          "Glyphs": 11,
+          "Page": 1,
+          "MathText": "(x+ab+c2+y)",
+          "Anchors": [
+            {
+              "Offset": 0,
+              "Text": "(",
+              "X": 243.02,
+              "Y": 540.05
+            },
+            {
+              "Offset": 1,
+              "Text": "x",
+              "X": 247.46,
+              "Y": 540.86
+            },
+            {
+              "Offset": 2,
+              "Text": "+",
+              "X": 254.66,
+              "Y": 540.86
+            },
+            {
+              "Offset": 3,
+              "Text": "a",
+              "X": 263.5,
+              "Y": 546.24
+            },
+            {
+              "Offset": 4,
+              "Text": "b",
+              "X": 263.59,
+              "Y": 536.3
+            },
+            {
+              "Offset": 5,
+              "Text": "+",
+              "X": 269.69,
+              "Y": 540.86
+            },
+            {
+              "Offset": 6,
+              "Text": "c",
+              "X": 278.52,
+              "Y": 540.86
+            },
+            {
+              "Offset": 7,
+              "Text": "2",
+              "X": 283.15,
+              "Y": 544.22
+            },
+            {
+              "Offset": 8,
+              "Text": "+",
+              "X": 289.25,
+              "Y": 540.86
+            },
+            {
+              "Offset": 9,
+              "Text": "y",
+              "X": 298.08,
+              "Y": 540.86
+            },
+            {
+              "Offset": 10,
+              "Text": ")",
+              "X": 303.36,
+              "Y": 540.05
+            }
+          ]
+        },
+        {
+          "First": "\u220f",
+          "Glyphs": 11,
+          "Page": 1,
+          "MathText": "\u220fx+abcd+yni",
+          "Anchors": [
+            {
+              "Offset": 0,
+              "Text": "\u220f",
+              "X": 276.6,
+              "Y": 496.99
+            },
+            {
+              "Offset": 1,
+              "Text": "x",
+              "X": 291.79,
+              "Y": 497.81
+            },
+            {
+              "Offset": 2,
+              "Text": "+",
+              "X": 298.99,
+              "Y": 497.81
+            },
+            {
+              "Offset": 3,
+              "Text": "a",
+              "X": 307.82,
+              "Y": 502.63
+            },
+            {
+              "Offset": 4,
+              "Text": "b",
+              "X": 322.39,
+              "Y": 502.63
+            },
+            {
+              "Offset": 5,
+              "Text": "c",
+              "X": 308.18,
+              "Y": 491.9
+            },
+            {
+              "Offset": 6,
+              "Text": "d",
+              "X": 322.2,
+              "Y": 491.9
+            },
+            {
+              "Offset": 7,
+              "Text": "+",
+              "X": 329.76,
+              "Y": 497.81
+            },
+            {
+              "Offset": 8,
+              "Text": "y",
+              "X": 338.59,
+              "Y": 497.81
+            },
+            {
+              "Offset": 9,
+              "Text": "n",
+              "X": 281.33,
+              "Y": 511.46
+            },
+            {
+              "Offset": 10,
+              "Text": "i",
+              "X": 282.24,
+              "Y": 486.17
+            }
+          ]
+        }
+      ]
     }
   ]
 }

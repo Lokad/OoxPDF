@@ -40,7 +40,7 @@ internal static partial class DocxMathLayout
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token,
         out DocxMathBox? box, out string? fallback, OpenTypeFont? parentMetricsFont,
         Func<IDocxMathControl, PdfFontResource?>? resolveControlFont,
-        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics)
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics, double? rowControlSize)
     {
         box = null;
         var glyphs = new List<DocxMathGlyphPlacement>();
@@ -60,7 +60,9 @@ internal static partial class DocxMathLayout
             var metricControl = childRuns.Count == 0 ? GetStandaloneControl(childEquation, token) : null;
             if (childRuns.Count == 0 && (metricControl is null || resolveControlMetrics?.Invoke(metricControl) is null))
             { fallback = "MissingMathStructuredControlMetrics"; return false; }
-            double parentSize = equation.ParentFontSize ?? (childRuns.Count == 0
+            // Nested box roles pass their actual control owner. The paragraph's
+            // nominal size remains the fallback for an unowned top-level row.
+            double parentSize = rowControlSize ?? equation.ParentFontSize ?? (childRuns.Count == 0
                 ? metricControl!.ControlText?.FontSize ?? double.NaN : childRuns[0].Run.Text.FontSize);
             bool measured = TryMeasure(childEquation, resolveFont, token, out var structure, out fallback,
                 parentMetricsFont, resolveControlFont, resolveControlMetrics, rowControlSize: parentSize);
