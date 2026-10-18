@@ -1,5 +1,30 @@
 # Measured operating envelope
 
+## Related-story placement reuse, 2026-10-18
+
+Qualified source `2d587d98` (root `bcbfabb4`) reuses immutable related-story
+measurements across the coordinator's fixed-input header/footer placement retry.
+Distinct body/note width keys remain. Numbering, kerning, font/geometry changes
+and other conversions retain fresh owners. The dictionary ends with its owning
+placement scope; no global cache, extra quota or unsafe/native code is introduced.
+
+The same C234 inputs/options and isolated one-cold/three-warm method now allocate:
+
+| Source | Current Final / Review (MB) | Saved Final / Review (MB) | Reduction Final / Review |
+|---|---:|---:|---:|
+| Fixed report | 24.489 / 27.749 | 0.062 / 0.122 | 0.25% / 0.44% |
+| Single long note | 31.063 / 37.885 | 2.262 / 5.196 | 6.79% / 12.06% |
+| Two plain notes | 31.206 / 38.064 | 2.264 / 5.198 | 6.76% / 12.01% |
+
+All eight composed-note PDFs and six whole/staged benchmark identities remain
+unchanged. Initial font preparation and715,743 native kerning-pair fingerprints
+remain unchanged. These are calling-thread allocated volumes, not live-heap
+ceilings; overlapping preparation scopes remain non-additive and timing is noisy,
+so no timing speedup is claimed. No new Office export or visual raster comparison.
+58Windows/42Ubuntu checks pass,16native skips; a parent-library regression counts
+1,108 repeated note measurements, versus zero during the corrected placement retry.
+Evidence: `artifacts/composition-c1/related-story-measurement-reuse-evidence.json`.
+
 ## Compound-note baseline, 2026-10-18
 
 Qualified C233 source `24f3ce2d` (root `5986a1b9`) is measured through a separately

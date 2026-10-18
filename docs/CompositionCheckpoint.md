@@ -1,5 +1,34 @@
 # Composed-document reliability checkpoint
 
+## C236: reuse measured stories within fixed-input placement retry (2026-10-18)
+
+One coordinator-owned width dictionary now spans the two header/footer placement
+calls with identical document, font measurers, math plans, geometry and scale.
+The355.135/468pt contexts remain separate. Other font/numbering/kerning/page-count
+preparations and conversions retain fresh owners; no global cache, new quota or
+unsafe/native code. The existing Create ABI remains intact. A source/provenance
+and changed-placement count regression measures zero repeated note text calls;
+it fails accepted C233 with1,108 calls, rather than missing-member failure.
+
+One frozen2d587d98 artifact qualifies58Windows/42Ubuntu checks,16native skips,
+once per platform. Selection covers normal/owned notes plus static/comment/field,
+inline-image and concurrent shared-resolver neighbors; no harness repair. All
+2,249 input pins remain unchanged. Eight composed-note PDFs and six staged/whole
+benchmark outputs retain bytes. Initial font preparation and715,743 kerning-pair
+fingerprints remain unchanged. Same C234 isolated1cold/3warm method saves long-note
+2.262-2.264MB Final/5.196-5.198MB Review(6.76-6.79%/12.01-12.06%). Calling-thread
+allocation is not live heap; diagnostic stages overlap, timing is noisy and no
+timing speedup is claimed. The probe is rebuilt separately; library not rebuilt.
+
+All eight Office comparisons,28paired PNG hashes/review chains, failed strict
+gates and four raw math-word audit flags carry by whole-PDF/input/reference/
+threshold identity. No new export, raster comparison, visual review or audit
+replay.17assets/four root smoke PDFs match; no root build/suite or ordinary corpus
+replay. Rootbcbfabb4, library2E4AB2C38587DFF3D213E27AA0C35FD844A4EBA7FC7F35034E087CD23F25FC01.
+Evidence: related-story-measurement-reuse-evidence.json; docs/OperatingEnvelope.md.
+C233CI39142860977 is green on both platforms, including broader/package checks.
+C237 returns to the realistic table/cell reference combination.
+
 ## C235: related-story measurement ownership across placement retries (2026-10-18)
 
 Read-only C233 attribution confirms a concrete repeated pure operation. The same
