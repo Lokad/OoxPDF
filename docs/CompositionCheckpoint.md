@@ -1,5 +1,36 @@
 # Composed-document reliability checkpoint
 
+## C229: shared physical body boundary seats initial note heads (2026-10-18)
+
+C228's body overlap and initial head-capacity errors close in the admitted
+physical frame. Body-to-note coordinate conversion is extracted from inline-
+note eligibility and reused for placement; the head reserves its separator once
+from placed body bounds. Typography/kerning admission and old inline-note paths
+remain. No font/size/document-shape exception or fitted offset is added.
+Both presets now match Word17/31/16 source membership and retain all64 paragraphs
+once/in order. First-head errors19.425/58.699pt become+0.002/+0.271pt; all note
+page first/last origins retain1pt gates (max0.432/0.432pt).
+
+One frozen c0bba51c artifact:37 Windows/29 Ubuntu passes, eight native skips,
+once per platform; both strengthened observers fail accepted C227. Two bounded
+prototype conversions preceded qualification; no root build/suite replay.
+2,246 input pins unchanged; one Office-facts JSON adds independently retained
+head origins and page membership. Four existing Word views reused, no exports.
+Separator-less PDFs and all equation operations remain identical. Two comparisons
+reused/two fresh; all4 strict visual failures remain. Source prose/simple math
+deficits are zero, per-page prose membership deficits clear, and four raw Word
+rate/time math-word screens remain. Twelve paired PNG hashes/chains retained;
+two first-note page pairs and one of six portable pages reviewed.
+
+Existing fixed-source header math retains static typography fallback, and C227's
+measured footer frames do not intrude; the new placement-cap branch is unreachable
+there. Source SHA proof suffices without portfolio/deck preparations or conversions.
+17 assets/four root smoke PDFs match. Library/CLI Release builds have zero
+warnings/errors; tests retain two inherited nullable warnings. Root a80f0fe2,
+library 08B2EC5BFCE39BC3F2F623A9FFE22C4D57BCA6D60C2E03BEDFC7F1BB1B789230.
+Evidence: note-body-boundaries-evidence.json. C227 CI39138298794 is green on both
+platforms, including broader/package checks. C230 checks the footer-free sibling.
+
 ## C228: first-note body collision diagnosis (2026-10-18)
 
 Retained C227/Word PDFs plus two read-only prepared layouts expose a confirmed
