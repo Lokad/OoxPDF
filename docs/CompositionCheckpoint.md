@@ -1,5 +1,42 @@
 # Composed-document reliability checkpoint
 
+C171 resolves C170's three-versus-two-page defect through source-owned note
+admission. Legacy block admission excludes a new block's own note reserve after
+existing content. Its complete one-line path was disabled by unrelated static
+stories and by requiring the target's first text to match the body number. The
+plain target has no authored number. Remove those two eligibility couplings;
+owned body references and unique complete target stories now control admission.
+Existing note/line boxes, reserves and placement remain unchanged. Numbering and
+custom-marker guards, complex-note/frame, section/column/keep and unowned-marker
+fallbacks remain. No synthetic number, fitted offset, new mode or reserve algorithm.
+
+109 Windows/96 Ubuntu checks pass,13 native skips. Both new observers fail C170.
+Six independent Word admission observations pass. Four promoted public controls
+retain exact previously exported input bytes and cached Office pins; zero new
+exports. Removing only the static guard left the label guard active. Temporary
+full/compact experiments were ineffective, and an unmarked-height branch proved
+identical to existing boxes and was removed. Qualified frame inspection confirms
+19.428pt note box including6pt source after-space and13.428pt separator line;
+temporary trace instrumentation is absent from production.
+
+The specification now matches Word's three pages/43 math glyphs in both presets,
+including the final note-marker paragraph, note, balloon and repeated static
+content. Source/Office prose and simple-math deficits are zero; both raw screens
+retain three complex-math flags each. Both strict raster gates remain failed,
+with Pagination recovered and no new failed components. Fifteen full-page pairs
+were reviewed across document/controls, with no demonstrated new clipping. Two
+compact controls retain the existing6.050pt note-Y residual; full/header-only
+fresh-page note Y differs by0.050pt. No fitted spacing correction is accepted.
+
+The16-outcome/nine-source portfolio now has30 candidate/Word pages. Fourteen
+prior PDFs/24 reviewed pairs retain identities, fourteen DOCX strict gates remain
+failed and both decks pass. All2,099 old public inputs retain hashes; six inputs
+are added.17 assets/four smokes transfer without root build, suite or corpus
+replay. Root27ca2035; evidence
+artifacts/composition-c1/static-note-admission-evidence.json. C170 CI39084659085
+is green on both platforms. Next, investigate occupied note/separator spacing
+under compact body capacity while preserving the corrected admission contract.
+
 C170 adds a development specification combining qualified radical/matrix/sum/
 product formulas with tables, numbering, image, links, footnote, comments and
 static stories. It derives only from existing public development inputs. Two
