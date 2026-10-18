@@ -1802,11 +1802,11 @@ internal sealed partial class DocxLayoutEngine
             var layout = head.StoryLayout;
             if (layout.TextLines.Count == 0) break;
             double[] boxes = GetStoryTextLineBoxHeights(layout);
-            double[]? afters = printScale >= 1d ? GetStoryLineAfterSpacings(layout) : null;
             double capacity = Math.Max(0d, top - bottom - seated);
             bool fresh = inFlightNotes is null || head.Location.Reference.Id is null ||
                 !inFlightNotes.TryGetValue((head.Location.Reference.Kind, head.Location.Reference.Id), out var flight) ||
                 flight.PlacedLineCount == 0;
+            double[]? afters = printScale >= 1d && fresh ? GetStoryLineAfterSpacings(layout) : null;
             (int take, double height) = usesParagraphFrames
                 ? TakeParagraphStoryLines(layout.TextLines[0].SourceParagraph!, boxes, 0, layout.TextLines.Count,
                     capacity, afters, page.Items.Count != 0 || seated != 0d, fresh)
@@ -1949,7 +1949,9 @@ internal sealed partial class DocxLayoutEngine
         foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
         {
             InFlightRelatedStory? trackedStory = inFlightNotes is not null && story.Location.Reference.Id is not null && inFlightNotes.TryGetValue((story.Location.Reference.Kind, story.Location.Reference.Id), out InFlightRelatedStory? tracked) ? tracked : null;
-            double storyHeight = ResolvePlacedStoryHeight(story.StoryLayout, activePage);
+            // Admission measures the complete source remainder. Capping it to
+            // page height can falsely admit an oversized story without slicing.
+            double storyHeight = Math.Max(0d, story.StoryLayout.ContentHeight);
             if (trackedStory is not null && trackedStory.SeparatorPlaced && continuationSeparatorLayout is not null && continuationSeparatorLayout.TextLines.Count != 0 &&
                 (placementFooter is null || !sharedSeparatorPlaced))
             {
@@ -2061,7 +2063,7 @@ internal sealed partial class DocxLayoutEngine
         foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
         {
             InFlightRelatedStory? trackedStory = inFlightNotes is not null && story.Location.Reference.Id is not null && inFlightNotes.TryGetValue((story.Location.Reference.Kind, story.Location.Reference.Id), out InFlightRelatedStory? tracked) ? tracked : null;
-            double storyHeight = ResolvePlacedStoryHeight(story.StoryLayout, activePage);
+            double storyHeight = Math.Max(0d, story.StoryLayout.ContentHeight);
             // Omitted continuation stories still have a default full-width rule.
             // Source progress distinguishes a true continuation from an unplaced head.
             double? defaultContinuationWidth = ownedFrame && continuationSeparatorLayout is null &&
