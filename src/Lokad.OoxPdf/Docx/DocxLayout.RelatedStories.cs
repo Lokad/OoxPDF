@@ -135,7 +135,7 @@ internal sealed partial class DocxLayoutEngine
             DocxRelatedStoryLayout? footnoteContinuationLayout = FindSpecialRelatedStoryLayout(footnoteLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? footnoteSeparatorLayout;
             PlaceFootnoteStories(outputPages, outputIndex, page, pageFootnoteStories, footnoteSeparatorLayout, footnoteContinuationLayout, separatorMeasurer, printScale, headerKeepOut,
                 footerKeepOut: CanUsePlainFootnoteStaticFrame(document, page, separatorMeasurer, printScale, cancellationToken) ? footerKeepOut : null,
-                availableFooterKeepOut: ownedFootnoteFooterKeepOut ?? footerKeepOut);
+                availableFooterKeepOut: ownedFootnoteFooterKeepOut ?? footerKeepOut, cancellationToken: cancellationToken);
             outputShift += outputPages.Count - countBefore;
         }
 
@@ -1776,7 +1776,8 @@ internal sealed partial class DocxLayoutEngine
         double? sharedContentTop = null,
         Func<DocxLayoutPage, int, int, double>? footerKeepOut = null,
         Func<DocxLayoutPage, int, int, double>? availableFooterKeepOut = null,
-        bool hasSourceOwnedReserve = false)
+        bool hasSourceOwnedReserve = false,
+        CancellationToken cancellationToken = default)
     {
         if (footnoteStories.Count == 0)
         {
@@ -1786,7 +1787,7 @@ internal sealed partial class DocxLayoutEngine
         if (separatorLayout is null)
         {
             PlaceFootnoteStoriesWithoutSeparator(outputPages, outputIndex, page, footnoteStories, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, sharedSlicePlacement, inFlightNotes, pageNumberOverride, pageCountOverride,
-                sharedContentTop: sharedContentTop, footerKeepOut: footerKeepOut, availableFooterKeepOut: availableFooterKeepOut);
+                sharedContentTop: sharedContentTop, footerKeepOut: footerKeepOut, availableFooterKeepOut: availableFooterKeepOut, cancellationToken: cancellationToken);
             return;
         }
 
@@ -1934,6 +1935,27 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
+    private static double ResolveDefaultFootnoteSeparatorFlowHeight(DocxRelatedStoryLayout firstLayout,
+        IDocxTextMeasurer? measurer)
+    {
+        if (firstLayout.TextLines.Count == 0) return 0d;
+        double firstBoxHeight = GetStoryTextLineBoxHeights(firstLayout)[0];
+        if (measurer is IDocxLineMetricsProvider && firstLayout.TextLines[0].SourceParagraph is { } paragraph)
+        {
+            // A default separator consumes a natural source-font line, without
+            // authored paragraph minima or inline mathematical extents.
+            var natural = paragraph with
+            {
+                LineSpacingPoints = null,
+                LineSpacingFactor = 1d,
+                Spacing = paragraph.Spacing with { LineRuleValue = "auto", LineValue = "240" }
+            };
+            double height = ResolveNoteContentLineHeightProfile(natural, GetParagraphFontSize(natural), measurer).LineHeight;
+            if (double.IsFinite(height) && height > 0d) firstBoxHeight = height;
+        }
+        return firstBoxHeight;
+    }
+
     // RV06 footlong probes: separator-less footnote blocks keep legacy whole
     // placement when they fit (synthetic rule preserved), but overflowing stories
     // slice through the shared line-partition machinery with the synthetic rule
@@ -1954,7 +1976,8 @@ internal sealed partial class DocxLayoutEngine
         int? pageCountOverride = null,
         double? sharedContentTop = null,
         Func<DocxLayoutPage, int, int, double>? footerKeepOut = null,
-        Func<DocxLayoutPage, int, int, double>? availableFooterKeepOut = null)
+        Func<DocxLayoutPage, int, int, double>? availableFooterKeepOut = null,
+        CancellationToken cancellationToken = default)
     {
         bool ownedFrame = ResolveOwnedInlineFootnoteFrame(page, footnoteStories, printScale,
             ref sharedContentTop, ref footerKeepOut, availableFooterKeepOut);
@@ -1974,27 +1997,26 @@ internal sealed partial class DocxLayoutEngine
             : ResolveFootnoteClampBodyBottom(page, pageNumberOverride ?? (outputIndex + 1), pageCountOverride ?? outputPages.Count, firstLayout, headerKeepOut);
         if (firstLayout.TextLines.Count != 0)
         {
-            double firstBoxHeight = GetStoryTextLineBoxHeights(firstLayout)[0];
-            if (ownedFrame && separatorMeasurer is IDocxLineMetricsProvider && firstLayout.TextLines[0].SourceParagraph is { } paragraph)
-            {
-                // A synthetic separator consumes a natural font line, independent
-                // of authored paragraph minima and inline mathematical extents.
-                var natural = paragraph with
-                {
-                    LineSpacingPoints = null,
-                    LineSpacingFactor = 1d,
-                    Spacing = paragraph.Spacing with { LineRuleValue = "auto", LineValue = "240" }
-                };
-                double height = ResolveNoteContentLineHeightProfile(natural, GetParagraphFontSize(natural), separatorMeasurer).LineHeight;
-                if (double.IsFinite(height) && height > 0d) firstBoxHeight = height;
-            }
+            double firstBoxHeight = ownedFrame
+                ? ResolveDefaultFootnoteSeparatorFlowHeight(firstLayout, separatorMeasurer)
+                : GetStoryTextLineBoxHeights(firstLayout)[0];
             storiesTop = Math.Min(cursorTop, clampBodyBottom - firstBoxHeight);
             if (sharedContentTop is not null)
             {
                 storiesTop = Math.Min(storiesTop, sharedContentTop.Value - (ownedFrame ? firstBoxHeight : 0d));
             }
         }
-        if (ownedFrame)
+        bool paragraphBodyFrame = false;
+        if (!ownedFrame && footnoteStories.All(story => HasParagraphNoteFlowStory(story.StoryLayout, cancellationToken)) &&
+            TryResolveFootnoteBodyBottom(activePage, printScale, null, out double bodyBottom))
+        {
+            paragraphBodyFrame = true;
+            // The implied rule owns a natural source-font line on this path too.
+            // Physical body/table occupancy is independent of math eligibility.
+            storiesTop = Math.Min(storiesTop, bodyBottom -
+                ResolveDefaultFootnoteSeparatorFlowHeight(firstLayout, separatorMeasurer));
+        }
+        if (ownedFrame || paragraphBodyFrame)
         {
             storiesTop = ResolveSeatedFootnoteTop(activePage, footnoteStories, storiesTop, frameBottom,
                 inFlightNotes, printScale, usesParagraphFrames: true);
@@ -2007,7 +2029,7 @@ internal sealed partial class DocxLayoutEngine
             double storyHeight = Math.Max(0d, story.StoryLayout.ContentHeight);
             // Omitted continuation stories still have a default full-width rule.
             // Source progress distinguishes a true continuation from an unplaced head.
-            double? defaultContinuationWidth = ownedFrame && continuationSeparatorLayout is null &&
+            double? defaultContinuationWidth = (ownedFrame || paragraphBodyFrame) && continuationSeparatorLayout is null &&
                 trackedStory is { PlacedLineCount: > 0 }
                     ? ResolveContinuationRuleWidth(activePage, printScale) : null;
             bool needsContinuationRule = false;

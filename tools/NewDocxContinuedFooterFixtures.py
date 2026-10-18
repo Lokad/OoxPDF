@@ -14,7 +14,9 @@ for row in manifest:
     restore_footer = row.get("RestoreOriginalFooter", False)
     split_owners = row.get("SplitNoteOwners", False)
     table_reference = row.get("MoveReferenceToTable", False)
-    source = output / ("two-plain-notes-report.docx" if table_reference else
+    remove_separator = row.get("RemoveFootnoteSeparator", False)
+    source = output / ("table-note-reference-report.docx" if remove_separator else
+                       "two-plain-notes-report.docx" if table_reference else
                        "long-note-original-footer-report.docx" if split_owners else
                        "occupied-footer-long-note-report.docx" if restore_footer else "linked-inline-footer-report.docx")
     assert hashlib.sha256(source.read_bytes()).hexdigest().upper() == row["SourceSha256"]
@@ -64,7 +66,7 @@ for row in manifest:
     else:
         part = "word/footnotes.xml"
         story = E.fromstring(parts[part])
-        if "no-separator" in row["Id"]:
+        if remove_separator or "no-separator" in row["Id"]:
             story.remove(next(n for n in story if n.get(w + "type") == "separator"))
         else:
             note = next(n for n in story if n.get(w + "id") == "1")

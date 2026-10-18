@@ -14,11 +14,18 @@ internal static partial class DocxInlineCompositionTests
         CheckTableNoteReferences(null);
     }
 
-    internal static void CheckTableNoteReferences(IFontResolver? resolver)
+    public static void DocxInlineCompositionImplicitFootnoteSeparatorKeepsIndependentWordFrames()
     {
-        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath("table-note-reference-office.json")));
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent implicit-separator frames require installed Windows fonts.");
+        CheckTableNoteReferences(null, "table-note-without-separator-report", "table-note-without-separator-office.json");
+    }
+
+    internal static void CheckTableNoteReferences(IFontResolver? resolver,
+        string fixture = "table-note-reference-report", string reference = "table-note-reference-office.json")
+    {
+        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath(reference)));
         TestAssert.Equal(gold.RootElement.GetProperty("InputSha256").GetString(),
-            Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(NestedMathCasePath("table-note-reference-report.docx")))));
+            Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(NestedMathCasePath(fixture + ".docx")))));
         var expectedNumbers = gold.RootElement.GetProperty("ExpectedNumberOrder").EnumerateArray().Select(n => n.GetInt32()).ToArray();
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
@@ -26,7 +33,7 @@ internal static partial class DocxInlineCompositionTests
             var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
             foreach (bool transformed in new[] { false, true })
             {
-                var document = ReadMutation("CompositionProbes/table-note-reference-report", mode, transformed, transformed,
+                var document = ReadMutation("CompositionProbes/" + fixture, mode, transformed, transformed,
                     partOverride: "word/document.xml");
                 var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
                 var pages = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
@@ -52,6 +59,30 @@ internal static partial class DocxInlineCompositionTests
                         text[i].StartsWith("Second public continuation note.", StringComparison.Ordinal) ||
                         text[i].StartsWith("Public continuation note line", StringComparison.Ordinal)).ToArray();
                     if (noteIndices.Length == 0) continue;
+                    if (row.TryGetProperty("SeparatorRules", out var expectedRules))
+                    {
+                        double firstNoteInkTop = lines[noteIndices[0]].SelectMany(show => OccupiedFooterInk(show, scale)).Max();
+                        var rule = Regex.Matches(page.Content,
+                            @"(?m)^0 g\r?\n(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re f")
+                            .Cast<Match>().Select(match => (X: Number(match, "x"), Y: Number(match, "y"),
+                                Width: Number(match, "w"), Height: Number(match, "h")))
+                            .Where(rect => rect.Width > 50d && rect.Height < 2d && rect.Y > firstNoteInkTop)
+                            .OrderBy(rect => rect.Y).First();
+                        bool headPage = noteIndices.Any(i => text[i].StartsWith("Second public continuation note.", StringComparison.Ordinal) ||
+                            text[i].StartsWith("All quantities", StringComparison.Ordinal));
+                        double expectedWidth = (headPage ? 144d : document.PageWidthPoints - document.MarginLeftPoints - document.MarginRightPoints) * scale;
+                        TestAssert.True(Math.Abs(rule.Width - expectedWidth) < .002d,
+                            "Every implicit head uses the short rule and every continuation uses its full source text width, with native or portable fonts.");
+                        if (resolver is null)
+                        {
+                            var expectedRule = expectedRules.EnumerateArray().Single(r => r.GetProperty("Page").GetInt32() == index + 1);
+                            TestAssert.True(Math.Abs(rule.X - expectedRule.GetProperty("X").GetDouble()) < 1d &&
+                                Math.Abs(rule.Y - expectedRule.GetProperty("Y").GetDouble()) < 1d &&
+                                Math.Abs(rule.Width - expectedRule.GetProperty("Width").GetDouble()) < 1d &&
+                                Math.Abs(rule.Height - expectedRule.GetProperty("Height").GetDouble()) < 1d,
+                                "Implicit head and continuation rules retain independent one-point Word geometry.");
+                        }
+                    }
                     if (index == 0)
                     {
                         var tableProse = Enumerable.Range(0, lines.Length).Where(i => text[i].Contains("Observed series", StringComparison.Ordinal) ||
@@ -104,5 +135,6 @@ internal static partial class DocxInlineCompositionTests
                 }
             }
         }
+        static double Number(Match match, string group) => double.Parse(match.Groups[group].Value, System.Globalization.CultureInfo.InvariantCulture);
     }
 }

@@ -16,6 +16,10 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingImplicitFootnoteSeparatorKeepsTableAndNotesClear() =>
+        DocxInlineCompositionTests.CheckTableNoteReferences(new PinnedResolver(mathFont: true),
+            "table-note-without-separator-report", "table-note-without-separator-office.json");
+
     public static void PortableRenderingTableNoteReferencesRetainSourceOrderAndTargets() =>
         DocxInlineCompositionTests.CheckTableNoteReferences(new PinnedResolver(mathFont: true));
 

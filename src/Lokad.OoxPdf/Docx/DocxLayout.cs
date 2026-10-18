@@ -956,7 +956,7 @@ internal sealed partial class DocxLayoutEngine
                     pageNumberOverride: templatePageNumber,
                     pageCountOverride: templatePageNumber,
                     sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter), footerKeepOut: footnoteFrameBottom,
-                    availableFooterKeepOut: availableFootnoteFrameBottom);
+                    availableFooterKeepOut: availableFootnoteFrameBottom, cancellationToken: cancellationToken);
             }
             else
             {
@@ -977,7 +977,7 @@ internal sealed partial class DocxLayoutEngine
                     sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter) -
                         (completeFootnoteAdmission?.SeparatorHeight ?? 0d), footerKeepOut: footnoteFrameBottom,
                         availableFooterKeepOut: availableFootnoteFrameBottom,
-                        hasSourceOwnedReserve: completeFootnoteAdmission is not null);
+                        hasSourceOwnedReserve: completeFootnoteAdmission is not null, cancellationToken: cancellationToken);
             }
 
             var harvestedStories = new List<DocxPlacedRelatedStoryLayout>();
@@ -1044,7 +1044,7 @@ internal sealed partial class DocxLayoutEngine
                         pending[0].ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale, ResolveHeaderKeepOut,
                         sharedSlicePlacement: true, inFlightNotes: inFlightNotes,
                         footerKeepOut: qualifiedTypography ? ResolveNoteFooterKeepOut : null,
-                        availableFooterKeepOut: ResolveNoteFooterKeepOut);
+                        availableFooterKeepOut: ResolveNoteFooterKeepOut, cancellationToken: cancellationToken);
                     tailPage = pages[tailPageIndex];
                     tailPlacedStories = tailPage.PlacedRelatedStories.ToList();
                     // An unusable static frame retains the existing progress

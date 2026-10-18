@@ -502,7 +502,7 @@ internal static partial class DocxInlineCompositionTests
             var document = DocxTests.ReadDocx(input, mode);
             var lines = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                 : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(document).Lines;
-            string kind = input.Contains("-footnote-", StringComparison.Ordinal) ? "Footnote" : "Endnote";
+            string kind = Path.GetFileName(input).Contains("-footnote-", StringComparison.Ordinal) ? "Footnote" : "Endnote";
             var prose = lines.First(line => line.ContainerStoryKind == kind && line.TextLength > 1)
                 .Segments.First(segment => segment.TextLength > 1);
             TestAssert.True(Math.Abs(prose.BaselineY - row.GetProperty("FirstProseBaseline").GetDouble()) < .5d,
@@ -525,12 +525,12 @@ internal static partial class DocxInlineCompositionTests
             bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
             var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
             string fixture = "CompositionProbes/" + row.GetProperty("Id").GetString();
-            string noteKind = input.Contains("-footnote-", StringComparison.Ordinal) ? "footnote" : "endnote";
+            string noteKind = Path.GetFileName(input).Contains("-footnote-", StringComparison.Ordinal) ? "footnote" : "endnote";
             var document = ReadMutation(fixture, mode, false, false,
                 (xml, w, m) => { if (removeMath) xml.Descendants(m + "oMath").Remove(); }, "word/" + noteKind + "s.xml");
             var lines = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                 : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(document).Lines;
-            string kind = input.Contains("-footnote-", StringComparison.Ordinal) ? "Footnote" : "Endnote";
+            string kind = Path.GetFileName(input).Contains("-footnote-", StringComparison.Ordinal) ? "Footnote" : "Endnote";
             var noteLines = lines.Where(line => line.ContainerStoryKind == kind && line.TextLength > 1).ToArray();
             TestAssert.True(row.GetProperty("ProseLineCount").GetInt32() == noteLines.Length,
                 $"The normal note inherits its owning section's design width before print scaling: {input}/{mode}.");

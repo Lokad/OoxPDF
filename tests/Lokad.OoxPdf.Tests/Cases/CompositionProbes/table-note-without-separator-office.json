@@ -1,0 +1,343 @@
+{
+  "InputSha256": "078C2027357F5568D0C8578F123BEF2E8E305F71C44260D0F732E88455E29C4B",
+  "ExpectedNumberOrder": [
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32
+  ],
+  "Rows": [
+    {
+      "Mode": "final-preserve",
+      "Pages": 4,
+      "Heads": [
+        {
+          "Prefix": "Second public continuation note.",
+          "Page": 1,
+          "BaselineY": 508.3900146484375,
+          "DestinationY": 518.0
+        },
+        {
+          "Prefix": "All quantities in this synthetic example are illustrative.",
+          "Page": 3,
+          "BaselineY": 430.6300048828125,
+          "DestinationY": 441.0
+        }
+      ],
+      "NotePages": [
+        {
+          "Page": 1,
+          "Numbers": [
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            54
+          ]
+        },
+        {
+          "Page": 2,
+          "Numbers": [
+            55,
+            56,
+            57,
+            58,
+            59,
+            60,
+            61,
+            62,
+            63,
+            64
+          ]
+        },
+        {
+          "Page": 3,
+          "Numbers": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18
+          ]
+        },
+        {
+          "Page": 4,
+          "Numbers": [
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32
+          ]
+        }
+      ],
+      "ReferencePdfSha256": "D391C89647807BB699F040D580C6E9835691CE9FCC67874A23C388DFCE408781",
+      "Scope": "Independent Word page count, reference/head pages, paragraph membership, head and link origins asserted; stricter visual thresholds remain unchanged.",
+      "SeparatorRules": [
+        {
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 523.8699951171875,
+          "Width": 144.02000427246094,
+          "Height": 0.719970703125
+        },
+        {
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 271.25,
+          "Width": 468.0699920654297,
+          "Height": 0.72003173828125
+        },
+        {
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 446.1099853515625,
+          "Width": 144.02000427246094,
+          "Height": 0.720001220703125
+        },
+        {
+          "Page": 4,
+          "X": 72.02400207519531,
+          "Y": 349.010009765625,
+          "Width": 468.0699920654297,
+          "Height": 0.720001220703125
+        }
+      ]
+    },
+    {
+      "Mode": "all-word-compatible",
+      "Pages": 4,
+      "Heads": [
+        {
+          "Prefix": "Second public continuation note.",
+          "Page": 1,
+          "BaselineY": 481.510009765625,
+          "DestinationY": 489.0
+        },
+        {
+          "Prefix": "All quantities in this synthetic example are illustrative.",
+          "Page": 3,
+          "BaselineY": 422.5400085449219,
+          "DestinationY": 430.0
+        }
+      ],
+      "NotePages": [
+        {
+          "Page": 1,
+          "Numbers": [
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            54
+          ]
+        },
+        {
+          "Page": 2,
+          "Numbers": [
+            55,
+            56,
+            57,
+            58,
+            59,
+            60,
+            61,
+            62,
+            63,
+            64
+          ]
+        },
+        {
+          "Page": 3,
+          "Numbers": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18
+          ]
+        },
+        {
+          "Page": 4,
+          "Numbers": [
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32
+          ]
+        }
+      ],
+      "ReferencePdfSha256": "FF37E4C213D41B5AA9CF342B8FF01BAEC38B69EC813E6F4594CE1D54370174FD",
+      "Scope": "Independent Word page count, reference/head pages, paragraph membership, head and link origins asserted; stricter visual thresholds remain unchanged.",
+      "SeparatorRules": [
+        {
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 493.2699890136719,
+          "Width": 109.22000885009766,
+          "Height": 0.527984619140625
+        },
+        {
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 301.67999267578125,
+          "Width": 354.98001861572266,
+          "Height": 0.552001953125
+        },
+        {
+          "Page": 3,
+          "X": 54.599998474121094,
+          "Y": 434.2799987792969,
+          "Width": 109.22000885009766,
+          "Height": 0.552001953125
+        },
+        {
+          "Page": 4,
+          "X": 54.599998474121094,
+          "Y": 360.6499938964844,
+          "Width": 354.98001861572266,
+          "Height": 0.551971435546875
+        }
+      ]
+    }
+  ]
+}
