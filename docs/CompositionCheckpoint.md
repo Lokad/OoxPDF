@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+C169 shares bounded container/matrix source discovery between radicals and
+n-ary operators. C168 loses all six sum/product/inner-control formulas while
+Word paints seven glyphs each. The shared helper preserves ordered outer/matrix
+owners and independent limit roles, reusing existing measurements/context sizes/
+painting. Matrix cells still reject another matrix or container. Visible/hidden
+limits, missing metrics, cancellation and scene-node limits retain bounded behavior.
+
+48 Windows and30 Ubuntu checks pass,18 native skips. All three new observers
+fail on C168. Native/pinned portable body/cell transformations preserve content
+and mathematical origins. Twelve coherent n-ary/radical outcomes are measured
+once: six new Word anchor gates pass(maxX0.385pt/maxY0.567pt), six radical PDFs/
+comparisons retain bytes, and all12 strict gates retain foreground-recall/SSIM
+failures. Two unique new full-page/crop pairs were reviewed; four new pairs carry
+both raster identities and six radical reviews carry by PDF identity. Matrix
+cells, operators, both limits and following prose are visible, with residuals
+unaccepted. Initial diagnostic limit pairing reversed upper/lower glyphs and
+reported invalid8.282/33.255pt differences; unique source-character matching
+corrects that observation without geometry or threshold changes.
+
+All2,091 prior inputs retain hashes. A1,464-DOCX source audit finds only three
+new n-ary and three qualified radical controls with the affected shapes. The
+C16614-outcome portfolio carries by source-backed inference and existing report/
+deck PDF integration identities, without corpus replay.17 assets/four exact
+smokes transfer without root build or suite replay. Roota793c051; evidence
+artifacts/composition-c1/nary-matrix-evidence.json. Next, exercise the qualified
+formulas together in one realistic development specification with tables/notes/
+static stories and refresh the finite document checkpoint once.
+
 C168 restores supported matrix arguments inside radicals. C166 drops the whole
 formula in all six square/indexed/inner-control outcomes while Word preserves
 all glyphs. The bounded matrix walk now supplies source runs with ordered
