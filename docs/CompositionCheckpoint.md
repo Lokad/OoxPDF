@@ -1,5 +1,21 @@
 # Composed-document reliability checkpoint
 
+C220 confirms that paragraph justification still breaks supported composition.
+A single-line or wrapped report paragraph containing two supported formulas
+omits both in each public preset: nine glyphs/outcome,36 missing overall.
+The wrapped left-aligned sibling retains all32 document math glyphs and prose;
+all six independent Word outputs retain32 glyphs/two pages. The converter
+succeeds with an unsupported/ignored diagnostic for each justified outcome.
+
+Three source transformations preserve all formulas/fonts/story owners, with
+ordinary public prose added only for wrapped controls. Six Word exports are
+cached once. Frozen C219 supplies all measurements without production build or
+test replay; all six strict gates remain failed. C221 should reuse the existing
+justification contract in ordered placement, including continuation/last-line
+ownership and source geometry. No new single-line/font/size/source-shape guard.
+Evidence: justified-math-composition-review.json. C219 CI39130228459 is green
+on both platforms, including broader/package checks.
+
 C219 restores64 missing glyphs caused by unused tab-stop metadata. Shared
 resolution retains the source leader; ordered composition validates the stops
 actually consumed, including a line retry. Bars and unknown kinds keep the
