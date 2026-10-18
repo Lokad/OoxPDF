@@ -27,7 +27,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? unscaledTextMeasurer,
         CancellationToken cancellationToken,
         bool header,
-        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null,
+        bool hasDocumentBodyOrigin = false)
     {
         if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
         {
@@ -55,7 +56,7 @@ internal sealed partial class DocxLayoutEngine
             defaultTabStopPoints,
             paragraphSpacingScale,
             unscaledLineMetrics,
-            cancellationToken, mathEquations, unscaledTextMeasurer);
+            cancellationToken, mathEquations, unscaledTextMeasurer, hasDocumentBodyOrigin);
         if (!HasVisibleStaticContent(layout))
         {
             return null;
@@ -174,7 +175,8 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints,
                     paragraphSpacingScale,
                     unscaledLineMetrics,
-                    cancellationToken, mathEquations, unscaledTextMeasurer);
+                    cancellationToken, mathEquations, unscaledTextMeasurer,
+                    hasDocumentBodyOrigin: pages[0].Items.FirstOrDefault() is DocxTextLineLayout);
             DocxStaticStoryLayoutResult footerLayout = CreatePageStaticStoryLayout(
                     page, selectedFooter,
                     page.MarginLeft,
@@ -188,7 +190,8 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints,
                     paragraphSpacingScale,
                     unscaledLineMetrics,
-                    cancellationToken, mathEquations, unscaledTextMeasurer);
+                    cancellationToken, mathEquations, unscaledTextMeasurer,
+                    hasDocumentBodyOrigin: pages[0].Items.FirstOrDefault() is DocxTextLineLayout);
             // Stories that laid out no visible content (absent headers, empty selections)
             // displace nothing: their untouched start cursor sits inside the header zone,
             // which would otherwise read as overflow whenever the header distance is

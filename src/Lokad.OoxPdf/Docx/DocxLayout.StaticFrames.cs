@@ -8,11 +8,11 @@ internal sealed partial class DocxLayoutEngine
         IDocxStaticTextMetricsProvider staticMetrics, double defaultTabStopPoints, double scale,
         IDocxLineMetricsProvider? unscaledLineMetrics, CancellationToken token,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations,
-        IDocxTextMeasurer? unscaledTextMeasurer)
+        IDocxTextMeasurer? unscaledTextMeasurer, bool hasDocumentBodyOrigin = false)
     {
         bool canMap = scale is > 0d and < 1d && double.IsFinite(width / scale) &&
             page.ColumnFrames.Count <= 1 &&
-            page.Items.FirstOrDefault() is DocxTextLineLayout &&
+            (page.Items.FirstOrDefault() is DocxTextLineLayout || page.Items.Count == 0 && hasDocumentBodyOrigin) &&
             unscaledTextMeasurer is IDocxStaticTextMetricsProvider &&
             page.PageSettings.HeaderFloatingDrawingsByType.Values.All(drawings => drawings.Count == 0) &&
             page.PageSettings.FooterFloatingDrawingsByType.Values.All(drawings => drawings.Count == 0) &&

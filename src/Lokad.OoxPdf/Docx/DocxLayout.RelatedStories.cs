@@ -78,7 +78,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? separatorMeasurer = null, 
         Func<DocxLayoutPage, int, int, double>? headerKeepOut = null,
         ISet<(DocxRelatedStoryKind Kind, string Id)>? alreadyPlacedStoryKeys = null,
-        Func<DocxLayoutPage, int, int, double>? footerKeepOut = null)
+        Func<DocxLayoutPage, int, int, double>? footerKeepOut = null,
+        Func<DocxLayoutPage, int, int, double>? ownedFootnoteFooterKeepOut = null)
     {
         if (pages.Count == 0)
         {
@@ -193,7 +194,7 @@ internal sealed partial class DocxLayoutEngine
             DocxRelatedStoryLayout? footnoteContinuationLayout = FindSpecialRelatedStoryLayout(footnoteLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? footnoteSeparatorLayout;
             PlaceFootnoteStories(outputPages, outputIndex, page, pageFootnoteStories, footnoteSeparatorLayout, footnoteContinuationLayout, separatorMeasurer, printScale, headerKeepOut,
                 footerKeepOut: CanUsePlainFootnoteStaticFrame(document, page, separatorMeasurer, printScale, cancellationToken) ? footerKeepOut : null,
-                availableFooterKeepOut: footerKeepOut);
+                availableFooterKeepOut: ownedFootnoteFooterKeepOut ?? footerKeepOut);
             outputShift += outputPages.Count - countBefore;
         }
 

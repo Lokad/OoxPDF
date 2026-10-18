@@ -313,7 +313,7 @@ internal sealed partial class DocxLayoutEngine
         var keepLookaheadYielded = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
         var footnotePlacedLinesAtLastYield = new Dictionary<(DocxRelatedStoryKind Kind, string Id), int>();
         var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int), DocxStaticStoryLayoutResult?>();
-        var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int), double>();
+        var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int), (double Body, double Note)>();
         var plainFootnoteFooterFrames = new Dictionary<(DocxPageSettings, double, double, double, double, double, double, int), DocxLayoutPage?>();
         double? bodyFirstBaselineMemo = null;
         double bodyFirstSourceOffsetMemo = 0d;
@@ -918,7 +918,7 @@ internal sealed partial class DocxLayoutEngine
             DocxRelatedStoryLayout? continuationLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? separatorLayout;
             IDocxTextMeasurer? separatorMeasurer = unscaledTextMeasurer ?? textMeasurer;
             Func<DocxLayoutPage, int, int, double> availableFootnoteFrameBottom =
-                (p, _, _) => ResolveFooterKeepOut(p, templatePageNumber, templatePageNumber);
+                (p, _, _) => ResolveNoteFooterKeepOut(p, templatePageNumber, templatePageNumber);
             Func<DocxLayoutPage, int, int, double>? footnoteFrameBottom =
                 CanUsePlainFootnoteStaticFrame(document, templatePage, separatorMeasurer, paragraphSpacingScale, cancellationToken)
                     ? availableFootnoteFrameBottom : null;
@@ -1021,6 +1021,34 @@ internal sealed partial class DocxLayoutEngine
             DocxLayoutPage tailPage = pages[^1];
             var tailPlacedStories = new List<DocxPlacedRelatedStoryLayout>();
             double tailCursorTop = 0d;
+            var ownedTail = inFlightNotes.Values.Where(note => note.RemainingLineCount > 0 &&
+                note.Location.Reference.Id is { } id && placedStoryKeys.Contains((note.Location.Reference.Kind, id))).ToArray();
+            if (tailPage.ColumnFrames.Count <= 1 && ownedTail.Length != 0 &&
+                ownedTail.All(note => HasOwnedInlineNoteFlowStory(note.StoryLayout)))
+            {
+                // Dedicated continuations are footnote containers too. Reuse
+                // the same bottom-anchored batch and source paragraph slicing.
+                while (ownedTail.Any(note => note.RemainingLineCount > 0))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    MoveToRelatedStoryContinuationPage(pages, ref tailPageIndex, ref tailPage, ref tailPlacedStories,
+                        ref tailCursorTop, insertContinuationAfterActivePage: false, ResolveHeaderKeepOut);
+                    drainStarted = true;
+                    var pending = ownedTail.Where(note => note.RemainingLineCount > 0).ToArray();
+                    long remaining = pending.Sum(note => (long)note.RemainingLineCount);
+                    var stories = pending.Select(note => new DocxReferencedRelatedStoryLayout(note.Location,
+                        NarrowStoryTextLinesForOffset(note.StoryLayout, note.PlacedLineCount))).ToArray();
+                    PlaceFootnoteStories(pages, tailPageIndex, tailPage, stories, pending[0].SeparatorLayout,
+                        pending[0].ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale, ResolveHeaderKeepOut,
+                        sharedSlicePlacement: true, inFlightNotes: inFlightNotes, footerKeepOut: ResolveNoteFooterKeepOut);
+                    tailPage = pages[tailPageIndex];
+                    tailPlacedStories = tailPage.PlacedRelatedStories.ToList();
+                    // An unusable static frame retains the existing progress
+                    // fallback instead of retrying an empty page indefinitely.
+                    if (pending.Sum(note => (long)note.RemainingLineCount) == remaining) break;
+                }
+                if (ownedTail.All(note => note.RemainingLineCount <= 0)) return;
+            }
             foreach (InFlightRelatedStory inFlight in inFlightNotes.Values)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -2026,7 +2054,8 @@ internal sealed partial class DocxLayoutEngine
             var headerKey = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount);
             if (!continuationHeaderByPage.TryGetValue(headerKey, out DocxStaticStoryLayoutResult? headerLayout))
             {
-                headerLayout = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: true, mathEquations: mathEquations);
+                headerLayout = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: true, mathEquations: mathEquations,
+                    hasDocumentBodyOrigin: pages.Count != 0 && pages[0].Items.FirstOrDefault() is DocxTextLineLayout);
                 continuationHeaderByPage[headerKey] = headerLayout;
             }
 
@@ -2082,21 +2111,31 @@ internal sealed partial class DocxLayoutEngine
             double takeScale = paragraphSpacingScale;
             return (keepOutLayout - firstPinBaseline.Value * (1d - takeScale) - firstPinSourceOffset * takeScale) / takeScale;
         }
-        double ResolveFooterKeepOut(DocxLayoutPage templatePage, int pageNumber, int pageCount)
+        (double Body, double Note) ResolveFooterBounds(DocxLayoutPage templatePage, int pageNumber, int pageCount)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var key = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount);
-            if (!continuationFooterTopByPage.TryGetValue(key, out double top))
+            if (!continuationFooterTopByPage.TryGetValue(key, out var bounds))
             {
                 var footer = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer,
-                    defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: false, mathEquations: mathEquations);
-                top = footer is null ? double.NegativeInfinity : ResolveStaticFooterContentTop(footer,
+                    defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: false, mathEquations: mathEquations,
+                    hasDocumentBodyOrigin: pages.Count != 0 && pages[0].Items.FirstOrDefault() is DocxTextLineLayout);
+                double top = footer is null ? double.NegativeInfinity : ResolveStaticFooterContentTop(footer,
                     (unscaledTextMeasurer as IDocxLineMetricsProvider) ?? (textMeasurer as IDocxLineMetricsProvider));
-                continuationFooterTopByPage[key] = top;
+                // Body admission uses the margin-anchored boundary. Note boxes
+                // remain in design coordinates until their common print map.
+                double noteTop = footer?.PhysicalFooterFrameTop is { } physicalTop
+                    ? new DocxPrintedPageFrame(templatePage.Height, paragraphSpacingScale).UnmapY(physicalTop) : top;
+                bounds = (top, noteTop);
+                continuationFooterTopByPage[key] = bounds;
             }
-            return Math.Max(templatePage.MarginBottom, top);
+            return bounds;
         }
-        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys, ResolveFooterKeepOut).ToArray();
+        double ResolveFooterKeepOut(DocxLayoutPage templatePage, int pageNumber, int pageCount) =>
+            Math.Max(templatePage.MarginBottom, ResolveFooterBounds(templatePage, pageNumber, pageCount).Body);
+        double ResolveNoteFooterKeepOut(DocxLayoutPage templatePage, int pageNumber, int pageCount) =>
+            Math.Max(templatePage.MarginBottom, ResolveFooterBounds(templatePage, pageNumber, pageCount).Note);
+        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys, ResolveFooterKeepOut, ResolveNoteFooterKeepOut).ToArray();
         var staticContent = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, mathEquations);
         DocxLayoutPage[] pagesWithStaticText = staticContent.Pages.ToArray();
         IReadOnlyDictionary<int, double> footerContentTopByPage = staticContent.FooterContentTopByPage;

@@ -1,0 +1,29 @@
+[
+  {
+    "Id": "note-footer-frame-body-tail",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/note-footer-frame-body-tail.docx",
+    "Sha256": "EC5427DC4AEBAB6485C92B8C94F26599032A5232646AC822F7D8A2244DB4DE9B",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Public calculation note.",
+      "End of supported note.",
+      "Public review footer line 3.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "note-footer-frame-empty-tail",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/note-footer-frame-empty-tail.docx",
+    "Sha256": "539A1CC41F7893E117B1B5A0692BB761E53890698D8A5A6054AD326168876090",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Public calculation note.",
+      "End of supported note.",
+      "Public review footer line 3."
+    ]
+  }
+]

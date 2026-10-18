@@ -4,4 +4,5 @@ namespace Lokad.OoxPdf.Docx;
 internal readonly record struct DocxPrintedPageFrame(double Height, double Scale)
 {
     public double MapY(double sourceY) => sourceY * Scale + (Height / 2d) * (1d - Scale);
+    public double UnmapY(double physicalY) => (physicalY - (Height / 2d) * (1d - Scale)) / Scale;
 }
