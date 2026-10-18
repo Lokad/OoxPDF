@@ -6170,5 +6170,13 @@
     "PortableRenderingOperatorMatrixSpecification",
     "DocxInlineCompositionMixedMatrixCells",
     "PortableRenderingMixedMatrixCells"
+  ],
+  "docx-structured-cell-specification": [
+    "DocxInlineCompositionStructuredCellSpecification",
+    "PortableRenderingStructuredCellSpecification",
+    "DocxInlineCompositionMixedArgumentSpecification",
+    "PortableRenderingMixedArgumentSpecification",
+    "DocxInlineCompositionOperatorMatrixSpecification",
+    "PortableRenderingOperatorMatrixSpecification"
   ]
 }

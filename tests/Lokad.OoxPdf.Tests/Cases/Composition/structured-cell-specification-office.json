@@ -1,0 +1,83 @@
+{
+  "Scope": "Independent Word content/pages/navigation evidence. Seven of ten existing1pt origin gates retain failures(maxY4.472pt); content observers do not relabel geometry. No repeated exports.",
+  "Rows": [
+    {
+      "Id": "composed-structured-cell-specification",
+      "Mode": "final-preserve",
+      "InputSha256": "23D30B1A76F7F6183A3FF663E6E95A1600CA172D46AC595FC7B1ADEB3F46FF34",
+      "ReferencePdfSha256": "ED55E19F188B8987248905B74B9444AAA3685EDBBE977D368E816AE298F87A4C",
+      "WordPages": 3,
+      "BodyMathCharacters": {
+        "\u221a": 1,
+        "x": 11,
+        "+": 23,
+        "p": 3,
+        "q": 3,
+        "y": 11,
+        "b": 5,
+        "u": 3,
+        "2": 4,
+        "d": 3,
+        "\u2211": 1,
+        "n": 3,
+        "i": 3,
+        "s": 1,
+        "a": 2,
+        "(": 1,
+        "c": 1,
+        ")": 1,
+        "\u220f": 1
+      },
+      "HeaderMathCharactersPerPage": {
+        "a": 1,
+        "+": 1,
+        "b": 1,
+        "=": 1,
+        "c": 1
+      },
+      "WordMathGlyphs": 96,
+      "Images": 1,
+      "ExternalLink": "https://example.org/method",
+      "InternalLinksIncludingFootnote": 1
+    },
+    {
+      "Id": "composed-structured-cell-specification",
+      "Mode": "all-word-compatible",
+      "InputSha256": "23D30B1A76F7F6183A3FF663E6E95A1600CA172D46AC595FC7B1ADEB3F46FF34",
+      "ReferencePdfSha256": "8E443E8F4ABCF72BBDE922F1FBF50814FB33AD147FE69CEC3917D88013A2E94A",
+      "WordPages": 3,
+      "BodyMathCharacters": {
+        "\u221a": 1,
+        "x": 11,
+        "+": 23,
+        "p": 3,
+        "q": 3,
+        "y": 11,
+        "b": 5,
+        "u": 3,
+        "2": 4,
+        "d": 3,
+        "\u2211": 1,
+        "n": 3,
+        "i": 3,
+        "s": 1,
+        "a": 2,
+        "(": 1,
+        "c": 1,
+        ")": 1,
+        "\u220f": 1
+      },
+      "HeaderMathCharactersPerPage": {
+        "a": 1,
+        "+": 1,
+        "b": 1,
+        "=": 1,
+        "c": 1
+      },
+      "WordMathGlyphs": 96,
+      "Images": 1,
+      "ExternalLink": "https://example.org/method",
+      "InternalLinksIncludingFootnote": 1
+    }
+  ]
+}

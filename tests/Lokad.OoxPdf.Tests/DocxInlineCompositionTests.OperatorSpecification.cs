@@ -18,7 +18,7 @@ internal static partial class DocxInlineCompositionTests
     }
 
     internal static void CheckOperatorMatrixSpecification(IFontResolver? resolver)
-        => CheckComposedOperatorSpecification(resolver, "operator-matrix-specification", requireWordPageCount: false);
+        => CheckComposedOperatorSpecification(resolver, "operator-matrix-specification", requireWordPageCount: true);
 
     public static void DocxInlineCompositionMixedArgumentSpecificationRetainsIndependentContentAndPages()
     {
@@ -27,9 +27,21 @@ internal static partial class DocxInlineCompositionTests
     }
 
     internal static void CheckMixedArgumentSpecification(IFontResolver? resolver)
-        => CheckComposedOperatorSpecification(resolver, "mixed-argument-specification", requireWordPageCount: true);
+        => CheckComposedOperatorSpecification(resolver, "mixed-argument-specification", requireWordPageCount: true, requireWordOrigins: true);
 
-    private static void CheckComposedOperatorSpecification(IFontResolver? resolver, string name, bool requireWordPageCount)
+    public static void DocxInlineCompositionStructuredCellSpecificationKeepsContentPagesAndNeutralSources()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Native structured-cell specification uses installed Windows fonts.");
+        CheckStructuredCellSpecification(null);
+    }
+
+    internal static void CheckStructuredCellSpecification(IFontResolver? resolver)
+        // Content/page gates remain distinct from the retained row-geometry
+        // failures; the mixed-argument specification keeps its qualified origins.
+        => CheckComposedOperatorSpecification(resolver, "structured-cell-specification", requireWordPageCount: true);
+
+    private static void CheckComposedOperatorSpecification(IFontResolver? resolver, string name, bool requireWordPageCount,
+        bool requireWordOrigins = false)
     {
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "Composition"));
         using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, name + ".json")));
@@ -68,7 +80,7 @@ internal static partial class DocxInlineCompositionTests
                 var actual = mathematicalText.GroupBy(character => character).ToDictionary(group => group.Key, group => group.Count());
                 TestAssert.Equal(expected.Count, actual.Count);
                 foreach (var item in expected) TestAssert.Equal(item.Value, actual.GetValueOrDefault(item.Key));
-                if (requireWordPageCount && resolver is null)
+                if (requireWordOrigins && resolver is null)
                 {
                     foreach (var group in row.GetProperty("FormulaGroups").EnumerateArray())
                     {
@@ -90,7 +102,22 @@ internal static partial class DocxInlineCompositionTests
                 }
                 TestAssert.Equal(row.GetProperty("Images").GetInt32(), pages.Sum(page => page.Images.Sum(image => Regex.Matches(page.Content, "/" + Regex.Escape(image.ResourceName) + @"\s+Do\b").Count)));
                 var links = pages.SelectMany(page => page.Annotations).ToArray();
-                TestAssert.Equal(1, links.Count(link => link.Uri == row.GetProperty("ExternalLink").GetString()));
+                string externalTarget = row.GetProperty("ExternalLink").GetString()!;
+                var external = pages.SelectMany((page, index) => page.Annotations
+                    .Where(link => link.Uri == externalTarget).Select(link => (Page: index, Link: link))).ToArray();
+                if (resolver is null) TestAssert.Equal(1, external.Length);
+                else
+                {
+                    // A source link may wrap into several rectangles with portable
+                    // metrics. Native controls retain Office's exact fragment count.
+                    TestAssert.Equal(1, DocxBlockTraversal.EnumerateBodyParagraphs(source)
+                        .Sum(paragraph => paragraph.Hyperlinks.Count(link => link.Target == externalTarget)));
+                    TestAssert.True(external.Length != 0 && external.Distinct().Count() == external.Length &&
+                        links.Where(link => link.Uri is not null).All(link => link.Uri == externalTarget) &&
+                        external.All(item => item.Link.Width > 0d && item.Link.Height > 0d && item.Link.X >= 0d && item.Link.Y >= 0d &&
+                            item.Link.X + item.Link.Width <= pages[item.Page].Width && item.Link.Y + item.Link.Height <= pages[item.Page].Height),
+                        "Every portable annotation fragment keeps the source target, distinct visible bounds and page ownership.");
+                }
                 TestAssert.Equal(row.GetProperty("InternalLinksIncludingFootnote").GetInt32(), links.Count(link => link.Destination is not null));
                 string pageContent = string.Join("|", pages.Select(page => new string(DocxPageFootnoteNumberingTests.DecodeText(page)
                     .Normalize(NormalizationForm.FormKC).Where(character => !char.IsWhiteSpace(character)).OrderBy(character => character).ToArray())));
