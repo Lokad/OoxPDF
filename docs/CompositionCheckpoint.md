@@ -1,5 +1,20 @@
 # Composed-document reliability checkpoint
 
+C198 reuses C197 for one compound specification with a double integral in body/
+repeated header and a triple integral in a table cell. Explicit/inherited limits,
+structured formula children, root assembly, image, links, notes and markup remain.
+Two native conversions/two independent Word exports plus one pinned-portable
+conversion; no source change, build or test replay. All three outputs retain3
+pages and102 normalized math scalars matching Word. Six native page pairs and all
+three portable pages reviewed, no new visible omission/overlap/clipping. Both
+native strict gates fail changed pixels, recall, MAE and SSIM. Keep raw sin and
+complex-math flags; operator origin maxX0.624/maxY2.621pt remains a residual, not a
+complete-formula geometry pass. Evidence integral-family-composition-evidence.json.
+
+The infrequent C198 read-only workspace scan records13.195GB/705,934 files,
+zero errors(artifacts/workspace-footprint-C198.json). The loose5GB target remains
+unmet. Protected rejected retirements remain untouched; no reclamation claim.
+
 C197 removes complete-equation loss for double/triple integrals. One bounded
 integral-family predicate owns admission and document-default selection; existing
 font-owned n-ary measurement/variants/italic correction and placement are reused.
