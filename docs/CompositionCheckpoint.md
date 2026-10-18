@@ -1,5 +1,38 @@
 # Composed-document reliability checkpoint
 
+C173 fixes complete source-owned automatic-target batches in plain static frames.
+Four independent Word Final controls expose three two-versus-one-page errors.
+The older whole static reserve preempted the complete minimum head; after routing
+was corrected, the plain-frame slicer still deferred admitted lines whose optional
+final spacing did not fit. Prefer the owned minimum, then fit only final target
+after-space into measured body/separator capacity using page-local copies. Keep
+canonical source/layout records, inter-note space, physical footer origins and
+complex/continuation fallbacks. No fitted geometry, font/size branch or new mode.
+
+116 Windows/98 Ubuntu checks pass,18 native skips. Both new regressions fail C172;
+48 portable capacity/mode/after-space layouts protect canonical/source ownership.
+The initial portable assertion counted an unused normal comment as a footnote.
+Only its kind filters changed; only that method reran/platform.115 Windows/97
+Ubuntu passes and18 skips carry through14 runtime-asset/2,121 input identities;
+production/CLI never rebuilt for that correction. Original failure reports remain.
+
+All four controls match Word pages; max note-Y error0.091pt. Five page pairs were
+reviewed, with no demonstrated new clipping. Four independent Office exports were
+made once before exact-byte promotion, with none repeated. All four strict raster
+gates remain failed; three plain controls request800pt pages, emit800pt candidate
+MediaBoxes versus800.04pt in Word, and retain Dimensions failures. Three raw
+screens pass, one retains complex-math flags; source/Office prose and simple-math
+deficits are zero. No numerical or visual threshold is relaxed.
+
+All16 portfolio PDFs/30 reviewed pairs and eight C172 control PDFs/19 reviewed
+pairs retain identities; all24 comparisons reuse. Fourteen portfolio DOCX strict
+failures, two deck passes and six raw screens remain unchanged.17 assets/four
+smokes transfer without root build, suite or corpus replay; all2,115 old input
+hashes match and six public inputs are added. Root2897b951; evidence
+artifacts/composition-c1/complete-note-batch-evidence.json. C172 CI39086886682 is
+green on both platforms. Next, distinguish whole-formula versus internal matrix
+row placement using retained independent anchors before new geometry work.
+
 C172 repairs complete-note body/target spacing ownership. Eight independent
 Word Final probes expose three C171 pagination errors and up to12.050pt note-Y
 error: required body paragraph after-space was omitted while optional final note
