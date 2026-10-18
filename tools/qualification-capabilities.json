@@ -6837,5 +6837,17 @@
     "DocxInlineCompositionExactCommentFrames",
     "PortableRenderingExactCommentFrames",
     "PortableRenderingExactCommentHeightChangesKeepGlyphBrackets"
+  ],
+  "docx-consumed-tab-ownership": [
+    "DocxInlineCompositionUnusedTabMetadata",
+    "PortableRenderingUnusedTabMetadata",
+    "DocxInlineCompositionLeftTabMeasurementRetainsWrapAndFallbackContracts",
+    "DocxInlineCompositionAlignedTabsMeasureCompleteFieldsAndKeepFallbacks",
+    "DocxInlineCompositionLeftTabsMatchIndependentFieldOffsets",
+    "DocxInlineCompositionAlignedTabsMatchIndependentWordAndSourceTransforms",
+    "DocxInlineCompositionLeftTabMathLinksCoverCellAndStaticGlyphs",
+    "DocxInlineCompositionSourceCursorRetainsBreakTabsAndFirstLineLabel",
+    "DocxInlineCompositionSourceViewOrdersEquationsPicturesTabsAndBreaks",
+    "DocxInlineCompositionExactLineSlotSeparatesInkFromAdvanceAndKeepsFallbacks"
   ]
 }

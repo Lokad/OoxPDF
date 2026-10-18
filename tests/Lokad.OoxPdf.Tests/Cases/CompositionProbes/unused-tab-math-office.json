@@ -1,0 +1,37 @@
+{
+  "Source": "Four independent Word16 source/view/PDF-pinned exports. Only an unused720pt positioning stop differs. Body rasters equal original references; cell inline offsets remain unchanged while its table frame shifts0.84/0.65pt. Existing0.2pt field-offset tolerances retained.",
+  "Rows": [
+    {
+      "Id": "math-tabs-unused-decimal-body",
+      "Mode": "final-preserve",
+      "InputSha256": "9A040047EB18FF3C1217D7D5421501D300886790273EC0C08E51D96A64EF9C8F",
+      "ReferencePdfSha256": "E9AE5AD44CBBF5809FFCA7E24A218736A0F4E84364C35878EBCA72580F28DD04",
+      "MiddleOffset": 71.99600000000001,
+      "EndOffset": 144.026
+    },
+    {
+      "Id": "math-tabs-unused-decimal-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "9A040047EB18FF3C1217D7D5421501D300886790273EC0C08E51D96A64EF9C8F",
+      "ReferencePdfSha256": "73BC6503379A9EB1ACF5B3B8A9DA9074463918AA85A34F5022E83C1CB5F788E1",
+      "MiddleOffset": 54.62,
+      "EndOffset": 109.22
+    },
+    {
+      "Id": "math-tabs-unused-leader-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "5E12B39875BD3BD1F45A33C7C8F8C9760BD003D0E29415BAE0198A22F7A9320E",
+      "ReferencePdfSha256": "07CDBD27C61055D345BFC1DD5E99852D3C2F3A3E3A1388537AE1FE527BF1580F",
+      "MiddleOffset": 72.01999999999998,
+      "EndOffset": 144.05
+    },
+    {
+      "Id": "math-tabs-unused-leader-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "5E12B39875BD3BD1F45A33C7C8F8C9760BD003D0E29415BAE0198A22F7A9320E",
+      "ReferencePdfSha256": "6DA75D307FA5991B2432C6BAC8ED093036E11CA27079D65F8456CF972DA5AC29",
+      "MiddleOffset": 54.620000000000005,
+      "EndOffset": 109.22000000000003
+    }
+  ]
+}

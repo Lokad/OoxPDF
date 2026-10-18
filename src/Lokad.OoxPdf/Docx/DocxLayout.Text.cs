@@ -424,7 +424,7 @@ internal sealed partial class DocxLayoutEngine
         public List<DocxTextSpan> Spans { get; } = [];
     }
 
-    private readonly record struct DocxResolvedTabStop(double PositionPoints, string? Value);
+    private readonly record struct DocxResolvedTabStop(double PositionPoints, string? Value, string? LeaderValue = null);
 
     private static IReadOnlyList<DocxTabField> SplitTabFields(IReadOnlyList<DocxTextSpan> spans)
     {
@@ -672,7 +672,7 @@ internal sealed partial class DocxLayoutEngine
         {
             if ((tabStop.PositionPoints ?? 0d) > width + 0.001d)
             {
-                return new DocxResolvedTabStop(tabStop.PositionPoints ?? 0d, tabStop.Value);
+                return new DocxResolvedTabStop(tabStop.PositionPoints ?? 0d, tabStop.Value, tabStop.LeaderValue);
             }
         }
 

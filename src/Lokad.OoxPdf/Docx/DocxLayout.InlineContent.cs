@@ -246,14 +246,14 @@ internal sealed partial class DocxLayoutEngine
             items ??= DocxInlineContent.FromPrefix(paragraph.Runs, paragraph.Images, token);
         }
         bool hasTabs = items.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden);
-        // Right/center tabs measure a complete following field. Decimal/bar
-        // stops and leaders retain their explicit measurement/painting fallback.
+        // Bars can draw without consuming a tab, and unknown kinds have no
+        // placement contract. Positioning stops are checked when consumed.
         if (hasTabs && paragraph.TabStops.Any(stop =>
             stop.Value is not null && !string.Equals(stop.Value, "left", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(stop.Value, "right", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(stop.Value, "center", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(stop.Value, "clear", StringComparison.OrdinalIgnoreCase) ||
-            stop.LeaderValue is not null && !string.Equals(stop.LeaderValue, "none", StringComparison.OrdinalIgnoreCase))) return false;
+                !string.Equals(stop.Value, "decimal", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(stop.Value, "clear", StringComparison.OrdinalIgnoreCase))) return false;
         if (!double.IsFinite(scale) || scale <= 0d) return false;
         if (DocxPlainBodyFrame.HasFixedLineFlow(paragraph))
         {
@@ -524,6 +524,7 @@ internal sealed partial class DocxLayoutEngine
             if (Atom(index).Source is DocxInlineTab)
             {
                 var tabStop = ResolveNextTabStop(advance, tabStops, defaultTabStopPoints * scale);
+                if (!CanMeasureOrderedTabStop(tabStop)) return false;
                 double stop = tabStop.PositionPoints;
                 double available = output.Count == 0 ? firstWidth : nextWidth;
                 if (string.Equals(tabStop.Value, "right", StringComparison.OrdinalIgnoreCase) ||
@@ -549,7 +550,9 @@ internal sealed partial class DocxLayoutEngine
                 {
                     Flush(new(index));
                     if (stopAfterFirstLine) { lines = output; return true; }
-                    stop = ResolveNextTabStop(0d, tabStops, defaultTabStopPoints * scale).PositionPoints;
+                    tabStop = ResolveNextTabStop(0d, tabStops, defaultTabStopPoints * scale);
+                    if (!CanMeasureOrderedTabStop(tabStop)) return false;
+                    stop = tabStop.PositionPoints;
                     available = nextWidth;
                 }
                 if (!double.IsFinite(stop) || stop < advance || stop > available) return false;
@@ -778,4 +781,8 @@ internal sealed partial class DocxLayoutEngine
             current.Clear(); advance = 0d; above = baselineInset; below = Math.Max(0d, lineHeight - baselineInset);
         }
     }
+
+    private static bool CanMeasureOrderedTabStop(DocxResolvedTabStop stop) =>
+        !string.Equals(stop.Value, "decimal", StringComparison.OrdinalIgnoreCase) &&
+        (stop.LeaderValue is null || string.Equals(stop.LeaderValue, "none", StringComparison.OrdinalIgnoreCase));
 }

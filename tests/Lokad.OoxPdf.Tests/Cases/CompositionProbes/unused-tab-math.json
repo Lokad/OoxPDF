@@ -1,0 +1,32 @@
+[
+  {
+    "Id": "math-tabs-unused-decimal-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-tabs-unused-decimal-body.docx",
+    "Sha256": "9A040047EB18FF3C1217D7D5421501D300886790273EC0C08E51D96A64EF9C8F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "Middle",
+      "End.",
+      "Following prose."
+    ],
+    "SourceSha256": "4E0A6E0D5CC4FD5AACA397509DAB77A4269F8EE528C3637E6F20DF8740A6F27B",
+    "Change": "One unused720pt tab stop; active72/144pt stops and all content retained."
+  },
+  {
+    "Id": "math-tabs-unused-leader-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-tabs-unused-leader-cell.docx",
+    "Sha256": "5E12B39875BD3BD1F45A33C7C8F8C9760BD003D0E29415BAE0198A22F7A9320E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Start",
+      "Middle",
+      "End.",
+      "Following prose."
+    ],
+    "SourceSha256": "6B5404198ACC574E827BA0379D9AE9E28907CA155CE651AE06882245450AFAF4",
+    "Change": "One unused720pt tab stop; active72/144pt stops and all content retained."
+  }
+]

@@ -1590,8 +1590,13 @@ internal static partial class DocxInlineCompositionTests
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
             TestAssert.Skip("Installed Cambria Math is required for the independent tab controls.");
+        CheckTabOffsets(null);
+    }
+
+    internal static void CheckTabOffsets(Lokad.OoxPdf.Fonts.IFontResolver? resolver, string referenceFile = "math-tabs-office-offsets.json")
+    {
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
-        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-tabs-office-offsets.json")));
+        using var references = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, referenceFile)));
         foreach (var row in references.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string input = Path.Combine(cases, row.GetProperty("Id").GetString() + ".docx");
@@ -1599,13 +1604,14 @@ internal static partial class DocxInlineCompositionTests
             bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
             var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
             var document = DocxTests.ReadDocx(input, mode);
-            var renderer = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+            var renderer = new DocxRenderer(resolver, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                 : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
             TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Tabs cannot discard the supported formulas.");
+            if (resolver is not null) continue;
             var shows = pages.SelectMany(DocxCommentsTests.ReadEmbeddedGlyphTextShows).ToArray();
             double start = VisibleTextStartX(shows.Single(show => show.Text.TrimStart().StartsWith("Start", StringComparison.Ordinal)));
             foreach (var (textPrefix, property) in new[] { ("Middle", "MiddleOffset"), ("End.", "EndOffset") })
@@ -1640,6 +1646,20 @@ internal static partial class DocxInlineCompositionTests
             {
                 advance += fragment.LeadingAdvance + fragment.Advance;
                 if (fragment.Source is DocxInlineTab) TestAssert.Equal(++stopIndex * 108d * scale, advance);
+            }
+            foreach (var unused in new[] { new DocxTabStop(720d, null, "decimal", null), new(720d, null, "left", "dot"),
+                new(-36d, null, "decimal", null), new(720d, null, "clear", "dot") })
+            {
+                var changed = explicitStops with { TabStops = explicitStops.TabStops.Append(unused).ToArray() };
+                TestAssert.True(Measure(changed, 300d, scale, out var unchanged), "An unconsumed positioning stop cannot discard supported inline content.");
+                var expected = TestAssert.NotNull(positioned).Single();
+                var actual = TestAssert.NotNull(unchanged).Single();
+                TestAssert.Equal(expected.Advance, actual.Advance);
+                TestAssert.Equal(expected.BaselineInset, actual.BaselineInset);
+                TestAssert.Equal(expected.OccupiedHeight, actual.OccupiedHeight);
+                TestAssert.True(expected.Fragments.Select(f => (f.Advance, f.LeadingAdvance, f.SourceItemIndex, f.Math))
+                    .SequenceEqual(actual.Fragments.Select(f => (f.Advance, f.LeadingAdvance, f.SourceItemIndex, f.Math))),
+                    "Unused metadata preserves complete fragment geometry and prepared math owners in physical coordinates.");
             }
         }
         foreach (double width in new[] { 110d, 80d })
