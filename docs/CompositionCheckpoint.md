@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+## C222: justified linked-picture body/cell holdouts (2026-10-18)
+
+Two source-only heldouts combine wrapped justified prose, an unchanged image,
+paired fractions and an internal source hyperlink/bookmark. All four C221 frozen
+outcomes retain16 math glyphs/one illustration/full main-document source prose,
+with the same one-page pagination as Word.64 independent glyph origins pass the
+existing1pt/.1pt gates (maxX0.891pt/Y0.170pt/size0.011pt); image edges differ by
+at most0.749pt. All four complete native/Word pixel pairs reviewed and hash-pinned.
+
+Both PDFs retain6body/12cell links and page0 destinations. Review-cell clickable
+rectangles end up to0.154pt above380of456 source character baseline origins.
+This demonstrates an annotation-frame inconsistency, not missing ink or proof
+that those glyphs cannot be clicked. Left-aligned C219/C221 controls have identical
+PDFs and repeat the gap: inherited behavior. Horizontal link edges also retain
+up to2.710pt differences; trailing wrap-space ownership remains unresolved.
+
+All four strict gates remain failed. A first prose screen accidentally joined
+paragraphs into souththe/southobserved in both outputs; raw evidence retained.
+The corrected paragraph-aware source screen has zero deficits. Four new Word
+exports retained; four heldout conversions and four small parent/current left
+controls used existing artifacts. No production builds or suite replays.
+Evidence: justified-composition-holdouts-evidence.json and its pinned math,
+link-origin-coverage and left-parent-identity reports. C221 CI39132266264 is green
+on Windows/Ubuntu, including broader/package checks. Next C223 traces shared
+hyperlink next-line font coordinates, retaining body/final contracts and all
+cached Word views before choosing a bounded correction.
+
 ## C221: shared ordered justification preserves mixed formulas (2026-10-18)
 
 Confirmed C220 omissions are closed: four justified report outcomes restore two
