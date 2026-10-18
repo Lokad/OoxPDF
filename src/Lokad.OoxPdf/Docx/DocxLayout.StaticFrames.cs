@@ -133,7 +133,9 @@ internal sealed partial class DocxLayoutEngine
             EndCursorY = frameAnchor + (source.EndCursorY - frameAnchor) * scale,
             EndPendingAfterSpacing = source.EndPendingAfterSpacing * scale,
             MappedFooterContentTop = isHeader ? null : frameAnchor + (footerTop - frameAnchor) * scale,
-            PhysicalFooterFrameTop = double.IsFinite(footerTop) ? center + (footerTop - center) * scale : null
+            PhysicalFooterFrameTop = double.IsFinite(footerTop) ? center + (footerTop - center) * scale : null,
+            PhysicalHeaderFrameBottom = isHeader
+                ? center + (source.EndCursorY - source.EndPendingAfterSpacing - center) * scale : null
         };
     }
 

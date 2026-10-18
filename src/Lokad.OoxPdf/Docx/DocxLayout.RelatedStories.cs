@@ -826,8 +826,8 @@ internal sealed partial class DocxLayoutEngine
             plainDocumentEndnoteFlow ? lineAfters : null);
         int lineIndex = 0;
         double consumedHeight = 0d;
-        bool plainParagraphFlow = plainDocumentEndnoteFlow ||
-            frameBottom is not null && storyLayout.Story.Kind == DocxRelatedStoryKind.Footnote;
+        bool physicalFootnoteFrame = frameBottom is not null && storyLayout.Story.Kind == DocxRelatedStoryKind.Footnote;
+        bool plainParagraphFlow = plainDocumentEndnoteFlow || physicalFootnoteFrame;
         while (lineIndex < storyLayout.TextLines.Count)
         {
             double FrameBottom(DocxLayoutPage page, int index) => frameBottom?.Invoke(page, index + 1, outputPages.Count) ?? page.MarginBottom;
@@ -846,13 +846,17 @@ internal sealed partial class DocxLayoutEngine
             }
 
             int remainingLines = storyLayout.TextLines.Count - lineIndex;
-            double[]? fitAfters = printScale >= 1d ? lineAfters : null;
+            bool isFreshHead = lineIndex == 0 && (inFlight is null || inFlight.PlacedLineCount == 0);
+            // The physical note frame consumes design line boxes. Fresh heads
+            // may hang trailing after-space regardless of the print transform;
+            // continued source fragments keep their complete flow charge.
+            double[]? fitAfters = printScale >= 1d || physicalFootnoteFrame && isFreshHead ? lineAfters : null;
             bool hasPageContent = activePage.Items.Count != 0 ||
                 activePlacedStories.Any(s => s.StoryLayout.Story.IsNormalStoryType);
             (int takeCount, double takeHeight) = plainParagraphFlow
                 ? TakeParagraphStoryLines(storyLayout.TextLines[0].SourceParagraph!, lineBoxes, lineIndex,
                     remainingLines, availableHeight, fitAfters, hasPageContent,
-                    lineIndex == 0 && (inFlight is null || inFlight.PlacedLineCount == 0))
+                    isFreshHead)
                 : TakeStoryLines(lineBoxes, lineIndex, remainingLines, availableHeight, fitAfters);
             if (plainParagraphFlow && hasPageContent && takeCount == 0)
             {
@@ -1800,13 +1804,20 @@ internal sealed partial class DocxLayoutEngine
             bool fresh = inFlightNotes is null || head.Location.Reference.Id is null ||
                 !inFlightNotes.TryGetValue((head.Location.Reference.Kind, head.Location.Reference.Id), out var flight) ||
                 flight.PlacedLineCount == 0;
-            double[]? afters = printScale >= 1d && fresh ? GetStoryLineAfterSpacings(layout) : null;
+            double[]? afters = fresh && (printScale >= 1d || usesParagraphFrames) ? GetStoryLineAfterSpacings(layout) : null;
             (int take, double height) = usesParagraphFrames
                 ? TakeParagraphStoryLines(layout.TextLines[0].SourceParagraph!, boxes, 0, layout.TextLines.Count,
                     capacity, afters, page.Items.Count != 0 || seated != 0d, fresh)
                 : TakeStoryLines(boxes, 0, layout.TextLines.Count, capacity, afters, forceProgress: seated == 0d);
             // A continued tail and a fresh head share one bottom-anchored batch.
-            if (take < layout.TextLines.Count) return bottom + seated + height;
+            if (take < layout.TextLines.Count)
+            {
+                double seatedTop = bottom + seated + height;
+                // The fit may discard trailing after-space while its occupied
+                // height retains it. Keep the already admitted top boundary;
+                // trailing paragraph space can hang below the frame instead.
+                return usesParagraphFrames ? Math.Min(top, seatedTop) : seatedTop;
+            }
             seated += ResolvePlacedStoryHeight(layout, page);
         }
         return top;

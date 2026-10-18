@@ -62,11 +62,24 @@ internal static partial class DocxInlineCompositionTests
         CheckPictureNoteBatches(null);
     }
 
-    internal static void CheckPictureNoteBatches(IFontResolver? resolver)
+    public static void DocxInlineCompositionWrappedPictureNoteFramesMatchIndependentWord()
     {
-        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath("long-note-inline-picture-office.json")));
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent picture-note frames require installed Windows fonts.");
+        CheckContinuationPictureFrameControls(null);
+    }
+
+    internal static void CheckContinuationPictureFrameControls(IFontResolver? resolver)
+    {
+        foreach (string fixture in new[] { "wrapped-note-pictures-report", "wrapped-single-picture-note-report", "two-note-pictures-report" })
+            CheckPictureNoteBatches(resolver, fixture);
+    }
+
+    internal static void CheckPictureNoteBatches(IFontResolver? resolver, string fixture = "long-note-inline-picture-report")
+    {
+        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath(fixture[..^"-report".Length] + "-office.json")));
+        int expectedImages = gold.RootElement.GetProperty("ImagePlacements").GetInt32();
         TestAssert.Equal(gold.RootElement.GetProperty("InputSha256").GetString(),
-            Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(NestedMathCasePath("long-note-inline-picture-report.docx")))));
+            Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(NestedMathCasePath(fixture + ".docx")))));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             bool final = row.GetProperty("Mode").GetString() == "final-preserve";
@@ -74,13 +87,16 @@ internal static partial class DocxInlineCompositionTests
             List<(int Page, double X, double Y, double Width, double Height)>? originalPictures = null;
             foreach (bool transformed in new[] { false, true })
             {
-                var document = ReadMutation("CompositionProbes/long-note-inline-picture-report", mode, false, transformed,
+                var document = ReadMutation("CompositionProbes/" + fixture, mode, false, transformed,
                     (xml, w, _) =>
                     {
                         if (!transformed) return;
-                        var run = xml.Descendants(w + "drawing").Single().Ancestors(w + "r").First();
-                        run.AddBeforeSelf(new XElement(w + "bookmarkStart", new XAttribute(w + "id", "901"), new XAttribute(w + "name", "PublicNotePicture")));
-                        run.AddAfterSelf(new XElement(w + "bookmarkEnd", new XAttribute(w + "id", "901")));
+                        int id = 901;
+                        foreach (var run in xml.Descendants(w + "drawing").Select(drawing => drawing.Ancestors(w + "r").First()).ToArray())
+                        {
+                            run.AddBeforeSelf(new XElement(w + "bookmarkStart", new XAttribute(w + "id", id), new XAttribute(w + "name", "PublicNotePicture" + id)));
+                            run.AddAfterSelf(new XElement(w + "bookmarkEnd", new XAttribute(w + "id", id++)));
+                        }
                     }, partOverride: "word/footnotes.xml");
                 var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
                 var pages = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
@@ -138,9 +154,9 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(seen.SequenceEqual(Enumerable.Range(1, 64)), "Every original source paragraph survives once and in order.");
                 TestAssert.Equal(22 + 5 * pages.Length, math);
                 TestAssert.Equal(2, pages.Sum(page => page.Annotations.Count(link => link.Destination is not null)));
-                TestAssert.Equal(2, pictures.Count);
-                TestAssert.Equal(1, pictures.Count(p => p.Page == secondHeadPage));
-                TestAssert.Equal(2, pages.Sum(page => page.Images.Sum(image => Regex.Matches(page.Content, "/" + Regex.Escape(image.ResourceName) + @"\s+Do\b").Count)));
+                TestAssert.Equal(expectedImages, pictures.Count);
+                TestAssert.Equal(secondHeadPage, pictures[1].Page);
+                TestAssert.Equal(expectedImages, pages.Sum(page => page.Images.Sum(image => Regex.Matches(page.Content, "/" + Regex.Escape(image.ResourceName) + @"\s+Do\b").Count)));
                 if (originalPictures is not null)
                     for (int i = 0; i < pictures.Count; i++)
                     {

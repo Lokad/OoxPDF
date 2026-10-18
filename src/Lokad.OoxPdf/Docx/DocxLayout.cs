@@ -2078,6 +2078,14 @@ internal sealed partial class DocxLayoutEngine
             }
 
             double keepOutLayout = headerLayout.EndCursorY - headerLayout.EndPendingAfterSpacing;
+            if (headerLayout.PhysicalHeaderFrameBottom is { } physicalBottom)
+            {
+                // Mapped static stories already own a physical page boundary.
+                // Notes consume design boxes, just as at the footer boundary;
+                // the legacy first-pin transform would map this frame twice.
+                double center = templatePage.Height / 2d;
+                return center + (physicalBottom - center) / paragraphSpacingScale;
+            }
             // The take loop consumes design line boxes while static layout stacks scaled
             // advances, so the keep-out crosses into take space through the same maps as
             // emission: static lines shift by the first-pin offset while footnote stories

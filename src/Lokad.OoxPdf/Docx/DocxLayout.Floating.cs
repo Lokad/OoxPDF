@@ -1113,5 +1113,6 @@ internal sealed partial class DocxLayoutEngine
     {
         public double? MappedFooterContentTop { get; init; }
         public double? PhysicalFooterFrameTop { get; init; }
+        public double? PhysicalHeaderFrameBottom { get; init; }
     }
 }

@@ -17,7 +17,10 @@ for row in manifest:
     table_reference = row.get("MoveReferenceToTable", False)
     remove_separator = row.get("RemoveFootnoteSeparator", False)
     note_picture = row.get("AddInlineNotePicture", False)
-    source = output / ("two-plain-notes-report.docx" if note_picture else
+    wrap_picture = row.get("WrapNotePictureParagraph", False)
+    second_picture = row.get("AddSecondNotePicture", False)
+    source = output / ("long-note-inline-picture-report.docx" if wrap_picture or second_picture else
+                       "two-plain-notes-report.docx" if note_picture else
                        "table-note-reference-report.docx" if remove_separator else
                        "two-plain-notes-report.docx" if table_reference else
                        "long-note-original-footer-report.docx" if split_owners else
@@ -26,7 +29,24 @@ for row in manifest:
     with ZipFile(source) as archive:
         original = {name: archive.read(name) for name in archive.namelist()}
     parts = dict(original)
-    if note_picture:
+    if wrap_picture or second_picture:
+        part = "word/footnotes.xml"
+        story = E.fromstring(parts[part])
+        note = next(n for n in story if n.get(w + "id") == "2")
+        intro = note.find(w + "p")
+        image = next(run for run in intro.findall(w + "r") if run.find(".//" + w + "drawing") is not None)
+        if wrap_picture:
+            run = E.Element(w + "r")
+            E.SubElement(run, w + "t", {"{http://www.w3.org/XML/1998/namespace}space": "preserve"}).text = (
+                " " + "The continuation picture must stay with its own wrapped source line. " * 8)
+            intro.insert(list(intro).index(image), run)
+        if second_picture:
+            clone = copy.deepcopy(image)
+            docpr = next(clone.iter("{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}docPr"))
+            docpr.set("id", "502")
+            docpr.set("name", "Public wrapped note picture")
+            next(p for p in note.findall(w + "p") if "Public continuation note line 50:" in "".join(p.itertext())).append(clone)
+    elif note_picture:
         part = "word/footnotes.xml"
         a = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
         r = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
