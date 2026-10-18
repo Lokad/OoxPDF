@@ -1,5 +1,29 @@
 # Composed-document reliability checkpoint
 
+C195 binds document-level math defaults in shared preparation, preserving source
+identity and node-setting precedence. Static stories previously lose inherited
+stacked integral placement: maximum5.112ptX/11.105ptY against Word. Header origins
+now differ by at most0.024ptX/0.090ptY; following prose0.114pt/body0.105pt. Cell
+control stays unchanged. All four full-math/flow1pt groups pass. No font, size or
+story-specific branch. Malformed used defaults retain fallback; unused malformed
+defaults cannot suppress a supported integral. Both new observers fail the old
+library on context ownership. Original source nodes remain unchanged.
+
+Two exact-byte public promotions/four Word exports once;2,183 old pins unchanged
+and four added. One frozen Release batch qualifies44 Windows/27 Ubuntu checks
+with17 native skips. Ubuntu initially has eight temporary-directory infrastructure
+failures; only those eight rerun after directory creation, all pass. Original19
+passes/17 skips carry. Parent infrastructure failures remain separate from the
+semantic parent failures. No production or test change during qualification.
+All34 accepted PDFs and60 reviewed page pairs retain identity;34 comparisons reuse
+pinned PDF/threshold evidence. Two unique new native pairs reviewed/two preset
+carries, two portable pages reviewed, six independent scalar inventories pass.
+Four new strict foreground-recall/SSIM gates and raw complex-math audit exit1
+remain failed; prose/simple-math/Office-word deficits and unsupported warnings
+are zero.17 transferred assets/four smoke PDFs match; no root build or suite
+replay. Root1df80312; inherited-math-defaults-evidence.json. C194 parser repair
+CI39105903015 is green. Continue the bounded composition boundary review.
+
 C194 CI39104918991 catches one stale parser expectation after3490 passed checks
 (16 skips): the source-role test still expects display integral exclusion. The
 focused selection missed that parser neighbor. Correct only the supported-role
