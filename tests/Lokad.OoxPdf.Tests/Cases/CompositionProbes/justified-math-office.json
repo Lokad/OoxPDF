@@ -1,0 +1,395 @@
+{
+  "Provenance": "Independent Word 16 C220 exports; source, PDF and export-log pins retained in justified-math-composition-review.json. Existing1pt origins/.1pt physical size thresholds.",
+  "Rows": [
+    {
+      "Id": "justified-math-single-report",
+      "Mode": "final-preserve",
+      "InputSha256": "7071ADFE070A6145207E6DE5780C5314EB183FF025E54FBE6C23CD6434D28FD5",
+      "ReferencePdfSha256": "D903A2E24B4A4CA52AFB8C0E7EEA3A6B3AB52D80B354397E8F183BD5E4066B6E",
+      "MathGlyphCount": 32,
+      "TargetMathText": "\ud835\udc4e+\ud835\udc4f=\ud835\udc50\ud835\udc65+2\ud835\udc66",
+      "ParagraphY": 630.94,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc4e",
+          "X": 171.02,
+          "Y": 630.94,
+          "Size": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 179.9,
+          "Y": 630.94,
+          "Size": 11.04
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 190.61,
+          "Y": 630.94,
+          "Size": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 199.73,
+          "Y": 630.94,
+          "Size": 11.04
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 211.01,
+          "Y": 630.94,
+          "Size": 11.04
+        },
+        {
+          "Text": "\ud835\udc65",
+          "X": 238.25,
+          "Y": 637.42,
+          "Size": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 243.17,
+          "Y": 637.42,
+          "Size": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 249.05,
+          "Y": 637.42,
+          "Size": 8.04
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 243.29,
+          "Y": 625.42,
+          "Size": 8.04
+        }
+      ]
+    },
+    {
+      "Id": "justified-math-single-report",
+      "Mode": "all-word-compatible",
+      "InputSha256": "7071ADFE070A6145207E6DE5780C5314EB183FF025E54FBE6C23CD6434D28FD5",
+      "ReferencePdfSha256": "92DC0C01EC9CFB532F9957558D8DB271A6D1AEBFCAC54442765A3260683A40F6",
+      "MathGlyphCount": 32,
+      "TargetMathText": "\ud835\udc4e+\ud835\udc4f=\ud835\udc50\ud835\udc65+2\ud835\udc66",
+      "ParagraphY": 574.44,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc4e",
+          "X": 129.7,
+          "Y": 574.44,
+          "Size": 8.352
+        },
+        {
+          "Text": "+",
+          "X": 136.44,
+          "Y": 574.44,
+          "Size": 8.352
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 144.53,
+          "Y": 574.44,
+          "Size": 8.352
+        },
+        {
+          "Text": "=",
+          "X": 151.46,
+          "Y": 574.44,
+          "Size": 8.352
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 160.01,
+          "Y": 574.44,
+          "Size": 8.352
+        },
+        {
+          "Text": "\ud835\udc65",
+          "X": 180.67,
+          "Y": 579.36,
+          "Size": 6.096
+        },
+        {
+          "Text": "+",
+          "X": 184.39,
+          "Y": 579.36,
+          "Size": 6.096
+        },
+        {
+          "Text": "2",
+          "X": 188.86,
+          "Y": 579.36,
+          "Size": 6.096
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 184.49,
+          "Y": 570.26,
+          "Size": 6.096
+        }
+      ]
+    },
+    {
+      "Id": "left-math-wrapped-report",
+      "Mode": "final-preserve",
+      "InputSha256": "73AC6830B1CECB56E01E7D94F2DBD38DEF60AA3083E8877235E062133A2C2814",
+      "ReferencePdfSha256": "BAF30C330B71562C5D9E8A4ED897E3ECAC500534507E6D056A49125BD4337062",
+      "MathGlyphCount": 32,
+      "TargetMathText": "\ud835\udc4e+\ud835\udc4f=\ud835\udc50\ud835\udc65+2\ud835\udc66",
+      "ParagraphY": 630.94,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc4e",
+          "X": 171.02,
+          "Y": 630.94,
+          "Size": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 179.9,
+          "Y": 630.94,
+          "Size": 11.04
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 190.61,
+          "Y": 630.94,
+          "Size": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 199.73,
+          "Y": 630.94,
+          "Size": 11.04
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 211.01,
+          "Y": 630.94,
+          "Size": 11.04
+        },
+        {
+          "Text": "\ud835\udc65",
+          "X": 238.25,
+          "Y": 637.42,
+          "Size": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 243.17,
+          "Y": 637.42,
+          "Size": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 249.05,
+          "Y": 637.42,
+          "Size": 8.04
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 243.29,
+          "Y": 625.42,
+          "Size": 8.04
+        }
+      ]
+    },
+    {
+      "Id": "left-math-wrapped-report",
+      "Mode": "all-word-compatible",
+      "InputSha256": "73AC6830B1CECB56E01E7D94F2DBD38DEF60AA3083E8877235E062133A2C2814",
+      "ReferencePdfSha256": "D7006B8B23A22E1B989C946E302A8B7A77033F9F65BE200000F6371AAA4E4690",
+      "MathGlyphCount": 32,
+      "TargetMathText": "\ud835\udc4e+\ud835\udc4f=\ud835\udc50\ud835\udc65+2\ud835\udc66",
+      "ParagraphY": 574.44,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc4e",
+          "X": 129.7,
+          "Y": 574.44,
+          "Size": 8.352
+        },
+        {
+          "Text": "+",
+          "X": 136.44,
+          "Y": 574.44,
+          "Size": 8.352
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 144.53,
+          "Y": 574.44,
+          "Size": 8.352
+        },
+        {
+          "Text": "=",
+          "X": 151.46,
+          "Y": 574.44,
+          "Size": 8.352
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 160.01,
+          "Y": 574.44,
+          "Size": 8.352
+        },
+        {
+          "Text": "\ud835\udc65",
+          "X": 180.67,
+          "Y": 579.36,
+          "Size": 6.096
+        },
+        {
+          "Text": "+",
+          "X": 184.39,
+          "Y": 579.36,
+          "Size": 6.096
+        },
+        {
+          "Text": "2",
+          "X": 188.86,
+          "Y": 579.36,
+          "Size": 6.096
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 184.49,
+          "Y": 570.26,
+          "Size": 6.096
+        }
+      ]
+    },
+    {
+      "Id": "justified-math-wrapped-report",
+      "Mode": "final-preserve",
+      "InputSha256": "109BF2BF27C367DA3C94B1EF5247B536ED04B7F449F2BDC9F1540AE33E3C31DC",
+      "ReferencePdfSha256": "86D753CD5D5399913B1A30F56A1826FF183978B7099309F0E2B2AE14BA1386F7",
+      "MathGlyphCount": 32,
+      "TargetMathText": "\ud835\udc4e+\ud835\udc4f=\ud835\udc50\ud835\udc65+2\ud835\udc66",
+      "ParagraphY": 630.94,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc4e",
+          "X": 173.06,
+          "Y": 630.94,
+          "Size": 11.04
+        },
+        {
+          "Text": "+",
+          "X": 181.94,
+          "Y": 630.94,
+          "Size": 11.04
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 192.65,
+          "Y": 630.94,
+          "Size": 11.04
+        },
+        {
+          "Text": "=",
+          "X": 201.77,
+          "Y": 630.94,
+          "Size": 11.04
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 213.05,
+          "Y": 630.94,
+          "Size": 11.04
+        },
+        {
+          "Text": "\ud835\udc65",
+          "X": 241.49,
+          "Y": 637.42,
+          "Size": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 246.41,
+          "Y": 637.42,
+          "Size": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 252.29,
+          "Y": 637.42,
+          "Size": 8.04
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 246.53,
+          "Y": 625.42,
+          "Size": 8.04
+        }
+      ]
+    },
+    {
+      "Id": "justified-math-wrapped-report",
+      "Mode": "all-word-compatible",
+      "InputSha256": "109BF2BF27C367DA3C94B1EF5247B536ED04B7F449F2BDC9F1540AE33E3C31DC",
+      "ReferencePdfSha256": "8E2BCEA330967220D72D648F7802CC8B828B761696207D942AD7381F4A909BA1",
+      "MathGlyphCount": 32,
+      "TargetMathText": "\ud835\udc4e+\ud835\udc4f=\ud835\udc50\ud835\udc65+2\ud835\udc66",
+      "ParagraphY": 574.44,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc4e",
+          "X": 131.26,
+          "Y": 574.44,
+          "Size": 8.352
+        },
+        {
+          "Text": "+",
+          "X": 137.98,
+          "Y": 574.44,
+          "Size": 8.352
+        },
+        {
+          "Text": "\ud835\udc4f",
+          "X": 146.09,
+          "Y": 574.44,
+          "Size": 8.352
+        },
+        {
+          "Text": "=",
+          "X": 153,
+          "Y": 574.44,
+          "Size": 8.352
+        },
+        {
+          "Text": "\ud835\udc50",
+          "X": 161.54,
+          "Y": 574.44,
+          "Size": 8.352
+        },
+        {
+          "Text": "\ud835\udc65",
+          "X": 183.12,
+          "Y": 579.36,
+          "Size": 6.096
+        },
+        {
+          "Text": "+",
+          "X": 186.86,
+          "Y": 579.36,
+          "Size": 6.096
+        },
+        {
+          "Text": "2",
+          "X": 191.33,
+          "Y": 579.36,
+          "Size": 6.096
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 186.96,
+          "Y": 570.26,
+          "Size": 6.096
+        }
+      ]
+    }
+  ]
+}

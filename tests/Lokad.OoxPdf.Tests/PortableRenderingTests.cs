@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingJustifiedMathRetainsContentAndNeutralOrigins() =>
+        DocxInlineCompositionTests.CheckJustifiedMath(new PinnedResolver(mathFont: true));
+
     public static void PortableRenderingUnusedTabMetadataKeepsSupportedFormulas() =>
         DocxInlineCompositionTests.CheckTabOffsets(new PinnedResolver(mathFont: true), "unused-tab-math-office.json");
 

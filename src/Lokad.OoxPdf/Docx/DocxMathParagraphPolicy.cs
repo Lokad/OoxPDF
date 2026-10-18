@@ -245,10 +245,15 @@ internal static class DocxMathParagraphPolicy
         paragraph.Equations.Count == 1 && (GetInlineRow(paragraph) is null && GetStandaloneRow(paragraph) is null ||
             GetInlineRow(paragraph) is { } inline && prepared is not null &&
             prepared.TryGetValue(inline, out var math) && (math.Box.InlineBreakAfterGlyphs.Count != 0 ||
-                math.Box.AllowsInlineRelocation && HasSupportedOrderedAlignment(paragraph)));
+                math.Box.AllowsInlineRelocation && HasSimpleRelocationAlignment(paragraph)));
+
+    // Preserve the qualified legacy single-equation placement. Mixed ordered
+    // content additionally owns whitespace justification after line breaking.
+    private static bool HasSimpleRelocationAlignment(DocxParagraph paragraph) =>
+        paragraph.Alignment is DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right;
 
     private static bool HasSupportedOrderedAlignment(DocxParagraph paragraph) =>
-        paragraph.Alignment is DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right;
+        HasSimpleRelocationAlignment(paragraph) || paragraph.Alignment == DocxTextAlignment.Justified;
 
     // Preparation needs the dependency kind, not a guessed counter value.
     // Body/cell placement supplies PAGE; total counts remain unavailable there.

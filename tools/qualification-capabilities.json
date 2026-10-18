@@ -6849,5 +6849,22 @@
     "DocxInlineCompositionSourceCursorRetainsBreakTabsAndFirstLineLabel",
     "DocxInlineCompositionSourceViewOrdersEquationsPicturesTabsAndBreaks",
     "DocxInlineCompositionExactLineSlotSeparatesInkFromAdvanceAndKeepsFallbacks"
+  ],
+  "docx-inline-justification": [
+    "DocxInlineCompositionJustif",
+    "PortableRenderingJustifiedMath",
+    "DocxInlineCompositionAuthoredDisplayAlignmentOwnsMathRowsAndKeepsFallbacks",
+    "DocxInlineCompositionAuthoredDisplayAlignmentMatchesIndependentWord",
+    "DocxInlineCompositionMathOnlyGroupsCenterAcrossParagraphAlignment",
+    "DocxInlineCompositionMeasurementPreservesSourceTrackingKerningAndHiddenRuns",
+    "DocxInlineCompositionLeftTabMeasurementRetainsWrapAndFallbackContracts",
+    "DocxInlineCompositionSourceCursorRetainsBreakTabsAndFirstLineLabel",
+    "DocxLayoutStageJustifiesWrappedNonFinalLines",
+    "JustifiedParagraphLineStartsArePinned",
+    "DocxJustifiedInlineImageUsesImageAwareStretch",
+    "DocxJustifiedInlineImageAlignsWithStretchedText",
+    "DocxStaticFrameMappingSeparatesAlignmentFromPlainContentOwnership",
+    "DocxNativeInlineFractionPreservesSourceRolesAlongsideProse",
+    "DocxNativeInlineFractionChildSizesDoNotTakeOwnershipOfParentShifts"
   ]
 }

@@ -2507,7 +2507,12 @@ internal static partial class DocxInlineCompositionTests
         var lineBreak = prose with { Text = "\n" };
         var mixed = paragraph with { Runs = [lineBreak, prose], InlineContent = [.. paragraph.InlineContent!,
             new DocxInlineBreak(lineBreak, 0), new DocxInlineText(prose, 0, prose.Text.Length)] };
-        TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(mixed).Count);
+        TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(mixed).Count);
+        TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineContent(mixed, math, new TrackingMeasurer(),
+            12d, 100d, 100d, 9d, 16d, 1d, default, out var mixedLines) &&
+            TestAssert.NotNull(mixedLines)[0].DisplayAlignment == DocxTextAlignment.Right &&
+            mixedLines[^1].DisplayAlignment is null,
+            "An authored display row retains alignment beside a separately justified prose row.");
         var unknown = paragraph.Equations.Select(equation => equation with { AlignmentValue = "unknown" }).ToArray();
         TestAssert.True(DocxMathParagraphPolicy.ResolveDisplayAlignment(unknown, default) is null,
             "An unknown alignment retains an explicit fallback.");

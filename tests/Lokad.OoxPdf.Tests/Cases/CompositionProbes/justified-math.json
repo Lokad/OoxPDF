@@ -1,0 +1,52 @@
+[
+  {
+    "Id": "justified-math-single-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/justified-math-single-report.docx",
+    "Sha256": "7071ADFE070A6145207E6DE5780C5314EB183FF025E54FBE6C23CD6434D28FD5",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "Inventory availability",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "Wrapped": false,
+    "Justified": true
+  },
+  {
+    "Id": "left-math-wrapped-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/left-math-wrapped-report.docx",
+    "Sha256": "73AC6830B1CECB56E01E7D94F2DBD38DEF60AA3083E8877235E062133A2C2814",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "Inventory availability",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative.",
+      "Additional public calculation text preserves the existing source formulas"
+    ],
+    "Wrapped": true,
+    "Justified": false
+  },
+  {
+    "Id": "justified-math-wrapped-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/justified-math-wrapped-report.docx",
+    "Sha256": "109BF2BF27C367DA3C94B1EF5247B536ED04B7F449F2BDC9F1540AE33E3C31DC",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "Inventory availability",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative.",
+      "Additional public calculation text preserves the existing source formulas"
+    ],
+    "Wrapped": true,
+    "Justified": true
+  }
+]

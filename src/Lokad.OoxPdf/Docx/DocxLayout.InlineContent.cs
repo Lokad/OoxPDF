@@ -733,6 +733,43 @@ internal sealed partial class DocxLayoutEngine
                 current.All(fragment => fragment.Math is { UsesDisplayStyle: true } ||
                     fragment.Source is DocxInlineText text &&
                     text.Run.Text.AsSpan(text.Start, text.Length).IsWhiteSpace());
+            if (!displayGroup && paragraph.Alignment == DocxTextAlignment.Justified &&
+                !endCursor.IsComplete(atoms) && !current.Any(fragment => fragment.Source is DocxInlineTab))
+            {
+                double available = output.Count == 0 ? firstWidth : nextWidth;
+                int spaces = 0;
+                foreach (var fragment in current)
+                    foreach (var span in fragment.Text)
+                        foreach (char character in span.Text)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (IsJustificationSpace(character)) spaces++;
+                        }
+                if (spaces != 0 && available - advance > .001d)
+                {
+                    // Intrinsic boxes and run boundaries keep their advances;
+                    // only retained source whitespace shares the remaining width.
+                    double extraPerSpace = (available - advance) / spaces;
+                    for (int index = 0; index < current.Count; index++)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        var fragment = current[index];
+                        int count = fragment.Text.Sum(span => span.Text.Count(IsJustificationSpace));
+                        if (count == 0) continue;
+                        var segments = new List<DocxTextSegmentLayout>();
+                        double segmentX = 0d;
+                        for (int spanIndex = 0; spanIndex < fragment.Text.Count; spanIndex++)
+                        {
+                            var span = fragment.Text[spanIndex];
+                            segmentX = AddJustifiedSpanSegments(span, segmentX, extraPerSpace, fontSize, measurer, segments);
+                            if (spanIndex + 1 < fragment.Text.Count)
+                                segmentX += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, fragment.Text[spanIndex + 1].Text);
+                        }
+                        current[index] = fragment with { Advance = fragment.Advance + count * extraPerSpace, TextSegments = segments };
+                    }
+                    advance = available;
+                }
+            }
             double textInset = baselineInset;
             if (physicalTextBaselineInset is { } physicalInset && !displayGroup &&
                 current.Any(fragment => fragment.Math is not null) &&

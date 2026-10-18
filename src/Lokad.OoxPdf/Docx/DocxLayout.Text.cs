@@ -313,7 +313,7 @@ internal sealed partial class DocxLayoutEngine
         for (int i = 0; i < drawableSpans.Count; i++)
         {
             DocxTextSpan span = drawableSpans[i];
-            segmentX = AddJustifiedSpanSegments(span, segmentX);
+            segmentX = AddJustifiedSpanSegments(span, segmentX, extraPerSpace, fontSize, textMeasurer, segments);
             if (i + 1 < drawableSpans.Count)
             {
                 segmentX += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, drawableSpans[i + 1].Text);
@@ -321,46 +321,47 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return segments;
+    }
 
-        double AddJustifiedSpanSegments(DocxTextSpan span, double segmentX)
+    private static double AddJustifiedSpanSegments(DocxTextSpan span, double segmentX, double extraPerSpace,
+        double fontSize, IDocxTextMeasurer textMeasurer, List<DocxTextSegmentLayout> segments)
+    {
+        double spanFontSize = GetTextSpanFontSize(span, fontSize);
+        double baselineOffset = GetTextSpanBaselineOffset(span, fontSize);
+        int start = 0;
+        while (start < span.Text.Length)
         {
-            double spanFontSize = GetTextSpanFontSize(span, fontSize);
-            double baselineOffset = GetTextSpanBaselineOffset(span, fontSize);
-            int start = 0;
-            while (start < span.Text.Length)
+            bool isSpace = IsJustificationSpace(span.Text[start]);
+            int end = start + 1;
+            while (end < span.Text.Length && IsJustificationSpace(span.Text[end]) == isSpace)
             {
-                bool isSpace = IsJustificationSpace(span.Text[start]);
-                int end = start + 1;
-                while (end < span.Text.Length && IsJustificationSpace(span.Text[end]) == isSpace)
-                {
-                    end++;
-                }
-
-                string text = span.Text[start..end];
-                double width = textMeasurer.MeasureText(span.StyleRun, text, spanFontSize);
-                if (isSpace)
-                {
-                    segmentX += width + text.Length * extraPerSpace;
-                }
-                else
-                {
-                    segments.Add(new DocxTextSegmentLayout(
-                        text,
-                        span.StyleRun,
-                        segmentX,
-                        width,
-                        spanFontSize,
-                        baselineOffset,
-                        SourceTextRunIndex: span.SourceTextRunIndex,
-                        SourceTextOffsetInRun: span.SourceTextOffsetInRun + start, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, Role: DocxTextSegmentRole.Text));
-                    segmentX += width;
-                }
-
-                start = end;
+                end++;
             }
 
-            return segmentX;
+            string text = span.Text[start..end];
+            double width = textMeasurer.MeasureText(span.StyleRun, text, spanFontSize);
+            if (isSpace)
+            {
+                segmentX += width + text.Length * extraPerSpace;
+            }
+            else
+            {
+                segments.Add(new DocxTextSegmentLayout(
+                    text,
+                    span.StyleRun,
+                    segmentX,
+                    width,
+                    spanFontSize,
+                    baselineOffset,
+                    SourceTextRunIndex: span.SourceTextRunIndex,
+                    SourceTextOffsetInRun: span.SourceTextOffsetInRun + start, PdfCharacterSpacing: 0d, PdfCharacterSpacingSource: DocxTextStateCharacterSpacingSource.None, CompensatePdfCharacterSpacing: true, Role: DocxTextSegmentRole.Text));
+                segmentX += width;
+            }
+
+            start = end;
         }
+
+        return segmentX;
     }
 
     private static int CountStretchableJustificationSpaces(IReadOnlyList<DocxTextSpan> spans)
