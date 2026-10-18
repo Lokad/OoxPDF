@@ -1,5 +1,42 @@
 # Composed-document reliability checkpoint
 
+## C225: measured footer occupancy seats notes and separators (2026-10-18)
+
+C224's confirmed overlap is closed. Placement uses an intruding measured footer
+boundary when it leaves a usable frame, independently of note typography/reflow
+admission. Existing eligibility flags remain, including sliced continuations;
+rich complementary/header guards still pass. The separator consumes the same
+physical placement height. No font/size/document-shape exception or quota added.
+Footer-note baseline errors26.466/20.528pt become−0.016/+0.432pt; independent
+separator Y errors+0.127/−0.331pt. All four note/footer/rule1pt gates retain bounds.
+
+Final frozen41b72c27:31 Windows/24 Ubuntu checks, seven native skips, once per
+platform. Two final observers fail accepted C223 ink clearance. Visual review of
+the first build exposed a separator-height error despite its31/24 test passes;
+that production correction added a Word rectangle observer and required final
+affected-set qualification. The new observer fails the first build's rule.
+Earlier evidence retained; no root/corpus replay. A pre-execution selector fix
+changed only the tracked capability manifest, with17 runtime assets/all2,243 pins
+unchanged and no rebuild. Final2,239 old pins unchanged/four public inputs added.
+
+All four C224 Word views reused, no exports. The note-story sibling PDFs retain
+bytes; all equation operations/96 added glyph anchors remain unchanged. Two
+comparisons reused/two fresh, all four strict failures retained. Eight paired PNG
+hashes/reuse chains retained: two corrected page2pairs viewed, two review identities
+carried, first pages retained without a review claim. Both portable review pages
+viewed; note/footer ink is disjoint. Content audit has zero source-prose/simple-
+math deficits; four raw Office Arial rate/time word flags remain. Font/nonblank
+operation/source/reference identity carries the audit; only whitespace separator
+anchor matrices change. Four measured fixed-portfolio footer boundaries exclude
+the new intrusion path, avoiding unrelated corpus/deck conversions or suites.
+
+17 assets/four smokes match on transfer, no root build/suite. Release library/CLI
+are warning-free; two inherited nullable test warnings remain. Root f4294258;
+occupied-footer-notes-evidence.json and occupied-footer-notes-transfer/. C223
+CI39133625732 is green on Windows/Ubuntu. Next C226 checks two bounded omitted-
+separator/continued-plain-note variants against the same frozen artifact and
+independent Word views before choosing any further correction.
+
 ## C224: linked-inline footer/note holdouts expose footer reservation gap (2026-10-18)
 
 Two source-only report transforms append a short linked equation/image paragraph
