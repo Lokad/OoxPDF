@@ -38,7 +38,6 @@ internal static partial class DocxInlineCompositionTests
             }
         }
         foreach (var invalid in new[] {
-            source with { Spacing = source.Spacing with { LineRuleValue = "exact" } },
             source with { Spacing = source.Spacing with { LineRuleValue = "future" } },
             source with { LineSpacingPoints = null },
             source with { LineSpacingPoints = -1d },

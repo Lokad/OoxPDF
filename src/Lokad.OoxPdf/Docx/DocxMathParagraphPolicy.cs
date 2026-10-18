@@ -125,7 +125,8 @@ internal static class DocxMathParagraphPolicy
     // style only for measurement; mixed prose retains its inline ownership.
     public static DocxEquation? GetStandaloneRow(DocxParagraph paragraph)
     {
-        if (!HasSupportedOwner(paragraph) || paragraph.ListLabel is not null || paragraph.Hyperlinks.Count != 0 ||
+        if (!HasSupportedOwner(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph) ||
+            paragraph.ListLabel is not null || paragraph.Hyperlinks.Count != 0 ||
             paragraph.CommentRanges.Count != 0 ||
             HasVisibleProse(paragraph) || (paragraph.InlineContent is { } items &&
             items.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden)) ||
@@ -138,6 +139,7 @@ internal static class DocxMathParagraphPolicy
     public static bool TryGetDisplayLineSpacingFactor(DocxParagraph paragraph, out double factor)
     {
         factor = 1d;
+        if (DocxPlainBodyFrame.HasFixedLineFlow(paragraph)) { return true; }
         if (!DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph))
             return false;
         if (!DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph)) { return true; }
@@ -235,7 +237,7 @@ internal static class DocxMathParagraphPolicy
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? prepared = null) =>
         paragraph.Equations.Count > 1 || paragraph.Images.Count != 0 ||
         paragraph.Equations.Count != 0 && paragraph.LineSpacingPoints is not null &&
-            DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) ||
+            (DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph)) ||
         paragraph.Equations.Count != 0 && paragraph.CommentRanges.Count != 0 ||
         paragraph.Equations.Count != 0 && paragraph.InlineReferences.Any(reference =>
             reference.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote) ||
@@ -298,7 +300,7 @@ internal static class DocxMathParagraphPolicy
         if (GetInlineRow(paragraph) is { } inline) return [inline];
         if (!NeedsOrderedInlineLayout(paragraph) || !HasSupportedSourceOwner(paragraph, hasPageInputs, token) ||
             paragraph.InlineContent is null ||
-            !DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph)) return [];
+            !(DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph))) return [];
         // Source rows own resolved style: Word measures explicit formulas inline
         // beside visible text/pictures; math-only rows retain display measurement/alignment.
         var displayRows = paragraph.Equations.Any(equation => equation.Display)

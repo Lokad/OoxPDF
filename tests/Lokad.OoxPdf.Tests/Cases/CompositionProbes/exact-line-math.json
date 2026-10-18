@@ -1,0 +1,92 @@
+[
+  {
+    "Id": "exact-line-math-12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/exact-line-math-12.docx",
+    "Sha256": "EED904C86C1880674D423D9D0D15BB368D8EC8F53FC57083E80328AB4579E30A",
+    "SourceSha256": "18ACC059DCE03BBA3483C97DD02501699E2250F3D4A2D6096D461E2ACD95F01C",
+    "HeldOut": false,
+    "ExpectedEquationCount": 3,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Side limits:",
+      "Stacked limits:",
+      "Following prose."
+    ],
+    "ExactLineHeight": 12,
+    "Container": "body",
+    "Part": "word/document.xml"
+  },
+  {
+    "Id": "exact-line-math-72",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/exact-line-math-72.docx",
+    "Sha256": "129AAA63A786C638E2ECB5A06443BBA9ED1EDC9977192DFA7B2C3EFA339952EB",
+    "SourceSha256": "F64953E4D70D3AE990A5BB73068B8509132DE74A9B8EB413FBB8BBD04462FD21",
+    "HeldOut": false,
+    "ExpectedEquationCount": 3,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Side limits:",
+      "Stacked limits:",
+      "Following prose."
+    ],
+    "ExactLineHeight": 72,
+    "Container": "body",
+    "Part": "word/document.xml"
+  },
+  {
+    "Id": "exact-line-math-72-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/exact-line-math-72-cell.docx",
+    "Sha256": "6AE6BB49E590B0E43A80BC161FFBE28BFD3B86EE16EFA24B74712E3285CBF448",
+    "SourceSha256": "5DB30EDEA3ECF491948D631FE423D4E1502A36225BD5CC1A23E6886AD24FE799",
+    "HeldOut": false,
+    "ExpectedEquationCount": 3,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Side limits:",
+      "Stacked limits:",
+      "Following prose."
+    ],
+    "ExactLineHeight": 72,
+    "Container": "cell",
+    "Part": "word/document.xml"
+  },
+  {
+    "Id": "exact-line-math-72-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/exact-line-math-72-header.docx",
+    "Sha256": "2DF2527CA402E368F6CD2D243E4A5FF401EE280D596E54B5F57DFC5C9D4ADE66",
+    "SourceSha256": "54D3060A025AAA0E146FF23AA6ECAB4AD079B2B0641D90C333C4302746EE0FC6",
+    "HeldOut": false,
+    "ExpectedEquationCount": 3,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Side limits:",
+      "Stacked limits:",
+      "Following prose.",
+      "Composed story."
+    ],
+    "ExactLineHeight": 72,
+    "Container": "header",
+    "Part": "word/headerMinimum.xml"
+  },
+  {
+    "Id": "exact-line-math-composed-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/exact-line-math-composed-report.docx",
+    "Sha256": "B9D24EA858056EDE098D1A0FA84AAE86C3A35BE8A83EC11AC24CEF1FD0B772A2",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "HeldOut": true,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "Inventory availability",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "ExactLineHeight": 48,
+    "Container": "report",
+    "Part": "word/document.xml"
+  }
+]

@@ -29,6 +29,10 @@ internal static class DocxPlainBodyFrame
         paragraph.LineSpacingPoints is { } minimum && double.IsFinite(minimum) && minimum >= 0d &&
         string.Equals(paragraph.Spacing.LineRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase);
 
+    internal static bool HasFixedLineFlow(DocxParagraph paragraph) =>
+        paragraph.LineSpacingPoints is { } height && double.IsFinite(height) && height > 0d &&
+        string.Equals(paragraph.Spacing.LineRuleValue, "exact", StringComparison.OrdinalIgnoreCase);
+
     internal static bool IsPlainParagraph(DocxParagraph p) =>
         p.Alignment == DocxTextAlignment.Left && HasPlainTextContent(p);
 

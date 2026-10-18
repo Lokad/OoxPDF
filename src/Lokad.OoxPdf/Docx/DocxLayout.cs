@@ -1476,8 +1476,7 @@ internal sealed partial class DocxLayoutEngine
                 double firstInset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints);
                 double nextInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
                 double rightInset = GetParagraphRightInset(paragraph, paragraphSpacingScale);
-                double baseInset = DocxLineMetrics.ResolveUniformBodyTypographicBaselineInset(paragraph, paragraphFontSize, textMeasurer)
-                    ?? ResolveOrderedBodyBaselineInset(paragraph, paragraphFontSize, baselineLineHeight, textMeasurer);
+                double baseInset = ResolveOrderedBodyBaselineInset(paragraph, paragraphFontSize, baselineLineHeight, textMeasurer);
                 double anchorInset = 0d;
                 if (scaleBaselineOffsetTransitions)
                 {

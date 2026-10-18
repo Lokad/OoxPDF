@@ -1,0 +1,79 @@
+{
+  "Source": "Two independent Word16 source/view/PDF-pinned references for a held-out composed report with one48pt exact mixed-math paragraph. No font or point-size fitting.",
+  "Rows": [
+    {
+      "Id": "exact-line-math-composed-report",
+      "Mode": "final-preserve",
+      "InputSha256": "B9D24EA858056EDE098D1A0FA84AAE86C3A35BE8A83EC11AC24CEF1FD0B772A2",
+      "ReferencePdfSha256": "FDA184831DABCAC7889900BA4464FE0ABD7F9C19D012B8B949EF0CC6E860443A",
+      "Part": "word/document.xml",
+      "ExactLineHeight": 48,
+      "MathGlyphCount": 32,
+      "SummaryY": 631.9,
+      "TargetMathText": "x+2y",
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 119.9,
+          "Y": 638.38,
+          "Size": 8.04
+        },
+        {
+          "Text": "+",
+          "X": 124.94,
+          "Y": 638.38,
+          "Size": 8.04
+        },
+        {
+          "Text": "2",
+          "X": 130.82,
+          "Y": 638.38,
+          "Size": 8.04
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 124.94,
+          "Y": 626.38,
+          "Size": 8.04
+        }
+      ]
+    },
+    {
+      "Id": "exact-line-math-composed-report",
+      "Mode": "all-word-compatible",
+      "InputSha256": "B9D24EA858056EDE098D1A0FA84AAE86C3A35BE8A83EC11AC24CEF1FD0B772A2",
+      "ReferencePdfSha256": "F672879265C920808A5CE54DFF9BC3846B511BD313D8619D386360BB0223B014",
+      "Part": "word/document.xml",
+      "ExactLineHeight": 48,
+      "MathGlyphCount": 32,
+      "SummaryY": 575.18,
+      "TargetMathText": "x+2y",
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 90.936,
+          "Y": 580.08,
+          "Size": 6.096
+        },
+        {
+          "Text": "+",
+          "X": 94.752,
+          "Y": 580.08,
+          "Size": 6.096
+        },
+        {
+          "Text": "2",
+          "X": 99.216,
+          "Y": 580.08,
+          "Size": 6.096
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 94.752,
+          "Y": 570.98,
+          "Size": 6.096
+        }
+      ]
+    }
+  ]
+}

@@ -6817,5 +6817,25 @@
     "DocxRendererEmbedsResolvedTrueTypeCollectionFace",
     "DocxInlineCompositionMixedArgumentSpecification",
     "PortableRenderingMixedArgumentSpecification"
+  ],
+  "docx-exact-line-math": [
+    "DocxInlineCompositionExactLine",
+    "PortableRenderingExactLine",
+    "DocxInlineCompositionMinimumLineSlotOwnsLeadingAndRetainsSpacingFallbacks",
+    "DocxInlineCompositionMinimumLineMath",
+    "PortableRenderingMinimumLineMath",
+    "DocxInlineCompositionDisplayIntegrals",
+    "PortableRenderingDisplayIntegrals",
+    "DocxInlineCompositionMultipleIntegrals",
+    "PortableRenderingMultipleIntegrals",
+    "DocxInlineCompositionInheritedIntegralLimits",
+    "PortableRenderingInheritedIntegralLimits",
+    "DocxInlineCompositionExactRows",
+    "PortableRenderingExactRows",
+    "DocxWordCompatibleExactBodySpacingPrints",
+    "DocxWordCompatibleExactKeepChainUsesPrintedPageBoundary",
+    "DocxInlineCompositionExactCommentFrames",
+    "PortableRenderingExactCommentFrames",
+    "PortableRenderingExactCommentHeightChangesKeepGlyphBrackets"
   ]
 }

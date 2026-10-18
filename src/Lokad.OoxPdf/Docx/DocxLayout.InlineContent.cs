@@ -50,7 +50,10 @@ internal sealed partial class DocxLayoutEngine
 
     private static double ResolveOrderedBodyBaselineInset(DocxParagraph paragraph, double size,
         double lineHeight, IDocxTextMeasurer measurer) =>
-        DocxLineMetrics.ResolveBodyBaselineOffset(size, lineHeight, false,
+        !DocxPlainBodyFrame.HasFixedLineFlow(paragraph) &&
+            DocxLineMetrics.ResolveUniformBodyTypographicBaselineInset(paragraph, size, measurer) is { } typographic
+            ? typographic
+            : DocxLineMetrics.ResolveBodyBaselineOffset(size, lineHeight, DocxPlainBodyFrame.HasFixedLineFlow(paragraph),
             DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, size, measurer),
             DocxLineMetrics.ResolveBodyTierAMaxPoints(paragraph, measurer));
 
@@ -252,6 +255,13 @@ internal sealed partial class DocxLayoutEngine
                 !string.Equals(stop.Value, "clear", StringComparison.OrdinalIgnoreCase) ||
             stop.LeaderValue is not null && !string.Equals(stop.LeaderValue, "none", StringComparison.OrdinalIgnoreCase))) return false;
         if (!double.IsFinite(scale) || scale <= 0d) return false;
+        if (DocxPlainBodyFrame.HasFixedLineFlow(paragraph))
+        {
+            // Containers share the authored physical slot; measured ink may
+            // overhang it without changing advance or the text baseline.
+            lineHeight = paragraph.LineSpacingPoints!.Value * scale;
+            baselineInset = DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, hasExplicitLineSpacing: true);
+        }
         if (paragraph.LineSpacingPoints is not null && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph))
         {
             // Measure intrinsic fragments first; the completed row owns the
@@ -754,6 +764,12 @@ internal sealed partial class DocxLayoutEngine
             }
             if (paragraph.LineSpacingPoints is { } minimum && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph))
                 above += Math.Max(0d, minimum * scale - above - below);
+            if (DocxPlainBodyFrame.HasFixedLineFlow(paragraph))
+            {
+                above = baselineInset;
+                below = lineHeight - baselineInset;
+                textInset = baselineInset;
+            }
             output.Add(new(current.ToArray(), advance, above, above + below)
                 { DisplayAlignment = displayGroup ? DocxMathParagraphPolicy.ResolveDisplayAlignment(
                     current.Where(fragment => fragment.Math is not null).Select(fragment => fragment.Math!.Equation), token) : null,
