@@ -1,0 +1,57 @@
+{
+  "Scope": "Independent mixed-font body-origin geometry for distinct adjacent and paragraph-separated tables; source widths identify root border families.",
+  "Rows": [
+    {
+      "Id": "table-frame-chain-direct",
+      "Mode": "final-preserve",
+      "InputSha256": "52DD3B0B7B4F44279F05F499FC5814311F550BFADC4BEF55B6AB3C4011ABD53F",
+      "ReferencePdfSha256": "D7DB23420CB0F1DEA9CAE4974EA67797B01F58D5CB4FBFDAD2968D21BE2A3FC3",
+      "Pages": 1,
+      "FirstTableBottomY": 616.3,
+      "SecondTableTopY": 616.30001,
+      "TableGap": -1.0000000088439265e-05,
+      "SecondTableBottomY": 544.99,
+      "FollowingY": 534.55,
+      "FollowingInset": -10.440000000000055
+    },
+    {
+      "Id": "table-frame-chain-direct",
+      "Mode": "all-word-compatible",
+      "InputSha256": "52DD3B0B7B4F44279F05F499FC5814311F550BFADC4BEF55B6AB3C4011ABD53F",
+      "ReferencePdfSha256": "8EDFC092D9D13EAE592528589DA3113A32F59139E3D3CB95FC99B714D97636F9",
+      "Pages": 1,
+      "FirstTableBottomY": 563.35,
+      "SecondTableTopY": 563.354,
+      "TableGap": -0.004000000000019099,
+      "SecondTableBottomY": 509.28,
+      "FollowingY": 501.36,
+      "FollowingInset": -7.919999999999959
+    },
+    {
+      "Id": "table-frame-chain-paragraph",
+      "Mode": "final-preserve",
+      "InputSha256": "A0A9E63EBA076A193AB403AF2B97A1492307475E5F333B5DB7D6C8F656C81515",
+      "ReferencePdfSha256": "D28BC5EA044BDE952DBA3D8F2B1A11592B6BEA867AEF9B611E3FE8AA01561DEA",
+      "Pages": 1,
+      "FirstTableBottomY": 616.3,
+      "SecondTableTopY": 602.86001,
+      "TableGap": 13.439989999999966,
+      "SecondTableBottomY": 531.55,
+      "FollowingY": 521.11,
+      "FollowingInset": -10.43999999999994
+    },
+    {
+      "Id": "table-frame-chain-paragraph",
+      "Mode": "all-word-compatible",
+      "InputSha256": "A0A9E63EBA076A193AB403AF2B97A1492307475E5F333B5DB7D6C8F656C81515",
+      "ReferencePdfSha256": "DE6BF27AB24AC3E98E85AFD70C1258071F8C738B49BC80B39132CD256DA443ED",
+      "Pages": 1,
+      "FirstTableBottomY": 563.35,
+      "SecondTableTopY": 553.15,
+      "TableGap": 10.200000000000045,
+      "SecondTableBottomY": 499.08,
+      "FollowingY": 491.16,
+      "FollowingInset": -7.919999999999959
+    }
+  ]
+}

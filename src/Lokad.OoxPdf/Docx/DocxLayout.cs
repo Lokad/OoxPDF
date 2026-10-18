@@ -1226,6 +1226,7 @@ internal sealed partial class DocxLayoutEngine
                     : tableElement.Table;
                 double? precedingBodyBaselineInset = firstBodyLineBaselineOffset;
                 int completedPagesBeforeTable = pages.Count;
+                int columnBeforeTable = activeColumnIndex;
                 EnsureFootnoteReserveForSourceBlock(elementIndex);
                 RegisterInFlightFootnotesForSourceBlock(elementIndex);
                 cursorY -= pendingSpacingAfter;
@@ -1300,9 +1301,15 @@ internal sealed partial class DocxLayoutEngine
                 if (scaleBaselineOffsetTransitions &&
                     (completedPagesBeforeTable == pages.Count || reviewFragmentScale < 1d) && textMeasurer is not null)
                 {
-                    ApplyReviewTableBaselineGeometry(currentItems, itemCountBeforeTable, precedingBodyBaselineInset,
+                    double? tableBodyAnchor = ApplyReviewTableBaselineGeometry(currentItems, itemCountBeforeTable, precedingBodyBaselineInset,
                         textMeasurer, paragraphSpacingScale, ref cursorY, cancellationToken,
                         allowPageBoundaryFragments: reviewFragmentScale < 1d);
+                    // A complete table consumes printed height in the current
+                    // body frame; it does not start a new font-baseline origin.
+                    // Page/column transitions and unprojected tables keep their
+                    // existing reset rather than inheriting an unproven frame.
+                    if (completedPagesBeforeTable == pages.Count && columnBeforeTable == activeColumnIndex)
+                        firstBodyLineBaselineOffset = tableBodyAnchor;
                 }
                 continue;
             }

@@ -1,0 +1,36 @@
+[
+  {
+    "Id": "table-frame-chain-direct",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/table-frame-chain-direct.docx",
+    "Sha256": "52DD3B0B7B4F44279F05F499FC5814311F550BFADC4BEF55B6AB3C4011ABD53F",
+    "SourceSha256": "9B907564FC68DA3439B773366A6D81F8E8F1389DA94C56E819AB08C88E638A73",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Planning input",
+      "Observed series",
+      "Calculation summary",
+      "Detail: review the accepted ratio.",
+      "Following tables."
+    ],
+    "Variant": "direct"
+  },
+  {
+    "Id": "table-frame-chain-paragraph",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/table-frame-chain-paragraph.docx",
+    "Sha256": "A0A9E63EBA076A193AB403AF2B97A1492307475E5F333B5DB7D6C8F656C81515",
+    "SourceSha256": "9B907564FC68DA3439B773366A6D81F8E8F1389DA94C56E819AB08C88E638A73",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Planning input",
+      "Observed series",
+      "Calculation summary",
+      "Detail: review the accepted ratio.",
+      "Following tables."
+    ],
+    "Variant": "paragraph"
+  }
+]

@@ -10,7 +10,9 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    internal static void ApplyReviewTableBaselineGeometry(
+    // Return the nominal body anchor only after complete physical publication.
+    // An unprojected table leaves the caller on its existing reset/fallback.
+    internal static double? ApplyReviewTableBaselineGeometry(
         List<DocxLayoutItem> items,
         int firstItem,
         double? precedingBodyBaselineInset,
@@ -22,7 +24,7 @@ internal sealed partial class DocxLayoutEngine
     {
         if (!double.IsFinite(printScale) || printScale >= 1d || printScale <= 0d || firstItem >= items.Count)
         {
-            return;
+            return null;
         }
 
         var rows = new List<(DocxTableRowLayout Row, double[] Insets)>();
@@ -79,7 +81,7 @@ internal sealed partial class DocxLayoutEngine
         }
         for (int itemIndex = firstItem; itemIndex < items.Count; itemIndex++)
         {
-            if (items[itemIndex] is not DocxTableRowLayout row || !TryCollectRow(row, false)) return;
+            if (items[itemIndex] is not DocxTableRowLayout row || !TryCollectRow(row, false)) return null;
         }
 
         bool HasCompleteSourceMeasurement(DocxTableRowLayout row)
@@ -118,7 +120,7 @@ internal sealed partial class DocxLayoutEngine
         // Exact subtree clips retain the existing placement until complete
         // source-ordered nested height reclamation is qualified with them.
         if (hasNestedRows && rows.Select(pair => pair.Row).Concat(nestedInsets.Keys)
-            .Any(row => HasExactTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue))) return;
+            .Any(row => HasExactTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue))) return null;
 
         // Validate every exact frame before translating any earlier row. Tight
         // source clips and incomplete/overflowing occupied frames keep their
@@ -132,7 +134,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (DocxTableCellClipGeometry.Resolve(row, cell).Admitted ||
-                    !HasContainedReviewCellFrames(cell, cell.Y + borderAdvance, cell.Y + cell.Height, cancellationToken)) return;
+                    !HasContainedReviewCellFrames(cell, cell.Y + borderAdvance, cell.Y + cell.Height, cancellationToken)) return null;
             }
         }
 
@@ -144,7 +146,7 @@ internal sealed partial class DocxLayoutEngine
         double originCorrection = (precedingBodyBaselineInset ?? firstCellInset) * (1d - printScale);
         if (!double.IsFinite(originCorrection) || originCorrection <= 0d)
         {
-            return;
+            return null;
         }
 
         DocxTableRowLayout MapRow(DocxTableRowLayout row, double[] insets,
@@ -239,13 +241,14 @@ internal sealed partial class DocxLayoutEngine
             var mapped = MapRow(row, insets,
                 -originCorrection + previousBorderAdvanceCorrection, borderAdvanceCorrection);
             if (hasNestedRows && DocxTableCellClipGeometry.EnumerateCellLines(mapped, null, cancellationToken).LongCount() !=
-                CountLines(row)) return;
+                CountLines(row)) return null;
             replacements[rowIndex] = mapped;
             previousBorderAdvanceCorrection += row.Height - mapped.Height;
         }
         for (int rowIndex = 0; rowIndex < replacements.Length; rowIndex++)
             items[firstItem + rowIndex] = replacements[rowIndex];
         cursorY += previousBorderAdvanceCorrection;
+        return precedingBodyBaselineInset ?? firstCellInset;
 
         long CountLines(DocxTableRowLayout row)
         {
