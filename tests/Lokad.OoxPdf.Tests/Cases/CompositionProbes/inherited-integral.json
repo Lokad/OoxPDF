@@ -1,0 +1,33 @@
+[
+  {
+    "Id": "inherited-integral-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/inherited-integral-cell.docx",
+    "Sha256": "D4628B96FA4CC04EB33652438D3D882F2AE4A3988543EC5C8E514EDD29BE4EE8",
+    "SourceSha256": "E393AE7FF37DB125EE8FC25D6D9A2A4E1643D85AE0CC4F81130F9A9585C5D0F1",
+    "Container": "cell",
+    "DocumentIntegralLimit": "subSup",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Following prose."
+    ]
+  },
+  {
+    "Id": "inherited-integral-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/inherited-integral-header.docx",
+    "Sha256": "5F2C8A19CAFEA571DC2C8BA188886C1D71C139CAF6403EB76164FD97DD434716",
+    "SourceSha256": "8D34E454BC5D07E5B8B179EC8E31FDE87B9AB0592E88910561D6949FBF228A1A",
+    "Container": "header",
+    "DocumentIntegralLimit": "undOvr",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Following prose.",
+      "Composed story."
+    ]
+  }
+]

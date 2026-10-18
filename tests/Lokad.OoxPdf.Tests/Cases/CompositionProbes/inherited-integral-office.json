@@ -1,0 +1,151 @@
+{
+  "Source": "Four independent Word16 source/view/PDF-pinned cell/header exports; node location omitted and document defaults explicit.",
+  "Rows": [
+    {
+      "Id": "inherited-integral-cell",
+      "Mode": "final-preserve",
+      "Part": "word/document.xml",
+      "DocumentIntegralLimit": "subSup",
+      "InputSha256": "D4628B96FA4CC04EB33652438D3D882F2AE4A3988543EC5C8E514EDD29BE4EE8",
+      "ReferencePdfSha256": "6F7FA45DBC0A780603B10891F4294BF73B1E9D301B5EC58F3747F578F2B379A8",
+      "MathText": "\u222bx10",
+      "FollowingY": 647.14,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 72.024,
+          "Y": 684.58,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 86.664,
+          "Y": 684.58,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 81.744,
+          "Y": 698.26,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "X": 77.304,
+          "Y": 673.18,
+          "Size": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "inherited-integral-cell",
+      "Mode": "all-word-compatible",
+      "Part": "word/document.xml",
+      "DocumentIntegralLimit": "subSup",
+      "InputSha256": "D4628B96FA4CC04EB33652438D3D882F2AE4A3988543EC5C8E514EDD29BE4EE8",
+      "ReferencePdfSha256": "AE53DD5F03649BD138977EB4956F0C39AEF97F14E32C74E3B2E222147DC29569",
+      "MathText": "\u222bx10",
+      "FollowingY": 647.14,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 72.024,
+          "Y": 684.58,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 86.664,
+          "Y": 684.58,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 81.744,
+          "Y": 698.26,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "X": 77.304,
+          "Y": 673.18,
+          "Size": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "inherited-integral-header",
+      "Mode": "final-preserve",
+      "Part": "word/headerC195.xml",
+      "DocumentIntegralLimit": "undOvr",
+      "InputSha256": "5F2C8A19CAFEA571DC2C8BA188886C1D71C139CAF6403EB76164FD97DD434716",
+      "ReferencePdfSha256": "94E01EF6B56D6240A0C300E31B581591D261C87E2C9D07BFAF42F0C60CF30698",
+      "MathText": "\u222bx10",
+      "FollowingY": 672.1,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 72.024,
+          "Y": 714.96,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 83.664,
+          "Y": 714.96,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 76.584,
+          "Y": 734.16,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "X": 72.144,
+          "Y": 698.14,
+          "Size": 8.52
+        }
+      ],
+      "BodyY": 657.46
+    },
+    {
+      "Id": "inherited-integral-header",
+      "Mode": "all-word-compatible",
+      "Part": "word/headerC195.xml",
+      "DocumentIntegralLimit": "undOvr",
+      "InputSha256": "5F2C8A19CAFEA571DC2C8BA188886C1D71C139CAF6403EB76164FD97DD434716",
+      "ReferencePdfSha256": "93F99C26AC50F7C931693BEE59C2310FE8AAF60F31C2C8B9457DBF3332B14433",
+      "MathText": "\u222bx10",
+      "FollowingY": 672.1,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 72.024,
+          "Y": 714.96,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 83.664,
+          "Y": 714.96,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 76.584,
+          "Y": 734.16,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "X": 72.144,
+          "Y": 698.14,
+          "Size": 8.52
+        }
+      ],
+      "BodyY": 657.46
+    }
+  ]
+}

@@ -141,8 +141,13 @@ internal sealed partial class DocxRenderer
             {
                 bool displayStyle = hyperlinked?.Contains(sourceEquation) != true &&
                     (sourceEquation.Display && mixedRows?.Contains(sourceEquation) != true || standalone || displayRows.Contains(sourceEquation));
-                DocxEquation equation = sourceEquation.Display == displayStyle
-                    ? sourceEquation : sourceEquation with { Display = displayStyle };
+                // Document defaults belong to the preparation context, including
+                // stories parsed without paragraph-level document settings.
+                // Keep the original source identity as the prepared-map key.
+                DocxEquation equation = sourceEquation.Display == displayStyle &&
+                    ReferenceEquals(sourceEquation.LimitSettings, document.Settings.MathLimitSettings)
+                    ? sourceEquation : sourceEquation with { Display = displayStyle,
+                        LimitSettings = document.Settings.MathLimitSettings };
                 if (!DocxMathLayout.TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> mathRuns)) { continue; }
                 var controls = DocxMathLayout.GetControlSources(equation, token);
                 var metricControls = DocxMathLayout.GetMetricOnlyControls(equation, mathRuns, token, controls);
