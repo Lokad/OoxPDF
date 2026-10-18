@@ -1,0 +1,24 @@
+[
+  {
+    "Id": "plain-automatic-batch-after12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/plain-automatic-batch-after12.docx",
+    "Sha256": "2986F0A186FBFA3CC557F3980244F06FF045E5C4EA17A959A2C3C4AECA52BB51",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public conclusion.",
+      "Public second note remains visible"
+    ]
+  },
+  {
+    "Id": "plain-batch-footer-bookmark",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/plain-batch-footer-bookmark.docx",
+    "Sha256": "54D12FA96EA615CE8E3A2C010760CBD876FA91A5A159E9145F66C5BA39C43495",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public conclusion.",
+      "Public second note remains visible"
+    ]
+  }
+]

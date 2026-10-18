@@ -32,11 +32,13 @@ internal static class DocxPlainBodyFrame
     internal static bool IsPlainParagraph(DocxParagraph p) =>
         p.Alignment == DocxTextAlignment.Left && HasPlainTextContent(p);
 
+    // Bookmarks are non-rendering source metadata. Navigation validates their
+    // anchor ownership separately; they do not change the plain flow frame.
     internal static bool HasPlainTextContent(DocxParagraph p) =>
         p.Images.Count == 0 && p.InlineTextBoxes.Count == 0 && p.Equations.Count == 0 &&
         p.FieldReferences.Count == 0 && p.CommentRanges.Count == 0 && DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(p, p.Revisions) &&
         p.RevisionRanges.Count == 0 && !p.HasDeletedParagraphMark && p.DeletedText.Length == 0 &&
-        p.ListLabel is null && p.Hyperlinks.Count == 0 && p.BookmarkAnchors.Count == 0 &&
+        p.ListLabel is null && p.Hyperlinks.Count == 0 &&
         p.Runs.All(r => r.Revision is null && r.Revisions.Count == 0 &&
             r.Text.All(ch => ch is >= ' ' and <= '~' or '\r' or '\n'));
 }

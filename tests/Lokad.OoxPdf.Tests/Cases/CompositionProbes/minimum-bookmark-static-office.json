@@ -1,0 +1,93 @@
+{
+  "Scope": "Independent Word exports made before byte-identical public promotion; no repeat exports. Static cache reuses the C173 Final control.",
+  "Rows": [
+    {
+      "Id": "plain-automatic-batch-after12",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/plain-automatic-batch-after12.docx",
+      "InputSha256": "2986F0A186FBFA3CC557F3980244F06FF045E5C4EA17A959A2C3C4AECA52BB51",
+      "ReferencePdfSha256": "383BBA2C1143C078C42C27A418E44C62F6B915CF5179E0FD5C17FE93F380FA82",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public conclusion.",
+          "Y": 134.66
+        },
+        {
+          "Text": "All quantities",
+          "Y": 101.78
+        },
+        {
+          "Text": "Public second note",
+          "Y": 82.32
+        }
+      ]
+    },
+    {
+      "Id": "plain-automatic-batch-after12",
+      "Mode": "all-word-compatible",
+      "Input": "CompositionProbes/plain-automatic-batch-after12.docx",
+      "InputSha256": "2986F0A186FBFA3CC557F3980244F06FF045E5C4EA17A959A2C3C4AECA52BB51",
+      "ReferencePdfSha256": "C6A139F62B4C1F9A229ED4EA6262BB9ADA596B1F5BE082FAA5A092DD1FF64423",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public conclusion.",
+          "Y": 134.66
+        },
+        {
+          "Text": "All quantities",
+          "Y": 101.78
+        },
+        {
+          "Text": "Public second note",
+          "Y": 82.32
+        }
+      ]
+    },
+    {
+      "Id": "plain-batch-footer-bookmark",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/plain-batch-footer-bookmark.docx",
+      "InputSha256": "54D12FA96EA615CE8E3A2C010760CBD876FA91A5A159E9145F66C5BA39C43495",
+      "ReferencePdfSha256": "D255BE511103F99DD47280E22FC754E992390983AFCC737611DC64312FABEB80",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public conclusion.",
+          "Y": 134.66
+        },
+        {
+          "Text": "All quantities",
+          "Y": 101.78
+        },
+        {
+          "Text": "Public second note",
+          "Y": 82.32
+        }
+      ]
+    },
+    {
+      "Id": "plain-batch-footer-bookmark",
+      "Mode": "all-word-compatible",
+      "Input": "CompositionProbes/plain-batch-footer-bookmark.docx",
+      "InputSha256": "54D12FA96EA615CE8E3A2C010760CBD876FA91A5A159E9145F66C5BA39C43495",
+      "ReferencePdfSha256": "53BF5333D449D03F2BFE78FA9B4DE571FDC65661958BDCC4C886AF9CD99CAB4F",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public conclusion.",
+          "Y": 134.66
+        },
+        {
+          "Text": "All quantities",
+          "Y": 101.78
+        },
+        {
+          "Text": "Public second note",
+          "Y": 82.32
+        }
+      ]
+    }
+  ]
+}

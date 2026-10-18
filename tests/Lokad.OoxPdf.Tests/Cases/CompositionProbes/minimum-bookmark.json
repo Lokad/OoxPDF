@@ -1,0 +1,92 @@
+[
+  {
+    "Id": "minimum-bookmark-ordinary12-control",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/ordinary-minimum-line-20.docx",
+    "Sha256": "CA9514199B2B8BD44BD0EFF7FF7CAE637AD3A3A0DECDA6ADF584D304B6B4FE74",
+    "SourceSha256": "CA9514199B2B8BD44BD0EFF7FF7CAE637AD3A3A0DECDA6ADF584D304B6B4FE74",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta."
+    ],
+    "Context": "ordinary12",
+    "FontPoints": 12,
+    "Bookmarked": false
+  },
+  {
+    "Id": "minimum-bookmark-ordinary12-bookmarked",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-bookmark-ordinary12-bookmarked.docx",
+    "Sha256": "55CEEE4244DA42322D3B5A75FFF4FBED0684CFAFB5C620E64D0F680560175CE2",
+    "SourceSha256": "CA9514199B2B8BD44BD0EFF7FF7CAE637AD3A3A0DECDA6ADF584D304B6B4FE74",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta."
+    ],
+    "Context": "ordinary12",
+    "FontPoints": 12,
+    "Bookmarked": true
+  },
+  {
+    "Id": "minimum-bookmark-ordinary11-control",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-bookmark-ordinary11-control.docx",
+    "Sha256": "F8AF84291A8A82232E0BF16DADE46540F8B2B7F4C4847F345954AC375EAE8B3B",
+    "SourceSha256": "CA9514199B2B8BD44BD0EFF7FF7CAE637AD3A3A0DECDA6ADF584D304B6B4FE74",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta."
+    ],
+    "Context": "ordinary11",
+    "FontPoints": 11,
+    "Bookmarked": false
+  },
+  {
+    "Id": "minimum-bookmark-ordinary11-bookmarked",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-bookmark-ordinary11-bookmarked.docx",
+    "Sha256": "5F0569BEA0F5C124E6D675C2B6B07A8A6C17E2F66A0FCA2F7D7DED90B723FFDD",
+    "SourceSha256": "CA9514199B2B8BD44BD0EFF7FF7CAE637AD3A3A0DECDA6ADF584D304B6B4FE74",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta."
+    ],
+    "Context": "ordinary11",
+    "FontPoints": 11,
+    "Bookmarked": true
+  },
+  {
+    "Id": "minimum-bookmark-noted12-control",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/note-marked-minimum-line-20.docx",
+    "Sha256": "7E81696732717C13824B757E4721B1DF5EE414A35205BBE136F5806ABB4D65E4",
+    "SourceSha256": "7E81696732717C13824B757E4721B1DF5EE414A35205BBE136F5806ABB4D65E4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta."
+    ],
+    "Context": "noted12",
+    "FontPoints": 12,
+    "Bookmarked": false
+  },
+  {
+    "Id": "minimum-bookmark-noted12-bookmarked",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-bookmark-noted12-bookmarked.docx",
+    "Sha256": "92C34A2BFB748BD58314CCC3CFD116C21FCA250C2CB80D256ED6DC5B5C2F8CF8",
+    "SourceSha256": "7E81696732717C13824B757E4721B1DF5EE414A35205BBE136F5806ABB4D65E4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta."
+    ],
+    "Context": "noted12",
+    "FontPoints": 12,
+    "Bookmarked": true
+  }
+]

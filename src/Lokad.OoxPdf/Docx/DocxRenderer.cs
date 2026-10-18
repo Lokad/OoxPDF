@@ -494,7 +494,7 @@ internal sealed partial class DocxRenderer
         var layout = CreateCompleteNoteReservedLayout(document, fonts, context, geometry, cancellationToken, pageCount);
         bool unscaledMinimumLeading = context.WordCompatiblePrintScale == 1d &&
             (context.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ||
-                context.Mode == OoxPdfDocxMarkupMode.Final && DocxMinimumBodyLineLeading.IsOrdinaryBody(document));
+                context.Mode == OoxPdfDocxMarkupMode.Final);
         return unscaledMinimumLeading && fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
             DocxMinimumBodyLineLeading.TryCreateLayout(document, layout, out var adjusted) ? adjusted : layout;
     }
