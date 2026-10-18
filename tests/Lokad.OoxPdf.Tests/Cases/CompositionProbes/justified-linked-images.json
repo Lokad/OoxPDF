@@ -1,0 +1,28 @@
+[
+  {
+    "Id": "justified-linked-image-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/justified-linked-image-body.docx",
+    "Sha256": "8EAB9630AB190BF91F8EC124A2F39BA7553A77223AC37691FB4142E948DB86E2",
+    "SourceSha256": "BA6452A492B205BA53E5E592DB0134DB478376BA2DD6D10EC906D4DC55E5F0A2",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "The linked calculation",
+      "supported illustration and formulas."
+    ]
+  },
+  {
+    "Id": "justified-linked-image-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/justified-linked-image-cell.docx",
+    "Sha256": "1C82A60B762398C13B744330091B90C410B2B98A9D648218AD161DA40A6936B6",
+    "SourceSha256": "5269CFC5CAD1BC6ECBCF52615330F543ACF5668D6D7B6478C3C909127EB1021E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "The linked calculation",
+      "supported illustration and formulas."
+    ]
+  }
+]

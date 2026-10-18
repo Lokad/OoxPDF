@@ -6866,5 +6866,27 @@
     "DocxStaticFrameMappingSeparatesAlignmentFromPlainContentOwnership",
     "DocxNativeInlineFractionPreservesSourceRolesAlongsideProse",
     "DocxNativeInlineFractionChildSizesDoNotTakeOwnershipOfParentShifts"
+  ],
+  "docx-printed-link-frames": [
+    "DocxInlineCompositionPrintedHyperlinkFrames",
+    "PortableRenderingPrintedHyperlinkFrames",
+    "DocxBodyHyperlinkUsesExactLineBoxAcrossFontsAndPrintScale",
+    "DocxBodyHyperlinkAutoBoxSurvivesMixedRunsSpacingAndBreakSpill",
+    "DocxBodyHyperlinkSlotIsIndependentOfFollowingTableFont",
+    "DocxWordCompatibleAllMarkupUsesEmittedAdvanceForHyperlinkAnnotations",
+    "DocxWordCompatibleAllMarkupUsesEmittedAdvanceForTableCellHyperlinkAnnotations",
+    "DocxWordCompatibleAllMarkupUsesEmittedAdvanceForFloatingTextBoxHyperlinkAnnotations",
+    "DocxWordCompatibleAllMarkupUsesEmittedAdvanceForStaticTextBoxHyperlinkAnnotations",
+    "DocxInlineCompositionGroupedHyperlinksFollowPrintedReviewRows",
+    "DocxInlineCompositionAtomicFormulaHyperlinksCoverPaintedGlyphs",
+    "DocxInlineCompositionExplicitDisplayLinksMatchIndependentWordAcrossContainers",
+    "DocxInlineCompositionLeftTabMathLinksCoverCellAndStaticGlyphs",
+    "DocxRendererKeepsSplitTableCellHyperlinkAnnotationsOnVisibleFragment",
+    "DocxRendererEmitsPlacedFootnoteExternalHyperlinkAnnotations",
+    "DocxRendererEmitsPlacedEndnoteExternalHyperlinkAnnotations",
+    "DocxHeaderRendererEmitsExternalHyperlinkAnnotations",
+    "DocxFooterRendererEmitsExternalHyperlinkAnnotations",
+    "DocxRendererEmitsStaticFloatingTextBoxExternalHyperlinkAnnotations",
+    "DocxStaticStoryRendererEmitsInternalHyperlinkDestinations"
   ]
 }

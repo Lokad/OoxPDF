@@ -1462,7 +1462,9 @@ internal sealed partial class DocxRenderer
                 {
                     double flushNextTop = previousUsesBodyLineBox && line.BodyLineBoxBaselineInsetPoints is double nextInset
                         ? line.BaselineY - textEmissionBaselineOffset + nextInset
-                        : line.BaselineY + previousDelta.Value + HyperlinkRectTopEm * line.FontSize;
+                        // Line coordinates are already placed; legacy font
+                        // sizes still need the same print scale as emitted ink.
+                        : line.BaselineY + previousDelta.Value + HyperlinkRectTopEm * line.FontSize * textEmissionFontScale;
                     // RV06: tile only into lines below the held line; side-by-side table-cell
                     // lines share one baseline, so they keep the full-height fallback instead.
                     // A table or other story's glyph top is not the body slot's
