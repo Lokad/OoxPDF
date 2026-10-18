@@ -520,9 +520,9 @@ internal sealed partial class DocxLayoutEngine
 
         IDocxTextMeasurer? separatorMeasurerForNotes = unscaledTextMeasurer ?? textMeasurer;
 
-        bool FootnoteReserveYieldsPageToDrain(double itemHeight)
+        bool CanDrainFootnoteReserve()
         {
-            if (HasCurrentColumnContent() || currentPageFootnoteReserveHeight <= 0d || cursorY - itemHeight >= CurrentFrameBottom())
+            if (HasCurrentColumnContent() || currentPageFootnoteReserveHeight <= 0d)
             {
                 return false;
             }
@@ -557,11 +557,14 @@ internal sealed partial class DocxLayoutEngine
             return drainableProgress;
         }
 
-        void AdvanceForOverflowingItem(double itemHeight, int sourceBlockIndex)
+        void AdvanceForOverflowingItem(double itemHeight, int sourceBlockIndex, Func<double>? admissionBottom = null)
         {
+            // Retry the same container capacity that rejected this item. Printed
+            // paragraph admission can be stricter than the legacy body frame.
+            Func<double> frameBottom = admissionBottom ?? CurrentFrameBottom;
             AdvanceColumnOrPage();
             RegisterInFlightFootnotesForSourceBlock(sourceBlockIndex);
-            while (!HasCurrentColumnContent() && cursorY - itemHeight < CurrentFrameBottom() && FootnoteReserveYieldsPageToDrain(itemHeight))
+            while (!HasCurrentColumnContent() && cursorY - itemHeight < frameBottom() && CanDrainFootnoteReserve())
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 AdvanceColumnOrPage();
@@ -1172,7 +1175,7 @@ internal sealed partial class DocxLayoutEngine
                     double breakFontSize = GetParagraphFontSize(breakParagraph);
                     double breakLineHeight = ResolveLineHeight(breakParagraph, breakFontSize, textMeasurer);
                     double paragraphAdvance = breakSpacingProfile.AppliedBeforeSpacing + breakLineHeight;
-                    if (cursorY - paragraphAdvance < CurrentFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(paragraphAdvance)))
+                    if (cursorY - paragraphAdvance < CurrentFrameBottom() && (HasCurrentColumnContent() || CanDrainFootnoteReserve()))
                     {
                         AdvanceForOverflowingItem(paragraphAdvance, elementIndex);
                     }
@@ -1448,8 +1451,8 @@ internal sealed partial class DocxLayoutEngine
                 math.LineHeight * paragraphSpacingScale <= page.Height - page.MarginTop - page.MarginBottom)
             {
                 double advance = math.LineHeight * paragraphSpacingScale;
-                if (cursorY - advance < CurrentParagraphFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(advance)))
-                { AdvanceForOverflowingItem(advance, elementIndex); }
+                if (cursorY - advance < CurrentParagraphFrameBottom() && (HasCurrentColumnContent() || CanDrainFootnoteReserve()))
+                { AdvanceForOverflowingItem(advance, elementIndex, () => CurrentParagraphFrameBottom()); }
                 if (cursorY - advance >= CurrentParagraphFrameBottom())
                 {
                     double leftInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
@@ -1540,9 +1543,10 @@ internal sealed partial class DocxLayoutEngine
                             RegisterInFlightFootnotesForSourceBlock(elementIndex, line.Fragments.SelectMany(fragment => fragment.Text));
                         if (cursorY - line.OccupiedHeight < CurrentParagraphFrameBottom(
                             line.EndCursor.IsComplete(atoms) ? spacingProfile.ParagraphAfterSpacing : 0d) &&
-                            (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(line.OccupiedHeight)))
+                            (HasCurrentColumnContent() || CanDrainFootnoteReserve()))
                         {
-                            AdvanceForOverflowingItem(line.OccupiedHeight, elementIndex);
+                            AdvanceForOverflowingItem(line.OccupiedHeight, elementIndex, () => CurrentParagraphFrameBottom(
+                                line.EndCursor.IsComplete(atoms) ? spacingProfile.ParagraphAfterSpacing : 0d));
                             continue; // Admission did not consume any source or bind its counters.
                         }
                         double inset = index == 0 ? firstInset : nextInset;
@@ -1626,9 +1630,10 @@ internal sealed partial class DocxLayoutEngine
                     if (completeFootnoteAdmission is not null)
                         RegisterInFlightFootnotesForSourceBlock(elementIndex, line.Spans);
                     if (cursorY - extraAbove - extraBelow - lineHeight < CurrentParagraphFrameBottom(
-                        lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(extraAbove + extraBelow + lineHeight)))
+                        lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) && (HasCurrentColumnContent() || CanDrainFootnoteReserve()))
                     {
-                        AdvanceForOverflowingItem(extraAbove + extraBelow + lineHeight, elementIndex);
+                        AdvanceForOverflowingItem(extraAbove + extraBelow + lineHeight, elementIndex, () => CurrentParagraphFrameBottom(
+                            lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d));
                     }
 
                     cursorY -= extraAbove;
@@ -1886,10 +1891,10 @@ internal sealed partial class DocxLayoutEngine
                     // other overflowing item instead of painting below the margin; fit
                     // accounting stays zero-consumption so the following break still
                     // fits on the fresh page.
-                    bool breakSpillTurnedPage = cursorY - breakSpillAfterSpacing - lineHeight < CurrentParagraphFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(lineHeight));
+                    bool breakSpillTurnedPage = cursorY - breakSpillAfterSpacing - lineHeight < CurrentParagraphFrameBottom() && (HasCurrentColumnContent() || CanDrainFootnoteReserve());
                     if (breakSpillTurnedPage)
                     {
-                        AdvanceForOverflowingItem(lineHeight, elementIndex);
+                        AdvanceForOverflowingItem(lineHeight, elementIndex, () => CurrentParagraphFrameBottom());
                     }
                     // Turned spills open the fresh page with a plain first-line inset:
                     // uniform 11.3pt at 12pt across auto/exact probes and Aptos/Arial faces
@@ -1964,9 +1969,9 @@ internal sealed partial class DocxLayoutEngine
             }
             else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
             {
-                if (cursorY - lineHeight < CurrentParagraphFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(lineHeight)))
+                if (cursorY - lineHeight < CurrentParagraphFrameBottom() && (HasCurrentColumnContent() || CanDrainFootnoteReserve()))
                 {
-                    AdvanceForOverflowingItem(lineHeight, elementIndex);
+                    AdvanceForOverflowingItem(lineHeight, elementIndex, () => CurrentParagraphFrameBottom());
                 }
 
                 cursorY -= ResolveListLabelFirstLineExtraLeading(paragraph, paragraphFontSize, textMeasurer);
@@ -1984,7 +1989,7 @@ internal sealed partial class DocxLayoutEngine
                 cancellationToken.ThrowIfCancellationRequested();
                 var (imageWidth, imageHeight) = ResolveInlineImageSize(image, width, paragraphSpacingScale);
 
-                if (cursorY - imageHeight < CurrentFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(imageHeight)))
+                if (cursorY - imageHeight < CurrentFrameBottom() && (HasCurrentColumnContent() || CanDrainFootnoteReserve()))
                 {
                     AdvanceForOverflowingItem(imageHeight, elementIndex);
                 }
@@ -2012,7 +2017,7 @@ internal sealed partial class DocxLayoutEngine
             foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (cursorY - EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale) < CurrentFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale))))
+                if (cursorY - EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale) < CurrentFrameBottom() && (HasCurrentColumnContent() || CanDrainFootnoteReserve()))
                 {
                     AdvanceForOverflowingItem(EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale), elementIndex);
                 }

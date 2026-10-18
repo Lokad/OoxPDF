@@ -58,8 +58,8 @@ internal static partial class DocxInlineCompositionTests
                 }
                 if (resolver is not null) continue;
                 TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);
-                // The retained exact-height Review body-admission failure is recorded
-                // separately in UnresolvedAnchors and in the raw Office comparison.
+                // Body admission and continued notes use the same container boundary;
+                // every pinned Word body/tail page anchor now participates.
                 foreach (var anchor in row.GetProperty("Anchors").EnumerateArray())
                 {
                     string prefix = anchor.GetProperty("Prefix").GetString()!;
@@ -70,7 +70,7 @@ internal static partial class DocxInlineCompositionTests
                     TestAssert.True(Math.Abs(actual.Show.Y - anchor.GetProperty("Y").GetDouble()) < 1d,
                         "Qualified note heads, tails and body origins retain independent one-point Word gates.");
                 }
-                if (!transformed && !row.GetProperty("Page2RowsUnresolved").GetBoolean())
+                if (!transformed)
                 {
                     var rows = shows.Where(item => item.Page == 2 && !string.IsNullOrWhiteSpace(item.Show.Text) &&
                         !item.Show.Text.StartsWith("Public review footer", StringComparison.Ordinal))

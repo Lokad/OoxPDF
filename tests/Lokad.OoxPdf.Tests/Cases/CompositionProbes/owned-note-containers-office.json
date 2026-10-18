@@ -1,5 +1,5 @@
 {
-  "Source": "Independent Word 16 exports, exact input/PDF pins and unchanged one-point origin gates. Exact80 Review body admission remains failed; unresolved anchors below are retained, not qualified.",
+  "Source": "Independent Word16 exports, exact input/PDF pins and unchanged one-point body/note origins. C210 shared admission boundary closes the formerly unresolved exact-height Review page ownership; raw pixel failures remain.",
   "Rows": [
     {
       "Id": "owned-note-container-intermediate",
@@ -136,9 +136,7 @@
           "Y": 154.58
         }
       ],
-      "UnresolvedAnchors": [],
-      "Page2NoteRows": 40,
-      "Page2RowsUnresolved": false
+      "Page2NoteRows": 40
     },
     {
       "Id": "owned-note-container-intermediate",
@@ -164,6 +162,18 @@
           "EndsWith": false,
           "Page": 1,
           "Y": 253.63
+        },
+        {
+          "Prefix": "Following prose.",
+          "EndsWith": false,
+          "Page": 3,
+          "Y": 593.38
+        },
+        {
+          "Prefix": "Final tail.",
+          "EndsWith": true,
+          "Page": 2,
+          "Y": 171.17
         }
       ],
       "FooterAnchors": [
@@ -263,22 +273,7 @@
           "Y": 213.22
         }
       ],
-      "UnresolvedAnchors": [
-        {
-          "Prefix": "Following prose.",
-          "EndsWith": false,
-          "Page": 3,
-          "Y": 593.38
-        },
-        {
-          "Prefix": "Final tail.",
-          "EndsWith": true,
-          "Page": 2,
-          "Y": 171.17
-        }
-      ],
-      "Page2NoteRows": 40,
-      "Page2RowsUnresolved": true
+      "Page2NoteRows": 40
     },
     {
       "Id": "owned-note-container-dedicated",
@@ -409,9 +404,7 @@
           "Y": 154.58
         }
       ],
-      "UnresolvedAnchors": [],
-      "Page2NoteRows": 41,
-      "Page2RowsUnresolved": false
+      "Page2NoteRows": 41
     },
     {
       "Id": "owned-note-container-dedicated",
@@ -542,9 +535,7 @@
           "Y": 213.22
         }
       ],
-      "UnresolvedAnchors": [],
-      "Page2NoteRows": 41,
-      "Page2RowsUnresolved": false
+      "Page2NoteRows": 41
     }
   ]
 }
