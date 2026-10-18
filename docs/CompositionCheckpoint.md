@@ -1,5 +1,39 @@
 # Composed-document reliability checkpoint
 
+C206 makes owned footnote tails use the same bottom-anchored container as body
+pages. Removing only the following body paragraph previously raised the dedicated
+note tail 528.115 pt in Final/400.32 pt in review and hid all three review footer
+rows below paper. Static continuation stories now reuse an existing document body
+origin. Notes also recover their design footer boundary from the existing page
+map: body edge 90.212 pt versus note edge 96 pt predicts 4.392 pt of the earlier
+review displacement. One cached footer layout supplies both boundaries. Existing
+source/typography/fixed/multicol guards, cancellation and progress fallback remain;
+no fitted offset or font/size/document-specific rule.
+
+Four new Word exports run once/four compound exports are reused. Two exact public
+promotions preserve all 2,205 old pins/four added. All four body/empty-tail Word
+anchor groups pass (math first glyph X0.171/Y0.389 pt; prose/footer Y0.422 pt).
+All 32 math glyphs and Word's two pages remain per control; the image/math footer
+holdout closes its former note offset. Four raw rate/time token screens retain
+flags despite complete mathematical streams and zero prose/simple-math deficits.
+All four new strict visual gates and all four compound gates remain failed.
+
+One frozen Release artifact qualifies 61 Windows/43 Ubuntu checks with 18 native
+font skips, one exact invocation/platform. Both new observers fail C205. A missing
+diagnostics import prevented initial test compilation; corrected before freezing
+or running any checks, with the failed build log retained. No post-freeze repair.
+Eighteen neighboring PDFs/three compound PDFs retain bytes; 21 comparisons and
+38 prior reviewed pairs carry with both raster hashes. Ten native note/footer
+bands were reviewed. Four complete portable pages retain a confirmed overlap of
+note prose and the first footer line under the pinned math font; C205 reproduces
+worse clearance. Presence tests do not establish clearance. Keep this failure
+explicit and prioritize consistent natural/static metric families and occupied
+bounds in C207. Evidence note-footer-frame-portable-residual.json.
+
+Seventeen transferred assets/four smokes match; no root build/suite replay.
+Rootef9c24ee/3ef02e91; note-footer-frames-evidence.json and its Word observations.
+C205 CI39113410819 is green on Windows/Ubuntu. Continue C207 while C206 CI runs.
+
 C205 restores visible minimum-height static prose through the existing shared
 printed frame. Plain atLeast paragraphs were excluded from that frame, unlike
 supported minimum-height mathematical paragraphs. One eligibility predicate now
