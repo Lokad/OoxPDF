@@ -7004,6 +7004,8 @@
     "DocxDeferredFootnoteHeadsHonorDefaultOnAndOffWithSingleSourceOwnership",
     "DocxPlainFootnoteKerningSharesContentThresholdsAndCompleteOwners",
     "DocxPlainFootnoteKerningRetainsIncompleteAndUnqualifiedFallbacks",
-    "DocxHeaderFootnoteFramesPreserveCompleteCanonicalOwners"
+    "DocxHeaderFootnoteFramesPreserveCompleteCanonicalOwners",
+    "DocxInlineCompositionCompleteNoteBatch",
+    "DocxMinimumBookmarks"
   ]
 }

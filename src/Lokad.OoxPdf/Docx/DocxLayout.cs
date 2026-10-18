@@ -984,7 +984,8 @@ internal sealed partial class DocxLayoutEngine
                     pageCountOverride: templatePageNumber,
                     sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter) -
                         (completeFootnoteAdmission?.SeparatorHeight ?? 0d), footerKeepOut: footnoteFrameBottom,
-                        availableFooterKeepOut: availableFootnoteFrameBottom);
+                        availableFooterKeepOut: availableFootnoteFrameBottom,
+                        hasSourceOwnedReserve: completeFootnoteAdmission is not null);
             }
 
             var harvestedStories = new List<DocxPlacedRelatedStoryLayout>();

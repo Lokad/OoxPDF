@@ -1834,7 +1834,8 @@ internal sealed partial class DocxLayoutEngine
         int? pageCountOverride = null,
         double? sharedContentTop = null,
         Func<DocxLayoutPage, int, int, double>? footerKeepOut = null,
-        Func<DocxLayoutPage, int, int, double>? availableFooterKeepOut = null)
+        Func<DocxLayoutPage, int, int, double>? availableFooterKeepOut = null,
+        bool hasSourceOwnedReserve = false)
     {
         if (footnoteStories.Count == 0)
         {
@@ -1890,7 +1891,7 @@ internal sealed partial class DocxLayoutEngine
         {
             storiesTop = Math.Min(storiesTop, sharedContentTop.Value);
         }
-        if (!ownedInlineFrame && placementFooter is not null &&
+        if (!ownedInlineFrame && !hasSourceOwnedReserve && placementFooter is not null &&
             TryResolveFootnoteBodyBottom(activePage, printScale, null, out double bodyBottom))
         {
             // Body geometry owns the boundary even when note typography keeps
