@@ -1,5 +1,42 @@
 # Composed-document reliability checkpoint
 
+C216 restores104 missing math glyphs when paragraphs use exact line spacing.
+Finite positive fixed slots now share ordered inline composition, their authored
+physical advance and the existing exact text baseline. Measured ink may overhang
+without enlarging the slot. Body, cell and static containers keep their placement
+owners; automatic/minimum, zero/invalid and unsupported source fallbacks remain.
+No font/size/document-shape correction, extra quota or unsafe/native library code.
+
+Five minimal public transformations retain source equations/fonts. Eight body/
+cell/header outcomes restore96 glyphs; both composed-report presets restore four
+glyphs each and keep two pages, images, tables, header/footer, notes and markup.
+All104 independent Word origins pass existing one-point gates: maximumX0.546pt/
+Y0.1973pt. Physical font-size gates remain unchanged. Compact12pt slots retain
+Word's overlapping ink;72pt slots fit. Ten C215 exports stay cached with their
+source/view/PDF/log pins; no further Word export.
+
+One frozen Release production artifact qualifies22 Windows/13 Ubuntu checks,
+nine native skips, one initial exact invocation/platform. Three new observers
+fail C214. The new native report observer first assumed an unsplit prefix, then
+compared raw Tf sizes with scaled Word sizes. Two test-only corrections read the
+complete rendered line and apply the existing print map. Only that native entry
+reruns twice;14 production/runtime assets and2,226 public pins stay unchanged.
+All initial/failing reports remain. Its portable path and native-platform skip
+are unchanged, so no suite replay. Builds pass with two inherited test warnings.
+
+All ten frozen PDFs equal the reviewed prototype. Twelve reviewed Office pairs
+reuse both PNG hashes; four portable pages retain supported content. All ten
+strict visual gates remain failed; eight complex-math audit screens remain
+unresolved. Source-prose/simple-math/Office-word deficits are zero in all ten.
+The fixed ordinary portfolio has no exact math paragraphs or exact style defaults,
+so source eligibility excludes another ordinary-corpus/PPTX replay. Transfer
+verifies17 assets/four smoke PDFs without root build/suite replay.
+
+Root d51d7a19/observer4d5bfdfb; exact-line-math-evidence.json. C214
+CI39126058981 is green on both platforms. Push this coherent batch and continue
+C217 read-only exact-slot picture/note composition holdouts against its frozen
+artifact while CI runs. Change production only after a concrete defect appears.
+
 C215 confirms a visible composition defect using frozen C214. Changing only
 three paragraph-spacing attributes from atLeast to exact makes all three
 supported equations disappear in body, cell and header controls. Both presets
