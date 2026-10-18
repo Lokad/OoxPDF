@@ -1,5 +1,47 @@
 # Composed-document reliability checkpoint
 
+C186/C187 closes the portable root omission in the composed skewed-cell
+specification. Word/native already show three pages/all84 body+15 header math
+symbols; pinned DejaVu cannot select the required2,924-unit root above its2,867
+largest ready-made variant. Font-defined radical assemblies now compose complete
+parts, preserve one logical Unicode symbol through scalar ActualText spans and
+keep existing work/cancellation/bounds. Non-growing extenders do not repeat;
+source connector lengths may exceed part advances, while usable overlap preserves
+ordered/enclosing placement. Wider operator/delimiter assemblies remain staged.
+
+A12pt control/200pt child provides independent Word assembly evidence. All23
+physical origins pass1pt(maxX0.063/maxY0.124pt). The first prototype incorrectly
+adds unused child-font descent and displaces following prose41.162pt. The actual
+control now owns both ordinary frame floors; child ink remains measured. Following
+prose agrees within0.088pt. No fitted/font/size/document branch. Word's200.06pt
+child versus retained200.04pt export and minor stem raster seams remain cosmetic
+residuals; both strict foreground-recall failures remain. Independent extraction
+returns one root per preset. Three parent observers fail C185.
+
+Four independent Word exports once precede two exact-byte promotions.2,168 old
+inputs unchanged/six added. The complete specification retains99 logical math
+symbols in native and pinned portable modes; the latter uses102 physical text
+operations. Original full-content check passes without narrowing. All five body
+formula sequences, pages/static repetitions, image, note/navigation and neutral
+source transformations qualify. Eight of ten existing1pt groups still fail
+(maxY3.500pt), cause unverified; both strict/raw complex-math/sin-token flags remain.
+Source-prose/simple-math deficits and unsupported warnings are zero. Raw audits
+exit1; matching content does not relabel failed geometry or visual thresholds.
+
+One committed Release artifact qualifies148 Windows/112 Ubuntu checks(36 native
+skips), one exact invocation/platform. Initial failing portable, connector, flow
+and harness probes remain. The new harness accepts prose fragments after neutral
+run splitting and retains the0.02pt font discrepancy rather than changing export
+rules. No rerun or harness correction after freeze. All36 accepted outcomes retain
+logical text/physical text geometry and58 reviewed page-pair pixels;30 PDFs are
+byte-identical, six root-font subsets add unused assembly glyphs. Thirty comparisons
+reuse PDF/threshold identity; all prior raw/strict residuals carry. Three new unique
+page pairs reviewed/five further outcomes carry both raster hashes; three portable
+pages reviewed with no new clipping observed.17 assets/four smokes and five pinned
+inspector assets transfer by hash, without root build/suite replay. Root decoder
+be5a221e/feature710df725; radical-assemblies-evidence.json. C185 CI39096702546 is
+green; package/broader checks run in the next scoped CI push while work continues.
+
 C185 renders bounded skewed fractions with actual source/control ownership.
 Full-size literal arguments meet font-defined MATH gaps around the math axis;
 the slash uses its authored control font/size/ink and the existing encoded
