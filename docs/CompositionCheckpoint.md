@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+C179 exercises accepted mixed arguments in one complete development specification.
+Five body formulas combine with tables, numbering, image, navigation, note,
+comments and static stories. C177 produces two pages with zero body math and ten
+repeated-header glyphs. Reused C178 matches Word's three pages with all51 body/
+15 repeated-header glyphs per preset. All source prose, images, external link
+and note destination survive bookmark/run-split transformations; portable checks
+use pinned faces. Two independent Word exports occur once before exact-byte
+promotion. Existing fixed/held-out inputs remain unchanged.
+
+The library and14 non-test assets equal C178;2,145 old inputs retain hashes,
+three added. Only four new/shared-helper checks run:4 Windows/2 Ubuntu pass,
+two native skips. C178's112 Windows/83 Ubuntu checks(29 skips) carry without
+replay. No library rebuild or fixed-portfolio conversion/comparison replay.
+Two new full-page pairs reviewed/four pairs carried by both raster hashes show
+no new clipping.17 assets/four smoke PDFs transfer without root rebuild/suite.
+
+Both strict raster gates and raw complex-math/sin-token flags remain. Source
+prose/simple-math deficits are zero. Exact math inventories and reviewed pages
+confirm sin; raw audit exits1 because separate glyph operations split the token.
+Eight of ten formula-origin groups exceed the existing1pt gate(maxX2.230/
+maxY1.702pt), despite passing isolated controls. Cause remains unverified; no
+fitted offset is accepted. The fixed nine-source/sixteen-outcome portfolio keeps
+its30 reviewed pairs,14 DOCX strict failures/two deck passes/six raw flags.
+Rootac6d2801; evidence artifacts/composition-c1/mixed-argument-specification-evidence.json.
+C177 CI39091746268 is green; C178 CI39092215686 is running. Next, decompose the
+composed line/paragraph advance residual using retained Word/source frames.
+
 C178 restores bounded mixed arguments in existing math containers. Six public
 controls put literal neighbors around supported fractions/scripts/matrices inside
 radicals, n-ary operators, delimiters and function applications. C177 successfully
