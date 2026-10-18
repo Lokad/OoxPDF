@@ -1,5 +1,20 @@
 # Composed-document reliability checkpoint
 
+C167 reproduces the four retained matrix cell-frame counterexamples on the
+accepted C166 artifact. All four PDFs retain C123 bytes, so their Office metrics
+and reviewed images carry without exports or rasterization. The1.762-1.794pt
+vertical failures remain. No production build, suite replay or correction occurs.
+
+Twelve existing controls are inspected read-only in Word16 without saving or
+exporting: row rule/spacing remain0/0; the11pt child keeps its source size when
+only the matrix control changes to12pt. Candidate child boxes already retain11pt,
+and removing diagnostic parent-size injection leaves all child boxes identical.
+Reject that ownership hypothesis. The accepted script/child frames also remain
+identical to C125. Cause stays unverified; no uniform row gap, size replacement or
+fitted offset is accepted. Evidence
+artifacts/composition-c1/matrix-frame-current-review.json. Next, probe bounded
+matrix/radical composition through existing math discovery and box placement.
+
 C166 preserves the established body baseline origin after a fitting projected
 Review table. Resetting it to the next cell's font metrics caused a1.360pt overlap
 between separate tables and displaced following prose. Return the nominal origin
