@@ -30,6 +30,44 @@ internal static class DocxFontCacheTests
         TestAssert.Equal(1, counters.Values.Single());
     }
 
+    public static void DocxNumberingRetriesKeepParsedFontsOwnedByOneConversion()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var source = new CountingProgramSource("numbering-retry-test", TestFontBuilder.CreateTestFont());
+            var resolver = new SingleSourceResolver(source);
+            byte[] first = ConvertNumberedDoc(resolver, mode), second = ConvertNumberedDoc(resolver, mode);
+            TestAssert.Equal(2, source.RequestCount);
+            TestAssert.True(first.AsSpan().SequenceEqual(second), "Independent conversions retain deterministic note output without sharing parsed fonts.");
+        }
+    }
+
+    public static void DocxConcurrentNumberingRetriesKeepIndependentParsedFontOwners()
+    {
+        var source = new CountingProgramSource("parallel-numbering-retry-test", TestFontBuilder.CreateTestFont());
+        var resolver = new SingleSourceResolver(source);
+        var tasks = Enumerable.Range(0, 4).Select(_ => Task.Run(() => ConvertNumberedDoc(resolver, OoxPdfDocxMarkupMode.Final))).ToArray();
+        Task.WaitAll(tasks);
+        TestAssert.Equal(tasks.Length, source.RequestCount);
+        TestAssert.True(tasks.All(task => task.Result.AsSpan().SequenceEqual(tasks[0].Result)),
+            "Concurrent conversions may share immutable source bytes, with their own parsed font/preparation ownership.");
+    }
+
+    private static byte[] ConvertNumberedDoc(IFontResolver resolver, OoxPdfDocxMarkupMode mode)
+    {
+        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes",
+            "spanning-page-notes-calibri-12-zero.docx"));
+        using var source = File.OpenRead(input);
+        using var output = new MemoryStream();
+        OoxPdfConverter.Convert(source, output, new OoxPdfOptions
+        {
+            InputKind = OoxPdfInputKind.Docx, FontResolver = resolver, DocxMarkupMode = mode,
+            DocxMarkupGeometryMode = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+        });
+        return output.ToArray();
+    }
+
     private static byte[] ConvertMinimalDoc(IFontResolver resolver)
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

@@ -28,6 +28,7 @@ if (args.Any(arg => string.Equals(arg, "--help", StringComparison.Ordinal) || st
     Console.WriteLine("  Allocation scope is the calling thread; see report/allocationScope.");
     Console.WriteLine("  --concurrency <n> runs n conversions of each input in parallel with batch peaks.");
     Console.WriteLine("  --font-file <ttf> uses one explicit TrueType face for all requested families and records its hash.");
+    Console.WriteLine("  --font-load-counts traces one conversion per input; reports delegated font-program reads, not allocations.");
     return 2;
 }
 
@@ -77,6 +78,21 @@ if (reportPath is null || inputs.Length == 0 || warmup < 0 || iterations < 1)
 {
     Console.Error.WriteLine("Usage: Lokad.OoxPdf.AllocProbe --out <report.json> [--warmup <n>] [--iterations <n>] [--stages] [--output-mode buffer|file|forward-only] [--resident-window bytes] [--isolate] <input...>");
     return 2;
+}
+
+if (args.Contains("--font-load-counts", StringComparer.Ordinal))
+{
+    if (isolate || measureStages || ReadOption("--concurrency") is not null)
+    {
+        Console.Error.WriteLine("--font-load-counts is a separate diagnostic, without stages, isolation or concurrency benchmarks.");
+        return 2;
+    }
+    try { return FontLoadCounts.Run(inputs, reportPath, probeFont, docxReview); }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("Cannot trace font loads: " + ex.Message);
+        return 1;
+    }
 }
 
 if (isolate)

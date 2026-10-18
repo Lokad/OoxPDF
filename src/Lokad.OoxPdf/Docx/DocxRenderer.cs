@@ -380,14 +380,20 @@ internal sealed partial class DocxRenderer
         Action<OoxPdfDiagnostic>? diagnostics, CancellationToken cancellationToken)
     {
         List<OoxPdfDiagnostic>? messages = diagnostics is null ? null : [];
-        var first = PrepareNoteAdjustedLayout(document, resolver, context, geometry, messages is null ? null : messages.Add, cancellationToken);
+        // Source identities/face indices retain immutable programs throughout
+        // this preparation. Numbering, kerning and page-count retries need new
+        // subsets/layout, but can reuse their parsed fonts. Ownership ends with
+        // this conversion; nothing is shared across converters or resolvers.
+        var fontCache = new Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>();
+        var first = PrepareNoteAdjustedLayout(document, resolver, context, geometry, messages is null ? null : messages.Add, cancellationToken,
+            fontCache);
         if (first.FontResources.DeferredPageCountEquations.Count != 0)
         {
             List<OoxPdfDiagnostic>? retryMessages = diagnostics is null ? null : [];
             // Recompute note-dependent purposes too: accepting a stable count
             // must not leave numbering or kerning derived from the omitted math.
             var retry = PrepareNoteAdjustedLayout(document, resolver, context, geometry, retryMessages is null ? null : retryMessages.Add,
-                cancellationToken, first.Layout.Pages.Count);
+                cancellationToken, fontCache, first.Layout.Pages.Count);
             if (retry.Layout.Pages.Count == first.Layout.Pages.Count)
             {
                 var painted = new HashSet<DocxEquation>(EnumeratePaintedEquations(
@@ -406,9 +412,10 @@ internal sealed partial class DocxRenderer
 
     private static (DocxDocument Document, DocxFontResources FontResources, DocxLayout Layout) PrepareNoteAdjustedLayout(
         DocxDocument document, IFontResolver resolver, DocxMarkupContext context, OoxPdfDocxMarkupGeometryMode geometry,
-        Action<OoxPdfDiagnostic>? diagnostics, CancellationToken cancellationToken, int? pageCount = null)
+        Action<OoxPdfDiagnostic>? diagnostics, CancellationToken cancellationToken,
+        Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache, int? pageCount = null)
     {
-        var fonts = PrepareFontResourcesCore(document, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount);
+        var fonts = PrepareFontResourcesCore(document, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount, fontCache);
         var first = CreatePlainFootnoteTextLayout(document, fonts, context, geometry, cancellationToken, pageCount);
         DocxDocument adjusted = document;
         IReadOnlyDictionary<string, int> originalPages = new Dictionary<string, int>();
@@ -440,7 +447,7 @@ internal sealed partial class DocxRenderer
                 DocxWrappedCalibriKerning.TryCreateDocument(document, first, out adjusted, out originalPages,
                     DocxWrappedCalibriPolicy.SourceThresholds, DocxFootnoteOwnerScope.AllSourceReferences)))
         {
-            var adjustedFonts = PrepareFontResourcesCore(adjusted, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount);
+            var adjustedFonts = PrepareFontResourcesCore(adjusted, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount, fontCache);
             var adjustedLayout = CreatePlainFootnoteTextLayout(adjusted, adjustedFonts, context, geometry, cancellationToken, pageCount);
             bool wrappedCalibri = !DocxPlainFootnoteKerning.HasSingleLineBody(first) &&
                 DocxWrappedFootnoteFrame.IsEligible(adjusted, DocxWrappedCalibriPolicy.NormalizedThresholds, DocxFootnoteOwnerScope.AllSourceReferences);
@@ -473,7 +480,7 @@ internal sealed partial class DocxRenderer
         // Corrected labels need their own glyph subset and measured advances.
         // One bounded retry is accepted only when body and complete note pages
         // remain stable; otherwise the original resources/layout retain fallback.
-        var numberedFonts = PrepareFontResourcesCore(numbered, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount);
+        var numberedFonts = PrepareFontResourcesCore(numbered, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount, fontCache);
         var final = CreatePlainFootnoteTextLayout(numbered, numberedFonts, context, geometry, cancellationToken, pageCount);
         return final.Pages.Count == first.Pages.Count && DocxPageFootnoteNumbering.HasStableNumberingPages(numbered, final, pages,
             allowWrappedBody: context.WordCompatiblePrintScale == 1d,

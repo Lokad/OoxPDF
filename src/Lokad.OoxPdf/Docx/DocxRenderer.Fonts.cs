@@ -15,16 +15,17 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed partial class DocxRenderer
 {
     private static DocxFontResources PrepareFontResources(DocxDocument document, IFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken, bool includeReviewAutofitMarks = false)
-        => PrepareFontResourcesCore(document, fontResolver, diagnosticSink, cancellationToken, includeReviewAutofitMarks, null);
+        => PrepareFontResourcesCore(document, fontResolver, diagnosticSink, cancellationToken, includeReviewAutofitMarks, null,
+            new Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>());
 
     private static DocxFontResources PrepareFontResourcesCore(DocxDocument document, IFontResolver fontResolver,
-        Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken, bool includeReviewAutofitMarks, int? pageCount)
+        Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken, bool includeReviewAutofitMarks, int? pageCount,
+        Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache)
     {
         cancellationToken.ThrowIfCancellationRequested();
         DocxFontPlan plan = DocxFontPlan.Create(document, fontResolver, cancellationToken, includeReviewAutofitMarks);
         var resources = new List<PdfFontResource>();
         var runResources = new Dictionary<DocxTextRun, DocxRunFontResource>();
-        var fontCache = new Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>();
         var reportedUnembeddableFaces = new HashSet<(string StableId, int FaceIndex)>();
         plan = SubstituteUnembeddableFonts(plan, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken);
         // Five-paragraph mixed terminals previously retained no marks. Give their
