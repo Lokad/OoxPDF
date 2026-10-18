@@ -71,6 +71,8 @@ jobs:
           pwsh -NoProfile -File tools/TestWorkspaceFootprint.ps1
       - name: Qualification build workspace checks
         run: pwsh -NoProfile -File tools/TestQualificationBuild.ps1
+      - name: Qualification report reuse checks
+        run: pwsh -NoProfile -File tools/TestQualificationReportJoin.ps1
       - name: Markup text geometry checks
         run: pwsh -NoProfile -File tools/TestMarkupTextGeometry.ps1
       - name: Markup annotation checks
