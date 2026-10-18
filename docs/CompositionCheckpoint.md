@@ -1,5 +1,19 @@
 # Composed-document reliability checkpoint
 
+## C228: first-note body collision diagnosis (2026-10-18)
+
+Retained C227/Word PDFs plus two read-only prepared layouts expose a confirmed
+Review body/note overlap. The first note baseline lies28.386pt before the final
+body baseline; Word places it28.850pt below. Body baselines themselves differ
+only1.463pt. Final head remains one extra paragraph high. These are placement/
+capacity defects, not missing content or evidence for a font/line-pitch fit.
+The existing body-to-note conversion is gated by owned-inline note eligibility;
+plain multi-paragraph notes keep a scaled body cursor in note design space.
+Missing separator charge is an additional hypothesis requiring a bounded probe.
+No production builds, conversions, exports, tests or rasters replayed.
+C229 will share physical boundary ownership while retaining typography admission.
+Evidence: continued-footer-head-review.json and two head-frame snapshots.
+
 ## C227: continued-note occupancy and fallback endnote clearance (2026-10-18)
 
 Physical footer availability now reaches the normal unqualified continuation
