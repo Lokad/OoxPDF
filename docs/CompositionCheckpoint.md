@@ -1,5 +1,22 @@
 # Composed-document reliability checkpoint
 
+## C226: separator-less and continued-note footer holdouts (2026-10-18)
+
+Four source-only outcomes reuse frozen C225, with four new Word exports once;
+no production build or test replay. Removing the separator retains note baselines
+within0.433pt of Word. The long note retains all64 numbered paragraphs once/in
+order and four pages in both modes, but continuation pages3/4 visibly overlap the
+footer. Accepted C223 reproduces that collision, establishing inherited debt.
+Word numbered-paragraph membership17/31/16 differs from Final18/33/13 and Review
+21/32/11. Existing line pitch is close; no font/line-height fit is supported.
+Initial head errors−19.425/−58.699pt and capacity causes remain unverified.
+All four strict gates remain failed. Twelve paired PNG hashes retained; four
+page pairs reviewed. Evidence: occupied-footer-continuation-evidence.json.
+
+C225 CI39136390437 has Ubuntu green and one Windows mixed-endnote fallback
+assertion failure; its cause is pending diagnosis, not dismissed as stale.
+C227 prioritizes measured continuation occupancy and adjacent mixed-note guards.
+
 ## C225: measured footer occupancy seats notes and separators (2026-10-18)
 
 C224's confirmed overlap is closed. Placement uses an intruding measured footer
