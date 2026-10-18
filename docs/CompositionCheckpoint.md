@@ -1,5 +1,18 @@
 # Composed-document reliability checkpoint
 
+C191 records compound allocation cost before further optimization. One existing
+probe build runs against pinned C187/C189 libraries on the fixed report and
+skewed-cell specification, both public presets, isolated processes/file output,
+one cold/warmup and two measured warm conversions. Source/output/library hashes,
+pages and byte stability match existing evidence. Warm calling-thread allocation
+is31.645-40.014MB; delimiter registration adds0.055-0.057% in the specification.
+Initial font preparation allocates24.18-24.98MB. Three standalone face probes
+contain207k-260k kerning pairs each and allocate4.85-5.76MB per map. Independent
+stages overlap and are not added. No timing speedup or repeated-layout dominance
+claim; no library build, Office/raster export or unit/corpus replay. Evidence:
+compound-assembly-allocation-evidence.json. A bounded immutable-map prototype
+will be accepted only after pair/geometry identity and measured tradeoff checks.
+
 C190 closes the bounded delimiter composition review without code changes.
 Two ignored cell/header transformations retain all17 logical math symbols, prose,
 numbering and an image across eight native/pinned-portable outcomes. Four Word
