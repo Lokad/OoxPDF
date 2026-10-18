@@ -1,5 +1,23 @@
 # Composed-document reliability checkpoint
 
+C174 bounds the remaining matrix-frame concern without changing production.
+Exact normalized glyph pairing on retained independent Word/C123/C167 operations
+separates internal row-pitch deficits0.633/1.378pt from first-paragraph advance
+deficits2.114/2.282pt. The retained1.762-1.794pt maxima include following body flow;
+a uniform matrix shift cannot repair those independent errors. Four current
+explicit-child controls retain exact C126 PDFs and all17 mathematical operations;
+the earlier content omission remains fixed. Their unused-header diagnostic stays.
+
+One isolated prototype let ordinary cells' measured line frames contribute to
+matrix row minima. Ten outcomes reuse existing independent Word exports, with
+no new rasters or tests. Several glyph anchors improve, but maximum prose error
+worsens in two controls and other matrix failures persist. The prototype is
+rejected and source restored; no size/font/row-specific exception or fitted offset
+is introduced. Accepted production remains C173. Evidence
+artifacts/composition-c1/matrix-frame-ownership-review.json. Next, trace the measured
+compound font-preparation allocations before choosing an optimization; avoid
+speculative shared caches or layout-pass rewrites.
+
 C173 fixes complete source-owned automatic-target batches in plain static frames.
 Four independent Word Final controls expose three two-versus-one-page errors.
 The older whole static reserve preempted the complete minimum head; after routing
