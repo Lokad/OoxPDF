@@ -10,65 +10,6 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    private static IReadOnlyDictionary<int, double> CreateFootnoteReserveHeightBySourceBlock(
-        DocxDocument document,
-        IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts,
-        CancellationToken cancellationToken,
-        IDocxTextMeasurer? separatorMeasurer = null)
-    {
-        var reserveHeightBySourceBlock = new Dictionary<int, double>();
-        if (relatedStoryLayouts.Count == 0)
-        {
-            return reserveHeightBySourceBlock;
-        }
-
-        Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> storyByKey = CreateRelatedStoryLookup(relatedStoryLayouts);
-        DocxRelatedStoryLayout? footnoteSeparatorLayout = FindSpecialRelatedStoryLayout(relatedStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.Separator);
-        for (int sourceBlockIndex = 0; sourceBlockIndex < document.BodyElements.Count; sourceBlockIndex++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            double reserveHeight = 0d;
-            var reservedKeys = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
-            bool reservedFootnoteSeparator = false;
-            foreach (DocxInlineReferenceLocation location in EnumerateInlineReferenceLocations(document.BodyElements, sourceBlockIndex))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                DocxInlineReference reference = location.Reference;
-                if (reference.Kind != DocxRelatedStoryKind.Footnote || reference.Id is null || !reservedKeys.Add((reference.Kind, reference.Id)))
-                {
-                    continue;
-                }
-
-                if (storyByKey.TryGetValue((reference.Kind, reference.Id), out DocxRelatedStoryLayout? storyLayout))
-                {
-                    if (!reservedFootnoteSeparator)
-                    {
-                        double reserveGapPoints = FootnoteSeparatorGapPoints;
-                        if (footnoteSeparatorLayout is not null)
-                        {
-                            (DocxTextRun? reserveRun, double reserveFontSizePoints) = FindSeparatorMarkFont(footnoteSeparatorLayout.TextLines);
-                            reserveGapPoints = ResolveSeparatorGapPoints(reserveRun, reserveFontSizePoints, separatorMeasurer);
-                        }
-
-                        reserveHeight += footnoteSeparatorLayout is null
-                            ? reserveGapPoints
-                            : Math.Max(0d, footnoteSeparatorLayout.ContentHeight) + reserveGapPoints;
-                        reservedFootnoteSeparator = true;
-                    }
-
-                    reserveHeight += Math.Max(0d, storyLayout.ContentHeight);
-                }
-            }
-
-            if (reserveHeight > 0d)
-            {
-                reserveHeightBySourceBlock[sourceBlockIndex] = reserveHeight;
-            }
-        }
-
-        return reserveHeightBySourceBlock;
-    }
-
     private static IReadOnlyList<DocxLayoutPage> AddPlacedRelatedStories(
         DocxDocument document,
         IReadOnlyList<DocxLayoutPage> pages,

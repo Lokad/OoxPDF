@@ -348,7 +348,6 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<DocxRelatedStory, DocxTextRun>? customNoteTargets = null;
         var relatedStoryLayoutsByBodyWidth = PlacementRelatedStoryMeasurements ??
             new Dictionary<double, IReadOnlyList<DocxRelatedStoryLayout>>();
-        var footnoteReserveHeightByBodyWidth = new Dictionary<double, IReadOnlyDictionary<int, double>>();
 
         IReadOnlyList<DocxRelatedStoryLayout> GetFootnoteStoryLayouts(DocxPageGeometry geometry)
         {
@@ -376,18 +375,6 @@ internal sealed partial class DocxLayoutEngine
             }
 
             return layouts;
-        }
-
-        IReadOnlyDictionary<int, double> GetFootnoteReserveHeightBySourceBlock(double bodyWidth)
-        {
-            double key = Math.Round(Math.Max(1d, bodyWidth), 3);
-            if (!footnoteReserveHeightByBodyWidth.TryGetValue(key, out IReadOnlyDictionary<int, double>? reserveHeights))
-            {
-                reserveHeights = CreateFootnoteReserveHeightBySourceBlock(document, GetRelatedStoryLayouts(key), cancellationToken, unscaledTextMeasurer ?? textMeasurer);
-                footnoteReserveHeightByBodyWidth[key] = reserveHeights;
-            }
-
-            return reserveHeights;
         }
 
         IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts = GetRelatedStoryLayouts(page.BodyWidth);
@@ -1097,15 +1084,6 @@ internal sealed partial class DocxLayoutEngine
             }
         }
 
-        void EnsureFootnoteReserveForSourceBlock(int sourceBlockIndex)
-        {
-            IReadOnlyDictionary<int, double> footnoteReserveHeightBySourceBlock = GetFootnoteReserveHeightBySourceBlock(page.BodyWidth);
-            if (footnoteReserveHeightBySourceBlock.TryGetValue(sourceBlockIndex, out double reserveHeight))
-            {
-                currentPageFootnoteReserveHeight = Math.Max(currentPageFootnoteReserveHeight, reserveHeight);
-            }
-        }
-
         void AdvanceColumnOrPage()
         {
             if (activeColumnIndex + 1 < page.ColumnFrames.Count)
@@ -1295,7 +1273,8 @@ internal sealed partial class DocxLayoutEngine
                 double? precedingBodyBaselineInset = firstBodyLineBaselineOffset;
                 int completedPagesBeforeTable = pages.Count;
                 int columnBeforeTable = activeColumnIndex;
-                EnsureFootnoteReserveForSourceBlock(elementIndex);
+                // Register live source owners once. A second whole-story reserve
+                // would make a splittable note evict its own table and marker.
                 RegisterInFlightFootnotesForSourceBlock(elementIndex);
                 cursorY -= pendingSpacingAfter;
                 pendingSpacingAfter = 0d;

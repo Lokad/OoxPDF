@@ -13,13 +13,30 @@ manifest = json.loads((output / "occupied-footer-continuations.json").read_text(
 for row in manifest:
     restore_footer = row.get("RestoreOriginalFooter", False)
     split_owners = row.get("SplitNoteOwners", False)
-    source = output / ("long-note-original-footer-report.docx" if split_owners else
+    table_reference = row.get("MoveReferenceToTable", False)
+    source = output / ("two-plain-notes-report.docx" if table_reference else
+                       "long-note-original-footer-report.docx" if split_owners else
                        "occupied-footer-long-note-report.docx" if restore_footer else "linked-inline-footer-report.docx")
     assert hashlib.sha256(source.read_bytes()).hexdigest().upper() == row["SourceSha256"]
     with ZipFile(source) as archive:
         original = {name: archive.read(name) for name in archive.namelist()}
     parts = dict(original)
-    if split_owners:
+    if table_reference:
+        part = "word/document.xml"
+        story = E.fromstring(parts[part])
+        body = story.find(w + "body")
+        paragraph = next(p for p in body.findall(w + "p") if any(
+            ref.get(w + "id") == "2" for ref in p.iter(w + "footnoteReference")))
+        marker = next(run for run in paragraph if any(
+            ref.get(w + "id") == "2" for ref in run.iter(w + "footnoteReference")))
+        label = paragraph[list(paragraph).index(marker) - 1]
+        assert "".join(label.itertext()) == " Additional note"
+        target = body.find(w + "tbl").findall(w + "tr")[-1].findall(w + "tc")[-1].findall(w + "p")[-1]
+        for run in (label, marker):
+            paragraph.remove(run)
+            target.append(run)
+        assert [ref.get(w + "id") for ref in story.iter(w + "footnoteReference")] == ["2", "1"]
+    elif split_owners:
         part = "word/footnotes.xml"
         story = E.fromstring(parts[part])
         first = next(n for n in story if n.get(w + "id") == "1")
