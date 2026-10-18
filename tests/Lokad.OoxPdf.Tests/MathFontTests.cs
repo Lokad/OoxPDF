@@ -5,6 +5,75 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class MathFontTests
 {
+    public static void MathFontVerticalAssembliesKeepOrderedPartsSignedMetricsAndImmutableOwnership()
+    {
+        var font = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(AssemblyTable()));
+        TestAssert.True(font.TryGetMathVerticalAssembly(34, default, out var decoded), "The covered assembly retains its own part order.");
+        var assembly = TestAssert.NotNull(decoded);
+        TestAssert.Equal((short)-27, assembly.ItalicCorrection);
+        TestAssert.Equal((ushort)40, assembly.MinimumConnectorOverlap);
+        TestAssert.True(assembly.Parts.SequenceEqual(new OpenTypeMathGlyphPart[]
+        {
+            new(34, 0, 300, 500, false), new(35, 200, 200, 200, true), new(36, 250, 0, 400, false)
+        }), "The bottom, repeatable extender and top remain distinct source roles.");
+        TestAssert.Throws<NotSupportedException>(() => ((IList<OpenTypeMathGlyphPart>)assembly.Parts)[0] = default);
+        TestAssert.True(font.TryGetMathVerticalVariant(34, 1000d, default, out var variant) && variant.Glyph == 36 &&
+            !font.TryGetMathVerticalVariant(34, 1501d, default, out _), "Assembly decoding does not relax ready-made variant selection.");
+        TestAssert.True(!font.TryGetMathVerticalAssembly(35, default, out _) &&
+            !TestFontBuilder.LoadTestFont().TryGetMathVerticalAssembly(34, default, out _), "Uncovered/ordinary fonts retain explicit absence.");
+    }
+
+    public static void MathFontVerticalAssembliesRejectTruncatedOrMalformedPartsWithoutPublishingPrefixes()
+    {
+        byte[] source = AssemblyTable();
+        for (int length = 0; length < source.Length; length++)
+        {
+            var font = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(source[..length]));
+            TestAssert.True(!font.TryGetMathVerticalAssembly(34, default, out var absent) && absent is null,
+                "A truncated construction or later part cannot publish an assembly prefix.");
+            TestAssert.Equal((ushort)34, font.MapCodePoint('A'));
+        }
+        foreach ((int at, ushort value) in new (int, ushort)[]
+        {
+            (0, 2), (8, ushort.MaxValue), (20, 1), (22, 3), (28, 0), (28, 1), (28, ushort.MaxValue),
+            (30, ushort.MaxValue), (48, 0), (48, 4), (70, 0), (70, ushort.MaxValue),
+            (72, 401), (74, 401), (76, 0), (78, 2)
+        })
+        {
+            byte[] changed = (byte[])source.Clone();
+            BinaryPrimitives.WriteUInt16BigEndian(changed.AsSpan(at), value);
+            var font = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(changed));
+            TestAssert.True(!font.TryGetMathVerticalAssembly(34, default, out var absent) && absent is null,
+                "Unknown versions, invalid offsets/counts/glyphs/connectors/flags reject the complete assembly.");
+            TestAssert.Equal((ushort)34, font.MapCodePoint('A'));
+        }
+    }
+
+    public static void MathFontVerticalAssembliesKeepCancellationAndExistingCumulativeFontWork()
+    {
+        var font = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(AssemblyTable()));
+        using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => font.TryGetMathVerticalAssembly(34, cancellation.Token, out _));
+        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxFontWorkPerConversion = 4 });
+        TestAssert.True(font.TryGetMathVerticalAssembly(34, default, out _), "One bounded table/three-part read uses the existing work budget.");
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => font.TryGetMathVerticalAssembly(34, default, out _));
+    }
+
+    private static byte[] AssemblyTable()
+    {
+        byte[] table = VariantTable(false);
+        Array.Resize(ref table, 80);
+        void Set(int at, ushort value) => BinaryPrimitives.WriteUInt16BigEndian(table.AsSpan(at), value);
+        Set(10, 40); Set(28, 16);
+        BinaryPrimitives.WriteInt16BigEndian(table.AsSpan(44), -27);
+        // The design-unit profile ignores optional device offsets, as MathConstants does.
+        Set(46, ushort.MaxValue); Set(48, 3);
+        Set(50, 34); Set(52, 0); Set(54, 300); Set(56, 500); Set(58, 0);
+        Set(60, 35); Set(62, 200); Set(64, 200); Set(66, 200); Set(68, 1);
+        Set(70, 36); Set(72, 250); Set(74, 0); Set(76, 400); Set(78, 0);
+        return table;
+    }
+
     public static void MathFontVerticalNearestVariantsUseDistanceTallerTiesAndAssemblyFallback()
     {
         foreach(bool range in new[]{true,false})
