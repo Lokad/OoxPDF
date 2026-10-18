@@ -4,6 +4,7 @@ obj/
 .idea/
 # Local validation snapshots and tool caches.
 /.cache/
+__pycache__/
 artifacts/**
 !artifacts/.gitkeep
 private-cases/**
