@@ -78,6 +78,7 @@ internal static partial class DocxInlineCompositionTests
     {
         using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath(fixture[..^"-report".Length] + "-office.json")));
         int expectedImages = gold.RootElement.GetProperty("ImagePlacements").GetInt32();
+        int extraMath = gold.RootElement.TryGetProperty("ExtraMathematicalGlyphs", out var extra) ? extra.GetInt32() : 0;
         TestAssert.Equal(gold.RootElement.GetProperty("InputSha256").GetString(),
             Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(NestedMathCasePath(fixture + ".docx")))));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
@@ -104,6 +105,7 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "An inline picture cannot remove existing supported formulas.");
                 var pictures = new List<(int Page, double X, double Y, double Width, double Height)>();
                 var seen = new List<int>();
+                var mathOrigins = new List<(int Page, string Text, double X, double Y)>();
                 int heads = 0, math = 0, secondHeadPage = -1;
                 double scale = final ? 1d : DocxRenderer.ResolveWordCompatiblePrintScale(document,
                     DocxMarkupContext.FromMode(mode, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
@@ -117,7 +119,9 @@ internal static partial class DocxInlineCompositionTests
                         foreach (Match match in matches) pictures.Add((index + 1, Number(match, "x"), Number(match, "y"), Number(match, "w"), Number(match, "h")));
                     }
                     var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
-                    math += shows.Count(show => page.Fonts.Any(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(resource.Font, show.Font)));
+                    var equationShows = shows.Where(show => page.Fonts.Any(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(resource.Font, show.Font))).ToArray();
+                    math += equationShows.Length;
+                    mathOrigins.AddRange(equationShows.Select(show => (index + 1, show.Text, show.X, show.Y)));
                     var lines = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).Select(group => group.OrderBy(show => show.X).ToArray()).ToArray();
                     var text = lines.Select(line => string.Concat(line.Select(show => show.Text))).ToArray();
                     int before = seen.Count;
@@ -152,7 +156,7 @@ internal static partial class DocxInlineCompositionTests
                 }
                 TestAssert.Equal(2, heads);
                 TestAssert.True(seen.SequenceEqual(Enumerable.Range(1, 64)), "Every original source paragraph survives once and in order.");
-                TestAssert.Equal(22 + 5 * pages.Length, math);
+                TestAssert.Equal(22 + 5 * pages.Length + extraMath, math);
                 TestAssert.Equal(2, pages.Sum(page => page.Annotations.Count(link => link.Destination is not null)));
                 TestAssert.Equal(expectedImages, pictures.Count);
                 TestAssert.Equal(secondHeadPage, pictures[1].Page);
@@ -166,6 +170,12 @@ internal static partial class DocxInlineCompositionTests
                     }
                 originalPictures = pictures;
                 if (resolver is not null) continue;
+                if (row.TryGetProperty("MathAnchors", out var anchors))
+                    foreach (var anchor in anchors.EnumerateArray())
+                        TestAssert.True(mathOrigins.Any(origin => origin.Page == anchor.GetProperty("Page").GetInt32() &&
+                            origin.Text == anchor.GetProperty("Text").GetString() && Math.Abs(origin.X - anchor.GetProperty("X").GetDouble()) < 1d &&
+                            Math.Abs(origin.Y - anchor.GetProperty("Y").GetDouble()) < 1d),
+                            "Every added mathematical glyph retains its independent one-point Word origin beside the picture.");
                 TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);
                 var expectedPictures = row.GetProperty("Images").EnumerateArray().ToArray();
                 for (int i = 0; i < pictures.Count; i++)

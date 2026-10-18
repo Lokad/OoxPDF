@@ -504,52 +504,79 @@ internal sealed partial class DocxLayoutEngine
         story.Story.BodyElements.Count == 1 && story.TextLines.Count != 0 &&
         story.TableRows.Count == 0 && story.FloatingDrawings.Count == 0 &&
         story.Story.BodyElements[0] is DocxParagraphElement { Paragraph: var paragraph } &&
-        story.TextLines.All(line => ReferenceEquals(line.SourceParagraph, paragraph) &&
-            line.InlineFrame is { } frame && double.IsFinite(frame.BaselineInset) && frame.BaselineInset >= 0d &&
-            double.IsFinite(frame.Height) && frame.Height > 0d && frame.Height >= frame.BaselineInset) &&
+        story.TextLines.All(line => ReferenceEquals(line.SourceParagraph, paragraph) && HasUsableNoteInlineFrame(line)) &&
         HasNoteParagraphFlowProperties(paragraph, allowSourceAffinedImages: true) &&
         DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) && double.IsFinite(story.ContentHeight);
 
-    private static bool HasParagraphNoteFlowStory(DocxRelatedStoryLayout story, CancellationToken token)
+    private static bool HasUsableNoteInlineFrame(DocxTextLineLayout line) =>
+        line.InlineFrame is { } frame && double.IsFinite(frame.BaselineInset) && frame.BaselineInset >= 0d &&
+        double.IsFinite(frame.Height) && frame.Height > 0d && frame.Height >= frame.BaselineInset;
+
+    // A complete measured source story owns every equation once. Partial or
+    // unprepared views retain the existing fallback rather than inferring boxes.
+    internal static bool HasParagraphNoteFlowStory(DocxRelatedStoryLayout story, CancellationToken token)
     {
         if (story.Story.BodyElements.Count == 0 || story.TextLines.Count == 0 ||
             story.TableRows.Count != 0 || story.FloatingDrawings.Count != 0 ||
             !double.IsFinite(story.ContentHeight)) return false;
         Dictionary<DocxParagraph, HashSet<DocxInlineImage>>? pictureSources = null;
+        Dictionary<DocxEquation, DocxParagraph>? remainingMath = null;
         foreach (var element in story.Story.BodyElements)
         {
             token.ThrowIfCancellationRequested();
             if (element is not DocxParagraphElement { Paragraph: var paragraph } ||
-                !DocxPlainBodyFrame.HasPlainTextContent(paragraph.Images.Count == 0 ? paragraph : paragraph with { Images = [] }) ||
+                !DocxPlainBodyFrame.HasPlainTextContent(paragraph.Images.Count == 0 && paragraph.Equations.Count == 0
+                    ? paragraph : paragraph with { Images = [], Equations = [] }) ||
                 !IsPlainNoteFlowParagraph(paragraph, allowSourceAffinedImages: true) ||
                 !DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph, element.Revisions, token)) return false;
+            if (paragraph.Images.Count != 0 || paragraph.Equations.Count != 0)
+            {
+                // Classification does not alter source content or typography.
+                // Mixed automatic paragraphs need measured source-owned items;
+                // fixed/minimum and complex sources retain their fallback.
+                if (!DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph)) return false;
+            }
             if (paragraph.Images.Count != 0)
             {
-                // Shared source-affinity/property checks above own picture
-                // validity. This placement migration admits automatic lines;
-                // it does not promote note typography or fixed/minimum frames.
-                if (!DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph)) return false;
                 pictureSources ??= new(ReferenceEqualityComparer.Instance);
                 pictureSources[paragraph] = new(paragraph.Images, ReferenceEqualityComparer.Instance);
             }
+            foreach (var equation in paragraph.Equations)
+            {
+                token.ThrowIfCancellationRequested();
+                remainingMath ??= new(ReferenceEqualityComparer.Instance);
+                if (!remainingMath.TryAdd(equation, paragraph)) return false;
+            }
         }
-        Dictionary<(int, int, int), DocxParagraph>? lineOwners = story.InlineImages.Count == 0 ? null : new();
+        Dictionary<(int, int, int), DocxTextLineLayout>? lineOwners = story.InlineImages.Count == 0 ? null : new();
         foreach (var line in story.TextLines)
         {
             token.ThrowIfCancellationRequested();
             if (line.SourceParagraph is null) return false;
+            if (line.SourceParagraph.Equations.Count != 0 && !HasUsableNoteInlineFrame(line)) return false;
+            if (line.Math is { } direct && !ConsumeMath(direct.Equation, line.SourceParagraph)) return false;
+            foreach (var math in line.InlineMath)
+            {
+                token.ThrowIfCancellationRequested();
+                if (!ConsumeMath(math.Math.Equation, line.SourceParagraph)) return false;
+            }
             if (lineOwners is not null && TryGetSourceLineOwner(line.SourceBlockIndex, line.SourceParagraphIndex,
-                line.SourceLineIndex, out var key) && !lineOwners.TryAdd(key, line.SourceParagraph) &&
-                !ReferenceEquals(lineOwners[key], line.SourceParagraph)) return false;
+                line.SourceLineIndex, out var key) && !lineOwners.TryAdd(key, line) &&
+                !ReferenceEquals(lineOwners[key], line)) return false;
         }
         foreach (var image in story.InlineImages)
         {
             token.ThrowIfCancellationRequested();
             if (!TryGetSourceLineOwner(image.SourceBlockIndex, image.SourceParagraphIndex, image.SourceLineIndex, out var key) ||
-                image.LineFrame is not { IsUsable: true } || !lineOwners!.TryGetValue(key, out var owner) ||
-                pictureSources is null || !pictureSources.TryGetValue(owner, out var sources) || !sources.Contains(image.Image)) return false;
+                !lineOwners!.TryGetValue(key, out var owner) ||
+                !(image.LineFrame is { IsUsable: true } || image.LineFrame is null && HasUsableNoteInlineFrame(owner)) ||
+                pictureSources is null || !pictureSources.TryGetValue(owner.SourceParagraph!, out var sources) || !sources.Contains(image.Image)) return false;
         }
-        return true;
+        return remainingMath is null || remainingMath.Count == 0;
+
+        bool ConsumeMath(DocxEquation equation, DocxParagraph owner) =>
+            remainingMath is not null && remainingMath.TryGetValue(equation, out var source) &&
+            ReferenceEquals(source, owner) && remainingMath.Remove(equation);
     }
 
     private static bool IsPlainNoteFlowParagraph(DocxParagraph paragraph, bool allowSourceAffinedImages = false) =>

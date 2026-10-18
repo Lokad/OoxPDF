@@ -19,7 +19,8 @@ for row in manifest:
     note_picture = row.get("AddInlineNotePicture", False)
     wrap_picture = row.get("WrapNotePictureParagraph", False)
     second_picture = row.get("AddSecondNotePicture", False)
-    source = output / ("long-note-inline-picture-report.docx" if wrap_picture or second_picture else
+    note_equation = row.get("AddInlineNoteEquation", False)
+    source = output / ("long-note-inline-picture-report.docx" if wrap_picture or second_picture or note_equation else
                        "two-plain-notes-report.docx" if note_picture else
                        "table-note-reference-report.docx" if remove_separator else
                        "two-plain-notes-report.docx" if table_reference else
@@ -29,7 +30,7 @@ for row in manifest:
     with ZipFile(source) as archive:
         original = {name: archive.read(name) for name in archive.namelist()}
     parts = dict(original)
-    if wrap_picture or second_picture:
+    if wrap_picture or second_picture or note_equation:
         part = "word/footnotes.xml"
         story = E.fromstring(parts[part])
         note = next(n for n in story if n.get(w + "id") == "2")
@@ -46,6 +47,12 @@ for row in manifest:
             docpr.set("id", "502")
             docpr.set("name", "Public wrapped note picture")
             next(p for p in note.findall(w + "p") if "Public continuation note line 50:" in "".join(p.itertext())).append(clone)
+        if note_equation:
+            math = "{http://schemas.openxmlformats.org/officeDocument/2006/math}"
+            equation = copy.deepcopy(next(E.fromstring(parts["word/document.xml"]).iter(math + "oMath")))
+            E.SubElement(E.SubElement(intro, w + "r"), w + "t",
+                         {"{http://www.w3.org/XML/1998/namespace}space": "preserve"}).text = " "
+            intro.append(equation)
     elif note_picture:
         part = "word/footnotes.xml"
         a = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
