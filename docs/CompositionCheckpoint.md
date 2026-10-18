@@ -1,5 +1,43 @@
 # Composed-document reliability checkpoint
 
+C189 restores complete tall delimiters. Growing parentheses with60/200pt literal
+children made the whole formula disappear in both public presets; fixed controls
+rendered. Complete font-defined vertical shapes now share radical placement,
+retaining fixed/nearest-ready selection, actual source control/ink and complete
+encoding/bounds/cancellation/work fallback. Four outcomes regain12 logical symbols.
+Six independent Word exports once precede three exact-byte promotions;2,174 old
+inputs unchanged/five added. Wider assemblies and nesting remain staged.
+
+A neighboring-font probe catches a regression after the first61Win/46Ubuntu
+qualification: Cambria braces share a physical extender, and eager registration
+as logical operators rejects even small formulas. That artifact remains
+unaccepted. Physical parts now register separately after authored/ready glyphs;
+existing scalar ActualText owns each assembled symbol. Authored Unicode and strict
+ready-glyph alias guards remain. Actual Cambria and a portable synthetic font
+cover shared parts and authored collisions. Both new checks fail the initial
+artifact; two original content observers fail C187. Failures remain retained.
+
+The corrected committed Release artifact qualifies63 Windows/47 Ubuntu checks
+with16 native skips, one exact invocation/platform. The confirmed production
+correction justifies that second capability run. Ordinary fraction-only output
+replay is excluded.24 selected prior outcomes retain text geometry/50 reviewed
+pixel pairs;18 PDFs retain C187 bytes, six subsets change only resource identity.
+All30 selected final PDFs equal the initial C189 bytes, so all comparisons,
+geometry, raw audits and reviews carry. Three unique new Word/candidate pairs
+reviewed/three preset outcomes carry both raster hashes; two portable PDFs and
+eight independent logical extractions carry exact bytes. An authored-brace page
+was also reviewed, with no new clipping seen.17 assets/four smokes match without
+root build/suite/corpus replay. One existing root font-license newline difference
+is recorded separately; all rendered binary inputs are exact.
+
+Four growing physical1pt groups still fail(maxY2.575pt/following flow2.433pt), cause
+unverified. Fixed/argument baselines and all physical X anchors pass1pt. All six
+strict foreground-recall/SSIM failures, complex-math flags/raw audit exit1 and minor
+stem raster seams remain. Source-prose/simple-math/Office-word deficits are zero;
+content restoration does not relabel geometry failures. Root881c46e2/e396f30f;
+delimiter-assemblies-evidence.json. C186/C187 CI39100480675 is green; continue bounded
+composition checks while this scoped push runs.
+
 C188 finds no defect in the all-unavailable mixed-content fallback. Eight
 initial and eight ordered body/cell outcomes reuse C187: complete equation
 removal and unknown equation produce identical page content in both presets,
