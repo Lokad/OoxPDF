@@ -1846,7 +1846,7 @@ internal sealed partial class DocxLayoutEngine
             double visualY = cellY;
             double fullVisualHeight = fullRowHeight;
             double fullVisualY = fullCellY;
-            if (IsVerticalMergeRestart(cell))
+            if (cell.IsVerticalMergeRestart)
             {
                 fullVisualHeight = GetVerticalMergeSpanHeight(table, rowIndex, gridColumnIndex, rowHeights);
                 fullVisualY = cursorY - fullVisualHeight;

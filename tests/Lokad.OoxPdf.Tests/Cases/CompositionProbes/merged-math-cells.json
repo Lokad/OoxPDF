@@ -1,0 +1,28 @@
+[
+  {
+    "Id": "unmerged-math-cell-control",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx",
+    "Sha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "SourceSha256": "1E83A978A5C6B6A0EA94CB2D570F69D6D8EECD0CD51D178711A603C8900C2C0C",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before inline",
+      "after equation."
+    ],
+    "Change": "Add an empty second row; retain independent cells as control."
+  },
+  {
+    "Id": "merged-math-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-math-cell.docx",
+    "Sha256": "31E9CC97E9C28632B839F56060B6E53C9D11C29A4F613062D34590A113BFC2F4",
+    "SourceSha256": "1E83A978A5C6B6A0EA94CB2D570F69D6D8EECD0CD51D178711A603C8900C2C0C",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before inline",
+      "after equation."
+    ],
+    "Change": "Add an empty second row; only declare restart/continue vertical ownership."
+  }
+]

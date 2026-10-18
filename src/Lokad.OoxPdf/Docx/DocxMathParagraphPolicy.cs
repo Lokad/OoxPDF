@@ -38,7 +38,10 @@ internal static class DocxMathParagraphPolicy
             {
                 token.ThrowIfCancellationRequested();
                 var children = DocxTableCellContent.GetBodyElements(cell);
-                if (!IsSupportedCellProperties(cell) ||
+                // A restart cell owns visible content across its merge span.
+                // Preparation preserves that source; placement still applies
+                // the existing merge geometry and continuation ownership.
+                if (!HasSupportedCellContentProperties(cell) || cell.HasVerticalMerge && !cell.IsVerticalMergeRestart ||
                     !children.All(child => child is DocxParagraphElement or DocxTableElement)) { continue; }
                 foreach (var child in children)
                 {
@@ -58,7 +61,10 @@ internal static class DocxMathParagraphPolicy
         IsSupportedCellProperties(cell) && cell.BodyElements.All(child => child is DocxParagraphElement);
 
     public static bool IsSupportedCellProperties(DocxTableCell cell) =>
-        !cell.HasVerticalMerge && !cell.FitText &&
+        !cell.HasVerticalMerge && HasSupportedCellContentProperties(cell);
+
+    private static bool HasSupportedCellContentProperties(DocxTableCell cell) =>
+        !cell.FitText &&
         HasSupportedTableContentRevisions(cell.Revisions, DocxRevisionKind.TableCellPropertiesChange) &&
         cell.TextDirectionValue is null or "lrTb";
 

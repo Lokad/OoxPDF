@@ -52,13 +52,6 @@ internal sealed partial class DocxLayoutEngine
         return revisions;
     }
 
-    private static bool IsVerticalMergeRestart(DocxTableCell cell)
-    {
-        return cell.HasVerticalMerge &&
-            string.Equals(cell.VerticalMergeValue, "restart", StringComparison.OrdinalIgnoreCase);
-    }
-
-
     private static bool IsTextLineVisibleInCellFragmentGeometry(
         bool cellPageBreakAlignsWithFragmentBoundary,
         DocxTextLineLayout line,
@@ -391,7 +384,7 @@ var context = new DocxTableCellLayoutContext(
 
     private static bool IsVerticalMergeContinuation(DocxTableCell cell)
     {
-        return cell.HasVerticalMerge && !IsVerticalMergeRestart(cell);
+        return cell.HasVerticalMerge && !cell.IsVerticalMergeRestart;
     }
 
     private static DocxVerticalMergeOwner? FindVerticalMergeRestartOwner(
@@ -407,7 +400,7 @@ var context = new DocxTableCellLayoutContext(
                 return null;
             }
 
-            if (IsVerticalMergeRestart(previousCell))
+            if (previousCell.IsVerticalMergeRestart)
             {
                 return new DocxVerticalMergeOwner(previousCell, previousRowIndex, gridColumnIndex);
             }

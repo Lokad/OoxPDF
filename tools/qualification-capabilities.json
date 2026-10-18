@@ -7791,5 +7791,25 @@
     "DocxReaderPreservesParagraphHyperlinkRunsInOrder",
     "DocxMarkupModesFilterHyperlinkAndFieldRevisionsBeforeLayout",
     "DocxWordCompatibleAllMarkupPreservesRevisedHyperlinkAnnotations"
+  ],
+  "docx-owning-merged-cell-math": [
+    "DocxInlineCompositionMergedCellMathRetainsIndependentRelativeWordGeometry",
+    "DocxInlineCompositionMergedMathPreparationKeepsOwningSourcesAndPlacementFallbacks",
+    "PortableRenderingMergedMathCellsKeepOwnerContent",
+    "DocxTableMath",
+    "DocxStaticTableMath",
+    "DocxStaticFrameMapping",
+    "DocxTableLayoutStageAppliesVerticalMergeGeometry",
+    "DocxTableLayoutStageCarriesVerticalMergeOwnerAcrossPages",
+    "DocxTableLayoutStageCarriesVerticalMergeOwnerAfterRepeatedHeader",
+    "DocxTableLayoutSnapshotUsesCanonicalBodyForVerticalMergeVisualOwner",
+    "DocxTableLayoutStageClipsVerticalMergeRestartToSplitRowFragments",
+    "DocxReaderTableCellPreservesVerticalMergeToken",
+    "SharedBorderPlanMatchesNestedEnumerationMerged",
+    "PortableRenderingCellStructureKeepsContentInkAndSourceOrder",
+    "PortableRenderingNestedCellNeighborsKeepContentAndSourceOrder",
+    "PortableRenderingCellPageNotesKeepLabelsMathImagesAndDestinations",
+    "DocxInlineCompositionLinkedMixedNoteFramesMatchIndependentWord",
+    "PortableRenderingLinkedMixedNoteFramesRetainSourceAndInk"
   ]
 }

@@ -153,6 +153,8 @@ internal sealed record DocxTableCell(
     }
     public IReadOnlyList<DocxBodyElement> BodyElements { get; init; } = [];
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
+    public bool IsVerticalMergeRestart => HasVerticalMerge &&
+        string.Equals(VerticalMergeValue, "restart", StringComparison.OrdinalIgnoreCase);
 
     public DocxTableCellVerticalAlignment VerticalAlignment => ParseVerticalAlignment(VerticalAlignmentValue);
 
