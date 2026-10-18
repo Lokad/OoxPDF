@@ -1,5 +1,17 @@
 # Composed-document reliability checkpoint
 
+C194 CI39104918991 catches one stale parser expectation after3490 passed checks
+(16 skips): the source-role test still expects display integral exclusion. The
+focused selection missed that parser neighbor. Correct only the supported-role
+assertion and add all four n-ary parser checks to the capability manifest.
+The library/14 non-test assets and2,183 inputs remain identical after a test-only
+build. Four newly selected parser checks pass once per platform; carry the38
+qualified methods. Final42 Windows/26 Ubuntu checks qualify with16 native skips.
+Only three test assets transfer to root; all17 asset hashes match and four original
+CLI smokes carry without replay. Failure logs remain. Evidence:
+display-integral-parser-repair-evidence.json. Production rendering is unchanged.
+The inherited-limit prototype is preserved while this scoped repair is pushed.
+
 C194 renders standalone display integrals through shared n-ary contracts.
 Previously both limit placements lose all4 mathematical symbols in both public
 presets. Admission alone restores text but leaves9.7pt flow error. Independent
