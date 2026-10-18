@@ -3315,6 +3315,9 @@ var tail = rendererType.GetMethod(
 
     public static void PptxSyntheticChartAxisLabelsSkipPairKerning()
     {
+        string calibri = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "calibri.ttf");
+        if (!File.Exists(calibri))
+            TestAssert.Skip("The independent Office kerning advances require installed Calibri.");
         var measurerType = typeof(PptxRenderer).GetNestedType(
             "ChartTextMeasurer",
             System.Reflection.BindingFlags.NonPublic);

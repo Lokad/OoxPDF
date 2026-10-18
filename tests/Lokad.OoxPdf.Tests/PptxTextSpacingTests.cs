@@ -259,6 +259,9 @@ internal static class PptxTextSpacingTests
 
     public static void PptxSyntheticTextBoxNoBreakSpaceKeepsBoundaryKerning()
     {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+            TestAssert.Skip("The independent Office no-break-space advances require installed Arial.");
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
