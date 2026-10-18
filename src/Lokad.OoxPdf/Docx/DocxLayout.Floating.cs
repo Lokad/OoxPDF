@@ -449,7 +449,8 @@ internal sealed partial class DocxLayoutEngine
                         SourceBlockIndex: sourceBlockIndex,
                         SourceParagraphIndex: sourceParagraphIndex,
                         Story: null)
-                    { LineFrame = DocxPictureLineFrame.FromLine(cursorY, lineHeight, extraAbove, lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) });
+                    { SourceLineIndex = lineIndex,
+                        LineFrame = DocxPictureLineFrame.FromLine(cursorY, lineHeight, extraAbove, lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) });
                 }
             }
             firstLine = false;

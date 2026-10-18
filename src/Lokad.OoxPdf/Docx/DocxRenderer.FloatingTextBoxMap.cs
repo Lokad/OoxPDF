@@ -93,7 +93,7 @@ internal sealed partial class DocxRenderer
                 ClipBounds = image.ClipBounds is { } clip
                     ? new(PrecompensateX(clip.X), PrecompensateY(clip.Y), ScaleExtent(clip.Width), ScaleExtent(clip.Height)) : null,
                 LineFrame = image.LineFrame is { } frame
-                    ? new(PrecompensateY(frame.Bottom), ScaleExtent(frame.Height)) : null
+                    ? new(PrecompensateY(frame.Bottom), ScaleExtent(frame.Height)) { ImageGrowth = ScaleExtent(frame.ImageGrowth) } : null
             };
         }
 

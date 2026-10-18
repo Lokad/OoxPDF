@@ -83,7 +83,7 @@ internal sealed partial class DocxLayoutEngine
                     X = x + (clip.X - x) * scale, Y = center + (clip.Y - center) * scale,
                     Width = clip.Width * scale, Height = clip.Height * scale
                 } : null,
-                LineFrame = image.LineFrame is { } frame ? new(center + (frame.Bottom - center) * scale, frame.Height * scale) : null
+                LineFrame = image.LineFrame is { } frame ? new(center + (frame.Bottom - center) * scale, frame.Height * scale) { ImageGrowth = frame.ImageGrowth * scale } : null
             };
         }
         var mappedTables = new Dictionary<DocxTableLayoutContext, DocxTableLayoutContext>(ReferenceEqualityComparer.Instance);

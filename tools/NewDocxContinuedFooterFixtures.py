@@ -3,6 +3,7 @@ from pathlib import Path
 from xml.etree import ElementTree as E
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 from io import BytesIO
+import copy
 import hashlib
 import json
 
@@ -15,7 +16,9 @@ for row in manifest:
     split_owners = row.get("SplitNoteOwners", False)
     table_reference = row.get("MoveReferenceToTable", False)
     remove_separator = row.get("RemoveFootnoteSeparator", False)
-    source = output / ("table-note-reference-report.docx" if remove_separator else
+    note_picture = row.get("AddInlineNotePicture", False)
+    source = output / ("two-plain-notes-report.docx" if note_picture else
+                       "table-note-reference-report.docx" if remove_separator else
                        "two-plain-notes-report.docx" if table_reference else
                        "long-note-original-footer-report.docx" if split_owners else
                        "occupied-footer-long-note-report.docx" if restore_footer else "linked-inline-footer-report.docx")
@@ -23,7 +26,32 @@ for row in manifest:
     with ZipFile(source) as archive:
         original = {name: archive.read(name) for name in archive.namelist()}
     parts = dict(original)
-    if table_reference:
+    if note_picture:
+        part = "word/footnotes.xml"
+        a = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+        r = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
+        wp = "{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}"
+        pr = "{http://schemas.openxmlformats.org/package/2006/relationships}"
+        body = E.fromstring(parts["word/document.xml"])
+        drawing = copy.deepcopy(next(body.iter(w + "drawing")))
+        blip = next(drawing.iter(a + "blip"))
+        relationship = next(rel for rel in E.fromstring(parts["word/_rels/document.xml.rels"])
+                            if rel.get("Id") == blip.get(r + "embed"))
+        blip.set(r + "embed", "rIdPublicNotePicture")
+        for docpr in drawing.iter(wp + "docPr"):
+            docpr.set("id", "501")
+            docpr.set("name", "Public continuation note picture")
+        story = E.fromstring(parts[part])
+        intro = next(note for note in story if note.get(w + "id") == "2").find(w + "p")
+        E.SubElement(intro, w + "r").append(drawing)
+        relpart = "word/_rels/footnotes.xml.rels"
+        assert relpart not in parts
+        rels = E.Element(pr + "Relationships")
+        attrs = dict(relationship.attrib)
+        attrs["Id"] = "rIdPublicNotePicture"
+        E.SubElement(rels, pr + "Relationship", attrs)
+        parts[relpart] = E.tostring(rels, encoding="utf-8", xml_declaration=True)
+    elif table_reference:
         part = "word/document.xml"
         story = E.fromstring(parts[part])
         body = story.find(w + "body")

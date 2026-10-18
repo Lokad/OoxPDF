@@ -193,10 +193,15 @@ internal sealed record DocxInlineImageLayout(
 
 internal readonly record struct DocxPictureLineFrame(double Bottom, double Height)
 {
-    public bool IsUsable => double.IsFinite(Bottom) && double.IsFinite(Height) && Height > 0d && double.IsFinite(Bottom + Height);
+    // Measured extra advance, separate from paragraph after-space included in
+    // Height. Slicing must consume each contribution once even when paragraph
+    // spacing metadata is stored on another line of the same paragraph.
+    public double ImageGrowth { get; init; }
+    public bool IsUsable => double.IsFinite(Bottom) && double.IsFinite(Height) && Height > 0d &&
+        double.IsFinite(Bottom + Height) && double.IsFinite(ImageGrowth) && ImageGrowth >= 0d;
 
     public static DocxPictureLineFrame FromLine(double cursorY, double lineHeight, double imageGrowth, double afterSpacing) =>
-        new(cursorY - lineHeight - afterSpacing, lineHeight + imageGrowth + afterSpacing);
+        new(cursorY - lineHeight - afterSpacing, lineHeight + imageGrowth + afterSpacing) { ImageGrowth = imageGrowth };
 }
 
 // An inline textbox laid out as a body-flow block. Coordinates are absolute flow

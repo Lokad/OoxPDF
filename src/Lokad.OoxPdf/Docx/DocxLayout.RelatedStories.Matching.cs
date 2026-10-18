@@ -513,25 +513,47 @@ internal sealed partial class DocxLayoutEngine
     private static bool HasParagraphNoteFlowStory(DocxRelatedStoryLayout story, CancellationToken token)
     {
         if (story.Story.BodyElements.Count == 0 || story.TextLines.Count == 0 ||
-            story.TableRows.Count != 0 || story.InlineImages.Count != 0 || story.FloatingDrawings.Count != 0 ||
+            story.TableRows.Count != 0 || story.FloatingDrawings.Count != 0 ||
             !double.IsFinite(story.ContentHeight)) return false;
+        Dictionary<DocxParagraph, HashSet<DocxInlineImage>>? pictureSources = null;
         foreach (var element in story.Story.BodyElements)
         {
             token.ThrowIfCancellationRequested();
             if (element is not DocxParagraphElement { Paragraph: var paragraph } ||
-                !DocxPlainBodyFrame.HasPlainTextContent(paragraph) || !IsPlainNoteFlowParagraph(paragraph) ||
+                !DocxPlainBodyFrame.HasPlainTextContent(paragraph.Images.Count == 0 ? paragraph : paragraph with { Images = [] }) ||
+                !IsPlainNoteFlowParagraph(paragraph, allowSourceAffinedImages: true) ||
                 !DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph, element.Revisions, token)) return false;
+            if (paragraph.Images.Count != 0)
+            {
+                // Shared source-affinity/property checks above own picture
+                // validity. This placement migration admits automatic lines;
+                // it does not promote note typography or fixed/minimum frames.
+                if (!DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph)) return false;
+                pictureSources ??= new(ReferenceEqualityComparer.Instance);
+                pictureSources[paragraph] = new(paragraph.Images, ReferenceEqualityComparer.Instance);
+            }
         }
+        Dictionary<(int, int, int), DocxParagraph>? lineOwners = story.InlineImages.Count == 0 ? null : new();
         foreach (var line in story.TextLines)
         {
             token.ThrowIfCancellationRequested();
             if (line.SourceParagraph is null) return false;
+            if (lineOwners is not null && TryGetSourceLineOwner(line.SourceBlockIndex, line.SourceParagraphIndex,
+                line.SourceLineIndex, out var key) && !lineOwners.TryAdd(key, line.SourceParagraph) &&
+                !ReferenceEquals(lineOwners[key], line.SourceParagraph)) return false;
+        }
+        foreach (var image in story.InlineImages)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!TryGetSourceLineOwner(image.SourceBlockIndex, image.SourceParagraphIndex, image.SourceLineIndex, out var key) ||
+                image.LineFrame is not { IsUsable: true } || !lineOwners!.TryGetValue(key, out var owner) ||
+                pictureSources is null || !pictureSources.TryGetValue(owner, out var sources) || !sources.Contains(image.Image)) return false;
         }
         return true;
     }
 
-    private static bool IsPlainNoteFlowParagraph(DocxParagraph paragraph) =>
-        HasNoteParagraphFlowProperties(paragraph) &&
+    private static bool IsPlainNoteFlowParagraph(DocxParagraph paragraph, bool allowSourceAffinedImages = false) =>
+        HasNoteParagraphFlowProperties(paragraph, allowSourceAffinedImages) &&
         // Fixed boxes share paragraph ownership/flow, not content-driven metrics.
         (DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) ||
             paragraph.LineSpacingPoints is { } fixedHeight && double.IsFinite(fixedHeight) && fixedHeight > 0d &&

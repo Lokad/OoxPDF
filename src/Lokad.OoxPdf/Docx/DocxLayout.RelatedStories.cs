@@ -526,12 +526,27 @@ internal sealed partial class DocxLayoutEngine
     private static double[] GetStoryTextLineBoxHeights(DocxRelatedStoryLayout storyLayout,
         IReadOnlyList<double>? ownedAfterSpacings = null)
     {
+        // A measured picture belongs to one source line. Its extra advance is
+        // independent of paragraph spacing, which take overrides still own.
+        Dictionary<(int, int, int), double>? pictureFrames = null;
+        foreach (var image in storyLayout.InlineImages)
+        {
+            if (!TryGetSourceLineOwner(image.SourceBlockIndex, image.SourceParagraphIndex, image.SourceLineIndex, out var key) ||
+                image.LineFrame is not { IsUsable: true } frame) continue;
+            pictureFrames ??= new();
+            pictureFrames[key] = Math.Max(pictureFrames.GetValueOrDefault(key), frame.ImageGrowth);
+        }
         double[] heights = new double[storyLayout.TextLines.Count];
         for (int lineIndex = 0; lineIndex < heights.Length; lineIndex++)
         {
             DocxTextLineLayout line = storyLayout.TextLines[lineIndex];
             double afterSpacing = ownedAfterSpacings?[lineIndex] ?? line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d;
             heights[lineIndex] = ResolveStoryTextLineBoxHeight(line, afterSpacing);
+            if (pictureFrames is not null && TryGetSourceLineOwner(line.SourceBlockIndex, line.SourceParagraphIndex,
+                line.SourceLineIndex, out var key) && pictureFrames.TryGetValue(key, out double pictureHeight))
+            {
+                heights[lineIndex] += pictureHeight;
+            }
         }
 
         return heights;
@@ -579,7 +594,45 @@ internal sealed partial class DocxLayoutEngine
             sliceLines[lineIndex] = storyLayout.TextLines[startLineIndex + lineIndex];
         }
 
-        return storyLayout with { TextLines = sliceLines };
+        return storyLayout with { TextLines = sliceLines,
+            InlineImages = SliceSourceOwnedInlineImages(storyLayout.InlineImages, storyLayout.TextLines, sliceLines) };
+    }
+
+    private static bool TryGetSourceLineOwner(int? block, int? paragraph, int? line,
+        out (int Block, int Paragraph, int Line) owner)
+    {
+        if (block is int b && b >= 0 && paragraph is int p && p >= 0 && line is int l && l >= 0)
+        {
+            owner = (b, p, l);
+            return true;
+        }
+        owner = default;
+        return false;
+    }
+
+    private static IReadOnlyList<DocxInlineImageLayout> SliceSourceOwnedInlineImages(
+        IReadOnlyList<DocxInlineImageLayout> images, IReadOnlyList<DocxTextLineLayout> sourceLines,
+        IReadOnlyList<DocxTextLineLayout> lines)
+    {
+        if (images.Count == 0) return images;
+        var candidates = new HashSet<(int, int, int)>();
+        foreach (var image in images)
+            if (TryGetSourceLineOwner(image.SourceBlockIndex, image.SourceParagraphIndex, image.SourceLineIndex, out var key)) candidates.Add(key);
+        var recorded = new HashSet<(int, int, int)>();
+        foreach (var source in sourceLines)
+        {
+            if (candidates.Count == 0) break;
+            if (TryGetSourceLineOwner(source.SourceBlockIndex, source.SourceParagraphIndex, source.SourceLineIndex, out var key) &&
+                candidates.Remove(key)) recorded.Add(key);
+        }
+        var owners = new HashSet<(int, int, int)>();
+        foreach (var line in lines)
+            if (TryGetSourceLineOwner(line.SourceBlockIndex, line.SourceParagraphIndex, line.SourceLineIndex, out var key)) owners.Add(key);
+        // Unrecorded legacy owners keep the existing clipped fallback. Known
+        // owners follow their source line exactly once, including line indices
+        // that restart in the next source paragraph.
+        return images.Where(image => !TryGetSourceLineOwner(image.SourceBlockIndex, image.SourceParagraphIndex,
+            image.SourceLineIndex, out var key) || !recorded.Contains(key) || owners.Contains(key)).ToArray();
     }
 
     // RV06 interleaving: exact in-flight remainder for the drain-aware body reserve.
@@ -1726,7 +1779,7 @@ internal sealed partial class DocxLayoutEngine
         return storyLayout with
         {
             TextLines = ShiftTextLines(sliceLines, consumedHeight, 0d),
-            InlineImages = ShiftInlineImages(storyLayout.InlineImages, consumedHeight, 0d),
+            InlineImages = ShiftInlineImages(SliceSourceOwnedInlineImages(storyLayout.InlineImages, storyLayout.TextLines, sliceLines), consumedHeight, 0d),
             TableRows = ShiftTableRows(storyLayout.TableRows, consumedHeight, 0d),
             ContentHeight = Math.Max(0d, remainingHeight)
         };
