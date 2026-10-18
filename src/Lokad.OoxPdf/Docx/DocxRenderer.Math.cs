@@ -262,6 +262,15 @@ internal sealed partial class DocxRenderer
                                         unavailableControlFaces.Add(controlFont);
                                     height = variant.Advance + 1d;
                                 }
+                                if (control is DocxMathRadical && controlFont.TryGetMathVerticalAssembly(glyph, token, out var assembly) && assembly is not null)
+                                {
+                                    foreach (var part in assembly.Parts)
+                                    {
+                                        token.ThrowIfCancellationRequested();
+                                        found = true;
+                                        if (!TryRegisterOperatorGlyph(face.Operators, part.Glyph, point)) unavailableControlFaces.Add(controlFont);
+                                    }
+                                }
                                 if (!found) return false;
                                 face.Characters.Add(point);
                             }

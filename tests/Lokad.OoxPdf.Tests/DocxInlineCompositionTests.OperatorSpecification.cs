@@ -40,6 +40,16 @@ internal static partial class DocxInlineCompositionTests
         // failures; the mixed-argument specification keeps its qualified origins.
         => CheckComposedOperatorSpecification(resolver, "structured-cell-specification", requireWordPageCount: true);
 
+    public static void DocxInlineCompositionSkewedCellSpecificationKeepsIndependentContentPagesAndSourceOrder()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Native skewed-cell specification uses installed Windows fonts.");
+        CheckSkewedCellSpecification(null);
+    }
+
+    internal static void CheckSkewedCellSpecification(IFontResolver? resolver)
+        // Its retained matrix-row origins still fail eight one-point groups.
+        => CheckComposedOperatorSpecification(resolver, "skewed-cell-specification", requireWordPageCount: true);
+
     private static void CheckComposedOperatorSpecification(IFontResolver? resolver, string name, bool requireWordPageCount,
         bool requireWordOrigins = false)
     {
@@ -80,6 +90,17 @@ internal static partial class DocxInlineCompositionTests
                 var actual = mathematicalText.GroupBy(character => character).ToDictionary(group => group.Key, group => group.Count());
                 TestAssert.Equal(expected.Count, actual.Count);
                 foreach (var item in expected) TestAssert.Equal(item.Value, actual.GetValueOrDefault(item.Key));
+                if (row.TryGetProperty("FormulaTexts", out var formulaTexts))
+                {
+                    foreach (var formula in formulaTexts.EnumerateArray())
+                    {
+                        string first = formula.GetProperty("First").GetString()!;
+                        int start = Array.FindIndex(math, item => item.Show.Text.Normalize(NormalizationForm.FormKC) == first);
+                        TestAssert.True(start >= 0, "Every independent body formula retains its source start.");
+                        TestAssert.Equal(formula.GetProperty("MathText").GetString(), string.Concat(math.Skip(start)
+                            .Take(formula.GetProperty("Glyphs").GetInt32()).Select(item => item.Show.Text)).Normalize(NormalizationForm.FormKC));
+                    }
+                }
                 if (requireWordOrigins && resolver is null)
                 {
                     foreach (var group in row.GetProperty("FormulaGroups").EnumerateArray())

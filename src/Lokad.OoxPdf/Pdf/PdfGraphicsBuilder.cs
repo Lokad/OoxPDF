@@ -24,6 +24,7 @@ internal sealed class PdfGraphicsBuilder
     private readonly Dictionary<string, int> patternIndex = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> shadingPatternIndex = new(StringComparer.Ordinal);
     private int stateDepth;
+    private bool actualTextOpen;
 
     public IReadOnlyList<PdfExtGStateResource> ExtGStates => extGStates;
 
@@ -60,7 +61,7 @@ internal sealed class PdfGraphicsBuilder
     private string RegisterTransparencyGroup(PdfGraphicsBuilder child, PdfRectangle bounds)
     {
         ArgumentNullException.ThrowIfNull(child);
-        if (child.stateDepth != 0 || child.usedFontResourceNames.Count != 0 || child.patterns.Count != 0)
+        if (child.stateDepth != 0 || child.actualTextOpen || child.usedFontResourceNames.Count != 0 || child.patterns.Count != 0)
         {
             throw new InvalidDataException("SVG transparency groups require balanced vector content.");
         }
@@ -637,11 +638,15 @@ internal sealed class PdfGraphicsBuilder
     // so a failed node rewinds its paint without disturbing earlier nodes. Font/image caches are intentionally
     // outside the boundary: orphan entries are inert, while index rollback could
     // dangle references held by surviving content.
-    public readonly record struct ContentMark(int ContentLength, int ExtGStateCount, int ShadingCount, int PatternCount, int StateDepth, int FontUseCount, int GroupCount, int ShadingPatternCount);
+    public readonly record struct ContentMark(int ContentLength, int ExtGStateCount, int ShadingCount, int PatternCount, int StateDepth, int FontUseCount, int GroupCount, int ShadingPatternCount)
+    {
+        public bool ActualTextOpen { get; init; }
+    }
 
     public ContentMark MarkContent()
     {
-        return new ContentMark(builder.Length, extGStates.Count, shadings.Count, patterns.Count, stateDepth, fontUseOrder.Count, groups.Count, shadingPatterns.Count);
+        return new ContentMark(builder.Length, extGStates.Count, shadings.Count, patterns.Count, stateDepth, fontUseOrder.Count, groups.Count, shadingPatterns.Count)
+            { ActualTextOpen = actualTextOpen };
     }
 
     public void TruncateContent(ContentMark mark)
@@ -683,6 +688,7 @@ internal sealed class PdfGraphicsBuilder
         }
 
         stateDepth = Math.Max(0, mark.StateDepth);
+        actualTextOpen = mark.ActualTextOpen;
         RebuildResourceIndexes();
     }
 
@@ -730,7 +736,26 @@ internal sealed class PdfGraphicsBuilder
     }
     public override string ToString()
     {
+        if (actualTextOpen) throw new InvalidOperationException("PDF content leaves an ActualText span open.");
         return builder.ToString();
+    }
+
+    // A structural symbol may use several glyph pieces while retaining one
+    // Unicode scalar for selection, copying and accessible text extraction.
+    public void BeginActualText(int sourceCodePoint)
+    {
+        if (!Rune.IsValid(sourceCodePoint)) throw new ArgumentOutOfRangeException(nameof(sourceCodePoint));
+        if (actualTextOpen) throw new InvalidOperationException("ActualText spans cannot be nested.");
+        string hex = Convert.ToHexString(Encoding.BigEndianUnicode.GetBytes(char.ConvertFromUtf32(sourceCodePoint)));
+        builder.Append("/Span << /ActualText <FEFF").Append(hex).AppendLine("> >> BDC");
+        actualTextOpen = true;
+    }
+
+    public void EndActualText()
+    {
+        if (!actualTextOpen) throw new InvalidOperationException("ActualText ends without an open span.");
+        builder.AppendLine("EMC");
+        actualTextOpen = false;
     }
 
     private void AppendEllipsePath(double x, double y, double width, double height)

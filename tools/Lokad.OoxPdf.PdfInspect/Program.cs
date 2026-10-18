@@ -1161,6 +1161,12 @@ internal sealed record PdfTextOperation(
         @"(?:\(" + PdfContentSyntax.NestedLiteralStringBody + @"\)|<[^>]*>|-?(?:\d+\.?\d*|\.\d+))",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    // Canonical scalar ActualText spans emitted for assembled structural glyphs.
+    // Physical payloads/geometry remain in the report; text belongs to the span.
+    private static readonly Regex ActualTextRegex = new(
+        @"^\s*/Span\s+<<\s*/ActualText\s+<FEFF(?<hex>(?:[0-9A-Fa-f]{4})+)>\s*>>\s+BDC\s*$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     public static IReadOnlyList<PdfTextOperation> Extract(
         int? pageNumber,
         int objectNumber,
@@ -1183,9 +1189,19 @@ internal sealed record PdfTextOperation(
         double y = 0d;
         PdfMatrix currentMatrix = PdfMatrix.Identity;
         var graphicsStack = new Stack<TextExtractionState>();
+        string? actualText = null;
+        bool actualEmitted = false;
 
         foreach (string line in stream.Split('\n'))
         {
+            var actual = ActualTextRegex.Match(line);
+            if (actual.Success)
+            {
+                actualText = Encoding.BigEndianUnicode.GetString(Convert.FromHexString(actual.Groups["hex"].Value));
+                actualEmitted = false;
+            }
+            else if (actualText is not null && line.Trim() == "EMC")
+            { actualText = null; actualEmitted = false; }
             foreach (Match _ in SaveGraphicsStateRegex.Matches(line))
             {
                 graphicsStack.Push(new TextExtractionState(font, fontSize, characterSpacing, currentMatrix, fillColor));
@@ -1242,6 +1258,11 @@ internal sealed record PdfTextOperation(
                 string decodedText = DecodePayload(payload, (pageNumber is not null && fontUnicodeMaps.TryGetValue((pageNumber.Value, font), out IReadOnlyDictionary<int, string>? unicodeMap))
                     ? unicodeMap
                     : null);
+                if (actualText is not null)
+                {
+                    decodedText = actualEmitted ? string.Empty : actualText;
+                    actualEmitted = true;
+                }
                 PdfTextPayloadProfile payloadProfile = ReadPayloadProfile(payload);
                 double averageAdjustmentPoints = payloadProfile.AdjustmentCount == 0
                     ? 0d

@@ -1,0 +1,149 @@
+{
+  "Scope": "Independent Word full mathematical source order/content, pages and navigation. Eight of ten one-point formula origin groups retain failures(maxY3.500pt); content observers do not relabel geometry.",
+  "Rows": [
+    {
+      "Id": "composed-skewed-cell-specification",
+      "Mode": "final-preserve",
+      "InputSha256": "D19E76C68D6EF2441CC4B13DABA9594500435FA62A3F08B350E86A9FF0DB0693",
+      "ReferencePdfSha256": "851DBDD2EA8509D1710E36A7831CF8CA02C0E2D286073387CA07969F83F1DAD0",
+      "WordPages": 3,
+      "BodyMathCharacters": {
+        "a": 2,
+        "+": 23,
+        "b": 5,
+        "c": 1,
+        "\u221a": 1,
+        "x": 11,
+        "p": 3,
+        "q": 3,
+        "\u2044": 3,
+        "y": 11,
+        "u": 3,
+        "2": 4,
+        "d": 3,
+        "\u2211": 1,
+        "n": 3,
+        "i": 3,
+        "s": 1,
+        "(": 1,
+        ")": 1,
+        "\u220f": 1
+      },
+      "HeaderMathCharactersPerPage": {
+        "a": 1,
+        "+": 1,
+        "b": 1,
+        "=": 1,
+        "c": 1
+      },
+      "WordMathGlyphs": 99,
+      "Images": 1,
+      "ExternalLink": "https://example.org/method",
+      "InternalLinksIncludingFootnote": 1,
+      "FormulaTexts": [
+        {
+          "First": "\u221a",
+          "Glyphs": 20,
+          "MathText": "\u221ax+x+pq\u2044+ybx+u2+yd+y",
+          "Page": 1
+        },
+        {
+          "First": "\u2211",
+          "Glyphs": 22,
+          "MathText": "\u2211x+x+pq\u2044+ybx+u2+yd+yni",
+          "Page": 1
+        },
+        {
+          "First": "s",
+          "Glyphs": 9,
+          "MathText": "sinx+ab+y",
+          "Page": 1
+        },
+        {
+          "First": "(",
+          "Glyphs": 11,
+          "MathText": "(x+ab+c2+y)",
+          "Page": 1
+        },
+        {
+          "First": "\u220f",
+          "Glyphs": 22,
+          "MathText": "\u220fx+x+pq\u2044+ybx+u2+yd+yni",
+          "Page": 1
+        }
+      ]
+    },
+    {
+      "Id": "composed-skewed-cell-specification",
+      "Mode": "all-word-compatible",
+      "InputSha256": "D19E76C68D6EF2441CC4B13DABA9594500435FA62A3F08B350E86A9FF0DB0693",
+      "ReferencePdfSha256": "62DDDC3E055728538605FF21F6D3DC50D8E316B6037B277A81D998030B35660B",
+      "WordPages": 3,
+      "BodyMathCharacters": {
+        "a": 2,
+        "+": 23,
+        "b": 5,
+        "c": 1,
+        "\u221a": 1,
+        "x": 11,
+        "p": 3,
+        "q": 3,
+        "\u2044": 3,
+        "y": 11,
+        "u": 3,
+        "2": 4,
+        "d": 3,
+        "\u2211": 1,
+        "n": 3,
+        "i": 3,
+        "s": 1,
+        "(": 1,
+        ")": 1,
+        "\u220f": 1
+      },
+      "HeaderMathCharactersPerPage": {
+        "a": 1,
+        "+": 1,
+        "b": 1,
+        "=": 1,
+        "c": 1
+      },
+      "WordMathGlyphs": 99,
+      "Images": 1,
+      "ExternalLink": "https://example.org/method",
+      "InternalLinksIncludingFootnote": 1,
+      "FormulaTexts": [
+        {
+          "First": "\u221a",
+          "Glyphs": 20,
+          "MathText": "\u221ax+x+pq\u2044+ybx+u2+yd+y",
+          "Page": 1
+        },
+        {
+          "First": "\u2211",
+          "Glyphs": 22,
+          "MathText": "\u2211x+x+pq\u2044+ybx+u2+yd+yni",
+          "Page": 1
+        },
+        {
+          "First": "s",
+          "Glyphs": 9,
+          "MathText": "sinx+ab+y",
+          "Page": 1
+        },
+        {
+          "First": "(",
+          "Glyphs": 11,
+          "MathText": "(x+ab+c2+y)",
+          "Page": 1
+        },
+        {
+          "First": "\u220f",
+          "Glyphs": 22,
+          "MathText": "\u220fx+x+pq\u2044+ybx+u2+yd+yni",
+          "Page": 1
+        }
+      ]
+    }
+  ]
+}

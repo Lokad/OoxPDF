@@ -3,6 +3,8 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Docx;
 
+internal readonly record struct DocxMathGlyphPartPlacement(ushort OriginalGlyph, string EncodedGlyph, double X, double BaselineY);
+
 internal sealed record DocxMathGlyphPlacement(
     int SourceCodePoint, int RenderCodePoint, PdfFontResource Font, string EncodedGlyph,
     double FontSize, double X, double BaselineY, double Advance, RgbColor Color)
@@ -12,6 +14,7 @@ internal sealed record DocxMathGlyphPlacement(
     public IDocxMathControl? ControlOwner { get; init; }
     public ushort OriginalGlyph { get; init; }
     public double TextShear { get; init; }
+    public IReadOnlyList<DocxMathGlyphPartPlacement> AssemblyParts { get; init; } = [];
 }
 
 internal sealed record DocxMathBox(
@@ -69,10 +72,14 @@ internal static class DocxMathBoxPainter
             }
             var ink = resolveRevisionInk is null ? (Color: glyph.Color, Strike: false) : resolveRevisionInk(glyph);
             var color = ink.Color;
-            graphics.DrawGlyphText(glyph.Font.ResourceName, glyph.FontSize, glyphX, glyphY,
-                color.Red, color.Green, color.Blue, glyph.EncodedGlyph,
-                italic: false, characterSpacing: 0d, textRenderingMode: 0,
-                strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
+            if (glyph.AssemblyParts.Count == 0) Draw(glyph.EncodedGlyph, glyphX, glyphY);
+            else
+            {
+                graphics.BeginActualText(glyph.SourceCodePoint);
+                foreach (var part in glyph.AssemblyParts)
+                { token.ThrowIfCancellationRequested(); Draw(part.EncodedGlyph, glyphX + part.X, glyphY + part.BaselineY); }
+                graphics.EndActualText();
+            }
             if (glyph.TextShear != 0d) { graphics.RestoreState(); }
             if (ink.Strike)
             {
@@ -83,6 +90,11 @@ internal static class DocxMathBoxPainter
                 graphics.FillRectangle(x + glyph.X, baselineY + glyph.BaselineY + position,
                     glyph.Advance, Math.Max(.1d, thickness));
             }
+
+            void Draw(string encoded, double drawX, double drawY) =>
+                graphics.DrawGlyphText(glyph.Font.ResourceName, glyph.FontSize, drawX, drawY,
+                    color.Red, color.Green, color.Blue, encoded, italic: false, characterSpacing: 0d, textRenderingMode: 0,
+                    strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
         }
     }
 }

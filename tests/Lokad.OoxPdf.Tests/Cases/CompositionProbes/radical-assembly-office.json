@@ -1,0 +1,305 @@
+{
+  "Scope": "Independent Word physical assembly-part origins, logical content and following-prose baseline. Font control12pt, normal child200pt. Native origins/following retain the one-point gate; portable metrics qualify content/source invariance separately. Word child size200.06pt differs from the retained authored-size export profile200.04pt; retain that0.02pt cosmetic residual separately from origin/flow gates.",
+  "Rows": [
+    {
+      "Id": "radical-assembly-child200",
+      "Mode": "final-preserve",
+      "InputSha256": "F94BAFB250EE318AA07335BAFAC44E175A97D6BD62BFE235A54A7A48563BB9CC",
+      "ReferencePdfSha256": "6033CC1C9B83C992E0A8296CB2D5EAB2A168D8B955D752A9C80C7E2EA60DF79C",
+      "ExportLogSha256": "D2989D1454657DD745D25B745A434E28CE28A67C54B84E08DCBFEFE7AD56C67C",
+      "MathText": "\u221aA",
+      "PhysicalGlyphOperations": 23,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 151.82,
+          "Y": 580.9,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 151.82,
+          "Y": 595.66,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 151.82,
+          "Y": 601.3,
+          "Size": 12
+        },
+        {
+          "Offset": 3,
+          "X": 151.82,
+          "Y": 607.06,
+          "Size": 12
+        },
+        {
+          "Offset": 4,
+          "X": 151.82,
+          "Y": 612.82,
+          "Size": 12
+        },
+        {
+          "Offset": 5,
+          "X": 151.82,
+          "Y": 618.58,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "X": 151.82,
+          "Y": 624.22,
+          "Size": 12
+        },
+        {
+          "Offset": 7,
+          "X": 151.82,
+          "Y": 629.98,
+          "Size": 12
+        },
+        {
+          "Offset": 8,
+          "X": 151.82,
+          "Y": 635.74,
+          "Size": 12
+        },
+        {
+          "Offset": 9,
+          "X": 151.82,
+          "Y": 641.5,
+          "Size": 12
+        },
+        {
+          "Offset": 10,
+          "X": 151.82,
+          "Y": 647.14,
+          "Size": 12
+        },
+        {
+          "Offset": 11,
+          "X": 151.82,
+          "Y": 652.9,
+          "Size": 12
+        },
+        {
+          "Offset": 12,
+          "X": 151.82,
+          "Y": 658.66,
+          "Size": 12
+        },
+        {
+          "Offset": 13,
+          "X": 151.82,
+          "Y": 664.42,
+          "Size": 12
+        },
+        {
+          "Offset": 14,
+          "X": 151.82,
+          "Y": 670.06,
+          "Size": 12
+        },
+        {
+          "Offset": 15,
+          "X": 151.82,
+          "Y": 675.82,
+          "Size": 12
+        },
+        {
+          "Offset": 16,
+          "X": 151.82,
+          "Y": 681.58,
+          "Size": 12
+        },
+        {
+          "Offset": 17,
+          "X": 151.82,
+          "Y": 687.34,
+          "Size": 12
+        },
+        {
+          "Offset": 18,
+          "X": 151.82,
+          "Y": 692.98,
+          "Size": 12
+        },
+        {
+          "Offset": 19,
+          "X": 151.82,
+          "Y": 698.74,
+          "Size": 12
+        },
+        {
+          "Offset": 20,
+          "X": 151.82,
+          "Y": 704.5,
+          "Size": 12
+        },
+        {
+          "Offset": 21,
+          "X": 151.82,
+          "Y": 710.38,
+          "Size": 12
+        },
+        {
+          "Offset": 22,
+          "X": 159.5,
+          "Y": 580.9,
+          "Size": 200.06
+        }
+      ],
+      "FollowingY": 566.26
+    },
+    {
+      "Id": "radical-assembly-child200",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F94BAFB250EE318AA07335BAFAC44E175A97D6BD62BFE235A54A7A48563BB9CC",
+      "ReferencePdfSha256": "53471CA46349ACCE687A203ACB871AD307269976C8883429771B54E0951390C4",
+      "ExportLogSha256": "0A28F82550569203786543F546717DE5FF80B10678022C70B2A12184206D635F",
+      "MathText": "\u221aA",
+      "PhysicalGlyphOperations": 23,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 151.82,
+          "Y": 580.9,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 151.82,
+          "Y": 595.66,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 151.82,
+          "Y": 601.3,
+          "Size": 12
+        },
+        {
+          "Offset": 3,
+          "X": 151.82,
+          "Y": 607.06,
+          "Size": 12
+        },
+        {
+          "Offset": 4,
+          "X": 151.82,
+          "Y": 612.82,
+          "Size": 12
+        },
+        {
+          "Offset": 5,
+          "X": 151.82,
+          "Y": 618.58,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "X": 151.82,
+          "Y": 624.22,
+          "Size": 12
+        },
+        {
+          "Offset": 7,
+          "X": 151.82,
+          "Y": 629.98,
+          "Size": 12
+        },
+        {
+          "Offset": 8,
+          "X": 151.82,
+          "Y": 635.74,
+          "Size": 12
+        },
+        {
+          "Offset": 9,
+          "X": 151.82,
+          "Y": 641.5,
+          "Size": 12
+        },
+        {
+          "Offset": 10,
+          "X": 151.82,
+          "Y": 647.14,
+          "Size": 12
+        },
+        {
+          "Offset": 11,
+          "X": 151.82,
+          "Y": 652.9,
+          "Size": 12
+        },
+        {
+          "Offset": 12,
+          "X": 151.82,
+          "Y": 658.66,
+          "Size": 12
+        },
+        {
+          "Offset": 13,
+          "X": 151.82,
+          "Y": 664.42,
+          "Size": 12
+        },
+        {
+          "Offset": 14,
+          "X": 151.82,
+          "Y": 670.06,
+          "Size": 12
+        },
+        {
+          "Offset": 15,
+          "X": 151.82,
+          "Y": 675.82,
+          "Size": 12
+        },
+        {
+          "Offset": 16,
+          "X": 151.82,
+          "Y": 681.58,
+          "Size": 12
+        },
+        {
+          "Offset": 17,
+          "X": 151.82,
+          "Y": 687.34,
+          "Size": 12
+        },
+        {
+          "Offset": 18,
+          "X": 151.82,
+          "Y": 692.98,
+          "Size": 12
+        },
+        {
+          "Offset": 19,
+          "X": 151.82,
+          "Y": 698.74,
+          "Size": 12
+        },
+        {
+          "Offset": 20,
+          "X": 151.82,
+          "Y": 704.5,
+          "Size": 12
+        },
+        {
+          "Offset": 21,
+          "X": 151.82,
+          "Y": 710.38,
+          "Size": 12
+        },
+        {
+          "Offset": 22,
+          "X": 159.5,
+          "Y": 580.9,
+          "Size": 200.06
+        }
+      ],
+      "FollowingY": 566.26
+    }
+  ]
+}

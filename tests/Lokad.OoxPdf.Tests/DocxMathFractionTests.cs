@@ -7,7 +7,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxMathFractionTests
+internal static partial class DocxMathFractionTests
 {
     public static void MathFontStructuredSequencesKeepExplicitRowSizeOwner()
     {

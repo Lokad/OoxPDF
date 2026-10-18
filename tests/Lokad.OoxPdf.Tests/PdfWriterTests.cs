@@ -7,6 +7,38 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PdfWriterTests
 {
+    public static void PdfActualTextKeepsScalarEncodingAndBalancedTransactionalOwnership()
+    {
+        var graphics = new PdfGraphicsBuilder();
+        TestAssert.Throws<ArgumentOutOfRangeException>(() => graphics.BeginActualText(0xD800));
+        TestAssert.Throws<InvalidOperationException>(() => graphics.EndActualText());
+        var before = graphics.MarkContent();
+        graphics.BeginActualText(0x1D45D);
+        var inside = graphics.MarkContent();
+        TestAssert.Throws<InvalidOperationException>(() => graphics.BeginActualText(0x221A));
+        TestAssert.Throws<InvalidOperationException>(() => graphics.ToString());
+        graphics.EndActualText();
+        TestAssert.Contains("/ActualText <FEFFD835DC5D>", graphics.ToString());
+        graphics.TruncateContent(inside);
+        TestAssert.Throws<InvalidOperationException>(() => graphics.ToString());
+        graphics.EndActualText();
+        graphics.TruncateContent(before);
+        TestAssert.Equal(string.Empty, graphics.ToString());
+        TestAssert.Throws<InvalidOperationException>(() => graphics.EndActualText());
+        graphics.BeginActualText(0x221A);
+        graphics.FillRectangle(10d, 20d, 1d, 30d);
+        graphics.EndActualText();
+        TestAssert.Contains("/ActualText <FEFF221A>", graphics.ToString());
+        PdfContentValidator.ValidatePage(new PdfPage(100d, 100d, graphics.ToString()), 0, default);
+    }
+
+    public static void PdfActualTextValidationRejectsStrayAndUnclosedMarkedContent()
+    {
+        foreach (string content in new[] { "EMC", "/Span << /ActualText <FEFF221A> >> BDC", "/Artifact BMC" })
+            TestAssert.Throws<InvalidDataException>(() => PdfContentValidator.ValidatePage(new PdfPage(100d, 100d, content), 0, default));
+        PdfContentValidator.ValidatePage(new PdfPage(100d, 100d, "/Artifact BMC\n/Span << /ActualText <FEFF221A> >> BDC\nEMC\nEMC"), 0, default);
+    }
+
     public static void PdfWriterEscapesLongUnicodeUriWithoutStackGrowth()
     {
         const int count = 100_000;

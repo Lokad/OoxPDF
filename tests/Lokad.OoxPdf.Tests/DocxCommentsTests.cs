@@ -8038,7 +8038,7 @@ internal static partial class DocxCommentsTests
         => ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false);
 
     internal static IEnumerable<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)> ReadEmbeddedGlyphTextShows(
-        PdfPage page, bool usePageCoordinates, bool includeTextTransforms = false)
+        PdfPage page, bool usePageCoordinates, bool includeTextTransforms = false, bool honorActualText = true)
     {
         // Only the generated graphics-state operators are needed here. Keep
         // the default raw-Tm view for existing emission-contract assertions.
@@ -8050,10 +8050,22 @@ internal static partial class DocxCommentsTests
         // A text matrix's linear part (including synthetic slant) leaves its
         // origin at x/y. Existing callers retain their identity-matrix view.
         string linearTextMatrix = includeTextTransforms ? @"[-+\d.eE]+(?: [-+\d.eE]+){3}" : "1 0 0 1";
+        var actualMarkers = honorActualText ? Regex.Matches(page.Content,
+            @"(?m)^(?:/Span << /ActualText <(?<actual>[0-9A-F]+)> >> BDC|(?<end>EMC))\r?$") : null;
+        int actualIndex = 0;
+        string? actualText = null;
+        bool actualEmitted = false;
         foreach (Match show in Regex.Matches(page.Content,
             @"/(?<font>\S+) (?<size>[\d.]+) Tf\s+\S+ Tc\s+" + linearTextMatrix + @" (?<x>[-\d.]+) (?<y>[-\d.]+) Tm\s*(?<show><[0-9A-F]+> Tj|\[.*?\] TJ)",
             RegexOptions.Singleline))
         {
+            while (actualMarkers is not null && actualIndex < actualMarkers.Count && actualMarkers[actualIndex].Index < show.Index)
+            {
+                var marker = actualMarkers[actualIndex++];
+                actualText = marker.Groups["actual"].Success
+                    ? Encoding.BigEndianUnicode.GetString(Convert.FromHexString(marker.Groups["actual"].Value).AsSpan(2)) : null;
+                actualEmitted = false;
+            }
             while (transforms is not null && transformIndex < transforms.Count && transforms[transformIndex].Index < show.Index)
             {
                 var operation = transforms[transformIndex++];
@@ -8082,6 +8094,14 @@ internal static partial class DocxCommentsTests
             }
             double x = double.Parse(show.Groups["x"].Value, CultureInfo.InvariantCulture);
             double y = double.Parse(show.Groups["y"].Value, CultureInfo.InvariantCulture);
+            // All physical CIDs were validated above. One assembly span owns
+            // one logical symbol, even when several mapped pieces are painted.
+            if (actualText is not null)
+            {
+                if (actualEmitted) continue;
+                text.Clear().Append(actualText);
+                actualEmitted = true;
+            }
             yield return (font, text.ToString(), double.Parse(show.Groups["size"].Value, CultureInfo.InvariantCulture),
                 matrix.A * x + matrix.C * y + matrix.E, matrix.B * x + matrix.D * y + matrix.F);
         }

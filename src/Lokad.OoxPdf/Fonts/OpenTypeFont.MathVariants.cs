@@ -58,6 +58,12 @@ internal sealed partial class OpenTypeFont
         int count = U16(source, 4);
         if (count == 0 || source.Length - 6 < count * 10) return false;
         OoxConversionBudget.Current?.ChargeFontWork(1);
+        for (int index = 0; index < U16(construction, 2); index++)
+        {
+            token.ThrowIfCancellationRequested();
+            ushort variantGlyph = U16(construction, 4 + index * 4), advance = U16(construction, 6 + index * 4);
+            if (variantGlyph == 0 || variantGlyph >= GlyphCount || advance == 0) return false;
+        }
         var parts = new OpenTypeMathGlyphPart[count];
         for (int index = 0; index < count; index++)
         {
@@ -66,8 +72,7 @@ internal sealed partial class OpenTypeFont
             int at = 6 + index * 10;
             ushort partGlyph = U16(source, at), start = U16(source, at + 2), end = U16(source, at + 4),
                 advance = U16(source, at + 6), flags = U16(source, at + 8);
-            if (partGlyph == 0 || partGlyph >= GlyphCount || advance == 0 || start > advance || end > advance ||
-                (flags & ~1) != 0) return false;
+            if (partGlyph == 0 || partGlyph >= GlyphCount || advance == 0 || (flags & ~1) != 0) return false;
             parts[index] = new(partGlyph, start, end, advance, (flags & 1) != 0);
         }
         // Like MathConstants, retain the signed design-unit value without

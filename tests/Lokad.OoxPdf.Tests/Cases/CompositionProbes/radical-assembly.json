@@ -1,0 +1,15 @@
+[
+  {
+    "Id": "radical-assembly-child200",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/radical-assembly-child200.docx",
+    "Sha256": "F94BAFB250EE318AA07335BAFAC44E175A97D6BD62BFE235A54A7A48563BB9CC",
+    "SourceSha256": "A6E14611378485FF726EB85BE4664FAE30F4281EF777A3472BAEA1EC50D2F17D",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "ControlSize": 12,
+    "ChildSize": 200
+  }
+]

@@ -157,6 +157,8 @@ internal static class PdfContentValidator
         SetGraphicsState,
         FillShading,
         SetPattern,
+        BeginMarkedContent,
+        EndMarkedContent,
     }
 
     private static ContentOperator ClassifyOperator(string content, int start, int length)
@@ -179,6 +181,8 @@ internal static class PdfContentValidator
             2 when content[start] == 's' && content[start + 1] == 'h' => ContentOperator.FillShading,
             3 when content[start] == 's' && content[start + 1] == 'c' && content[start + 2] == 'n' => ContentOperator.SetPattern,
             3 when content[start] == 'S' && content[start + 1] == 'C' && content[start + 2] == 'N' => ContentOperator.SetPattern,
+            3 when content[start] == 'B' && (content[start + 1] == 'D' || content[start + 1] == 'M') && content[start + 2] == 'C' => ContentOperator.BeginMarkedContent,
+            3 when content[start] == 'E' && content[start + 1] == 'M' && content[start + 2] == 'C' => ContentOperator.EndMarkedContent,
             _ => ContentOperator.Unknown,
         };
     }
@@ -211,6 +215,7 @@ internal static class PdfContentValidator
         CancellationToken cancellationToken)
     {
         int graphicsDepth = 0;
+        int markedDepth = 0;
         bool inText = false;
         // Rolling window of recent tokens for operand lookback (Tf reads two back).
         var recent = new List<ContentToken>(4);
@@ -298,7 +303,7 @@ internal static class PdfContentValidator
                 }
 
                 PushToken(new ContentToken(IsName: false, ClassifyOperator(content, start, position - start), start, position - start), recent, ref tokenCount);
-                ApplyOperator(content, recent, context, ref graphicsDepth, ref inText, fonts, images, states, shadings, patterns);
+                ApplyOperator(content, recent, context, ref graphicsDepth, ref inText, ref markedDepth, fonts, images, states, shadings, patterns);
                 continue;
             }
 
@@ -325,6 +330,7 @@ internal static class PdfContentValidator
         {
             throw new InvalidDataException($"{context} leaves a text object open (BT without ET).");
         }
+        if (markedDepth != 0) throw new InvalidDataException($"{context} leaves marked content open (BMC/BDC without EMC).");
     }
 
     private static void PushToken(ContentToken token, List<ContentToken> recent, ref int tokenCount)
@@ -344,6 +350,7 @@ internal static class PdfContentValidator
         string context,
         ref int graphicsDepth,
         ref bool inText,
+        ref int markedDepth,
         HashSet<string> fonts,
         HashSet<string> images,
         HashSet<string> states,
@@ -378,6 +385,13 @@ internal static class PdfContentValidator
                 }
 
                 inText = false;
+                return;
+            case ContentOperator.BeginMarkedContent:
+                markedDepth++;
+                return;
+            case ContentOperator.EndMarkedContent:
+                if (markedDepth == 0) throw new InvalidDataException($"{context} ends marked content without opening it (stray EMC).");
+                markedDepth--;
                 return;
             case ContentOperator.SetFont:
                 RequireNameOperand(content, recent, 3, fonts, "font", "Tf", context);

@@ -17,6 +17,11 @@ internal static class MathFontTests
             new(34, 0, 300, 500, false), new(35, 200, 200, 200, true), new(36, 250, 0, 400, false)
         }), "The bottom, repeatable extender and top remain distinct source roles.");
         TestAssert.Throws<NotSupportedException>(() => ((IList<OpenTypeMathGlyphPart>)assembly.Parts)[0] = default);
+        byte[] overhangingConnector = AssemblyTable();
+        BinaryPrimitives.WriteUInt16BigEndian(overhangingConnector.AsSpan(72), ushort.MaxValue);
+        TestAssert.True(OpenTypeFont.Load(TestFontBuilder.CreateMathFont(overhangingConnector))
+            .TryGetMathVerticalAssembly(34, default, out var retained) && retained!.Parts[^1].StartConnectorLength == ushort.MaxValue,
+            "Connector metadata may exceed the part advance; placement owns the usable overlap.");
         TestAssert.True(font.TryGetMathVerticalVariant(34, 1000d, default, out var variant) && variant.Glyph == 36 &&
             !font.TryGetMathVerticalVariant(34, 1501d, default, out _), "Assembly decoding does not relax ready-made variant selection.");
         TestAssert.True(!font.TryGetMathVerticalAssembly(35, default, out _) &&
@@ -36,15 +41,15 @@ internal static class MathFontTests
         foreach ((int at, ushort value) in new (int, ushort)[]
         {
             (0, 2), (8, ushort.MaxValue), (20, 1), (22, 3), (28, 0), (28, 1), (28, ushort.MaxValue),
-            (30, ushort.MaxValue), (48, 0), (48, 4), (70, 0), (70, ushort.MaxValue),
-            (72, 401), (74, 401), (76, 0), (78, 2)
+            (30, ushort.MaxValue), (40, ushort.MaxValue), (48, 0), (48, 4), (70, 0), (70, ushort.MaxValue),
+            (76, 0), (78, 2)
         })
         {
             byte[] changed = (byte[])source.Clone();
             BinaryPrimitives.WriteUInt16BigEndian(changed.AsSpan(at), value);
             var font = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(changed));
             TestAssert.True(!font.TryGetMathVerticalAssembly(34, default, out var absent) && absent is null,
-                "Unknown versions, invalid offsets/counts/glyphs/connectors/flags reject the complete assembly.");
+                "Unknown versions and invalid offsets/counts/glyphs/flags reject the complete assembly.");
             TestAssert.Equal((ushort)34, font.MapCodePoint('A'));
         }
     }

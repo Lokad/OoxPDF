@@ -43,16 +43,15 @@ internal static partial class DocxMathLayout
         double extra = constants.GetValue(OpenTypeMathConstant.RadicalExtraAscender) * scale;
         double needed = child.AboveBaseline + (child.EnclosureBelowBaseline ?? child.BelowBaseline) + gap + rule;
         if (gap < 0d || rule <= 0d || extra < 0d || !double.IsFinite(needed) ||
-            !font.TryGetMathVerticalVariant(font.MapCodePoint(0x221A), needed / glyphScale, token, out var selected) ||
-            !font.TryGetGlyphBounds(selected.Glyph, out var bounds) || !resource.Font.TryGetEncodedCid(selected.Glyph, out ushort cid))
+            !TryMeasureRadicalShape(resource, needed / glyphScale, glyphScale, token, out var shape))
         { fallback = "UnsupportedMathRadicalVariant"; return false; }
-        gap += Math.Max(0d, selected.Advance * glyphScale - needed) / 2d;
-        double baseline = child.AboveBaseline + gap + rule - bounds.YMax * glyphScale;
-        double childX = font.GetAdvanceWidth(selected.Glyph) * glyphScale;
+        gap += Math.Max(0d, shape.AdvanceHeight * glyphScale - needed) / 2d;
+        double baseline = child.AboveBaseline + gap + rule - shape.YMax * glyphScale;
+        double childX = shape.AdvanceWidth * glyphScale;
         double advance = childX + child.AdvanceWidth;
-        double width = Math.Max(advance, Math.Max(childX + child.Width, bounds.XMax * glyphScale));
-        double above = Math.Max(child.AboveBaseline, baseline + bounds.YMax * glyphScale + extra);
-        double below = Math.Max(child.BelowBaseline, -baseline - bounds.YMin * glyphScale);
+        double width = Math.Max(advance, Math.Max(childX + child.Width, shape.XMax * glyphScale));
+        double above = Math.Max(child.AboveBaseline, baseline + shape.YMax * glyphScale + extra);
+        double below = Math.Max(child.BelowBaseline, -baseline - shape.YMin * glyphScale);
         DocxMathBox? degree = null;
         double degreeX = 0d, degreeY = 0d, rootX = 0d;
         if (radical.DegreeHidden != true)
@@ -66,8 +65,8 @@ internal static partial class DocxMathLayout
             // degree may start to its right while the group stays nonnegative.
             rootX = Math.Max(0d, degreeX + degree.AdvanceWidth +
                 constants.GetValue(OpenTypeMathConstant.RadicalKernAfterDegree) * scale);
-            degreeY = baseline + bounds.YMin * glyphScale +
-                constants.RadicalDegreeBottomRaisePercent / 100d * (bounds.YMax - bounds.YMin) * glyphScale + degree.BelowBaseline;
+            degreeY = baseline + shape.YMin * glyphScale +
+                constants.RadicalDegreeBottomRaisePercent / 100d * (shape.YMax - shape.YMin) * glyphScale + degree.BelowBaseline;
             childX += rootX;
             advance += rootX;
             width = Math.Max(width + rootX, degreeX + degree.Width);
@@ -81,9 +80,9 @@ internal static partial class DocxMathLayout
         Lokad.OoxPdf.Pptx.RgbColor color = child.Glyphs.Count == 0 ? default : child.Glyphs[0].Color;
         if (radical.ControlText is { } control)
         { color = default; Lokad.OoxPdf.Pptx.RgbColor.TryParse(control.ColorHex, out color); }
-        OoxConversionBudget.Current?.ChargeSceneNodes(2);
-        glyphs.Add(new(0x221A, 0x221A, resource, cid.ToString("X4", CultureInfo.InvariantCulture), glyphSize, rootX, baseline,
-            childX - rootX, color) { OriginalGlyph = selected.Glyph, ControlOwner = radical });
+        OoxConversionBudget.Current?.ChargeSceneNodes(shape.Parts.Count == 0 ? 2 : shape.Parts.Count + 1);
+        glyphs.Add(new(0x221A, 0x221A, resource, shape.EncodedGlyph, glyphSize, rootX, baseline,
+            childX - rootX, color) { OriginalGlyph = shape.Glyph, ControlOwner = radical, AssemblyParts = shape.Parts });
         foreach (var glyph in child.Glyphs) { token.ThrowIfCancellationRequested(); glyphs.Add(glyph with { X = glyph.X + childX }); }
         if (degree is not null)
             foreach (var glyph in degree.Glyphs)
