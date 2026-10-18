@@ -1,5 +1,18 @@
 # Composed-document reliability checkpoint
 
+C199 prevents late portfolio-input failures from consuming conversion work.
+MeasureCompositionPortfolio resolves/hashes every manifest input before creating
+output or converting. Retain later source/runtime identity checks; no resumable
+framework or new quota. The confirmed C197 interruption had completed38 cases
+before discovering untransferred inputs; those outputs were recovered, not replayed.
+Sentinel checks cover missing/mismatched second inputs and valid inputs: zero
+conversion/output publication for invalid batches, one sentinel conversion for
+valid batches, no .NET processes. The old script fails this regression. Add the
+small check to the existing Windows/Ubuntu CI composition-tool step. All17
+production/test assets and src/tests Git trees remain equal to qualified C197;
+carry47 Windows/29 Ubuntu/18 native skips with no build or suite/corpus replay.
+Evidence measurement-preflight-evidence.json.
+
 C198 reuses C197 for one compound specification with a double integral in body/
 repeated header and a triple integral in a table cell. Explicit/inherited limits,
 structured formula children, root assembly, image, links, notes and markup remain.
