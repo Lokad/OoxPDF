@@ -10,7 +10,18 @@ internal static partial class DocxMathLayout
     private static bool HasStructuredBoxArgument(DocxEquation equation, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        return GetFraction(equation) is not null || GetScripts(equation) is not null || GetMatrix(equation, token) is not null;
+        return GetFraction(equation) is not null || GetScripts(equation) is not null || GetMatrix(equation, token) is not null ||
+            HasMixedBoxArgument(equation, token);
+    }
+
+    private static bool HasMixedBoxArgument(DocxEquation equation, CancellationToken token)
+    {
+        // Reuse the ordered row composer for literal neighbors and the existing
+        // bounded boxes. Container children are excluded: this role cannot
+        // recursively admit another radical, n-ary, delimiter or function.
+        if (!equation.Content.Children.Any(node => node is not DocxMathRun)) return false;
+        return GetStructuredRow(equation, token) is { } row &&
+            row.Parts.All(part => part.Structure is DocxMathFraction or DocxMathScripts or DocxMathMatrix);
     }
 
     private static bool TryMeasureBoxArgument(DocxEquation equation, Func<DocxMathRun, PdfFontResource?> resolveFont,

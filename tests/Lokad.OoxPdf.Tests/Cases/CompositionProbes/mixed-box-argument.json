@@ -1,0 +1,80 @@
+[
+  {
+    "Id": "mixed-box-argument-radical-fraction",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-box-argument-radical-fraction.docx",
+    "Sha256": "BD63BABA2E35E07ECD6EE158BB760797FDF605904FA9145F3952F1A987390FF1",
+    "SourceSha256": "17DDB69EE5AE5DC9E84E1A1707BA368044A880D7E747547E70659EF1C58D4BFC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "Owner": "rad",
+    "Child": "fraction"
+  },
+  {
+    "Id": "mixed-box-argument-radical-matrix",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-box-argument-radical-matrix.docx",
+    "Sha256": "036E847436AD92725CDE663C5EAFD7FEDC77B603EC53176D2417554BF451F5A0",
+    "SourceSha256": "17DDB69EE5AE5DC9E84E1A1707BA368044A880D7E747547E70659EF1C58D4BFC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "Owner": "rad",
+    "Child": "matrix"
+  },
+  {
+    "Id": "mixed-box-argument-nary-script",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-box-argument-nary-script.docx",
+    "Sha256": "00796B2BD08BA4AC08B1809D9477F34329E1F9AB5C50941472E8665FD2C40EDF",
+    "SourceSha256": "17DDB69EE5AE5DC9E84E1A1707BA368044A880D7E747547E70659EF1C58D4BFC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "Owner": "nary",
+    "Child": "script"
+  },
+  {
+    "Id": "mixed-box-argument-nary-matrix",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-box-argument-nary-matrix.docx",
+    "Sha256": "2A88FDB5BF8E1329256B5FD8CD8BD52E98168172594A6B25F9EFCED57BE32080",
+    "SourceSha256": "17DDB69EE5AE5DC9E84E1A1707BA368044A880D7E747547E70659EF1C58D4BFC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "Owner": "nary",
+    "Child": "matrix"
+  },
+  {
+    "Id": "mixed-box-argument-delimiter-fraction-script",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-box-argument-delimiter-fraction-script.docx",
+    "Sha256": "55507C1F261B40D1E21ABBCA67F88A768183B33A19C302DEA084EDAAE59A14E8",
+    "SourceSha256": "17DDB69EE5AE5DC9E84E1A1707BA368044A880D7E747547E70659EF1C58D4BFC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "Owner": "d",
+    "Child": "both"
+  },
+  {
+    "Id": "mixed-box-argument-function-fraction",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/mixed-box-argument-function-fraction.docx",
+    "Sha256": "00584E4EA329CBCBA6CBE16871C4DB1CE8B53CA4ECD64EBABF06FD947DB87616",
+    "SourceSha256": "17DDB69EE5AE5DC9E84E1A1707BA368044A880D7E747547E70659EF1C58D4BFC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "Owner": "func",
+    "Child": "fraction"
+  }
+]

@@ -9,6 +9,48 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathFractionTests
 {
+    public static void MathFontMixedBoxArgumentsKeepSourceOrderAndCompleteBoundedFallbacks()
+    {
+        var resource = RadicalResource(); var font = resource.Font.Font;
+        var leading = (DocxMathRun)Row("B+").Children[0];
+        var trailing = (DocxMathRun)Row("+C").Children[0];
+        var fraction = new DocxMathFraction(Row("B"), Row("C"), "bar");
+        var template = RadicalEquation(12d) with { Display = false };
+        var radical = (DocxMathRadical)template.Content.Children[0];
+        DocxEquation Wrap(DocxMathNode child) => template with { Content = new([radical with
+            { Radicand = new([leading, child, trailing]) }]) };
+        var equation = Wrap(fraction);
+        TestAssert.True(DocxMathLayout.TryGetRuns(equation, default, out var runs) && runs.Count == 4 &&
+            ReferenceEquals(runs[0].Run, leading) && ReferenceEquals(runs[^1].Run, trailing) &&
+            runs[0].ScriptLevel == 0 && runs[1].ScriptLevel == 1 && runs[2].ScriptLevel == 1 && runs[^1].ScriptLevel == 0,
+            "Mixed arguments preserve literal neighbors and the fraction's source script roles in order.");
+        TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, default, out var measured, out var reason,
+            resolveControlMetrics: _ => font), reason ?? "Expected the existing row composer inside a bounded radical.");
+        var box = TestAssert.NotNull(measured);
+        TestAssert.Equal(7, box.Glyphs.Count);
+        TestAssert.Equal(2, box.Rules.Count);
+        foreach (DocxMathNode child in new DocxMathNode[] { radical,
+            fraction with { Numerator = new([fraction]) }, fraction with { HasUnsupportedProperties = true },
+            new DocxMathMatrix([new([new([radical])])]) })
+        {
+            var invalid = Wrap(child);
+            TestAssert.True(!DocxMathLayout.TryGetRuns(invalid, default, out _) &&
+                !DocxMathLayout.TryMeasure(invalid, _ => resource, default, out var absent, out _, resolveControlMetrics: _ => font) && absent is null,
+                "Unknown or deeper container/cell roles retain complete fallback, including literal neighbors.");
+        }
+        var missing = new PdfFontResource("MissingTail", PdfEmbeddedFont.CreateForGlyphMappings(font,
+            new[] { (font.MapCodePoint('B'), (int)'B'), (font.MapCodePoint('+'), (int)'+'), ((ushort)130, 0x221A), ((ushort)128, 0x221A) }, default));
+        TestAssert.True(!DocxMathLayout.TryMeasure(equation, run => ReferenceEquals(run, trailing) ? missing : resource,
+            default, out var partial, out _, resolveControlMetrics: _ => font) && partial is null,
+            "A late missing CID cannot publish the root, earlier fraction or literal prefix.");
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, cancelled.Token, out _));
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, cancelled.Token, out _, out _));
+        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 1 });
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, default,
+            out _, out _, resolveControlMetrics: _ => font));
+    }
+
     public static void MathFontFractionArgumentScriptsKeepStylesCancellationAndWorkBounds()
     {
         byte[] constants = Constants();

@@ -1,0 +1,785 @@
+{
+  "Scope": "Twelve independent Word references before exact-byte public promotion; existing one-point glyph/following-prose geometry gates. The upright function name is one Word text operation, so only its first origin is independently anchored.",
+  "Rows": [
+    {
+      "Id": "mixed-box-argument-radical-fraction",
+      "Mode": "final-preserve",
+      "MathText": "\u221ax+ab+y",
+      "MathGlyphCount": 7,
+      "FollowingY": 679.3,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 151.82,
+          "Y": 700.3
+        },
+        {
+          "Offset": 1,
+          "Text": "x",
+          "X": 160.82,
+          "Y": 700.66
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 170.3,
+          "Y": 700.66
+        },
+        {
+          "Offset": 3,
+          "Text": "a",
+          "X": 181.94,
+          "Y": 707.74
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 182.06,
+          "Y": 694.66
+        },
+        {
+          "Offset": 5,
+          "Text": "+",
+          "X": 190.1,
+          "Y": 700.66
+        },
+        {
+          "Offset": 6,
+          "Text": "y",
+          "X": 201.77,
+          "Y": 700.66
+        }
+      ],
+      "InputSha256": "BD63BABA2E35E07ECD6EE158BB760797FDF605904FA9145F3952F1A987390FF1",
+      "ReferencePdfSha256": "689377523F83AEABF79D5DF6A0D3A203E79D7A61A9F95F23D0722DB19C0FD5C8"
+    },
+    {
+      "Id": "mixed-box-argument-radical-fraction",
+      "Mode": "all-word-compatible",
+      "MathText": "\u221ax+ab+y",
+      "MathGlyphCount": 7,
+      "FollowingY": 679.3,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 151.82,
+          "Y": 700.3
+        },
+        {
+          "Offset": 1,
+          "Text": "x",
+          "X": 160.82,
+          "Y": 700.66
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 170.3,
+          "Y": 700.66
+        },
+        {
+          "Offset": 3,
+          "Text": "a",
+          "X": 181.94,
+          "Y": 707.74
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 182.06,
+          "Y": 694.66
+        },
+        {
+          "Offset": 5,
+          "Text": "+",
+          "X": 190.1,
+          "Y": 700.66
+        },
+        {
+          "Offset": 6,
+          "Text": "y",
+          "X": 201.77,
+          "Y": 700.66
+        }
+      ],
+      "InputSha256": "BD63BABA2E35E07ECD6EE158BB760797FDF605904FA9145F3952F1A987390FF1",
+      "ReferencePdfSha256": "C5E3AB3FC9CB2BD6FA768DDE06DF2D58156632D876146F3AC05643597C4E13DC"
+    },
+    {
+      "Id": "mixed-box-argument-radical-matrix",
+      "Mode": "final-preserve",
+      "MathText": "\u221ax+abcd+y",
+      "MathGlyphCount": 9,
+      "FollowingY": 679.3,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 151.82,
+          "Y": 700.3
+        },
+        {
+          "Offset": 1,
+          "Text": "x",
+          "X": 160.82,
+          "Y": 699.82
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 170.3,
+          "Y": 699.82
+        },
+        {
+          "Offset": 3,
+          "Text": "a",
+          "X": 181.94,
+          "Y": 706.18
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 201.29,
+          "Y": 706.18
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 182.42,
+          "Y": 692.02
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 200.93,
+          "Y": 692.02
+        },
+        {
+          "Offset": 7,
+          "Text": "+",
+          "X": 210.89,
+          "Y": 699.82
+        },
+        {
+          "Offset": 8,
+          "Text": "y",
+          "X": 222.53,
+          "Y": 699.82
+        }
+      ],
+      "InputSha256": "036E847436AD92725CDE663C5EAFD7FEDC77B603EC53176D2417554BF451F5A0",
+      "ReferencePdfSha256": "6024957DA59CE8B5254A763861A6C2982ABE86B080E7750C76EB9ED5F9A2AC2D"
+    },
+    {
+      "Id": "mixed-box-argument-radical-matrix",
+      "Mode": "all-word-compatible",
+      "MathText": "\u221ax+abcd+y",
+      "MathGlyphCount": 9,
+      "FollowingY": 679.3,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 151.82,
+          "Y": 700.3
+        },
+        {
+          "Offset": 1,
+          "Text": "x",
+          "X": 160.82,
+          "Y": 699.82
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 170.3,
+          "Y": 699.82
+        },
+        {
+          "Offset": 3,
+          "Text": "a",
+          "X": 181.94,
+          "Y": 706.18
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 201.29,
+          "Y": 706.18
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 182.42,
+          "Y": 692.02
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 200.93,
+          "Y": 692.02
+        },
+        {
+          "Offset": 7,
+          "Text": "+",
+          "X": 210.89,
+          "Y": 699.82
+        },
+        {
+          "Offset": 8,
+          "Text": "y",
+          "X": 222.53,
+          "Y": 699.82
+        }
+      ],
+      "InputSha256": "036E847436AD92725CDE663C5EAFD7FEDC77B603EC53176D2417554BF451F5A0",
+      "ReferencePdfSha256": "1444147FA23B285C753AFC0C7265F8C2E6878A44BF48BE81CB6BA58B1EFF3DC5"
+    },
+    {
+      "Id": "mixed-box-argument-nary-script",
+      "Mode": "final-preserve",
+      "MathText": "\u2211x+c2+yni",
+      "MathGlyphCount": 9,
+      "FollowingY": 693.82,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u2211",
+          "X": 151.82,
+          "Y": 708.94
+        },
+        {
+          "Offset": 1,
+          "Text": "x",
+          "X": 168.02,
+          "Y": 708.46
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 177.5,
+          "Y": 708.46
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 189.14,
+          "Y": 708.46
+        },
+        {
+          "Offset": 4,
+          "Text": "2",
+          "X": 195.29,
+          "Y": 712.9
+        },
+        {
+          "Offset": 5,
+          "Text": "+",
+          "X": 203.33,
+          "Y": 708.46
+        },
+        {
+          "Offset": 6,
+          "Text": "y",
+          "X": 214.97,
+          "Y": 708.46
+        },
+        {
+          "Offset": 7,
+          "Text": "n",
+          "X": 160.34,
+          "Y": 713.38
+        },
+        {
+          "Offset": 8,
+          "Text": "i",
+          "X": 160.34,
+          "Y": 705.58
+        }
+      ],
+      "InputSha256": "00796B2BD08BA4AC08B1809D9477F34329E1F9AB5C50941472E8665FD2C40EDF",
+      "ReferencePdfSha256": "24F651A85804C6754D2699C1E98C540F43734D1D9D1F358C467EE83CB062F9A4"
+    },
+    {
+      "Id": "mixed-box-argument-nary-script",
+      "Mode": "all-word-compatible",
+      "MathText": "\u2211x+c2+yni",
+      "MathGlyphCount": 9,
+      "FollowingY": 693.82,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u2211",
+          "X": 151.82,
+          "Y": 708.94
+        },
+        {
+          "Offset": 1,
+          "Text": "x",
+          "X": 168.02,
+          "Y": 708.46
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 177.5,
+          "Y": 708.46
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 189.14,
+          "Y": 708.46
+        },
+        {
+          "Offset": 4,
+          "Text": "2",
+          "X": 195.29,
+          "Y": 712.9
+        },
+        {
+          "Offset": 5,
+          "Text": "+",
+          "X": 203.33,
+          "Y": 708.46
+        },
+        {
+          "Offset": 6,
+          "Text": "y",
+          "X": 214.97,
+          "Y": 708.46
+        },
+        {
+          "Offset": 7,
+          "Text": "n",
+          "X": 160.34,
+          "Y": 713.38
+        },
+        {
+          "Offset": 8,
+          "Text": "i",
+          "X": 160.34,
+          "Y": 705.58
+        }
+      ],
+      "InputSha256": "00796B2BD08BA4AC08B1809D9477F34329E1F9AB5C50941472E8665FD2C40EDF",
+      "ReferencePdfSha256": "C8B42534F30CB3DFD5413FB5E4DD00862555E9FD327944D21FB30A2F6AA4D871"
+    },
+    {
+      "Id": "mixed-box-argument-nary-matrix",
+      "Mode": "final-preserve",
+      "MathText": "\u2211x+abcd+yni",
+      "MathGlyphCount": 11,
+      "FollowingY": 684.22,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u2211",
+          "X": 151.82,
+          "Y": 703.9
+        },
+        {
+          "Offset": 1,
+          "Text": "x",
+          "X": 168.02,
+          "Y": 703.42
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 177.5,
+          "Y": 703.42
+        },
+        {
+          "Offset": 3,
+          "Text": "a",
+          "X": 189.14,
+          "Y": 709.78
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 208.37,
+          "Y": 709.78
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 189.62,
+          "Y": 695.62
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 208.13,
+          "Y": 695.62
+        },
+        {
+          "Offset": 7,
+          "Text": "+",
+          "X": 218.09,
+          "Y": 703.42
+        },
+        {
+          "Offset": 8,
+          "Text": "y",
+          "X": 229.73,
+          "Y": 703.42
+        },
+        {
+          "Offset": 9,
+          "Text": "n",
+          "X": 160.34,
+          "Y": 708.34
+        },
+        {
+          "Offset": 10,
+          "Text": "i",
+          "X": 160.34,
+          "Y": 700.54
+        }
+      ],
+      "InputSha256": "2A88FDB5BF8E1329256B5FD8CD8BD52E98168172594A6B25F9EFCED57BE32080",
+      "ReferencePdfSha256": "C8F48968C907FFA639A9F7525E5F48AA5F0692590D03C1DF375C74BCBCF4BFF6"
+    },
+    {
+      "Id": "mixed-box-argument-nary-matrix",
+      "Mode": "all-word-compatible",
+      "MathText": "\u2211x+abcd+yni",
+      "MathGlyphCount": 11,
+      "FollowingY": 684.22,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u2211",
+          "X": 151.82,
+          "Y": 703.9
+        },
+        {
+          "Offset": 1,
+          "Text": "x",
+          "X": 168.02,
+          "Y": 703.42
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 177.5,
+          "Y": 703.42
+        },
+        {
+          "Offset": 3,
+          "Text": "a",
+          "X": 189.14,
+          "Y": 709.78
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 208.37,
+          "Y": 709.78
+        },
+        {
+          "Offset": 5,
+          "Text": "c",
+          "X": 189.62,
+          "Y": 695.62
+        },
+        {
+          "Offset": 6,
+          "Text": "d",
+          "X": 208.13,
+          "Y": 695.62
+        },
+        {
+          "Offset": 7,
+          "Text": "+",
+          "X": 218.09,
+          "Y": 703.42
+        },
+        {
+          "Offset": 8,
+          "Text": "y",
+          "X": 229.73,
+          "Y": 703.42
+        },
+        {
+          "Offset": 9,
+          "Text": "n",
+          "X": 160.34,
+          "Y": 708.34
+        },
+        {
+          "Offset": 10,
+          "Text": "i",
+          "X": 160.34,
+          "Y": 700.54
+        }
+      ],
+      "InputSha256": "2A88FDB5BF8E1329256B5FD8CD8BD52E98168172594A6B25F9EFCED57BE32080",
+      "ReferencePdfSha256": "8760C0661B7CA5ABABFBD64880A69618E9AE5FBB74F96542B1096E6A8D82E526"
+    },
+    {
+      "Id": "mixed-box-argument-delimiter-fraction-script",
+      "Mode": "final-preserve",
+      "MathText": "(x+ab+c2+y)",
+      "MathGlyphCount": 11,
+      "FollowingY": 686.98,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "(",
+          "X": 151.82,
+          "Y": 704.86
+        },
+        {
+          "Offset": 1,
+          "Text": "x",
+          "X": 157.7,
+          "Y": 704.86
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 167.18,
+          "Y": 704.86
+        },
+        {
+          "Offset": 3,
+          "Text": "a",
+          "X": 178.82,
+          "Y": 711.94
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 178.94,
+          "Y": 698.86
+        },
+        {
+          "Offset": 5,
+          "Text": "+",
+          "X": 186.98,
+          "Y": 704.86
+        },
+        {
+          "Offset": 6,
+          "Text": "c",
+          "X": 198.65,
+          "Y": 704.86
+        },
+        {
+          "Offset": 7,
+          "Text": "2",
+          "X": 204.77,
+          "Y": 709.3
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 212.81,
+          "Y": 704.86
+        },
+        {
+          "Offset": 9,
+          "Text": "y",
+          "X": 224.45,
+          "Y": 704.86
+        },
+        {
+          "Offset": 10,
+          "Text": ")",
+          "X": 231.41,
+          "Y": 704.86
+        }
+      ],
+      "InputSha256": "55507C1F261B40D1E21ABBCA67F88A768183B33A19C302DEA084EDAAE59A14E8",
+      "ReferencePdfSha256": "E2E311A0950319F4C653D063A59DCD9EFE62E57A89EF2701BD03440E935291DD"
+    },
+    {
+      "Id": "mixed-box-argument-delimiter-fraction-script",
+      "Mode": "all-word-compatible",
+      "MathText": "(x+ab+c2+y)",
+      "MathGlyphCount": 11,
+      "FollowingY": 686.98,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "(",
+          "X": 151.82,
+          "Y": 704.86
+        },
+        {
+          "Offset": 1,
+          "Text": "x",
+          "X": 157.7,
+          "Y": 704.86
+        },
+        {
+          "Offset": 2,
+          "Text": "+",
+          "X": 167.18,
+          "Y": 704.86
+        },
+        {
+          "Offset": 3,
+          "Text": "a",
+          "X": 178.82,
+          "Y": 711.94
+        },
+        {
+          "Offset": 4,
+          "Text": "b",
+          "X": 178.94,
+          "Y": 698.86
+        },
+        {
+          "Offset": 5,
+          "Text": "+",
+          "X": 186.98,
+          "Y": 704.86
+        },
+        {
+          "Offset": 6,
+          "Text": "c",
+          "X": 198.65,
+          "Y": 704.86
+        },
+        {
+          "Offset": 7,
+          "Text": "2",
+          "X": 204.77,
+          "Y": 709.3
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 212.81,
+          "Y": 704.86
+        },
+        {
+          "Offset": 9,
+          "Text": "y",
+          "X": 224.45,
+          "Y": 704.86
+        },
+        {
+          "Offset": 10,
+          "Text": ")",
+          "X": 231.41,
+          "Y": 704.86
+        }
+      ],
+      "InputSha256": "55507C1F261B40D1E21ABBCA67F88A768183B33A19C302DEA084EDAAE59A14E8",
+      "ReferencePdfSha256": "68AC7F7D53B7D1DA970B9680024D6B35ECAB5C16E52DD0DFD6A0FD5F5DBA1532"
+    },
+    {
+      "Id": "mixed-box-argument-function-fraction",
+      "Mode": "final-preserve",
+      "MathText": "sinx+ab+y",
+      "MathGlyphCount": 9,
+      "FollowingY": 689.5,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "s",
+          "X": 151.82,
+          "Y": 707.02
+        },
+        {
+          "Offset": 3,
+          "Text": "x",
+          "X": 169.1,
+          "Y": 707.02
+        },
+        {
+          "Offset": 4,
+          "Text": "+",
+          "X": 178.46,
+          "Y": 707.02
+        },
+        {
+          "Offset": 5,
+          "Text": "a",
+          "X": 190.1,
+          "Y": 714.12
+        },
+        {
+          "Offset": 6,
+          "Text": "b",
+          "X": 190.22,
+          "Y": 701.02
+        },
+        {
+          "Offset": 7,
+          "Text": "+",
+          "X": 198.29,
+          "Y": 707.02
+        },
+        {
+          "Offset": 8,
+          "Text": "y",
+          "X": 209.93,
+          "Y": 707.02
+        }
+      ],
+      "InputSha256": "00584E4EA329CBCBA6CBE16871C4DB1CE8B53CA4ECD64EBABF06FD947DB87616",
+      "ReferencePdfSha256": "86E461926BBD357869F093BE05F194EDEB7797A489B9E34EDDE31F1632DEA3E7"
+    },
+    {
+      "Id": "mixed-box-argument-function-fraction",
+      "Mode": "all-word-compatible",
+      "MathText": "sinx+ab+y",
+      "MathGlyphCount": 9,
+      "FollowingY": 689.5,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "s",
+          "X": 151.82,
+          "Y": 707.02
+        },
+        {
+          "Offset": 3,
+          "Text": "x",
+          "X": 169.1,
+          "Y": 707.02
+        },
+        {
+          "Offset": 4,
+          "Text": "+",
+          "X": 178.46,
+          "Y": 707.02
+        },
+        {
+          "Offset": 5,
+          "Text": "a",
+          "X": 190.1,
+          "Y": 714.12
+        },
+        {
+          "Offset": 6,
+          "Text": "b",
+          "X": 190.22,
+          "Y": 701.02
+        },
+        {
+          "Offset": 7,
+          "Text": "+",
+          "X": 198.29,
+          "Y": 707.02
+        },
+        {
+          "Offset": 8,
+          "Text": "y",
+          "X": 209.93,
+          "Y": 707.02
+        }
+      ],
+      "InputSha256": "00584E4EA329CBCBA6CBE16871C4DB1CE8B53CA4ECD64EBABF06FD947DB87616",
+      "ReferencePdfSha256": "FB87A1337EF69D8A37AC44CB78A7645981AB91F3D09C94AF748ECA3B930C72A0"
+    }
+  ]
+}

@@ -145,10 +145,9 @@ internal static partial class DocxMathLayout
         bool AddContainerArgumentRows(DocxMathRow content)
         {
             var argument = equation with { Content = content };
-            // Radicals and n-ary operators share bounded box arguments. Only
-            // this outer role delegates a matrix; its existing cell grammar
-            // rejects another matrix or container rather than recursing.
-            return GetMatrix(argument, token) is not null
+            // The outer container delegates a matrix or a mixed row of existing
+            // bounded boxes. Their child grammars still reject deeper owners.
+            return GetMatrix(argument, token) is not null || HasMixedBoxArgument(argument, token)
                 ? TryGetRuns(argument, token, out argumentRuns)
                 : AddBoxArgumentRows(content);
         }
