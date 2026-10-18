@@ -1,5 +1,20 @@
 # Composed-document reliability checkpoint
 
+## C230: ordinary-footer sibling exposes placement dependency (2026-10-18)
+
+Removing only the added mixed footer paragraph restores the original report
+footer while preserving all64 note paragraphs and all original body/static
+content. Frozen C229 renders two modes without builds/suite replay; two new Word
+views are exported once. Review notes again overlap body ink, visually confirmed
+on page2. Word21/32/11 source membership differs from Final22/33/9 and Review
+24/32/8; all64 paragraphs remain once/in order, with four pages in every output.
+The shared placement resolver rejects an ordinary bottom-margin frame unless
+typography qualifies it, so physical placement still depends on footer intrusion.
+Two strict visual gates remain failed; eight paired PNG hashes retained, one
+pair reviewed. C231 will admit ordinary measured placement independently of
+intrusion/typography and retain focused legacy separator/admission controls.
+Evidence: long-note-footer-sibling-observations.json. No font/line-height fit.
+
 ## C229: shared physical body boundary seats initial note heads (2026-10-18)
 
 C228's body overlap and initial head-capacity errors close in the admitted
