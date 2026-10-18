@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+C183 validates structured cells inside complete root/n-ary specifications.
+One development document combines mixed fraction/script matrix cells with
+ordinary equations, tables, image, numbering, navigation, note/comments and
+static stories. C180 emits two pages/21 mathematical glyphs per preset; reused
+C181 matches Word's three pages/all81 body+15 header glyphs. Two Word exports
+occur once before exact-byte promotion.2,153 old inputs retain hashes, three
+added; fixed/held-out inputs remain unchanged. No library rendering change.
+
+Six document methods qualify:6 Windows/3 Ubuntu pass,three native skips. The
+initial Windows run exposes an overly strict portable annotation count: one
+source link wraps into two distinct rectangles. The corrected contract checks
+source URI, distinct positive rectangles and page ownership; native Office
+counts remain exact. Native3 passes carry and3 portable checks qualify the new
+contract(two had passed weaker assertions); Ubuntu6 methods run once. Initial
+failure and fragment probe remain. Library/14 non-test assets equal C181, so
+its120 Windows/88 Ubuntu checks(32 skips) and old document evidence carry.
+The original specification also now enforces its independently fixed Word page
+count; the prior mixed-argument origin gates remain enabled.
+
+Four new full-page pairs reviewed/two prior pairs carried by both raster hashes
+show no new clipping. Both strict raster gates/raw complex-math/sin-token flags
+remain; prose/simple-math deficits zero, raw audit exits1. Seven of ten1pt origin
+groups remain failed(maxY4.472pt): content/page checks do not claim geometry
+passes.17 assets/four smoke PDFs transfer without root/library rebuild, old
+capability or corpus replay. Root0e23f52a; evidence
+artifacts/composition-c1/structured-cell-specification-evidence.json. Next, isolate
+whether an unsupported equation also suppresses a supported sibling in body flow.
+
 C182 bounds the mixed-row geometry investigation without a production change.
 Retained C181 Word/source frames place first-row b anchors within0.057pt while
 lower-row pitch remains short by0.869/0.691/2.189pt. Body baseline errors differ
