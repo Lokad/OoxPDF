@@ -1,0 +1,46 @@
+[
+  {
+    "Id": "composed-operator-matrix-specification",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/composed-operator-matrix-specification.docx",
+    "Sha256": "D7B869C53D801B3C861513B0489A5B45DF646751C4938710D1D8408CBBF4614E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Replenishment calculation specification",
+      "Calculation inputs and acceptance criteria",
+      "Review section 20.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "Features": [
+      "tables",
+      "numbering",
+      "image",
+      "equations",
+      "bookmark",
+      "link",
+      "header",
+      "footer",
+      "footnote",
+      "comment",
+      "matrix",
+      "radical",
+      "nary"
+    ],
+    "SourceSha256": "89907FD078C01576171B70051341239BA6B8189C835BDD73094B94B32AF903E5",
+    "FormulaSources": [
+      {
+        "Input": "CompositionProbes/radical-matrix-inline.docx",
+        "Sha256": "A6E14611378485FF726EB85BE4664FAE30F4281EF777A3472BAEA1EC50D2F17D"
+      },
+      {
+        "Input": "CompositionProbes/nary-matrix-inline-sum.docx",
+        "Sha256": "21788D6DA2109B622031A9A0FB1D57F1EB7134A18A05D7AD025B331A813D89CD"
+      },
+      {
+        "Input": "CompositionProbes/nary-matrix-display-product.docx",
+        "Sha256": "F2BA59296A8FB196B6FFD8F6ED4C795DEFEC920023A6458B880792DF483C1F27"
+      }
+    ]
+  }
+]
