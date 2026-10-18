@@ -1,0 +1,65 @@
+{
+  "Scope": "Independent Word admission outcomes. Four promoted controls retain exact previously exported source bytes; no repeat exports.",
+  "Rows": [
+    {
+      "Id": "composed-operator-matrix-specification",
+      "Mode": "final-preserve",
+      "Input": "Composition/composed-operator-matrix-specification.docx",
+      "InputSha256": "D7B869C53D801B3C861513B0489A5B45DF646751C4938710D1D8408CBBF4614E",
+      "ReferencePdfSha256": "35724A493031EBDB3738E70E5FC445F37E9BAC13B0F666C3DFBE77653E2F8F06",
+      "Pages": 3,
+      "MathGlyphs": 43,
+      "HasBodyNote": true
+    },
+    {
+      "Id": "composed-operator-matrix-specification",
+      "Mode": "all-word-compatible",
+      "Input": "Composition/composed-operator-matrix-specification.docx",
+      "InputSha256": "D7B869C53D801B3C861513B0489A5B45DF646751C4938710D1D8408CBBF4614E",
+      "ReferencePdfSha256": "8FD2F71E4DD16EF1176F60C1C7DCFD79AAC5DA6428B58B8D603D4B0A78898216",
+      "Pages": 3,
+      "MathGlyphs": 43,
+      "HasBodyNote": true
+    },
+    {
+      "Id": "operator-matrix-specification-without-footnote",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/operator-matrix-specification-without-footnote.docx",
+      "InputSha256": "EFF2C15CCA9CF13103B90E20F999E48263D3952E84005378983AC62B19A69A37",
+      "ReferencePdfSha256": "4C2DFD6D9A02E42A2AC9DDD757B5A15680D3DA122157610AC1609EBE4D4AABF3",
+      "Pages": 2,
+      "MathGlyphs": 38,
+      "HasBodyNote": false
+    },
+    {
+      "Id": "operator-matrix-specification-without-static",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/operator-matrix-specification-without-static.docx",
+      "InputSha256": "2F9D78B67E973E17F764709B90A8A034ED9564EEE43972444FED4F2113B7BE15",
+      "ReferencePdfSha256": "8C6A28A84A5D42A18254B7DBB5C272BD8C4A529977D5C6BDA94A494D1D4A1960",
+      "Pages": 2,
+      "MathGlyphs": 28,
+      "HasBodyNote": true
+    },
+    {
+      "Id": "operator-matrix-specification-without-header",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/operator-matrix-specification-without-header.docx",
+      "InputSha256": "4B166608273F40A0D94E066EC3B2F3BA75DE71AC5539448F89329E1196166E2B",
+      "ReferencePdfSha256": "702579428B41D9461ECE69EFFC3697FAE551694E9831D72926F90AB7ED56C6A9",
+      "Pages": 2,
+      "MathGlyphs": 28,
+      "HasBodyNote": true
+    },
+    {
+      "Id": "operator-matrix-specification-without-footer",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/operator-matrix-specification-without-footer.docx",
+      "InputSha256": "B99E254139063A220DEF5CFE4409BE8A7C1F24EB06159D4EB01BFB1EF9611A02",
+      "ReferencePdfSha256": "6AF5CA7821B0BB840258DEBC4913C21163912082C5CC90BF03DB5A1A4A74B578",
+      "Pages": 3,
+      "MathGlyphs": 43,
+      "HasBodyNote": true
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+[
+  {
+    "Id": "operator-matrix-specification-without-footnote",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/operator-matrix-specification-without-footnote.docx",
+    "Sha256": "EFF2C15CCA9CF13103B90E20F999E48263D3952E84005378983AC62B19A69A37",
+    "SourceSha256": "D7B869C53D801B3C861513B0489A5B45DF646751C4938710D1D8408CBBF4614E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": [
+      "Replenishment calculation specification"
+    ],
+    "Features": [
+      "without-footnote"
+    ]
+  },
+  {
+    "Id": "operator-matrix-specification-without-static",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/operator-matrix-specification-without-static.docx",
+    "Sha256": "2F9D78B67E973E17F764709B90A8A034ED9564EEE43972444FED4F2113B7BE15",
+    "SourceSha256": "D7B869C53D801B3C861513B0489A5B45DF646751C4938710D1D8408CBBF4614E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": [
+      "Replenishment calculation specification"
+    ],
+    "Features": [
+      "without-static"
+    ]
+  },
+  {
+    "Id": "operator-matrix-specification-without-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/operator-matrix-specification-without-header.docx",
+    "Sha256": "4B166608273F40A0D94E066EC3B2F3BA75DE71AC5539448F89329E1196166E2B",
+    "SourceSha256": "D7B869C53D801B3C861513B0489A5B45DF646751C4938710D1D8408CBBF4614E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": [
+      "Replenishment calculation specification"
+    ],
+    "Features": [
+      "without-header"
+    ]
+  },
+  {
+    "Id": "operator-matrix-specification-without-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/operator-matrix-specification-without-footer.docx",
+    "Sha256": "B99E254139063A220DEF5CFE4409BE8A7C1F24EB06159D4EB01BFB1EF9611A02",
+    "SourceSha256": "D7B869C53D801B3C861513B0489A5B45DF646751C4938710D1D8408CBBF4614E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": [
+      "Replenishment calculation specification"
+    ],
+    "Features": [
+      "without-footer"
+    ]
+  }
+]

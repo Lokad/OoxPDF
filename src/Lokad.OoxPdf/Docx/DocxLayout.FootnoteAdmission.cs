@@ -35,10 +35,10 @@ internal sealed partial class DocxLayoutEngine
     {
         token.ThrowIfCancellationRequested();
         if (!stories.Any(story => story.Story.Kind == DocxRelatedStoryKind.Footnote && story.Story.IsNormalStoryType)) return null;
-        // Column/section changes, selected static frames and keep chains retain
-        // their existing reservation/continuation contracts. Unrelated tables or
-        // mixed paragraph content do not change complete body-marker ownership.
-        if (!DocxPlainBodyFrame.HasKnownBodyFrame(document) || !DocxPlainBodyFrame.HasNoStaticStories(document) ||
+        // Column/section changes and keep chains retain their existing
+        // reservation/continuation contracts. Selected static stories and mixed
+        // paragraph content do not change complete body-marker ownership.
+        if (!DocxPlainBodyFrame.HasKnownBodyFrame(document) ||
             document.FinalSectionBreak!.ColumnCountValue is not (null or "1") ||
             document.FinalSectionBreak.ColumnDefinitions.Count > 1 ||
             document.FinalSectionBreak.PageSettings.FootnoteReferenceSettings.PositionValue is not (null or "pageBottom")) return null;
@@ -92,8 +92,10 @@ internal sealed partial class DocxLayoutEngine
                         !DocxCustomNoteMarkerOwners.TryGetTargetRun(note.Story, custom, out var target) ||
                         target.EffectiveProperties.Hidden) return null;
                 }
-                else if (!DocxInlineContent.TryGetAutomaticNoteRun(reference, out var marker) || !ReferenceEquals(run, marker) ||
-                    note.Story.Paragraphs[0].Runs.Count == 0 || note.Story.Paragraphs[0].Runs[0].Text != reference.DisplayText) return null;
+                // Physical admission needs the owned body reference and unique
+                // target story, even when that story has no painted number.
+                // Numbering and custom-mark rewriting keep their own checks.
+                else if (!DocxInlineContent.TryGetAutomaticNoteRun(reference, out var marker) || !ReferenceEquals(run, marker)) return null;
                 if (document.BodyElements[block] is DocxTableElement)
                 {
                     if (!tableOwners.TryGetValue(block, out var indexed)) tableOwners.Add(block, indexed = []);
