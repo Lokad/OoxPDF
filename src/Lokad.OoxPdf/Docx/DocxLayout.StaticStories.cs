@@ -87,6 +87,10 @@ internal sealed partial class DocxLayoutEngine
             {
                 footerContentTop = firstFooterLine.BaselineY + math.BaselineInset * firstFooterLine.MathScale;
             }
+            else if (firstFooterLine.OccupiedLineBox is { } occupied)
+            {
+                footerContentTop = firstFooterLine.BaselineY + occupied.BaselineInset;
+            }
             else
             {
                 double firstFooterSize = GetParagraphFontSize(firstFooterParagraph);
@@ -419,6 +423,7 @@ internal sealed partial class DocxLayoutEngine
                     double staticLineHeight = ascender + descender;
                     double staticBaselineY = isHeader ? cursorY - ascender : cursorY + descender;
                     double? staticSingleLineHeight = null;
+                    DocxOccupiedLineBox? staticOccupiedLineBox = null;
                     DocxLineHeightSource staticLineHeightSource = DocxLineHeightSource.StaticWindowsExtents;
                     if (unscaledLineMetrics is not null &&
                         staticEffective.LineSpacingPoints is null)
@@ -470,8 +475,14 @@ internal sealed partial class DocxLayoutEngine
                         staticLineHeight = profile.LineHeight * paragraphSpacingScale;
                         staticSingleLineHeight = profile.SingleLineHeight;
                         staticLineHeightSource = profile.Source;
-                        double baselineOffset = ResolveDeclaredStaticBaselineOffset(profile.Source, staticFontSize, profile.LineHeight, descender);
+                        double declaredDescender = profile.Source == DocxLineHeightSource.AtLeastLineSpacing
+                            ? line.Spans.Max(span => MeasureStaticMinimumDescender(span.StyleRun, staticMetrics)) : descender;
+                        double baselineOffset = ResolveDeclaredStaticBaselineOffset(profile.Source, staticFontSize, profile.LineHeight, declaredDescender);
                         staticBaselineY = cursorY - baselineOffset;
+                        if (profile.Source == DocxLineHeightSource.AtLeastLineSpacing &&
+                            double.IsFinite(staticLineHeight) && staticLineHeight > 0d &&
+                            double.IsFinite(baselineOffset) && baselineOffset >= 0d && baselineOffset <= staticLineHeight)
+                            staticOccupiedLineBox = new(staticLineHeight, baselineOffset);
                     }
                     IReadOnlyList<DocxTextSegmentLayout> segments = CreateStaticTextSegments(line.Spans, lineX);
                     IReadOnlyList<DocxTextSegmentLayout> emissionSegments = segments;
@@ -505,7 +516,8 @@ internal sealed partial class DocxLayoutEngine
                         SourceParagraph: paragraph,
                         SourceParagraphIndex: paragraphIndex,
                         Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType),
-                        LineHeightSource: staticLineHeightSource, SourceBlockIndex: null, EndsWithIntraTokenBreak: false, SingleLineHeight: staticSingleLineHeight, ListLabelSingleLineHeight: null, BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: null, EmitsTerminalParagraphMark: false));
+                        LineHeightSource: staticLineHeightSource, SourceBlockIndex: null, EndsWithIntraTokenBreak: false, SingleLineHeight: staticSingleLineHeight, ListLabelSingleLineHeight: null, BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: null, EmitsTerminalParagraphMark: false)
+                    { OccupiedLineBox = staticOccupiedLineBox });
                     // RV06 header-align probe: headers and footers keep one row-end space
                     // beyond authored trailing on the last wrapped line too.
                     if (paragraph.Images.Count == 0 &&
@@ -716,7 +728,9 @@ internal sealed partial class DocxLayoutEngine
                 DocxLineHeightProfile profile = ResolveLineHeightProfile(planParagraph, planFontSize, textMeasurer, selectMaxAcrossRuns: true);
                 maxHeight = profile.LineHeight * planScale;
                 double maximumDescender = planLines.SelectMany(line => line.Spans)
-                    .Select(span => planMetrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize)).DefaultIfEmpty(0d).Max();
+                    .Select(span => profile.Source == DocxLineHeightSource.AtLeastLineSpacing
+                        ? MeasureStaticMinimumDescender(span.StyleRun, planMetrics)
+                        : planMetrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize)).DefaultIfEmpty(0d).Max();
                 maxDisplacement = ResolveDeclaredStaticBaselineOffset(profile.Source, planFontSize, profile.LineHeight, maximumDescender);
             }
 
@@ -963,6 +977,19 @@ internal sealed partial class DocxLayoutEngine
     private static double MeasureStaticTextSpansForWrapping(IReadOnlyList<DocxTextSpan> spans, IDocxTextMeasurer textMeasurer)
     {
         return MeasureStaticTextSpans(NormalizeHiddenBreakSpans(spans, preserveTerminalSoftHyphen: false), textMeasurer);
+    }
+
+    private static double MeasureStaticMinimumDescender(DocxTextRun run, IDocxStaticTextMetricsProvider metrics)
+    {
+        double size = run.EffectiveProperties.FontSize;
+        if (metrics is IDocxTypographicMetricsProvider typographic && typographic.UseTypographicMetrics(run))
+        {
+            double height = typographic.MeasureTypographicLineHeight(run, size);
+            double inset = typographic.MeasureTypographicBaselineInset(run, size);
+            if (double.IsFinite(height) && height > 0d && double.IsFinite(inset) && inset > 0d && inset <= height)
+                return height - inset;
+        }
+        return metrics.MeasureWindowsDescender(run, size);
     }
 
     private static double ResolveDeclaredStaticBaselineOffset(DocxLineHeightSource? source, double fontSize, double lineHeight, double descender)

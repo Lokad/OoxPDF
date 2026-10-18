@@ -1,0 +1,93 @@
+{
+  "Source": "Independent Word 16 plain static sources requesting typographic metrics; unchanged one-point gates.",
+  "Rows": [
+    {
+      "Id": "minimum-static-typographic-header",
+      "Part": "word/headerMinimumPlain.xml",
+      "Mode": "final-preserve",
+      "InputSha256": "7C0D5517B11DB8830CE4BA987B987EE830815486075CB6B4F6DF84A3C2BDB576",
+      "ReferencePdfSha256": "109F3F77E25EDE1BD400CEE371C37C981825D3A8651D6F0CB2023A9B4FD6F659",
+      "StaticY": [
+        738.24,
+        718.32,
+        698.26
+      ],
+      "BodyAnchors": [
+        {
+          "Prefix": "Leading paragraph.",
+          "Y": 684.58
+        },
+        {
+          "Prefix": "Following prose.",
+          "Y": 669.94
+        }
+      ]
+    },
+    {
+      "Id": "minimum-static-typographic-header",
+      "Part": "word/headerMinimumPlain.xml",
+      "Mode": "all-word-compatible",
+      "InputSha256": "7C0D5517B11DB8830CE4BA987B987EE830815486075CB6B4F6DF84A3C2BDB576",
+      "ReferencePdfSha256": "F1AECA033BA96FEB583B2CD70F4774BE26B57380AC21AD0E09AF2FD6CC4299C2",
+      "StaticY": [
+        655.8,
+        640.7,
+        625.51
+      ],
+      "BodyAnchors": [
+        {
+          "Prefix": "Leading paragraph.",
+          "Y": 615.12
+        },
+        {
+          "Prefix": "Following prose.",
+          "Y": 604.03
+        }
+      ]
+    },
+    {
+      "Id": "minimum-static-typographic-footer",
+      "Part": "word/footerMinimumPlain.xml",
+      "Mode": "final-preserve",
+      "InputSha256": "FF0F6B93FF8AC403525280F960787A776FFA6CE921A87162A3D741D5C161166F",
+      "ReferencePdfSha256": "90AA9F4B93CFF6241669338BCE9E79DA1DCE13FFD2FB259756C818E40FB40121",
+      "StaticY": [
+        78.144,
+        58.224,
+        38.16
+      ],
+      "BodyAnchors": [
+        {
+          "Prefix": "Leading paragraph.",
+          "Y": 708.58
+        },
+        {
+          "Prefix": "Following prose.",
+          "Y": 693.94
+        }
+      ]
+    },
+    {
+      "Id": "minimum-static-typographic-footer",
+      "Part": "word/footerMinimumPlain.xml",
+      "Mode": "all-word-compatible",
+      "InputSha256": "FF0F6B93FF8AC403525280F960787A776FFA6CE921A87162A3D741D5C161166F",
+      "ReferencePdfSha256": "22EC6C27B27549B57CE79051CBCAB3555AFE0C2B541645B85D606112E8BAD45C",
+      "StaticY": [
+        155.23,
+        140.14,
+        124.94
+      ],
+      "BodyAnchors": [
+        {
+          "Prefix": "Leading paragraph.",
+          "Y": 633.34
+        },
+        {
+          "Prefix": "Following prose.",
+          "Y": 622.22
+        }
+      ]
+    }
+  ]
+}

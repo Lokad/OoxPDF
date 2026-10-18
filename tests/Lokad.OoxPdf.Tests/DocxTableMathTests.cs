@@ -40,6 +40,11 @@ internal static class DocxTableMathTests
             {
                 TestAssert.True(pair.Second.StaticStoryUsesPhysicalY && ReferenceEquals(pair.First.SourceParagraph, pair.Second.SourceParagraph),
                     "A complete minimum-height story retains its measured source owner when mapped.");
+                if (minimum > 0d) // Zero retains the existing undeclared static-metrics fallback.
+                    TestAssert.True(pair.First.OccupiedLineBox is { } measured && pair.Second.OccupiedLineBox is { } placed &&
+                        Math.Abs(placed.Height - measured.Height * scale) < 1e-9 &&
+                        Math.Abs(placed.BaselineInset - measured.BaselineInset * scale) < 1e-9,
+                        "The measured declared minimum frame is retained for footer admission and mapped once for painting.");
                 TestAssert.True(Math.Abs(pair.Second.BaselineY - mapped.Height / 2d -
                     (pair.First.BaselineY - design.Height / 2d) * scale) < 1e-9 &&
                     Math.Abs(pair.Second.LineHeight!.Value - pair.First.LineHeight!.Value * scale) < 1e-9,

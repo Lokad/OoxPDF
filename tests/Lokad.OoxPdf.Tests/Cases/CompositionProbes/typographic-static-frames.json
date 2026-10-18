@@ -1,0 +1,40 @@
+[
+  {
+    "Id": "minimum-static-typographic-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-static-typographic-header.docx",
+    "Sha256": "7C0D5517B11DB8830CE4BA987B987EE830815486075CB6B4F6DF84A3C2BDB576",
+    "SourceSha256": "33795F1371841C3849496A8FEDC6A4D8D84138CBFD3BCF4CACB0FC6469966C27",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Following prose.",
+      "Public review header line 1.",
+      "Public review header line 2.",
+      "Public review header line 3."
+    ],
+    "Font": "Cambria Math",
+    "MinimumLineHeight": 20,
+    "Part": "word/headerMinimumPlain.xml"
+  },
+  {
+    "Id": "minimum-static-typographic-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-static-typographic-footer.docx",
+    "Sha256": "FF0F6B93FF8AC403525280F960787A776FFA6CE921A87162A3D741D5C161166F",
+    "SourceSha256": "7B888952575224F4A52F507FAE18BA9618508EF93950CC4C006436D77590F940",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Following prose.",
+      "Public review footer line 1.",
+      "Public review footer line 2.",
+      "Public review footer line 3."
+    ],
+    "Font": "Cambria Math",
+    "MinimumLineHeight": 20,
+    "Part": "word/footerMinimumPlain.xml"
+  }
+]

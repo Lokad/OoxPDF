@@ -14,9 +14,15 @@ internal static partial class DocxInlineCompositionTests
         CheckMinimumStaticFrames(null);
     }
 
-    internal static void CheckMinimumStaticFrames(IFontResolver? resolver)
+    public static void DocxInlineCompositionTypographicMinimumStaticFramesKeepIndependentWordBaselines()
     {
-        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath("minimum-static-frames-office.json")));
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent typographic static origins require installed Windows fonts.");
+        CheckMinimumStaticFrames(null, "typographic-static-frames-office.json");
+    }
+
+    internal static void CheckMinimumStaticFrames(IFontResolver? resolver, string referenceFile = "minimum-static-frames-office.json")
+    {
+        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath(referenceFile)));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string id = row.GetProperty("Id").GetString()!;

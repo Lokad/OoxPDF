@@ -16,6 +16,46 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingMinimumStaticFooterInkClearsOwnedNotes()
+    {
+        foreach (string tail in new[] { "body-tail", "empty-tail" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/note-footer-frame-" + tail + ".docx"), mode);
+            var pages = new DocxRenderer(new PinnedResolver(mathFont: true), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderBlankPages(document, null, default).ToArray();
+            TestAssert.Equal(2, pages.Length);
+            foreach (var page in pages)
+            {
+                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
+                var footer = shows.Single(show => show.Text == "Public review footer line 1.");
+                double footerTop = Ink(footer).Max();
+                double noteBottom = shows.Where(show => !show.Text.StartsWith("Public review footer", StringComparison.Ordinal))
+                    .Where(show => !page.Fonts.Any(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal) &&
+                        ReferenceEquals(resource.Font, show.Font)))
+                    .SelectMany(Ink).Min();
+                TestAssert.True(noteBottom > footerTop,
+                    "Actual note prose and footer glyph ink must remain vertically disjoint, including empty continuation pages.");
+                var staticParagraphs = document.FooterParagraphsByType.Values.SelectMany(value => value).ToArray();
+                TestAssert.Equal(3, staticParagraphs.Length);
+                TestAssert.True(staticParagraphs.All(p => p.LineSpacingPoints == 20d), "Placement cannot rewrite authored minima to repair clearance.");
+            }
+        }
+
+        static IEnumerable<double> Ink((PdfEmbeddedFont Font, string Text, double Size, double X, double Y) show)
+        {
+            var font = show.Font.Font;
+            foreach (var rune in show.Text.EnumerateRunes())
+            {
+                if (Rune.IsWhiteSpace(rune)) continue;
+                TestAssert.True(font.TryGetGlyphBounds(font.MapCodePoint(rune.Value), out var bounds), "The pinned glyph has measurable ink bounds.");
+                yield return show.Y + bounds.YMin * show.Size / font.UnitsPerEm;
+                yield return show.Y + bounds.YMax * show.Size / font.UnitsPerEm;
+            }
+        }
+    }
+
     public static void PortableRenderingNoteFooterFramesKeepEmptyContinuationContentVisible() =>
         DocxInlineCompositionTests.CheckNoteFooterFrames(new PinnedResolver(mathFont: true));
 
