@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+C205 restores visible minimum-height static prose through the existing shared
+printed frame. Plain atLeast paragraphs were excluded from that frame, unlike
+supported minimum-height mathematical paragraphs. One eligibility predicate now
+uses content-driven line flow; exact/unknown/malformed rules, source ownership,
+alignment/image guards and the existing transform remain. No fitted shift or
+font/size/document-specific branch. Separate reproducible plain header/footer
+controls establish the correction; compound image/math note inputs stay unchanged.
+
+Four independent Word exports run once; four existing compound exports are reused.
+All four standalone one-point static/body anchor groups pass (maximum static
+0.436 pt, body 0.14 pt). Three standalone footer rows and all six repeated footer
+rows in the review compound are restored onto the page. Source-prose/Office-word
+screens pass all four new outcomes with no unresolved features. All four new
+strict visual gates and all four compound gates remain failed. The compound note
+is still 4.753/4.737 pt too low at first/last baselines; footer baselines now agree
+within 0.436 pt. That note-versus-footer frame concern remains separate and open.
+
+One committed frozen Release artifact qualifies 28 Windows/18 Ubuntu checks with
+ten native-font skips, one exact invocation/platform. All three new observers
+fail C203: portable visibility, native body admission and complete measured-frame
+ownership. No harness repair. All 2,201 prior input pins remain/four added.
+Eighteen neighboring PDFs and three compound PDFs retain bytes; 21 comparisons
+and 38 reviewed pairs carry with both raster hashes/reuse chains pinned. Six
+changed native static/note bands and two complete portable pages were reviewed.
+Seventeen transferred assets/four smokes match, with no root build or suite replay.
+Root0871b780; minimum-static-frames-evidence.json. C203 CI39112468677 is green on
+Windows and Ubuntu. Continue bounded note/footer frame tracing while C205 CI runs.
+
 C204 extends the frozen C203 check to two unchanged image/math note holdouts,
 with and without a three-line minimum-height footer. Four native conversions and
 four independent Word exports run once, with no builds or suite replay. Both
