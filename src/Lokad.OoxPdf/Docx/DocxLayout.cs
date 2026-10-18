@@ -943,7 +943,7 @@ internal sealed partial class DocxLayoutEngine
                     cancellationToken.ThrowIfCancellationRequested();
                     slicePage = headScratchPages[slicePageIndex];
                     InFlightRelatedStory? continuedFlight = continuedStory.Location.Reference.Id is not null && inFlightNotes.TryGetValue((continuedStory.Location.Reference.Kind, continuedStory.Location.Reference.Id), out InFlightRelatedStory? continuedTracked) ? continuedTracked : null;
-                    sliceCursorTop = PlaceContinuationSeparatorIfNeeded(headScratchPages, ref slicePageIndex, ref slicePage, ref slicePlacedStories, sliceCursorTop, continuedStory.Location.SourceBlockIndex, continuedStory.StoryLayout, 0, GetStoryTextLineBoxHeights(continuedStory.StoryLayout), continuationLayout, separatorMeasurer, paragraphSpacingScale, frameBottom: footnoteFrameBottom);
+                    sliceCursorTop = PlaceContinuationSeparatorIfNeeded(headScratchPages, ref slicePageIndex, ref slicePage, ref slicePlacedStories, sliceCursorTop, continuedStory.Location.SourceBlockIndex, continuedStory.StoryLayout, 0, GetStoryTextLineBoxHeights(continuedStory.StoryLayout), continuationLayout, separatorMeasurer, paragraphSpacingScale, frameBottom: footnoteFrameBottom, hasPlacedSource: continuedFlight?.PlacedLineCount > 0);
                     PlaceRelatedStorySlices(headScratchPages, ref slicePageIndex, ref slicePage, ref slicePlacedStories, ref sliceCursorTop, continuedStory.StoryLayout, continuedStory.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationLayout, separatorMeasurer, paragraphSpacingScale, ResolveHeaderKeepOut, stopAfterCurrentPage: true, inFlight: continuedFlight,
                         frameBottom: footnoteFrameBottom);
                 }
@@ -1079,7 +1079,7 @@ internal sealed partial class DocxLayoutEngine
                         ? ResolveFooterKeepOut : null;
                 var tailFrameBottom = ResolveFootnotePlacementFooter(tailPage, tailPageIndex + 1, pages.Count,
                     qualifiedTailFrameBottom, ResolveNoteFooterKeepOut);
-                tailCursorTop = PlaceContinuationSeparatorIfNeeded(pages, ref tailPageIndex, ref tailPage, ref tailPlacedStories, tailCursorTop, inFlight.SourceBlockIndex, narrowedLayout, 0, narrowedLineBoxes, inFlight.ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale, frameBottom: tailFrameBottom);
+                tailCursorTop = PlaceContinuationSeparatorIfNeeded(pages, ref tailPageIndex, ref tailPage, ref tailPlacedStories, tailCursorTop, inFlight.SourceBlockIndex, narrowedLayout, 0, narrowedLineBoxes, inFlight.ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale, frameBottom: tailFrameBottom, hasPlacedSource: inFlight.PlacedLineCount > 0);
                 PlaceRelatedStorySlices(pages, ref tailPageIndex, ref tailPage, ref tailPlacedStories, ref tailCursorTop, narrowedLayout, inFlight.SourceBlockIndex, insertContinuationAfterActivePage: true, inFlight.ContinuationLayout, separatorMeasurerForNotes, paragraphSpacingScale, ResolveHeaderKeepOut, stopAfterCurrentPage: false, inFlight: inFlight, frameBottom: tailFrameBottom, usesPlainFootnoteFrame: qualifiedTailFrameBottom is not null);
             }
         }

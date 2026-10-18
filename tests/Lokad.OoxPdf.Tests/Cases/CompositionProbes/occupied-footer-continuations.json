@@ -31,5 +31,22 @@
       "Public continuation note line 64: the footer must keep every source paragraph clear."
     ],
     "Change": "Only append64 short public paragraphs to the existing normal footnote; original note, body, images/math/links and footer remain."
+  },
+  {
+    "Id": "long-note-original-footer-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/long-note-original-footer-report.docx",
+    "Sha256": "0FB103F0938ABBB592F86504DCF09363FD739719E15AFB9A0CD374C9711D1C71",
+    "SourceSha256": "272F71136C38A31927A63956B68A422297DC1561FC2B1E14E3CE99BF63DA0B1B",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "Inventory availability",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative.",
+      "Public continuation note line 64: the footer must keep every source paragraph clear."
+    ],
+    "Change": "Only remove the added mixed footer paragraph, restoring the original report footer; all64 note paragraphs and original body/static content remain.",
+    "RestoreOriginalFooter": true
   }
 ]

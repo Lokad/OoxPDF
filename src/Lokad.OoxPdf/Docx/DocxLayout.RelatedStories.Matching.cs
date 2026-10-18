@@ -139,10 +139,11 @@ internal sealed partial class DocxLayoutEngine
     {
         if (qualifiedFooter is not null || availableFooter is null) return qualifiedFooter;
         // Page occupancy is independent of note typography/reflow eligibility.
-        // Consume an intruding measured footer only while it leaves a usable
-        // frame; an absent/unusable boundary retains the existing fallback.
+        // An ordinary bottom margin is a placement frame too. Consume the
+        // measured boundary while it leaves usable space; absent/unusable
+        // boundaries retain the existing fallback.
         double occupied = availableFooter(page, pageNumber, pageCount);
-        return double.IsFinite(occupied) && occupied > page.MarginBottom && occupied < page.Height - page.MarginTop
+        return double.IsFinite(occupied) && occupied >= page.MarginBottom && occupied < page.Height - page.MarginTop
             ? availableFooter : null;
     }
 

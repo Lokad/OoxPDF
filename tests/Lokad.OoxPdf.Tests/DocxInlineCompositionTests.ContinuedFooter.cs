@@ -27,7 +27,7 @@ internal static partial class DocxInlineCompositionTests
             foreach (bool transformed in new[] { false, true })
             {
                 var document = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed,
-                    partOverride: "word/footer1.xml");
+                    partOverride: row.TryGetProperty("MetadataMutationPart", out var part) ? part.GetString()! : "word/footer1.xml");
                 var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
                 var pages = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, diagnostics.Add, default).ToArray();
@@ -68,7 +68,7 @@ internal static partial class DocxInlineCompositionTests
                         Math.Abs(footer[0].Y - expected.GetProperty("FooterY").GetDouble()) < 1d,
                         "Last-note and footer baselines retain independent one-point Word bounds on every page.");
                 }
-                TestAssert.Equal(22 + 21 * pages.Length, mathCount);
+                TestAssert.Equal(22 + (row.TryGetProperty("StaticMathGlyphsPerPage", out var staticMath) ? staticMath.GetInt32() : 21) * pages.Length, mathCount);
                 TestAssert.True(seen.SequenceEqual(id.Contains("long-note", StringComparison.Ordinal) ? Enumerable.Range(1, 64) : []),
                     "All64 numbered source paragraphs survive exactly once, in source order, across page turns.");
                 if (resolver is null) TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);

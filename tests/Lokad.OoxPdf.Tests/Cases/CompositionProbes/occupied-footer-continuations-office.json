@@ -1,5 +1,5 @@
 {
-  "Provenance": "Independent C226 Word16 exports, pinned in occupied-footer-continuation-evidence.json. Last-note/footer baselines retain1pt gates; page membership remains a separate unresolved comparison.",
+  "Provenance": "Independent C226/C230 Word16 exports; source/view/PDF/log pins retained in their evidence. First/last note/footer origins keep1pt gates; numbered paragraph page membership is exact.",
   "Rows": [
     {
       "Id": "occupied-footer-no-separator-report",
@@ -92,6 +92,70 @@
           "FirstNoteY": 398.4200134277344
         }
       ]
+    },
+    {
+      "Id": "long-note-original-footer-report",
+      "Mode": "final-preserve",
+      "InputSha256": "0FB103F0938ABBB592F86504DCF09363FD739719E15AFB9A0CD374C9711D1C71",
+      "ReferencePdfSha256": "BA2640E1D516C98A6C50ED2DEF4059D0995DEA1D1C415F503BFB70852CEBDE9D",
+      "Pages": 4,
+      "NotePages": [
+        {
+          "Page": 2,
+          "NoteY": 80.90399169921875,
+          "FooterY": 44.90399169921875,
+          "FirstNoteY": 488.95001220703125,
+          "NumberedParagraphs": 21
+        },
+        {
+          "Page": 3,
+          "NoteY": 80.90399169921875,
+          "FooterY": 44.90399169921875,
+          "FirstNoteY": 683.260009765625,
+          "NumberedParagraphs": 32
+        },
+        {
+          "Page": 4,
+          "NoteY": 80.90399169921875,
+          "FooterY": 44.90399169921875,
+          "FirstNoteY": 275.2099609375,
+          "NumberedParagraphs": 11
+        }
+      ],
+      "StaticMathGlyphsPerPage": 5,
+      "MetadataMutationPart": "word/header1.xml"
+    },
+    {
+      "Id": "long-note-original-footer-report",
+      "Mode": "all-word-compatible",
+      "InputSha256": "0FB103F0938ABBB592F86504DCF09363FD739719E15AFB9A0CD374C9711D1C71",
+      "ReferencePdfSha256": "693291A476814FB124382DCC865FE9E787303880AFE8D4685555C8EE7DCD0B7F",
+      "Pages": 4,
+      "NotePages": [
+        {
+          "Page": 2,
+          "NoteY": 157.3399658203125,
+          "FooterY": 130.030029296875,
+          "FirstNoteY": 466.7799987792969,
+          "NumberedParagraphs": 21
+        },
+        {
+          "Page": 3,
+          "NoteY": 157.3399658203125,
+          "FooterY": 130.030029296875,
+          "FirstNoteY": 614.1400146484375,
+          "NumberedParagraphs": 32
+        },
+        {
+          "Page": 4,
+          "NoteY": 157.3399658203125,
+          "FooterY": 130.030029296875,
+          "FirstNoteY": 304.67999267578125,
+          "NumberedParagraphs": 11
+        }
+      ],
+      "StaticMathGlyphsPerPage": 5,
+      "MetadataMutationPart": "word/header1.xml"
     }
   ]
 }

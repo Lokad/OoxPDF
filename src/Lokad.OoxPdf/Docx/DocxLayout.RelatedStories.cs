@@ -847,7 +847,7 @@ internal sealed partial class DocxLayoutEngine
 
                 MoveToRelatedStoryContinuationPage(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage, headerKeepOut);
                 availableHeight = Math.Max(0d, cursorTop - FrameBottom(activePage, activePageIndex));
-                cursorTop = PlaceContinuationSeparatorIfNeeded(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, cursorTop, sourceBlockIndex, storyLayout, lineIndex, lineBoxes, continuationSeparatorLayout, separatorMeasurer, printScale, frameBottom: frameBottom);
+                cursorTop = PlaceContinuationSeparatorIfNeeded(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, cursorTop, sourceBlockIndex, storyLayout, lineIndex, lineBoxes, continuationSeparatorLayout, separatorMeasurer, printScale, frameBottom: frameBottom, hasPlacedSource: inFlight?.PlacedLineCount > 0);
                 availableHeight = Math.Max(0d, cursorTop - FrameBottom(activePage, activePageIndex));
             }
 
@@ -872,7 +872,7 @@ internal sealed partial class DocxLayoutEngine
                     ref cursorTop, insertContinuationAfterActivePage, headerKeepOut);
                 cursorTop = PlaceContinuationSeparatorIfNeeded(outputPages, ref activePageIndex, ref activePage,
                     ref activePlacedStories, cursorTop, sourceBlockIndex, storyLayout, lineIndex, lineBoxes,
-                    continuationSeparatorLayout, separatorMeasurer, printScale, frameBottom: frameBottom) + (lineIndex == 0 ? noteDestinationTopOffset : 0d);
+                    continuationSeparatorLayout, separatorMeasurer, printScale, frameBottom: frameBottom, hasPlacedSource: inFlight?.PlacedLineCount > 0) + (lineIndex == 0 ? noteDestinationTopOffset : 0d);
                 continue;
             }
             if (lineIndex + takeCount >= storyLayout.TextLines.Count)
@@ -916,7 +916,7 @@ internal sealed partial class DocxLayoutEngine
                 }
 
                 MoveToRelatedStoryContinuationPage(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage, headerKeepOut);
-                cursorTop = PlaceContinuationSeparatorIfNeeded(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, cursorTop, sourceBlockIndex, storyLayout, lineIndex, lineBoxes, continuationSeparatorLayout, separatorMeasurer, printScale, frameBottom: frameBottom);
+                cursorTop = PlaceContinuationSeparatorIfNeeded(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, cursorTop, sourceBlockIndex, storyLayout, lineIndex, lineBoxes, continuationSeparatorLayout, separatorMeasurer, printScale, frameBottom: frameBottom, hasPlacedSource: inFlight?.PlacedLineCount > 0);
             }
         }
     }
@@ -1068,7 +1068,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? separatorMeasurer,
         double printScale = 1d, 
         Func<DocxLayoutPage, int, int, double>? headerKeepOut = null,
-        Func<DocxLayoutPage, int, int, double>? frameBottom = null)
+        Func<DocxLayoutPage, int, int, double>? frameBottom = null,
+        bool hasPlacedSource = false)
     {
         if (continuationSeparatorLayout is null || continuationSeparatorLayout.TextLines.Count == 0)
         {
@@ -1091,7 +1092,10 @@ internal sealed partial class DocxLayoutEngine
             // keeps its after-spacing under any constant full-block charge; word-compatible
             // takes stay legacy pending the balloon lane, so scaled pages keep the shared
             // full-block charge with null needs exactly as today.
-            bool hasPrecedingFragment = bodyLineIndex > 0 || bodyStoryLayout.TextLines[0].SourceLineIndex > 0;
+            // A narrowed remainder can start at line zero of a later paragraph.
+            // Its source owner, rather than that paragraph-local index, records
+            // whether a fragment has already been placed.
+            bool hasPrecedingFragment = hasPlacedSource || bodyLineIndex > 0 || bodyStoryLayout.TextLines[0].SourceLineIndex > 0;
             // An admitted physical continuation frame owns the separator's first
             // inset as well as its visible rule. Charging only the rule ride lets
             // an extra source line and the separator clip cross the frame top.
