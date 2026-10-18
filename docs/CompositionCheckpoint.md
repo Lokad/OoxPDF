@@ -1,5 +1,34 @@
 # Composed-document reliability checkpoint
 
+C176 removes two rendering eligibility couplings. Independent Word output
+confirms that a bookmark in an automatic-height neighbor leaves every measured
+minimum-paragraph baseline unchanged. C175 instead disables whole-document
+minimum-leading correction, moving unrelated11/12pt paragraphs by5.35-6.57pt and
+leaving up to6.732pt error. Final noted controls also omit the source-qualified
+correction(5.54pt). Treat bookmarks as non-rendering metadata in shared plain flow;
+navigation retains anchor checks. Allow existing unscaled, source-qualified
+leading in Final for noted/ordinary paragraphs. Font/size/slot/spacing, complex
+source and requested AllMarkup-preserved fallbacks remain. No fitted offset or
+new document-specific branch is introduced.
+
+168 Windows/146 Ubuntu checks pass,22 native skips, once each. Both new native/
+portable regressions fail C175. Sixteen independent Word outcomes have maximum
+anchor error0.188pt. Fifteen exports were made once before exact-byte promotion;
+the C173 Final static reference is reused. Four unique full-page pairs were
+reviewed;12 other outcomes carry through both raster hashes, with no demonstrated
+new clipping. Seven body outputs change, five body/four static controls retain
+bytes. All16 raw content screens pass. All16 strict raster gates remain failed,
+including800pt native versus800.04pt Word dimensions on static controls; no
+threshold is relaxed or failure relabeled.
+
+All16 portfolio PDFs/30 reviewed pairs/comparisons retain identities. Fourteen
+DOCX strict failures, two deck passes and six raw flags remain.17 assets/four
+smokes transfer without root build, suite or corpus replay;2,121 old input hashes
+match and nine public inputs are added. Root29f05ac5; evidence
+artifacts/composition-c1/minimum-bookmark-evidence.json. C175 CI39089440159 is green.
+Next, investigate the shared ASCII restriction on supported simple-script text
+using existing Word controls before changing language/shaping eligibility.
+
 C175 reuses parsed fonts within one DOCX conversion's coordinated preparation.
 Resolver decoration on accepted C173 shows two program-source requests per used
 face on note-numbering retries; fixed compound main fonts already load once.
