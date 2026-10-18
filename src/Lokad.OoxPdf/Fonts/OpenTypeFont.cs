@@ -1107,9 +1107,9 @@ internal sealed partial class OpenTypeFont
 
     private static IReadOnlyDictionary<uint, short> ReadKerningPairs(byte[] bytes, Dictionary<string, TableRecord> tables, CancellationToken cancellationToken)
     {
-        // Count source batches without expanding a tuple list, then allocate
-        // the final map once. Counts include overwritten keys; insertion
-        // order and last-wins values remain the same as the original stream.
+        // Bound source batches before publishing owned key/value storage.
+        // Counts include overwritten keys; stable ordering preserves the
+        // original stream's last-wins values without a mutable shared map.
         var pairs = new KerningPairBuilder(cancellationToken);
         ReadLegacyKerningPairs(bytes, tables, pairs);
         cancellationToken.ThrowIfCancellationRequested();

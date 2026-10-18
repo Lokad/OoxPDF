@@ -12,7 +12,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class OoxLimitsTests
+internal static partial class OoxLimitsTests
 {
     public static void MalformedRequiredLongNormalizesToInvalidData()
     {

@@ -149,24 +149,6 @@ internal sealed partial class OpenTypeFont
         }
     }
 
-    private sealed class KerningPairWriter(int sourceCount, CancellationToken token)
-    {
-        private readonly Dictionary<uint, short> pairs = new(sourceCount);
-        private int written;
-        public void Add(uint key, short value)
-        {
-            if (written >= sourceCount) throw new InvalidDataException("Kerning source contribution count changed during parsing.");
-            if ((written++ & 1023) == 0) token.ThrowIfCancellationRequested();
-            pairs[key] = value;
-        }
-        public IReadOnlyDictionary<uint, short> Complete()
-        {
-            token.ThrowIfCancellationRequested();
-            if (written != sourceCount) throw new InvalidDataException("Kerning source contribution count changed during parsing.");
-            return pairs;
-        }
-    }
-
     private static void ConsumeKerningWork(ref long workRemaining, long steps)
     {
         workRemaining -= steps;

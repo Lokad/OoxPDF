@@ -6392,5 +6392,20 @@
     "DocxInlineCompositionOperatorMatrixSpecification",
     "PortableRenderingOperatorMatrixSpecification",
     "PdfActualText"
+  ],
+  "font-kerning-storage": [
+    "Kerning",
+    "Gpos",
+    "SyntheticUnlinkedKernFeature",
+    "SyntheticExtensionKernLookup",
+    "SyntheticRejectedScriptKern",
+    "SyntheticNonKernFeature",
+    "CoverageExpansionBeyondCapThrows",
+    "OpenTypeFontLoadObservesCancelledToken",
+    "FontProgramLoaderPropagatesParseCancellation",
+    "DocxInlineCompositionSkewedCellSpecification",
+    "PortableRenderingSkewedCellSpecification",
+    "DocxInlineCompositionDelimiterSharedBraceParts",
+    "MathFontDelimiterAssemblyPartsKeepAuthored"
   ]
 }
