@@ -220,10 +220,17 @@ internal sealed partial class DocxLayoutEngine
             paragraph.Runs.All(run => run.FieldKind is not { } kind || !kind.IsDynamic() ||
                 DocxFieldText.CanResolve(kind, pageNumber, pageCount));
         var items = paragraph.InlineContent;
+        bool retainPreparedContent = allowStaticFallback;
         if (paragraph.Equations.Count != 0)
         {
             if (items is null || equations is null ||
                 DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasActualFieldInputs, token).Count != paragraph.Equations.Count) return false;
+            if (!retainPreparedContent)
+                foreach (var equation in paragraph.Equations)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (equations.ContainsKey(equation)) { retainPreparedContent = true; break; }
+                }
         }
         else
         {
@@ -308,10 +315,11 @@ internal sealed partial class DocxLayoutEngine
                 case DocxInlineEquation math:
                     if (equations is null || !equations.TryGetValue(math.Equation, out var prepared))
                     {
-                        // The static fallback keeps other supported source items
-                        // measurable. Missing math retains the renderer's existing
-                        // unsupported diagnostic rather than disabling the story.
-                        if (allowStaticFallback) break;
+                        // A trusted ordered paragraph keeps its prepared items
+                        // when a sibling cannot be rendered. The existing
+                        // unsupported diagnostic still belongs to that item;
+                        // entirely unsupported body content keeps its fallback.
+                        if (retainPreparedContent) break;
                         return false;
                     }
                     AddMeasuredMath(item, prepared);
