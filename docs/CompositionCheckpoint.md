@@ -1,5 +1,45 @@
 # Composed-document reliability checkpoint
 
+C200 restores supported math when paragraphs use content-driven minimum line
+spacing. Merely adding atLeast12/72pt drops all three inline/display equations;
+cell/header parents also omit all math, and a compound image/math paragraph loses
+11 glyphs/preset. Shared content-driven eligibility and completed-row slots now
+preserve intrinsic ink/descent, adding excess leading before the baseline.
+Standalone display frames use the same rule. Legacy automatic-inline behavior and
+exact/compressed/malformed fallbacks remain. No font/size/document branch or fitted
+offset. The first admission-only prototype leaves52.636pt inline-baseline error;
+placing the minimum on the completed line closes it. [Minimum line-height semantics](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.linespacingrulevalues?view=openxml-3.0.1)
+are supported by the independent Word exports, without adding an SDK dependency.
+
+Ten Word exports once/four exact-byte reproducible public promotions;2,191 old pins
+unchanged/six added. Eight complete1pt math/flow groups pass, restoring96 control
+glyphs(maxX0.546/maxY0.136pt;following0.153pt/body0.145pt). The compound restores22
+more glyphs across both modes, all102 normalized scalars match Word and three
+pages remain. Minimum-induced anchor changes stay within0.109pt of Word, while
+pre-existing multi-point layout residuals remain. One frozen Release batch runs
+31 exact capability checks on Windows and17 on Ubuntu(14 native skips), one
+invocation/platform; three new observers fail C197. Direct frames verify minimum
+leading/descent/source ownership at1/.75 scale; neighboring spacing, source trust,
+body/cell/static math and fallback checks qualify. No post-freeze harness change.
+
+All42 accepted PDFs/68 reviewed pairs retain identity and42 comparisons carry.
+Nine unique new native pairs reviewed/five carries by both raster hashes, four
+portable pages reviewed, twelve independent scalar inventories pass.17 assets/
+four integration smoke PDFs match; no root rebuild or suite/corpus replay. All
+10 new strict gates remain failed; eight complex-math source screens and compound
+raw sin/table/typography/connector residuals remain. Source-prose/Office-word
+deficits are zero in the eight controls. The complete audit CLI cannot finish
+across separate Office roots; its failed lookup is retained separately. Reuse the
+existing audit functions with pinned roots; no full CLI pass is claimed. Root
+29117ac6; minimum-line-math-evidence.json. C197 CI39107609021 and C199
+CI39107981092 are green on both platforms, including broader/package checks.
+
+The automatic approval review rejects generated Python bytecode retirement before
+process creation("blocked by policy"); no files removed or bytes reclaimed.
+Preserve the cache and ignore it in place; no alternate retirement. Evidence
+python-cache-retirement-rejected.json. Next repair the audit's multiple-root
+interface using its existing identity checks, without rebuilding the library.
+
 C199 prevents late portfolio-input failures from consuming conversion work.
 MeasureCompositionPortfolio resolves/hashes every manifest input before creating
 output or converting. Retain later source/runtime identity checks; no resumable
