@@ -928,7 +928,8 @@ internal sealed partial class DocxLayoutEngine
                 FitCompleteFootnoteTrailingSpacing(sharedBatch, cursorY - Math.Max(0d, pendingSpacingAfter) -
                     completeFootnoteAdmission.SeparatorHeight - bottom);
             }
-            if (pageFootnoteStories.Count == 0 && templatePage.Items.Count == 0)
+            if (pageFootnoteStories.Count == 0 && templatePage.Items.Count == 0 &&
+                !TryResolveOwnedInlineFootnoteTop(templatePage, sharedBatch, paragraphSpacingScale, null, out _))
             {
                 DocxLayoutPage slicePage = headScratchPages[0];
                 int slicePageIndex = 0;

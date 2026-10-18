@@ -1,0 +1,550 @@
+{
+  "Source": "Independent Word 16 exports, exact input/PDF pins and unchanged one-point origin gates. Exact80 Review body admission remains failed; unresolved anchors below are retained, not qualified.",
+  "Rows": [
+    {
+      "Id": "owned-note-container-intermediate",
+      "Mode": "final-preserve",
+      "InputSha256": "558E623410E1E88C0C38F7379A70BC3244791346927C53C8A3EB50A8C18C5FEB",
+      "ReferencePdfSha256": "FDC4F5FC7C8ADD62CFEBA8EF83A03988186C5B2A54F48D9A6C79E14966AFDE69",
+      "Pages": 3,
+      "Anchors": [
+        {
+          "Prefix": "Leading paragraph.",
+          "EndsWith": false,
+          "Page": 1,
+          "Y": 708.58
+        },
+        {
+          "Prefix": "Before formula:",
+          "EndsWith": false,
+          "Page": 1,
+          "Y": 240.53
+        },
+        {
+          "Prefix": "Public calculation note.",
+          "EndsWith": false,
+          "Page": 1,
+          "Y": 207.86
+        },
+        {
+          "Prefix": "Following prose.",
+          "EndsWith": false,
+          "Page": 3,
+          "Y": 655.9
+        },
+        {
+          "Prefix": "Final tail.",
+          "EndsWith": true,
+          "Page": 2,
+          "Y": 99.144
+        }
+      ],
+      "FooterAnchors": [
+        {
+          "Text": "Public review footer line 1.",
+          "Page": 1,
+          "Y": 78.024
+        },
+        {
+          "Text": "Public review footer line 2.",
+          "Page": 1,
+          "Y": 58.104
+        },
+        {
+          "Text": "Public review footer line 3.",
+          "Page": 1,
+          "Y": 38.04
+        },
+        {
+          "Text": "Public review footer line 1.",
+          "Page": 2,
+          "Y": 78.024
+        },
+        {
+          "Text": "Public review footer line 2.",
+          "Page": 2,
+          "Y": 58.104
+        },
+        {
+          "Text": "Public review footer line 3.",
+          "Page": 2,
+          "Y": 38.04
+        },
+        {
+          "Text": "Public review footer line 1.",
+          "Page": 3,
+          "Y": 78.024
+        },
+        {
+          "Text": "Public review footer line 2.",
+          "Page": 3,
+          "Y": 58.104
+        },
+        {
+          "Text": "Public review footer line 3.",
+          "Page": 3,
+          "Y": 38.04
+        }
+      ],
+      "MathAnchors": [
+        {
+          "Offset": 0,
+          "Page": 1,
+          "X": 156.98,
+          "Y": 247.61
+        },
+        {
+          "Offset": 4,
+          "Page": 1,
+          "X": 156.26,
+          "Y": 234.53
+        },
+        {
+          "Offset": 8,
+          "Page": 1,
+          "X": 196.97,
+          "Y": 247.61
+        },
+        {
+          "Offset": 12,
+          "Page": 1,
+          "X": 196.25,
+          "Y": 234.53
+        },
+        {
+          "Offset": 16,
+          "Page": 1,
+          "X": 195.89,
+          "Y": 167.66
+        },
+        {
+          "Offset": 20,
+          "Page": 1,
+          "X": 195.17,
+          "Y": 154.58
+        },
+        {
+          "Offset": 24,
+          "Page": 1,
+          "X": 235.73,
+          "Y": 167.66
+        },
+        {
+          "Offset": 28,
+          "Page": 1,
+          "X": 235.01,
+          "Y": 154.58
+        }
+      ],
+      "UnresolvedAnchors": [],
+      "Page2NoteRows": 40,
+      "Page2RowsUnresolved": false
+    },
+    {
+      "Id": "owned-note-container-intermediate",
+      "Mode": "all-word-compatible",
+      "InputSha256": "558E623410E1E88C0C38F7379A70BC3244791346927C53C8A3EB50A8C18C5FEB",
+      "ReferencePdfSha256": "BE100326BF42CC1F2628BF21764F455087DAE080ACE745307F115BC4FA72C47A",
+      "Pages": 3,
+      "Anchors": [
+        {
+          "Prefix": "Leading paragraph.",
+          "EndsWith": false,
+          "Page": 1,
+          "Y": 633.34
+        },
+        {
+          "Prefix": "Before formula:",
+          "EndsWith": false,
+          "Page": 1,
+          "Y": 278.38
+        },
+        {
+          "Prefix": "Public calculation note.",
+          "EndsWith": false,
+          "Page": 1,
+          "Y": 253.63
+        }
+      ],
+      "FooterAnchors": [
+        {
+          "Text": "Public review footer line 1.",
+          "Page": 1,
+          "Y": 155.16
+        },
+        {
+          "Text": "Public review footer line 2.",
+          "Page": 1,
+          "Y": 140.04
+        },
+        {
+          "Text": "Public review footer line 3.",
+          "Page": 1,
+          "Y": 124.85
+        },
+        {
+          "Text": "Public review footer line 1.",
+          "Page": 2,
+          "Y": 155.16
+        },
+        {
+          "Text": "Public review footer line 2.",
+          "Page": 2,
+          "Y": 140.04
+        },
+        {
+          "Text": "Public review footer line 3.",
+          "Page": 2,
+          "Y": 124.85
+        },
+        {
+          "Text": "Public review footer line 1.",
+          "Page": 3,
+          "Y": 155.16
+        },
+        {
+          "Text": "Public review footer line 2.",
+          "Page": 3,
+          "Y": 140.04
+        },
+        {
+          "Text": "Public review footer line 3.",
+          "Page": 3,
+          "Y": 124.85
+        }
+      ],
+      "MathAnchors": [
+        {
+          "Offset": 0,
+          "Page": 1,
+          "X": 119.04,
+          "Y": 283.75
+        },
+        {
+          "Offset": 4,
+          "Page": 1,
+          "X": 118.51,
+          "Y": 273.84
+        },
+        {
+          "Offset": 8,
+          "Page": 1,
+          "X": 149.35,
+          "Y": 283.75
+        },
+        {
+          "Offset": 12,
+          "Page": 1,
+          "X": 148.82,
+          "Y": 273.84
+        },
+        {
+          "Offset": 16,
+          "Page": 1,
+          "X": 148.54,
+          "Y": 223.13
+        },
+        {
+          "Offset": 20,
+          "Page": 1,
+          "X": 147.98,
+          "Y": 213.22
+        },
+        {
+          "Offset": 24,
+          "Page": 1,
+          "X": 178.75,
+          "Y": 223.13
+        },
+        {
+          "Offset": 28,
+          "Page": 1,
+          "X": 178.2,
+          "Y": 213.22
+        }
+      ],
+      "UnresolvedAnchors": [
+        {
+          "Prefix": "Following prose.",
+          "EndsWith": false,
+          "Page": 3,
+          "Y": 593.38
+        },
+        {
+          "Prefix": "Final tail.",
+          "EndsWith": true,
+          "Page": 2,
+          "Y": 171.17
+        }
+      ],
+      "Page2NoteRows": 40,
+      "Page2RowsUnresolved": true
+    },
+    {
+      "Id": "owned-note-container-dedicated",
+      "Mode": "final-preserve",
+      "InputSha256": "F25E4A63BFB26C58BAEE26A04EAFDC2BA88267892F6A4F90885798B13405D42F",
+      "ReferencePdfSha256": "78B0D92C17A01FBE649DC58F7797D522722AB8581C981302BD745B576BC43B33",
+      "Pages": 3,
+      "Anchors": [
+        {
+          "Prefix": "Leading paragraph.",
+          "EndsWith": false,
+          "Page": 1,
+          "Y": 708.58
+        },
+        {
+          "Prefix": "Before formula:",
+          "EndsWith": false,
+          "Page": 1,
+          "Y": 240.53
+        },
+        {
+          "Prefix": "Public calculation note.",
+          "EndsWith": false,
+          "Page": 1,
+          "Y": 207.86
+        },
+        {
+          "Prefix": "Final tail.",
+          "EndsWith": true,
+          "Page": 3,
+          "Y": 99.144
+        }
+      ],
+      "FooterAnchors": [
+        {
+          "Text": "Public review footer line 1.",
+          "Page": 1,
+          "Y": 78.024
+        },
+        {
+          "Text": "Public review footer line 2.",
+          "Page": 1,
+          "Y": 58.104
+        },
+        {
+          "Text": "Public review footer line 3.",
+          "Page": 1,
+          "Y": 38.04
+        },
+        {
+          "Text": "Public review footer line 1.",
+          "Page": 2,
+          "Y": 78.024
+        },
+        {
+          "Text": "Public review footer line 2.",
+          "Page": 2,
+          "Y": 58.104
+        },
+        {
+          "Text": "Public review footer line 3.",
+          "Page": 2,
+          "Y": 38.04
+        },
+        {
+          "Text": "Public review footer line 1.",
+          "Page": 3,
+          "Y": 78.024
+        },
+        {
+          "Text": "Public review footer line 2.",
+          "Page": 3,
+          "Y": 58.104
+        },
+        {
+          "Text": "Public review footer line 3.",
+          "Page": 3,
+          "Y": 38.04
+        }
+      ],
+      "MathAnchors": [
+        {
+          "Offset": 0,
+          "Page": 1,
+          "X": 156.98,
+          "Y": 247.61
+        },
+        {
+          "Offset": 4,
+          "Page": 1,
+          "X": 156.26,
+          "Y": 234.53
+        },
+        {
+          "Offset": 8,
+          "Page": 1,
+          "X": 196.97,
+          "Y": 247.61
+        },
+        {
+          "Offset": 12,
+          "Page": 1,
+          "X": 196.25,
+          "Y": 234.53
+        },
+        {
+          "Offset": 16,
+          "Page": 1,
+          "X": 195.89,
+          "Y": 167.66
+        },
+        {
+          "Offset": 20,
+          "Page": 1,
+          "X": 195.17,
+          "Y": 154.58
+        },
+        {
+          "Offset": 24,
+          "Page": 1,
+          "X": 235.73,
+          "Y": 167.66
+        },
+        {
+          "Offset": 28,
+          "Page": 1,
+          "X": 235.01,
+          "Y": 154.58
+        }
+      ],
+      "UnresolvedAnchors": [],
+      "Page2NoteRows": 41,
+      "Page2RowsUnresolved": false
+    },
+    {
+      "Id": "owned-note-container-dedicated",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F25E4A63BFB26C58BAEE26A04EAFDC2BA88267892F6A4F90885798B13405D42F",
+      "ReferencePdfSha256": "1D5A1EE1E586F647556B05358C26F31AC9EB825EA712AE8538BF194D16A2A784",
+      "Pages": 3,
+      "Anchors": [
+        {
+          "Prefix": "Leading paragraph.",
+          "EndsWith": false,
+          "Page": 1,
+          "Y": 633.34
+        },
+        {
+          "Prefix": "Before formula:",
+          "EndsWith": false,
+          "Page": 1,
+          "Y": 278.38
+        },
+        {
+          "Prefix": "Public calculation note.",
+          "EndsWith": false,
+          "Page": 1,
+          "Y": 253.63
+        },
+        {
+          "Prefix": "Final tail.",
+          "EndsWith": true,
+          "Page": 3,
+          "Y": 171.17
+        }
+      ],
+      "FooterAnchors": [
+        {
+          "Text": "Public review footer line 1.",
+          "Page": 1,
+          "Y": 155.16
+        },
+        {
+          "Text": "Public review footer line 2.",
+          "Page": 1,
+          "Y": 140.04
+        },
+        {
+          "Text": "Public review footer line 3.",
+          "Page": 1,
+          "Y": 124.85
+        },
+        {
+          "Text": "Public review footer line 1.",
+          "Page": 2,
+          "Y": 155.16
+        },
+        {
+          "Text": "Public review footer line 2.",
+          "Page": 2,
+          "Y": 140.04
+        },
+        {
+          "Text": "Public review footer line 3.",
+          "Page": 2,
+          "Y": 124.85
+        },
+        {
+          "Text": "Public review footer line 1.",
+          "Page": 3,
+          "Y": 155.16
+        },
+        {
+          "Text": "Public review footer line 2.",
+          "Page": 3,
+          "Y": 140.04
+        },
+        {
+          "Text": "Public review footer line 3.",
+          "Page": 3,
+          "Y": 124.85
+        }
+      ],
+      "MathAnchors": [
+        {
+          "Offset": 0,
+          "Page": 1,
+          "X": 119.04,
+          "Y": 283.75
+        },
+        {
+          "Offset": 4,
+          "Page": 1,
+          "X": 118.51,
+          "Y": 273.84
+        },
+        {
+          "Offset": 8,
+          "Page": 1,
+          "X": 149.35,
+          "Y": 283.75
+        },
+        {
+          "Offset": 12,
+          "Page": 1,
+          "X": 148.82,
+          "Y": 273.84
+        },
+        {
+          "Offset": 16,
+          "Page": 1,
+          "X": 148.54,
+          "Y": 223.13
+        },
+        {
+          "Offset": 20,
+          "Page": 1,
+          "X": 147.98,
+          "Y": 213.22
+        },
+        {
+          "Offset": 24,
+          "Page": 1,
+          "X": 178.75,
+          "Y": 223.13
+        },
+        {
+          "Offset": 28,
+          "Page": 1,
+          "X": 178.2,
+          "Y": 213.22
+        }
+      ],
+      "UnresolvedAnchors": [],
+      "Page2NoteRows": 41,
+      "Page2RowsUnresolved": false
+    }
+  ]
+}

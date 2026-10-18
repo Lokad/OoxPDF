@@ -132,16 +132,18 @@ internal sealed partial class DocxLayoutEngine
         return Math.Min(Math.Max(0d, storyLayout.ContentHeight), Math.Max(0d, page.Height - page.MarginTop - page.MarginBottom));
     }
 
-    private static void ResolveOwnedInlineFootnoteFrame(DocxLayoutPage page,
+    private static bool ResolveOwnedInlineFootnoteFrame(DocxLayoutPage page,
         IReadOnlyList<DocxReferencedRelatedStoryLayout> notes, double printScale,
         ref double? contentTop, ref Func<DocxLayoutPage, int, int, double>? footer,
         Func<DocxLayoutPage, int, int, double>? availableFooter)
     {
-        if (footer is null && TryResolveOwnedInlineFootnoteTop(page, notes, printScale, contentTop, out double top))
+        if (TryResolveOwnedInlineFootnoteTop(page, notes, printScale, contentTop, out double top))
         {
             contentTop = top;
-            footer = availableFooter ?? ((frame, _, _) => frame.MarginBottom);
+            footer ??= availableFooter ?? ((frame, _, _) => frame.MarginBottom);
+            return true;
         }
+        return false;
     }
 
     private static bool TryResolveOwnedInlineFootnoteTop(DocxLayoutPage page,
@@ -149,10 +151,15 @@ internal sealed partial class DocxLayoutEngine
         out double top)
     {
         top = 0d;
-        if (!double.IsFinite(printScale) || printScale <= 0d || page.ColumnFrames.Count > 1 ||
-            page.Items.Count == 0 || page.Items.Any(item => item is not (DocxTextLineLayout or DocxTableRowLayout)) ||
-            !HasNumericTrailingBodyAfterSpacing(page) || notes.Count == 0 ||
+        if (!double.IsFinite(printScale) || printScale <= 0d || page.ColumnFrames.Count > 1 || notes.Count == 0 ||
             !notes.All(note => HasOwnedInlineNoteFlowStory(note.StoryLayout))) return false;
+        if (page.Items.Count == 0)
+        {
+            top = page.Height - page.MarginTop;
+            return double.IsFinite(top);
+        }
+        if (page.Items.Any(item => item is not (DocxTextLineLayout or DocxTableRowLayout)) ||
+            !HasNumericTrailingBodyAfterSpacing(page)) return false;
         double bodyBottom = sharedContentTop ?? page.Items.Min(item =>
             item is DocxTextLineLayout line && DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double bottom, out _)
                 ? bottom : GetVerticalBounds(item).Y);

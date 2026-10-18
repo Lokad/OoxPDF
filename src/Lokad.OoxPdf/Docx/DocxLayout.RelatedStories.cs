@@ -1820,17 +1820,16 @@ internal sealed partial class DocxLayoutEngine
             return;
         }
 
-        // Owned paragraph frames can be sliced independently of body contents
-        // and static-story eligibility. Compare them in the note design frame.
-        ResolveOwnedInlineFootnoteFrame(page, footnoteStories, printScale,
-            ref sharedContentTop, ref footerKeepOut, availableFooterKeepOut);
-
         if (separatorLayout is null)
         {
             PlaceFootnoteStoriesWithoutSeparator(outputPages, outputIndex, page, footnoteStories, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, sharedSlicePlacement, inFlightNotes, pageNumberOverride, pageCountOverride,
-                sharedContentTop: sharedContentTop, footerKeepOut: footerKeepOut);
+                sharedContentTop: sharedContentTop, footerKeepOut: footerKeepOut, availableFooterKeepOut: availableFooterKeepOut);
             return;
         }
+
+        // Normalize once, including when the separator-less path dispatches.
+        ResolveOwnedInlineFootnoteFrame(page, footnoteStories, printScale,
+            ref sharedContentTop, ref footerKeepOut, availableFooterKeepOut);
 
         DocxLayoutPage activePage = outputPages[outputIndex];
         int activePageIndex = outputIndex;
@@ -1971,7 +1970,7 @@ internal sealed partial class DocxLayoutEngine
         Func<DocxLayoutPage, int, int, double>? footerKeepOut = null,
         Func<DocxLayoutPage, int, int, double>? availableFooterKeepOut = null)
     {
-        ResolveOwnedInlineFootnoteFrame(page, footnoteStories, printScale,
+        bool ownedFrame = ResolveOwnedInlineFootnoteFrame(page, footnoteStories, printScale,
             ref sharedContentTop, ref footerKeepOut, availableFooterKeepOut);
         DocxLayoutPage activePage = outputPages[outputIndex];
         int activePageIndex = outputIndex;
@@ -1981,19 +1980,37 @@ internal sealed partial class DocxLayoutEngine
         double cursorTop = frameBottom + bodyHeight;
         double storiesTop = cursorTop;
         DocxRelatedStoryLayout firstLayout = footnoteStories[0].StoryLayout;
-        double clampBodyBottom = ResolveFootnoteClampBodyBottom(page, pageNumberOverride ?? (outputIndex + 1), pageCountOverride ?? outputPages.Count, firstLayout, headerKeepOut);
+        double clampBodyBottom = ownedFrame
+            ? Math.Min(page.Height - page.MarginTop,
+                headerKeepOut?.Invoke(page, pageNumberOverride ?? (outputIndex + 1), pageCountOverride ?? outputPages.Count) ?? double.PositiveInfinity)
+            : ResolveFootnoteClampBodyBottom(page, pageNumberOverride ?? (outputIndex + 1), pageCountOverride ?? outputPages.Count, firstLayout, headerKeepOut);
         if (firstLayout.TextLines.Count != 0)
         {
             double firstBoxHeight = GetStoryTextLineBoxHeights(firstLayout)[0];
+            if (ownedFrame && separatorMeasurer is IDocxLineMetricsProvider && firstLayout.TextLines[0].SourceParagraph is { } paragraph)
+            {
+                // A synthetic separator consumes a natural font line, independent
+                // of authored paragraph minima and inline mathematical extents.
+                var natural = paragraph with
+                {
+                    LineSpacingPoints = null,
+                    LineSpacingFactor = 1d,
+                    Spacing = paragraph.Spacing with { LineRuleValue = "auto", LineValue = "240" }
+                };
+                double height = ResolveNoteContentLineHeightProfile(natural, GetParagraphFontSize(natural), separatorMeasurer).LineHeight;
+                if (double.IsFinite(height) && height > 0d) firstBoxHeight = height;
+            }
             storiesTop = Math.Min(cursorTop, clampBodyBottom - firstBoxHeight);
-        if (sharedContentTop is not null)
+            if (sharedContentTop is not null)
+            {
+                storiesTop = Math.Min(storiesTop, sharedContentTop.Value - (ownedFrame ? firstBoxHeight : 0d));
+            }
+        }
+        if (ownedFrame)
         {
-            storiesTop = Math.Min(storiesTop, sharedContentTop.Value);
-        }
-        }
-        if (footerKeepOut is not null && footnoteStories.All(story => HasOwnedInlineNoteFlowStory(story.StoryLayout)))
             storiesTop = ResolveSeatedFootnoteTop(activePage, footnoteStories, storiesTop, frameBottom,
                 inFlightNotes, printScale, usesParagraphFrames: true);
+        }
         double contentTop = storiesTop;
         bool firstStory = true;
         foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
