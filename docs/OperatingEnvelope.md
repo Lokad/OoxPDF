@@ -1,5 +1,32 @@
 # Measured operating envelope
 
+## Compound-note baseline, 2026-10-18
+
+Qualified C233 source `24f3ce2d` (root `5986a1b9`) is measured through a separately
+built/self-tested probe, with no library rebuild or visual qualification replay.
+All six whole/staged PDFs are stable and equal the qualified outputs.
+
+| Source (pages) | Final warm allocation (MB) / time (ms) | Review warm allocation (MB) / time (ms) |
+|---|---:|---:|
+| Fixed report (2) | 24.551 / 107.06 | 27.871 / 107.69 |
+| Single long note (4) | 33.325 / 173.12 | 43.081 / 91.10 |
+| Two plain notes (4) | 33.470 / 62.38 | 43.262 / 75.47 |
+
+Windows/.NET10.0.13, default resolver466faces, buffer output/default64MiB resident
+window. Each source/preset uses an isolated process, one cold/warmup conversion
+and three warm samples; medians are shown, MB is decimal. Calling-thread allocated
+volume is distinct from live heap/process memory. Timings are noisy: no speedup
+or mode ordering is established. No new limit or cache is introduced.
+
+Standalone initial font-resource preparation allocates16.656-17.530MB. Coordinated
+layout plus snapshot allocates21.807-34.072MB; for the two-note report it is28.011MB
+Final/34.072MB Review. These independent scopes overlap and must not be summed;
+they do not count layout passes. The Review cost warrants bounded dependency/
+reuse attribution, without assuming repeated layout dominates production cost.
+
+Existing independent Office gates and explicit residuals remain unchanged.
+Evidence: `artifacts/composition-c1/compound-note-allocation-evidence.json`.
+
 ## Collection-face ownership, 2026-10-18
 
 Qualified source `94454cae` (root `06e8183a`) extracts an owned face directly from

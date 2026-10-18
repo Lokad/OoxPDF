@@ -1,5 +1,20 @@
 # Composed-document reliability checkpoint
 
+## C234: compound-note allocation baseline (2026-10-18)
+
+The existing probe alone is built/self-tested against frozen C233; library bytes
+remain pinned. Fixed report, single long note and two-note report are measured in
+both presets: one isolated process per input/preset, one cold/warmup and three
+warm conversions, buffer output/default64MiB resident window. All six whole/
+staged PDFs are stable and equal qualified output hashes; no Office export,
+visual qualification or library build is replayed. Calling-thread allocation
+is not live heap/process memory. Two-note warm medians33.470MB Final/43.262MB
+Review; timing is noisy, with no speedup/mode-order claim. Initial font resources
+allocate16.656-17.530MB; coordinated layout/snapshot21.807-34.072MB. Those diagnostic
+scopes overlap and do not count layout passes. C235 will attribute coordinated
+Review preparation before choosing any optimization; no new quota/cache.
+Evidence: compound-note-allocation-evidence.json and docs/OperatingEnvelope.md.
+
 ## C233: ordered plain-note batches and uncapped source admission (2026-10-18)
 
 The C232 overlap/order defect closes: deferred heads remain owned by the drain,
