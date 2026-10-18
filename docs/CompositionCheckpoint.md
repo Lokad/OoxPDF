@@ -1,5 +1,43 @@
 # Composed-document reliability checkpoint
 
+C209 makes intermediate owned-note pages use the same design/footer frame,
+paragraph slicer and bottom seating as heads and final tails. Normalize that
+frame once, including separator-less dispatch. Synthetic head admission consumes
+a measured natural font line instead of an authored minimum or mathematical box;
+it constrains the actual body bottom. Finite metrics, source ownership and single
+columns govern the shared path. Exact/rich/multicolumn/unknown-provider fallbacks,
+bounds, cancellation and no-progress checks remain. No fitted font/size/shift rule.
+
+C208's unchanged long/multiple-note holdouts retain all content and Word's three/
+four pages, but exposed intermediate overlap and a 52.790 pt high tail. C209
+matches their page2 row counts:41/41 for the long note and40/40 for multiple notes,
+both presets; first/last origins differ by less than0.4 pt. Two minimal controls
+are promoted byte-for-byte with four independent Word exports once. Three complete
+body/tail origin groups pass unchanged one-point gates. The fourth Review group
+passes head/footer/math origins but retains an inherited body-admission defect:
+its exact-height body enters page2 where Word reserves that page for the note;
+the candidate's last three note rows then move to page3. C207 also fails this
+control. Keep its independent unresolved anchors and raw failed comparison.
+
+One frozen Release production artifact qualifies39 Windows/28 Ubuntu checks,
+with11 native-font skips and one exact capability invocation/platform. The first
+Windows run passed38 and failed the new row observer because it counted three
+whitespace-only footer shows. Only that assertion is corrected and rerun. All14
+production/runtime assets and2,217 input pins remain unchanged; the three test
+assets are replaced. Both new observers fail C207. The2,213 prior input pins stay
+unchanged/four added. No production rebuild or root suite replay.
+
+Twenty-four neighbor/compound PDFs and their24 comparisons/42 reviewed raster
+pairs retain identity, including both original PNG hashes. Twelve new native
+paired bands and a seven-page portable overview confirm clearance; glyph-bounds
+assertions cover both modes. Four source-prose/simple-math screens have no deficits
+or unresolved features. Four raw Office-word screens retain rate/time extraction
+flags, while the full32-glyph mathematical stream is present. All eight new/control
+and held-out strict pixel gates remain failed. Continuation rules remain too short;
+Review body/note admission is next. Transfer verifies17 assets/four identical smoke
+PDFs. Root dd026ebd/813b4d3a; owned-note-containers-evidence.json. C207 CI39116871142
+is green on both platforms. C209 CI runs after the scoped push; continue work.
+
 C207 closes the retained portable note/footer overlap through a shared metric
 family rule. The resolved face requests typographic metrics, but minimum static
 baselines subtracted its much larger Windows descender. Use the existing provider
