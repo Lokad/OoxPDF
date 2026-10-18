@@ -87,6 +87,8 @@ jobs:
         run: python -B tools/TestCompositionSourceAudit.py
       - name: Composition comparison orchestration checks
         run: |
+          pwsh -NoProfile -File tools/TestCompositionMeasurement.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pwsh -NoProfile -File tools/TestCompositionComparison.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pwsh -NoProfile -File tools/TestCompositionJoin.ps1

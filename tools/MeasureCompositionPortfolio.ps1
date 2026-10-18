@@ -17,14 +17,23 @@ $libraryHash = (Get-FileHash -LiteralPath $library).Hash
 $cliHash = (Get-FileHash -LiteralPath $cli).Hash
 $inspectorHash = (Get-FileHash -LiteralPath $inspector).Hash
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'A fresh portfolio output directory is required' }
+# Resolve every input before any conversion or output publication. A late stale
+# path must not invalidate an otherwise completed batch of expensive conversions.
+$jobs = @(foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Json)) {
+    $inputPath = (Resolve-Path -LiteralPath (Join-Path $repo $document.Input)).Path
+    if ((Get-FileHash -LiteralPath $inputPath).Hash -ne $document.Sha256) { throw ('Portfolio input differs: ' + $document.Id) }
+    [pscustomobject]@{Document=$document;InputPath=$inputPath}
+})
 New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
 $output = (Resolve-Path -LiteralPath $OutputDirectory).Path
 $rows = @()
 function Normalize-Text([string] $Text) {
     [regex]::Replace($Text.Normalize([Text.NormalizationForm]::FormKC), '\s+', ' ').Trim()
 }
-foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Json)) {
-    $inputPath = (Resolve-Path -LiteralPath (Join-Path $repo $document.Input)).Path
+foreach ($job in $jobs) {
+    $document = $job.Document
+    $inputPath = $job.InputPath
+    # Retain identity checks in case a source changes after preflight.
     if ((Get-FileHash -LiteralPath $inputPath).Hash -ne $document.Sha256) { throw ('Portfolio input differs: ' + $document.Id) }
     $isDocx = $inputPath.EndsWith('.docx', [StringComparison]::OrdinalIgnoreCase)
     $modes = if ($isDocx) { @('final-preserve','all-word-compatible') } else { @('presentation') }
