@@ -136,7 +136,23 @@
           "Y": 154.58
         }
       ],
-      "Page2NoteRows": 40
+      "Page2NoteRows": 40,
+      "SeparatorRules": [
+        {
+          "Page": 1,
+          "X": 72.024,
+          "Y": 224.69,
+          "Width": 144.02,
+          "Height": 0.8400300000000129
+        },
+        {
+          "Page": 2,
+          "X": 72.024,
+          "Y": 687.34,
+          "Width": 468.07000000000005,
+          "Height": 0.8399999999999181
+        }
+      ]
     },
     {
       "Id": "owned-note-container-intermediate",
@@ -273,7 +289,23 @@
           "Y": 213.22
         }
       ],
-      "Page2NoteRows": 40
+      "Page2NoteRows": 40,
+      "SeparatorRules": [
+        {
+          "Page": 1,
+          "X": 54.6,
+          "Y": 266.38,
+          "Width": 109.22,
+          "Height": 0.62402000000003
+        },
+        {
+          "Page": 2,
+          "X": 54.6,
+          "Y": 617.23,
+          "Width": 354.97999999999996,
+          "Height": 0.6240099999999984
+        }
+      ]
     },
     {
       "Id": "owned-note-container-dedicated",
@@ -404,7 +436,30 @@
           "Y": 154.58
         }
       ],
-      "Page2NoteRows": 41
+      "Page2NoteRows": 41,
+      "SeparatorRules": [
+        {
+          "Page": 1,
+          "X": 72.024,
+          "Y": 224.69,
+          "Width": 144.02,
+          "Height": 0.8400300000000129
+        },
+        {
+          "Page": 2,
+          "X": 72.024,
+          "Y": 701.98,
+          "Width": 468.07000000000005,
+          "Height": 0.8400000000000318
+        },
+        {
+          "Page": 3,
+          "X": 72.024,
+          "Y": 643.42,
+          "Width": 468.07000000000005,
+          "Height": 0.8400000000000318
+        }
+      ]
     },
     {
       "Id": "owned-note-container-dedicated",
@@ -535,7 +590,30 @@
           "Y": 213.22
         }
       ],
-      "Page2NoteRows": 41
+      "Page2NoteRows": 41,
+      "SeparatorRules": [
+        {
+          "Page": 1,
+          "X": 54.6,
+          "Y": 266.38,
+          "Width": 109.22,
+          "Height": 0.62402000000003
+        },
+        {
+          "Page": 2,
+          "X": 54.6,
+          "Y": 628.32,
+          "Width": 354.97999999999996,
+          "Height": 0.6480099999999993
+        },
+        {
+          "Page": 3,
+          "X": 54.6,
+          "Y": 583.92,
+          "Width": 354.97999999999996,
+          "Height": 0.6239900000000489
+        }
+      ]
     }
   ]
 }

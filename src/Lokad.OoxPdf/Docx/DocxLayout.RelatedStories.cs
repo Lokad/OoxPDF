@@ -1117,6 +1117,12 @@ internal sealed partial class DocxLayoutEngine
         return markBaselineY - separatorGapPoints;
     }
 
+    private static double ResolveContinuationRuleWidth(DocxLayoutPage page, double printScale)
+    {
+        double reservedMarginPoints = Math.Abs(printScale - 1d) < 0.000000001d ? 0d : page.MarkupMarginReservePoints;
+        return Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight + reservedMarginPoints);
+    }
+
     private static (DocxPlacedRelatedStoryLayout Placed, double SeparatorBottom) PlaceContinuationSeparatorStory(
         DocxLayoutPage page,
         int pageIndex,
@@ -1137,8 +1143,7 @@ internal sealed partial class DocxLayoutEngine
         // shrunk body with identity emission, and unit scales keep legacy behavior
         // bit-identically. The story widens with the rule so the emission clip
         // covers it.
-        double reservedMarginPoints = Math.Abs(printScale - 1d) < 0.000000001d ? 0d : page.MarkupMarginReservePoints;
-        double ruleWidthPoints = Math.Max(1d, page.Width - page.MarginLeft - page.MarginRight + reservedMarginPoints);
+        double ruleWidthPoints = ResolveContinuationRuleWidth(page, printScale);
         DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, continuationLayout, sourceBlockIndex, topY, storyTopOffset: 0d, storyHeight: ResolvePlacedStoryHeight(continuationLayout, page), separatorY: markBaselineY + ruleBottomOffsetPoints);
         placedSeparator = placedSeparator with
         {
@@ -2017,6 +2022,11 @@ internal sealed partial class DocxLayoutEngine
         {
             InFlightRelatedStory? trackedStory = inFlightNotes is not null && story.Location.Reference.Id is not null && inFlightNotes.TryGetValue((story.Location.Reference.Kind, story.Location.Reference.Id), out InFlightRelatedStory? tracked) ? tracked : null;
             double storyHeight = ResolvePlacedStoryHeight(story.StoryLayout, activePage);
+            // Omitted continuation stories still have a default full-width rule.
+            // Source progress distinguishes a true continuation from an unplaced head.
+            double? defaultContinuationWidth = ownedFrame && continuationSeparatorLayout is null &&
+                trackedStory is { PlacedLineCount: > 0 }
+                    ? ResolveContinuationRuleWidth(activePage, printScale) : null;
             bool needsContinuationRule = false;
             if (trackedStory is not null && trackedStory.SeparatorPlaced && continuationSeparatorLayout is not null && continuationSeparatorLayout.TextLines.Count != 0)
             {
@@ -2044,7 +2054,11 @@ internal sealed partial class DocxLayoutEngine
                     with { UsesPlainFootnoteFrame = footerKeepOut is not null };
                 if (separatorY is not null)
                 {
-                    placedStory = placedStory with { SeparatorThickness = separatorThickness };
+                    placedStory = placedStory with
+                    {
+                        SeparatorThickness = separatorThickness,
+                        SeparatorWidth = defaultContinuationWidth ?? placedStory.SeparatorWidth
+                    };
                 }
 
                 activePlacedStories.Add(placedStory);
@@ -2062,7 +2076,7 @@ internal sealed partial class DocxLayoutEngine
                 PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, stopAfterCurrentPage: sharedSlicePlacement, inFlight: trackedStory, frameBottom: footerKeepOut);
                 if (firstStory && !needsContinuationRule)
                 {
-                    PatchSyntheticRuleOntoHeadSlice(outputPages, headPageIndex, headCount, separatorMeasurer);
+                    PatchSyntheticRuleOntoHeadSlice(outputPages, headPageIndex, headCount, separatorMeasurer, defaultContinuationWidth);
                 }
             }
 
@@ -2085,7 +2099,8 @@ internal sealed partial class DocxLayoutEngine
         List<DocxLayoutPage> outputPages,
         int headPageIndex,
         int headCount,
-        IDocxTextMeasurer? separatorMeasurer)
+        IDocxTextMeasurer? separatorMeasurer,
+        double? separatorWidth = null)
     {
         DocxLayoutPage headPage = outputPages[headPageIndex];
         for (int storyIndex = headCount; storyIndex < headPage.PlacedRelatedStories.Count; storyIndex++)
@@ -2110,6 +2125,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 SeparatorY = placed.TopY + syntheticGapPoints + syntheticOffsetPoints,
                 SeparatorThickness = syntheticThicknessPoints,
+                SeparatorWidth = separatorWidth ?? placed.SeparatorWidth,
             };
             outputPages[headPageIndex] = headPage with { PlacedRelatedStories = patchedStories };
             return;

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
@@ -56,7 +57,30 @@ internal static partial class DocxInlineCompositionTests
                         .SelectMany(item => Ink(item.Show)).Min();
                     TestAssert.True(proseBottom > footerTop, "Continued note prose clears actual footer ink on intermediate and final pages.");
                 }
+                var rules = pages.SelectMany((page, index) => Regex.Matches(page.Content,
+                    @"(?m)^0 g\r?\n(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re f")
+                    .Cast<Match>().Select(match => (Page: index + 1, X: Number(match, "x"), Y: Number(match, "y"),
+                        Width: Number(match, "w"), Height: Number(match, "h"))))
+                    .Where(rule => rule.Height < 2d && rule.Width > 50d).ToArray();
+                TestAssert.True(rules.Length >= 2, "A continued source note retains its head and continuation rules.");
+                double scale = final ? 1d : DocxRenderer.ResolveWordCompatiblePrintScale(document,
+                    DocxMarkupContext.FromMode(mode, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+                double designWidth = document.PageWidthPoints - document.MarginLeftPoints - document.MarginRightPoints;
+                TestAssert.True(Math.Abs(rules[0].Width - 144d * scale) < .002d, "The default head retains its qualified short rule.");
+                TestAssert.True(rules.Skip(1).All(rule => Math.Abs(rule.Width - designWidth * scale) < .002d),
+                    "Omitted continuation stories use the owning section's full design width mapped once.");
                 if (resolver is not null) continue;
+                var expectedRules = row.GetProperty("SeparatorRules").EnumerateArray().ToArray();
+                TestAssert.Equal(expectedRules.Length, rules.Length);
+                foreach (var expectedRule in expectedRules)
+                {
+                    var actual = rules.Single(rule => rule.Page == expectedRule.GetProperty("Page").GetInt32());
+                    TestAssert.True(Math.Abs(actual.X - expectedRule.GetProperty("X").GetDouble()) < 1d &&
+                        Math.Abs(actual.Y - expectedRule.GetProperty("Y").GetDouble()) < 1d &&
+                        Math.Abs(actual.Width - expectedRule.GetProperty("Width").GetDouble()) < 1d &&
+                        Math.Abs(actual.Height - expectedRule.GetProperty("Height").GetDouble()) < 1d,
+                        "Head and default continuation rule geometry retain the independent one-point Word gate.");
+                }
                 TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);
                 // Body admission and continued notes use the same container boundary;
                 // every pinned Word body/tail page anchor now participates.
@@ -92,6 +116,8 @@ internal static partial class DocxInlineCompositionTests
                 }
             }
         }
+
+        static double Number(Match match, string name) => double.Parse(match.Groups[name].Value, System.Globalization.CultureInfo.InvariantCulture);
 
         static IEnumerable<double> Ink((PdfEmbeddedFont Font, string Text, double Size, double X, double Y) show)
         {

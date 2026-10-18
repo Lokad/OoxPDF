@@ -6764,5 +6764,25 @@
     "DocxWordCompatibleExactBodySpacingPrints",
     "DocxWordCompatibleExactKeepChainUsesPrintedPageBoundary",
     "PortableRenderingExactCommentHeightChangesKeepGlyphBrackets"
+  ],
+  "docx-default-note-rules": [
+    "DocxInlineCompositionOwnedNoteContainers",
+    "PortableRenderingOwnedNoteContainers",
+    "DocxInlineCompositionNoteFooterFrames",
+    "PortableRenderingNoteFooterFrames",
+    "DocxInlineCompositionOwnedNoteFrames",
+    "PortableRenderingOwnedNoteFrames",
+    "DocxContinuedFootnoteFooterFramesKeepHeadsSeparatorsAndTailClear",
+    "DocxContinuedFootnoteCapacityKeepsSeparatorInsetInsideAdmittedFrame",
+    "DocxSharedFootnoteHeadFitRetainsPhysicalSeparatorSpacing",
+    "DocxLongFootnoteSplitsAcrossPagesWithContinuationSeparator",
+    "DocxLongFootnoteWithoutSeparatorSplitsAcrossPages",
+    "DocxSharedFootnotePagesKeepBodyAboveNotes",
+    "DocxFootnoteContinuationTakeChargesRideTolerance",
+    "DocxFootnoteContinuationTakeChargesRuleOverhead",
+    "DocxFootnoteHeadTakeReservesClampMargin",
+    "DocxHeaderFootnoteFramesRetainRichKeepContextualAndScaledFallbacks",
+    "DocxMixedFootnoteFrameRetainsRichComplementarySourceFallbacks",
+    "DocxInlineCompositionNormalNotesMatchIndependentPrintedWrapping"
   ]
 }
