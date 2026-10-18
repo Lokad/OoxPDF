@@ -1,6 +1,9 @@
 using System.Globalization;
+using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
@@ -9,6 +12,61 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionDelimiterSharedBracePartsPreserveAuthoredUnicode()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Cambria braces share a physical extender glyph.");
+        foreach (double size in new[] { 12d, 60d })
+        foreach (bool authoredPart in new[] { false, true })
+        foreach (bool final in new[] { true, false })
+        {
+            string path = WriteDelimiterMutation(size, braces: true, authoredPart);
+            try
+            {
+                var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var page = new DocxRenderer(null, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(
+                        DocxTests.ReadDocx(path, mode), diagnostics.Add, default).Single();
+                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                    "A shared physical brace piece cannot invalidate a ready or assembled logical symbol.");
+                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Where(show => page.Fonts.Any(resource =>
+                    resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(resource.Font, show.Font)));
+                TestAssert.Equal(authoredPart ? "{A}\u23AA" : "{A}", string.Concat(shows.Select(show => show.Text)));
+            }
+            finally { File.Delete(path); }
+        }
+    }
+
+    internal static string WriteDelimiterMutation(double size, bool braces, bool authoredPart = false)
+    {
+        var parts = new Dictionary<string, byte[]>();
+        using (var archive = ZipFile.OpenRead(NestedMathCasePath("delimiter-assembly-child60.docx")))
+            foreach (var entry in archive.Entries)
+            {
+                using var input = entry.Open(); using var output = new MemoryStream();
+                input.CopyTo(output); parts.Add(entry.FullName, output.ToArray());
+            }
+        XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        XNamespace m = "http://schemas.openxmlformats.org/officeDocument/2006/math";
+        var document = XElement.Parse(Encoding.UTF8.GetString(parts["word/document.xml"]));
+        var delimiter = document.Descendants(m + "d").Single();
+        if (braces)
+        {
+            delimiter.Element(m + "dPr")!.Element(m + "begChr")!.SetAttributeValue(m + "val", "{");
+            delimiter.Element(m + "dPr")!.Element(m + "endChr")!.SetAttributeValue(m + "val", "}");
+        }
+        var run = delimiter.Element(m + "e")!.Element(m + "r")!;
+        run.Element(w + "rPr")!.Element(w + "sz")!.SetAttributeValue(w + "val", size * 2d);
+        if (authoredPart)
+        {
+            var literal = new XElement(run); literal.Element(m + "t")!.Value = "\u23AA";
+            literal.Element(w + "rPr")!.Element(w + "sz")!.SetAttributeValue(w + "val", "24");
+            delimiter.Parent!.Add(literal);
+        }
+        parts["word/document.xml"] = Encoding.UTF8.GetBytes(document.ToString(SaveOptions.DisableFormatting));
+        return TestFixtures.WriteTempPackage(".docx", parts);
+    }
+
     public static void DocxInlineCompositionDelimiterAssembliesKeepContentAndNeutralSourceOrigins()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent delimiter controls use installed Windows fonts.");

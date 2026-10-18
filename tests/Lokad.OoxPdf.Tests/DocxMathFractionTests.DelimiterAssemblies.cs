@@ -6,6 +6,43 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxMathFractionTests
 {
+    public static void MathFontDelimiterAssemblyPartsKeepAuthoredUnicodeAcrossSharedSymbols()
+    {
+        byte[] bytes = DelimiterFontBytes();
+        var range = TestFontBuilder.GetTableRange(bytes, "MATH");
+        byte[] math = bytes.AsSpan(range.Offset, range.Length).ToArray();
+        Array.Resize(ref math, 306);
+        void Set(int at, ushort value) => System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(math.AsSpan(at), value);
+        Set(224, 40); Set(246, 24); Set(258, 12); Set(274, 3);
+        // Both logical marks share all physical parts, including the authored
+        // A glyph. This deliberately challenges eager subset registration too.
+        foreach ((int at, ushort glyph, ushort start, ushort end, ushort flags) in new[] {
+            (276, (ushort)129, (ushort)0, (ushort)100, (ushort)0),
+            (286, (ushort)34, (ushort)100, (ushort)100, (ushort)1),
+            (296, (ushort)130, (ushort)100, (ushort)0, (ushort)0) })
+        { Set(at, glyph); Set(at + 2, start); Set(at + 4, end); Set(at + 6, 500); Set(at + 8, flags); }
+        bytes = TestFontBuilder.ReplaceTable(bytes, "MATH", math);
+        foreach (double size in new[] { 12d, 60d })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string path = DocxInlineCompositionTests.WriteDelimiterMutation(size, braces: false);
+            try
+            {
+                var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
+                var page = new DocxRenderer(new RadicalFontResolver(bytes), mode,
+                    mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                        OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(
+                            DocxTests.ReadDocx(path, mode), diagnostics.Add, default).Single();
+                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                    "Shared physical pieces preserve both logical operators and authored glyph identity.");
+                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Where(show => page.Fonts.Any(resource =>
+                    resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(resource.Font, show.Font)));
+                TestAssert.Equal("(A)", string.Concat(shows.Select(show => show.Text)));
+            }
+            finally { File.Delete(path); }
+        }
+    }
+
     public static void MathFontDelimiterAssembliesKeepCompleteInkLogicalTextAndFixedFallbacks()
     {
         string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",

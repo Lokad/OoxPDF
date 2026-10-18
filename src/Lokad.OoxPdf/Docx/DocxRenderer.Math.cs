@@ -110,7 +110,8 @@ internal sealed partial class DocxRenderer
         Dictionary<DocxEquation, DocxPreparedMathParagraph>? metricOnlyLayouts = null;
         var groups = new Dictionary<(string StableId, int FaceIndex), (OpenTypeFont Font, Dictionary<ushort, int> Glyphs)>();
         var runKeys = new Dictionary<DocxMathRun, (string StableId, int FaceIndex)>();
-        var controlFaces = new Dictionary<OpenTypeFont, (Dictionary<ushort, int> Glyphs, Dictionary<ushort, int> Operators, HashSet<int> Characters)>(ReferenceEqualityComparer.Instance);
+        var controlFaces = new Dictionary<OpenTypeFont, (Dictionary<ushort, int> Glyphs, Dictionary<ushort, int> Operators,
+            Dictionary<ushort, int> AssemblyParts, HashSet<int> Characters)>(ReferenceEqualityComparer.Instance);
         var controlKeys = new Dictionary<IDocxMathControl, (string StableId, int FaceIndex)>(ReferenceEqualityComparer.Instance);
         var unavailableControlFaces = new HashSet<OpenTypeFont>(ReferenceEqualityComparer.Instance);
         foreach (var owner in DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, token, includePageCountDependencies: true)
@@ -236,7 +237,7 @@ internal sealed partial class DocxRenderer
                             { controlGroup = (controlFont, new Dictionary<ushort, int>()); groups.Add(controlKey, controlGroup); }
                             if (!controlFaces.TryGetValue(controlFont, out var face))
                             {
-                                face = (controlGroup.Glyphs, new Dictionary<ushort, int>(), new HashSet<int>());
+                                face = (controlGroup.Glyphs, new Dictionary<ushort, int>(), new Dictionary<ushort, int>(), new HashSet<int>());
                                 controlFaces.Add(controlFont, face);
                             }
                             foreach (int point in controlPoints)
@@ -269,7 +270,10 @@ internal sealed partial class DocxRenderer
                                     {
                                         token.ThrowIfCancellationRequested();
                                         found = true;
-                                        if (!TryRegisterOperatorGlyph(face.Operators, part.Glyph, point)) unavailableControlFaces.Add(controlFont);
+                                        // Physical parts may be shared by different symbols.
+                                        // Their enclosing ActualText owns the logical scalar;
+                                        // an existing authored/ready glyph keeps its Unicode map.
+                                        face.AssemblyParts.TryAdd(part.Glyph, point);
                                     }
                                 }
                                 if (!found) return false;
@@ -293,6 +297,7 @@ internal sealed partial class DocxRenderer
             { unavailableControlFaces.Add(face.Key); continue; }
             if (unavailableControlFaces.Contains(face.Key)) { continue; }
             foreach (var glyph in face.Value.Operators) { face.Value.Glyphs[glyph.Key] = glyph.Value; }
+            foreach (var glyph in face.Value.AssemblyParts) { face.Value.Glyphs.TryAdd(glyph.Key, glyph.Value); }
         }
         var fonts = new Dictionary<(string StableId, int FaceIndex), PdfFontResource>();
         foreach (var group in groups)
