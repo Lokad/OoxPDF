@@ -18,8 +18,11 @@ internal sealed partial class OpenTypeFont
 
     internal static uint U32(byte[] bytes, int offset)
     {
-        return BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(offset, 4));
+        return U32(bytes.AsSpan(), offset);
     }
+
+    private static uint U32(ReadOnlySpan<byte> bytes, int offset) =>
+        BinaryPrimitives.ReadUInt32BigEndian(bytes.Slice(offset, 4));
 
     internal static short I16(byte[] bytes, int offset)
     {

@@ -152,6 +152,90 @@ internal static class FontFormatTests
         TestAssert.Equal("TestFontB", OpenTypeFont.Load(collection, 1).FamilyName);
     }
 
+    public static void FontProgramLoaderSharedProgramsRetainIndependentOwnership()
+    {
+        foreach (byte[] program in new[] { TestFontBuilder.CreateTestFont(), TestFontBuilder.CreateCollection("TestFontA", "TestFontB") })
+        {
+            var backing = new byte[program.Length + 73];
+            program.CopyTo(backing, 37);
+            var source = new MemoryFontProgramSource("ownership:shared-slice", backing.AsMemory(37, program.Length));
+            int faceCount = OpenTypeFont.GetCollectionFontCount(program);
+            OpenTypeFont[] expected = Enumerable.Range(0, faceCount).Select(i => OpenTypeFont.Load(program.ToArray(), i)).ToArray();
+            var fonts = new OpenTypeFont[8];
+            Parallel.For(0, fonts.Length, i =>
+            {
+                var resolution = new FontFaceResolution("TestFont", "TestFont", new FontStyleKey(false, false, 400, i % faceCount, false), source, IsFallback: false);
+                fonts[i] = TestAssert.NotNull(FontProgramLoader.Load(resolution, CancellationToken.None));
+            });
+            TestAssert.True(program.AsSpan().SequenceEqual(backing.AsSpan(37, program.Length)), "Concurrent parsing must leave shared source bytes unchanged.");
+            for (int i = 0; i < fonts.Length; i++)
+            {
+                OpenTypeFont font = fonts[i];
+                OpenTypeFont reference = expected[i % faceCount];
+                TestAssert.True(font.Bytes.Span.SequenceEqual(reference.Bytes.Span), "Selected SFNT must retain byte-exact extraction.");
+                TestAssert.Equal(reference.FamilyName, font.FamilyName);
+                TestAssert.Equal(reference.MapCodePoint('A'), font.MapCodePoint('A'));
+                TestAssert.Equal(reference.GetKerning(34, 35), font.GetKerning(34, 35));
+                TestAssert.True(System.Runtime.InteropServices.MemoryMarshal.TryGetArray(font.Bytes, out ArraySegment<byte> owned), "Parsed font must own an array.");
+                TestAssert.True(!ReferenceEquals(backing, owned.Array), "Parsed font must not retain the shared source array.");
+                for (int j = 0; j < i; j++)
+                {
+                    TestAssert.True(System.Runtime.InteropServices.MemoryMarshal.TryGetArray(fonts[j].Bytes, out ArraySegment<byte> other) && !ReferenceEquals(owned.Array, other.Array), "Independent loads must own independent SFNT buffers.");
+                }
+            }
+        }
+    }
+
+    public static void FontProgramLoaderCollectionExtractionSkipsUnusedSourceCopy()
+    {
+        byte[] collection = TestFontBuilder.CreateCollection("TestFontA", "TestFontB");
+        var padded = new byte[4 * 1024 * 1024];
+        collection.CopyTo(padded, 0);
+        var resolution = new FontFaceResolution("TestFontB", "TestFontB", new FontStyleKey(false, false, 400, 1, false), new MemoryFontProgramSource("allocation:padded-collection", padded), IsFallback: false);
+        TestAssert.NotNull(FontProgramLoader.Load(resolution, CancellationToken.None));
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        OpenTypeFont font = TestAssert.NotNull(FontProgramLoader.Load(resolution, CancellationToken.None));
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        TestAssert.Equal("TestFontB", font.FamilyName);
+        TestAssert.True(allocated < padded.Length / 2, $"Loading a small face must not allocate a copy of its4MiB collection; allocated {allocated} bytes.");
+        TestAssert.True(font.Bytes.Span.SequenceEqual(OpenTypeFont.Load(collection, 1).Bytes.Span), "Unused collection bytes must not change the selected face.");
+    }
+
+    public static void FontProgramLoaderSharedCollectionRejectsInvalidExtentsAndCancellation()
+    {
+        byte[] collection = TestFontBuilder.CreateCollection("TestFontA", "TestFontB");
+        int faceOffset = (int)OpenTypeFont.U32(collection, 12);
+        var invalid = new List<byte[]> { collection[..16] };
+        foreach (Action<byte[]> mutate in new Action<byte[]>[]
+        {
+            bytes => WriteBigEndianUInt32(bytes, 8, 257),
+            bytes => WriteBigEndianUInt32(bytes, 12, uint.MaxValue),
+            bytes => { bytes[faceOffset + 4] = 255; bytes[faceOffset + 5] = 255; },
+            bytes => Array.Copy(bytes, faceOffset + 12, bytes, faceOffset + 28, 4),
+            bytes => WriteBigEndianUInt32(bytes, faceOffset + 12 + 8, uint.MaxValue)
+        })
+        {
+            byte[] bytes = collection.ToArray();
+            mutate(bytes);
+            invalid.Add(bytes);
+        }
+        foreach (byte[] bytes in invalid)
+        {
+            TestAssert.Throws<InvalidDataException>(() => OpenTypeFont.Load(bytes));
+            TestAssert.True(FontProgramLoader.Load(Resolve(bytes, 0), CancellationToken.None) is null, "Malformed shared collections must retain the font fallback.");
+        }
+        foreach (int index in new[] { -1, 2 })
+        {
+            TestAssert.True(FontProgramLoader.Load(Resolve(collection, index), CancellationToken.None) is null, "Invalid collection face index must retain the font fallback.");
+        }
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => FontProgramLoader.Load(Resolve(collection, 1), cancelled.Token));
+        TestAssert.Throws<OperationCanceledException>(() => OpenTypeFont.LoadShared(collection, 1, cancelled.Token));
+
+        static FontFaceResolution Resolve(byte[] bytes, int index) => new("TestFont", "TestFont", new FontStyleKey(false, false, 400, index, false), new MemoryFontProgramSource("invalid:collection", bytes), IsFallback: false);
+    }
+
     public static void RejectsCollectionFaceCountOverflow()
     {
         byte[] header = new byte[16];

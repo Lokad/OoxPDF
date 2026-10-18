@@ -78,6 +78,17 @@ internal sealed partial class OpenTypeFont
         return Load(bytes, fontIndex, CancellationToken.None);
     }
 
+    // Program sources publish immutable shared memory. Always retain a private
+    // SFNT: copy a standalone face, or extract only the selected collection face.
+    // No source memory is retained or changed by the parser or subsetter.
+    internal static OpenTypeFont LoadShared(ReadOnlySpan<byte> bytes, int fontIndex, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return bytes.StartsWith("ttcf"u8)
+            ? Load(ExtractCollectionFont(bytes, fontIndex, cancellationToken), 0, cancellationToken)
+            : Load(bytes.ToArray(), fontIndex, cancellationToken);
+    }
+
     // font-table parsing (especially kern/GPOS expansion) is CPU work
     // that previously ignored cancellation entirely. Checkpoints sit between parse
     // phases so a cancelled conversion fails fast instead of expanding kerning
@@ -93,7 +104,7 @@ internal sealed partial class OpenTypeFont
 
         if (Encoding.ASCII.GetString(bytes, 0, 4) == "ttcf")
         {
-            bytes = ExtractCollectionFont(bytes, fontIndex);
+            bytes = ExtractCollectionFont(bytes, fontIndex, cancellationToken);
         }
         else if (fontIndex != 0)
         {
@@ -389,8 +400,9 @@ internal sealed partial class OpenTypeFont
         }
     }
 
-    private static byte[] ExtractCollectionFont(byte[] bytes, int fontIndex)
+    private static byte[] ExtractCollectionFont(ReadOnlySpan<byte> bytes, int fontIndex, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (bytes.Length < 16)
             {
                 throw new InvalidDataException("TrueType collection header is too small.");
@@ -426,7 +438,7 @@ internal sealed partial class OpenTypeFont
             for (int i = 0; i < collectionTableCount; i++)
             {
                 int recordOffset = (int)fontOffset + 12 + i * 16;
-                string tag = Encoding.ASCII.GetString(bytes, recordOffset, 4);
+                string tag = Encoding.ASCII.GetString(bytes.Slice(recordOffset, 4));
                 records[i] = faceTables[tag];
             }
 
@@ -445,14 +457,15 @@ internal sealed partial class OpenTypeFont
             }
 
             var output = new byte[Align4((int)outputLength)];
-            Array.Copy(bytes, (int)fontOffset, output, 0, directoryLength);
+            bytes.Slice((int)fontOffset, directoryLength).CopyTo(output);
 
             int writeOffset = directoryLength;
             for (int i = 0; i < records.Length; i++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 TableRecord record = records[i];
                 writeOffset = Align4(writeOffset);
-                Array.Copy(bytes, record.Offset, output, writeOffset, record.Length);
+                bytes.Slice(record.Offset, record.Length).CopyTo(output.AsSpan(writeOffset));
                 W32(output, 12 + i * 16 + 8, (uint)writeOffset);
                 writeOffset += record.Length;
             }
@@ -896,7 +909,7 @@ internal sealed partial class OpenTypeFont
     // so late tables such as glyf do not fail validation merely for lying beyond the
     // discovery span. Reads still come from bytes; anything actually touched beyond the
     // slice throws and callers fall back to a full read.
-    private static Dictionary<string, TableRecord> ReadTableDirectory(byte[] bytes, int directoryOffset, ushort tableCount, string what, long? extentLimit = null)
+    private static Dictionary<string, TableRecord> ReadTableDirectory(ReadOnlySpan<byte> bytes, int directoryOffset, ushort tableCount, string what, long? extentLimit = null)
     {
         if ((long)directoryOffset + (long)tableCount * 16L > bytes.Length)
         {
@@ -908,7 +921,7 @@ internal sealed partial class OpenTypeFont
         for (int i = 0; i < tableCount; i++)
         {
             int record = directoryOffset + i * 16;
-            string tag = Encoding.ASCII.GetString(bytes, record, 4);
+            string tag = Encoding.ASCII.GetString(bytes.Slice(record, 4));
             uint tableOffset = U32(bytes, record + 8);
             uint length = U32(bytes, record + 12);
             if ((ulong)tableOffset + length > (ulong)limit)
