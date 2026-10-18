@@ -1,5 +1,23 @@
 # Composed-document reliability checkpoint
 
+## C235: related-story measurement ownership across placement retries (2026-10-18)
+
+Read-only C233 attribution confirms a concrete repeated pure operation. The same
+source document and prepared resources require a header-placement retry: initial
+header bottoms717.676/718.237pt lie below the720pt body top. Each engine.Create
+builds a fresh related-story width dictionary, recomputing immutable measurements.
+Final uses468pt; Review needs355.135pt body and468pt note widths. The two normal
+notes measure130lines at the narrow width and66 at full width, so these distinct
+contexts must remain. Standalone factory medians are2.282MB for full width and
+2.956MB for the narrow Review width; reflection/PowerShell dispatch is included.
+These diagnostic figures are not additive production savings or a speedup claim.
+SegoeUI is added during painting, so it does not explain coordinated snapshots.
+No library builds, PDF conversions, tests or Office exports replayed.
+C236 will share measured related stories only across the two placement calls,
+with identical source/font/math/geometry and rounded width keys; other coordinator
+retries/conversions retain separate ownership. Evidence:
+related-story-measurement-attribution.json and four frozen attribution snapshots.
+
 ## C234: compound-note allocation baseline (2026-10-18)
 
 The existing probe alone is built/self-tested against frozen C233; library bytes
