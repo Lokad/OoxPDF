@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingMultipleIntegralsKeepContentAndNeutralOrigins() =>
+        DocxInlineCompositionTests.CheckDisplayIntegrals(new PinnedResolver(mathFont: true), "multiple-integral-office.json");
+
     public static void PortableRenderingInheritedIntegralLimitsKeepContentDefaultsAndNeutralOrigins() =>
         DocxInlineCompositionTests.CheckInheritedIntegralLimits(new PinnedResolver(mathFont: true));
 

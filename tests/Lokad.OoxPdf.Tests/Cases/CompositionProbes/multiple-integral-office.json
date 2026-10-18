@@ -1,0 +1,341 @@
+{
+  "Source": "Four independent Word16 source/view/PDF-pinned exports; each document combines inline inherited, explicit-side display and inherited-stacked display integral placements.",
+  "Rows": [
+    {
+      "Id": "multiple-integral-double",
+      "Mode": "final-preserve",
+      "InputSha256": "2F4D3FD3CA6B11B9AE03535885CBDF9C4C9C529E99618B09F6C0A9E82C7BDF41",
+      "ReferencePdfSha256": "DF0B2782771B409E54D262F84EC8AD003712C019FB2195010F5F0760D5E46680",
+      "EquationCount": 3,
+      "DisplayEquationCount": 2,
+      "MathText": "\u222b\u222bx10\u222b\u222bx10\u222b\u222bx10",
+      "FollowingY": 584.5,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 151.82,
+          "Y": 705.1,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 169.82,
+          "Y": 705.7,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 162.86,
+          "Y": 713.02,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "X": 160.46,
+          "Y": 700.78,
+          "Size": 8.52
+        },
+        {
+          "Offset": 4,
+          "X": 72.024,
+          "Y": 665.26,
+          "Size": 12
+        },
+        {
+          "Offset": 5,
+          "X": 91.344,
+          "Y": 665.26,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "X": 86.424,
+          "Y": 678.94,
+          "Size": 8.52
+        },
+        {
+          "Offset": 7,
+          "X": 81.984,
+          "Y": 653.86,
+          "Size": 8.52
+        },
+        {
+          "Offset": 8,
+          "X": 72.024,
+          "Y": 612.7,
+          "Size": 12
+        },
+        {
+          "Offset": 9,
+          "X": 88.464,
+          "Y": 612.7,
+          "Size": 12
+        },
+        {
+          "Offset": 10,
+          "X": 78.984,
+          "Y": 631.9,
+          "Size": 8.52
+        },
+        {
+          "Offset": 11,
+          "X": 74.544,
+          "Y": 595.9,
+          "Size": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "multiple-integral-double",
+      "Mode": "all-word-compatible",
+      "InputSha256": "2F4D3FD3CA6B11B9AE03535885CBDF9C4C9C529E99618B09F6C0A9E82C7BDF41",
+      "ReferencePdfSha256": "0176EE77746C172EA2F3C031A51A8B6D726FEC77014226F971EF3C99160897C7",
+      "EquationCount": 3,
+      "DisplayEquationCount": 2,
+      "MathText": "\u222b\u222bx10\u222b\u222bx10\u222b\u222bx10",
+      "FollowingY": 584.5,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 151.82,
+          "Y": 705.1,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 169.82,
+          "Y": 705.7,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 162.86,
+          "Y": 713.02,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "X": 160.46,
+          "Y": 700.78,
+          "Size": 8.52
+        },
+        {
+          "Offset": 4,
+          "X": 72.024,
+          "Y": 665.26,
+          "Size": 12
+        },
+        {
+          "Offset": 5,
+          "X": 91.344,
+          "Y": 665.26,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "X": 86.424,
+          "Y": 678.94,
+          "Size": 8.52
+        },
+        {
+          "Offset": 7,
+          "X": 81.984,
+          "Y": 653.86,
+          "Size": 8.52
+        },
+        {
+          "Offset": 8,
+          "X": 72.024,
+          "Y": 612.7,
+          "Size": 12
+        },
+        {
+          "Offset": 9,
+          "X": 88.464,
+          "Y": 612.7,
+          "Size": 12
+        },
+        {
+          "Offset": 10,
+          "X": 78.984,
+          "Y": 631.9,
+          "Size": 8.52
+        },
+        {
+          "Offset": 11,
+          "X": 74.544,
+          "Y": 595.9,
+          "Size": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "multiple-integral-triple",
+      "Mode": "final-preserve",
+      "InputSha256": "10DE8433230A7DE0A80B85864F00840CE55EEC49AA7F58C44531764F4DDA9AAD",
+      "ReferencePdfSha256": "D886A2D6728B704EC69ABD69959AE14DE16BF16FF44F60D2827449E08EFDFB82",
+      "EquationCount": 3,
+      "DisplayEquationCount": 2,
+      "MathText": "\u222b\u222b\u222bx10\u222b\u222b\u222bx10\u222b\u222b\u222bx10",
+      "FollowingY": 584.5,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 151.82,
+          "Y": 705.1,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 173.9,
+          "Y": 705.7,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 166.94,
+          "Y": 713.02,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "X": 164.54,
+          "Y": 700.78,
+          "Size": 8.52
+        },
+        {
+          "Offset": 4,
+          "X": 72.024,
+          "Y": 665.26,
+          "Size": 12
+        },
+        {
+          "Offset": 5,
+          "X": 96.144,
+          "Y": 665.26,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "X": 91.224,
+          "Y": 678.94,
+          "Size": 8.52
+        },
+        {
+          "Offset": 7,
+          "X": 86.784,
+          "Y": 653.86,
+          "Size": 8.52
+        },
+        {
+          "Offset": 8,
+          "X": 72.024,
+          "Y": 612.7,
+          "Size": 12
+        },
+        {
+          "Offset": 9,
+          "X": 93.264,
+          "Y": 612.7,
+          "Size": 12
+        },
+        {
+          "Offset": 10,
+          "X": 81.384,
+          "Y": 631.9,
+          "Size": 8.52
+        },
+        {
+          "Offset": 11,
+          "X": 76.944,
+          "Y": 595.9,
+          "Size": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "multiple-integral-triple",
+      "Mode": "all-word-compatible",
+      "InputSha256": "10DE8433230A7DE0A80B85864F00840CE55EEC49AA7F58C44531764F4DDA9AAD",
+      "ReferencePdfSha256": "1C624E20A513301C7DEC8A9C3C01EC496409032590854824BA2B3739F55B3AF0",
+      "EquationCount": 3,
+      "DisplayEquationCount": 2,
+      "MathText": "\u222b\u222b\u222bx10\u222b\u222b\u222bx10\u222b\u222b\u222bx10",
+      "FollowingY": 584.5,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "X": 151.82,
+          "Y": 705.1,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "X": 173.9,
+          "Y": 705.7,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "X": 166.94,
+          "Y": 713.02,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "X": 164.54,
+          "Y": 700.78,
+          "Size": 8.52
+        },
+        {
+          "Offset": 4,
+          "X": 72.024,
+          "Y": 665.26,
+          "Size": 12
+        },
+        {
+          "Offset": 5,
+          "X": 96.144,
+          "Y": 665.26,
+          "Size": 12
+        },
+        {
+          "Offset": 6,
+          "X": 91.224,
+          "Y": 678.94,
+          "Size": 8.52
+        },
+        {
+          "Offset": 7,
+          "X": 86.784,
+          "Y": 653.86,
+          "Size": 8.52
+        },
+        {
+          "Offset": 8,
+          "X": 72.024,
+          "Y": 612.7,
+          "Size": 12
+        },
+        {
+          "Offset": 9,
+          "X": 93.264,
+          "Y": 612.7,
+          "Size": 12
+        },
+        {
+          "Offset": 10,
+          "X": 81.384,
+          "Y": 631.9,
+          "Size": 8.52
+        },
+        {
+          "Offset": 11,
+          "X": 76.944,
+          "Y": 595.9,
+          "Size": 8.52
+        }
+      ]
+    }
+  ]
+}

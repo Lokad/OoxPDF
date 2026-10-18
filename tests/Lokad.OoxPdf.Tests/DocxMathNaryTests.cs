@@ -33,7 +33,7 @@ internal static partial class DocxMathNaryTests
         TestAssert.True(!DocxMathLayout.TryMeasure(equation with { Content = new([Row("B"), first, second with { Body = Row("D") }]) },
             _ => resource, CancellationToken.None, out var absent, out _) && absent is null,
             "A missing later body CID cannot publish preceding literals or another n-ary box.");
-        foreach (var invalid in new[] { second with { LimitLocationValue = "unknown" }, second with { CharacterValue = "\u222C" } })
+        foreach (var invalid in new[] { second with { LimitLocationValue = "unknown" }, second with { CharacterValue = "\u2A0C" } })
             TestAssert.True(!DocxMathLayout.TryGetRuns(equation with { Content = new([Row("B"), first, invalid]) }, CancellationToken.None, out _),
                 "Contextual mixed eligibility preserves malformed placement and unsupported operator fallback.");
     }
@@ -128,7 +128,7 @@ internal static partial class DocxMathNaryTests
     public static void MathFontNaryEligibilityBoundsAndCancellationRemainExplicit()
     {
         var nary = Nary("\u2211");
-        foreach (var invalid in new[] { nary with { CharacterValue = "\u222C" }, nary with { LimitLocationValue = "unknown" },
+        foreach (var invalid in new[] { nary with { CharacterValue = "\u2A0C" }, nary with { LimitLocationValue = "unknown" },
             nary with { SubscriptHiddenValue = true }, nary with { SuperscriptHiddenValue = true },
             nary with { Body = new([nary]) }, nary with { HasUnsupportedProperties = true } })
             TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(invalid), CancellationToken.None, out _),

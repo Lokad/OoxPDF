@@ -1,0 +1,34 @@
+[
+  {
+    "Id": "multiple-integral-double",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/multiple-integral-double.docx",
+    "Sha256": "2F4D3FD3CA6B11B9AE03535885CBDF9C4C9C529E99618B09F6C0A9E82C7BDF41",
+    "SourceSha256": "1BF923C70E1652E8EF216DCF5CC7B35F391FE0BF7CC6991AC9678A06C031211D",
+    "HeldOut": false,
+    "ExpectedEquationCount": 3,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Side limits:",
+      "Stacked limits:",
+      "Following prose."
+    ],
+    "IntegralCharacter": "\u222c"
+  },
+  {
+    "Id": "multiple-integral-triple",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/multiple-integral-triple.docx",
+    "Sha256": "10DE8433230A7DE0A80B85864F00840CE55EEC49AA7F58C44531764F4DDA9AAD",
+    "SourceSha256": "1BF923C70E1652E8EF216DCF5CC7B35F391FE0BF7CC6991AC9678A06C031211D",
+    "HeldOut": false,
+    "ExpectedEquationCount": 3,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Side limits:",
+      "Stacked limits:",
+      "Following prose."
+    ],
+    "IntegralCharacter": "\u222d"
+  }
+]

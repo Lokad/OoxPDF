@@ -15,16 +15,20 @@ internal static partial class DocxMathLayout
 
     private static DocxMathNary? GetSupportedNary(DocxMathNode? node, DocxEquation equation, CancellationToken token) =>
         node is DocxMathNary
-        { HasUnsupportedProperties: false, CharacterValue: "\u2211" or "\u220F" or "\u222B", LimitLocationValue: null or "undOvr" or "subSup" } nary &&
+        { HasUnsupportedProperties: false, LimitLocationValue: null or "undOvr" or "subSup" } nary &&
+        (nary.CharacterValue is "\u2211" or "\u220F" || IsSupportedIntegral(nary.CharacterValue)) &&
         NaryLimitLocation(equation, nary) is "undOvr" or "subSup" &&
         (nary.SubscriptHiddenValue != true || IsEmptyLiteralArgument(nary.Subscript, token)) &&
         (nary.SuperscriptHiddenValue != true || IsEmptyLiteralArgument(nary.Superscript, token)) &&
         (nary.ControlText is null || DocxMathRowLayout.HasSupportedTextFormatting(nary.ControlText, allowBold: false)) ? nary : null;
 
     private static string? NaryLimitLocation(DocxEquation equation, DocxMathNary nary) =>
-        nary.LimitLocationValue ?? (nary.CharacterValue == "\u222B"
+        nary.LimitLocationValue ?? (IsSupportedIntegral(nary.CharacterValue)
             ? equation.LimitSettings.UnsupportedIntegral ? null : equation.LimitSettings.IntegralValue ?? "subSup"
             : equation.LimitSettings.UnsupportedNary ? null : equation.LimitSettings.NaryValue ?? "undOvr");
+
+    // Admission and document-default ownership use the same bounded family.
+    private static bool IsSupportedIntegral(string? character) => character is "\u222B" or "\u222C" or "\u222D";
 
     // Word reassigns stored nonempty hidden arguments into visible roles.
     // Only a truly empty supported literal argument may be omitted here.

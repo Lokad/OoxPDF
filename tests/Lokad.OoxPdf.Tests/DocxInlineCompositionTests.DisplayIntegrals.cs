@@ -16,9 +16,15 @@ internal static partial class DocxInlineCompositionTests
         CheckDisplayIntegrals(null);
     }
 
-    internal static void CheckDisplayIntegrals(IFontResolver? resolver)
+    public static void DocxInlineCompositionMultipleIntegralsKeepIndependentWordPlacementsAndFlow()
     {
-        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath("display-integral-office.json")));
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent integral origins require installed Windows fonts.");
+        CheckDisplayIntegrals(null, "multiple-integral-office.json");
+    }
+
+    internal static void CheckDisplayIntegrals(IFontResolver? resolver, string referenceFile = "display-integral-office.json")
+    {
+        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath(referenceFile)));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string id = row.GetProperty("Id").GetString()!;
@@ -31,8 +37,10 @@ internal static partial class DocxInlineCompositionTests
             {
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var document = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed);
-                TestAssert.True(document.Paragraphs.SelectMany(p => p.Equations).Single().Display,
-                    "The independent source is standalone display math rather than a rewritten inline equation.");
+                var equations = document.Paragraphs.SelectMany(p => p.Equations).ToArray();
+                TestAssert.Equal(row.TryGetProperty("EquationCount", out var count) ? count.GetInt32() : 1, equations.Length);
+                TestAssert.Equal(row.TryGetProperty("DisplayEquationCount", out var displays) ? displays.GetInt32() : 1,
+                    equations.Count(e => e.Display));
                 var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, diagnostics.Add, default).Single();
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
@@ -42,7 +50,7 @@ internal static partial class DocxInlineCompositionTests
                     && ReferenceEquals(resource.Font, show.Font))).ToArray();
                 TestAssert.Equal(row.GetProperty("MathText").GetString(),
                     string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
-                TestAssert.Equal(4, math.Length);
+                TestAssert.Equal(row.GetProperty("PhysicalAnchors").GetArrayLength(), math.Length);
                 TestAssert.True(math.All(show => show.X > 0d && show.X < page.Width && show.Y > 0d && show.Y < page.Height),
                     "Operator, body and both limits remain on the page.");
                 string origins = string.Join("|", math.Select(show => show.X.ToString("R", CultureInfo.InvariantCulture) + "," +
