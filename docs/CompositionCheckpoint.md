@@ -1,5 +1,23 @@
 # Composed-document reliability checkpoint
 
+C196 reuses qualified C195 for two public-source compound transformations:
+bookmarked standalone header integrals inherit stacked limits; the specification
+sum inherits side limits while its product retains explicit stacked placement.
+Tables, image, links, notes, body formulas and static repetitions remain. Four
+candidate conversions/four independent Word exports, no source change, build,
+test or previous-corpus replay. Report2pages/specification3pages match both modes.
+All252 normalized mathematical scalars match Word, including40 repeated header
+scalars; source-prose deficits are zero. All10 unique native page pairs reviewed:
+no new visible omission, overlap or clipping. No production change warranted.
+
+Both Final header1pt groups pass(maxY0.531pt); both Word-compatible groups fail
+at1.030662pt(maxX0.146247pt). Keep four strict changed-pixel/foreground-recall/MAE/
+SSIM failures, complex-math flags and raw sin word-token deficit1/specification.
+Complete math scalar inventories match; extraction screens are not reading-order
+or visual proof. Existing table/row/paragraph/connector/typography residuals remain.
+Evidence compound-inherited-defaults-evidence.json. Next investigate the explicitly
+excluded double/triple integral family through the existing n-ary contracts.
+
 C195 binds document-level math defaults in shared preparation, preserving source
 identity and node-setting precedence. Static stories previously lose inherited
 stacked integral placement: maximum5.112ptX/11.105ptY against Word. Header origins
