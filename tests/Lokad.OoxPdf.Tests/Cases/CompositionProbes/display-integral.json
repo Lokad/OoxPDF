@@ -1,0 +1,30 @@
+[
+  {
+    "Id": "display-integral-side",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/display-integral-side.docx",
+    "Sha256": "E393AE7FF37DB125EE8FC25D6D9A2A4E1643D85AE0CC4F81130F9A9585C5D0F1",
+    "SourceSha256": "1BF923C70E1652E8EF216DCF5CC7B35F391FE0BF7CC6991AC9678A06C031211D",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Following prose."
+    ],
+    "LimitLocation": "subSup"
+  },
+  {
+    "Id": "display-integral-stacked",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/display-integral-stacked.docx",
+    "Sha256": "8D34E454BC5D07E5B8B179EC8E31FDE87B9AB0592E88910561D6949FBF228A1A",
+    "SourceSha256": "1BF923C70E1652E8EF216DCF5CC7B35F391FE0BF7CC6991AC9678A06C031211D",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before formula:",
+      "after formula.",
+      "Following prose."
+    ],
+    "LimitLocation": "undOvr"
+  }
+]

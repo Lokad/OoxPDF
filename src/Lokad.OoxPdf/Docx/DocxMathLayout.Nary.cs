@@ -9,14 +9,13 @@ internal static partial class DocxMathLayout
 {
     // Node placement overrides the document owner. Inline equations place
     // limits beside the operator, as Office does for undOvr.
-    // Integral sizing retains its independently measured fallback.
+    // Display variants retain the same font-owned n-ary fitting rules.
     private static DocxMathNary? GetNary(DocxEquation equation, CancellationToken token) =>
         GetSupportedNary(GetSingleSupportedChild(equation), equation, token);
 
     private static DocxMathNary? GetSupportedNary(DocxMathNode? node, DocxEquation equation, CancellationToken token) =>
         node is DocxMathNary
         { HasUnsupportedProperties: false, CharacterValue: "\u2211" or "\u220F" or "\u222B", LimitLocationValue: null or "undOvr" or "subSup" } nary &&
-        (!equation.Display || nary.CharacterValue != "\u222B") &&
         NaryLimitLocation(equation, nary) is "undOvr" or "subSup" &&
         (nary.SubscriptHiddenValue != true || IsEmptyLiteralArgument(nary.Subscript, token)) &&
         (nary.SuperscriptHiddenValue != true || IsEmptyLiteralArgument(nary.Superscript, token)) &&
@@ -66,7 +65,10 @@ internal static partial class DocxMathLayout
         int point = char.ConvertToUtf32(nary.CharacterValue!, 0);
         ushort canonical = font.MapCodePoint(point);
         double glyphSize = OfficePdfTextEmissionProfile.FontSize(size), scale = glyphSize / font.UnitsPerEm;
-        double target = equation.Display ? constants.DisplayOperatorMinHeight : 0d;
+        // Office also applies the font's subformula minimum to display
+        // operators. Keep the declared display minimum as a lower bound.
+        double target = equation.Display ? Math.Max(constants.DisplayOperatorMinHeight,
+            constants.DelimitedSubFormulaMinHeight) : 0d;
         // Unlike delimiters, an omitted n-ary grow property defaults to off.
         // Explicit growth fits the body's occupied height, without imposing
         // a delimiter's symmetric extension around the math axis.
@@ -78,14 +80,25 @@ internal static partial class DocxMathLayout
         double Value(OpenTypeMathConstant field) => constants.GetValue(field) * size / font.UnitsPerEm;
         double baseline = Value(OpenTypeMathConstant.AxisHeight) - (bounds.YMax + bounds.YMin) / 2d * scale;
         double operatorAdvance = font.GetAdvanceWidth(variant.Glyph) * scale;
+        if (!font.TryGetMathItalicCorrection(variant.Glyph, out short correction))
+        { fallback = "InvalidMathNaryScriptMetrics"; return false; }
         bool stacked = equation.Display && NaryLimitLocation(equation, nary) == "undOvr";
         double groupAdvance, operatorX = 0d, upperX, lowerX, upperY, lowerY, bodyX;
         if (stacked)
         {
             groupAdvance = Math.Max(operatorAdvance, Math.Max((lower?.AdvanceWidth ?? 0d), (upper?.AdvanceWidth ?? 0d)));
             operatorX = (groupAdvance - operatorAdvance) / 2d;
-            upperX = (groupAdvance - (upper?.AdvanceWidth ?? 0d)) / 2d;
-            lowerX = (groupAdvance - (lower?.AdvanceWidth ?? 0d)) / 2d;
+            upperX = (groupAdvance - (upper?.AdvanceWidth ?? 0d)) / 2d + correction * scale / 2d;
+            lowerX = (groupAdvance - (lower?.AdvanceWidth ?? 0d)) / 2d - correction * scale / 2d;
+            // Slanted limits can extend left of the operator. Translate the
+            // complete group and retain its logical right edge before the body.
+            double left = Math.Min(operatorX, Math.Min(upper is null ? operatorX : upperX,
+                lower is null ? operatorX : lowerX));
+            double shift = -Math.Min(0d, left);
+            operatorX += shift; upperX += shift; lowerX += shift;
+            groupAdvance = Math.Max(operatorX + operatorAdvance, Math.Max(
+                upper is null ? 0d : upperX + upper.AdvanceWidth,
+                lower is null ? 0d : lowerX + lower.AdvanceWidth));
             upperY = baseline + bounds.YMax * scale + Math.Max(Value(OpenTypeMathConstant.UpperLimitBaselineRiseMin),
                 Value(OpenTypeMathConstant.UpperLimitGapMin) + (upper?.BelowBaseline ?? 0d));
             lowerY = baseline + bounds.YMin * scale - Math.Max(Value(OpenTypeMathConstant.LowerLimitBaselineDropMin),
@@ -95,8 +108,7 @@ internal static partial class DocxMathLayout
         else
         {
             var basis = new DocxMathBox(operatorAdvance, Math.Max(0d, bounds.YMax * scale), Math.Max(0d, -bounds.YMin * scale), []);
-            if (!font.TryIsMathExtendedShape(variant.Glyph, out bool extended) ||
-                !font.TryGetMathItalicCorrection(variant.Glyph, out short correction))
+            if (!font.TryIsMathExtendedShape(variant.Glyph, out bool extended))
             { fallback = "InvalidMathNaryScriptMetrics"; return false; }
             GetScriptShifts(constants, size / font.UnitsPerEm, basis, lower, upper, extended, equation.Cramped,
                 out double up, out double down);

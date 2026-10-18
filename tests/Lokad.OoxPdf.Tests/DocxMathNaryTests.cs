@@ -6,7 +6,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxMathNaryTests
+internal static partial class DocxMathNaryTests
 {
     public static void MathFontMixedNaryRowsKeepSemanticEdgesControlsAndCompleteFallback()
     {
@@ -33,9 +33,9 @@ internal static class DocxMathNaryTests
         TestAssert.True(!DocxMathLayout.TryMeasure(equation with { Content = new([Row("B"), first, second with { Body = Row("D") }]) },
             _ => resource, CancellationToken.None, out var absent, out _) && absent is null,
             "A missing later body CID cannot publish preceding literals or another n-ary box.");
-        foreach (var invalid in new[] { second with { LimitLocationValue = "unknown" }, second with { CharacterValue = "\u222B" } })
+        foreach (var invalid in new[] { second with { LimitLocationValue = "unknown" }, second with { CharacterValue = "\u222C" } })
             TestAssert.True(!DocxMathLayout.TryGetRuns(equation with { Content = new([Row("B"), first, invalid]) }, CancellationToken.None, out _),
-                "Contextual mixed eligibility preserves malformed placement and unresolved display-integral fallback.");
+                "Contextual mixed eligibility preserves malformed placement and unsupported operator fallback.");
     }
 
     public static void MathFontNaryDocumentLimitSettingsRetainValuesMalformedSourceAndCancellation()
@@ -128,7 +128,7 @@ internal static class DocxMathNaryTests
     public static void MathFontNaryEligibilityBoundsAndCancellationRemainExplicit()
     {
         var nary = Nary("\u2211");
-        foreach (var invalid in new[] { nary with { CharacterValue = "\u222B" }, nary with { LimitLocationValue = "unknown" },
+        foreach (var invalid in new[] { nary with { CharacterValue = "\u222C" }, nary with { LimitLocationValue = "unknown" },
             nary with { SubscriptHiddenValue = true }, nary with { SuperscriptHiddenValue = true },
             nary with { Body = new([nary]) }, nary with { HasUnsupportedProperties = true } })
             TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(invalid), CancellationToken.None, out _),
@@ -218,8 +218,11 @@ internal static class DocxMathNaryTests
             "A font-owned italic correction lets the lower integral limit precede the upper limit without a point-size branch.");
         TestAssert.True(upper.BaselineY - op.BaselineY >= 8d,
             "The extended-shape flag activates the occupied-base drop rule for an inline integral.");
-        TestAssert.True(!DocxMathLayout.TryGetRuns(equation with { Display = true }, CancellationToken.None, out _),
-            "Display integral sizing retains its independently measured unresolved fallback.");
+        TestAssert.True(DocxMathLayout.TryGetRuns(equation with { Display = true }, CancellationToken.None, out _),
+            "Display integrals share the same bounded source roles.");
+        TestAssert.True(!DocxMathLayout.TryMeasure(equation with { Display = true }, _ => resource,
+            CancellationToken.None, out var missingDisplay, out _) && missingDisplay is null,
+            "An unencoded display variant still retains complete fallback.");
         var invalid = equation with { LimitSettings = new("undOvr", "bad", false, true, []) };
         TestAssert.True(!DocxMathLayout.TryMeasure(invalid, _ => resource, CancellationToken.None, out var absent, out _) && absent is null,
             "Integral defaults retain independent ownership rather than consulting an unrelated n-ary setting.");

@@ -1,0 +1,157 @@
+{
+  "Source": "Four independent Word16 exports with pinned source/view/PDF provenance; body/limits and following prose retain one-point gates.",
+  "Rows": [
+    {
+      "Id": "display-integral-side",
+      "Mode": "final-preserve",
+      "InputSha256": "E393AE7FF37DB125EE8FC25D6D9A2A4E1643D85AE0CC4F81130F9A9585C5D0F1",
+      "ReferencePdfSha256": "70894E40C68846E7860D2970740BA7E2AB35E6B29F8A632BD82123BF5B4107D5",
+      "MathText": "\u222bx10",
+      "FollowingY": 647.14,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "Text": "\u222b",
+          "X": 72.024,
+          "Y": 684.58,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "\ud835\udc65",
+          "X": 86.664,
+          "Y": 684.58,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "Text": "1",
+          "X": 81.744,
+          "Y": 698.26,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "Text": "0",
+          "X": 77.304,
+          "Y": 673.18,
+          "Size": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "display-integral-side",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E393AE7FF37DB125EE8FC25D6D9A2A4E1643D85AE0CC4F81130F9A9585C5D0F1",
+      "ReferencePdfSha256": "3CC7C83590A343EF46790C1301ADF26850261B0E262D587D4953E41D36634A95",
+      "MathText": "\u222bx10",
+      "FollowingY": 647.14,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "Text": "\u222b",
+          "X": 72.024,
+          "Y": 684.58,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "\ud835\udc65",
+          "X": 86.664,
+          "Y": 684.58,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "Text": "1",
+          "X": 81.744,
+          "Y": 698.26,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "Text": "0",
+          "X": 77.304,
+          "Y": 673.18,
+          "Size": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "display-integral-stacked",
+      "Mode": "final-preserve",
+      "InputSha256": "8D34E454BC5D07E5B8B179EC8E31FDE87B9AB0592E88910561D6949FBF228A1A",
+      "ReferencePdfSha256": "C31D95F8AAD15C66C29AC0C9FE27BF38BE6DE5FB44C9F6F02701667A26576DE6",
+      "MathText": "\u222bx10",
+      "FollowingY": 636.1,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "Text": "\u222b",
+          "X": 72.024,
+          "Y": 678.94,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "\ud835\udc65",
+          "X": 83.664,
+          "Y": 678.94,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "Text": "1",
+          "X": 76.584,
+          "Y": 698.14,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "Text": "0",
+          "X": 72.144,
+          "Y": 662.14,
+          "Size": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "display-integral-stacked",
+      "Mode": "all-word-compatible",
+      "InputSha256": "8D34E454BC5D07E5B8B179EC8E31FDE87B9AB0592E88910561D6949FBF228A1A",
+      "ReferencePdfSha256": "2DC7D126891ECFF484922253E91B02EE755A512EE3FB6E5F5477534AA8A52634",
+      "MathText": "\u222bx10",
+      "FollowingY": 636.1,
+      "PhysicalAnchors": [
+        {
+          "Offset": 0,
+          "Text": "\u222b",
+          "X": 72.024,
+          "Y": 678.94,
+          "Size": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "\ud835\udc65",
+          "X": 83.664,
+          "Y": 678.94,
+          "Size": 12
+        },
+        {
+          "Offset": 2,
+          "Text": "1",
+          "X": 76.584,
+          "Y": 698.14,
+          "Size": 8.52
+        },
+        {
+          "Offset": 3,
+          "Text": "0",
+          "X": 72.144,
+          "Y": 662.14,
+          "Size": 8.52
+        }
+      ]
+    }
+  ]
+}
