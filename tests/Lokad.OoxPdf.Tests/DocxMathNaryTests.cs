@@ -227,6 +227,46 @@ internal static class DocxMathNaryTests
             _ => resource, CancellationToken.None, out _, out _), "Explicit placement overrides unused invalid integral defaults.");
     }
 
+    public static void MathFontNaryMatrixBodiesKeepOrderedOwnersLimitsAndCompleteFallback()
+    {
+        var font = OpenTypeFont.Load(FontBytes(0x2211));
+        var resource = new PdfFontResource("MatrixBody", PdfEmbeddedFont.CreateForGlyphMappings(font,
+            new[] { ((ushort)128, 0x2211), ((ushort)130, 0x2211), (font.MapCodePoint('B'), (int)'B'), (font.MapCodePoint('C'), (int)'C') }, default));
+        foreach (bool display in new[] { false, true })
+        foreach (bool hidden in new[] { false, true })
+        foreach (double size in new[] { 12d, 20d })
+        {
+            var matrix = new DocxMathMatrix([new([Row("B"), Row("C")])])
+            { ControlText = new("", size, null, false, false, false, null, "TestFont") };
+            var nary = Nary("\u2211") with { Body = new([matrix]), SubscriptHiddenValue = hidden, SuperscriptHiddenValue = hidden,
+                Subscript = hidden ? new([]) : Row("C"), Superscript = hidden ? new([]) : Row("B") };
+            var equation = Equation(nary) with { Display = display };
+            TestAssert.True(DocxMathLayout.TryGetRuns(equation, default, out var sources) && sources.Count == (hidden ? 2 : 4) &&
+                sources[0].ControlOwners.Count == 2 && ReferenceEquals(sources[0].ControlOwners[0], nary) &&
+                ReferenceEquals(sources[0].ControlOwners[1], matrix) && sources.Skip(1).All(source => source.ControlOwners.Count == 0) &&
+                sources.Skip(2).All(source => source.ScriptLevel == 1),
+                "A bounded matrix retains both owners while visible limits retain their own source roles.");
+            TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, default, out var measured, out var reason,
+                resolveControlMetrics: _ => font), reason ?? "Expected a bounded n-ary/matrix box.");
+            var box = TestAssert.NotNull(measured);
+            TestAssert.Equal(hidden ? "\u2211BC" : "\u2211BCBC", string.Concat(box.Glyphs.Select(glyph => char.ConvertFromUtf32(glyph.SourceCodePoint))));
+            TestAssert.Equal(0, box.Rules.Count);
+            TestAssert.True(!DocxMathLayout.TryMeasure(equation, _ => resource, default, out var missing, out _,
+                resolveControlMetrics: owner => ReferenceEquals(owner, matrix) ? null : font) && missing is null,
+                "Missing matrix metrics reject the complete operator and limits.");
+            var nested = matrix with { Rows = [new([new([matrix]), Row("C")])] };
+            var deeper = equation with { Content = new([nary with { Body = new([nested]) }]) };
+            TestAssert.True(!DocxMathLayout.TryGetRuns(deeper, default, out _) &&
+                !DocxMathLayout.TryMeasure(deeper, _ => resource, default, out var absent, out _, resolveControlMetrics: _ => font) && absent is null,
+                "Delegating an outer matrix does not recursively admit matrices inside cells.");
+            using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, cancelled.Token, out _));
+            using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 1 });
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, default,
+                out _, out _, resolveControlMetrics: _ => font));
+        }
+    }
+
     public static void MathFontNaryStructuredBodiesShareBoundedArgumentsRulesAndCompleteFallback()
     {
         var font = OpenTypeFont.Load(FontBytes(0x2211, withFractions: true));

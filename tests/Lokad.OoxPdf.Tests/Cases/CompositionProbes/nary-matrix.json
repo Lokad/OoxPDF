@@ -1,0 +1,53 @@
+[
+  {
+    "Id": "nary-matrix-inline-sum",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/nary-matrix-inline-sum.docx",
+    "Sha256": "21788D6DA2109B622031A9A0FB1D57F1EB7134A18A05D7AD025B331A813D89CD",
+    "SourceSha256": "A6E14611378485FF726EB85BE4664FAE30F4281EF777A3472BAEA1EC50D2F17D",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "ExpectedMathText": "\u2211abcdni",
+    "Features": [
+      "nary",
+      "matrix",
+      "subSup"
+    ]
+  },
+  {
+    "Id": "nary-matrix-display-product",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/nary-matrix-display-product.docx",
+    "Sha256": "F2BA59296A8FB196B6FFD8F6ED4C795DEFEC920023A6458B880792DF483C1F27",
+    "SourceSha256": "73ACFD5CD7250C18B9B7B755080662E168F3001D6D1DCDC958C90E463DE9EFFF",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "ExpectedMathText": "\u220fabcdni",
+    "Features": [
+      "nary",
+      "matrix",
+      "undOvr"
+    ]
+  },
+  {
+    "Id": "nary-matrix-inline-control20",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/nary-matrix-inline-control20.docx",
+    "Sha256": "AD62BDD76AE7A525369D0B71CFF5830F21F4A00AC3D7C811C67514B8CF9E41B1",
+    "SourceSha256": "B3F396D713CA20C38DED508E92A7191CBA503CB9C0BE8EE02269DDE4A55A7323",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "ExpectedMathText": "\u2211abcdni",
+    "Features": [
+      "nary",
+      "matrix",
+      "subSup"
+    ]
+  }
+]

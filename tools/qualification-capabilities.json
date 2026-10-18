@@ -5658,5 +5658,23 @@
     "DocxNativeMatrix",
     "DocxInlineCompositionRadicalMatrix",
     "PortableRenderingRadicalMatrix"
+  ],
+  "docx-nary-matrix": [
+    "MathFontNary",
+    "MathFontMixedNary",
+    "DocxMathNary",
+    "DocxNativeNary",
+    "DocxNativeMixedNary",
+    "DocxNativeEmptyHiddenNary",
+    "DocxNativeStoredHiddenNary",
+    "DocxNativeSideNary",
+    "DocxNativeStackedNary",
+    "MathFontMatrix",
+    "DocxNativeMatrix",
+    "MathFontRadicalMatrix",
+    "DocxInlineCompositionRadicalMatrix",
+    "PortableRenderingRadicalMatrix",
+    "DocxInlineCompositionNaryMatrix",
+    "PortableRenderingNaryMatrix"
   ]
 }

@@ -1,0 +1,371 @@
+{
+  "Scope": "Independent Word16 n-ary/matrix glyph anchors matched by unique source characters; candidate paint order places upper before lower limit. Existing one-point and raster gates remain separate.",
+  "Rows": [
+    {
+      "Id": "nary-matrix-inline-sum",
+      "Mode": "final-preserve",
+      "InputSha256": "21788D6DA2109B622031A9A0FB1D57F1EB7134A18A05D7AD025B331A813D89CD",
+      "ReferencePdfSha256": "965A829EDF106E30EA377255EC2BEC46BF2DFEA69971277A02F6F5EB0F7A6772",
+      "MathText": "\u2211abcdni",
+      "MathGlyphCount": 7,
+      "Pages": 1,
+      "FollowingY": 684.22,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u2211",
+          "X": 151.82,
+          "Y": 703.9,
+          "FontSize": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "a",
+          "X": 168.02,
+          "Y": 709.78,
+          "FontSize": 12
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 187.34,
+          "Y": 709.78,
+          "FontSize": 12
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 168.62,
+          "Y": 695.62,
+          "FontSize": 12
+        },
+        {
+          "Offset": 4,
+          "Text": "d",
+          "X": 186.98,
+          "Y": 695.62,
+          "FontSize": 12
+        },
+        {
+          "Offset": 5,
+          "Text": "n",
+          "X": 160.34,
+          "Y": 708.34,
+          "FontSize": 8.52
+        },
+        {
+          "Offset": 6,
+          "Text": "i",
+          "X": 160.34,
+          "Y": 700.54,
+          "FontSize": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "nary-matrix-inline-sum",
+      "Mode": "all-word-compatible",
+      "InputSha256": "21788D6DA2109B622031A9A0FB1D57F1EB7134A18A05D7AD025B331A813D89CD",
+      "ReferencePdfSha256": "F54568AB6D43F63D2144AFEA54FF2E24AFCD350FE9370CE58C4679A2BDC2F53E",
+      "MathText": "\u2211abcdni",
+      "MathGlyphCount": 7,
+      "Pages": 1,
+      "FollowingY": 684.22,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u2211",
+          "X": 151.82,
+          "Y": 703.9,
+          "FontSize": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "a",
+          "X": 168.02,
+          "Y": 709.78,
+          "FontSize": 12
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 187.34,
+          "Y": 709.78,
+          "FontSize": 12
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 168.62,
+          "Y": 695.62,
+          "FontSize": 12
+        },
+        {
+          "Offset": 4,
+          "Text": "d",
+          "X": 186.98,
+          "Y": 695.62,
+          "FontSize": 12
+        },
+        {
+          "Offset": 5,
+          "Text": "n",
+          "X": 160.34,
+          "Y": 708.34,
+          "FontSize": 8.52
+        },
+        {
+          "Offset": 6,
+          "Text": "i",
+          "X": 160.34,
+          "Y": 700.54,
+          "FontSize": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "nary-matrix-display-product",
+      "Mode": "final-preserve",
+      "InputSha256": "F2BA59296A8FB196B6FFD8F6ED4C795DEFEC920023A6458B880792DF483C1F27",
+      "ReferencePdfSha256": "DCF63B869113ADF05DE0502083BA0A5F8BE1A537466A3573DBCD5263A758C474",
+      "MathText": "\u220fabcdni",
+      "MathGlyphCount": 7,
+      "Pages": 1,
+      "FollowingY": 669.34,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u220f",
+          "X": 282.89,
+          "Y": 696.1,
+          "FontSize": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "a",
+          "X": 302.93,
+          "Y": 702.46,
+          "FontSize": 12
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 322.27,
+          "Y": 702.46,
+          "FontSize": 12
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 303.53,
+          "Y": 688.3,
+          "FontSize": 12
+        },
+        {
+          "Offset": 4,
+          "Text": "d",
+          "X": 321.91,
+          "Y": 688.3,
+          "FontSize": 12
+        },
+        {
+          "Offset": 5,
+          "Text": "n",
+          "X": 289.13,
+          "Y": 714,
+          "FontSize": 8.52
+        },
+        {
+          "Offset": 6,
+          "Text": "i",
+          "X": 290.33,
+          "Y": 680.74,
+          "FontSize": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "nary-matrix-display-product",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F2BA59296A8FB196B6FFD8F6ED4C795DEFEC920023A6458B880792DF483C1F27",
+      "ReferencePdfSha256": "E266E981DB3D4AE5D1E8F393CADA2A56D30039059FDBD7FF7B7F20B429D20E3D",
+      "MathText": "\u220fabcdni",
+      "MathGlyphCount": 7,
+      "Pages": 1,
+      "FollowingY": 669.34,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u220f",
+          "X": 282.89,
+          "Y": 696.1,
+          "FontSize": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "a",
+          "X": 302.93,
+          "Y": 702.46,
+          "FontSize": 12
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 322.27,
+          "Y": 702.46,
+          "FontSize": 12
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 303.53,
+          "Y": 688.3,
+          "FontSize": 12
+        },
+        {
+          "Offset": 4,
+          "Text": "d",
+          "X": 321.91,
+          "Y": 688.3,
+          "FontSize": 12
+        },
+        {
+          "Offset": 5,
+          "Text": "n",
+          "X": 289.13,
+          "Y": 714,
+          "FontSize": 8.52
+        },
+        {
+          "Offset": 6,
+          "Text": "i",
+          "X": 290.33,
+          "Y": 680.74,
+          "FontSize": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "nary-matrix-inline-control20",
+      "Mode": "final-preserve",
+      "InputSha256": "AD62BDD76AE7A525369D0B71CFF5830F21F4A00AC3D7C811C67514B8CF9E41B1",
+      "ReferencePdfSha256": "408605B43DC4B2107580F91302B6183A9780DCF3BB0C47BC28A75D71E6BF5253",
+      "MathText": "\u2211abcdni",
+      "MathGlyphCount": 7,
+      "Pages": 1,
+      "FollowingY": 684.22,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u2211",
+          "X": 151.82,
+          "Y": 703.9,
+          "FontSize": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "a",
+          "X": 168.02,
+          "Y": 709.78,
+          "FontSize": 12
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 187.34,
+          "Y": 709.78,
+          "FontSize": 12
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 168.62,
+          "Y": 695.62,
+          "FontSize": 12
+        },
+        {
+          "Offset": 4,
+          "Text": "d",
+          "X": 186.98,
+          "Y": 695.62,
+          "FontSize": 12
+        },
+        {
+          "Offset": 5,
+          "Text": "n",
+          "X": 160.34,
+          "Y": 708.34,
+          "FontSize": 8.52
+        },
+        {
+          "Offset": 6,
+          "Text": "i",
+          "X": 160.34,
+          "Y": 700.54,
+          "FontSize": 8.52
+        }
+      ]
+    },
+    {
+      "Id": "nary-matrix-inline-control20",
+      "Mode": "all-word-compatible",
+      "InputSha256": "AD62BDD76AE7A525369D0B71CFF5830F21F4A00AC3D7C811C67514B8CF9E41B1",
+      "ReferencePdfSha256": "726E4122DF9592FC9339BD1089F1239379EB089D0C00702E37ED753CFFA14124",
+      "MathText": "\u2211abcdni",
+      "MathGlyphCount": 7,
+      "Pages": 1,
+      "FollowingY": 684.22,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u2211",
+          "X": 151.82,
+          "Y": 703.9,
+          "FontSize": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "a",
+          "X": 168.02,
+          "Y": 709.78,
+          "FontSize": 12
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 187.34,
+          "Y": 709.78,
+          "FontSize": 12
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 168.62,
+          "Y": 695.62,
+          "FontSize": 12
+        },
+        {
+          "Offset": 4,
+          "Text": "d",
+          "X": 186.98,
+          "Y": 695.62,
+          "FontSize": 12
+        },
+        {
+          "Offset": 5,
+          "Text": "n",
+          "X": 160.34,
+          "Y": 708.34,
+          "FontSize": 8.52
+        },
+        {
+          "Offset": 6,
+          "Text": "i",
+          "X": 160.34,
+          "Y": 700.54,
+          "FontSize": 8.52
+        }
+      ]
+    }
+  ]
+}

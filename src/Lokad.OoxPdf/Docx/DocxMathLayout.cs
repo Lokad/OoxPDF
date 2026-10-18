@@ -87,7 +87,7 @@ internal static partial class DocxMathLayout
         }
         else if (GetNary(equation, token) is { } nary)
         {
-            if (!AddBoxArgumentRows(nary.Body)) { runs = []; return false; }
+            if (!AddContainerArgumentRows(nary.Body)) { runs = []; return false; }
             foreach (var (argument, hidden) in new[] { (nary.Subscript, nary.SubscriptHiddenValue), (nary.Superscript, nary.SuperscriptHiddenValue) })
             {
                 if (hidden == true) { continue; }
@@ -98,15 +98,7 @@ internal static partial class DocxMathLayout
         }
         else if (GetRadical(equation) is { } radical)
         {
-            var argument = equation with { Content = radical.Radicand };
-            // The matrix's existing cell grammar bounds this delegation. Its
-            // source owners survive inside the enclosing radical; matrix cells
-            // still reject another matrix or radical rather than recursing.
-            if (GetMatrix(argument, token) is not null)
-            {
-                if (!TryGetRuns(argument, token, out argumentRuns)) { runs = []; return false; }
-            }
-            else if (!AddBoxArgumentRows(radical.Radicand)) { runs = []; return false; }
+            if (!AddContainerArgumentRows(radical.Radicand)) { runs = []; return false; }
             controlOwner = radical;
             if (radical.DegreeHidden != true)
             {
@@ -149,6 +141,17 @@ internal static partial class DocxMathLayout
         if (controlOwner is not null && result.Count > 0) { result[0] = result[0] with { ControlOwners = [controlOwner, .. result[0].ControlOwners] }; }
         runs = result;
         return true;
+
+        bool AddContainerArgumentRows(DocxMathRow content)
+        {
+            var argument = equation with { Content = content };
+            // Radicals and n-ary operators share bounded box arguments. Only
+            // this outer role delegates a matrix; its existing cell grammar
+            // rejects another matrix or container rather than recursing.
+            return GetMatrix(argument, token) is not null
+                ? TryGetRuns(argument, token, out argumentRuns)
+                : AddBoxArgumentRows(content);
+        }
 
         bool AddBoxArgumentRows(DocxMathRow argument)
         {

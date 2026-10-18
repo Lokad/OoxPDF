@@ -18,8 +18,20 @@ internal static partial class DocxInlineCompositionTests
     }
 
     internal static void CheckRadicalMatrix(IFontResolver? resolver)
+        => CheckContainerMatrix(resolver, "radical-matrix-office.json");
+
+    public static void DocxInlineCompositionNaryMatrixKeepsIndependentWordContentAndOrigins()
     {
-        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath("radical-matrix-office.json")));
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent n-ary/matrix origins use installed Windows fonts.");
+        CheckNaryMatrix(null);
+    }
+
+    internal static void CheckNaryMatrix(IFontResolver? resolver)
+        => CheckContainerMatrix(resolver, "nary-matrix-office.json");
+
+    private static void CheckContainerMatrix(IFontResolver? resolver, string goldenFile)
+    {
+        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath(goldenFile)));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         foreach (bool cell in new[] { false, true })
         {
@@ -47,7 +59,7 @@ internal static partial class DocxInlineCompositionTests
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                 var page = renderer.RenderBlankPages(source, diagnostics.Add, default).Single();
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
-                    "Supported radical/matrix composition survives ordinary cell placement and neutral source metadata.");
+                    "Supported container/matrix composition survives ordinary cell placement and neutral source metadata.");
                 var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true);
                 var math = shows.Where(show => page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) &&
                     ReferenceEquals(font.Font, show.Font))).ToArray();
@@ -67,7 +79,7 @@ internal static partial class DocxInlineCompositionTests
                     var show = math[anchor.GetProperty("Offset").GetInt32()];
                     TestAssert.True(Math.Abs(show.X - anchor.GetProperty("X").GetDouble()) < 1d &&
                         Math.Abs(show.Y - anchor.GetProperty("Y").GetDouble()) < 1d,
-                        $"Bounded radical/matrix geometry meets independent Word's existing one-point gate: {id}/{mode}.");
+                        $"Bounded container/matrix geometry meets independent Word's existing one-point gate: {id}/{mode}.");
                 }
                 var following = shows.Single(show => show.Text == "Following prose.");
                 TestAssert.True(Math.Abs(following.Y - row.GetProperty("FollowingY").GetDouble()) < 1d,
