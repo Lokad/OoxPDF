@@ -1,5 +1,28 @@
 # Composed-document reliability checkpoint
 
+## C224: linked-inline footer/note holdouts expose footer reservation gap (2026-10-18)
+
+Two source-only report transforms append a short linked equation/image paragraph
+to the existing referenced footer or normal footnote, retaining all original
+content and other package parts. Four frozen C223 outputs/Word views keep two
+pages, expected prose and every equation: footer64math glyphs, note48.96 added
+math glyph anchors agree within0.215ptX/0.417ptY/0.007pt size. Added story links
+reach the existing body bookmark within0.276pt. Raw token floors retain a shared
+note/note1 automatic-reference adjacency flag in Word/candidate; not relabeled.
+
+Confirmed defect: expanded footer painting agrees with Word, but footnote text
+ignores its occupied boundary. It sits26.466ptFinal/20.528ptReview too low and
+visibly overlaps footer prose; font boxes intersect1084/624pt2 versus zero Word.
+The automatic note destination follows that misplaced note. The note-story
+sibling stays−0.028ptFinal/+0.407ptReview from Word, preserving its image/math.
+
+All four strict gates remain failed. Eight pixel pairs hash-pinned; four complete
+second-page pairs reviewed, first pages retained without a review claim. Four
+new Word exports retained once; no production build/suite replay. Evidence:
+linked-inline-story-holdouts-evidence.json and its source/PDF/note-footer geometry
+pins. Next C225 traces shared measured footer space into note reservation and
+placement, retaining validated ordinary/static/minimum/fixed frames and limits.
+
 ## C223: printed font ownership in hyperlink line tiling (2026-10-18)
 
 Confirmed C222 review-cell annotation gap is closed. The next-line legacy top
