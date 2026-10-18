@@ -1,5 +1,19 @@
 # Composed-document reliability checkpoint
 
+C182 bounds the mixed-row geometry investigation without a production change.
+Retained C181 Word/source frames place first-row b anchors within0.057pt while
+lower-row pitch remains short by0.869/0.691/2.189pt. Body baseline errors differ
+(-0.842/-0.093/+1.078pt), as do paragraph-advance deficits1.794/0.925/1.259pt.
+A uniform shift cannot resolve these independent errors. Child p/q/2 font sizes
+match Word8.52pt. Actual typographic/hhea/MATH metrics were inspected; no source
+font-size substitution or unsupported Windows-font-bound strut is accepted.
+C174's ordinary-cell strut prototype already worsens prose in two independent
+controls; it is not replayed or narrowed with case/font/size exceptions.
+The shared occupied row/frame cause remains unverified. No builds, conversions,
+Office exports, tests or rasters were repeated. Evidence
+artifacts/composition-c1/mixed-cell-row-frame-review.json. Next, test accepted
+structured cells inside supported root/n-ary boxes in one complete specification.
+
 C181 restores bounded mixed matrix-cell content. Three public controls put
 literal neighbors around fractions/scripts, including mixed cells separated by
 ordinary cells. C180 omits all six whole equations. Shared discovery now appends
