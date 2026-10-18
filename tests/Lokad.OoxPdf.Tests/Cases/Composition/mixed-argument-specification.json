@@ -1,0 +1,49 @@
+[
+  {
+    "Id": "composed-mixed-argument-specification",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/composed-mixed-argument-specification.docx",
+    "Sha256": "EC5C3E168802F59B76AF2F0CDCA17A97DD9B67554A75C75598C5F1896C940BBF",
+    "HeldOut": false,
+    "ExpectedEquationCount": 6,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Replenishment calculation specification",
+      "Calculation inputs and acceptance criteria",
+      "Review section 20.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "Features": [
+      "tables",
+      "numbering",
+      "image",
+      "equations",
+      "bookmark",
+      "link",
+      "header",
+      "footer",
+      "footnote",
+      "comment",
+      "matrix",
+      "radical",
+      "nary",
+      "mixed-box-arguments",
+      "function",
+      "delimiter"
+    ],
+    "SourceSha256": "D7B869C53D801B3C861513B0489A5B45DF646751C4938710D1D8408CBBF4614E",
+    "FormulaSources": [
+      {
+        "Input": "CompositionProbes/radical-matrix-inline.docx",
+        "Sha256": "A6E14611378485FF726EB85BE4664FAE30F4281EF777A3472BAEA1EC50D2F17D"
+      },
+      {
+        "Input": "CompositionProbes/nary-matrix-inline-sum.docx",
+        "Sha256": "21788D6DA2109B622031A9A0FB1D57F1EB7134A18A05D7AD025B331A813D89CD"
+      },
+      {
+        "Input": "CompositionProbes/nary-matrix-display-product.docx",
+        "Sha256": "F2BA59296A8FB196B6FFD8F6ED4C795DEFEC920023A6458B880792DF483C1F27"
+      }
+    ]
+  }
+]

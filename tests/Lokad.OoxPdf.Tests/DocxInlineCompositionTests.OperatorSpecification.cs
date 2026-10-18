@@ -18,12 +18,24 @@ internal static partial class DocxInlineCompositionTests
     }
 
     internal static void CheckOperatorMatrixSpecification(IFontResolver? resolver)
+        => CheckComposedOperatorSpecification(resolver, "operator-matrix-specification", requireWordPageCount: false);
+
+    public static void DocxInlineCompositionMixedArgumentSpecificationRetainsIndependentContentAndPages()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Native mixed-argument specification uses installed Windows fonts.");
+        CheckMixedArgumentSpecification(null);
+    }
+
+    internal static void CheckMixedArgumentSpecification(IFontResolver? resolver)
+        => CheckComposedOperatorSpecification(resolver, "mixed-argument-specification", requireWordPageCount: true);
+
+    private static void CheckComposedOperatorSpecification(IFontResolver? resolver, string name, bool requireWordPageCount)
     {
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "Composition"));
-        using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "operator-matrix-specification.json")));
+        using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, name + ".json")));
         var fixture = manifest.RootElement[0];
         TestAssert.True(!fixture.GetProperty("HeldOut").GetBoolean(), "Compound controls derive only from development inputs.");
-        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "operator-matrix-specification-office.json")));
+        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, name + "-office.json")));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string id = row.GetProperty("Id").GetString()!;
@@ -39,9 +51,10 @@ internal static partial class DocxInlineCompositionTests
                 var renderer = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                 var pages = renderer.RenderBlankPages(source, diagnostics.Add, default).ToArray();
                 TestAssert.True(pages.Length >= 2, "The specification exercises page boundaries and repeated static content.");
-                // Word's three-page count remains an independent failing gate.
-                // This content observer must not freeze the candidate's wrong
-                // page count or convert that known discrepancy into a pass.
+                // Portable faces have their own metrics. Native composed controls
+                // can independently qualify Word page membership when requested.
+                if (requireWordPageCount && resolver is null)
+                    TestAssert.Equal(row.GetProperty("WordPages").GetInt32(), pages.Length);
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Every supported source formula survives the compound document.");
                 string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
                 foreach (var prose in fixture.GetProperty("ExpectedText").EnumerateArray()) TestAssert.Contains(prose.GetString()!, text);

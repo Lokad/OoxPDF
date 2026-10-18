@@ -6082,5 +6082,11 @@
     "DocxNativeFractionDelimiters",
     "DocxInlineCompositionMixedBoxArguments",
     "PortableRenderingMixedBoxArguments"
+  ],
+  "docx-mixed-argument-specification": [
+    "DocxInlineCompositionMixedArgumentSpecification",
+    "PortableRenderingMixedArgumentSpecification",
+    "DocxInlineCompositionOperatorMatrixSpecification",
+    "PortableRenderingOperatorMatrixSpecification"
   ]
 }

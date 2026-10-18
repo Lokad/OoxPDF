@@ -1,0 +1,77 @@
+{
+  "Scope": "Independent Word three-page outcomes; all51 body and5/page static math glyphs. Raw raster and one-point formula-origin failures remain separate from content/page observers.",
+  "Rows": [
+    {
+      "Id": "composed-mixed-argument-specification",
+      "Mode": "final-preserve",
+      "InputSha256": "EC5C3E168802F59B76AF2F0CDCA17A97DD9B67554A75C75598C5F1896C940BBF",
+      "ReferencePdfSha256": "0A7672A532FE089DE903DFD00D16F83FE737A57CE76345EDA4EC7C174A0FD736",
+      "WordPages": 3,
+      "BodyMathCharacters": {
+        "\u221a": 1,
+        "x": 5,
+        "+": 11,
+        "a": 5,
+        "b": 5,
+        "c": 4,
+        "d": 3,
+        "y": 5,
+        "\u2211": 1,
+        "n": 3,
+        "i": 3,
+        "s": 1,
+        "(": 1,
+        "2": 1,
+        ")": 1,
+        "\u220f": 1
+      },
+      "HeaderMathCharactersPerPage": {
+        "a": 1,
+        "+": 1,
+        "b": 1,
+        "=": 1,
+        "c": 1
+      },
+      "WordMathGlyphs": 66,
+      "Images": 1,
+      "ExternalLink": "https://example.org/method",
+      "InternalLinksIncludingFootnote": 1
+    },
+    {
+      "Id": "composed-mixed-argument-specification",
+      "Mode": "all-word-compatible",
+      "InputSha256": "EC5C3E168802F59B76AF2F0CDCA17A97DD9B67554A75C75598C5F1896C940BBF",
+      "ReferencePdfSha256": "83DAD2B94238A96D18451396DBA90CCEDB0CFA5298D4A7CE05CF78721A056A05",
+      "WordPages": 3,
+      "BodyMathCharacters": {
+        "\u221a": 1,
+        "x": 5,
+        "+": 11,
+        "a": 5,
+        "b": 5,
+        "c": 4,
+        "d": 3,
+        "y": 5,
+        "\u2211": 1,
+        "n": 3,
+        "i": 3,
+        "s": 1,
+        "(": 1,
+        "2": 1,
+        ")": 1,
+        "\u220f": 1
+      },
+      "HeaderMathCharactersPerPage": {
+        "a": 1,
+        "+": 1,
+        "b": 1,
+        "=": 1,
+        "c": 1
+      },
+      "WordMathGlyphs": 66,
+      "Images": 1,
+      "ExternalLink": "https://example.org/method",
+      "InternalLinksIncludingFootnote": 1
+    }
+  ]
+}
