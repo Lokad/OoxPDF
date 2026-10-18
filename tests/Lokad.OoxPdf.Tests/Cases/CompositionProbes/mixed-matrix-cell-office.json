@@ -1,0 +1,455 @@
+{
+  "Scope": "Independent Word content/source-order controls. The ordered-batch outcomes retain failed one-point glyph/following-prose gates; content observers do not relabel geometry failures.",
+  "Rows": [
+    {
+      "Id": "matrix-mixed-cell-fraction",
+      "Mode": "final-preserve",
+      "MathText": "x+pq+ybcd",
+      "MathGlyphCount": 9,
+      "FollowingY": 675.58,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 151.82,
+          "Y": 707.02
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 161.3,
+          "Y": 707.02
+        },
+        {
+          "Offset": 2,
+          "Text": "p",
+          "X": 172.94,
+          "Y": 714.12
+        },
+        {
+          "Offset": 3,
+          "Text": "q",
+          "X": 172.94,
+          "Y": 701.02
+        },
+        {
+          "Offset": 4,
+          "Text": "+",
+          "X": 180.98,
+          "Y": 707.02
+        },
+        {
+          "Offset": 5,
+          "Text": "y",
+          "X": 192.65,
+          "Y": 707.02
+        },
+        {
+          "Offset": 6,
+          "Text": "b",
+          "X": 211.97,
+          "Y": 707.02
+        },
+        {
+          "Offset": 7,
+          "Text": "c",
+          "X": 172.82,
+          "Y": 687.1
+        },
+        {
+          "Offset": 8,
+          "Text": "d",
+          "X": 211.61,
+          "Y": 687.1
+        }
+      ],
+      "InputSha256": "99C3C4C876F0B2720907889B0D2B1BB60825327E2B8FF3916D92DF42BA97982D",
+      "ReferencePdfSha256": "04DD33B6CFAFF74631D85FDA2FDB4FCA30C4E414C5379BC4558462F9C8BB3C10"
+    },
+    {
+      "Id": "matrix-mixed-cell-fraction",
+      "Mode": "all-word-compatible",
+      "MathText": "x+pq+ybcd",
+      "MathGlyphCount": 9,
+      "FollowingY": 675.58,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 151.82,
+          "Y": 707.02
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 161.3,
+          "Y": 707.02
+        },
+        {
+          "Offset": 2,
+          "Text": "p",
+          "X": 172.94,
+          "Y": 714.12
+        },
+        {
+          "Offset": 3,
+          "Text": "q",
+          "X": 172.94,
+          "Y": 701.02
+        },
+        {
+          "Offset": 4,
+          "Text": "+",
+          "X": 180.98,
+          "Y": 707.02
+        },
+        {
+          "Offset": 5,
+          "Text": "y",
+          "X": 192.65,
+          "Y": 707.02
+        },
+        {
+          "Offset": 6,
+          "Text": "b",
+          "X": 211.97,
+          "Y": 707.02
+        },
+        {
+          "Offset": 7,
+          "Text": "c",
+          "X": 172.82,
+          "Y": 687.1
+        },
+        {
+          "Offset": 8,
+          "Text": "d",
+          "X": 211.61,
+          "Y": 687.1
+        }
+      ],
+      "InputSha256": "99C3C4C876F0B2720907889B0D2B1BB60825327E2B8FF3916D92DF42BA97982D",
+      "ReferencePdfSha256": "711872FD2626680B47ABFCB80CC1F9D14B536A739FF9394C99A5AA0E3684893E"
+    },
+    {
+      "Id": "matrix-mixed-cell-script",
+      "Mode": "final-preserve",
+      "MathText": "x+u2+ybcd",
+      "MathGlyphCount": 9,
+      "FollowingY": 682.18,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 151.82,
+          "Y": 708.46
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 161.3,
+          "Y": 708.46
+        },
+        {
+          "Offset": 2,
+          "Text": "u",
+          "X": 172.94,
+          "Y": 708.46
+        },
+        {
+          "Offset": 3,
+          "Text": "2",
+          "X": 180.14,
+          "Y": 712.9
+        },
+        {
+          "Offset": 4,
+          "Text": "+",
+          "X": 188.18,
+          "Y": 708.46
+        },
+        {
+          "Offset": 5,
+          "Text": "y",
+          "X": 199.85,
+          "Y": 708.46
+        },
+        {
+          "Offset": 6,
+          "Text": "b",
+          "X": 219.05,
+          "Y": 708.46
+        },
+        {
+          "Offset": 7,
+          "Text": "c",
+          "X": 176.3,
+          "Y": 693.7
+        },
+        {
+          "Offset": 8,
+          "Text": "d",
+          "X": 218.81,
+          "Y": 693.7
+        }
+      ],
+      "InputSha256": "AB22D7904C17C48AE27C5115DF41B8C7FF7DD7095C45AD5730096B06276A1F54",
+      "ReferencePdfSha256": "B5B6E76553EFFC171BB8F8F02F16B035193CA442B8D74927EF634A6E24C45A24"
+    },
+    {
+      "Id": "matrix-mixed-cell-script",
+      "Mode": "all-word-compatible",
+      "MathText": "x+u2+ybcd",
+      "MathGlyphCount": 9,
+      "FollowingY": 682.18,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 151.82,
+          "Y": 708.46
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 161.3,
+          "Y": 708.46
+        },
+        {
+          "Offset": 2,
+          "Text": "u",
+          "X": 172.94,
+          "Y": 708.46
+        },
+        {
+          "Offset": 3,
+          "Text": "2",
+          "X": 180.14,
+          "Y": 712.9
+        },
+        {
+          "Offset": 4,
+          "Text": "+",
+          "X": 188.18,
+          "Y": 708.46
+        },
+        {
+          "Offset": 5,
+          "Text": "y",
+          "X": 199.85,
+          "Y": 708.46
+        },
+        {
+          "Offset": 6,
+          "Text": "b",
+          "X": 219.05,
+          "Y": 708.46
+        },
+        {
+          "Offset": 7,
+          "Text": "c",
+          "X": 176.3,
+          "Y": 693.7
+        },
+        {
+          "Offset": 8,
+          "Text": "d",
+          "X": 218.81,
+          "Y": 693.7
+        }
+      ],
+      "InputSha256": "AB22D7904C17C48AE27C5115DF41B8C7FF7DD7095C45AD5730096B06276A1F54",
+      "ReferencePdfSha256": "BE46642FCBAD03DE1EAF127A30CE7ADF0CDCBC0FF4708B53FFCCBABD49920F31"
+    },
+    {
+      "Id": "matrix-mixed-cell-ordered-batch",
+      "Mode": "final-preserve",
+      "MathText": "x+pq+ybx+u2+yd",
+      "MathGlyphCount": 14,
+      "FollowingY": 671.74,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 155.42,
+          "Y": 707.02
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 164.9,
+          "Y": 707.02
+        },
+        {
+          "Offset": 2,
+          "Text": "p",
+          "X": 176.54,
+          "Y": 714.12
+        },
+        {
+          "Offset": 3,
+          "Text": "q",
+          "X": 176.54,
+          "Y": 701.02
+        },
+        {
+          "Offset": 4,
+          "Text": "+",
+          "X": 184.58,
+          "Y": 707.02
+        },
+        {
+          "Offset": 5,
+          "Text": "y",
+          "X": 196.25,
+          "Y": 707.02
+        },
+        {
+          "Offset": 6,
+          "Text": "b",
+          "X": 219.05,
+          "Y": 707.02
+        },
+        {
+          "Offset": 7,
+          "Text": "x",
+          "X": 151.82,
+          "Y": 685.78
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 161.3,
+          "Y": 685.78
+        },
+        {
+          "Offset": 9,
+          "Text": "u",
+          "X": 172.94,
+          "Y": 685.78
+        },
+        {
+          "Offset": 10,
+          "Text": "2",
+          "X": 180.14,
+          "Y": 690.22
+        },
+        {
+          "Offset": 11,
+          "Text": "+",
+          "X": 188.18,
+          "Y": 685.78
+        },
+        {
+          "Offset": 12,
+          "Text": "y",
+          "X": 199.85,
+          "Y": 685.78
+        },
+        {
+          "Offset": 13,
+          "Text": "d",
+          "X": 218.81,
+          "Y": 685.78
+        }
+      ],
+      "InputSha256": "8F8BC1D8AFE8BEA25944391A327F40933387C34DDF2FA95C8BBFCBAFD4BB069B",
+      "ReferencePdfSha256": "FBED732CB05F33393EFBC5F0306288BC0473A6FE59073AFBF86AF2675C462424"
+    },
+    {
+      "Id": "matrix-mixed-cell-ordered-batch",
+      "Mode": "all-word-compatible",
+      "MathText": "x+pq+ybx+u2+yd",
+      "MathGlyphCount": 14,
+      "FollowingY": 671.74,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "x",
+          "X": 155.42,
+          "Y": 707.02
+        },
+        {
+          "Offset": 1,
+          "Text": "+",
+          "X": 164.9,
+          "Y": 707.02
+        },
+        {
+          "Offset": 2,
+          "Text": "p",
+          "X": 176.54,
+          "Y": 714.12
+        },
+        {
+          "Offset": 3,
+          "Text": "q",
+          "X": 176.54,
+          "Y": 701.02
+        },
+        {
+          "Offset": 4,
+          "Text": "+",
+          "X": 184.58,
+          "Y": 707.02
+        },
+        {
+          "Offset": 5,
+          "Text": "y",
+          "X": 196.25,
+          "Y": 707.02
+        },
+        {
+          "Offset": 6,
+          "Text": "b",
+          "X": 219.05,
+          "Y": 707.02
+        },
+        {
+          "Offset": 7,
+          "Text": "x",
+          "X": 151.82,
+          "Y": 685.78
+        },
+        {
+          "Offset": 8,
+          "Text": "+",
+          "X": 161.3,
+          "Y": 685.78
+        },
+        {
+          "Offset": 9,
+          "Text": "u",
+          "X": 172.94,
+          "Y": 685.78
+        },
+        {
+          "Offset": 10,
+          "Text": "2",
+          "X": 180.14,
+          "Y": 690.22
+        },
+        {
+          "Offset": 11,
+          "Text": "+",
+          "X": 188.18,
+          "Y": 685.78
+        },
+        {
+          "Offset": 12,
+          "Text": "y",
+          "X": 199.85,
+          "Y": 685.78
+        },
+        {
+          "Offset": 13,
+          "Text": "d",
+          "X": 218.81,
+          "Y": 685.78
+        }
+      ],
+      "InputSha256": "8F8BC1D8AFE8BEA25944391A327F40933387C34DDF2FA95C8BBFCBAFD4BB069B",
+      "ReferencePdfSha256": "0056ED43E5A738BD91F603F1CC5E58D94775DFEA901F9A3134894B4CDABD9A24"
+    }
+  ]
+}

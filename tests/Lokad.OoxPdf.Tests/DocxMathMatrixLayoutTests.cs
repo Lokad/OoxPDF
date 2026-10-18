@@ -7,6 +7,48 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMathMatrixLayoutTests
 {
+    public static void MathFontMatrixMixedCellsKeepOrderedSourcesAndCompleteFallbacks()
+    {
+        var font = MathFont(); var resource = Resource("MixedCells", font, "BC+");
+        var leading = Run("B+"); var numerator = Run("B"); var denominator = Run("C"); var trailing = Run("+C");
+        var between = Run("B"); var nextLeading = Run("C+"); var basis = Run("B"); var power = Run("C");
+        var nextTrailing = Run("+C"); var last = Run("C");
+        var fraction = new DocxMathFraction(new([numerator]), new([denominator]), "bar");
+        var scripts = new DocxMathScripts(new([basis]), null, new([power]));
+        var matrix = new DocxMathMatrix([new([new([leading, fraction, trailing]), new([between])]),
+            new([new([nextLeading, scripts, nextTrailing]), new([last])])]);
+        var equation = Equation(matrix) with { Display = false };
+        TestAssert.True(DocxMathLayout.TryGetRuns(equation, default, out var sources), "Mixed cells retain their supported complete source.");
+        TestAssert.True(sources.Select(source => source.Run).SequenceEqual(new[]
+            { leading, numerator, denominator, trailing, between, nextLeading, basis, power, nextTrailing, last }),
+            "Mixed cells and intervening ordinary cells keep source identity in row/cell order.");
+        TestAssert.Equal("0,1,1,0,0,0,0,1,0,0", string.Join(',', sources.Select(source => source.ScriptLevel)));
+        TestAssert.True(ReferenceEquals(sources[0].ControlOwner, matrix), "The grid retains its outer metric owner.");
+        TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, default, out var measured, out var reason,
+            resolveControlMetrics: _ => font), reason ?? "Expected a complete mixed-cell grid.");
+        var box = TestAssert.NotNull(measured);
+        TestAssert.Equal(14, box.Glyphs.Count); TestAssert.Equal(1, box.Rules.Count);
+        foreach (DocxMathNode child in new DocxMathNode[] { matrix,
+            new DocxMathRadical(new([basis]), new([]), true),
+            fraction with { HasUnsupportedProperties = true }, fraction with { Numerator = new([fraction]) } })
+        {
+            var invalid = matrix with { Rows = [matrix.Rows[0], new([new([nextLeading, child, nextTrailing]), new([last])])] };
+            TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(invalid), default, out _) &&
+                !DocxMathLayout.TryMeasure(Equation(invalid), _ => resource, default, out var absent, out _, resolveControlMetrics: _ => font) && absent is null,
+                "A mixed cell cannot admit another grid, deeper container or unsupported child source.");
+        }
+        var missing = Resource("MissingLastCell", font, "B+");
+        TestAssert.True(!DocxMathLayout.TryMeasure(equation, run => ReferenceEquals(run, last) ? missing : resource,
+            default, out var partial, out _, resolveControlMetrics: _ => font) && partial is null,
+            "A late missing CID cannot publish an earlier mixed row.");
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, cancelled.Token, out _));
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, cancelled.Token, out _, out _));
+        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 1 });
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, default,
+            out _, out _, resolveControlMetrics: _ => font));
+    }
+
     public static void MathFontMatrixFunctionArgumentsRetainOwnersIndependentPaintAndBoundedFallback()
     {
         var outerFont = MathFont(); var innerFont = MathFont(); var plain = TestFontBuilder.LoadTestFont();

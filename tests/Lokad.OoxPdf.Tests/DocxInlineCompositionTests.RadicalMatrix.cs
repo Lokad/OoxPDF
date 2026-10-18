@@ -29,7 +29,7 @@ internal static partial class DocxInlineCompositionTests
     internal static void CheckNaryMatrix(IFontResolver? resolver)
         => CheckContainerMatrix(resolver, "nary-matrix-office.json");
 
-    private static void CheckContainerMatrix(IFontResolver? resolver, string goldenFile)
+    private static void CheckContainerMatrix(IFontResolver? resolver, string goldenFile, bool validateWordGeometry = true)
     {
         using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath(goldenFile)));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
@@ -73,7 +73,7 @@ internal static partial class DocxInlineCompositionTests
                     show.Y.ToString("R", CultureInfo.InvariantCulture)));
                 if (originalOrigins is not null) TestAssert.Equal(originalOrigins, origins);
                 originalOrigins = origins;
-                if (resolver is not null || cell || transformed) continue;
+                if (resolver is not null || cell || transformed || !validateWordGeometry) continue;
                 foreach (var anchor in row.GetProperty("Anchors").EnumerateArray())
                 {
                     var show = math[anchor.GetProperty("Offset").GetInt32()];

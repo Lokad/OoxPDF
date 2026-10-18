@@ -1,0 +1,38 @@
+[
+  {
+    "Id": "matrix-mixed-cell-fraction",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/matrix-mixed-cell-fraction.docx",
+    "Sha256": "99C3C4C876F0B2720907889B0D2B1BB60825327E2B8FF3916D92DF42BA97982D",
+    "SourceSha256": "17DDB69EE5AE5DC9E84E1A1707BA368044A880D7E747547E70659EF1C58D4BFC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "Variant": "fraction"
+  },
+  {
+    "Id": "matrix-mixed-cell-script",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/matrix-mixed-cell-script.docx",
+    "Sha256": "AB22D7904C17C48AE27C5115DF41B8C7FF7DD7095C45AD5730096B06276A1F54",
+    "SourceSha256": "17DDB69EE5AE5DC9E84E1A1707BA368044A880D7E747547E70659EF1C58D4BFC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "Variant": "script"
+  },
+  {
+    "Id": "matrix-mixed-cell-ordered-batch",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/matrix-mixed-cell-ordered-batch.docx",
+    "Sha256": "8F8BC1D8AFE8BEA25944391A327F40933387C34DDF2FA95C8BBFCBAFD4BB069B",
+    "SourceSha256": "17DDB69EE5AE5DC9E84E1A1707BA368044A880D7E747547E70659EF1C58D4BFC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "Variant": "ordered-batch"
+  }
+]

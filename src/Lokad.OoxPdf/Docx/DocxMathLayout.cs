@@ -61,8 +61,7 @@ internal static partial class DocxMathLayout
     {
         if (GetFunction(equation) is { } function) { return TryGetFunctionRuns(equation, function, token, out runs); }
         if (GetDelimiter(equation) is { } delimiter) { return TryGetDelimiterRuns(equation, delimiter, token, out runs); }
-        var rows = new List<(DocxMathRow Row, int Level, bool AllowArgumentSize)>();
-        IReadOnlyList<DocxMathRunSource>? argumentRuns = null;
+        var result = new List<DocxMathRunSource>();
         IDocxMathControl? controlOwner = null;
         if (GetMatrix(equation, token) is { } matrix)
         {
@@ -87,24 +86,24 @@ internal static partial class DocxMathLayout
         }
         else if (GetNary(equation, token) is { } nary)
         {
-            if (!AddContainerArgumentRows(nary.Body)) { runs = []; return false; }
+            if (!AddBoxArgumentRows(nary.Body, allowMatrix: true)) { runs = []; return false; }
             foreach (var (argument, hidden) in new[] { (nary.Subscript, nary.SubscriptHiddenValue), (nary.Superscript, nary.SuperscriptHiddenValue) })
             {
                 if (hidden == true) { continue; }
                 if (!DocxMathArgumentMetrics.TryGetScriptLevel(argument, out int level)) { runs = []; return false; }
-                rows.Add((argument, level, true));
+                if (!AddRow(argument, level, true)) { runs = []; return false; }
             }
             controlOwner = nary;
         }
         else if (GetRadical(equation) is { } radical)
         {
-            if (!AddContainerArgumentRows(radical.Radicand)) { runs = []; return false; }
+            if (!AddBoxArgumentRows(radical.Radicand, allowMatrix: true)) { runs = []; return false; }
             controlOwner = radical;
             if (radical.DegreeHidden != true)
             {
                 if (!DocxMathArgumentMetrics.TryGetScriptLevel(radical.Degree, out int level, startingLevel: 2))
                 { runs = []; return false; }
-                rows.Add((radical.Degree, level, true));
+                if (!AddRow(radical.Degree, level, true)) { runs = []; return false; }
             }
         }
         else if (GetStructuredRow(equation, token) is { } compound)
@@ -122,41 +121,24 @@ internal static partial class DocxMathLayout
             sources.AddRange(after); runs = sources;
             return true;
         }
-        else { rows.Add((equation.Content, 0, false)); }
-        var result = new List<DocxMathRunSource>();
-        if (argumentRuns is not null) result.AddRange(argumentRuns);
-        foreach ((DocxMathRow row, int level, bool allowArgumentSize) in rows)
-        {
-            if (!DocxMathRowLayout.TryGetRenderCodePoints(row, token, out _, out _, allowArgumentSize)) { runs = []; return false; }
-            var pending = new Stack<DocxMathNode>();
-            pending.Push(row);
-            while (pending.TryPop(out DocxMathNode? node))
-            {
-                token.ThrowIfCancellationRequested();
-                if (node is DocxMathRun run) { result.Add(new(run, level)); }
-                else if (node is DocxMathRow sequence)
-                    for (int index = sequence.Children.Count - 1; index >= 0; index--) { pending.Push(sequence.Children[index]); }
-            }
-        }
+        else if (!AddRow(equation.Content, 0, false)) { runs = []; return false; }
         if (controlOwner is not null && result.Count > 0) { result[0] = result[0] with { ControlOwners = [controlOwner, .. result[0].ControlOwners] }; }
         runs = result;
         return true;
 
-        bool AddContainerArgumentRows(DocxMathRow content)
+        bool AddBoxArgumentRows(DocxMathRow argument, bool allowMatrix = false)
         {
-            var argument = equation with { Content = content };
-            // The outer container delegates a matrix or a mixed row of existing
-            // bounded boxes. Their child grammars still reject deeper owners.
-            return GetMatrix(argument, token) is not null || HasMixedBoxArgument(argument, token)
-                ? TryGetRuns(argument, token, out argumentRuns)
-                : AddBoxArgumentRows(content);
-        }
-
-        bool AddBoxArgumentRows(DocxMathRow argument)
-        {
-            if (GetScripts(equation with { Content = argument }) is { } childScripts) { return AddScriptRows(childScripts); }
-            AddArgumentRows(argument);
-            return true;
+            var child = equation with { Content = argument };
+            // Matrix cells share mixed fraction/script rows with outer boxes,
+            // but cannot admit another grid. Append each child's sources now so
+            // mixed and ordinary cells retain their complete authored order.
+            if (allowMatrix && GetMatrix(child, token) is not null || HasMixedBoxArgument(child, token, allowMatrix))
+            {
+                if (!TryGetRuns(child, token, out var sources)) return false;
+                result.AddRange(sources);
+                return true;
+            }
+            return GetScripts(child) is { } childScripts ? AddScriptRows(childScripts) : AddArgumentRows(argument);
         }
 
         bool AddFractionArgumentRows(DocxMathRow argument)
@@ -164,34 +146,46 @@ internal static partial class DocxMathLayout
             int level = equation.Display ? 0 : 1;
             if (GetScriptArgument(argument) is { } child)
                 return AddScriptRows(child, level, literalBase: true);
-            rows.Add((argument, level, false));
-            return true;
+            return AddRow(argument, level, false);
         }
 
         bool AddScriptRows(DocxMathScripts script, int startingLevel = 0, bool literalBase = false)
         {
-            if (literalBase) rows.Add((script.Base, startingLevel, false));
-            else AddArgumentRows(script.Base);
+            if (!(literalBase ? AddRow(script.Base, startingLevel, false) : AddArgumentRows(script.Base))) return false;
             foreach (DocxMathRow? argument in new[] { script.Subscript, script.Superscript })
             {
                 if (argument is null) { continue; }
                 if (!DocxMathArgumentMetrics.TryGetScriptLevel(argument, out int level, Math.Min(2, startingLevel + 1))) { return false; }
-                rows.Add((argument, level, true));
+                if (!AddRow(argument, level, true)) return false;
             }
             return true;
         }
 
-        void AddArgumentRows(DocxMathRow argument)
+        bool AddArgumentRows(DocxMathRow argument)
         {
             // These argument roles admit a literal row or one fraction/stack with
             // literal children. Discovery never recursively expands structures.
             if (GetFraction(equation with { Content = argument }) is { } fraction)
             {
                 int level = equation.Display ? 0 : 1;
-                rows.Add((fraction.Numerator, level, false));
-                rows.Add((fraction.Denominator, level, false));
+                return AddRow(fraction.Numerator, level, false) && AddRow(fraction.Denominator, level, false);
             }
-            else { rows.Add((argument, 0, false)); }
+            return AddRow(argument, 0, false);
+        }
+
+        bool AddRow(DocxMathRow row, int level, bool allowArgumentSize)
+        {
+            if (!DocxMathRowLayout.TryGetRenderCodePoints(row, token, out _, out _, allowArgumentSize)) return false;
+            var pending = new Stack<DocxMathNode>();
+            pending.Push(row);
+            while (pending.TryPop(out DocxMathNode? node))
+            {
+                token.ThrowIfCancellationRequested();
+                if (node is DocxMathRun run) result.Add(new(run, level));
+                else if (node is DocxMathRow sequence)
+                    for (int index = sequence.Children.Count - 1; index >= 0; index--) pending.Push(sequence.Children[index]);
+            }
+            return true;
         }
     }
 

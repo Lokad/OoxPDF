@@ -14,14 +14,14 @@ internal static partial class DocxMathLayout
             HasMixedBoxArgument(equation, token);
     }
 
-    private static bool HasMixedBoxArgument(DocxEquation equation, CancellationToken token)
+    private static bool HasMixedBoxArgument(DocxEquation equation, CancellationToken token, bool allowMatrix = true)
     {
         // Reuse the ordered row composer for literal neighbors and the existing
         // bounded boxes. Container children are excluded: this role cannot
         // recursively admit another radical, n-ary, delimiter or function.
         if (!equation.Content.Children.Any(node => node is not DocxMathRun)) return false;
-        return GetStructuredRow(equation, token) is { } row &&
-            row.Parts.All(part => part.Structure is DocxMathFraction or DocxMathScripts or DocxMathMatrix);
+        return GetStructuredRow(equation, token) is { } row && row.Parts.All(part =>
+            part.Structure is DocxMathFraction or DocxMathScripts || allowMatrix && part.Structure is DocxMathMatrix);
     }
 
     private static bool TryMeasureBoxArgument(DocxEquation equation, Func<DocxMathRun, PdfFontResource?> resolveFont,

@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingMixedMatrixCellsKeepContentAndNeutralOriginsAcrossBodyAndCells() =>
+        DocxInlineCompositionTests.CheckMixedMatrixCells(new PinnedResolver(mathFont: true));
+
     public static void PortableRenderingMixedArgumentSpecificationRetainsContentAndNeutralOrigins() =>
         DocxInlineCompositionTests.CheckMixedArgumentSpecification(new PinnedResolver(mathFont: true));
 
