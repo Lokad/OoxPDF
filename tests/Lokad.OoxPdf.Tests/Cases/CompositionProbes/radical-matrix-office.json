@@ -1,0 +1,301 @@
+{
+  "Scope": "Independent Word16 radical/matrix glyphs and following prose; existing one-point geometry gate, strict raster gates remain separate.",
+  "Rows": [
+    {
+      "Id": "radical-matrix-inline",
+      "Mode": "final-preserve",
+      "InputSha256": "A6E14611378485FF726EB85BE4664FAE30F4281EF777A3472BAEA1EC50D2F17D",
+      "ReferencePdfSha256": "9DCD73F507437E6EF109D0023F71EB3EA3BF7B5157186B0C6294CFD5C9098803",
+      "MathText": "\u221aabcd",
+      "MathGlyphCount": 5,
+      "Pages": 1,
+      "FollowingY": 679.3,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 151.82,
+          "Y": 700.3,
+          "FontSize": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "a",
+          "X": 160.82,
+          "Y": 706.18,
+          "FontSize": 12
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 180.14,
+          "Y": 706.18,
+          "FontSize": 12
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 161.42,
+          "Y": 692.02,
+          "FontSize": 12
+        },
+        {
+          "Offset": 4,
+          "Text": "d",
+          "X": 179.9,
+          "Y": 692.02,
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "Id": "radical-matrix-inline",
+      "Mode": "all-word-compatible",
+      "InputSha256": "A6E14611378485FF726EB85BE4664FAE30F4281EF777A3472BAEA1EC50D2F17D",
+      "ReferencePdfSha256": "048B9BE9BE81C4E6BB4E0B5E6CE99140FEA5935EF2730EE0B152BBEFB7E922C4",
+      "MathText": "\u221aabcd",
+      "MathGlyphCount": 5,
+      "Pages": 1,
+      "FollowingY": 679.3,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 151.82,
+          "Y": 700.3,
+          "FontSize": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "a",
+          "X": 160.82,
+          "Y": 706.18,
+          "FontSize": 12
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 180.14,
+          "Y": 706.18,
+          "FontSize": 12
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 161.42,
+          "Y": 692.02,
+          "FontSize": 12
+        },
+        {
+          "Offset": 4,
+          "Text": "d",
+          "X": 179.9,
+          "Y": 692.02,
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "Id": "radical-matrix-display-indexed",
+      "Mode": "final-preserve",
+      "InputSha256": "73ACFD5CD7250C18B9B7B755080662E168F3001D6D1DCDC958C90E463DE9EFFF",
+      "ReferencePdfSha256": "3661351579CB878AE0E580EEAE0A9972EF2699F5DA634236E98B0AE69C8A4B96",
+      "MathText": "\u221aabcd3",
+      "MathGlyphCount": 6,
+      "Pages": 1,
+      "FollowingY": 679.3,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 289.01,
+          "Y": 700.3,
+          "FontSize": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "a",
+          "X": 298.01,
+          "Y": 706.18,
+          "FontSize": 12
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 317.33,
+          "Y": 706.18,
+          "FontSize": 12
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 298.49,
+          "Y": 692.02,
+          "FontSize": 12
+        },
+        {
+          "Offset": 4,
+          "Text": "d",
+          "X": 316.97,
+          "Y": 692.02,
+          "FontSize": 12
+        },
+        {
+          "Offset": 5,
+          "Text": "3",
+          "X": 288.53,
+          "Y": 708.1,
+          "FontSize": 6.96
+        }
+      ]
+    },
+    {
+      "Id": "radical-matrix-display-indexed",
+      "Mode": "all-word-compatible",
+      "InputSha256": "73ACFD5CD7250C18B9B7B755080662E168F3001D6D1DCDC958C90E463DE9EFFF",
+      "ReferencePdfSha256": "233FBF0D0FCC52D788FFAA3C0D0B099B0C9B7A483F2F28325819DD468973C828",
+      "MathText": "\u221aabcd3",
+      "MathGlyphCount": 6,
+      "Pages": 1,
+      "FollowingY": 679.3,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 289.01,
+          "Y": 700.3,
+          "FontSize": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "a",
+          "X": 298.01,
+          "Y": 706.18,
+          "FontSize": 12
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 317.33,
+          "Y": 706.18,
+          "FontSize": 12
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 298.49,
+          "Y": 692.02,
+          "FontSize": 12
+        },
+        {
+          "Offset": 4,
+          "Text": "d",
+          "X": 316.97,
+          "Y": 692.02,
+          "FontSize": 12
+        },
+        {
+          "Offset": 5,
+          "Text": "3",
+          "X": 288.53,
+          "Y": 708.1,
+          "FontSize": 6.96
+        }
+      ]
+    },
+    {
+      "Id": "radical-matrix-inline-control20",
+      "Mode": "final-preserve",
+      "InputSha256": "B3F396D713CA20C38DED508E92A7191CBA503CB9C0BE8EE02269DDE4A55A7323",
+      "ReferencePdfSha256": "15E8922460218A29DA8683FBB8FEBAE4C249E5B92E190A446016A3534EE0C611",
+      "MathText": "\u221aabcd",
+      "MathGlyphCount": 5,
+      "Pages": 1,
+      "FollowingY": 679.3,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 151.82,
+          "Y": 700.3,
+          "FontSize": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "a",
+          "X": 160.82,
+          "Y": 706.18,
+          "FontSize": 12
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 180.14,
+          "Y": 706.18,
+          "FontSize": 12
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 161.42,
+          "Y": 692.02,
+          "FontSize": 12
+        },
+        {
+          "Offset": 4,
+          "Text": "d",
+          "X": 179.9,
+          "Y": 692.02,
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "Id": "radical-matrix-inline-control20",
+      "Mode": "all-word-compatible",
+      "InputSha256": "B3F396D713CA20C38DED508E92A7191CBA503CB9C0BE8EE02269DDE4A55A7323",
+      "ReferencePdfSha256": "3CBC837E858A3B8BE4330CCD71B9B3687CF832FF6A894DA5AA7136D9B2CD3A84",
+      "MathText": "\u221aabcd",
+      "MathGlyphCount": 5,
+      "Pages": 1,
+      "FollowingY": 679.3,
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Text": "\u221a",
+          "X": 151.82,
+          "Y": 700.3,
+          "FontSize": 12
+        },
+        {
+          "Offset": 1,
+          "Text": "a",
+          "X": 160.82,
+          "Y": 706.18,
+          "FontSize": 12
+        },
+        {
+          "Offset": 2,
+          "Text": "b",
+          "X": 180.14,
+          "Y": 706.18,
+          "FontSize": 12
+        },
+        {
+          "Offset": 3,
+          "Text": "c",
+          "X": 161.42,
+          "Y": 692.02,
+          "FontSize": 12
+        },
+        {
+          "Offset": 4,
+          "Text": "d",
+          "X": 179.9,
+          "Y": 692.02,
+          "FontSize": 12
+        }
+      ]
+    }
+  ]
+}

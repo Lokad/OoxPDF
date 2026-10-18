@@ -414,6 +414,57 @@ internal static class DocxMathFractionTests
         }
     }
 
+    public static void MathFontRadicalMatrixArgumentsKeepOrderedOwnersBoxesAndBoundedFallbacks()
+    {
+        var resource = RadicalResource();
+        var font = resource.Font.Font;
+        foreach (bool indexed in new[] { false, true })
+        foreach (double controlSize in new[] { 12d, 20d })
+        {
+            var matrix = new DocxMathMatrix([new([Row("B"), Row("C")])])
+            { ControlText = new("", controlSize, null, false, false, false, null, "TestFont") };
+            var source = RadicalEquation(12d);
+            var radical = (DocxMathRadical)source.Content.Children[0];
+            radical = radical with { Radicand = new([matrix]), DegreeHidden = !indexed, Degree = indexed ? Row("B") : new([]) };
+            var equation = source with { Content = new([radical]) };
+            TestAssert.True(DocxMathLayout.TryGetRuns(equation, default, out var runs) && runs.Count == (indexed ? 3 : 2) &&
+                runs[0].ControlOwners.Count == 2 && ReferenceEquals(runs[0].ControlOwners[0], radical) &&
+                ReferenceEquals(runs[0].ControlOwners[1], matrix) && runs[1].ControlOwners.Count == 0 &&
+                (!indexed || runs[2].ScriptLevel == 2 && runs[2].ControlOwners.Count == 0),
+                "A bounded matrix keeps both ordered control owners and the degree's separate script-script role.");
+            TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, default, out var measured, out var reason,
+                resolveControlMetrics: _ => font), reason ?? "Expected a bounded radical/matrix box.");
+            TestAssert.True(DocxMathLayout.TryMeasure(source with { Content = new([matrix]), Cramped = true }, _ => resource,
+                default, out var inner, out reason, resolveControlMetrics: _ => font, rowControlSize: 12d),
+                reason ?? "Expected the existing context-owned matrix frame.");
+            var box = TestAssert.NotNull(measured); var child = TestAssert.NotNull(inner);
+            TestAssert.Equal(indexed ? 4 : 3, box.Glyphs.Count);
+            TestAssert.Equal(1, box.Rules.Count);
+            double x = box.Glyphs[1].X - child.Glyphs[0].X;
+            TestAssert.True(child.Glyphs.Select((glyph, index) => (glyph, index)).All(item =>
+                box.Glyphs[item.index + 1].X == item.glyph.X + x && box.Glyphs[item.index + 1].BaselineY == item.glyph.BaselineY &&
+                box.Glyphs[item.index + 1].FontSize == item.glyph.FontSize) &&
+                box.Rules[0].X == x && box.Rules[0].Width == child.AdvanceWidth,
+                "The shared measured matrix moves as a whole beneath the radical's owned overbar.");
+            foreach (DocxMathNode nested in new DocxMathNode[] { matrix, radical })
+            {
+                var deeper = matrix with { Rows = [new([new([nested]), Row("C")])] };
+                var invalid = equation with { Content = new([radical with { Radicand = new([deeper]) }]) };
+                TestAssert.True(!DocxMathLayout.TryGetRuns(invalid, default, out _) &&
+                    !DocxMathLayout.TryMeasure(invalid, _ => resource, default, out var absent, out _, resolveControlMetrics: _ => font) && absent is null,
+                    "Another matrix or radical inside a matrix cell retains complete bounded fallback.");
+            }
+            TestAssert.True(!DocxMathLayout.TryMeasure(equation, _ => resource, default, out var missing, out _,
+                resolveControlMetrics: owner => ReferenceEquals(owner, matrix) ? null : font) && missing is null,
+                "A missing inner metric owner cannot publish the radical or a partial matrix.");
+            using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, cancelled.Token, out _));
+            using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 1 });
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, default,
+                out _, out _, resolveControlMetrics: _ => font));
+        }
+    }
+
     public static void MathFontRadicalDegreeSignedOverlapKeepsGroupOriginNonnegative()
     {
         byte[] bytes = RadicalFontBytes();

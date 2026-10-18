@@ -5648,5 +5648,15 @@
     "DocxTableLayoutStageContinuesRowsInActiveColumnFrame",
     "DocxTableLayoutStageManualColumnBreakAdvancesPageInSingleColumn",
     "DocxMarkupReserveMarginModelsLandscapeColumnsAndWideTables"
+  ],
+  "docx-radical-matrix": [
+    "MathFontRadical",
+    "MathFontMatrix",
+    "DocxMathRadical",
+    "DocxNativeRoot",
+    "DocxNativeRadicals",
+    "DocxNativeMatrix",
+    "DocxInlineCompositionRadicalMatrix",
+    "PortableRenderingRadicalMatrix"
   ]
 }

@@ -62,6 +62,7 @@ internal static partial class DocxMathLayout
         if (GetFunction(equation) is { } function) { return TryGetFunctionRuns(equation, function, token, out runs); }
         if (GetDelimiter(equation) is { } delimiter) { return TryGetDelimiterRuns(equation, delimiter, token, out runs); }
         var rows = new List<(DocxMathRow Row, int Level, bool AllowArgumentSize)>();
+        IReadOnlyList<DocxMathRunSource>? argumentRuns = null;
         IDocxMathControl? controlOwner = null;
         if (GetMatrix(equation, token) is { } matrix)
         {
@@ -97,7 +98,15 @@ internal static partial class DocxMathLayout
         }
         else if (GetRadical(equation) is { } radical)
         {
-            if (!AddBoxArgumentRows(radical.Radicand)) { runs = []; return false; }
+            var argument = equation with { Content = radical.Radicand };
+            // The matrix's existing cell grammar bounds this delegation. Its
+            // source owners survive inside the enclosing radical; matrix cells
+            // still reject another matrix or radical rather than recursing.
+            if (GetMatrix(argument, token) is not null)
+            {
+                if (!TryGetRuns(argument, token, out argumentRuns)) { runs = []; return false; }
+            }
+            else if (!AddBoxArgumentRows(radical.Radicand)) { runs = []; return false; }
             controlOwner = radical;
             if (radical.DegreeHidden != true)
             {
@@ -123,6 +132,7 @@ internal static partial class DocxMathLayout
         }
         else { rows.Add((equation.Content, 0, false)); }
         var result = new List<DocxMathRunSource>();
+        if (argumentRuns is not null) result.AddRange(argumentRuns);
         foreach ((DocxMathRow row, int level, bool allowArgumentSize) in rows)
         {
             if (!DocxMathRowLayout.TryGetRenderCodePoints(row, token, out _, out _, allowArgumentSize)) { runs = []; return false; }
@@ -136,7 +146,7 @@ internal static partial class DocxMathLayout
                     for (int index = sequence.Children.Count - 1; index >= 0; index--) { pending.Push(sequence.Children[index]); }
             }
         }
-        if (controlOwner is not null && result.Count > 0) { result[0] = result[0] with { ControlOwners = [controlOwner] }; }
+        if (controlOwner is not null && result.Count > 0) { result[0] = result[0] with { ControlOwners = [controlOwner, .. result[0].ControlOwners] }; }
         runs = result;
         return true;
 

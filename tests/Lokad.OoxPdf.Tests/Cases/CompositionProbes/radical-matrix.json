@@ -1,0 +1,53 @@
+[
+  {
+    "Id": "radical-matrix-inline",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/radical-matrix-inline.docx",
+    "Sha256": "A6E14611378485FF726EB85BE4664FAE30F4281EF777A3472BAEA1EC50D2F17D",
+    "SourceSha256": "17DDB69EE5AE5DC9E84E1A1707BA368044A880D7E747547E70659EF1C58D4BFC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "Features": [
+      "radical",
+      "matrix",
+      "inline"
+    ],
+    "ExpectedMathText": "abcd"
+  },
+  {
+    "Id": "radical-matrix-display-indexed",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/radical-matrix-display-indexed.docx",
+    "Sha256": "73ACFD5CD7250C18B9B7B755080662E168F3001D6D1DCDC958C90E463DE9EFFF",
+    "SourceSha256": "17DDB69EE5AE5DC9E84E1A1707BA368044A880D7E747547E70659EF1C58D4BFC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "Features": [
+      "radical",
+      "matrix",
+      "indexed"
+    ],
+    "ExpectedMathText": "abcd3"
+  },
+  {
+    "Id": "radical-matrix-inline-control20",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/radical-matrix-inline-control20.docx",
+    "Sha256": "B3F396D713CA20C38DED508E92A7191CBA503CB9C0BE8EE02269DDE4A55A7323",
+    "SourceSha256": "17DDB69EE5AE5DC9E84E1A1707BA368044A880D7E747547E70659EF1C58D4BFC",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Following prose."
+    ],
+    "Features": [
+      "radical",
+      "matrix",
+      "inline"
+    ],
+    "ExpectedMathText": "abcd"
+  }
+]
