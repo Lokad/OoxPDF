@@ -161,7 +161,27 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(2, heads);
                 TestAssert.True(seen.SequenceEqual(Enumerable.Range(1, 64)), "Every original source paragraph survives once and in order.");
                 TestAssert.Equal(22 + 5 * pages.Length + extraMath, math);
-                TestAssert.Equal(2, pages.Sum(page => page.Annotations.Count(link => link.Destination is not null)));
+                int expectedLinks = row.TryGetProperty("Hyperlinks", out var hyperlinks) ? hyperlinks.GetArrayLength() : 0;
+                TestAssert.Equal(2 + expectedLinks, pages.Sum(page => page.Annotations.Count(link => link.Destination is not null)));
+                if (expectedLinks != 0)
+                {
+                    var actual = pages.SelectMany((page, index) => page.Annotations.Where(link => link.Destination?.PageIndex == 0)
+                        .Select(link => (Page: index + 1, Link: link))).Single();
+                    TestAssert.Equal(secondHeadPage, actual.Page);
+                    if (resolver is null)
+                    {
+                        var expected = hyperlinks.EnumerateArray().Single();
+                        var link = actual.Link;
+                        TestAssert.Equal(expected.GetProperty("Page").GetInt32(), actual.Page);
+                        TestAssert.True(Math.Abs(link.X - expected.GetProperty("X").GetDouble()) < 1d &&
+                            Math.Abs(link.Y - expected.GetProperty("Y").GetDouble()) < 1d &&
+                            Math.Abs(link.Width - expected.GetProperty("Width").GetDouble()) < 1d &&
+                            Math.Abs(link.Height - expected.GetProperty("Height").GetDouble()) < 1d &&
+                            link.Destination!.Value.Left is { } x && Math.Abs(x - expected.GetProperty("DestinationX").GetDouble()) < 1d &&
+                            link.Destination!.Value.Top is { } y && Math.Abs(y - expected.GetProperty("DestinationY").GetDouble()) < 1d,
+                            "The mathematical hyperlink retains Word's independent rectangle and bookmark destination.");
+                    }
+                }
                 TestAssert.Equal(expectedImages, pictures.Count);
                 TestAssert.Equal(secondHeadPage, pictures[1].Page);
                 TestAssert.Equal(expectedImages, pages.Sum(page => page.Images.Sum(image => Regex.Matches(page.Content, "/" + Regex.Escape(image.ResourceName) + @"\s+Do\b").Count)));

@@ -28,6 +28,21 @@ internal static class DocxInlineContent
     public static bool RequiresMeasuredSourceRanges(DocxParagraph paragraph) =>
         paragraph.CommentRanges.Count != 0 || paragraph.Hyperlinks.Count != 0;
 
+    public static bool HasValidHyperlinkSourceRanges(DocxParagraph paragraph, CancellationToken token)
+    {
+        foreach (var link in paragraph.Hyperlinks)
+        {
+            token.ThrowIfCancellationRequested();
+            if (paragraph.InlineContent is not { } items ||
+                link.StartInlineItemIndex is not int start || link.EndInlineItemIndex is not int end ||
+                start < 0 || end < start || end > items.Count ||
+                link.TextRunStartIndex < 0 || link.TextRunStartIndex > paragraph.Runs.Count ||
+                link.TextRunCount < 0 || link.TextRunCount > paragraph.Runs.Count - link.TextRunStartIndex)
+                return false;
+        }
+        return true;
+    }
+
     public static IReadOnlySet<DocxEquation>? GetHyperlinkedEquations(DocxParagraph paragraph, CancellationToken token)
     {
         if (paragraph.Hyperlinks.Count == 0 || paragraph.InlineContent is not { } items) return null;

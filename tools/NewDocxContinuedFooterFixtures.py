@@ -21,7 +21,8 @@ for row in manifest:
     second_picture = row.get("AddSecondNotePicture", False)
     note_equation = row.get("AddInlineNoteEquation", False)
     note_minimum = row.get("NoteMinimumPoints")
-    source = output / ("mixed-math-picture-note-report.docx" if note_minimum is not None else
+    link_equation = row.get("LinkNoteEquation", False)
+    source = output / ("mixed-math-picture-note-report.docx" if note_minimum is not None or link_equation else
                        "long-note-inline-picture-report.docx" if wrap_picture or second_picture or note_equation else
                        "two-plain-notes-report.docx" if note_picture else
                        "table-note-reference-report.docx" if remove_separator else
@@ -32,7 +33,18 @@ for row in manifest:
     with ZipFile(source) as archive:
         original = {name: archive.read(name) for name in archive.namelist()}
     parts = dict(original)
-    if note_minimum is not None:
+    if link_equation:
+        part = "word/footnotes.xml"
+        story = E.fromstring(parts[part])
+        intro = next(n for n in story if n.get(w + "id") == "2").find(w + "p")
+        math = "{http://schemas.openxmlformats.org/officeDocument/2006/math}"
+        equation = next(x for x in intro if x.tag == math + "oMath")
+        index = list(intro).index(equation)
+        intro.remove(equation)
+        link = E.Element(w + "hyperlink", {w + "anchor": "Calculation"})
+        link.append(equation)
+        intro.insert(index, link)
+    elif note_minimum is not None:
         part = "word/footnotes.xml"
         story = E.fromstring(parts[part])
         intro = next(n for n in story if n.get(w + "id") == "2").find(w + "p")

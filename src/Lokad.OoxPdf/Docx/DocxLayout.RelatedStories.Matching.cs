@@ -525,9 +525,14 @@ internal sealed partial class DocxLayoutEngine
         {
             token.ThrowIfCancellationRequested();
             if (element is not DocxParagraphElement { Paragraph: var paragraph } ||
-                !DocxPlainBodyFrame.HasPlainTextContent(paragraph.Images.Count == 0 && paragraph.Equations.Count == 0
-                    ? paragraph : paragraph with { Images = [], Equations = [] }) ||
-                !IsPlainNoteFlowParagraph(paragraph, allowSourceAffinedImages: true) ||
+                !DocxInlineContent.HasValidHyperlinkSourceRanges(paragraph, token)) return false;
+            // Valid source ranges annotate the measured content; they do not
+            // change its paragraph spacing or placement ownership. Keep the
+            // original runs and source paragraph for measurement and painting.
+            var flowParagraph = paragraph.Hyperlinks.Count == 0 ? paragraph : paragraph with { Hyperlinks = [] };
+            if (!DocxPlainBodyFrame.HasPlainTextContent(flowParagraph.Images.Count == 0 && flowParagraph.Equations.Count == 0
+                    ? flowParagraph : flowParagraph with { Images = [], Equations = [] }) ||
+                !IsPlainNoteFlowParagraph(flowParagraph, allowSourceAffinedImages: true) ||
                 !DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph, element.Revisions, token)) return false;
             if (paragraph.Images.Count != 0 || paragraph.Equations.Count != 0)
             {
@@ -555,7 +560,7 @@ internal sealed partial class DocxLayoutEngine
             if (line.SourceParagraph is null) return false;
             // An authored mixed-content minimum needs a complete line frame;
             // a legacy picture extent alone cannot establish its flow height.
-            bool requiresInlineFrame = line.SourceParagraph.Equations.Count != 0 ||
+            bool requiresInlineFrame = line.SourceParagraph.Equations.Count != 0 || line.SourceParagraph.Hyperlinks.Count != 0 ||
                 line.SourceParagraph.Images.Count != 0 && !DocxPlainBodyFrame.HasAutomaticLineFlow(line.SourceParagraph);
             if (requiresInlineFrame && (line.InlineFrame is not { } frame || !HasUsableNoteInlineFrame(line) ||
                 line.SourceParagraph.LineSpacingPoints is { } minimum && frame.Height < minimum)) return false;
