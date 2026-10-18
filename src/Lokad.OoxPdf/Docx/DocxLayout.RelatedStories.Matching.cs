@@ -132,6 +132,20 @@ internal sealed partial class DocxLayoutEngine
         return Math.Min(Math.Max(0d, storyLayout.ContentHeight), Math.Max(0d, page.Height - page.MarginTop - page.MarginBottom));
     }
 
+    private static Func<DocxLayoutPage, int, int, double>? ResolveFootnotePlacementFooter(
+        DocxLayoutPage page, int pageNumber, int pageCount,
+        Func<DocxLayoutPage, int, int, double>? qualifiedFooter,
+        Func<DocxLayoutPage, int, int, double>? availableFooter)
+    {
+        if (qualifiedFooter is not null || availableFooter is null) return qualifiedFooter;
+        // Page occupancy is independent of note typography/reflow eligibility.
+        // Consume an intruding measured footer only while it leaves a usable
+        // frame; an absent/unusable boundary retains the existing fallback.
+        double occupied = availableFooter(page, pageNumber, pageCount);
+        return double.IsFinite(occupied) && occupied > page.MarginBottom && occupied < page.Height - page.MarginTop
+            ? availableFooter : null;
+    }
+
     private static bool ResolveOwnedInlineFootnoteFrame(DocxLayoutPage page,
         IReadOnlyList<DocxReferencedRelatedStoryLayout> notes, double printScale,
         ref double? contentTop, ref Func<DocxLayoutPage, int, int, double>? footer,

@@ -807,7 +807,8 @@ internal sealed partial class DocxLayoutEngine
         bool plainDocumentEndnoteFlow = false,
         bool plainDocumentEndnoteTypography = false,
         double noteDestinationTopOffset = 0d,
-        Func<DocxLayoutPage, int, int, double>? frameBottom = null)
+        Func<DocxLayoutPage, int, int, double>? frameBottom = null,
+        bool usesPlainFootnoteFrame = true)
     {
         if (storyLayout.TextLines.Count == 0)
         {
@@ -889,7 +890,7 @@ internal sealed partial class DocxLayoutEngine
                 separatorY: null) with
             {
                 UsesPlainDocumentEndnoteTypography = plainDocumentEndnoteTypography,
-                UsesPlainFootnoteFrame = frameBottom is not null && storyLayout.Story.Kind == DocxRelatedStoryKind.Footnote,
+                UsesPlainFootnoteFrame = usesPlainFootnoteFrame && frameBottom is not null && storyLayout.Story.Kind == DocxRelatedStoryKind.Footnote,
                 NoteDestinationTopOffset = lineIndex == 0 ? noteDestinationTopOffset : 0d,
             });
             outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
@@ -1840,7 +1841,9 @@ internal sealed partial class DocxLayoutEngine
         int activePageIndex = outputIndex;
         List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
         double bodyHeight = footnoteStories.Sum(story => ResolvePlacedStoryHeight(story.StoryLayout, activePage));
-        double frameBottom = footerKeepOut?.Invoke(activePage, pageNumberOverride ?? (outputIndex + 1), pageCountOverride ?? outputPages.Count) ?? activePage.MarginBottom;
+        var placementFooter = ResolveFootnotePlacementFooter(activePage, pageNumberOverride ?? outputIndex + 1,
+            pageCountOverride ?? outputPages.Count, footerKeepOut, availableFooterKeepOut);
+        double frameBottom = placementFooter?.Invoke(activePage, pageNumberOverride ?? (outputIndex + 1), pageCountOverride ?? outputPages.Count) ?? activePage.MarginBottom;
         double cursorTop = frameBottom + bodyHeight;
         bool continuesHead = inFlightNotes is not null && footnoteStories[0].Location.Reference.Id is { } firstId &&
             inFlightNotes.TryGetValue((DocxRelatedStoryKind.Footnote, firstId), out InFlightRelatedStory? firstFlight) && firstFlight.SeparatorPlaced;
@@ -1900,7 +1903,7 @@ internal sealed partial class DocxLayoutEngine
         double separatorTop = storiesTop + separatorGapPoints + separatorHeight;
         (DocxPlacedRelatedStoryLayout placedSeparator, _) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, separatorLayout,
             footnoteStories[0].Location.SourceBlockIndex, separatorTop, separatorMeasurer,
-            placementHeightOverride: footerKeepOut is not null ? separatorHeight : null);
+            placementHeightOverride: placementFooter is not null ? separatorHeight : null);
         activePlacedStories.Add(placedSeparator);
         outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
         }
@@ -1937,7 +1940,7 @@ internal sealed partial class DocxLayoutEngine
             }
             else
             {
-                PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, stopAfterCurrentPage: sharedSlicePlacement, inFlight: trackedStory, headContentPushdownPoints: footnoteContentPushdownPoints, frameBottom: footerKeepOut);
+                PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, stopAfterCurrentPage: sharedSlicePlacement, inFlight: trackedStory, headContentPushdownPoints: footnoteContentPushdownPoints, frameBottom: placementFooter, usesPlainFootnoteFrame: footerKeepOut is not null);
             }
         }
 
@@ -1981,7 +1984,9 @@ internal sealed partial class DocxLayoutEngine
         int activePageIndex = outputIndex;
         List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
         double bodyHeight = footnoteStories.Sum(story => ResolvePlacedStoryHeight(story.StoryLayout, activePage));
-        double frameBottom = footerKeepOut?.Invoke(activePage, pageNumberOverride ?? (outputIndex + 1), pageCountOverride ?? outputPages.Count) ?? activePage.MarginBottom;
+        var placementFooter = ResolveFootnotePlacementFooter(activePage, pageNumberOverride ?? outputIndex + 1,
+            pageCountOverride ?? outputPages.Count, footerKeepOut, availableFooterKeepOut);
+        double frameBottom = placementFooter?.Invoke(activePage, pageNumberOverride ?? (outputIndex + 1), pageCountOverride ?? outputPages.Count) ?? activePage.MarginBottom;
         double cursorTop = frameBottom + bodyHeight;
         double storiesTop = cursorTop;
         DocxRelatedStoryLayout firstLayout = footnoteStories[0].StoryLayout;
@@ -2073,7 +2078,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 int headPageIndex = activePageIndex;
                 int headCount = activePlacedStories.Count;
-                PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, stopAfterCurrentPage: sharedSlicePlacement, inFlight: trackedStory, frameBottom: footerKeepOut);
+                PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, stopAfterCurrentPage: sharedSlicePlacement, inFlight: trackedStory, frameBottom: placementFooter, usesPlainFootnoteFrame: footerKeepOut is not null);
                 if (firstStory && !needsContinuationRule)
                 {
                     PatchSyntheticRuleOntoHeadSlice(outputPages, headPageIndex, headCount, separatorMeasurer, defaultContinuationWidth);

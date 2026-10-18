@@ -1,0 +1,32 @@
+[
+  {
+    "Id": "linked-inline-footer-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/linked-inline-footer-report.docx",
+    "Sha256": "A00F8CB9D1029CC7DADDDFB4BDE5F000A48683D74778E1FAE3A54D8DD613CD9F",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 7,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "Inventory availability",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative.",
+      "The linked calculation"
+    ]
+  },
+  {
+    "Id": "linked-inline-footnote-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/linked-inline-footnote-report.docx",
+    "Sha256": "9C4169FD6213EA7C57AC393737D90BC21997C19371C7F39B72A1CE081F295BCB",
+    "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 7,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "Inventory availability",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative.",
+      "The linked calculation"
+    ]
+  }
+]

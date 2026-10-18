@@ -1,0 +1,69 @@
+{
+  "Provenance": "Independent Word16 C224 exports, source/view/PDF/log pins in linked-inline-story-holdouts-evidence.json. Existing1pt origins retained; font-outline disjointness is a separate source invariant.",
+  "Rows": [
+    {
+      "Id": "linked-inline-footer-report",
+      "Mode": "final-preserve",
+      "InputSha256": "A00F8CB9D1029CC7DADDDFB4BDE5F000A48683D74778E1FAE3A54D8DD613CD9F",
+      "ReferencePdfSha256": "D55DF8B27D2F2296570A3DE5108B93D6D97BFE5171BA3B4BFD14340B6832AEDF",
+      "MathGlyphCount": 64,
+      "NoteY": 107.41998291015625,
+      "FooterY": 87.9840087890625,
+      "NoteDestinationY": 117.0,
+      "SeparatorRule": {
+        "X": 72.02400207519531,
+        "Y": 122.9000244140625,
+        "Width": 144.02000427246094,
+        "Height": 0.72003173828125
+      }
+    },
+    {
+      "Id": "linked-inline-footer-report",
+      "Mode": "all-word-compatible",
+      "InputSha256": "A00F8CB9D1029CC7DADDDFB4BDE5F000A48683D74778E1FAE3A54D8DD613CD9F",
+      "ReferencePdfSha256": "5CA0B6F1ECECE299F326DB6D06701CB5EC2211A9A11C1DB9DE8FD0DA2202722F",
+      "MathGlyphCount": 64,
+      "NoteY": 177.46002197265625,
+      "FooterY": 162.70001220703125,
+      "NoteDestinationY": 184.0,
+      "SeparatorRule": {
+        "X": 54.599998474121094,
+        "Y": 189.19000244140625,
+        "Width": 109.22000885009766,
+        "Height": 0.552001953125
+      }
+    },
+    {
+      "Id": "linked-inline-footnote-report",
+      "Mode": "final-preserve",
+      "InputSha256": "9C4169FD6213EA7C57AC393737D90BC21997C19371C7F39B72A1CE081F295BCB",
+      "ReferencePdfSha256": "4338A67EA46E9C30B263CCB0583C2F098CA6B6719D57D4CCD5096B7739B6EBD1",
+      "MathGlyphCount": 48,
+      "NoteY": 123.97998046875,
+      "FooterY": 44.90399169921875,
+      "NoteDestinationY": 134.0,
+      "SeparatorRule": {
+        "X": 72.02400207519531,
+        "Y": 139.46002197265625,
+        "Width": 144.02000427246094,
+        "Height": 0.72003173828125
+      }
+    },
+    {
+      "Id": "linked-inline-footnote-report",
+      "Mode": "all-word-compatible",
+      "InputSha256": "9C4169FD6213EA7C57AC393737D90BC21997C19371C7F39B72A1CE081F295BCB",
+      "ReferencePdfSha256": "89F2D796111A3CE069B9D6987EAF50959449C34B88D967DD0054F11B8B996056",
+      "MathGlyphCount": 48,
+      "NoteY": 190.010009765625,
+      "FooterY": 130.030029296875,
+      "NoteDestinationY": 197.0,
+      "SeparatorRule": {
+        "X": 54.599998474121094,
+        "Y": 201.739990234375,
+        "Width": 109.22000885009766,
+        "Height": 0.552001953125
+      }
+    }
+  ]
+}

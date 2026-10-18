@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingOccupiedFooterKeepsNoteInkClear() =>
+        DocxInlineCompositionTests.CheckOccupiedFooterNotes(new PinnedResolver(mathFont: true));
+
     public static void PortableRenderingPrintedHyperlinkFramesCoverSourceOrigins() =>
         DocxInlineCompositionTests.CheckPrintedHyperlinkFrames(new PinnedResolver(mathFont: true));
 
