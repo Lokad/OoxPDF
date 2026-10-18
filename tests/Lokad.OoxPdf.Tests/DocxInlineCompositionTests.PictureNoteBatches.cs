@@ -168,6 +168,9 @@ internal static partial class DocxInlineCompositionTests
                     var actual = pages.SelectMany((page, index) => page.Annotations.Where(link => link.Destination?.PageIndex == 0)
                         .Select(link => (Page: index + 1, Link: link))).Single();
                     TestAssert.Equal(secondHeadPage, actual.Page);
+                    TestAssert.Equal(4, mathOrigins.Count(origin => origin.Page == actual.Page &&
+                        origin.X >= actual.Link.X && origin.X <= actual.Link.X + actual.Link.Width &&
+                        origin.Y >= actual.Link.Y && origin.Y <= actual.Link.Y + actual.Link.Height));
                     if (resolver is null)
                     {
                         var expected = hyperlinks.EnumerateArray().Single();
@@ -175,8 +178,8 @@ internal static partial class DocxInlineCompositionTests
                         TestAssert.Equal(expected.GetProperty("Page").GetInt32(), actual.Page);
                         TestAssert.True(Math.Abs(link.X - expected.GetProperty("X").GetDouble()) < 1d &&
                             Math.Abs(link.Y - expected.GetProperty("Y").GetDouble()) < 1d &&
-                            Math.Abs(link.Width - expected.GetProperty("Width").GetDouble()) < 1d &&
-                            Math.Abs(link.Height - expected.GetProperty("Height").GetDouble()) < 1d &&
+                            Math.Abs(link.X + link.Width - expected.GetProperty("X").GetDouble() - expected.GetProperty("Width").GetDouble()) < 1d &&
+                            Math.Abs(link.Y + link.Height - expected.GetProperty("Y").GetDouble() - expected.GetProperty("Height").GetDouble()) < 1d &&
                             link.Destination!.Value.Left is { } x && Math.Abs(x - expected.GetProperty("DestinationX").GetDouble()) < 1d &&
                             link.Destination!.Value.Top is { } y && Math.Abs(y - expected.GetProperty("DestinationY").GetDouble()) < 1d,
                             "The mathematical hyperlink retains Word's independent rectangle and bookmark destination.");
