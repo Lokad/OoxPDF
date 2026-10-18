@@ -1,5 +1,38 @@
 # Composed-document reliability checkpoint
 
+## C221: shared ordered justification preserves mixed formulas (2026-10-18)
+
+Confirmed C220 omissions are closed: four justified report outcomes restore two
+formulas/nine glyphs each (36 total), including wrapped prose. Shared placement
+stretches retained ASCII spaces after line breaking; intrinsic equation/image
+advances, source ranges, display alignment and tab positions retain ownership.
+The existing plain-text span emitter is shared rather than duplicated. Final
+paragraph lines remain natural; legacy single-equation justification keeps its
+qualified placement path. No font/size/document-shape exception was added.
+
+One committed Release artifact54a83c09:16 Windows checks/10 Ubuntu checks,
+six native skips, once/platform, no repairs. Three new observers fail C219.
+All2,230 old input pins remain unchanged; five public inputs added. Six qualified
+PDFs equal the prototype; left controls retain C219 bytes.54 independent Word
+target glyph anchors retain existing1pt/.1pt gates: maxX0.187pt/Y0.843pt/size0.04pt.
+All six C220 Word exports reused; no new exports or unrelated corpus/deck replay.
+Source inspection excludes newly supported justification from the fixed four
+DOCX. The extracted ordinary-text emitter and preserved legacy path retain
+focused text/image/line-start/display/static/fraction neighbors.
+
+All six strict gates remain failed. Content audit has zero source-prose/simple-
+math deficits; four raw Office-word flags retain Word's source/sourc/e PDF run
+split. They are not relabeled as passes.12 native pixel pairs retain both PNG
+hashes/reuse chains; six pairs reviewed now, plus both pages of a portable-font
+review PDF. Font-dependent portable wrapping and existing comment/image/table
+geometry differences remain.17 assets/four smokes match on transfer, without a
+root build/suite replay. Root b2ddbe91; inline-justification-evidence.json,
+inline-justification-office-observations.json and inline-justification-transfer/.
+
+Next: bounded source-only justified image/link/container holdouts on this frozen
+artifact; characterize content, pagination and independent geometry before
+choosing another correction. No broader support claim follows from these probes.
+
 C220 confirms that paragraph justification still breaks supported composition.
 A single-line or wrapped report paragraph containing two supported formulas
 omits both in each public preset: nine glyphs/outcome,36 missing overall.
