@@ -9,6 +9,51 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableMathTests
 {
+    public static void DocxStaticMinimumFramesMapCompleteSourceAndRetainFixedFallbacks()
+    {
+        const double scale = .75d;
+        var measurer = new DocxTests.FamilyWidthTextMeasurer();
+        foreach (bool header in new[] { true, false })
+        foreach (double minimum in new[] { 0d, 8d, 20d, 40d })
+        {
+            var first = DocxTests.CreateDocxLayoutParagraph("First static row.", 10d, minimum) with
+            { Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = "atLeast" } };
+            var last = first with { Runs = [first.Runs[0] with { Text = "Last static row." }] };
+            var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [first, last] };
+            var document = DocxTests.CreateLayoutTestDocument(
+                [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Body.", 10d, 10d))], []) with
+            {
+                PageSettings = DocxPageSettings.Empty with
+                {
+                    HeaderDistancePoints = 12d, FooterDistancePoints = 12d,
+                    HeaderParagraphsByType = header ? paragraphs : new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
+                    FooterParagraphsByType = header ? new Dictionary<string, IReadOnlyList<DocxParagraph>>() : paragraphs
+                }
+            };
+            DocxLayout Layout(DocxDocument source, double factor) => new DocxLayoutEngine(
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, factor).Create(source,
+                    new DocxTests.ScaledLayoutTextMeasurer(measurer, factor, factor), default, measurer);
+            var design = Layout(document, 1d).Pages.Single();
+            var mapped = Layout(document, scale).Pages.Single();
+            TestAssert.Equal(2, mapped.StaticTextLines.Count);
+            foreach (var pair in design.StaticTextLines.Zip(mapped.StaticTextLines))
+            {
+                TestAssert.True(pair.Second.StaticStoryUsesPhysicalY && ReferenceEquals(pair.First.SourceParagraph, pair.Second.SourceParagraph),
+                    "A complete minimum-height story retains its measured source owner when mapped.");
+                TestAssert.True(Math.Abs(pair.Second.BaselineY - mapped.Height / 2d -
+                    (pair.First.BaselineY - design.Height / 2d) * scale) < 1e-9 &&
+                    Math.Abs(pair.Second.LineHeight!.Value - pair.First.LineHeight!.Value * scale) < 1e-9,
+                    "Minimum slots and baselines share the existing complete-frame transform exactly once.");
+            }
+            foreach (string rule in new[] { "exact", "future" })
+            {
+                paragraphs["default"] = [first with { Spacing = first.Spacing with { LineRuleValue = rule } }];
+                TestAssert.True(Layout(document, scale).Pages.Single().StaticTextLines.All(line => !line.StaticStoryUsesPhysicalY),
+                    "Fixed and unknown line rules retain their coordinate fallback.");
+            }
+        }
+    }
+
     public static void DocxTableMathOrderedFramesMatchIndependentBorderClearance()
     {
         if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))

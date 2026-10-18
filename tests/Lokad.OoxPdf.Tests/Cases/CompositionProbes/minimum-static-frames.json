@@ -1,0 +1,38 @@
+[
+  {
+    "Id": "minimum-static-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-static-header.docx",
+    "Sha256": "33795F1371841C3849496A8FEDC6A4D8D84138CBFD3BCF4CACB0FC6469966C27",
+    "SourceSha256": "5056ECC474661A31A312F037CA6C5566E5A14ECE12CFCBE88F4A640191536619",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Following prose.",
+      "Public review header line 1.",
+      "Public review header line 2.",
+      "Public review header line 3."
+    ],
+    "Part": "word/headerMinimumPlain.xml",
+    "MinimumLineHeight": 20
+  },
+  {
+    "Id": "minimum-static-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-static-footer.docx",
+    "Sha256": "7B888952575224F4A52F507FAE18BA9618508EF93950CC4C006436D77590F940",
+    "SourceSha256": "5056ECC474661A31A312F037CA6C5566E5A14ECE12CFCBE88F4A640191536619",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Leading paragraph.",
+      "Following prose.",
+      "Public review footer line 1.",
+      "Public review footer line 2.",
+      "Public review footer line 3."
+    ],
+    "Part": "word/footerMinimumPlain.xml",
+    "MinimumLineHeight": 20
+  }
+]

@@ -203,7 +203,7 @@ internal sealed partial class DocxLayoutEngine
             paragraph.Images.All(image => image.SourceRunIndex >= 0 && image.RotationDegrees == 0d &&
                 double.IsFinite(image.WidthPoints) && double.IsFinite(image.HeightPoints) &&
                 image.WidthPoints > 0d && image.HeightPoints > 0d && image.WidthPoints <= width) &&
-            DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) &&
+            DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) &&
             DocxInlineContent.HasSupportedSourceOwner(paragraph, token: token);
     }
 }

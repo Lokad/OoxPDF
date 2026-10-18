@@ -6564,5 +6564,33 @@
     "DocxTableMinimumNoteLinksKeepSlotDuringBaselineCorrection",
     "PortableRenderingAtomicFootnoteRetainsLastBodyLine",
     "DocxInlineCompositionMinimumLineSlotOwnsLeadingAndRetainsSpacingFallbacks"
+  ],
+  "docx-minimum-static-frames": [
+    "DocxStaticMinimumFrames",
+    "DocxInlineCompositionMinimumStaticFrames",
+    "PortableRenderingMinimumStaticFrames",
+    "DocxStaticFrameMapping",
+    "DocxInlineCompositionStaticSourceFramesMatchIndependentWord",
+    "PortableRenderingStaticSourceFramesKeepProseOnPage",
+    "DocxNativeScaledStaticFramesKeepFooterVisibleAndHeaderBodyInOfficeSlots",
+    "DocxNativeAlignedStaticFramesRetainOfficeBodyAndFooterSlots",
+    "DocxStaticTableMathAndPlainFramesMatchIndependentWordAnchors",
+    "DocxStaticTableMathCompleteReportMatchesIndependentPrintedFrames",
+    "DocxStaticStoryDeclaredFramesClipInlineImages",
+    "DocxFooterInlineImageReservesItsVisibleHeight",
+    "DocxOverflowingFooterTopIsExposedOnLayout",
+    "DocxBodyBreaksBeforeRaisedFooterFrameBottom",
+    "DocxBodyTrailingAfterDoesNotMoveFooter",
+    "DocxFooterLeadingBeforeDoesNotMoveFooter",
+    "DocxStaticFooterAutoAdvanceBottomAnchorsBlock",
+    "DocxStaticFooterFollowerLinesUseBodyRuleOffsets",
+    "DocxInlineCompositionOwnedNoteFrames",
+    "PortableRenderingOwnedNoteFrames",
+    "DocxInlineCompositionMinimumLineMathKeepsWordSlotsAcrossContainers",
+    "PortableRenderingMinimumLineMathKeepsContentAndNeutralContainerOrigins",
+    "DocxInlineCompositionStaticNoteAdmissionMatchesIndependentWordPageCounts",
+    "DocxMixedFootnoteFrameClearsOverflowingFooterWithoutChangingTypographyOwner",
+    "DocxMixedFootnoteFrameRetainsRichComplementarySourceFallbacks",
+    "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement"
   ]
 }

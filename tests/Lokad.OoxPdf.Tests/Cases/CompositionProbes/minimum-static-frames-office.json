@@ -1,0 +1,93 @@
+{
+  "Source": "Independent Word 16 PDF exports; unchanged one-point source baseline gates.",
+  "Rows": [
+    {
+      "Id": "minimum-static-header",
+      "Part": "word/headerMinimumPlain.xml",
+      "Mode": "final-preserve",
+      "InputSha256": "33795F1371841C3849496A8FEDC6A4D8D84138CBFD3BCF4CACB0FC6469966C27",
+      "ReferencePdfSha256": "623A6301C944A7F5E8633D1DCCE1E8F930F3C52482ADA3A16395224DF9695344",
+      "StaticY": [
+        738.12,
+        718.2,
+        698.14
+      ],
+      "BodyAnchors": [
+        {
+          "Prefix": "Leading paragraph.",
+          "Y": 684.58
+        },
+        {
+          "Prefix": "Following prose.",
+          "Y": 669.94
+        }
+      ]
+    },
+    {
+      "Id": "minimum-static-header",
+      "Part": "word/headerMinimumPlain.xml",
+      "Mode": "all-word-compatible",
+      "InputSha256": "33795F1371841C3849496A8FEDC6A4D8D84138CBFD3BCF4CACB0FC6469966C27",
+      "ReferencePdfSha256": "A54D81796C47B25B7069496D9A5F286FC23A4812A961ABCD8031F0D94B9CCF11",
+      "StaticY": [
+        655.73,
+        640.61,
+        625.42
+      ],
+      "BodyAnchors": [
+        {
+          "Prefix": "Leading paragraph.",
+          "Y": 615.12
+        },
+        {
+          "Prefix": "Following prose.",
+          "Y": 604.03
+        }
+      ]
+    },
+    {
+      "Id": "minimum-static-footer",
+      "Part": "word/footerMinimumPlain.xml",
+      "Mode": "final-preserve",
+      "InputSha256": "7B888952575224F4A52F507FAE18BA9618508EF93950CC4C006436D77590F940",
+      "ReferencePdfSha256": "503AE2E190B19EDEDE474578207FDB3D159188A786AE58BF8C34DEA232922A0D",
+      "StaticY": [
+        78.024,
+        58.104,
+        38.04
+      ],
+      "BodyAnchors": [
+        {
+          "Prefix": "Leading paragraph.",
+          "Y": 708.58
+        },
+        {
+          "Prefix": "Following prose.",
+          "Y": 693.94
+        }
+      ]
+    },
+    {
+      "Id": "minimum-static-footer",
+      "Part": "word/footerMinimumPlain.xml",
+      "Mode": "all-word-compatible",
+      "InputSha256": "7B888952575224F4A52F507FAE18BA9618508EF93950CC4C006436D77590F940",
+      "ReferencePdfSha256": "F1365E1A84D501A0F9FAFBECF4418EA6FDBAEB4A5D39389CBD4858517F64BEE7",
+      "StaticY": [
+        155.16,
+        140.04,
+        124.85
+      ],
+      "BodyAnchors": [
+        {
+          "Prefix": "Leading paragraph.",
+          "Y": 633.34
+        },
+        {
+          "Prefix": "Following prose.",
+          "Y": 622.22
+        }
+      ]
+    }
+  ]
+}
