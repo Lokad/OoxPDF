@@ -16,6 +16,12 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingExactCommentHeightChangesKeepGlyphBrackets() =>
+        DocxInlineCompositionTests.CheckExactCommentHeightChanges(new PinnedResolver(mathFont: true));
+
+    public static void PortableRenderingExactCommentFramesKeepAuthoredBoundsAndNeutralSourceTransforms() =>
+        DocxInlineCompositionTests.CheckExactCommentFrames(new PinnedResolver(mathFont: true));
+
     public static void PortableRenderingOwnedNoteContainersKeepProseClearAndSourceTransformsStable() =>
         DocxInlineCompositionTests.CheckOwnedNoteContainers(new PinnedResolver(mathFont: true));
 

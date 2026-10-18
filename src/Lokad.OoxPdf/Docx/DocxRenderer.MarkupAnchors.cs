@@ -123,7 +123,7 @@ internal sealed partial class DocxRenderer
     {
         anchorLine = line;
         anchorX = 0d;
-        if (line.Story?.Kind != DocxStoryKind.TableCell || range.EndSourceRunIndex is not { } endRun ||
+        if (line.Story?.Kind is not (DocxStoryKind.Body or DocxStoryKind.TableCell) || range.EndSourceRunIndex is not { } endRun ||
             endRun <= 0 || range.EndTextOffset != 0)
         {
             return false;
@@ -168,21 +168,25 @@ internal sealed partial class DocxRenderer
         return true;
     }
 
-    private static double? ResolveCommentAnchorDepth(
+    private static (double? Depth, double? Top) ResolveCommentAnchorFrame(
         DocxTextLineLayout line, DocxParagraph paragraph, DocxInlineReference reference,
         DocxMarkupContext markupContext)
     {
-        if (line.InlineFrame is null || !UsesWordCompatibleAllMarkupTextProfile(markupContext))
-            return null;
+        bool exact = DocxInlineLineGeometry.TryGetExactBodyLineBox(line, out var authored);
+        if ((line.InlineFrame is null && !exact) || !UsesWordCompatibleAllMarkupTextProfile(markupContext))
+            return (null, null);
         DocxCommentRange? range = paragraph.CommentRanges.FirstOrDefault(range =>
             string.Equals(range.Id, reference.Id, StringComparison.Ordinal));
         if (range is null || !TryResolveWordCompatibleCommentRangeBounds(line, range,
                 ResolveTextEmissionXOffset(markupContext), out _, out _))
-            return null;
-        // A measured range attaches at its selection bottom. Legacy plain-text
-        // and bare-reference anchors retain their established baseline inset.
-        return Math.Max(-WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints,
-            DocxInlineLineGeometry.VerticalExtents(line).Below);
+            return (null, null);
+        // A measured range attaches at its selection bottom. An authored exact
+        // box also owns balloon placement at its top, independently of the
+        // connector. Unmeasured and bare-reference anchors retain their fallback.
+        if (exact) return (authored.Height - authored.BaselineInset,
+            line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext) + authored.BaselineInset);
+        return (Math.Max(-WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints,
+            DocxInlineLineGeometry.VerticalExtents(line).Below), null);
     }
 
     private static double ResolveCommentAnchorX(

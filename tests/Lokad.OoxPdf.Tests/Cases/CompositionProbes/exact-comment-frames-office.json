@@ -1,0 +1,75 @@
+{
+  "Source": "Three existing independent Word16 exports: tall and compact exact body paragraphs, including a table neighbor. Input/PDF identities and one-point vertical gates; X/other visual failures remain. No new Word export.",
+  "Rows": [
+    {
+      "Id": "owned-note-container-intermediate",
+      "InputSha256": "558E623410E1E88C0C38F7379A70BC3244791346927C53C8A3EB50A8C18C5FEB",
+      "ReferencePdfSha256": "BE100326BF42CC1F2628BF21764F455087DAE080ACE745307F115BC4FA72C47A",
+      "Page": 3,
+      "ExpectedMathGlyphs": 32,
+      "ExpectedText": [
+        "Following prose.",
+        "Final tail."
+      ],
+      "SelectionBounds": [
+        {
+          "Bottom": 581.28,
+          "Top": 641.976
+        }
+      ],
+      "BalloonTitleY": 632.88
+    },
+    {
+      "Id": "scaled-note-body",
+      "InputSha256": "32C1D0B9CA1BFF05F25CA600C38BB26F6CA2A9E206C7FF5E2A640BF8045A03ED",
+      "ReferencePdfSha256": "93FFAB2332905BC9B9BEAC519A1D9E1F0B7C885B6699FD0D38BFFDE7FF7C0E58",
+      "Page": 1,
+      "ExpectedMathGlyphs": 0,
+      "ExpectedText": [
+        "Section 6 line 3.",
+        "Public calculation note."
+      ],
+      "SelectionBounds": [
+        {
+          "Bottom": 638.21,
+          "Top": 646.946
+        },
+        {
+          "Bottom": 629.5,
+          "Top": 638.212
+        },
+        {
+          "Bottom": 620.78,
+          "Top": 629.492
+        }
+      ],
+      "BalloonTitleY": 620.78
+    },
+    {
+      "Id": "scaled-note-cell",
+      "InputSha256": "AA32B068D7322A490A2DF7C1725AF72DBB5A58E7228B661368F223D54E233ABC",
+      "ReferencePdfSha256": "12644ACEE89BAEC5B72FBB971BED30168CAEC16B47F7A77C140A1EEC9A8B4060",
+      "Page": 1,
+      "ExpectedMathGlyphs": 0,
+      "ExpectedText": [
+        "Section 6 line 3.",
+        "Public calculation note."
+      ],
+      "SelectionBounds": [
+        {
+          "Bottom": 638.21,
+          "Top": 646.946
+        },
+        {
+          "Bottom": 629.5,
+          "Top": 638.212
+        },
+        {
+          "Bottom": 620.78,
+          "Top": 629.492
+        }
+      ],
+      "BalloonTitleY": 620.78
+    }
+  ]
+}

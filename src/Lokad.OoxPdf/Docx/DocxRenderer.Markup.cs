@@ -672,6 +672,7 @@ internal sealed partial class DocxRenderer
                         string wordCompatibleCommentBody = BuildWordCompatibleCommentBalloonPreview(storyLayout);
                         DocxCommentThreadBalloonMetrics commentMetrics = CountCommentThreadBalloonMetrics(storyLayout, replies ?? []);
                         DocxTextLineLayout anchorLine = ResolveCommentAnchorLine(line, anchorTextLines, paragraph, reference, markupContext);
+                        var commentFrame = ResolveCommentAnchorFrame(anchorLine, paragraph, reference, markupContext);
                         // RV06: Word-compatible comment balloons wear the first-seen
                         // author color; other profiles keep the legacy cream palette.
                         int commentAuthorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
@@ -712,7 +713,8 @@ internal sealed partial class DocxRenderer
                         {
                             WordCompatibleBodyResource = ReferenceEquals(qualifiedBody?.Embedded.Font, bodyEmbedded?.Font)
                                 ? null : qualifiedBody,
-                            WordCompatibleAnchorDepthPoints = ResolveCommentAnchorDepth(anchorLine, paragraph, reference, markupContext),
+                            WordCompatibleAnchorDepthPoints = commentFrame.Depth,
+                            WordCompatiblePlacementTopY = commentFrame.Top,
                             WordCompatibleBodyLineHeightEm = qualifiedBody is not null && qualifiedBody.Embedded.Font.UnitsPerEm > 0
                                 ? DocxLineMetrics.MeasureHheaLineHeight(qualifiedBody.Embedded.Font, 1d) : null,
                             WordCompatibleTerminalResource = ResolveCommentBalloonTerminalResource(storyLayout, qualifiedBody, qualifiedParts, fontResources),

@@ -28,10 +28,26 @@ internal static class DocxInlineLineGeometry
         return Math.Max(0d, frame.Height - frame.BaselineInset - (textHeight - textAbove));
     }
 
+    internal static bool TryGetExactBodyLineBox(DocxTextLineLayout line, out DocxOccupiedLineBox box)
+    {
+        box = default;
+        if (line.Story?.Kind != DocxStoryKind.Body || line.LineHeightSource != DocxLineHeightSource.ExactLineSpacing ||
+            line.BodyLineBoxHeightPoints is not { } height || line.BodyLineBoxBaselineInsetPoints is not { } inset ||
+            !double.IsFinite(height) || height <= 0d || !double.IsFinite(inset) || inset < 0d || inset > height)
+            return false;
+        box = new(height, inset);
+        return true;
+    }
+
     internal static (double Above, double Below) VerticalExtents(DocxTextLineLayout line)
     {
         double above = line.InlineFrame?.BaselineInset ?? 0d;
         double below = line.InlineFrame is { } frame ? Math.Max(0d, frame.Height - frame.BaselineInset) : 0d;
+        if (line.InlineFrame is null && TryGetExactBodyLineBox(line, out var authored))
+        {
+            above = authored.BaselineInset;
+            below = authored.Height - authored.BaselineInset;
+        }
         // Source endpoints constrain horizontal extent. Selection and connector
         // share the occupied line frame, enlarged only by visible math bounds.
         foreach (var extent in line.InlineSourceExtents)

@@ -262,7 +262,8 @@ internal sealed partial class DocxRenderer
                 double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
                 int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
                 var (above, below) = DocxInlineLineGeometry.VerticalExtents(line);
-                RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics, CommentAuthorFillRgb(authorSlot), CommentAuthorStrokeRgb(authorSlot), above, below);
+                RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics, CommentAuthorFillRgb(authorSlot), CommentAuthorStrokeRgb(authorSlot), above, below,
+                    usesExactFrame: DocxInlineLineGeometry.TryGetExactBodyLineBox(line, out _));
             }
             else if ((range is null || !HasCommentRangeBounds(range)) &&
                 TryResolveWordCompatibleCommentReferenceMarkerBounds(line, reference, ResolveTextEmissionXOffset(markupContext), out startX, out endX))
@@ -420,14 +421,25 @@ internal sealed partial class DocxRenderer
         PdfGraphicsBuilder graphics,
         DocxMarkupBalloonRgb fillRgb,
         DocxMarkupBalloonRgb strokeRgb,
-        double objectAbove = 0d, double objectBelow = 0d)
+        double objectAbove = 0d, double objectBelow = 0d, bool usesExactFrame = false)
     {
-        double bottomExtension = Math.Max(0d, objectBelow + WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints);
-        double topExtension = Math.Max(0d, objectAbove - WordCompatibleAllMarkupCommentRangeFillHeightPoints - WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints);
-        double bottomTickY = baselineY + WordCompatibleAllMarkupCommentRangeBottomTickYOffsetPoints - bottomExtension;
-        double verticalBottomY = baselineY + WordCompatibleAllMarkupCommentRangeVerticalBottomYOffsetPoints - bottomExtension;
-        double verticalTopY = baselineY + WordCompatibleAllMarkupCommentRangeVerticalTopYOffsetPoints + topExtension;
-        double topTickY = baselineY + WordCompatibleAllMarkupCommentRangeTopTickYOffsetPoints + topExtension;
+        // Exact source boxes own both expansion and compression. Content-driven
+        // inline frames retain the legacy minimum and grow for their visible ink.
+        double bottomExtension = objectBelow + WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints;
+        double topExtension = objectAbove - WordCompatibleAllMarkupCommentRangeFillHeightPoints - WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints;
+        if (!usesExactFrame)
+        {
+            bottomExtension = Math.Max(0d, bottomExtension);
+            topExtension = Math.Max(0d, topExtension);
+        }
+        // Authored spacing changes selection background, while its brackets
+        // remain attached to glyphs. Content-driven inline ink grows both.
+        double markerBottomExtension = usesExactFrame ? 0d : bottomExtension;
+        double markerTopExtension = usesExactFrame ? 0d : topExtension;
+        double bottomTickY = baselineY + WordCompatibleAllMarkupCommentRangeBottomTickYOffsetPoints - markerBottomExtension;
+        double verticalBottomY = baselineY + WordCompatibleAllMarkupCommentRangeVerticalBottomYOffsetPoints - markerBottomExtension;
+        double verticalTopY = baselineY + WordCompatibleAllMarkupCommentRangeVerticalTopYOffsetPoints + markerTopExtension;
+        double topTickY = baselineY + WordCompatibleAllMarkupCommentRangeTopTickYOffsetPoints + markerTopExtension;
         graphics.SetFillRgb(fillRgb.Red, fillRgb.Green, fillRgb.Blue);
         graphics.FillRectangle(
             Math.Max(0d, startX - WordCompatibleAllMarkupCommentRangeFillXInsetPoints),
