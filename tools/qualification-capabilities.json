@@ -6409,6 +6409,7 @@
     "MathFontDelimiterAssemblyPartsKeepAuthored"
   ],
   "docx-display-integrals": [
+    "DocxMathNary",
     "MathFontNary",
     "MathFontMixedNary",
     "MathFontInlineIntegral",
