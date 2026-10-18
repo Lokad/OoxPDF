@@ -1,5 +1,34 @@
 # Composed-document reliability checkpoint
 
+C175 reuses parsed fonts within one DOCX conversion's coordinated preparation.
+Resolver decoration on accepted C173 shows two program-source requests per used
+face on note-numbering retries; fixed compound main fonts already load once.
+One dictionary now belongs to coordinated preparation and is passed explicitly
+through note/kerning/numbering/deferred-count retries. Standalone preparation owns
+its own dictionary. Subsets/layout still rebuild. Existing immutable source/owned
+buffer contracts, bounded program caches, cancellation and parser/work limits
+remain; no global retention, new quota, unsafe code or native interop.
+
+One frozen Release artifact passes155 Windows/126 Ubuntu checks,29 native skips,
+once each. Both new sequential/concurrent ownership observers fail C173. On four
+note-control outcomes, requests fall2 to1 and warm calling-thread allocation falls
+7.45-17.00MB/conversion(25.8-33.9%). Whole/staged PDFs and prepared kerning-map hashes
+remain identical. Each source/preset uses an isolated cold process, one warmup and
+three warm samples. Stages overlap; candidate timings ran with qualification, so
+no throughput speedup or general-portfolio improvement is claimed. The reusable
+allocation probe gains --font-load-counts, forwarding native catalog/source/face
+semantics and reporting requests rather than physical reads or allocations.
+
+All16 portfolio PDFs/30 reviewed pairs/comparisons retain identities. Fourteen
+DOCX strict failures, two deck passes and six raw screens remain unchanged.
+17 assets/four smokes transfer without root build, suite or corpus replay; all
+2,121 public input hashes match. No new Office exports, rasters or relaxed gates.
+Root9d41fdae; artifacts/composition-c1/font-preparation-retry-evidence.json. C173
+CI39087577370 is green on both platforms. C174 research is batched with this push.
+Next, investigate neutral bookmark effects on body minimum-leading eligibility,
+retaining validated font/slot/spacing rules until independent evidence permits
+simplification.
+
 C174 bounds the remaining matrix-frame concern without changing production.
 Exact normalized glyph pairing on retained independent Word/C123/C167 operations
 separates internal row-pitch deficits0.633/1.378pt from first-paragraph advance

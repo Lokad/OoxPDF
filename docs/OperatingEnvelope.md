@@ -5,6 +5,42 @@ specific expansion, retention and output boundaries. Host capacity also includes
 runtime/JIT, resolver ownership, concurrent conversions, input/output owners and
 headroom. Office and PDFium validation processes are outside library measurements.
 
+## Conversion-owned font preparation, 2026-10-18
+
+Qualified source `83a86cf3` (root `9d41fdae`) reuses parsed fonts only within one
+DOCX conversion's note/kerning/page-count preparation retries. Subsets and layout
+are rebuilt when their inputs change. Sources retain immutable owned bytes,
+existing bounded program caches, cancellation and font-parser/work limits; no
+cross-conversion parsed-font cache or production quota is added.
+
+A diagnostic resolver in the allocation probe forwards resolution/catalog access,
+face indices, opaque source identities and bytes. Its `--font-load-counts` mode
+records delegated program-source requests, not physical reads or allocation.
+Four existing note-numbering outcomes request every used face twice before the
+change and once afterward. The fixed compound report/specification already load
+their main faces once; no general portfolio speedup is claimed.
+
+| Note control | Preset | Previous warm allocation (MB) | Current warm allocation (MB) | Reduction |
+|---|---|---:|---:|---:|
+| spanning paragraph | Final | 28.47 | 21.02 | 26.2% |
+| spanning paragraph | AllMarkup | 28.87 | 21.42 | 25.8% |
+| compound equations/images | Final | 50.14 | 33.14 | 33.9% |
+| compound equations/images | AllMarkup | 50.53 | 33.53 | 33.6% |
+
+MB is decimal. Each source/preset uses an isolated cold process, one warmup and
+three warm samples on Windows/.NET10/default resolver (466 discovered faces).
+Calling-thread allocations fall7.45-17.00MB/conversion. Whole/staged PDFs and
+prepared-font kerning-map fingerprints remain identical. Candidate timing ran
+alongside qualification and is not a controlled throughput comparison. Diagnostic
+stages overlap and are not additive; these are not live-heap ceilings.
+
+155 Windows/126 Ubuntu checks pass,29 native skips. Sequential and concurrent
+ownership regressions fail the preceding library. All16 portfolio PDFs retain
+identity; independent Office comparisons and failed visual thresholds carry.
+Evidence: `artifacts/composition-c1/checkpoint-175-note-allocation-comparison.json`
+and `font-preparation-retry-evidence.json`. The earlier kerning-materialization
+and mixed-document baselines below remain historical observations.
+
 ## Composed annotation report, 2026-10-16
 
 The separately pinned [C2 report](../tests/Lokad.OoxPdf.Tests/Cases/Composition/composed-annotations-report.json)
