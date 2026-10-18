@@ -4,6 +4,22 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxScriptClassifier
 {
+    // Plain-line corrections are qualified for printable ASCII and letters
+    // in these Latin/Greek/Cyrillic blocks, not arbitrary unclassified Unicode.
+    // Category checks exclude combining marks and controls inside the blocks.
+    // Block boundaries: https://www.unicode.org/Public/UCD/latest/ucd/Blocks.txt
+    internal static bool IsSimpleLineText(string text)
+    {
+        foreach (char ch in text)
+        {
+            if (ch is >= ' ' and <= '~' or '\r' or '\n') continue;
+            if (ch is not (>= '\u00c0' and <= '\u024f' or
+                >= '\u0370' and <= '\u052f' or >= '\u1e00' and <= '\u1fff') ||
+                !char.IsLetter(ch)) return false;
+        }
+        return true;
+    }
+
     public static bool IsComplexScriptText(string text)
     {
         foreach (Rune rune in text.EnumerateRunes())

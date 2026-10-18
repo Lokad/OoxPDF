@@ -1,0 +1,265 @@
+{
+  "Scope": "Independent Word exports before exact-byte public promotion; unchanged minimum paragraphs outside simple-script neighbors.",
+  "Rows": [
+    {
+      "Id": "minimum-simple-script-latin12",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/minimum-simple-script-latin12.docx",
+      "InputSha256": "0B6DDA11A582F943BB92A5D5F034A0436E4EE7A72AF356873BD8446755536CCF",
+      "ReferencePdfSha256": "78AEF43CF4C0475515C9118B89F1DF910ACF5C2FF39A00C9A657C8A8BFC8798A",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.18
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.62
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.94
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.62
+        }
+      ]
+    },
+    {
+      "Id": "minimum-simple-script-latin12",
+      "Mode": "all-word-compatible",
+      "Input": "CompositionProbes/minimum-simple-script-latin12.docx",
+      "InputSha256": "0B6DDA11A582F943BB92A5D5F034A0436E4EE7A72AF356873BD8446755536CCF",
+      "ReferencePdfSha256": "C29A5A44236021D09ACE1A21D63489062E9C84BE96BD3CCC4A07F1A37F0A848F",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.18
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.62
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.94
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.62
+        }
+      ]
+    },
+    {
+      "Id": "minimum-simple-script-greek12",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/minimum-simple-script-greek12.docx",
+      "InputSha256": "59B33BB106F5696509722F1C3F5C0D24EBF33600A233A86F3673F68B5A38C134",
+      "ReferencePdfSha256": "6A591DAE276A58B8D26D7009A761F7F87517E4CAFB562895CD86ECBD0BC6BDFF",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.18
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.62
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.94
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.62
+        }
+      ]
+    },
+    {
+      "Id": "minimum-simple-script-greek12",
+      "Mode": "all-word-compatible",
+      "Input": "CompositionProbes/minimum-simple-script-greek12.docx",
+      "InputSha256": "59B33BB106F5696509722F1C3F5C0D24EBF33600A233A86F3673F68B5A38C134",
+      "ReferencePdfSha256": "05CB9DF72D9EDA0905C666372FFDE05CFE03A6812CD5DE8A6BD5ACEB3A979B6E",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.18
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.62
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.94
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.62
+        }
+      ]
+    },
+    {
+      "Id": "minimum-simple-script-cyrillic12",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/minimum-simple-script-cyrillic12.docx",
+      "InputSha256": "92E0612C06190F0A2C976A11A6A5342FF9D82AAA9C8C80084F43F52D6A11A8FE",
+      "ReferencePdfSha256": "7F6FD7AAF42B763CA2E221AB8B751DBC4E04451419F65621633C3D2919F508F1",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.18
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.62
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.94
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.62
+        }
+      ]
+    },
+    {
+      "Id": "minimum-simple-script-cyrillic12",
+      "Mode": "all-word-compatible",
+      "Input": "CompositionProbes/minimum-simple-script-cyrillic12.docx",
+      "InputSha256": "92E0612C06190F0A2C976A11A6A5342FF9D82AAA9C8C80084F43F52D6A11A8FE",
+      "ReferencePdfSha256": "9962775C26CB891A381F59F340351B7C4DBD1E866E7D9D6DF68D4F6A3EF4248F",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.18
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.62
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.94
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.62
+        }
+      ]
+    },
+    {
+      "Id": "minimum-simple-script-latin11",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/minimum-simple-script-latin11.docx",
+      "InputSha256": "FA9ED53743642135937690982EC40EF5B546ED3F160A0F52B0B6E5E967335E27",
+      "ReferencePdfSha256": "5A610B616DD344017F20D2C80C130C64BE6D676F6A475C0AFA5928E7F95198AA",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 698.98
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 665.5
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 632.14
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 585.22
+        }
+      ]
+    },
+    {
+      "Id": "minimum-simple-script-latin11",
+      "Mode": "all-word-compatible",
+      "Input": "CompositionProbes/minimum-simple-script-latin11.docx",
+      "InputSha256": "FA9ED53743642135937690982EC40EF5B546ED3F160A0F52B0B6E5E967335E27",
+      "ReferencePdfSha256": "BB341FA43E04815011C0E6C736AD9E177584E4F26EB69C250E5AD629FD98F2FB",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 698.98
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 665.5
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 632.14
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 585.22
+        }
+      ]
+    },
+    {
+      "Id": "minimum-simple-script-latin-noted12",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/minimum-simple-script-latin-noted12.docx",
+      "InputSha256": "700CE44C89C11F2F9BC27B02FC35F6FF0466A7945C3F4C6011B2405E332C5128",
+      "ReferencePdfSha256": "4684CAD20F7F9C9930DFD0CF645F24280D49DBC500790AE841A92715CE9065C6",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.18
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 663.22
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 623.26
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 563.26
+        }
+      ]
+    },
+    {
+      "Id": "minimum-simple-script-latin-noted12",
+      "Mode": "all-word-compatible",
+      "Input": "CompositionProbes/minimum-simple-script-latin-noted12.docx",
+      "InputSha256": "700CE44C89C11F2F9BC27B02FC35F6FF0466A7945C3F4C6011B2405E332C5128",
+      "ReferencePdfSha256": "CB54D7C76041362B7638819D11837B4D5DFBC2ED6CC896EE60576EC416A2F508",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.18
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 663.22
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 623.26
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 563.26
+        }
+      ]
+    }
+  ]
+}

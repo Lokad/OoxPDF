@@ -40,5 +40,5 @@ internal static class DocxPlainBodyFrame
         p.RevisionRanges.Count == 0 && !p.HasDeletedParagraphMark && p.DeletedText.Length == 0 &&
         p.ListLabel is null && p.Hyperlinks.Count == 0 &&
         p.Runs.All(r => r.Revision is null && r.Revisions.Count == 0 &&
-            r.Text.All(ch => ch is >= ' ' and <= '~' or '\r' or '\n'));
+            DocxScriptClassifier.IsSimpleLineText(r.Text));
 }

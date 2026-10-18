@@ -49,12 +49,12 @@ internal static class DocxMinimumBodyFlowTests
             xml => MinimumParagraph(xml).Element(Word + "pPr")!.Add(new XElement(Word + "keepNext")),
             xml => MinimumParagraph(xml).Descendants(Word + "t").First().Value += string.Concat(Enumerable.Repeat(" Public wrapped minimum.", 40)),
             xml => xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2"))),
-            xml => MinimumParagraph(xml).Descendants(Word + "t").First().Value += " Ω"
+            xml => MinimumParagraph(xml).Descendants(Word + "t").First().Value += " e\u0301"
         ];
         foreach (var modify in guards)
         {
             var document = Read(ordinary: true, modify); var before = Layout(document);
-            TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var after), "Painted, kept, wrapped, column and non-ASCII paths retain the original layout.");
+            TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var after), "Painted, kept, wrapped, column and combining-text paths retain the original layout.");
             TestAssert.True(ReferenceEquals(before, after), "Exclusions preserve the complete layout object.");
         }
     }

@@ -77,14 +77,14 @@ internal static class DocxOrdinaryKerningTests
             (xml, _) => FirstRunProperties(xml).Element(Word + "sz")!.SetAttributeValue(Word + "val", "28"),
             (xml, _) => xml.Descendants(Word + "p").First().Element(Word + "pPr")!.Add(new XElement(Word + "keepNext")),
             (xml, _) => xml.Descendants(Word + "t").First().Value += string.Concat(Enumerable.Repeat(" Public wrapped AB.", 40)),
-            (xml, _) => xml.Descendants(Word + "t").First().Value += " Ω",
+            (xml, _) => xml.Descendants(Word + "t").First().Value += " e\u0301",
             (xml, _) => xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2"))),
             (xml, styles) => { foreach (var rp in xml.Descendants(Word + "rPr")) rp.Add(Kern("24")); }
         ];
         foreach (var modify in guards)
         {
             var source = Read(modify);
-            TestAssert.True(!DocxPlainFootnoteKerning.TryCreateDocument(source, Layout(source), out var fallback, out _), "Rich/painted, malformed, other-size, kept, wrapped, non-ASCII, column and already-enabled inputs retain fallback.");
+            TestAssert.True(!DocxPlainFootnoteKerning.TryCreateDocument(source, Layout(source), out var fallback, out _), "Rich/painted, malformed, other-size, kept, wrapped, combining-text, column and already-enabled inputs retain fallback.");
             TestAssert.True(ReferenceEquals(source, fallback), "Excluded ordinary flow retains the original document object.");
         }
     }

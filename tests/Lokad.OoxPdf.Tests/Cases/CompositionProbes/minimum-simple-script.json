@@ -1,0 +1,72 @@
+[
+  {
+    "Id": "minimum-simple-script-latin12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-simple-script-latin12.docx",
+    "Sha256": "0B6DDA11A582F943BB92A5D5F034A0436E4EE7A72AF356873BD8446755536CCF",
+    "SourceSha256": "CA9514199B2B8BD44BD0EFF7FF7CAE637AD3A3A0DECDA6ADF584D304B6B4FE74",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta."
+    ],
+    "Context": "latin12",
+    "Replacement": "Alph\u00e1"
+  },
+  {
+    "Id": "minimum-simple-script-greek12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-simple-script-greek12.docx",
+    "Sha256": "59B33BB106F5696509722F1C3F5C0D24EBF33600A233A86F3673F68B5A38C134",
+    "SourceSha256": "CA9514199B2B8BD44BD0EFF7FF7CAE637AD3A3A0DECDA6ADF584D304B6B4FE74",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta."
+    ],
+    "Context": "greek12",
+    "Replacement": "\u0391\u03bb\u03c6\u03b1"
+  },
+  {
+    "Id": "minimum-simple-script-cyrillic12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-simple-script-cyrillic12.docx",
+    "Sha256": "92E0612C06190F0A2C976A11A6A5342FF9D82AAA9C8C80084F43F52D6A11A8FE",
+    "SourceSha256": "CA9514199B2B8BD44BD0EFF7FF7CAE637AD3A3A0DECDA6ADF584D304B6B4FE74",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta."
+    ],
+    "Context": "cyrillic12",
+    "Replacement": "\u0410\u043b\u044c\u0444\u0430"
+  },
+  {
+    "Id": "minimum-simple-script-latin11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-simple-script-latin11.docx",
+    "Sha256": "FA9ED53743642135937690982EC40EF5B546ED3F160A0F52B0B6E5E967335E27",
+    "SourceSha256": "F8AF84291A8A82232E0BF16DADE46540F8B2B7F4C4847F345954AC375EAE8B3B",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta."
+    ],
+    "Context": "latin11",
+    "Replacement": "Alph\u00e1"
+  },
+  {
+    "Id": "minimum-simple-script-latin-noted12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-simple-script-latin-noted12.docx",
+    "Sha256": "700CE44C89C11F2F9BC27B02FC35F6FF0466A7945C3F4C6011B2405E332C5128",
+    "SourceSha256": "7E81696732717C13824B757E4721B1DF5EE414A35205BBE136F5806ABB4D65E4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta."
+    ],
+    "Context": "latin-noted12",
+    "Replacement": "Alph\u00e1"
+  }
+]
