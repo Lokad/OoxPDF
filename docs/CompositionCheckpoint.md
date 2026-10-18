@@ -1,5 +1,31 @@
 # Composed-document reliability checkpoint
 
+C180 fixes nested mixed-row control-size ownership. The shared box caller
+supplies a12pt container size, but structured-row dispatch drops it and uses the
+11pt paragraph nominal size. Isolated12pt controls hide this mismatch. Forward
+the existing row owner and prefer it during shared structured measurement;
+unowned top-level rows retain source fallback. No fitted offsets or font/size/
+document-specific branches, new grammar, framework or quota.
+
+One frozen Release artifact passes117 Windows/86 Ubuntu checks,31 native skips,
+once each. Both low-level ownership and native full-document observers fail C179.
+All ten retained Word formula-origin groups now pass the existing1pt gate,
+improving from eight failures(maxX2.230/maxY1.702pt) to maxX0.847/maxY0.871pt.
+Both presets preserve Word's three pages, all51 body/15 header glyphs, prose,
+image and navigation. Two new first-page pairs reviewed/four prior page pairs
+carried through both raster hashes show no new clipping. Both strict raster
+failures and raw complex-math/sin-token flags remain; prose/simple-math deficits
+are zero. No threshold changes or failure relabeling.
+
+No Office exports occur. All12 isolated control and16 fixed-portfolio PDFs
+preserve identities:28 comparisons/46 reviewed page-pair outcomes carry. The
+fixed portfolio retains14 DOCX strict failures/two deck passes/six raw flags.
+2,147 inputs retain hashes; one existing gold adds retained independent anchors.
+17 assets/four smokes transfer without root build/suite/corpus replay.
+Rootdad81c8f; artifacts/composition-c1/mixed-row-control-owner-evidence.json.
+C178 CI39092215686 is green. Next, inspect bounded mixed matrix-cell arguments
+for content omissions before broadening their source grammar.
+
 C179 exercises accepted mixed arguments in one complete development specification.
 Five body formulas combine with tables, numbering, image, navigation, note,
 comments and static stories. C177 produces two pages with zero body math and ten
