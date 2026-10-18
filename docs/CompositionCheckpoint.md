@@ -1,5 +1,21 @@
 # Composed-document reliability checkpoint
 
+C218 confirms another supported-feature composition omission on frozen C216.
+An unused720pt decimal stop in a body paragraph or dotted-leader stop in a cell
+removes both supported formulas in both presets:64 missing glyphs. Original
+left-tab controls retain16 glyphs/preset; source fields/content are unchanged.
+Office retains the formulas. Body raster hashes are identical; cell inline
+field offsets/Y are unchanged while its whole table shifts0.84pt Final/about
+0.65pt Review against the older cache. That frame difference remains unverified
+and receives no fitted correction. Four new Word exports are cached once.
+
+A C219 prototype validates consumed positioning stops and preserves their source
+leader metadata. Bars/unknown kinds keep the owner fallback; active decimal or
+leader tabs remain unsupported. All four transformed PDFs recover16 glyphs and
+are byte-identical to their original supported control. Final focused frozen
+qualification remains pending. Evidence: unused-tab-math-composition-review.json.
+C216 CI39127757053 is green on both platforms, including broader/package checks.
+
 C217 reuses frozen C216 for two held-out exact-slot combinations: a report
 paragraph containing math and an inline picture, and a wrapped footnote. Both
 presets retain32 math glyphs, all550/61 source-prose tokens and Word page counts
