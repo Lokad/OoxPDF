@@ -1,5 +1,43 @@
 # Composed-document reliability checkpoint
 
+C211 makes exact body comment geometry consume the already measured source
+box. Background expands or compresses to that box; connector bottom and balloon
+top have distinct placement owners. Glyph brackets retain their text attachment.
+Complete previous-source-run ending ownership now covers body paragraphs as well
+as cells. Finite/source frame checks preserve content-driven inline and unmeasured
+static/cell fallbacks. No font, point-size, source-shape or fitted-offset rule.
+
+Three existing Word groups cover a tall exact paragraph, compact multi-line body
+text and a table neighbor. Their former11.625pt selection heights now follow the
+60.707/8.717pt source boxes; maximum independent selection-edge error0.124pt and
+balloon-title error0.557pt. No new document or Office export;2,217 prior pins stay
+unchanged and one gold contract is added. Four legacy standard-sheet reference
+identities are imported from verified source/PDF/export-log pins; original PDFs,
+logs and rasters stay unchanged.
+
+Raster review rejected the first production prototype because authored spacing
+also stretched its glyph brackets. A new80-to120pt transformation proves those
+brackets retain their text geometry while background changes; it fails the rejected
+artifact. The final corrected frozen Release artifact qualifies32 Windows/25
+Ubuntu checks, seven native skips, one exact invocation/platform and no final
+harness repair. Two source-frame observers fail C210. An initial native whitespace
+failure reproduces on C210 under Linux: declare that entry's native-font platform
+precondition, keeping its Windows assertions and pinned both-platform coverage.
+Its test-only repair preserves14 production/runtime assets and2,218 public pins.
+Earlier rejected qualification and visual evidence remains intact.
+
+Eight fixed DOCX portfolio PDFs retain identity. Thirteen comparisons/fourteen
+original reviewed pairs reuse PDF/threshold and both PNG hashes. Eight control
+content screens reuse complete identical decoded text-operation bytes; source-
+prose/simple-math deficits remain zero, with four rate/time word-extraction flags.
+Three changed native bands/two native Final page pairs/four portable pages are
+reviewed. All eight control strict gates remain failed; both compact Review
+foreground-recall gates pass. X/width/bracket style and approximate compact note/
+separator origins remain. Transfer verifies17 assets/four smoke PDFs, no root
+build/suite replay. Root6f7b280c/2411b860; exact-comment-final-evidence.json.
+C210 CI39120537050 is green on both platforms, including broader/package checks.
+Continue C212 default continuation-rule semantics while C211 CI runs.
+
 C210 closes the inherited Review body/note page ownership failure. Paragraph
 admission rejected a line against the printed boundary, but the note-drain
 predicate and retry loop rechecked the less restrictive legacy body boundary.
