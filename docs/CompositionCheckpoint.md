@@ -1,5 +1,44 @@
 # Composed-document reliability checkpoint
 
+C203 fixes a confirmed continuation defect in a minimum-height footnote with
+ordinary prose and two supported fractions. All content was present, but the
+note split 3/1 lines in Final or 4/0 in Word-compatible markup instead of Word's
+2/2; its head was 66.549/72.495 pt too high and the review ending occupied the
+wrong page. Complete owned inline frames now reuse paragraph widow slicing,
+body-to-note coordinate mapping and shared bottom seating. Actual footer edges
+and existing font/kerning eligibility remain; no fitted shift or new font/size/
+document-specific branch. Fitting notes keep their PDF bytes.
+
+The two public controls reproduce the retained inputs exactly, reusing four
+independent Word exports with zero repeat exports. Both presets retain 32 math
+glyphs and the correct two-page split. Head errors fall to 0.083/0.353 pt;
+math first-glyph origins remain within 0.171 pt X/0.388 pt Y. Body anchors retain
+their prior positions. These are source-backed anchor gates, not full visual
+fidelity. All four strict visual gates remain failed. Four raw audit screens
+retain rate/time word-token flags because candidate PDF shows emit individual
+glyphs; source prose/simple math and full mathematical streams have no deficits.
+
+One frozen Release library qualifies 34 Windows and 25 Ubuntu checks, with nine
+native-font skips. The new native observer fails C200. Initial qualification
+retains 33 passes and one harness failure caused by a prose anchor spanning
+neutral run splits. Only that observer was corrected and rerun; 14 production
+assets/all 2,201 input pins remain unchanged, and Ubuntu ran one exact method set.
+Two promoted inputs/four new pins preserve all 2,197 prior pins. Source mutations
+cover bookmarks/run splits and authored/synthetic separators. Twenty-four compound
+neighbor PDFs plus two fitting-note PDFs retain identity; 26 comparisons carry.
+Four changed native note bands and four complete portable pages were reviewed.
+Seventeen transferred assets/four integration smokes match; no root build or
+suite replay. Root 4390275c/f00593fd; owned-note-frames-evidence.json and
+owned-note-frames-office-observations.json. Continue owned-note image/footer
+composition boundaries while CI runs. C201 CI39109805955 is green on both platforms.
+
+C202 used frozen C200 without code, build or test replay. Soft wrapping, an
+authored break and a fitting minimum-height note preserve all supported math,
+with Word anchors within 0.388 pt; three portable pages were reviewed. Eight Word
+exports were created once. Tightening only the body space exposed C203's confirmed
+continuation defect; no earlier omission or corruption claim was made. Retain
+minimum-slot-boundary-evidence.json and all failed visual gates.
+
 C201 completes content-audit batches spanning accepted Office caches. Use one
 `--references <cache> [<cache> ...]` argument; existing single-root commands remain
 valid. Preflight every present entry against comparison-pinned PDF identity;
