@@ -78,14 +78,14 @@ internal static partial class DocxInlineCompositionTests
             var changedTable = table with { Rows = [table.Rows[0] with { Cells = [changed] }, table.Rows[1]] };
             var elements = source.BodyElements.Select(element => element is DocxTableElement ?
                 new DocxTableElement(changedTable) : element).ToArray();
-            var document = source with { BodyElements = elements, Tables = [changedTable] };
+            var document = source with { BodyElements = elements };
             var candidates = DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, default)
                 .Where(p => p.Equations.Count != 0).ToArray();
             TestAssert.Equal(variant == "restart" ? 1 : 0, candidates.Length);
             if (candidates.Length != 0) TestAssert.True(ReferenceEquals(paragraph, candidates[0]), "Preparation retains the exact visible source paragraph.");
             var staticSource = document with
             {
-                BodyElements = [], Tables = [],
+                BodyElements = [],
                 HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>
                     { ["default"] = [new DocxTableElement(changedTable)] },
                 EquationParts = [new DocxEquationPartSource("/word/header1.xml", 1, [new DocxTableElement(changedTable)])]
