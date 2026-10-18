@@ -1,5 +1,37 @@
 # Composed-document reliability checkpoint
 
+C212 restores full default continuation rules when the package omits the
+continuation story. Source progress distinguishes a continued note from a fresh
+or still-unplaced head. Reuse the existing authored-continuation design width
+and one print map for both sliced and complete tails; retain short head rules,
+explicit separator behavior and unqualified fallbacks. No font/size/source-shape
+qualification, layout adjustment or new quota.
+
+The old144/109.272pt rules replace Word's468.07/354.98pt continuation widths.
+Existing cached references now pass46 independent one-point rule gates:
+maxX0.036pt/Y0.263pt/width0.155pt/height0.01304pt. Ten rectangles strengthen an
+existing gold contract;2,217 other input pins and all source/reference documents
+remain unchanged. No new Office export. One frozen Release artifact qualifies
+18 focused Windows/14 Ubuntu checks, four native skips, one exact invocation/
+platform and no repair. Both strengthened observers fail C211.
+
+All twenty focused outcomes retain identical complete decoded text operations.
+Their graphics lists differ only by24 rule-width extensions, including identical
+clips. Two fitting PDFs/comparisons and both raster hashes reuse identity.
+The fixed DOCX portfolio's four sources author their separators explicitly, so
+none can enter the default-only branch; avoid another ordinary-corpus/PPTX replay.
+Twelve paired native rule bands include fresh second-note heads, and six portable
+pages cover automatic/minimum/image/footer combinations. All twenty strict gates
+remain failed; some foreground-recall/changed-pixel components pass. Existing
+extraction and cosmetic residuals remain, with no threshold change.
+
+Transfer verifies17 assets/four smoke PDFs without root build or suite replay.
+Root a2608a43; default-note-rules-evidence.json. C211 CI39122616601 is green on
+both platforms, including broader/package checks. Continue C213's bounded mixed-
+document allocation baseline against this frozen library while C212 CI runs;
+inclusive stage diagnostics must not be added together or treated as a measured
+speedup. Choose optimization only after the portfolio measurements.
+
 C211 makes exact body comment geometry consume the already measured source
 box. Background expands or compresses to that box; connector bottom and balloon
 top have distinct placement owners. Glyph brackets retain their text attachment.
