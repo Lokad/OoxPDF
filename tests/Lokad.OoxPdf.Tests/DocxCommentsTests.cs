@@ -1882,8 +1882,11 @@ internal static partial class DocxCommentsTests
                 $"Word-compatible all-markup should anchor comment connectors near the layout comment range end after connector inset. AnchorX={placement.AnchorConnectorX}, RangeEndX={rangeEndX}."));
     }
 
-    public static void DocxCommentsPreserveAuthoredWhitespace() =>
+    public static void DocxCommentsPreserveAuthoredWhitespace()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Native whitespace checks require installed Office-compatible fonts; pinned portable coverage runs on both platforms.");
         PortableRenderingTests.CheckCommentAuthoredWhitespace(null);
+    }
 
     public static void DocxWordCompatibleAllMarkupPreservesAuthoredWhitespaceTextOperation()
     {
