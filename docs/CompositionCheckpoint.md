@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+C213 records the four fixed mixed DOCX sources in Final/preserved and
+AllMarkup/Word-compatible without rebuilding the library. One process-cold
+conversion and three warm samples per input/preset use the existing isolated
+allocation probe, Windows/.NET10.0.13, default466-face resolver and buffer output.
+The default64MiB resident window stays unchanged. All eight whole/staged outputs
+are stable and equal the previously qualified PDFs; fourteen reviewed Office/
+candidate pairs and all eight failed strict gates carry by identity. No new
+Office export, raster, suite replay or library build.
+
+| Source (pages) | Final warm MB / ms | AllMarkup warm MB / ms |
+|---|---:|---:|
+| Report (2) |26.319 /104.14 |29.634 /120.34 |
+| Letter (1) |23.603 /66.74 |26.852 /77.05 |
+| Specification (2) |29.065 /165.07 |32.410 /140.06 |
+| Held-out memo (2) |25.119 /101.54 |28.302 /95.58 |
+
+MB is decimal; values are medians of three warm samples and measure allocation
+on the calling thread, not retained heap. Timing is noisy and establishes no
+speedup or mode ordering. Standalone initial font resources allocate18.171-
+18.750MB; inclusive preparation diagnostics overlap and must not be added.
+Independent SFNT reparse probes do not establish repeated production parsing.
+Font loading copies a whole TTC before extracting its independently owned face:
+C214 will test direct read-only extraction while preserving defensive ownership,
+bounds/cancellation and existing bounded source caches. No shared parsed-font
+cache or new quota. Evidence: compound-allocation-baseline-evidence.json.
+C212 CI39124225988 is green on both platforms, including broader/package checks.
+
 C212 restores full default continuation rules when the package omits the
 continuation story. Source progress distinguishes a continued note from a fresh
 or still-unplaced head. Reuse the existing authored-continuation design width

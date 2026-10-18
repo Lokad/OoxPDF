@@ -1,5 +1,33 @@
 # Measured operating envelope
 
+## Fixed mixed-document baseline, 2026-10-18
+
+The existing frozen C212 library (`89fe008b`, root `a2608a43`) renders the four
+fixed DOCX sources in both public presets. The probe alone is built against its
+pinned library; no library rebuild or visual qualification replay.
+
+| Source (pages) | Final warm allocation (MB) / time (ms) | AllMarkup warm allocation (MB) / time (ms) |
+|---|---:|---:|
+| Report (2) |26.319 /104.14 |29.634 /120.34 |
+| Letter (1) |23.603 /66.74 |26.852 /77.05 |
+| Specification (2) |29.065 /165.07 |32.410 /140.06 |
+| Held-out memo (2) |25.119 /101.54 |28.302 /95.58 |
+
+Windows/.NET10.0.13, default resolver (466 discovered faces), buffer output and
+the default64MiB resident window. Each input/preset uses an isolated process:
+one process-cold conversion followed by three warm samples; table values are
+medians. MB is decimal. Allocation covers the calling thread; these are neither
+live-heap ceilings nor throughput guarantees. OS caches are unspecified and
+timing is noisy, so no speedup or mode ordering is claimed.
+
+Standalone initial font-resource preparation allocates18.171-18.750MB.
+Preparation diagnostics overlap; do not sum them or infer that repeated layout
+is the main cost. Independent SFNT reparses are diagnostic workloads, not proof
+that production repeats those parses. All eight whole/staged output identities
+remain stable and equal the qualified PDFs; fourteen retained reviewed pixel
+pairs and all eight failed strict gates carry. No new Office export or raster.
+Evidence: `artifacts/composition-c1/compound-allocation-baseline-evidence.json`.
+
 These are workload observations, not memory ceilings. Conversion budgets protect
 specific expansion, retention and output boundaries. Host capacity also includes
 runtime/JIT, resolver ownership, concurrent conversions, input/output owners and
