@@ -1,5 +1,37 @@
 # Composed-document reliability checkpoint
 
+C210 closes the inherited Review body/note page ownership failure. Paragraph
+admission rejected a line against the printed boundary, but the note-drain
+predicate and retry loop rechecked the less restrictive legacy body boundary.
+The progress predicate now owns pending-note progress only; a retry receives the
+same live container boundary, including final after-space. Generic image/break
+capacities, cancellation and no-progress guards remain. No point/font/document
+qualification or fitted offset is added.
+
+Using the same four cached Word exports, the formerly unresolved body moves to
+page3 (within0.083pt) and the complete note tail stays onpage2 (within0.375pt).
+All four body/note/math/footer origin groups now pass the unchanged one-point
+gates. Reference PDF pins and coordinates are unchanged; both formerly unresolved
+anchors and their page2 row count become mandatory. The strengthened observer
+fails C209. One frozen Release artifact qualifies39 Windows/28 Ubuntu checks,
+11 native skips, one exact invocation/platform, no harness correction.2,216 input
+pins stay unchanged; only that gold contract is strengthened, with no new exports.
+
+Twenty-two relevant footnote neighbor PDFs and three controls retain identity;
+25 comparisons/36 original reviewed pairs are reused with raster hashes verified.
+Unrelated PPTX/plain-static inputs are not reconverted. The portable controlPDF
+also retains identity and its three reviewed pages. Two changed native bands are
+reviewed. Source-prose/simple-math deficits are zero; four raw rate/time extraction
+flags remain. The fresh strict pixel comparison still fails. Continued rules are
+too short, and an exact-paragraph comment range/balloon still uses the wrong
+vertical extent. Those remain explicit follow-ups, not accepted geometry.
+
+Transfer verifies17 assets/four smoke PDFs without root build or suite replay.
+Root ac9e5429; owned-note-admission-evidence.json. Periodic scan reports13.527GB/
+726,781files, zero errors; loose5GB cap remains unmet and protected retirement
+targets are untouched. C209 CI39119744730 is green on both platforms, including broader/package checks.
+Push C210 and continue source-backed comment geometry review while its CI runs.
+
 C209 makes intermediate owned-note pages use the same design/footer frame,
 paragraph slicer and bottom seating as heads and final tails. Normalize that
 frame once, including separator-less dispatch. Synthetic head admission consumes
