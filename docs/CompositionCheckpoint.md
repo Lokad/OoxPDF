@@ -1,5 +1,41 @@
 # Composed-document reliability checkpoint
 
+## C227: continued-note occupancy and fallback endnote clearance (2026-10-18)
+
+Physical footer availability now reaches the normal unqualified continuation
+drain, separately from typography/kerning admission. The inherited continuation
+collision closes: all64 source paragraphs survive exactly once/in order, and
+last-note/footer origins agree with Word within0.433pt on every note page.
+Middle-page capacity now matches Word31 paragraphs. First-page membership still
+differs: Word17/31/16 vs Final18/31/15 and Review21/31/12. Initial head errors
+19.425/58.699pt remain; no font/size/document-shape exception or fitted line pitch.
+
+C225 CI39136390437 caught a real neighboring regression: raising a footnote
+exposed apparent fallback space underneath it for an unqualified mixed endnote.
+Fallback endnotes now clear complete occupied footnote boxes. Partial-head and
+typography qualifications retain their existing contracts. The existing CI guard
+fails C225 and passes C227; both new native/portable continuation observers fail
+C225 ink clearance. One parent-runtime missing-fixture failure is retained; only
+that guard reran after adding the sixth explicit input. No production repair of
+an assertion, harness rebuild, threshold change or qualification replay.
+
+One frozen eba3c1eb artifact:37 Windows/29 Ubuntu passes, eight native-font skips,
+once per platform. Library/CLI Release builds have zero warnings/errors; tests
+retain two inherited nullable warnings. All2,243 old public pins unchanged/four
+added, with deterministic byte-identical fixture regeneration. Four C226 Word
+exports reused; two unchanged separator-less PDFs reuse comparisons, two fresh
+comparisons retain all four strict failures. Equation operations remain identical.
+Source prose/simple math deficits are zero; four raw Word prose screens retain
+rate/time math-word and page-membership flags. Twelve paired PNG hashes/chains,
+two new continuation pairs reviewed; one of six portable pages reviewed.
+
+Four fixed DOCX sources have no endnotes or intruding footer boundaries in either
+preset, proving the new branches ineffective there; four Final layout preparations
+and prior Review frames suffice, without portfolio/deck conversion replay.
+17 assets/four root smoke PDFs match; no root build/suite. Root fa792a9c, library
+B4074E815678F61D206B6C687832EFE1B074220C664560E8BC7887070DF49C47.
+Evidence: continued-footer-notes-evidence.json. C228 traces initial head capacity.
+
 ## C226: separator-less and continued-note footer holdouts (2026-10-18)
 
 Four source-only outcomes reuse frozen C225, with four new Word exports once;
