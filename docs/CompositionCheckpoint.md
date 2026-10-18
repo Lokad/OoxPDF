@@ -1,5 +1,31 @@
 # Composed-document reliability checkpoint
 
+C184 preserves supported equations beside an unsupported item. A second skewed
+fraction made the original fraction disappear from otherwise eligible body and
+cell paragraphs in both presets; headers already retained it. The shared ordered
+path now retains prepared content when an actual source equation is ready,
+skipping missing boxes after existing eligibility checks. Entirely unavailable
+body math, foreign-only preparation, untrusted owners and cancellation retain
+their fallbacks. No grammar, fitted offset or threshold change.
+
+Six exact-byte public controls/twelve independent Word exports distinguish the
+known fraction from the unsupported skewed neighbor. Four outcomes restore16
+known glyphs; six unsupported warnings remain. All12 known-glyph1pt gates pass
+(maxX0.035/maxY0.427pt). The skewed p/q is still missing in six outcomes; all12
+strict raster failures and raw audit exit1 remain. Prose/simple-math deficits
+are zero. Four unique full-page pairs reviewed/eight carry both raster hashes;
+no new clipping observed.
+
+One frozen Release artifact qualifies48 exact Windows checks and25 Ubuntu
+checks with23 native-font skips. All three new observers fail the previous
+library. Neutral bookmarks/run splits preserve origins in body/cell/header;
+low-level preparation checks cover missing first/last items and foreign keys.
+2,156 old public inputs unchanged/eight added. All20 retained complete-document
+PDFs preserve identity:20 comparisons and42 reviewed page-pair outcomes reused.
+17 transferred assets/four smoke PDFs match; no root build/suite/corpus replay.
+Root da966f6c; retained evidence partial-math-evidence.json. C183 CI39094952760
+is green; continue rendering work while the next scoped push runs.
+
 C183 validates structured cells inside complete root/n-ary specifications.
 One development document combines mixed fraction/script matrix cells with
 ordinary equations, tables, image, numbering, navigation, note/comments and
