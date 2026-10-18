@@ -1,5 +1,37 @@
 # Composed-document reliability checkpoint
 
+C197 removes complete-equation loss for double/triple integrals. One bounded
+integral-family predicate owns admission and document-default selection; existing
+font-owned n-ary measurement/variants/italic correction and placement are reused.
+No font, size or container branch. Both operators are identified in [Unicode's
+math classification](https://unicode.org/Public/math/latest/MathClassEx-15.html)
+and [Word's symbol guide](https://support.microsoft.com/en-us/accessibility/word/quick-start-guide-to-math-autocorrect-commands-and-symbols).
+Two documents each combine inline inherited, explicit-side display and inherited-
+stacked display placement. Four Word exports once/two byte-exact reproducible
+promotions;2,187 prior pins unchanged/four added. All four full-math1pt groups
+pass, restoring48 source glyphs(maxX0.066/maxY0.136pt,following prose0.147pt).
+
+One committed frozen Release batch qualifies47 Windows/29 Ubuntu checks with18
+native skips, one exact invocation/platform. All three new observers fail C195.
+Used/unused malformed defaults, explicit precedence, missing selected CID,
+cancellation and work limits qualify. Unknown quadruple integral keeps complete
+negative grammar coverage. The existing independent integral test helper now
+handles both single and multiple source placements, avoiding another geometry
+assertion path. All38 accepted PDFs/64 reviewed pairs retain identity and38
+comparisons carry. Two unique native pairs reviewed/two preset carries, two
+portable pages reviewed and six independent scalar inventories pass.
+
+An initial root input lookup stops after38 completed conversions before the new
+fixtures transfer. Recover their PDF/inspection/diagnostic data, leave timings
+null and convert only four new cases with the worktree script; join42 outcomes.
+No replay.17 assets/four integration smokes match; no root build or suite replay.
+Four new strict gates remain failed(foreground recall, plus tripleSSIM); raw
+complex-math flags/audit exit1 remain. Source-prose/simple-math/Office-word deficits
+and unsupported warnings are zero. Normalization expands multiple-integral
+characters into repeated single-integral scalars; inventory is not reading-order
+or visible-ink proof. Rootac1776d9; integral-family-evidence.json. C195
+CI39106745681 is green on both platforms, including broader/package checks.
+
 C196 reuses qualified C195 for two public-source compound transformations:
 bookmarked standalone header integrals inherit stacked limits; the specification
 sum inherits side limits while its product retains explicit stacked placement.
