@@ -1,5 +1,18 @@
 # Composed-document reliability checkpoint
 
+C190 closes the bounded delimiter composition review without code changes.
+Two ignored cell/header transformations retain all17 logical math symbols, prose,
+numbering and an image across eight native/pinned-portable outcomes. Four Word
+exports once/two unique full-page pairs reviewed/two preset outcomes carry both
+raster hashes; one portable header page reviewed. No new clipping seen. Cell
+controls retain one inherited diagnostic for an unreferenced header; Word also
+omits that part. No diagnostic policy change. All four full physical1pt groups
+and strict gates remain failed(maxY2.575pt), consistent with the assembly residual;
+X stays below1pt(max0.501). No build, fixture promotion, harness or suite replay.
+Bounded transformations remain holdouts; no arbitrary-document fidelity claim.
+Evidence delimiter-composition-boundary-evidence.json. C189 is pushed as9480d068;
+CI39101904990 runs while compound allocation measurement proceeds.
+
 C189 restores complete tall delimiters. Growing parentheses with60/200pt literal
 children made the whole formula disappear in both public presets; fixed controls
 rendered. Complete font-defined vertical shapes now share radical placement,
