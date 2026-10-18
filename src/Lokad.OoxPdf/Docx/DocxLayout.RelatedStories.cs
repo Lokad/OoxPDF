@@ -629,9 +629,11 @@ internal sealed partial class DocxLayoutEngine
     }
 
     // RV06 interleaving: exact in-flight remainder for the drain-aware body reserve.
-    private static bool TryCompleteFootnoteReserve(IEnumerable<InFlightRelatedStory> notes, out double reserve)
+    private static bool TryCompleteFootnoteReserve(IEnumerable<InFlightRelatedStory> notes, out double reserve,
+        bool excludeFinalAfterSpacing = false)
     {
         reserve = 0d;
+        double finalAfterSpacing = 0d;
         DocxRelatedStoryLayout? head = null;
         foreach (InFlightRelatedStory note in notes)
         {
@@ -643,14 +645,19 @@ internal sealed partial class DocxLayoutEngine
             double[] boxes = GetStoryTextLineBoxHeights(note.StoryLayout);
             if (boxes.Length != 1 || !double.IsFinite(boxes[0]) || boxes[0] <= 0d) return false;
             reserve += boxes[0];
+            finalAfterSpacing = Math.Max(0d, note.StoryLayout.TextLines[0].ParagraphAfterSpacing ??
+                note.StoryLayout.TextLines[0].PendingAfterSpacing ?? 0d);
         }
         if (head is null) return true;
         // Complete notes share one separator line. The current page does not
         // reserve a continuation rule for each note or repeat the head's trailing
-        // paragraph spacing. Placement itself retains its existing geometry.
+        // paragraph spacing. Source-owned admission also lets the final note's
+        // trailing space collapse into the remaining body/separator capacity;
+        // earlier notes retain their inter-paragraph space.
         double? headLine = head.TextLines[0].LineHeight ?? head.TextLines[0].SingleLineHeight;
         if (headLine is not > 0d || !double.IsFinite(headLine.Value)) return false;
         reserve += headLine.Value;
+        if (excludeFinalAfterSpacing) reserve -= finalAfterSpacing;
         return double.IsFinite(reserve);
     }
 

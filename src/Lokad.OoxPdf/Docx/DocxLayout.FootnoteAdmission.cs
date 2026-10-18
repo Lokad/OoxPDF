@@ -7,8 +7,11 @@ internal sealed partial class DocxLayoutEngine
     // paragraph's future notes before its first line arrives.
     private sealed class CompleteFootnoteAdmission(
         IReadOnlyDictionary<int, Dictionary<int, DocxInlineReferenceLocation>> owners,
-        IReadOnlyDictionary<int, List<DocxInlineReferenceLocation>> tableOwners)
+        IReadOnlyDictionary<int, List<DocxInlineReferenceLocation>> tableOwners,
+        double separatorHeight)
     {
+        internal double SeparatorHeight => separatorHeight;
+
         internal IReadOnlyList<DocxInlineReferenceLocation> Select(int block,
             IEnumerable<DocxTextSpan>? spans, CancellationToken token)
         {
@@ -110,7 +113,8 @@ internal sealed partial class DocxLayoutEngine
         }
         // Pure tables continue to use their existing reservation contract. This
         // migration concerns paragraphs whose notes arrive on measured lines.
-        return owners.Count != 0 && ids.Count == notes.Count ? new(owners, tableOwners) : null;
+        return owners.Count != 0 && ids.Count == notes.Count
+            ? new(owners, tableOwners, separators[0].TextLines[0].LineHeight!.Value) : null;
     }
 
     private static HashSet<DocxParagraph>? IndexCompleteNoteParagraphs(DocxBodyElement source, CancellationToken token)

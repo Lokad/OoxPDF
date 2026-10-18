@@ -1,0 +1,85 @@
+{
+  "Scope": "Eight independent Word Final exports; promoted input bytes identical to original probes. No repeat export.",
+  "Rows": [
+    {
+      "Id": "compact-note-full-note-after0",
+      "Input": "CompositionProbes/compact-note-full-note-after0.docx",
+      "InputSha256": "CF0BBBD0C84A335122D9D27898A87442AEDF60C52A26C587E95B8B21086BD3C0",
+      "ReferencePdfSha256": "A98DE4ED0293F33114738CB707C844D3CCBDB4C46D3DD9319EAEE08FD712EF6F",
+      "Mode": "final-preserve",
+      "Pages": 3,
+      "NoteY": 74.904,
+      "MarkerParagraphY": 707.26
+    },
+    {
+      "Id": "compact-note-full-note-after6",
+      "Input": "CompositionProbes/compact-note-full-note-after6.docx",
+      "InputSha256": "A56CA5BA829D27164D99F9B7DDB696E0D9D960A6CD200AFC3BC6468968206106",
+      "ReferencePdfSha256": "EDE9BE7DF085E5660253D0609C51E52A6E2F2395C49D94F3C3931D5B379FB399",
+      "Mode": "final-preserve",
+      "Pages": 3,
+      "NoteY": 80.904,
+      "MarkerParagraphY": 707.26
+    },
+    {
+      "Id": "compact-note-full-note-after12",
+      "Input": "CompositionProbes/compact-note-full-note-after12.docx",
+      "InputSha256": "C2A5B0875AE5E35E19C4DACCFF6C3340A4FB891766999C1AF36EDF1C0F8344EF",
+      "ReferencePdfSha256": "1576DBF8736392976962F16BDE28EDD42B5FEACDD276ACF194F2F8F83EA9956F",
+      "Mode": "final-preserve",
+      "Pages": 3,
+      "NoteY": 86.904,
+      "MarkerParagraphY": 707.26
+    },
+    {
+      "Id": "compact-note-full-body-after0",
+      "Input": "CompositionProbes/compact-note-full-body-after0.docx",
+      "InputSha256": "5464F837A85739FAEC1D1A4544AEB746872F9F5E63952A3EFAAA4DF1D95C7CD9",
+      "ReferencePdfSha256": "BB65A5A348C150905FFAC42449A1DD9C5DCD48EFEE1EF1E9D2B6C2CC7CECDB31",
+      "Mode": "final-preserve",
+      "Pages": 2,
+      "NoteY": 78.624,
+      "MarkerParagraphY": 105.5
+    },
+    {
+      "Id": "compact-note-no-header-note-after0",
+      "Input": "CompositionProbes/compact-note-no-header-note-after0.docx",
+      "InputSha256": "5340EF3EEB575F8F03ADBD9F8075416CF90EE890C7EE3CE08AA6FDBDA4781210",
+      "ReferencePdfSha256": "7E4F8DD884FED2F98E9F9537606D60649F08595A04F8775D3D1731C51AA14981",
+      "Mode": "final-preserve",
+      "Pages": 2,
+      "NoteY": 74.904,
+      "MarkerParagraphY": 107.78
+    },
+    {
+      "Id": "compact-note-no-header-note-after6",
+      "Input": "CompositionProbes/compact-note-no-header-note-after6.docx",
+      "InputSha256": "9C397A99B9BE945ED40EC562EAADA9BC58FF2C0E91978D9C19254D663D8C18CE",
+      "ReferencePdfSha256": "A2CAEDF32DA04D6CF77E0A182ADD09E952E394F93DC6DB90B074D16A1F82CCD3",
+      "Mode": "final-preserve",
+      "Pages": 2,
+      "NoteY": 74.904,
+      "MarkerParagraphY": 107.78
+    },
+    {
+      "Id": "compact-note-no-header-note-after12",
+      "Input": "CompositionProbes/compact-note-no-header-note-after12.docx",
+      "InputSha256": "45328A7808432F2C18FF80E0F46547C6841C807B3D27DD89713368196033E8F4",
+      "ReferencePdfSha256": "81FDF02EFD07F0C95DC728C9F6A92AF632A9B4FABABB468B6EB489C27DA7655C",
+      "Mode": "final-preserve",
+      "Pages": 2,
+      "NoteY": 74.904,
+      "MarkerParagraphY": 107.78
+    },
+    {
+      "Id": "compact-note-no-header-body-after0",
+      "Input": "CompositionProbes/compact-note-no-header-body-after0.docx",
+      "InputSha256": "1C5D5D8A9DE3D090FC0B7BDA6B838D2C13D31C76BEBFF51917C2E49C8D0B78A3",
+      "ReferencePdfSha256": "DF7B6BFAA5738ECBC1040ECE4C7C5566821B551DD824376CCB5CE85A517D360F",
+      "Mode": "final-preserve",
+      "Pages": 2,
+      "NoteY": 80.904,
+      "MarkerParagraphY": 107.78
+    }
+  ]
+}

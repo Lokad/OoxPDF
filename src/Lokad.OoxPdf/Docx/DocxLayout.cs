@@ -453,10 +453,15 @@ internal sealed partial class DocxLayoutEngine
             return page.MarginBottom + Math.Max(currentPageFootnoteReserveHeight, ResolvePagedDisplacement(footerFrameBottomDisplacementByPage));
         }
 
-        double CurrentParagraphFrameBottom()
+        double CurrentParagraphFrameBottom(double finalAfterSpacing = 0d)
         {
             double bottom = CurrentFrameBottom();
-            if (!UsesPrintedBodyFrame()) return bottom;
+            // A complete note can surrender its final trailing space, but the
+            // body's final line must still clear its own paragraph boundary.
+            // This is an admission charge; the next paragraph consumes it once.
+            double requiredAfter = completeFootnoteAdmission is not null && currentPageFootnoteReserveHeight > 0d
+                ? Math.Max(0d, finalAfterSpacing) : 0d;
+            if (!UsesPrintedBodyFrame()) return bottom + requiredAfter;
             // Paragraph advances already occupy printed points below the source
             // top. Static stories cannot enlarge paragraph capacity.
             // Table fragments retain their separately qualified capacity until
@@ -466,7 +471,7 @@ internal sealed partial class DocxLayoutEngine
             // The existing occupied source reserve includes the selected footer
             // and notes. Convert it once for printed paragraph admission too.
             double occupiedReserve = Math.Max(0d, bottom - page.MarginBottom);
-            return Math.Max(bottom, printedBottom + occupiedReserve * paragraphSpacingScale);
+            return Math.Max(bottom, printedBottom + occupiedReserve * paragraphSpacingScale) + requiredAfter;
         }
 
         DocxLayoutPage? GetCurrentPlainFootnoteFooterFrame()
@@ -635,7 +640,8 @@ internal sealed partial class DocxLayoutEngine
                 TrySharedFootnoteFrameReserve(inFlightNotes.Values, frame with { Items = currentItems.ToArray() },
                     separatorMeasurerForNotes, cancellationToken, out double sharedReserve)) return sharedReserve;
             if ((completeFootnoteAdmission is not null || useCompleteFootnoteReserve) &&
-                TryCompleteFootnoteReserve(inFlightNotes.Values, out double completeReserve))
+                TryCompleteFootnoteReserve(inFlightNotes.Values, out double completeReserve,
+                    excludeFinalAfterSpacing: completeFootnoteAdmission is not null))
             {
                 return completeReserve;
             }
@@ -959,7 +965,8 @@ internal sealed partial class DocxLayoutEngine
                     inFlightNotes: inFlightNotes,
                     pageNumberOverride: templatePageNumber,
                     pageCountOverride: templatePageNumber,
-                    sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter), footerKeepOut: footnoteFrameBottom);
+                    sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter) -
+                        (completeFootnoteAdmission?.SeparatorHeight ?? 0d), footerKeepOut: footnoteFrameBottom);
             }
 
             var harvestedStories = new List<DocxPlacedRelatedStoryLayout>();
@@ -1488,7 +1495,8 @@ internal sealed partial class DocxLayoutEngine
                         line = line with { BaselineInset = Math.Max(baseInset * paragraphSpacingScale, objectInset) + labelLeading };
                         if (completeFootnoteAdmission is not null)
                             RegisterInFlightFootnotesForSourceBlock(elementIndex, line.Fragments.SelectMany(fragment => fragment.Text));
-                        if (cursorY - line.OccupiedHeight < CurrentParagraphFrameBottom() &&
+                        if (cursorY - line.OccupiedHeight < CurrentParagraphFrameBottom(
+                            line.EndCursor.IsComplete(atoms) ? spacingProfile.ParagraphAfterSpacing : 0d) &&
                             (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(line.OccupiedHeight)))
                         {
                             AdvanceForOverflowingItem(line.OccupiedHeight, elementIndex);
@@ -1574,7 +1582,8 @@ internal sealed partial class DocxLayoutEngine
 
                     if (completeFootnoteAdmission is not null)
                         RegisterInFlightFootnotesForSourceBlock(elementIndex, line.Spans);
-                    if (cursorY - extraAbove - extraBelow - lineHeight < CurrentParagraphFrameBottom() && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(extraAbove + extraBelow + lineHeight)))
+                    if (cursorY - extraAbove - extraBelow - lineHeight < CurrentParagraphFrameBottom(
+                        lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) && (HasCurrentColumnContent() || FootnoteReserveYieldsPageToDrain(extraAbove + extraBelow + lineHeight)))
                     {
                         AdvanceForOverflowingItem(extraAbove + extraBelow + lineHeight, elementIndex);
                     }
