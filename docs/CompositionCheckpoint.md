@@ -1,5 +1,34 @@
 # Composed-document reliability checkpoint
 
+C168 restores supported matrix arguments inside radicals. C166 drops the whole
+formula in all six square/indexed/inner-control outcomes while Word preserves
+all glyphs. The bounded matrix walk now supplies source runs with ordered
+radical/matrix owners and the degree's separate script-script role. Existing
+measurement/context sizing/painting are reused. Another matrix or radical inside
+a matrix cell still rejects the complete box; no arbitrary recursive grammar.
+
+44 Windows and30 Ubuntu checks pass,14 native skips. All three new native,
+portable and ownership observers fail on C166. Bookmark/unchanged-format run
+transformations preserve mathematical origins/content in body and fitting cells
+under both public presets. Missing inner metrics, cancellation and scene-node
+limits retain complete fallback/exception behavior. All2,086 old inputs keep
+hashes; five control/gold inputs are added. An initial missing diagnostic import
+prevented test compilation before publication; its retained log precedes the
+sole qualified Release artifact.
+
+Six independent Word anchor gates pass with maxX0.363pt/maxY0.608pt. All six
+strict raster gates retain foreground-recall/SSIM failures. Two unique full-page/
+crop pairs were reviewed; four comparisons carry both raster identities. Root,
+overbar, matrix cells, degree and following prose remain visible, with residual
+horizontal/indexed geometry unaccepted. Source audit scans1,461 tracked DOCX
+inputs: only the three new controls contain the affected argument shape. The
+C16614-outcome/eight-source/24-page portfolio carries by source-backed inference
+and existing report/deck integration identities, without corpus replay.17 assets/
+four exact smokes transfer without root build or suite replay. Root47b61670;
+evidence artifacts/composition-c1/radical-matrix-evidence.json. C166
+CI39082330047 is green on both platforms. Next, probe the equivalent bounded
+matrix argument under n-ary operators before extending shared discovery.
+
 C167 reproduces the four retained matrix cell-frame counterexamples on the
 accepted C166 artifact. All four PDFs retain C123 bytes, so their Office metrics
 and reviewed images carry without exports or rasterization. The1.762-1.794pt
