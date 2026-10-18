@@ -132,6 +132,38 @@ internal sealed partial class DocxLayoutEngine
         return Math.Min(Math.Max(0d, storyLayout.ContentHeight), Math.Max(0d, page.Height - page.MarginTop - page.MarginBottom));
     }
 
+    private static void ResolveOwnedInlineFootnoteFrame(DocxLayoutPage page,
+        IReadOnlyList<DocxReferencedRelatedStoryLayout> notes, double printScale,
+        ref double? contentTop, ref Func<DocxLayoutPage, int, int, double>? footer,
+        Func<DocxLayoutPage, int, int, double>? availableFooter)
+    {
+        if (footer is null && TryResolveOwnedInlineFootnoteTop(page, notes, printScale, contentTop, out double top))
+        {
+            contentTop = top;
+            footer = availableFooter ?? ((frame, _, _) => frame.MarginBottom);
+        }
+    }
+
+    private static bool TryResolveOwnedInlineFootnoteTop(DocxLayoutPage page,
+        IReadOnlyList<DocxReferencedRelatedStoryLayout> notes, double printScale, double? sharedContentTop,
+        out double top)
+    {
+        top = 0d;
+        if (!double.IsFinite(printScale) || printScale <= 0d || page.ColumnFrames.Count > 1 ||
+            page.Items.Count == 0 || page.Items.Any(item => item is not (DocxTextLineLayout or DocxTableRowLayout)) ||
+            !HasNumericTrailingBodyAfterSpacing(page) || notes.Count == 0 ||
+            !notes.All(note => HasOwnedInlineNoteFlowStory(note.StoryLayout))) return false;
+        double bodyBottom = sharedContentTop ?? page.Items.Min(item =>
+            item is DocxTextLineLayout line && DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double bottom, out _)
+                ? bottom : GetVerticalBounds(item).Y);
+        if (sharedContentTop is null && page.Items.MinBy(item => GetVerticalBounds(item).Y) is DocxTextLineLayout last)
+            bodyBottom -= Math.Max(0d, last.ParagraphAfterSpacing ?? last.PendingAfterSpacing ?? 0d);
+        double? inset = page.Items.OfType<DocxTextLineLayout>().FirstOrDefault() is { } first
+            ? page.Height - page.MarginTop - first.BaselineY : null;
+        top = ResolveDesignBodyBottomForEndnoteStart(bodyBottom, page.Height - page.MarginTop, inset, printScale);
+        return double.IsFinite(top);
+    }
+
     internal static double ResolveDesignBodyBottomForEndnoteStart(
         double scaledBodyBottom,
         double frameTop,

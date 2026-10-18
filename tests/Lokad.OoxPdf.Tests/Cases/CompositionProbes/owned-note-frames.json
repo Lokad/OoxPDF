@@ -1,0 +1,32 @@
+[
+  {
+    "Id": "minimum-note-wrapped",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-note-wrapped.docx",
+    "Sha256": "B8FDB8B54DA561CFCCBBAC92EB715B85B3175B60AD4FA0009DAE93D855637600",
+    "SourceSha256": "5056ECC474661A31A312F037CA6C5566E5A14ECE12CFCBE88F4A640191536619",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Public calculation note.",
+      "End of supported note."
+    ],
+    "MinimumLineHeight": 48,
+    "BodyBeforeSpacing": 0.0
+  },
+  {
+    "Id": "minimum-note-page-boundary",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-note-page-boundary.docx",
+    "Sha256": "A9956C012E259F540AFF912B78880F20EA4735B77D94B546E50125EE441DE796",
+    "SourceSha256": "5056ECC474661A31A312F037CA6C5566E5A14ECE12CFCBE88F4A640191536619",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Public calculation note.",
+      "End of supported note."
+    ],
+    "MinimumLineHeight": 48,
+    "BodyBeforeSpacing": 450.0
+  }
+]

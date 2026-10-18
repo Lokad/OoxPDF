@@ -192,7 +192,8 @@ internal sealed partial class DocxLayoutEngine
             int countBefore = outputPages.Count;
             DocxRelatedStoryLayout? footnoteContinuationLayout = FindSpecialRelatedStoryLayout(footnoteLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? footnoteSeparatorLayout;
             PlaceFootnoteStories(outputPages, outputIndex, page, pageFootnoteStories, footnoteSeparatorLayout, footnoteContinuationLayout, separatorMeasurer, printScale, headerKeepOut,
-                footerKeepOut: CanUsePlainFootnoteStaticFrame(document, page, separatorMeasurer, printScale, cancellationToken) ? footerKeepOut : null);
+                footerKeepOut: CanUsePlainFootnoteStaticFrame(document, page, separatorMeasurer, printScale, cancellationToken) ? footerKeepOut : null,
+                availableFooterKeepOut: footerKeepOut);
             outputShift += outputPages.Count - countBefore;
         }
 
@@ -1768,6 +1769,33 @@ internal sealed partial class DocxLayoutEngine
         };
     }
 
+    private static double ResolveSeatedFootnoteTop(DocxLayoutPage page,
+        IReadOnlyList<DocxReferencedRelatedStoryLayout> notes, double top, double bottom,
+        Dictionary<(DocxRelatedStoryKind Kind, string Id), InFlightRelatedStory>? inFlightNotes,
+        double printScale, bool usesParagraphFrames)
+    {
+        double seated = 0d;
+        foreach (var head in usesParagraphFrames ? notes : notes.Take(1))
+        {
+            var layout = head.StoryLayout;
+            if (layout.TextLines.Count == 0) break;
+            double[] boxes = GetStoryTextLineBoxHeights(layout);
+            double[]? afters = printScale >= 1d ? GetStoryLineAfterSpacings(layout) : null;
+            double capacity = Math.Max(0d, top - bottom - seated);
+            bool fresh = inFlightNotes is null || head.Location.Reference.Id is null ||
+                !inFlightNotes.TryGetValue((head.Location.Reference.Kind, head.Location.Reference.Id), out var flight) ||
+                flight.PlacedLineCount == 0;
+            (int take, double height) = usesParagraphFrames
+                ? TakeParagraphStoryLines(layout.TextLines[0].SourceParagraph!, boxes, 0, layout.TextLines.Count,
+                    capacity, afters, page.Items.Count != 0 || seated != 0d, fresh)
+                : TakeStoryLines(boxes, 0, layout.TextLines.Count, capacity, afters, forceProgress: seated == 0d);
+            // A continued tail and a fresh head share one bottom-anchored batch.
+            if (take < layout.TextLines.Count) return bottom + seated + height;
+            seated += ResolvePlacedStoryHeight(layout, page);
+        }
+        return top;
+    }
+
     private static void PlaceFootnoteStories(
         List<DocxLayoutPage> outputPages,
         int outputIndex,
@@ -1783,16 +1811,23 @@ internal sealed partial class DocxLayoutEngine
         int? pageNumberOverride = null,
         int? pageCountOverride = null,
         double? sharedContentTop = null,
-        Func<DocxLayoutPage, int, int, double>? footerKeepOut = null)
+        Func<DocxLayoutPage, int, int, double>? footerKeepOut = null,
+        Func<DocxLayoutPage, int, int, double>? availableFooterKeepOut = null)
     {
         if (footnoteStories.Count == 0)
         {
             return;
         }
 
+        // Owned paragraph frames can be sliced independently of body contents
+        // and static-story eligibility. Compare them in the note design frame.
+        ResolveOwnedInlineFootnoteFrame(page, footnoteStories, printScale,
+            ref sharedContentTop, ref footerKeepOut, availableFooterKeepOut);
+
         if (separatorLayout is null)
         {
-            PlaceFootnoteStoriesWithoutSeparator(outputPages, outputIndex, page, footnoteStories, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, sharedSlicePlacement, inFlightNotes, pageNumberOverride, pageCountOverride, footerKeepOut: footerKeepOut);
+            PlaceFootnoteStoriesWithoutSeparator(outputPages, outputIndex, page, footnoteStories, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, sharedSlicePlacement, inFlightNotes, pageNumberOverride, pageCountOverride,
+                sharedContentTop: sharedContentTop, footerKeepOut: footerKeepOut);
             return;
         }
 
@@ -1837,32 +1872,8 @@ internal sealed partial class DocxLayoutEngine
         // of leaving capacity slack above the margin. The head take still comes from the
         // same clamped capacity, so take counts are unchanged; fitting stories keep the
         // legacy whole placement bit-identically.
-        double seatedHeight = 0d;
-        foreach (DocxReferencedRelatedStoryLayout head in footerKeepOut is not null ? footnoteStories : footnoteStories.Take(1))
-        {
-            DocxRelatedStoryLayout headLayout = head.StoryLayout;
-            if (headLayout.TextLines.Count == 0) break;
-            double[] headLineBoxes = GetStoryTextLineBoxHeights(headLayout);
-            double[]? headFitAfters = printScale >= 1d ? GetStoryLineAfterSpacings(headLayout) : null;
-            double headCapacity = Math.Max(0d, storiesTop - frameBottom - seatedHeight);
-            bool freshHead = inFlightNotes is null || head.Location.Reference.Id is null ||
-                !inFlightNotes.TryGetValue((head.Location.Reference.Kind, head.Location.Reference.Id), out InFlightRelatedStory? headFlight) ||
-                headFlight.PlacedLineCount == 0;
-            (int headTakeCount, double headTakeHeight) = footerKeepOut is not null
-                ? TakeParagraphStoryLines(headLayout.TextLines[0].SourceParagraph!, headLineBoxes, 0,
-                    headLayout.TextLines.Count, headCapacity, headFitAfters,
-                    activePage.Items.Count != 0 || seatedHeight != 0d, freshHead)
-                : TakeStoryLines(headLineBoxes, 0, headLayout.TextLines.Count, headCapacity, headFitAfters,
-                    forceProgress: seatedHeight == 0d);
-            if (headTakeCount < headLayout.TextLines.Count)
-            {
-                // A continued tail and a fresh head share the same bottom-anchored
-                // batch. Seat the whole fitting prefix, not just its first story.
-                storiesTop = frameBottom + seatedHeight + headTakeHeight;
-                break;
-            }
-            seatedHeight += ResolvePlacedStoryHeight(headLayout, activePage);
-        }
+        storiesTop = ResolveSeatedFootnoteTop(activePage, footnoteStories, storiesTop, frameBottom,
+            inFlightNotes, printScale, footerKeepOut is not null);
         bool sharesContinuationSeparator = plainSharedHead && continuationSeparatorLayout is { TextLines.Count: > 0 };
         bool drawHeadSeparator = !sharesContinuationSeparator;
         if (inFlightNotes is not null && !sharesContinuationSeparator)
@@ -1956,8 +1967,11 @@ internal sealed partial class DocxLayoutEngine
         int? pageNumberOverride = null,
         int? pageCountOverride = null,
         double? sharedContentTop = null,
-        Func<DocxLayoutPage, int, int, double>? footerKeepOut = null)
+        Func<DocxLayoutPage, int, int, double>? footerKeepOut = null,
+        Func<DocxLayoutPage, int, int, double>? availableFooterKeepOut = null)
     {
+        ResolveOwnedInlineFootnoteFrame(page, footnoteStories, printScale,
+            ref sharedContentTop, ref footerKeepOut, availableFooterKeepOut);
         DocxLayoutPage activePage = outputPages[outputIndex];
         int activePageIndex = outputIndex;
         List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
@@ -1976,6 +1990,9 @@ internal sealed partial class DocxLayoutEngine
             storiesTop = Math.Min(storiesTop, sharedContentTop.Value);
         }
         }
+        if (footerKeepOut is not null && footnoteStories.All(story => HasOwnedInlineNoteFlowStory(story.StoryLayout)))
+            storiesTop = ResolveSeatedFootnoteTop(activePage, footnoteStories, storiesTop, frameBottom,
+                inFlightNotes, printScale, usesParagraphFrames: true);
         double contentTop = storiesTop;
         bool firstStory = true;
         foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)

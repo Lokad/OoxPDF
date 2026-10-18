@@ -1,0 +1,341 @@
+{
+  "Source": "Independent Word 16 PDF exports; first glyph origins only for grouped rate/time shows; unchanged one-point geometry threshold.",
+  "Rows": [
+    {
+      "Id": "minimum-note-wrapped",
+      "Mode": "final-preserve",
+      "InputSha256": "B8FDB8B54DA561CFCCBBAC92EB715B85B3175B60AD4FA0009DAE93D855637600",
+      "ReferencePdfSha256": "3DEE1DD55E33355D07937C60381CA69F0C6D991A8206133260BB7136B3DBDEEC",
+      "Pages": 1,
+      "ProseAnchors": [
+        {
+          "Prefix": "Leading paragraph.",
+          "Page": 1,
+          "Y": 708.58
+        },
+        {
+          "Prefix": "Before formula:",
+          "Page": 1,
+          "Y": 690.58
+        },
+        {
+          "Prefix": "Following prose.",
+          "Page": 1,
+          "Y": 673.06
+        },
+        {
+          "Prefix": "Public calculation note.",
+          "Page": 1,
+          "Y": 219.17
+        },
+        {
+          "Prefix": "End of supported note.",
+          "Page": 1,
+          "Y": 78.024
+        }
+      ],
+      "MathAnchors": [
+        {
+          "Offset": 0,
+          "Page": 1,
+          "X": 156.98,
+          "Y": 697.66
+        },
+        {
+          "Offset": 4,
+          "Page": 1,
+          "X": 156.26,
+          "Y": 684.58
+        },
+        {
+          "Offset": 8,
+          "Page": 1,
+          "X": 196.97,
+          "Y": 697.66
+        },
+        {
+          "Offset": 12,
+          "Page": 1,
+          "X": 196.25,
+          "Y": 684.58
+        },
+        {
+          "Offset": 16,
+          "Page": 1,
+          "X": 195.89,
+          "Y": 85.104
+        },
+        {
+          "Offset": 20,
+          "Page": 1,
+          "X": 195.17,
+          "Y": 72.024
+        },
+        {
+          "Offset": 24,
+          "Page": 1,
+          "X": 235.73,
+          "Y": 85.104
+        },
+        {
+          "Offset": 28,
+          "Page": 1,
+          "X": 235.01,
+          "Y": 72.024
+        }
+      ]
+    },
+    {
+      "Id": "minimum-note-wrapped",
+      "Mode": "all-word-compatible",
+      "InputSha256": "B8FDB8B54DA561CFCCBBAC92EB715B85B3175B60AD4FA0009DAE93D855637600",
+      "ReferencePdfSha256": "59D8E1A8C8BDD8440C197F6E3B854A0BDD27544480947C62008CCF316E7331DC",
+      "Pages": 1,
+      "ProseAnchors": [
+        {
+          "Prefix": "Leading paragraph.",
+          "Page": 1,
+          "Y": 633.34
+        },
+        {
+          "Prefix": "Before formula:",
+          "Page": 1,
+          "Y": 619.68
+        },
+        {
+          "Prefix": "Following prose.",
+          "Page": 1,
+          "Y": 606.38
+        },
+        {
+          "Prefix": "Public calculation note.",
+          "Page": 1,
+          "Y": 262.18
+        },
+        {
+          "Prefix": "End of supported note.",
+          "Page": 1,
+          "Y": 155.16
+        }
+      ],
+      "MathAnchors": [
+        {
+          "Offset": 0,
+          "Page": 1,
+          "X": 119.04,
+          "Y": 625.06
+        },
+        {
+          "Offset": 4,
+          "Page": 1,
+          "X": 118.51,
+          "Y": 615.12
+        },
+        {
+          "Offset": 8,
+          "Page": 1,
+          "X": 149.35,
+          "Y": 625.06
+        },
+        {
+          "Offset": 12,
+          "Page": 1,
+          "X": 148.82,
+          "Y": 615.12
+        },
+        {
+          "Offset": 16,
+          "Page": 1,
+          "X": 148.54,
+          "Y": 160.51
+        },
+        {
+          "Offset": 20,
+          "Page": 1,
+          "X": 147.98,
+          "Y": 150.6
+        },
+        {
+          "Offset": 24,
+          "Page": 1,
+          "X": 178.75,
+          "Y": 160.51
+        },
+        {
+          "Offset": 28,
+          "Page": 1,
+          "X": 178.2,
+          "Y": 150.6
+        }
+      ]
+    },
+    {
+      "Id": "minimum-note-page-boundary",
+      "Mode": "final-preserve",
+      "InputSha256": "A9956C012E259F540AFF912B78880F20EA4735B77D94B546E50125EE441DE796",
+      "ReferencePdfSha256": "C32144876C14402B224531B9279112596FE7109629B0F3440E83477776333162",
+      "Pages": 2,
+      "ProseAnchors": [
+        {
+          "Prefix": "Leading paragraph.",
+          "Page": 1,
+          "Y": 708.58
+        },
+        {
+          "Prefix": "Before formula:",
+          "Page": 1,
+          "Y": 240.53
+        },
+        {
+          "Prefix": "Following prose.",
+          "Page": 2,
+          "Y": 708.58
+        },
+        {
+          "Prefix": "Public calculation note.",
+          "Page": 1,
+          "Y": 123.14
+        },
+        {
+          "Prefix": "End of supported note.",
+          "Page": 2,
+          "Y": 78.024
+        }
+      ],
+      "MathAnchors": [
+        {
+          "Offset": 0,
+          "Page": 1,
+          "X": 156.98,
+          "Y": 247.61
+        },
+        {
+          "Offset": 4,
+          "Page": 1,
+          "X": 156.26,
+          "Y": 234.53
+        },
+        {
+          "Offset": 8,
+          "Page": 1,
+          "X": 196.97,
+          "Y": 247.61
+        },
+        {
+          "Offset": 12,
+          "Page": 1,
+          "X": 196.25,
+          "Y": 234.53
+        },
+        {
+          "Offset": 16,
+          "Page": 2,
+          "X": 195.89,
+          "Y": 85.104
+        },
+        {
+          "Offset": 20,
+          "Page": 2,
+          "X": 195.17,
+          "Y": 72.024
+        },
+        {
+          "Offset": 24,
+          "Page": 2,
+          "X": 235.73,
+          "Y": 85.104
+        },
+        {
+          "Offset": 28,
+          "Page": 2,
+          "X": 235.01,
+          "Y": 72.024
+        }
+      ]
+    },
+    {
+      "Id": "minimum-note-page-boundary",
+      "Mode": "all-word-compatible",
+      "InputSha256": "A9956C012E259F540AFF912B78880F20EA4735B77D94B546E50125EE441DE796",
+      "ReferencePdfSha256": "418E5FADD072DB16D2D5078CC283C9C7426907A0AA6EE0FE4E15A322EA209713",
+      "Pages": 2,
+      "ProseAnchors": [
+        {
+          "Prefix": "Leading paragraph.",
+          "Page": 1,
+          "Y": 633.34
+        },
+        {
+          "Prefix": "Before formula:",
+          "Page": 1,
+          "Y": 278.38
+        },
+        {
+          "Prefix": "Following prose.",
+          "Page": 2,
+          "Y": 633.34
+        },
+        {
+          "Prefix": "Public calculation note.",
+          "Page": 1,
+          "Y": 189.36
+        },
+        {
+          "Prefix": "End of supported note.",
+          "Page": 2,
+          "Y": 155.16
+        }
+      ],
+      "MathAnchors": [
+        {
+          "Offset": 0,
+          "Page": 1,
+          "X": 119.04,
+          "Y": 283.75
+        },
+        {
+          "Offset": 4,
+          "Page": 1,
+          "X": 118.51,
+          "Y": 273.84
+        },
+        {
+          "Offset": 8,
+          "Page": 1,
+          "X": 149.35,
+          "Y": 283.75
+        },
+        {
+          "Offset": 12,
+          "Page": 1,
+          "X": 148.82,
+          "Y": 273.84
+        },
+        {
+          "Offset": 16,
+          "Page": 2,
+          "X": 148.54,
+          "Y": 160.51
+        },
+        {
+          "Offset": 20,
+          "Page": 2,
+          "X": 147.98,
+          "Y": 150.6
+        },
+        {
+          "Offset": 24,
+          "Page": 2,
+          "X": 178.75,
+          "Y": 160.51
+        },
+        {
+          "Offset": 28,
+          "Page": 2,
+          "X": 178.2,
+          "Y": 150.6
+        }
+      ]
+    }
+  ]
+}

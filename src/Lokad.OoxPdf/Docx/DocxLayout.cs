@@ -917,9 +917,11 @@ internal sealed partial class DocxLayoutEngine
             DocxRelatedStoryLayout? separatorLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.Separator);
             DocxRelatedStoryLayout? continuationLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? separatorLayout;
             IDocxTextMeasurer? separatorMeasurer = unscaledTextMeasurer ?? textMeasurer;
+            Func<DocxLayoutPage, int, int, double> availableFootnoteFrameBottom =
+                (p, _, _) => ResolveFooterKeepOut(p, templatePageNumber, templatePageNumber);
             Func<DocxLayoutPage, int, int, double>? footnoteFrameBottom =
                 CanUsePlainFootnoteStaticFrame(document, templatePage, separatorMeasurer, paragraphSpacingScale, cancellationToken)
-                    ? (p, _, _) => ResolveFooterKeepOut(p, templatePageNumber, templatePageNumber) : null;
+                    ? availableFootnoteFrameBottom : null;
             if (completeFootnoteAdmission is not null)
             {
                 double bottom = footnoteFrameBottom?.Invoke(templatePage, templatePageNumber, templatePageNumber) ?? templatePage.MarginBottom;
@@ -957,7 +959,8 @@ internal sealed partial class DocxLayoutEngine
                     inFlightNotes: inFlightNotes,
                     pageNumberOverride: templatePageNumber,
                     pageCountOverride: templatePageNumber,
-                    sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter), footerKeepOut: footnoteFrameBottom);
+                    sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter), footerKeepOut: footnoteFrameBottom,
+                    availableFooterKeepOut: availableFootnoteFrameBottom);
             }
             else
             {
@@ -976,7 +979,8 @@ internal sealed partial class DocxLayoutEngine
                     pageNumberOverride: templatePageNumber,
                     pageCountOverride: templatePageNumber,
                     sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter) -
-                        (completeFootnoteAdmission?.SeparatorHeight ?? 0d), footerKeepOut: footnoteFrameBottom);
+                        (completeFootnoteAdmission?.SeparatorHeight ?? 0d), footerKeepOut: footnoteFrameBottom,
+                        availableFooterKeepOut: availableFootnoteFrameBottom);
             }
 
             var harvestedStories = new List<DocxPlacedRelatedStoryLayout>();
