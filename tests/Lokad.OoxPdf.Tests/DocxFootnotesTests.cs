@@ -7270,8 +7270,9 @@ internal static class DocxFootnotesTests
         // is independent of body size/after/length/before and follows body start with
         // footnote-side moves, while the renderer hung content one body em below the
         // lowest body baseline. Takes come from the same clamped capacity, but the
-        // overflowing head block seats bottom-up (storiesTop = margin + takeHeight)
-        // instead of leaving capacity slack above the margin.
+        // overflowing head block seats bottom-up instead of leaving capacity
+        // slack above the margin. Trailing after-space can hang outside an
+        // admitted top frame; occupied line content must remain inside it.
         var footnoteParas = new StringBuilder();
         for (int line = 0; line < 60; line++)
         {
@@ -7296,9 +7297,15 @@ internal static class DocxFootnotesTests
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxLayoutPage page = layout.Pages[0];
         DocxPlacedRelatedStoryLayout body = page.PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal));
-        // RV06 line-box maximum: filler runs box the Windows extents (1.2em), so the clamped take counts fewer lines with bottom-up seating intact.
+        // The portable filler measurer boxes Windows extents (1.2em); retain
+        // its exact take while checking content separately from after-space.
         TestAssert.Equal(25, body.TextLines.Count);
-        TestAssert.True(Math.Abs(body.TopY - body.Height - page.MarginBottom) < 0.000001d, "The overflowing head block must sit bottom-up on the margin; observed bottom=" + (body.TopY - body.Height).ToString(CultureInfo.InvariantCulture) + ".");
+        double bottom = body.TopY - body.Height;
+        var last = body.StoryLayout.TextLines[^1];
+        double after = Math.Max(0d, last.ParagraphAfterSpacing ?? last.PendingAfterSpacing ?? 0d);
+        TestAssert.True(bottom <= page.MarginBottom + .000001d && bottom + after >= page.MarginBottom - .000001d &&
+            body.TextLines[^1].BaselineY >= page.MarginBottom,
+            "Only trailing after-space may hang below the margin; the full occupied last line remains inside its frame.");
     }
 
     public static void DocxFootnoteSeparatorGapFollowsSingleLineMetrics()
