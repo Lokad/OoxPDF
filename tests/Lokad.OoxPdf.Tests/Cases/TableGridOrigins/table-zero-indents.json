@@ -1,0 +1,42 @@
+[
+  {
+    "Id": "table-origin-zero-bordered",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-zero-bordered.docx",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "zero-bordered",
+    "IndentTwips": 0,
+    "HorizontalMarginPoints": 5.4,
+    "Change": "Explicit zero indentation with a complete mathematical cell and ordinary/wide margins; preserve implicit-border controls.",
+    "Sha256": "8844FBFF2DCE87AAD91E8F404793CB74ACBCC48C8A1EF5A62BB5C608E02026B0"
+  },
+  {
+    "Id": "table-origin-zero-bordered-wide",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-zero-bordered-wide.docx",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "zero-bordered-wide",
+    "IndentTwips": 0,
+    "HorizontalMarginPoints": 10.0,
+    "Change": "Explicit zero indentation with a complete mathematical cell and ordinary/wide margins; preserve implicit-border controls.",
+    "Sha256": "6ACBDA5A171562A51860E288E0536AF78903B57DD26ACE6D74F61C80A8A8F341"
+  }
+]
