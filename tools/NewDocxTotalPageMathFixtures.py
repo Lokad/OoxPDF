@@ -21,6 +21,7 @@ probes.add_argument('--parallel-cell-probes', action='store_true')
 probes.add_argument('--parallel-cell-bordered-probe', action='store_true')
 probes.add_argument('--parallel-cell-short-probe', action='store_true')
 probes.add_argument('--parallel-cell-box-probe', action='store_true')
+probes.add_argument('--parallel-cell-inset-probes', action='store_true')
 args = parser.parse_args()
 sha = lambda value: hashlib.sha256(value).hexdigest().upper()
 
@@ -36,7 +37,14 @@ def publish(jobs):
             assert target.read_bytes() == data, target.name
 
 
-if args.parallel_cell_probes or args.parallel_cell_bordered_probe or args.parallel_cell_short_probe or args.parallel_cell_box_probe:
+parallel_group = next((group for enabled, group in [
+    (args.parallel_cell_probes, ('parallel-cell-probes.json', ('aligned', 'shifted', 'mixed'))),
+    (args.parallel_cell_bordered_probe, ('parallel-cell-bordered-probe.json', ('bordered',))),
+    (args.parallel_cell_short_probe, ('parallel-cell-short-probe.json', ('short-left',))),
+    (args.parallel_cell_box_probe, ('parallel-cell-box-probe.json', ('boxed-math',))),
+    (args.parallel_cell_inset_probes, ('parallel-cell-inset-probes.json', ('uniform-insets', 'unequal-insets'))),
+] if enabled), None)
+if parallel_group:
     parent = next(row for row in json.loads((cases / 'spanning-frame-probes.json').read_text())
         if row['Id'] == 'spanning-frame-mixed-prose')
     original = (root / parent['Input']).read_bytes()
@@ -45,7 +53,7 @@ if args.parallel_cell_probes or args.parallel_cell_bordered_probe or args.parall
         infos = archive.infolist()
         original_parts = {entry.filename: archive.read(entry.filename) for entry in infos}
     rows, jobs = [], []
-    variants = ('boxed-math',) if args.parallel_cell_box_probe else ('bordered',) if args.parallel_cell_bordered_probe else ('short-left',) if args.parallel_cell_short_probe else ('aligned', 'shifted', 'mixed')
+    manifest_name, variants = parallel_group
     for variant in variants:
         parts = dict(original_parts)
         tree = E.fromstring(parts['word/document.xml'])
@@ -67,6 +75,17 @@ if args.parallel_cell_probes or args.parallel_cell_bordered_probe or args.parall
                 borders = E.SubElement(cell.find(w + 'tcPr'), w + 'tcBorders')
                 for edge in ('top', 'left', 'bottom', 'right'):
                     E.SubElement(borders, w + edge, {w + 'val': 'single', w + 'sz': '8', w + 'color': '000000'})
+            if variant in ('uniform-insets', 'unequal-insets'):
+                properties = cell.find(w + 'tcPr')
+                margins = properties.find(w + 'tcMar')
+                if margins is None: margins = E.SubElement(properties, w + 'tcMar')
+                top, bottom = (3, 3) if variant == 'uniform-insets' else (3, 1) if side == 'Left' else (6, 3)
+                for edge, points in [('top', top), ('bottom', bottom)]:
+                    margin = margins.find(w + edge)
+                    if margin is None: margin = E.SubElement(margins, w + edge)
+                    margin.set(w + 'w', str(points * 20))
+                    margin.set(w + 'type', 'dxa')
+                E.SubElement(properties, w + 'shd', {w + 'val': 'clear', w + 'fill': 'DDEBF7' if side == 'Left' else 'E2F0D9'})
             paragraphs = cell.findall(w + 'p')
             prefix = paragraphs[0]
             prefix.find('.//' + w + 't').text = side + ' ordinary introduction.'
@@ -112,8 +131,12 @@ if args.parallel_cell_probes or args.parallel_cell_bordered_probe or args.parall
                 SourceBoxParagraphSha256=sha(E.tostring(box_paragraph)),FieldInstruction='NUMPAGES',
                 ExpectedText=rows[-1]['ExpectedText']+['Before inline','after equation.'],
                 Change='Preserve an accepted boxed equation/NUMPAGES prefix in the left cell beside ordinary parallel prose; use source-authored widths.')
+        if variant in ('uniform-insets', 'unequal-insets'):
+            rows[-1].update(CellInsets=dict(Left=dict(Top=3,Bottom=3 if variant=='uniform-insets' else 1),
+                Right=dict(Top=3 if variant=='uniform-insets' else 6,Bottom=3)),
+                CellFills=dict(Left='DDEBF7',Right='E2F0D9'),
+                Change='Explicit cell-owned vertical insets with ordinary prose; pale source fills expose shared physical fragments without border rules.')
         jobs.append((cases / (name + '.docx'), data))
-    manifest_name = 'parallel-cell-box-probe.json' if args.parallel_cell_box_probe else 'parallel-cell-bordered-probe.json' if args.parallel_cell_bordered_probe else 'parallel-cell-short-probe.json' if args.parallel_cell_short_probe else 'parallel-cell-probes.json'
     jobs.append((cases / manifest_name,
         (json.dumps(rows, indent=2) + '\n').replace('\n', '\r\n').encode()))
     publish(jobs)
