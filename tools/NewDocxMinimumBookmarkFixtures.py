@@ -3,7 +3,7 @@ from pathlib import Path
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 from xml.etree import ElementTree as E
 from io import BytesIO
-import argparse, json, hashlib
+import argparse, copy, json, hashlib
 
 def package_bytes(entries):
     stream = BytesIO()
@@ -26,6 +26,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 passive = parser.add_mutually_exclusive_group()
 passive.add_argument('--passive-headers', action='store_true')
 passive.add_argument('--passive-footers', action='store_true')
+passive.add_argument('--page-field-probes', action='store_true')
 parser.add_argument('--write', action='store_true', help='Publish passive-header controls; otherwise verify them.')
 args = parser.parse_args()
 
@@ -34,6 +35,45 @@ cases = root / 'tests/Lokad.OoxPdf.Tests/Cases'
 output = cases / 'CompositionProbes'
 output.mkdir(exist_ok=True)
 w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+
+if args.page_field_probes:
+    prepared, rows = [], []
+    for kind, context, instruction in [('header', 'ordinary12', 'PAGE'), ('footer', 'ordinary11', 'NUMPAGES')]:
+        source = next(row for row in json.loads((output / ('minimum-passive-' + kind + 's.json')).read_text()) if row['Context'] == context)
+        original = (root / source['Input']).read_bytes()
+        assert hashlib.sha256(original).hexdigest().upper() == source['Sha256']
+        with ZipFile(BytesIO(original)) as archive:
+            entries = {name: archive.read(name) for name in archive.namelist()}
+        body = entries['word/document.xml']
+        part = 'word/passive-body-' + kind + '.xml'
+        story = E.fromstring(entries[part])
+        paragraph = story.find(w + 'p')
+        run = paragraph.find(w + 'r')
+        text = run.find(w + 't')
+        text.text += ' '
+        text.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+        field = E.SubElement(paragraph, w + 'fldSimple', {w + 'instr': instruction})
+        result = E.SubElement(field, w + 'r')
+        result.append(copy.deepcopy(run.find(w + 'rPr')))
+        E.SubElement(result, w + 't').text = '1'
+        entries[part] = E.tostring(story, encoding='utf-8', xml_declaration=True)
+        assert entries['word/document.xml'] == body
+        name = 'minimum-passive-' + kind + '-' + instruction.lower()
+        data = package_bytes(entries)
+        rows.append(dict(Id=name, Input='tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/' + name + '.docx',
+            Sha256=hashlib.sha256(data).hexdigest().upper(), SourceId=source['Id'], SourceSha256=source['Sha256'],
+            BaseSourceId=source['SourceId'], BaseSourceSha256=source['SourceSha256'], SourceBodySha256=source['SourceBodySha256'],
+            HeldOut=True, ExpectedEquationCount=0, ExpectedText=source['ExpectedText'], Context=context,
+            FontPoints=source['FontPoints'], FieldInstruction=instruction))
+        prepared.append((output / (name + '.docx'), data))
+    prepared.append((output / 'minimum-passive-page-fields.json', manifest_bytes(rows)))
+    for path, data in prepared:
+        if args.write:
+            publish(path, data)
+        else:
+            assert path.read_bytes() == data, path.name
+    print('Two source-exact passive PAGE/NUMPAGES controls verified; document part unchanged.')
+    raise SystemExit(0)
 
 if args.passive_headers or args.passive_footers:
     kind = 'header' if args.passive_headers else 'footer'

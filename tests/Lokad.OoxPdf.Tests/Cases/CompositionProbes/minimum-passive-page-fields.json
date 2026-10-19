@@ -1,0 +1,42 @@
+[
+  {
+    "Id": "minimum-passive-header-page",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-passive-header-page.docx",
+    "Sha256": "995E83A533A0B1C7738D41C1B2CE674166C0403C37BB6DC293526A5C458D05AD",
+    "SourceId": "minimum-passive-header-ordinary12",
+    "SourceSha256": "1CA77E3D3926EFF7B1B4D352965F74EF7075B5F3F49A73B06D561E97934528B5",
+    "BaseSourceId": "minimum-bookmark-ordinary12-control",
+    "BaseSourceSha256": "CA9514199B2B8BD44BD0EFF7FF7CAE637AD3A3A0DECDA6ADF584D304B6B4FE74",
+    "SourceBodySha256": "95218CDC773AD2D64A3915B7D6ACD560E80435A6C0B5527C50AAEEF287688D3A",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta.",
+      "Public passive header."
+    ],
+    "Context": "ordinary12",
+    "FontPoints": 12,
+    "FieldInstruction": "PAGE"
+  },
+  {
+    "Id": "minimum-passive-footer-numpages",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-passive-footer-numpages.docx",
+    "Sha256": "FAF2226CB3F21F52FE7B0A430A0841A09697E76D9E15DAD87E6EB4FF033CF1CE",
+    "SourceId": "minimum-passive-footer-ordinary11",
+    "SourceSha256": "E49095774851FEA5FF5D01570761A3ABE27DB79DB278CED38C2D9EC902B1051F",
+    "BaseSourceId": "minimum-bookmark-ordinary11-control",
+    "BaseSourceSha256": "F8AF84291A8A82232E0BF16DADE46540F8B2B7F4C4847F345954AC375EAE8B3B",
+    "SourceBodySha256": "969AEC75CA095FA3A0929A11C588A302B4B18753046F3EAE47AC64811E2E662A",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta.",
+      "Public passive footer."
+    ],
+    "Context": "ordinary11",
+    "FontPoints": 11,
+    "FieldInstruction": "NUMPAGES"
+  }
+]
