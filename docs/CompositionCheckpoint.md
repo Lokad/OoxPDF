@@ -1,5 +1,29 @@
 # Composed-document reliability checkpoint
 
+## C267 shared modern table-grid origin (2026-10-19)
+
+Authored starting margins without a visible starting border now belong once to
+the shared grid, including explicit-zero styles and unrelated border edges.
+Legacy, positive indent/style and visible starting-border anchors remain.
+Fourteen source-exact controls/28 independent Word mode views:26 admitted views
+meet1pt/.1pt geometry, max X0.024pt/Y0.514pt; the two visible-start-border PDFs
+retain identity and their5.736pt X residual. All28 strict visual failures remain.
+The unchanged held-out compound document retains three formulas/12math glyphs,
+one image and one internal link. Both modes now meet1pt/.1pt absolute geometry:
+math X0.129pt/Y0.165pt, image0.153pt, link0.046pt, target0.270pt. No prose/math
+omissions; two held-out strict visual failures remain. Four rasters reviewed.
+
+One production artifact:35Windows checks and18portable Ubuntu passes. Eight
+historical Windows-Arial assertions fail identically on unchanged C266; native
+prerequisites are now explicit. Original8failures/9skips remain. The tracked
+joiner rejected failure-to-skip replacement; no passing Ubuntu35aggregate is
+claimed. Only those eight prerequisite checks reran/platform;14runtime assets
+and all2,331inputs are identical. Both new observers fail C266 meaningfully.
+Eight new edge/style Word views;22 prior views reused. Fixed10outcomes reuse
+parsed/source reachability proof, with zero fixed conversions.17assets/four
+root smokes, no root build/suite/package replay. Broader/package CI follows.
+Evidence:artifacts/composition-c1/table-grid-origins-evidence.json.
+
 ## C266 coarse host memory admission and bounded rule review (2026-10-19)
 
 Removed12 cumulative-work/retained-image/retained-font/live-image limit members
