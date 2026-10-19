@@ -211,17 +211,23 @@ internal static class DocxMathParagraphPolicy
     // Authored breaks delimit source rows. Only rows without another visible
     // inline owner promote their formulas; soft wrapping never changes style.
     public static IReadOnlySet<DocxEquation> GetDisplaySourceEquations(DocxParagraph paragraph,
-        CancellationToken token) => paragraph.Hyperlinks.Count == 0
-            ? GetMathOnlySourceEquations(paragraph, token)
-            : new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
+        CancellationToken token)
+    {
+        var display = GetMathOnlySourceEquations(paragraph, token);
+        // A link on another authored row does not own these equations.
+        // Equations inside the actual link keep their qualified inline style.
+        if (DocxInlineContent.GetHyperlinkedEquations(paragraph, token) is { } linked)
+            display.ExceptWith(linked);
+        return display;
+    }
 
-    private static IReadOnlySet<DocxEquation> GetMathOnlySourceEquations(DocxParagraph paragraph,
+    private static HashSet<DocxEquation> GetMathOnlySourceEquations(DocxParagraph paragraph,
         CancellationToken token) => GetSourceRowEquations(paragraph, token, withInlineOwner: false);
 
     public static IReadOnlySet<DocxEquation> GetMixedSourceEquations(DocxParagraph paragraph,
         CancellationToken token) => GetSourceRowEquations(paragraph, token, withInlineOwner: true);
 
-    private static IReadOnlySet<DocxEquation> GetSourceRowEquations(DocxParagraph paragraph,
+    private static HashSet<DocxEquation> GetSourceRowEquations(DocxParagraph paragraph,
         CancellationToken token, bool withInlineOwner)
     {
         var display = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);

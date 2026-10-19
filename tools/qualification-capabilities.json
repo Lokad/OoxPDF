@@ -9076,6 +9076,21 @@
     "PortableRenderingMixedDisplayCountersPreserveTotalPageDependencies",
     "DocxTableCellPageFieldsEvaluatePerFragmentPage"
   ],
+  "docx-authored-row-links": [
+    "DocxAuthoredRowLinks",
+    "PortableRenderingAuthoredRowLinksKeepEquationGeometryAndAnnotations",
+    "DocxInlineCompositionExplicitDisplayLinks",
+    "PortableRenderingSingleMathAnnotationsPreserveFrames",
+    "DocxInlineCompositionExplicitDisplays",
+    "PortableRenderingHardBreakMathRowsPreserveDisplayFramesAcrossStories",
+    "DocxInlineCompositionAuthoredDisplayAlignment",
+    "DocxInlineCompositionMixedDisplaySourceRolesFollowAuthoredRows",
+    "DocxInlineCompositionMixedDisplayRows",
+    "DocxInlineCompositionHyperlinkPreservesSingleMathFrame",
+    "DocxInlineCompositionAtomicFormulaHyperlinksCoverPaintedGlyphs",
+    "DocxInlineCompositionGroupedHyperlinksFollowPrintedReviewRows",
+    "DocxInlineCompositionHiddenRunPreservesMathGeometry"
+  ],
   "docx-inline-box-total-counter-containers": [
     "DocxInlineBoxTotalCountersKeepContentAcrossContainers",
     "PortableRenderingInlineBoxTotalCountersKeepContentAcrossContainers"
