@@ -1,0 +1,456 @@
+{
+  "Rows": [
+    {
+      "Id": "merge-row-floor-short",
+      "Mode": "final-preserve",
+      "InputSha256": "EEC55338DCE35CB642F910DDB83758181E62D7F2804C36030BA88667A820F29D",
+      "ReferencePdfSha256": "9A9D5C641C252A91C109E9B6F77B8CBFB7FD7103F575203A4B1EC39BC3E3B5AF",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Side row 1.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Side row 2.",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "Y": 697.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "merge-row-floor-short",
+      "Mode": "all-word-compatible",
+      "InputSha256": "EEC55338DCE35CB642F910DDB83758181E62D7F2804C36030BA88667A820F29D",
+      "ReferencePdfSha256": "C9398127EEE7A53ED72CD2B110828DC757B23284331893D3656C9E9670DAEB35",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Side row 1.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Side row 2.",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "Y": 697.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "merge-row-floor-wrap",
+      "Mode": "final-preserve",
+      "InputSha256": "EB09A9E7D778B3E7111DAEF22DE07FE70D89BC40B69F5D730524C232DC86BEA7",
+      "ReferencePdfSha256": "E6F1FEBBC95446FC5655DF8E3430DD5AC382F97B8CD10787AC85939015A4BD96",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose keeps its source ordered across a shared row frame. A second sentence continues through the same merged source."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Side row 1.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Side row 2.",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "Y": 692.97998046875
+        }
+      ]
+    },
+    {
+      "Id": "merge-row-floor-wrap",
+      "Mode": "all-word-compatible",
+      "InputSha256": "EB09A9E7D778B3E7111DAEF22DE07FE70D89BC40B69F5D730524C232DC86BEA7",
+      "ReferencePdfSha256": "09C36479AE826C45CBBE0402CF0F8CF1B9E85ECE6A88F0AF8791020EBDA61E2A",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose keeps its source ordered across a shared row frame. A second sentence continues through the same merged source."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Side row 1.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Side row 2.",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "Y": 692.97998046875
+        }
+      ]
+    },
+    {
+      "Id": "merge-row-floor-picture-wrap",
+      "Mode": "final-preserve",
+      "InputSha256": "2CD0FFC4002B60432213A184E3BBD0D0996A3DECC447B9E1FAEBE5FCB84C310B",
+      "ReferencePdfSha256": "C8398121651E7D5878324086C2A15DDFD5DE3EC3B1A20FD6A0C161FD7E8BF20E",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose keeps its source ordered across a shared row frame.  A second sentence continues through the same merged source."
+      ],
+      "Images": 1,
+      "FlowAnchors": [
+        {
+          "Text": "Side row 1.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Side row 2.",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "Y": 685.2999877929688
+        }
+      ]
+    },
+    {
+      "Id": "merge-row-floor-picture-wrap",
+      "Mode": "all-word-compatible",
+      "InputSha256": "2CD0FFC4002B60432213A184E3BBD0D0996A3DECC447B9E1FAEBE5FCB84C310B",
+      "ReferencePdfSha256": "CC92029DDF825188C143D9D6C7AD8C1374F4383F1D7E7D4CDCDFF592827E38A3",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose keeps its source ordered across a shared row frame.  A second sentence continues through the same merged source."
+      ],
+      "Images": 1,
+      "FlowAnchors": [
+        {
+          "Text": "Side row 1.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Side row 2.",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "Y": 685.2999877929688
+        }
+      ]
+    },
+    {
+      "Id": "merge-row-floor-wrap-mark",
+      "Mode": "final-preserve",
+      "InputSha256": "E1544E1FEB88577459ED3F83F1A858F11A607765704DE77C2F37AB5CE6B23196",
+      "ReferencePdfSha256": "20E49E3D79E545F8CC2BDBAA847A747406198BEF95E5C8FD41C4677B9ADB6E7A",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose keeps its source ordered across a shared row frame. A second sentence continues through the same merged source."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Side row 1.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Side row 2.",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "Y": 692.97998046875
+        }
+      ]
+    },
+    {
+      "Id": "merge-row-floor-wrap-mark",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E1544E1FEB88577459ED3F83F1A858F11A607765704DE77C2F37AB5CE6B23196",
+      "ReferencePdfSha256": "07B6322D640AABE89A5D2A7F596C6E551B76EF7FC5E66A53BF2ACB3F1F533295",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose keeps its source ordered across a shared row frame. A second sentence continues through the same merged source."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Side row 1.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Side row 2.",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "Y": 692.97998046875
+        }
+      ]
+    },
+    {
+      "Id": "merge-row-floor-wrap-run",
+      "Mode": "final-preserve",
+      "InputSha256": "1911E71EA97DA48F34A817693802E2F12787FF91F0A580BF26A063F40874E687",
+      "ReferencePdfSha256": "516351AE465F93E037CBCBE7938B4D6B2DA4FA862232EA22D67419F8B87B9B95",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose keeps its source ordered across a shared row frame. A second sentence continues through the same merged source."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Side row 1.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Side row 2.",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "Y": 615.9400024414062
+        }
+      ]
+    },
+    {
+      "Id": "merge-row-floor-wrap-run",
+      "Mode": "all-word-compatible",
+      "InputSha256": "1911E71EA97DA48F34A817693802E2F12787FF91F0A580BF26A063F40874E687",
+      "ReferencePdfSha256": "7F61EFB959A944C75AC502D06982309AA4CA6C74111ACD922E92CF704218C362",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose keeps its source ordered across a shared row frame. A second sentence continues through the same merged source."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Side row 1.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Side row 2.",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "Y": 615.9400024414062
+        }
+      ]
+    },
+    {
+      "Id": "merge-row-floor-short-mark",
+      "Mode": "final-preserve",
+      "InputSha256": "0DCF3EFFBEDEB102E6AEA393294F8BDED6221DA572037EFD67CAD781294C7D7B",
+      "ReferencePdfSha256": "A281956726298385E935324E94678B933F5E2D85F87E075AF43B796DFF5EA59F",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Side row 1.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Side row 2.",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "Y": 697.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "merge-row-floor-short-mark",
+      "Mode": "all-word-compatible",
+      "InputSha256": "0DCF3EFFBEDEB102E6AEA393294F8BDED6221DA572037EFD67CAD781294C7D7B",
+      "ReferencePdfSha256": "B300FBD5BFECDDC5683341EA943E09AA3DF2B70896E03A1D85982B4C5CDD0F74",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Side row 1.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Side row 2.",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "Y": 697.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "merge-row-floor-paragraphs",
+      "Mode": "final-preserve",
+      "InputSha256": "8DD645B2961191E0A27640E17B1BF5460C53835E6C9D3AE415616F42163531B0",
+      "ReferencePdfSha256": "10EB5A7553351B186CE733DA954984E7A7D080EF4D780953B03D886C078048C8",
+      "Pages": 1,
+      "SourceProse": [
+        "Public first merged paragraph.",
+        "Public second merged paragraph."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Side row 1.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Side row 2.",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "Y": 697.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "merge-row-floor-paragraphs",
+      "Mode": "all-word-compatible",
+      "InputSha256": "8DD645B2961191E0A27640E17B1BF5460C53835E6C9D3AE415616F42163531B0",
+      "ReferencePdfSha256": "5E7A800EBFC304901F0ACB3A9F469B6706243079212D00294846C3D055254A39",
+      "Pages": 1,
+      "SourceProse": [
+        "Public first merged paragraph.",
+        "Public second merged paragraph."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Side row 1.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Side row 2.",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "Y": 697.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "merge-row-floor-paragraphs-mark",
+      "Mode": "final-preserve",
+      "InputSha256": "E04C2D666248CCADB52EA4010C0E33CF3EE1BD9E37CE537E64590FE9A7C357D9",
+      "ReferencePdfSha256": "4DD8852F1572B459242F6FB63808EC5A49192780ACE0299F2EF5EC0450B59524",
+      "Pages": 1,
+      "SourceProse": [
+        "Public first merged paragraph.",
+        "Public second merged paragraph."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Side row 1.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Side row 2.",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "Y": 697.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "merge-row-floor-paragraphs-mark",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E04C2D666248CCADB52EA4010C0E33CF3EE1BD9E37CE537E64590FE9A7C357D9",
+      "ReferencePdfSha256": "07A3E8674387CC494342B8F950CC43973E96E417CD26FEA230B0D84CA5D99E9A",
+      "Pages": 1,
+      "SourceProse": [
+        "Public first merged paragraph.",
+        "Public second merged paragraph."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Side row 1.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Side row 2.",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "Y": 697.6599731445312
+        }
+      ]
+    }
+  ]
+}

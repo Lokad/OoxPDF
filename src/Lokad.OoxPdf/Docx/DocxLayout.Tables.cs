@@ -622,7 +622,7 @@ internal sealed partial class DocxLayoutEngine
         var rowBottomMargins = new double[table.Rows.Count];
         var boundaryMinimumRowHeights = new double[table.Rows.Count];
         var mergeSpans = adjustAlignedMinimumMargins && alignedMinimumAvailableHeight is not null && textMeasurer is not null
-            ? FindCompleteMathMergeSpans(table, mathEquations, cancellationToken) : [];
+            ? FindCompleteMergeSpans(table, mathEquations, cancellationToken) : [];
         var unexpandedRowHeights = mergeSpans.Count == 0 ? [] : new double[table.Rows.Count];
         bool allowDeclaredTopMargins = allowAutomaticMinimumGridPlacement &&
             IsEligibleDeclaredTopContentTable(table, textMeasurer, paragraphSpacingScale);
@@ -635,6 +635,8 @@ internal sealed partial class DocxLayoutEngine
             bool containsMath = false;
             double minimumContentHeight = 0d;
             double unexpandedContentHeight = 0d;
+            double independentContentHeight = 0d;
+            bool hasIndependentRowFloor = false;
             var cellContentHeights = sourceMeasurements.Length == 0 ? [] : new double[row.Cells.Count];
             double contentHeight = textMeasurer is null
                 ? 0d
@@ -652,6 +654,14 @@ internal sealed partial class DocxLayoutEngine
                             unexpanded = MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer,
                                 defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale,
                                 mathEquations: null, cancellationToken).Resolve(false);
+                        }
+                        else
+                        {
+                            // A non-spanning source owns this row's floor.
+                            // Complete merged content belongs to the span,
+                            // including wrapped prose and pictures, not row1.
+                            independentContentHeight = Math.Max(independentContentHeight, full);
+                            hasIndependentRowFloor = true;
                         }
                         unexpandedContentHeight = Math.Max(unexpandedContentHeight, unexpanded);
                         minimumContentHeight = Math.Max(minimumContentHeight,
@@ -673,7 +683,10 @@ internal sealed partial class DocxLayoutEngine
             if (sourceMeasurements.Length != 0) sourceMeasurements[rowIndex] = new(row, cellContentHeights);
             double fullHeight = ResolveTableRowHeight(row, contentHeight, paragraphSpacingScale, isLastRow, bottomMargin);
             if (unexpandedRowHeights.Length != 0)
-                unexpandedRowHeights[rowIndex] = ResolveTableRowHeight(row, unexpandedContentHeight,
+                // Without an independently owned floor, keep the previous
+                // unexpanded-source estimate rather than inventing a strut.
+                unexpandedRowHeights[rowIndex] = ResolveTableRowHeight(row,
+                    hasIndependentRowFloor ? independentContentHeight : unexpandedContentHeight,
                     paragraphSpacingScale, isLastRow, bottomMargin);
             boundaryMinimumRowHeights[rowIndex] = canDiscardAfter && containsMath
                 ? ResolveTableRowHeight(row, minimumContentHeight, paragraphSpacingScale, isLastRow, bottomMargin)
@@ -689,7 +702,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         if (alignedMinimumAvailableHeight is { } mergeAvailable &&
-            TryAdmitMathMergeSpans(unexpandedRowHeights, mergeSpans, Math.Min(mergeAvailable, pageContentHeight),
+            TryAdmitMergeSpans(unexpandedRowHeights, mergeSpans, Math.Min(mergeAvailable, pageContentHeight),
                 cancellationToken, out var admittedRows, out var admittedSpans))
         {
             rowHeights = admittedRows;

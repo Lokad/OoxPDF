@@ -40,6 +40,9 @@ internal static class PortableRenderingTests
     public static void PortableRenderingAdmittedMergeSpansRetainSourceAcrossRowFloors() =>
         DocxInlineCompositionTests.CheckMergedSourceConsumption(new PinnedResolver(mathFont: true), "merged-span-admission-office.json");
 
+    public static void PortableRenderingMergedSourceRowFloorsRetainProseAndImages() =>
+        DocxInlineCompositionTests.CheckMergeSourceRowFloors(new PinnedResolver(mathFont: true));
+
     public static void PortableRenderingFractionControlsKeepChildrenAndSourceGeometry() =>
         DocxInlineCompositionTests.CheckFractionControlFrames(new PinnedResolver(mathFont: true));
 

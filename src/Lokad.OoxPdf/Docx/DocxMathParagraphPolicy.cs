@@ -63,7 +63,7 @@ internal static class DocxMathParagraphPolicy
     public static bool IsSupportedCellProperties(DocxTableCell cell) =>
         !cell.HasVerticalMerge && HasSupportedCellContentProperties(cell);
 
-    private static bool HasSupportedCellContentProperties(DocxTableCell cell) =>
+    internal static bool HasSupportedCellContentProperties(DocxTableCell cell) =>
         !cell.FitText &&
         HasSupportedTableContentRevisions(cell.Revisions, DocxRevisionKind.TableCellPropertiesChange) &&
         cell.TextDirectionValue is null or "lrTb";

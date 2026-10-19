@@ -1,0 +1,158 @@
+[
+  {
+    "Id": "merge-row-floor-short",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-row-floor-short.docx",
+    "Sha256": "EEC55338DCE35CB642F910DDB83758181E62D7F2804C36030BA88667A820F29D",
+    "SourceSha256": "4E60A8C7DC0EDEBE82CC2D0FFBE80D4BFCCABB4D4E884A52B844E129D8185F5F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "After public math table.",
+      "Side row 1.",
+      "Side row 2.",
+      "Public merged prose"
+    ],
+    "Variant": "short",
+    "Change": "Independent source-row-floor probe: short/wrapped prose, image, source run/paragraph mark, or multiple paragraphs; no equation or page spacer.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-span-page-boundary.docx"
+  },
+  {
+    "Id": "merge-row-floor-wrap",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-row-floor-wrap.docx",
+    "Sha256": "EB09A9E7D778B3E7111DAEF22DE07FE70D89BC40B69F5D730524C232DC86BEA7",
+    "SourceSha256": "4E60A8C7DC0EDEBE82CC2D0FFBE80D4BFCCABB4D4E884A52B844E129D8185F5F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "After public math table.",
+      "Side row 1.",
+      "Side row 2.",
+      "Public merged prose"
+    ],
+    "Variant": "wrap",
+    "Change": "Independent source-row-floor probe: short/wrapped prose, image, source run/paragraph mark, or multiple paragraphs; no equation or page spacer.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-span-page-boundary.docx"
+  },
+  {
+    "Id": "merge-row-floor-picture-wrap",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-row-floor-picture-wrap.docx",
+    "Sha256": "2CD0FFC4002B60432213A184E3BBD0D0996A3DECC447B9E1FAEBE5FCB84C310B",
+    "SourceSha256": "4E60A8C7DC0EDEBE82CC2D0FFBE80D4BFCCABB4D4E884A52B844E129D8185F5F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "After public math table.",
+      "Side row 1.",
+      "Side row 2.",
+      "Public merged prose"
+    ],
+    "Variant": "picture-wrap",
+    "Change": "Independent source-row-floor probe: short/wrapped prose, image, source run/paragraph mark, or multiple paragraphs; no equation or page spacer.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-span-page-boundary.docx",
+    "PictureSource": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/justified-linked-image-cell.docx",
+    "PictureSourceSha256": "1C82A60B762398C13B744330091B90C410B2B98A9D648218AD161DA40A6936B6"
+  },
+  {
+    "Id": "merge-row-floor-wrap-mark",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-row-floor-wrap-mark.docx",
+    "Sha256": "E1544E1FEB88577459ED3F83F1A858F11A607765704DE77C2F37AB5CE6B23196",
+    "SourceSha256": "4E60A8C7DC0EDEBE82CC2D0FFBE80D4BFCCABB4D4E884A52B844E129D8185F5F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "After public math table.",
+      "Side row 1.",
+      "Side row 2.",
+      "Public merged prose"
+    ],
+    "Variant": "wrap-mark",
+    "Change": "Independent source-row-floor probe: short/wrapped prose, image, source run/paragraph mark, or multiple paragraphs; no equation or page spacer.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-span-page-boundary.docx"
+  },
+  {
+    "Id": "merge-row-floor-wrap-run",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-row-floor-wrap-run.docx",
+    "Sha256": "1911E71EA97DA48F34A817693802E2F12787FF91F0A580BF26A063F40874E687",
+    "SourceSha256": "4E60A8C7DC0EDEBE82CC2D0FFBE80D4BFCCABB4D4E884A52B844E129D8185F5F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "After public math table.",
+      "Side row 1.",
+      "Side row 2.",
+      "Public merged prose"
+    ],
+    "Variant": "wrap-run",
+    "Change": "Independent source-row-floor probe: short/wrapped prose, image, source run/paragraph mark, or multiple paragraphs; no equation or page spacer.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-span-page-boundary.docx"
+  },
+  {
+    "Id": "merge-row-floor-short-mark",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-row-floor-short-mark.docx",
+    "Sha256": "0DCF3EFFBEDEB102E6AEA393294F8BDED6221DA572037EFD67CAD781294C7D7B",
+    "SourceSha256": "4E60A8C7DC0EDEBE82CC2D0FFBE80D4BFCCABB4D4E884A52B844E129D8185F5F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "After public math table.",
+      "Side row 1.",
+      "Side row 2.",
+      "Public merged prose"
+    ],
+    "Variant": "short-mark",
+    "Change": "Independent source-row-floor probe: short/wrapped prose, image, source run/paragraph mark, or multiple paragraphs; no equation or page spacer.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-span-page-boundary.docx"
+  },
+  {
+    "Id": "merge-row-floor-paragraphs",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-row-floor-paragraphs.docx",
+    "Sha256": "8DD645B2961191E0A27640E17B1BF5460C53835E6C9D3AE415616F42163531B0",
+    "SourceSha256": "4E60A8C7DC0EDEBE82CC2D0FFBE80D4BFCCABB4D4E884A52B844E129D8185F5F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "After public math table.",
+      "Side row 1.",
+      "Side row 2.",
+      "Public first merged paragraph.",
+      "Public second merged paragraph."
+    ],
+    "Variant": "paragraphs",
+    "Change": "Independent source-row-floor probe: short/wrapped prose, image, source run/paragraph mark, or multiple paragraphs; no equation or page spacer.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-span-page-boundary.docx"
+  },
+  {
+    "Id": "merge-row-floor-paragraphs-mark",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-row-floor-paragraphs-mark.docx",
+    "Sha256": "E04C2D666248CCADB52EA4010C0E33CF3EE1BD9E37CE537E64590FE9A7C357D9",
+    "SourceSha256": "4E60A8C7DC0EDEBE82CC2D0FFBE80D4BFCCABB4D4E884A52B844E129D8185F5F",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "After public math table.",
+      "Side row 1.",
+      "Side row 2.",
+      "Public first merged paragraph.",
+      "Public second merged paragraph."
+    ],
+    "Variant": "paragraphs-mark",
+    "Change": "Independent source-row-floor probe: short/wrapped prose, image, source run/paragraph mark, or multiple paragraphs; no equation or page spacer.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-span-page-boundary.docx"
+  }
+]

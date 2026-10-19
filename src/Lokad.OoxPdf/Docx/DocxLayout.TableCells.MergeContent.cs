@@ -25,16 +25,16 @@ internal sealed partial class DocxLayoutEngine
         (string.IsNullOrEmpty(cell.VerticalAlignmentValue) ||
             string.Equals(cell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase));
 
-    private sealed record MeasuredMathMergeSpan(DocxTableCell Cell, int FirstRow, int LastRow)
+    private sealed record MeasuredMergeSpan(DocxTableCell Cell, int FirstRow, int LastRow)
     {
         public double RequiredHeight { get; set; }
     }
 
-    private static Dictionary<DocxTableCell, MeasuredMathMergeSpan> FindCompleteMathMergeSpans(
+    private static Dictionary<DocxTableCell, MeasuredMergeSpan> FindCompleteMergeSpans(
         DocxTable table, IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? math, CancellationToken token)
     {
-        var result = new Dictionary<DocxTableCell, MeasuredMathMergeSpan>(ReferenceEqualityComparer.Instance);
-        if (math is null || math.Count == 0) return result;
+        var result = new Dictionary<DocxTableCell, MeasuredMergeSpan>(ReferenceEqualityComparer.Instance);
+        if (!table.Rows.Any(row => row.Cells.Any(cell => cell.IsVerticalMergeRestart))) return result;
         // Fixed rows and sources whose page capacity can change during placement
         // retain the existing staged path, rather than lending unadmitted space.
         foreach (var row in table.Rows)
@@ -53,9 +53,9 @@ internal sealed partial class DocxLayoutEngine
             foreach (var cell in table.Rows[first].Cells)
             {
                 if (cell.IsVerticalMergeRestart && IsStaticTopAlignedMergeSource(cell) &&
+                    DocxMathParagraphPolicy.HasSupportedCellContentProperties(cell) &&
                     cell.Paragraphs.All(paragraph => paragraph.InlineTextBoxes.Count == 0) &&
-                    cell.Paragraphs.SelectMany(p => p.Equations).Any() &&
-                    cell.Paragraphs.SelectMany(p => p.Equations).All(math.ContainsKey))
+                    cell.Paragraphs.SelectMany(p => p.Equations).All(equation => math?.ContainsKey(equation) == true))
                 {
                     int last = first;
                     for (int next = first + 1; next < table.Rows.Count; next++)
@@ -77,14 +77,14 @@ internal sealed partial class DocxLayoutEngine
         return result;
     }
 
-    private static bool TryAdmitMathMergeSpans(IReadOnlyList<double> baseHeights,
-        Dictionary<DocxTableCell, MeasuredMathMergeSpan> spans, double available,
+    private static bool TryAdmitMergeSpans(IReadOnlyList<double> baseHeights,
+        Dictionary<DocxTableCell, MeasuredMergeSpan> spans, double available,
         CancellationToken token, out double[] rowHeights, out IReadOnlyDictionary<DocxTableCell, double> admitted)
     {
         rowHeights = [];
         admitted = new Dictionary<DocxTableCell, double>(ReferenceEqualityComparer.Instance);
         if (spans.Count == 0 || !double.IsFinite(available) || available <= 0d) return false;
-        var ending = new List<MeasuredMathMergeSpan>?[baseHeights.Count];
+        var ending = new List<MeasuredMergeSpan>?[baseHeights.Count];
         foreach (var span in spans.Values)
         {
             token.ThrowIfCancellationRequested();
