@@ -1,0 +1,21 @@
+[
+  {
+    "Id": "inline-box-child-page-counter",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-child-page-counter.docx",
+    "Sha256": "D507944E8408B00566420553EBA462C5B84182342939565046524BAD81BF9452",
+    "SourceId": "inline-box-boxed-equation-valid",
+    "SourceSha256": "5986739F1666625F94485092240716E3C4884C9B3AEDD5FBD6B499ADBA915FF1",
+    "SourceChildParagraphSha256": "02835D7A763793F936EB049D5388D44DE6069B6758F6DD184468A78604FDC631",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "FieldInstruction": "PAGE",
+    "Change": "Append a bare PAGE field; preserve every existing child item and outer frame property."
+  }
+]

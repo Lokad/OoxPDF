@@ -44,11 +44,53 @@ def pack(infos, parts):
     return buffer.getvalue()
 
 
+def publish(target, data):
+    temporary = target.with_suffix(target.suffix + '.staging')
+    with temporary.open('xb') as output:
+        output.write(data)
+    temporary.replace(target)
+
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--write', action='store_true')
+parser.add_argument('--page-counter-probe', action='store_true')
+args = parser.parse_args()
+
 seed_case = by_variant['boxed-equation']
 seed = (root / seed_case['Input']).read_bytes()
 assert sha(seed) == seed_case['Sha256']
 seed_infos, seed_parts = unpack(seed)
 seed_frame = E.fromstring(seed_parts['word/document.xml']).find(w + 'body').findall(w + 'p')[1]
+if args.page_counter_probe:
+    parts = seed_parts.copy()
+    tree = E.fromstring(parts['word/document.xml'])
+    paragraph = tree.find('.//' + w + 'txbxContent').find(w + 'p')
+    children = [E.tostring(child) for child in paragraph]
+    assert len(list(paragraph.iter(m + 'oMath'))) == 1
+    E.SubElement(E.SubElement(paragraph, w + 'r'), w + 't',
+        {'{http://www.w3.org/XML/1998/namespace}space': 'preserve'}).text = ' '
+    field = E.SubElement(paragraph, w + 'fldSimple', {w + 'instr': 'PAGE'})
+    E.SubElement(E.SubElement(field, w + 'r'), w + 't').text = '1'
+    assert [E.tostring(child) for child in list(paragraph)[:-2]] == children
+    parts['word/document.xml'] = E.tostring(tree, encoding='utf-8', xml_declaration=True)
+    name = 'inline-box-child-page-counter'
+    data = pack(seed_infos, parts)
+    rows = [dict(Id=name, Input='tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/' + name + '.docx',
+        Sha256=sha(data), SourceId=seed_case['Id'], SourceSha256=seed_case['Sha256'],
+        SourceChildParagraphSha256=sha(b''.join(children)), HeldOut=True,
+        ExpectedEquationCount=1, ExpectedRenderedEquationCount=1,
+        ExpectedText=seed_case['ExpectedText'], FieldInstruction='PAGE',
+        Change='Append a bare PAGE field; preserve every existing child item and outer frame property.')]
+    jobs = [(directory / (name + '.docx'), data), (directory / 'inline-box-page-counter.json',
+        (json.dumps(rows, indent=2) + '\n').replace('\n', '\r\n').encode())]
+    for target, data in jobs:
+        if args.write:
+            publish(target, data)
+        else:
+            assert target.read_bytes() == data, target.name
+    print('One source-exact PAGE/math child control verified; existing inline items/frame unchanged.')
+    raise SystemExit(0)
+
 prepared = []
 for case in cases:
     variant = case['Variant']
@@ -206,12 +248,7 @@ for case in review_cases:
     assert sha(data) == case['Sha256'], case['Id']
     prepared.append((root / case['Input'], data))
 
-parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--write', action='store_true')
-if parser.parse_args().write:
+if args.write:
     for target, data in prepared:
-        temporary = target.with_suffix('.docx.staging')
-        with temporary.open('xb') as output:
-            output.write(data)
-        temporary.replace(target)  # Replace the entry; never write through frozen links.
+        publish(target, data)  # Replace the entry; never write through frozen links.
 print('Canonical frame verified; ten ordinary and five review fixtures reproduce byte-identically.')
