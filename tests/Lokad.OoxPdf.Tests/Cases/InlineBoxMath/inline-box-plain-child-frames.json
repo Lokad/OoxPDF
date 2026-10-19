@@ -1,0 +1,462 @@
+[
+  {
+    "Id": "inline-box-body-equation-inline-box-valid",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-body-equation-inline-box-valid.docx",
+    "Sha256": "515A53E52166ED841334643C57390BD2300053C67CB208BFA47AB565F240FE85",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table.",
+      "Inline box content."
+    ],
+    "Variant": "body-equation-inline-box",
+    "Change": "Source-owned sibling equation and textbox share an ordered inline frame; richer and unowned frames retain block fallback.",
+    "RejectedProbeSha256": "536EFD07D25A9837A40F176C96109318496F3A73D548F27517F728407E453F63",
+    "ReviewedInput": "artifacts/inline-box-composition-valid/inline-box-body-equation-inline-box-valid.docx",
+    "ExpectedRenderedEquationCount": 1
+  },
+  {
+    "Id": "inline-sibling-first",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-sibling-first.docx",
+    "Sha256": "27C6BBC440F7A3BEF5BB43B2C9BF04633057C4CC6BE830977EDF8CD919724692",
+    "SourceSha256": "B67A7116789E31491156A207E458EF6FECB4B507011A5FE02ABCDA8B5F7DC88E",
+    "SiblingSourceSha256": "515A53E52166ED841334643C57390BD2300053C67CB208BFA47AB565F240FE85",
+    "HeldOut": false,
+    "Variant": "first",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ]
+  },
+  {
+    "Id": "inline-sibling-mixed",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-sibling-mixed.docx",
+    "Sha256": "AF81436D026A847A086B74D2BF3AA5950614B27D0AA4D4867E4EE8FF9CF6A732",
+    "SourceSha256": "B67A7116789E31491156A207E458EF6FECB4B507011A5FE02ABCDA8B5F7DC88E",
+    "SiblingSourceSha256": "515A53E52166ED841334643C57390BD2300053C67CB208BFA47AB565F240FE85",
+    "HeldOut": false,
+    "Variant": "mixed",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 2,
+    "ExpectedRenderedEquationCount": 2,
+    "ExpectedImageCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ]
+  },
+  {
+    "Id": "inline-sibling-wrap",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-sibling-wrap.docx",
+    "Sha256": "F2A0161BF2BF468BC8104A514435B8C8250C0EF6A0B00A57196DDB41F2E40CAA",
+    "SourceSha256": "B67A7116789E31491156A207E458EF6FECB4B507011A5FE02ABCDA8B5F7DC88E",
+    "SiblingSourceSha256": "515A53E52166ED841334643C57390BD2300053C67CB208BFA47AB565F240FE85",
+    "HeldOut": false,
+    "Variant": "wrap",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ]
+  },
+  {
+    "Id": "inline-sibling-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-sibling-cell.docx",
+    "Sha256": "24CC3C178E5086CAFC0463AB50FA6A832F04724178820DC0E4178045A335A4FE",
+    "SourceSha256": "59A5E49B6549272D9B7EC77D0AD5971946AE1AEF8CF9E003170D2B482B6A0164",
+    "SiblingSourceSha256": "515A53E52166ED841334643C57390BD2300053C67CB208BFA47AB565F240FE85",
+    "HeldOut": false,
+    "Variant": "cell",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ]
+  },
+  {
+    "Id": "inline-sibling-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-sibling-header.docx",
+    "Sha256": "3E287DE97A5339FD9818516F867234F07CFCB96E41E673CCBFE8024B6D587D5D",
+    "SourceSha256": "3819F1216A9AC659768070B52D4B88F3AD71E16C97BB9FF2F8C0BEA95B65E76E",
+    "SiblingSourceSha256": "515A53E52166ED841334643C57390BD2300053C67CB208BFA47AB565F240FE85",
+    "HeldOut": false,
+    "Variant": "header",
+    "MathPart": "word/inline-box-header.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ]
+  },
+  {
+    "Id": "inline-sibling-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-sibling-footer.docx",
+    "Sha256": "D60DC18B3AFE43B7820CA21D3450EBE30E0C081E3434E358990FFBC69A7DD821",
+    "SourceSha256": "30BEB8936CF2E24B10EA794D3C110424D22742AB7452FC47C5834217226C7280",
+    "SiblingSourceSha256": "515A53E52166ED841334643C57390BD2300053C67CB208BFA47AB565F240FE85",
+    "HeldOut": false,
+    "Variant": "footer",
+    "MathPart": "word/inline-box-footer.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ]
+  },
+  {
+    "Id": "inline-end-cell-picture",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-end-cell-picture.docx",
+    "Sha256": "F112DD5685D22D6BAEAB79E326C5CEDEA12D8CB5B76EFFCA29A462BDB1095E65",
+    "SourceSha256": "24CC3C178E5086CAFC0463AB50FA6A832F04724178820DC0E4178045A335A4FE",
+    "HeldOut": true,
+    "Variant": "cell-picture",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedImageCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ]
+  },
+  {
+    "Id": "inline-end-cell-space",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-end-cell-space.docx",
+    "Sha256": "984A19EC8BA2138AA9CE5072F7082AF3EEE4855BE31835ECEBEB891E6AAD0917",
+    "SourceSha256": "24CC3C178E5086CAFC0463AB50FA6A832F04724178820DC0E4178045A335A4FE",
+    "HeldOut": true,
+    "Variant": "cell-space",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ]
+  },
+  {
+    "Id": "inline-end-cell-size12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-end-cell-size12.docx",
+    "Sha256": "C2038EFFC4B9B68D38502F4D891900A9C6C8ED1E8D3FD361939FD45CF0D45B19",
+    "SourceSha256": "24CC3C178E5086CAFC0463AB50FA6A832F04724178820DC0E4178045A335A4FE",
+    "HeldOut": true,
+    "Variant": "cell-size12",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ]
+  },
+  {
+    "Id": "inline-end-wrap-size12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-end-wrap-size12.docx",
+    "Sha256": "579E52B94A8D7D66ADD2A7170EDCC4FA5F1B9B51C1FB95E095CD97742E604B11",
+    "SourceSha256": "F2A0161BF2BF468BC8104A514435B8C8250C0EF6A0B00A57196DDB41F2E40CAA",
+    "HeldOut": true,
+    "Variant": "wrap-size12",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ]
+  },
+  {
+    "Id": "inline-box-review-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-review-body.docx",
+    "Sha256": "B67A7116789E31491156A207E458EF6FECB4B507011A5FE02ABCDA8B5F7DC88E",
+    "SourceSha256": "5986739F1666625F94485092240716E3C4884C9B3AEDD5FBD6B499ADBA915FF1",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "body",
+    "Change": "Add one ordinary body comment outside the unchanged child math frame. Final should retain ordinary placement; Word-compatible review exercises actual page scaling.",
+    "ReviewedInput": "artifacts/inline-box-review-scale/inline-box-review-body.docx",
+    "ExpectedRenderedEquationCount": 1
+  },
+  {
+    "Id": "inline-box-review-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-review-footer.docx",
+    "Sha256": "30BEB8936CF2E24B10EA794D3C110424D22742AB7452FC47C5834217226C7280",
+    "SourceSha256": "C5F105611F3B4E223DC3C5E13687812DC4427FDF27C394B89B7FAAC4AC9EB399",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "footer",
+    "Change": "Add one ordinary body comment outside the unchanged child math frame. Final should retain ordinary placement; Word-compatible review exercises actual page scaling.",
+    "ReviewedInput": "artifacts/inline-box-review-scale/inline-box-review-footer.docx",
+    "ExpectedRenderedEquationCount": 1
+  },
+  {
+    "Id": "inline-box-review-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-review-header.docx",
+    "Sha256": "3819F1216A9AC659768070B52D4B88F3AD71E16C97BB9FF2F8C0BEA95B65E76E",
+    "SourceSha256": "C080AE29F5D181392D7C24000D4EED7B3B991D4909D8A65F9C94792033526451",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "header",
+    "Change": "A real body comment exercises review scaling of header/cell/static-cell box frames; source math and dimensions unchanged.",
+    "ReviewedInput": "artifacts/inline-box-review-scale-neighbors/inline-box-review-header.docx",
+    "ExpectedRenderedEquationCount": 1
+  },
+  {
+    "Id": "inline-box-review-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-review-cell.docx",
+    "Sha256": "59A5E49B6549272D9B7EC77D0AD5971946AE1AEF8CF9E003170D2B482B6A0164",
+    "SourceSha256": "94DB539C6B386447B671CE72566709F8DBB1E0924903E3C18C3B928FBFC12885",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "cell",
+    "Change": "A real body comment exercises review scaling of header/cell/static-cell box frames; source math and dimensions unchanged.",
+    "ReviewedInput": "artifacts/inline-box-review-scale-neighbors/inline-box-review-cell.docx",
+    "ExpectedRenderedEquationCount": 1
+  },
+  {
+    "Id": "inline-box-review-static-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-review-static-cell.docx",
+    "Sha256": "E24B711AC3871AFD9367D01E538E4AE011BC3D5D03252E355C8705AC4B6FB0A7",
+    "SourceSha256": "94DB539C6B386447B671CE72566709F8DBB1E0924903E3C18C3B928FBFC12885",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "static-cell",
+    "Change": "A real body comment exercises review scaling of header/cell/static-cell box frames; source math and dimensions unchanged.",
+    "ReviewedInput": "artifacts/inline-box-review-scale-neighbors/inline-box-review-static-cell.docx",
+    "ExpectedRenderedEquationCount": 1
+  },
+  {
+    "Id": "inline-box-boxed-equation-valid",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-boxed-equation-valid.docx",
+    "Sha256": "5986739F1666625F94485092240716E3C4884C9B3AEDD5FBD6B499ADBA915FF1",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "boxed-equation",
+    "Change": "Promote unchanged Word-accepted source; shared child-box math only. Sibling inline-box equation remains staged.",
+    "RejectedProbeSha256": "C35C9F37414D764B9160E991A026F94B83F6ADB73BB027DF344DE4699A5C4A6D",
+    "ReviewedInput": "artifacts/inline-box-composition-valid/inline-box-boxed-equation-valid.docx",
+    "ExpectedRenderedEquationCount": 1
+  },
+  {
+    "Id": "inline-box-boxed-text-valid",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-boxed-text-valid.docx",
+    "Sha256": "2A9027534A82DC3BA055464A4FAC35C237C639EADF2CF9A60597D027C4A49976",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "boxed-text",
+    "Change": "Promote unchanged Word-accepted source; shared child-box math only. Sibling inline-box equation remains staged.",
+    "RejectedProbeSha256": "A6C72CD8A1AD2F7B7FCF4AC65C6BA80DAA3FEE4A894E4B843CBA0F503640F9E1",
+    "ReviewedInput": "artifacts/inline-box-composition-valid/inline-box-boxed-text-valid.docx",
+    "ExpectedRenderedEquationCount": 0
+  },
+  {
+    "Id": "inline-box-mixed-source-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-mixed-source-report.docx",
+    "Sha256": "BF02ADC44651A9C12119E65187744B980070D0FB980573AFF3B82E71F5E83C98",
+    "SourceSha256": "90BF8FF816A97A45C948701B85C84AA3E84F8978F1B0627B4407ACDA71E0C1E1",
+    "HeldOut": false,
+    "ExpectedEquationCount": 4,
+    "ExpectedRenderedEquationCount": 4,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Summary:",
+      "share the same input series.",
+      "The trend marker",
+      "without replacing it."
+    ],
+    "Variant": "mixed-source-report",
+    "Change": "Restore source-exact child paragraphs, including original36x18pt picture; only the outer box has360x120pt extents. Initial erroneous360x120pt nested picture retained separately.",
+    "ReviewedInput": "artifacts/inline-box-mixed-source-review/inline-box-mixed-source-report.docx"
+  },
+  {
+    "Id": "inline-box-owned-text-first",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-owned-text-first.docx",
+    "Sha256": "C0B6F6B2B0A86DCF0F68114946EE15CB1A1D389A1A06B660B99C41493A0C8566",
+    "SourceSha256": "27C6BBC440F7A3BEF5BB43B2C9BF04633057C4CC6BE830977EDF8CD919724692",
+    "HeldOut": true,
+    "Variant": "first",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "Change": "Remove only parent mathematics; preserve source-ordered box, prose, real body comment and child frame."
+  },
+  {
+    "Id": "inline-box-owned-text-wrap",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-owned-text-wrap.docx",
+    "Sha256": "91DBA96AC87CC59D2208695B8B8806DA57626EE64A568FF3D2A8B855B83D560A",
+    "SourceSha256": "F2A0161BF2BF468BC8104A514435B8C8250C0EF6A0B00A57196DDB41F2E40CAA",
+    "HeldOut": true,
+    "Variant": "wrap",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "Change": "Remove only parent mathematics; preserve source-ordered box, prose, real body comment and child frame."
+  },
+  {
+    "Id": "inline-box-math-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-math-cell.docx",
+    "Sha256": "94DB539C6B386447B671CE72566709F8DBB1E0924903E3C18C3B928FBFC12885",
+    "SourceSha256": "5986739F1666625F94485092240716E3C4884C9B3AEDD5FBD6B499ADBA915FF1",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "cell",
+    "Change": "Promote unchanged Word-accepted source; shared child-box math only. Sibling inline-box equation remains staged.",
+    "ReviewedInput": "artifacts/inline-box-math-containers/inline-box-math-cell.docx",
+    "ExpectedRenderedEquationCount": 1
+  },
+  {
+    "Id": "inline-box-child-plain-before",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-child-plain-before.docx",
+    "Sha256": "FA3B402DA9B7DB3325443D4583F07562BCE845ACA3056DCDC85B5745C344C1F5",
+    "SourceSha256": "B67A7116789E31491156A207E458EF6FECB4B507011A5FE02ABCDA8B5F7DC88E",
+    "HeldOut": true,
+    "Variant": "before",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table.",
+      "Public context."
+    ],
+    "Change": "Add an ordinary child paragraph before/after existing math; retain frame extents, source math and real body comment."
+  },
+  {
+    "Id": "inline-box-child-plain-after",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-child-plain-after.docx",
+    "Sha256": "B716A614C920DE433C068860097954C43125649A613DF71A644CDC8843D6468F",
+    "SourceSha256": "B67A7116789E31491156A207E458EF6FECB4B507011A5FE02ABCDA8B5F7DC88E",
+    "HeldOut": true,
+    "Variant": "after",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table.",
+      "Public context."
+    ],
+    "Change": "Add an ordinary child paragraph before/after existing math; retain frame extents, source math and real body comment."
+  }
+]

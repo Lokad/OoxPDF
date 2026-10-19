@@ -35,6 +35,28 @@ def measure(path, following_text=None):
                         'InsidePage': rect in page.rect})
     return glyphs, frames, following
 
+def measure_prose(path, prefixes):
+    """Keep every prefix match: duplicate or missing source lines must fail."""
+    if len(set(prefixes)) != len(prefixes):
+        raise ValueError('Prose anchor prefixes must be unique')
+    matches = {prefix: [] for prefix in prefixes}
+    with pymupdf.open(path) as pdf:
+        for page_index, page in enumerate(pdf):
+            for block in page.get_text('rawdict')['blocks']:
+                for line in block.get('lines', []):
+                    characters = [(char, span['size']) for span in line['spans'] for char in span['chars']]
+                    value = ' '.join(unicodedata.normalize('NFKC', ''.join(char['c'] for char, _ in characters)).split())
+                    first = next(((char, size) for char, size in characters if char['c'].strip()), None)
+                    if first is None:
+                        continue
+                    for prefix in prefixes:
+                        if value.startswith(prefix):
+                            char, size = first
+                            matches[prefix].append({'Text': prefix, 'Page': page_index + 1,
+                                'X': char['origin'][0], 'Y': char['origin'][1], 'Size': size})
+    return [match for prefix in prefixes for match in matches[prefix]]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--golden', type=Path, required=True)
@@ -84,6 +106,20 @@ def main():
                 result['Failures'].append('StrokeWidth')
         if any(not frame['InsidePage'] for frame in frames):
             result['Failures'].append('OffPageFrame')
+        expected_prose = row.get('WordProseAnchors', [])
+        if expected_prose:
+            prose = measure_prose(path, [anchor['Text'] for anchor in expected_prose])
+            result['NativeProse'] = prose
+            if len(prose) != len(expected_prose) or any(a['Text'] != e['Text'] or a['Page'] != e['Page'] for a, e in zip(prose, expected_prose)):
+                result['Failures'].append('ProseCountOrPage')
+            else:
+                for axis in ['X', 'Y', 'Size']:
+                    result['MaxProse' + axis + 'Error'] = max(abs(a[axis] - e[axis]) for a, e in zip(prose, expected_prose))
+                result['ProseResidualAxes'] = [axis for axis in ['X', 'Y'] if result['MaxProse' + axis + 'Error'] >= 1.]
+                result['Failures'] += ['Prose' + axis for axis in row.get('ProseGeometryAxes', axes)
+                    if axis in result['ProseResidualAxes']]
+                if result['MaxProseSizeError'] >= .1:
+                    result['Failures'].append('ProsePhysicalSize')
         if expected_following:
             result['NativeFollowing'] = following
             if len(following) != 1 or following[0]['Page'] != expected_following['Page']:
@@ -99,10 +135,11 @@ def main():
         'GoldenSha256': sha(args.golden), 'OutcomesSha256': sha(outcomes_path), 'PyMuPdfVersion': pymupdf.VersionBind,
         'OriginThresholdPoints': 1., 'FontSizeThresholdPoints': .1, 'StrokeThresholdPoints': .01,
         'FailedOutcomes': sum(bool(row['Failures']) for row in rows),
-        'FollowingResidualOutcomes': sum(bool(row.get('FollowingResidualAxes')) for row in rows), 'Rows': rows}
+        'FollowingResidualOutcomes': sum(bool(row.get('FollowingResidualAxes')) for row in rows),
+        'ProseResidualOutcomes': sum(bool(row.get('ProseResidualAxes')) for row in rows), 'Rows': rows}
     args.output.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
     for row in rows:
-        print(row['Id'], row['Mode'], {k: v for k, v in row.items() if k.startswith(('Max', 'Following')) or k == 'Failures'})
+        print(row['Id'], row['Mode'], {k: v for k, v in row.items() if k.startswith(('Max', 'Following', 'Prose')) or k == 'Failures'})
     return int(report['FailedOutcomes'] != 0)
 
 if __name__ == '__main__':

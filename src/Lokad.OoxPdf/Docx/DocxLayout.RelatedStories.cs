@@ -2460,19 +2460,23 @@ internal sealed partial class DocxLayoutEngine
             // Normal notes and independently placed textbox stories share ordered
             // measurement. Notes retain their common emission mapping; textbox
             // geometry is shifted once through its existing container frame.
-            if (paragraph.Equations.Count != 0 && (story.Kind == DocxRelatedStoryKind.TextBox ||
+            bool ordinaryBoxParagraph = story.Kind == DocxRelatedStoryKind.TextBox && paragraph.Equations.Count == 0;
+            if (ordinaryBoxParagraph || paragraph.Equations.Count != 0 && (story.Kind == DocxRelatedStoryKind.TextBox ||
                 story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote))
             {
                 double size = GetParagraphFontSize(paragraph);
-                double lineHeight = ResolveLineHeightProfile(paragraph, size, textMeasurer, selectMaxAcrossRuns: true).LineHeight;
+                double lineHeight = ResolveLineHeightProfile(paragraph, size, textMeasurer, selectMaxAcrossRuns: !ordinaryBoxParagraph).LineHeight;
                 double baseline = ResolveRelatedStoryBaselineOffset(paragraph, size, lineHeight, textMeasurer, DocxStoryId.Related(story.Kind).Kind);
+                // Ordinary child text owns a physical inset inside its scaled
+                // box. Prepared mathematical rows retain their accepted frame.
+                if (ordinaryBoxParagraph) baseline *= paragraphSpacingScale;
                 double firstInset = GetParagraphFirstLineTextStartOffset(paragraph, size, textMeasurer, paragraphSpacingScale, defaultTabStopPoints);
                 double nextInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
                 double rightInset = GetParagraphRightInset(paragraph, paragraphSpacingScale);
                 if (paragraph.InlineTextBoxes.Count == 0 && TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, size,
                     Math.Max(1d, bodyWidth - firstInset - rightInset), Math.Max(1d, bodyWidth - nextInset - rightInset),
                     baseline, lineHeight, paragraphSpacingScale, cancellationToken, out var measured,
-                    defaultTabStopPoints: defaultTabStopPoints))
+                    defaultTabStopPoints: defaultTabStopPoints, allowStaticFallback: ordinaryBoxParagraph))
                 {
                     for (int index = 0; index < measured.Count; index++)
                     {
