@@ -1,5 +1,40 @@
 # Measured operating envelope
 
+## C269/C270 child inline-box math and frame ownership (2026-10-19)
+
+Equations now survive inside existing body, cell, header and footer textbox
+frames. Source-owned picture selection prevents a child image from replacing
+its enclosing box. Static paragraph spacing owns separation; footer boxes now
+share the occupied story anchor and body keep-out edge. This closes a confirmed
+68 pt off-page footer defect. The mixed report retains four equations/18 glyphs
+and its source-sized image. No public API, quota or unsafe-code changes.
+
+Eleven public controls/22 independent Word views:20 supported/control outcomes
+have zero source/Word/simple-math deficits. Existing one-point gates pass for
+math origins (max X0.096 pt/Y0.758 pt), box edges (0.404 pt) and image edges
+(0.818 pt); every box frame stays on the printed page. Four rasters reviewed.
+All22 strict visual failures remain. Four raw audit failures remain:two genuine
+staged sibling-equation omissions and two inherited unused-header warnings.
+No diagnostic policy relaxation; whole-page flow/typography remain residuals.
+Sibling, revised/nested/floating box composition and richer fields stay staged.
+
+One final qualified runtime:31 Windows/27 Ubuntu checks, four native skips.
+Two development candidates failed and remain retained. The final harness/input
+repair preserved14 runtime assets and2,350 common inputs; one generated image
+had accidentally inherited its outer box's dimensions. The corrected input
+restores exact source paragraphs/image sizing and retains the unused-header
+warning. The focused31-method selection reran because the input scope changed;
+no passing report join was manufactured. No library rebuild for that repair.
+Two parent observers fail meaningfully. Twenty PDFs reused plus two corrected
+source conversions;52 earlier qualifications carry forward by source proof.
+17 assets/four smokes, no root build/suite/package replay. Source generator
+verifies a canonical frame and ten derived archives byte-identically.
+Evidence:artifacts/composition-c1/inline-box-qualified-evidence.json; root3c247434.
+C268CI39246263300 is green on both platforms, including broader/package gates.
+
+Workspace:15.426 GB/836,679 files, zero scan errors. The loose5 GB target remains
+unmet; preserve previously rejected retirement targets without alternate retry.
+
 ## C268 authored signed table indentation (2026-10-19)
 
 Negative authored table indents were clamped to zero, causing36pt/41.4pt text
