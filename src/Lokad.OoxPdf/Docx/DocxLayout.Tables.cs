@@ -278,11 +278,15 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static bool HasContainedReviewCellFrames(DocxTableCellLayout cell, double bottom, double top, CancellationToken token)
+        => HasContainedInlineFrames(cell.TextLines, cell.InlineImages, bottom, top, token);
+
+    private static bool HasContainedInlineFrames(IEnumerable<DocxTextLineLayout> lines,
+        IEnumerable<DocxInlineImageLayout> images, double bottom, double top, CancellationToken token)
     {
         // This only absorbs floating-point roundoff, not an Office correction.
         const double roundoff = .000001d;
         if (!double.IsFinite(bottom) || !double.IsFinite(top) || top <= bottom) return false;
-        foreach (var line in cell.TextLines)
+        foreach (var line in lines)
         {
             token.ThrowIfCancellationRequested();
             if (line.InlineFrame is not { } frame || !double.IsFinite(frame.Height) || frame.Height <= 0d) return false;
@@ -291,7 +295,7 @@ internal sealed partial class DocxLayoutEngine
             double lineBottom = line.BaselineY - extent.Below;
             if (!double.IsFinite(lineTop) || !double.IsFinite(lineBottom) || lineBottom < bottom - roundoff || lineTop > top + roundoff) return false;
         }
-        foreach (var image in cell.InlineImages)
+        foreach (var image in images)
         {
             token.ThrowIfCancellationRequested();
             // Ordered pictures already share their measured line owner. An
@@ -612,7 +616,7 @@ internal sealed partial class DocxLayoutEngine
             table.IndentPoints,
             table.CellSpacingPoints,
             table.LayoutValue,
-            table.Revisions) { PageCount = pageCount, MathEquations = mathEquations, CancellationToken = cancellationToken,
+            table.Revisions) { PageCount = pageCount, PageContentHeight = pageContentHeight, MathEquations = mathEquations, CancellationToken = cancellationToken,
                 SourceMeasurements = sourceMeasurements };
         var rowHeights = new double[table.Rows.Count];
         var rowBottomMargins = new double[table.Rows.Count];
@@ -689,7 +693,7 @@ internal sealed partial class DocxLayoutEngine
             DeclaredTopRowContentClips = completeBodyFrame ? declaredTopContentClips : []
         };
 
-        return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, pageContentHeight, grid.TableX)
+        return new DocxTableLayoutFrame(tableContext, grid.EffectiveColumns, grid.Scale, rowHeights, grid.TableX)
         { BoundaryMinimumRowHeights = boundaryMinimumRowHeights };
     }
 
@@ -1955,6 +1959,23 @@ internal sealed partial class DocxLayoutEngine
                     .Where(rowLayout => IsNestedTableRowOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerNestedTableBoundaryIndex, cellPageBreakUpperNestedTableBoundaryIndex, rowLayout, FragmentCount))
                     .Where(rowLayout => IsNestedTableRowVisibleInCellFragmentGeometry(cellPageBreakAlignsWithNestedTableBlock, rowLayout, visualY, visualHeight, FragmentIndex, FragmentCount))
                     .ToArray();
+            // Complete measured source content already admitted by its restart
+            // row is consumed once. Continuations retain the visual cell for
+            // shading/borders, without resetting that source at another origin.
+            if (verticalMergeOwner is { } sourceOwner && cellTextLines.Count != 0 &&
+                !HasPageDynamicFields(GetTableCellLayoutBodyElements(contentCell)) &&
+                GetTableCellLayoutBodyElements(contentCell).All(element => element is DocxParagraphElement) &&
+                (string.IsNullOrEmpty(contentCell.VerticalAlignmentValue) ||
+                    string.Equals(contentCell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase)) &&
+                cellInlineTextBoxes.Count == 0 &&
+                HasAdmittedMergeSourceFrame(table, tableContext, sourceOwner.RowIndex, rowHeights,
+                    cellTextLines, cellInlineImages.Concat(cellPlacedImages), contentY + contentHeight))
+            {
+                textLines = [];
+                inlineImages = [];
+                inlineTextBoxes = [];
+                nestedTableRows = [];
+            }
             cells.Add(new DocxTableCellLayout(
                 cell,
                 cellX,

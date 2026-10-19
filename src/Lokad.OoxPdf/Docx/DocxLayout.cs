@@ -268,9 +268,9 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<double> EffectiveColumns,
         double Scale,
         IReadOnlyList<double> RowHeights,
-        double PageContentHeight,
         double TableX)
     {
+        public double PageContentHeight => Context.PageContentHeight;
         public IReadOnlyList<double> BoundaryMinimumRowHeights { get; init; } = [];
     }
 

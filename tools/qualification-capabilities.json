@@ -7811,5 +7811,31 @@
     "PortableRenderingCellPageNotesKeepLabelsMathImagesAndDestinations",
     "DocxInlineCompositionLinkedMixedNoteFramesMatchIndependentWord",
     "PortableRenderingLinkedMixedNoteFramesRetainSourceAndInk"
+  ],
+  "docx-merged-source-consumption": [
+    "DocxInlineCompositionMergedCellMathRetainsIndependentRelativeWordGeometry",
+    "DocxInlineCompositionMergedMathPreparationKeepsOwningSourcesAndPlacementFallbacks",
+    "PortableRenderingMergedMathCellsKeepOwnerContent",
+    "DocxTableMath",
+    "DocxStaticTableMath",
+    "DocxStaticFrameMapping",
+    "DocxTableLayoutStageAppliesVerticalMergeGeometry",
+    "DocxTableLayoutStageCarriesVerticalMergeOwnerAcrossPages",
+    "DocxTableLayoutStageCarriesVerticalMergeOwnerAfterRepeatedHeader",
+    "DocxTableLayoutSnapshotUsesCanonicalBodyForVerticalMergeVisualOwner",
+    "DocxTableLayoutStageClipsVerticalMergeRestartToSplitRowFragments",
+    "DocxReaderTableCellPreservesVerticalMergeToken",
+    "SharedBorderPlanMatchesNestedEnumerationMerged",
+    "PortableRenderingCellStructureKeepsContentInkAndSourceOrder",
+    "PortableRenderingNestedCellNeighborsKeepContentAndSourceOrder",
+    "PortableRenderingCellPageNotesKeepLabelsMathImagesAndDestinations",
+    "DocxInlineCompositionLinkedMixedNoteFramesMatchIndependentWord",
+    "PortableRenderingLinkedMixedNoteFramesRetainSourceAndInk",
+    "DocxInlineCompositionAdmittedMergeContentAppearsOnceAcrossRowsAndPages",
+    "DocxInlineCompositionMergeConsumptionRequiresCompleteAdmittedFrames",
+    "PortableRenderingAdmittedMergedSourcesAppearOnce",
+    "DocxInlineCompositionNestedCellNeighbors",
+    "DocxInlineCompositionNoteTables",
+    "PortableRenderingNoteTableCompositionKeepsContentAndDestinations"
   ]
 }

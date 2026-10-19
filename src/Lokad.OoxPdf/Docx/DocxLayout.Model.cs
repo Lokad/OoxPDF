@@ -271,6 +271,7 @@ internal sealed record DocxTableLayoutContext(
     IReadOnlyList<DocxRevisionInfo>? Revisions)
 {
     public int? PageCount { get; init; }
+    public double PageContentHeight { get; init; }
     public IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? MathEquations { get; init; }
     public CancellationToken CancellationToken { get; init; }
     public IReadOnlyList<DocxTableRowMeasurement> SourceMeasurements { get; init; } = [];
