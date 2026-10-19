@@ -1,0 +1,40 @@
+[
+  {
+    "Id": "minimum-page-mark-11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-page-mark-11.docx",
+    "Sha256": "08C2849E7255E65275378E5F27F0FBABE1DC7824AC60C0E65BEC96B1E3382CE2",
+    "SourceId": "minimum-passive-header-page",
+    "SourceSha256": "995E83A533A0B1C7738D41C1B2CE674166C0403C37BB6DC293526A5C458D05AD",
+    "SourceBodySha256": "95218CDC773AD2D64A3915B7D6ACD560E80435A6C0B5527C50AAEEF287688D3A",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta.",
+      "Public passive header."
+    ],
+    "FieldInstruction": "PAGE",
+    "VisibleFontPoints": 11,
+    "Context": "ordinary12",
+    "ParagraphMarkPoints": 11
+  },
+  {
+    "Id": "minimum-page-mark-13",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-page-mark-13.docx",
+    "Sha256": "0F97CD65ACFC4AFA24C1D67EF265FEA4ACC40BD4EF517B97E9BD624BB93E735B",
+    "SourceId": "minimum-passive-header-page",
+    "SourceSha256": "995E83A533A0B1C7738D41C1B2CE674166C0403C37BB6DC293526A5C458D05AD",
+    "SourceBodySha256": "95218CDC773AD2D64A3915B7D6ACD560E80435A6C0B5527C50AAEEF287688D3A",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta.",
+      "Public passive header."
+    ],
+    "FieldInstruction": "PAGE",
+    "VisibleFontPoints": 11,
+    "Context": "ordinary12",
+    "ParagraphMarkPoints": 13
+  }
+]
