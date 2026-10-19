@@ -1,0 +1,240 @@
+[
+  {
+    "Id": "table-origin-direct-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-direct-zero.docx",
+    "Sha256": "8B0A1DE5398010276A44DC31B7DC2FEDF53D8C79815786D4723EDB48A6626694",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "direct-zero",
+    "Change": "Independent table-grid starting-margin control; original reviewed source bytes retained.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx"
+  },
+  {
+    "Id": "table-origin-direct-wide",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-direct-wide.docx",
+    "Sha256": "D96CF39698C421C049B7D30FE57E12F9E56380DF91D5C85D019604EE7D95B83F",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "direct-wide",
+    "Change": "Independent table-grid starting-margin control; original reviewed source bytes retained.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx"
+  },
+  {
+    "Id": "table-origin-cell-wide",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-cell-wide.docx",
+    "Sha256": "2565E3FA9649150CB2F0BBEF94A613C4B068EF0D32F80E7B1C0EF3430CD06184",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "cell-wide",
+    "Change": "Independent table-grid starting-margin control; original reviewed source bytes retained.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx"
+  },
+  {
+    "Id": "table-origin-style-108",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-style-108.docx",
+    "Sha256": "88A5A92D856AECC1F3CBBCA7B347F75BCDB92C56F7B1B3AEBD7A072D584C54B1",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "style-108",
+    "Change": "Independent table-grid starting-margin control; original reviewed source bytes retained.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx"
+  },
+  {
+    "Id": "table-origin-style-200-direct-108",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-style-200-direct-108.docx",
+    "Sha256": "7663AB4BE58F96AB2EB476D209591E2F4C8AF079BA0433E87F769180AC45E3BD",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "style-200-direct-108",
+    "Change": "Independent table-grid starting-margin control; original reviewed source bytes retained.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx"
+  },
+  {
+    "Id": "table-origin-style-108-direct-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-style-108-direct-zero.docx",
+    "Sha256": "60B0A5AC98EFE620B52D00F00110F16230186FF9CAC24685FD40B963A6A5E9F6",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "style-108-direct-zero",
+    "Change": "Independent table-grid starting-margin control; original reviewed source bytes retained.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx"
+  },
+  {
+    "Id": "table-origin-indent-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-indent-zero.docx",
+    "Sha256": "64395C625F2B542FE949E704BD099FE57EC21B70EDC7DD269A57BA9F528EDA42",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "indent-zero",
+    "Change": "Independent table-grid starting-margin control; original reviewed source bytes retained.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx"
+  },
+  {
+    "Id": "table-origin-compat-15",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-compat-15.docx",
+    "Sha256": "AE51771699720FFF17D640CF708952E9746EF6747B7DF57DA87E0E2C318FAD1A",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "compat-15",
+    "Change": "Independent table-grid starting-margin control; original reviewed source bytes retained.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx"
+  },
+  {
+    "Id": "table-origin-auto-width",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-auto-width.docx",
+    "Sha256": "3421B24FCC4D2B28A12EF3A5E72344CA62FD94E28238695E188D93480D5CDFFB",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "auto-width",
+    "Change": "Independent table-grid starting-margin control; original reviewed source bytes retained.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx"
+  },
+  {
+    "Id": "table-origin-bordered",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-bordered.docx",
+    "Sha256": "E8EBB66769ED892122B0FD0E409F3248984A6AD3839D4E8010D2DD9D78C6EFEB",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "bordered",
+    "Change": "Independent table-grid starting-margin control; original reviewed source bytes retained.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx"
+  },
+  {
+    "Id": "table-origin-top-border",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-top-border.docx",
+    "Sha256": "5AB459FAE09FEF57FD291EB35F09FD29B9DB1E4B3A605F7CEB057DEB19D45BA2",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "top-border",
+    "Change": "Independent table-grid starting-margin control; original reviewed source bytes retained.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9"
+  },
+  {
+    "Id": "table-origin-right-border",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-right-border.docx",
+    "Sha256": "A7B8958973A8C3D3C4650088738A8DB9848D62A3F19ADD01CA48974E0014702E",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "right-border",
+    "Change": "Independent table-grid starting-margin control; original reviewed source bytes retained.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9"
+  },
+  {
+    "Id": "table-origin-inside-border",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-inside-border.docx",
+    "Sha256": "93CAFB02DFA9086A41241ECEBC752C6CD7730C7FE63DB3E48F23F9F98BC71FA7",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "inside-border",
+    "Change": "Independent table-grid starting-margin control; original reviewed source bytes retained.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9"
+  },
+  {
+    "Id": "table-origin-style-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-style-zero.docx",
+    "Sha256": "6D47949121C8B350A4AF37124D49B307A176D59A7621B61442BC82E422C9712C",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "style-zero",
+    "Change": "Independent table-grid starting-margin control; original reviewed source bytes retained.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9"
+  }
+]

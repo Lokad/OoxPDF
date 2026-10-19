@@ -747,9 +747,10 @@ internal sealed partial class DocxLayoutEngine
         // UseLegacyTableGrid/PinTextToMargin): compat aligns the outer border edge at
         // the origin (m13/ladder, indent or not per M14); modern pins text at an indent
         // origin (w66); pin-regime pins text at the margin via style margins (w72/m12).
-        // Bare tables sit at the origin (w63). Table-level shift keeps columns aligned
-        // across rows (ragged-border rows unprobed); explicit-0 indent counts as absent
-        // (unprobed, assumed same).
+        // Modern authored starting margins also anchor text when the starting
+        // border is absent, including explicit-zero style/indent and other edges.
+        // A shared grid shift keeps rows, images and annotations in one frame.
+        // Bare tables and visible starting borders retain their existing fallback.
         double gridX = tableX;
         if (table.Rows.FirstOrDefault()?.Cells.FirstOrDefault() is { } firstCell)
         {
@@ -765,6 +766,15 @@ internal sealed partial class DocxLayoutEngine
             else if ((firstCell.StyleMargins?.LeftPoints ?? 0d) > 0d)
             {
                 gridX = tableX - (firstCell.StyleMargins?.LeftPoints ?? 0d) * fixedScale;
+            }
+            else if (firstCell.Margins.LeftPoints is not null &&
+                DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(firstCell.Borders, "left")) == 0d &&
+                DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(firstCell.Borders, "start")) == 0d)
+            {
+                // Authored margins without a visible starting border locate the
+                // first text edge at the container origin. The grid carries
+                // that inset once for all rows and their source annotations.
+                gridX = tableX - ResolveTableCellHorizontalEdgeInset(firstCell, "left", firstCell.Margins.LeftPoints, fixedScale);
             }
         }
         double tableAvailableWidth = Math.Max(1d, availableWidth - indentPoints);
