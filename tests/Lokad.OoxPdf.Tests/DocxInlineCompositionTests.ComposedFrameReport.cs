@@ -108,8 +108,14 @@ internal static partial class DocxInlineCompositionTests
             var expectedRule = row.GetProperty("WordSeparatorRule");
             TestAssert.Equal(expectedRule.GetProperty("Page").GetInt32(), note.Page);
             double ruleTop = pages[note.Page - 1].Height - rule.Y - rule.Height;
-            TestAssert.True(Math.Abs(ruleTop - expectedRule.GetProperty("Rect")[1].GetDouble()) < 1d,
-                "The separator retains its independent one-point Word position.");
+            var expectedConclusion = row.GetProperty("WordProseAnchorGroups").EnumerateArray()
+                .Single(group => group.GetProperty("Text").GetString() == "Review conclusion:")
+                .GetProperty("Occurrences")[0];
+            double expectedGap = expectedRule.GetProperty("Rect")[1].GetDouble() - expectedConclusion.GetProperty("Y").GetDouble();
+            // This contract measures note seating relative to its body owner.
+            // The separate absolute Word geometry report retains body drift.
+            TestAssert.True(Math.Abs(ruleTop - conclusion.Y - expectedGap) < 1d,
+                "The separator retains its independent one-point Word gap after the conclusion.");
             foreach (var anchor in row.GetProperty("WordProseAnchorGroups")[0].GetProperty("Occurrences").EnumerateArray())
                 TestAssert.Equal(1, boxes.Count(line => line.Page == anchor.GetProperty("Page").GetInt32() &&
                     Math.Abs(line.X - anchor.GetProperty("X").GetDouble()) < 1d && Math.Abs(line.Y - anchor.GetProperty("Y").GetDouble()) < 1d));

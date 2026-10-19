@@ -122,8 +122,10 @@ def main():
         if any(not frame['InsidePage'] for frame in frames):
             result['Failures'].append('OffPageFrame')
         if 'WordSeparatorRule' in row:
-            rules = measure_note_rules(path)
             expected_rule = row['WordSeparatorRule']
+            # A report may contain filled horizontal table borders on other
+            # pages. Keep every candidate on the independently pinned note page.
+            rules = [rule for rule in measure_note_rules(path) if rule['Page'] == expected_rule['Page']]
             result['NativeSeparatorRules'] = rules
             if len(rules) != 1 or rules[0]['Page'] != expected_rule['Page']:
                 result['Failures'].append('SeparatorCountOrPage')
