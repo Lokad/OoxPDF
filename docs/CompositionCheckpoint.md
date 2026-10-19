@@ -1,5 +1,41 @@
 # Composed-document reliability checkpoint
 
+## C312 complete text and solid borders on natural page fragments (2026-10-20)
+
+A single edge predicate shared by strips and junctions repeats decoration for
+physical automatic PageBoundary fragments, reusing the existing automatic-height
+rule. Declared-height/manual-break policies remain. Solid border extents now
+participate in admitted cell source windows and shared capacity. Natural source
+height consistency retains unmatched collapsed/compound/merge/changing-PAGE
+fallbacks. No new API/cache/quota or unsafe/native library code.
+
+Three controls/six presets/1,440 independent Word prose anchors retain the same
+pages and pass Y/size gates, Ymax0.396973pt. Restore24 missing row-edge bands.
+Complete source glyphs clear both painted edges on native and pinned portable
+fonts. All six raw content screens are clean; both thick-border page screens
+close. All six strict pixel and prose-X gates remain failed at5.390pt. Fourteen
+neighbor PDFs/comparisons are exact prior reuse. No horizontal correction or
+performance claim. Three viewed images distinguish paint-only and final native
+page2 against Word: Left54/Right53 clear the top edge and bottom borders close.
+
+The initial3bb2f1d9 paint-only prototype passed16Windows/13Ubuntu/three skips;
+its six text-operation reports equal C311. Visual review showed the new edge
+crossing misplaced ink, so it was not published separately. Final3fd85627 adds
+occupied border space and strengthens two regressions with ink clearance and
+Word page/Y/size checks. All22 exact methods run once/platform after production
+change:22Windows,16Ubuntu/six native skips. Two genuine final clearance failures
+against paint-only; its two earlier coverage failures against C310 are retained.
+No harness repair/qualification join. One final immutable artifact/2,498inputs,
+two Release builds total,20final/six development conversions, no new Word export.
+Six independent references reused.17assets/two exact transfer smokes; no root
+build, root suite replay or speculative source/accounting expansion.
+
+Root productione2f1e1a8; evidence artifacts/composition-c1/natural-fragment-frames-
+evidence.json. C310CI39342900275 is green Windows/Ubuntu including broader/package
+checks. Continue bounded authored/implicit starting-origin review, retaining
+static-container contracts and5.390pt/5.736pt residuals. Version0.1.5; release
+preparation remains deferred.
+
 ## C311 natural row page-edge border ownership review (2026-10-20)
 
 Three source controls (aligned/shifted introductions,1pt/2pt solid edges) and six
