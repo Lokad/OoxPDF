@@ -28,7 +28,8 @@ passive.add_argument('--passive-headers', action='store_true')
 passive.add_argument('--passive-footers', action='store_true')
 passive.add_argument('--page-field-probes', action='store_true')
 passive.add_argument('--inactive-static-probes', action='store_true')
-parser.add_argument('--write', action='store_true', help='Publish passive-header controls; otherwise verify them.')
+passive.add_argument('--inactive-note-probe', action='store_true')
+parser.add_argument('--write', action='store_true', help='Publish selected composition controls; otherwise verify them.')
 args = parser.parse_args()
 
 root = Path(__file__).resolve().parent.parent
@@ -37,15 +38,18 @@ output = cases / 'CompositionProbes'
 output.mkdir(exist_ok=True)
 w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 
-if args.inactive_static_probes:
+if args.inactive_static_probes or args.inactive_note_probe:
     r = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
     rel = '{http://schemas.openxmlformats.org/package/2006/relationships}'
     ct = '{http://schemas.openxmlformats.org/package/2006/content-types}'
     math = '{http://schemas.openxmlformats.org/officeDocument/2006/math}'
     rich_cases = json.loads((cases / 'InlineBoxMath/static-table-origins.json').read_text())
     prepared, rows = [], []
-    for kind, context, variant in [('header', 'ordinary12', 'first'), ('footer', 'ordinary11', 'even')]:
-        source = next(row for row in json.loads((output / ('minimum-passive-' + kind + 's.json')).read_text()) if row['Context'] == context)
+    controls = [('header', 'noted12', 'first')] if args.inactive_note_probe else [
+        ('header', 'ordinary12', 'first'), ('footer', 'ordinary11', 'even')]
+    for kind, context, variant in controls:
+        source_manifest = 'minimum-bookmark.json' if args.inactive_note_probe else 'minimum-passive-' + kind + 's.json'
+        source = next(row for row in json.loads((output / source_manifest).read_text()) if row['Context'] == context and not row.get('Bookmarked', False))
         rich = next(row for row in rich_cases if row['Id'] == 'static-table-origin-' + kind + '-wide')
         original = (root / source['Input']).read_bytes()
         rich_data = (root / rich['Input']).read_bytes()
@@ -62,7 +66,8 @@ if args.inactive_static_probes:
         before = b''.join(E.tostring(node) for node in body if node.tag != w + 'sectPr')
         section = body.find(w + 'sectPr')
         assert section.find(w + 'titlePg') is None
-        assert section.find(w + kind + 'Reference').get(w + 'type') == 'default'
+        selected = section.find(w + kind + 'Reference')
+        assert selected is None if args.inactive_note_probe else selected.get(w + 'type') == 'default'
         settings = E.fromstring(entries['word/settings.xml'])
         assert settings.find(w + 'evenAndOddHeaders') is None
         part = 'word/inactive-' + variant + '-' + kind + '.xml'
@@ -79,21 +84,22 @@ if args.inactive_static_probes:
         types = E.fromstring(entries['[Content_Types].xml'])
         E.SubElement(types, ct + 'Override', PartName='/' + part, ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.' + kind + '+xml')
         entries['[Content_Types].xml'] = E.tostring(types, encoding='utf-8', xml_declaration=True)
-        name = 'minimum-inactive-' + variant + '-' + kind
+        name = 'minimum-inactive-' + variant + '-' + kind + ('-noted12' if args.inactive_note_probe else '')
         data = package_bytes(entries)
         rows.append(dict(Id=name, Input='tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/' + name + '.docx',
             Sha256=hashlib.sha256(data).hexdigest().upper(), SourceId=source['Id'], SourceSha256=source['Sha256'],
-            SourceBodySha256=source['SourceBodySha256'], RichSourceSha256=rich['Sha256'], RichPart=part,
+            SourceBodySha256=hashlib.sha256(before).hexdigest().upper(), RichSourceSha256=rich['Sha256'], RichPart=part,
             HeldOut=True, ExpectedEquationCount=sum(1 for _ in story.iter(math + 'oMath')), ExpectedRenderedEquationCount=0,
             ExpectedText=source['ExpectedText'], Context=context, FontPoints=source['FontPoints'], Variant=variant, StoryKind=kind))
         prepared.append((output / (name + '.docx'), data))
-    prepared.append((output / 'minimum-inactive-static.json', manifest_bytes(rows)))
+    manifest_name = 'minimum-inactive-notes.json' if args.inactive_note_probe else 'minimum-inactive-static.json'
+    prepared.append((output / manifest_name, manifest_bytes(rows)))
     for path, data in prepared:
         if args.write:
             publish(path, data)
         else:
             assert path.read_bytes() == data, path.name
-    print('Two inactive rich first/even variants verified; selected stories and body contents/properties unchanged.')
+    print(str(len(controls)) + ' inactive rich variants verified; selected stories and body contents/properties unchanged.')
     raise SystemExit(0)
 
 if args.page_field_probes:

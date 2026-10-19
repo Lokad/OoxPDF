@@ -1,0 +1,23 @@
+[
+  {
+    "Id": "minimum-inactive-first-header-noted12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-inactive-first-header-noted12.docx",
+    "Sha256": "E58FAD6CB1854A22F3E6FA927CB08C786CC662D4CD9E6CD786A359DFE85599D4",
+    "SourceId": "minimum-bookmark-noted12-control",
+    "SourceSha256": "7E81696732717C13824B757E4721B1DF5EE414A35205BBE136F5806ABB4D65E4",
+    "SourceBodySha256": "394FF3EECCF7F3B5F6E24BAEF2DB2E77C137AF915504CD003A4FBB1F71E85EDB",
+    "RichSourceSha256": "CDA620C89F9481657073B5D8343B3F04FDEF81C0BA9072D1036BA8EF76323F8F",
+    "RichPart": "word/inactive-first-header.xml",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta."
+    ],
+    "Context": "noted12",
+    "FontPoints": 12,
+    "Variant": "first",
+    "StoryKind": "header"
+  }
+]
