@@ -1,5 +1,46 @@
 # Composed-document reliability checkpoint
 
+## C285 preserve source-owned versus richer note placement (2026-10-19)
+
+C282’s broader Windows CI catches one existing Office-anchored mapped-note-band
+bottom assertion (3,604pass/onefail/16skip); Ubuntu passes. The shared origin
+improves revised note text but reaches a richer legacy story whose independently
+validated revision-band bottom uses its previous placement. Reuse the existing
+trailing-paragraph/fitting note-flow admission for document-end and section-end
+origin mapping. Rich/fragmented fallbacks retain their legacy coordinates. No
+new font/size/count regime, band-height correction or changed Word assertion.
+
+42 exact Windows/29 Ubuntu/13 native skips, once per platform from one new
+frozen runtime/2,408inputs; no production report join. The initial compile attempt
+passed referenced section-note wrappers instead of raw layouts; retained log,
+no artifact/tests. Final projection uses the same existing predicate. Both
+ordinary composed-report PDFs retain accepted C282 bytes; static-cell review
+also matches. Revised report review restores the exact C280 PDF, retaining its
+validated band edge. Three comparisons reused/one fresh against an existing
+pinned Word cache, zero Office exports. Ten fixed-portfolio outcomes carry by
+explicit absence of endnotes (and distinct PPTX path), with no conversion replay.
+17 assets/four exact transfer smokes, no root build or qualification replay.
+Original visual/field residuals and revision-band height concern remain explicit.
+Evidence:artifacts/composition-c1/note-origin-fallback-evidence.json; rootd40b8572.
+Corrected CI follows the scoped push; previous failed run stays in history.
+
+## C284 ordinary footer-table viewport discriminators (2026-10-19)
+
+Two source-exact ordinary box/picture paragraphs move into a single footer-table
+cell. Four Word exports and four existing-frozen-runtime conversions, no library
+build/tests. The original four generator outputs remain exact. Four clean raw
+content screens; all four strict visual failures remain. Ordinary box frames
+match within.058pt/prose.209pt. Picture rectangles agree within.056pt, but the
+following box differs7.330pt Final/5.580pt review. Two reviewed rasters show Word
+itself places that border through preceding prose, while native output keeps
+it clear. Preserve geometry failure without introducing the occlusion.
+
+The new Word controls have no outer outline clip; C279’s math/footer-table
+source clips at a viewport. A universal footer clipping rule remains unverified.
+No production patch or new special-case family. Independent pins/clip observations
+remain available for qualification. Evidence:artifacts/composition-c1/
+ordinary-footer-table-review-evidence.json; sourcesd88c8241/8e7f5038.
+
 ## C283 reject invalid runner arguments before discovery (2026-10-19)
 
 C282 exposed a qualification defect: an unsupported --filter silently selected
