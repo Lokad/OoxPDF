@@ -82,7 +82,7 @@ internal static class DocxPassiveStaticBodyTests
     public static void DocxInactiveNoteTemplatesKeepEnabledStoryAndSectionFallbacks()
     {
         var document = DocxTests.ReadDocx(Case("CompositionProbes/minimum-inactive-first-header-noted12.docx"), OoxPdfDocxMarkupMode.Final);
-        TestAssert.True(DocxPageFootnoteNumbering.IsEligibleDocument(document));
+        TestAssert.True(DocxPageFootnoteNumbering.IsEligibleDocument(document), "A disabled first template preserves existing note source admission.");
         TestAssert.True(!DocxPageFootnoteNumbering.IsEligibleDocument(document with
             { PageSettings = document.PageSettings with { TitlePage = true } }), "An enabled first story retains the original fallback.");
         var enabledEven = document with { PageSettings = document.PageSettings with { EvenAndOddHeaders = true },
