@@ -49,7 +49,9 @@ internal static class OoxMemoryAdmissionTests
                 InputKind = kind, FontResolver = resolver, MemoryAdmission = admission,
                 ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 },
                 DiagnosticSink = _ => TestAssert.Equal(ReservationBytes, pool.Reserved), ReportResourceUsage = true });
-            TestAssert.True(resolver.Calls > 0 && destination.Writes > 0, "Font preparation and staged emission were observed.");
+            if (kind == OoxPdfInputKind.Docx) { TestAssert.True(resolver.Calls > 0, "Text-bearing DOCX exercises font preparation."); }
+            TestAssert.True(destination.Writes > 0, "Staged emission was observed.");
+            if (kind == OoxPdfInputKind.Pptx) { TestAssert.Contains("/Subtype /Image", System.Text.Encoding.Latin1.GetString(destination.ToArray())); }
             TestAssert.Equal(1, admission.Requests);
             TestAssert.Equal(1, pool.Releases);
             TestAssert.Equal(0L, pool.Reserved);
