@@ -16,6 +16,7 @@ parser.add_argument('--write', action='store_true')
 probes = parser.add_mutually_exclusive_group()
 probes.add_argument('--compound-report-probe', action='store_true')
 probes.add_argument('--spanning-cell-probe', action='store_true')
+probes.add_argument('--spanning-frame-probes', action='store_true')
 args = parser.parse_args()
 sha = lambda value: hashlib.sha256(value).hexdigest().upper()
 
@@ -29,6 +30,61 @@ def publish(jobs):
             stage.replace(target)
         else:
             assert target.read_bytes() == data, target.name
+
+
+if args.spanning_frame_probes:
+    parent = json.loads((cases / 'spanning-cell-total-count.json').read_text())[0]
+    original = (root / parent['Input']).read_bytes()
+    assert sha(original) == parent['Sha256']
+    with ZipFile(BytesIO(original)) as archive:
+        infos = archive.infolist()
+        original_parts = {entry.filename: archive.read(entry.filename) for entry in infos}
+    wp = '{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}'
+    a = '{http://schemas.openxmlformats.org/drawingml/2006/main}'
+    rows, jobs = [], []
+    for variant, height in [('short-box', 42), ('tall-box', 78), ('mixed-prose', None)]:
+        parts = dict(original_parts)
+        tree = E.fromstring(parts['word/document.xml'])
+        cell = next(tree.iter(w + 'tc'))
+        if height is not None:
+            for tag in (wp + 'extent', a + 'ext'):
+                node = next(cell.iter(tag))
+                node.set('cy', str(height * 12700))
+            count = 84
+        else:
+            prefix = cell.find(w + 'p')
+            prefix.clear()
+            E.SubElement(E.SubElement(prefix, w + 'r'), w + 't').text = 'Ordinary cell introduction.'
+            sample = cell.findall(w + 'p')[1]
+            for paragraph in cell.findall(w + 'p')[1:]:
+                cell.remove(paragraph)
+            count = 120
+            for index in range(1, count + 1):
+                paragraph = copy.deepcopy(sample)
+                paragraph.find('.//' + w + 't').text = 'Planning row ' + str(index) + ' stays visible.'
+                paragraph.find('.//' + w + 'sz').set(w + 'val', '24' if index % 2 else '20')
+                cell.append(paragraph)
+        parts['word/document.xml'] = E.tostring(tree, encoding='utf-8', xml_declaration=True)
+        buffer = BytesIO()
+        with ZipFile(buffer, 'w') as archive:
+            for entry in infos:
+                archive.writestr(copy.copy(entry), parts[entry.filename])
+        data = buffer.getvalue()
+        name = 'spanning-frame-' + variant
+        row = dict(Id=name,Input='tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/' + name + '.docx',
+            Sha256=sha(data),SourceInput=parent['Input'],SourceSha256=parent['Sha256'],HeldOut=True,
+            ExpectedEquationCount=0 if height is None else 1,ExpectedRenderedEquationCount=0 if height is None else 1,
+            PlanningParagraphs=count,BoxHeightPoints=height,
+            ExpectedText=['Before public math table.','Planning row 1 stays visible.',
+                'Planning row ' + str(count) + ' stays visible.','After public math table.'],
+            Change='Vary the measured prefix frame or ordinary paragraph metrics; no source-count eligibility rule.')
+        rows.append(row)
+        jobs.append((cases / (name + '.docx'), data))
+    jobs.append((cases / 'spanning-frame-probes.json',
+        (json.dumps(rows, indent=2) + '\n').replace('\n', '\r\n').encode()))
+    publish(jobs)
+    print('Three spanning-frame controls verified; accepted total-count input unchanged.')
+    raise SystemExit(0)
 
 
 if args.spanning_cell_probe:
