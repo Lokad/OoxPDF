@@ -1,0 +1,51 @@
+[
+  {
+    "Id": "composed-inline-frame-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/composed-inline-frame-report.docx",
+    "Sha256": "24982F90C9E3AD52FEA6ED01EE0BABB819E6C0F6FF00EBC28F72F41404129C32",
+    "HeldOut": true,
+    "ExpectedEquationCount": 12,
+    "ExpectedInlineImageCount": 5,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "See calculation",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative.",
+      "Calculation:",
+      "Footer:",
+      "Inline box content."
+    ],
+    "Features": [
+      "image/math/comment/link/bookmark in one paragraph",
+      "math/endnote reference in a table cell",
+      "numbering",
+      "header equation",
+      "footer",
+      "continuous endnote",
+      "wrapped prose",
+      "cached field results beside math/image/comment and inside an internal hyperlink",
+      "two supported fractions and a bookmark inside the endnote",
+      "source PNG also embedded beside the endnote fractions",
+      "simple/packed PAGE fields beside cached fields/math/images, inside an internal hyperlink and in a math/note table cell",
+      "existing header/footer prose and equation preserved in simple cells; mixed footer fractions/image/PAGE/NUMPAGES",
+      "ordered equations/picture/box in body and ordinary ordered frames alongside existing static tables/page fields"
+    ],
+    "InlineFrameSources": [
+      {
+        "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-sibling-mixed.docx",
+        "Sha256": "AF81436D026A847A086B74D2BF3AA5950614B27D0AA4D4867E4EE8FF9CF6A732",
+        "DestinationPart": "word/document.xml"
+      },
+      {
+        "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-inline-ordinary-header-box.docx",
+        "Sha256": "80A41D9E948541DFB341CF9AC874F9EA01564FE2D21A326715BBBB68FB11AEE5",
+        "DestinationPart": "word/header1.xml"
+      },
+      {
+        "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-inline-ordinary-footer-picture.docx",
+        "Sha256": "A32D2957369E2A8F726105C85C77455F4BC92091E2A3E924DE67B365F8C00C1B",
+        "DestinationPart": "word/footer1.xml"
+      }
+    ]
+  }
+]

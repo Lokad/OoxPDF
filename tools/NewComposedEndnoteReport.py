@@ -12,7 +12,9 @@ parser.add_argument('--include-math', action='store_true', help='Add two support
 parser.add_argument('--include-image', action='store_true', help='Add the source PNG beside the two note fractions')
 parser.add_argument('--include-page-fields', action='store_true', help='Add PAGE fields to the complete image/math report body, link and table')
 parser.add_argument('--include-static-cells', action='store_true', help='Place existing headers/footers in simple cells and add mixed footer content')
+parser.add_argument('--include-inline-frames', action='store_true', help='Add qualified ordered body/header/footer frame sources to the complete report')
 args = parser.parse_args()
+if args.include_inline_frames: args.include_static_cells = True
 if args.include_static_cells: args.include_page_fields = True
 if args.include_page_fields: args.include_image = True
 if args.include_image: args.include_math = True
@@ -127,25 +129,36 @@ if args.include_static_cells:
             entries['word/_rels/footer1.xml.rels'] = E.tostring(rels, encoding='utf-8', xml_declaration=True)
         E.SubElement(story, w + 'p')
         entries[part] = E.tostring(story, encoding='utf-8', xml_declaration=True)
-output = cases / ('composed-static-cell-report.docx' if args.include_static_cells else
+inline_sources = []
+if args.include_inline_frames:
+    from DocxFixtureInlineFrames import add_source_frames
+    inline_sources = add_source_frames(entries, root)
+output = cases / ('composed-inline-frame-report.docx' if args.include_inline_frames else
+                  'composed-static-cell-report.docx' if args.include_static_cells else
                   'composed-page-counter-report.docx' if args.include_page_fields else
                   'composed-note-image-math-report.docx' if args.include_image else
                   'composed-note-math-report.docx' if args.include_math else 'composed-endnotes-report.docx')
-with ZipFile(output, 'w', ZIP_DEFLATED) as archive:
+temporary = output.with_suffix('.docx.staging')
+assert not temporary.exists()
+with ZipFile(temporary, 'w', ZIP_DEFLATED) as archive:
     for name,data in sorted(entries.items()):
         info = ZipInfo(name, (2026,10,16,0,0,0))
         info.compress_type = ZIP_DEFLATED
         archive.writestr(info, data)
+temporary.replace(output)  # Replace the entry; never overwrite frozen hard links.
 manifest = [baseline | dict(Id=output.stem, Input=output.relative_to(root).as_posix(),
     Sha256=hashlib.sha256(output.read_bytes()).hexdigest().upper(),
-    ExpectedEquationCount=baseline['ExpectedEquationCount'] + (2 if args.include_math else 0) + (2 if args.include_static_cells else 0),
-    ExpectedInlineImageCount=baseline['ExpectedInlineImageCount'] + (1 if args.include_image else 0) + (1 if args.include_static_cells else 0),
-    ExpectedText=baseline['ExpectedText'] + (['Calculation:'] if args.include_math else []) + (['Footer:'] if args.include_static_cells else []),
+    ExpectedEquationCount=baseline['ExpectedEquationCount'] + (2 if args.include_math else 0) + (2 if args.include_static_cells else 0) + (2 if args.include_inline_frames else 0),
+    ExpectedInlineImageCount=baseline['ExpectedInlineImageCount'] + (1 if args.include_image else 0) + (1 if args.include_static_cells else 0) + (2 if args.include_inline_frames else 0),
+    ExpectedText=baseline['ExpectedText'] + (['Calculation:'] if args.include_math else []) + (['Footer:'] if args.include_static_cells else []) + (['Inline box content.'] if args.include_inline_frames else []),
     Features=[item.replace('footnote', 'endnote') for item in baseline['Features']] +
         (['two supported fractions and a bookmark inside the endnote'] if args.include_math else []) +
         (['source PNG also embedded beside the endnote fractions'] if args.include_image else []) +
         (['simple/packed PAGE fields beside cached fields/math/images, inside an internal hyperlink and in a math/note table cell'] if args.include_page_fields else []) +
-        (['existing header/footer prose and equation preserved in simple cells; mixed footer fractions/image/PAGE/NUMPAGES'] if args.include_static_cells else []))]
+        (['existing header/footer prose and equation preserved in simple cells; mixed footer fractions/image/PAGE/NUMPAGES'] if args.include_static_cells else []) +
+        (['ordered equations/picture/box in body and ordinary ordered frames alongside existing static tables/page fields'] if args.include_inline_frames else []))]
+if inline_sources:
+    manifest[0]['InlineFrameSources'] = inline_sources
 (cases / (output.stem + '.json')).write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')
 print('Pinned one held-out endnote report; existing prose, six equations, media and unrelated package parts preserved' +
       ('; two note fractions added' if args.include_math else '') +
