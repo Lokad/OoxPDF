@@ -8022,5 +8022,32 @@
     "DocxTerminalLineSpaceUsesPilcrowSize",
     "DocxReviewTerminalSpacePreservesResolvedParagraphMarkSize",
     "DocxReviewAutofitMeasuresCommentDisplayLabelAtParagraphMarkSize"
+  ],
+  "library-simplification": [
+    "DeterministicConversionProducesStableBytes",
+    "RepeatedConversionsReuseRetainedFontBytes",
+    "ConvertHonorsFixedCreationDate",
+    "ConcurrentConversionsSharingOneResolverStayByteIdentical",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "DiagnosticCollectorBoundsSamplesWithTotals",
+    "MemoReturnsHitForSameKey",
+    "MemoReplaysAtChangedOrigin",
+    "MemoDistinguishesReferenceIdentity",
+    "MemoTiersPageStaticVsDynamic",
+    "MemoKeyIncludesMeasurerReference",
+    "DocxTableCellTextLinesMemoSharesSplitCells",
+    "DocxTableCellPageFieldsEvaluatePerFragmentPage",
+    "DocxTableLayoutStageSplitsTallRowsAcrossPagesByDefault",
+    "PptxChartWorkbookParsingPreservesRangeMetadata",
+    "PptxChartIndexedVectorsPreserveWorkbookSidecarPoints",
+    "PptxChartSeriesNamesPreserveWorkbookSidecarPoints",
+    "SmallRangeReadsCells",
+    "FullColumnFormulaThrowsPromptly",
+    "NarrowHiddenColumnRunPreservesSemantics",
+    "PptxScenePreservesChartColorStyleDeclarations",
+    "PptxChartCategoryAxisSourceAcceptsDateAxes",
+    "PptxSyntheticLineAndPieChartsRenderNativeCharts",
+    "PptxSyntheticAreaScatterRadarAndDoughnutChartsRenderNativeCharts"
   ]
 }
