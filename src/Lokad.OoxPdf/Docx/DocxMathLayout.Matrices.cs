@@ -99,7 +99,6 @@ internal static partial class DocxMathLayout
                 token.ThrowIfCancellationRequested();
                 if (IsEmptyMatrixCell(matrix.Rows[r].Cells[c], token))
                 {
-                    OoxConversionBudget.Current?.ChargeSceneNodes(1);
                     if (placeholder is null)
                     {
                         if (!TryMeasureHiddenPlaceholder(font, glyphSize, out placeholder))

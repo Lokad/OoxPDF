@@ -180,6 +180,7 @@ internal sealed class PdfPageContentStaging : IDisposable
 
     public int GetPageLength(int pageIndex, CancellationToken cancellationToken)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
         cancellationToken.ThrowIfCancellationRequested();
         if (pendingPage is not null)
         {
@@ -372,6 +373,11 @@ internal sealed class PdfPageContentStaging : IDisposable
         }
 
         disposed = true;
+        memory.Clear();
+        pendingPage?.Segments.Clear();
+        pendingPage = null;
+        fileOffsets.Clear();
+        bufferedBytes = 0;
         spillFile?.Dispose();
         spillFile = null;
     }

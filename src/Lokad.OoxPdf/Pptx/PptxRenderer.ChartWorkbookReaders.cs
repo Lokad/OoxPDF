@@ -22,9 +22,6 @@ internal sealed partial class PptxRenderer
 
         using var stream = new MemoryStream(sceneExternalData.Resource.Bytes, writable: false);
         OoxPackage workbookPackage = OoxPackage.Open(stream, cancellationToken);
-        // R04: nested package bytes accumulate across embedded workbooks against the
-        // conversion aggregate quota (each package is already capped individually).
-        OoxConversionBudget.Current?.ChargeNestedPackageBytes(workbookPackage.RetainedBytes);
         return ReadWorkbookDataCore(workbookPackage, cancellationToken);
     }
 
@@ -93,9 +90,6 @@ internal sealed partial class PptxRenderer
             }
 
             sheets[sheet.Name] = worksheetData;
-            // R04: cells accumulate against the conversion aggregate quota across
-            // every embedded workbook; cached workbook models do not recharge.
-            OoxConversionBudget.Current?.ChargeWorkbookCells(worksheetData.Cells.Count);
             foreach (ChartWorkbookTable table in ReadWorksheetTables(workbookPackage, worksheetPart, sheet.Name, cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -108,13 +102,6 @@ internal sealed partial class PptxRenderer
         }
 
         ChartWorkbookData? model = sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles, definedNames, tables, calculation, definedNameRecords, workbookSheets);
-        if (model is not null)
-        {
-            // R04: retained workbook models accumulate across embedded workbooks;
-            // cached models bypass this read and do not recharge.
-            OoxConversionBudget.Current?.ChargeWorkbookModels(1);
-        }
-
         return model;
     }
 

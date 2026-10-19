@@ -44,9 +44,6 @@ internal static class DocxMathMatrixLayoutTests
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, cancelled.Token, out _));
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, cancelled.Token, out _, out _));
-        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 1 });
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, default,
-            out _, out _, resolveControlMetrics: _ => font));
     }
 
     public static void MathFontMatrixFunctionArgumentsRetainOwnersIndependentPaintAndBoundedFallback()
@@ -80,9 +77,6 @@ internal static class DocxMathMatrixLayoutTests
             "Adding a matrix argument cannot admit arbitrary function recursion.");
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, cancelled.Token, out _));
-        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 });
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None,
-            out _, out _, resolveControlMetrics: Metrics));
     }
 
     public static void MathFontMatrixFencesRetainBothControlOwnersAndBoundedArgumentRoles()
@@ -121,9 +115,6 @@ internal static class DocxMathMatrixLayoutTests
             "General delimiter recursion stays outside this bounded matrix argument grammar.");
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, cancelled.Token, out _));
-        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 });
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => painted, CancellationToken.None,
-            out _, out _, resolveControlFont: _ => marks, resolveControlMetrics: _ => innerFont));
     }
 
     public static void MathFontMatrixMixedRowsRetainIndependentOwnersAndWholeFallback()
@@ -162,9 +153,6 @@ internal static class DocxMathMatrixLayoutTests
             "An unsupported late matrix rejects the whole mixed row without publishing a partial prefix or first grid.");
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, cancelled.Token, out _));
-        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 4 });
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None,
-            out _, out _, resolveControlMetrics: _ => font));
     }
 
     public static void MathFontMatrixColumnSpacingSharesSlotsAndRetainsSourceUnits()
@@ -266,9 +254,6 @@ internal static class DocxMathMatrixLayoutTests
             resolveControlMetrics: _ => MathFont()) && missing is null, "Missing placeholder metrics cannot invent an empty width or publish partial cells.");
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(Equation(matrix), cancelled.Token, out _));
-        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 1 });
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(Equation(matrix), _ => resource,
-            CancellationToken.None, out _, out _, resolveControlMetrics: _ => font));
     }
 
     public static void MathFontMatrixStructuredCellsTranslateChildRulesAndKeepControlMetrics()
@@ -454,8 +439,6 @@ internal static class DocxMathMatrixLayoutTests
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(Equation(matrix), cancelled.Token, out _));
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(Equation(matrix), _ => resource, cancelled.Token, out _, out _));
-        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 });
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(Equation(matrix), _ => resource, CancellationToken.None, out _, out _, resolveControlMetrics: _ => font));
     }
 
     private static DocxMathRun Run(string text, string? color = null) => new(new(text, 12d, color, false, false, false, null, "TestFont"), "p", null) { NormalTextValue = true };

@@ -308,13 +308,10 @@ internal static class PptxChartAxesTests
         TestAssert.True(ordinary.SequenceEqual(ReadMinorGridlineValues(100d, 20d, 1d, crossing: 40d)), "A crossing already owned by a major level must not remove another minor.");
     }
 
-    public static void PptxChartMinorGridlinesRetainTickAndCumulativeWorkBounds()
+    public static void PptxChartMinorGridlinesRetainTickBounds()
     {
-        using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxChartRangeCellsPerConversion = 33 });
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadMinorGridlineValues(100d, 20d, 4d));
-        TestAssert.Equal(7L, scope.Budget.ChartRangeCells);
+        TestAssert.True(ReadMinorGridlineValues(100d, 20d, 4d).Count > 0, "Ordinary bounded minor levels remain available.");
         TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadMinorGridlineValues(100d, 20d, 1e-12));
-        TestAssert.Equal(14L, scope.Budget.ChartRangeCells);
     }
 
     private static IReadOnlyList<double> ReadMinorGridlineValues(double max, double? major, double? minor, double? crossing = 0d, double targetCount = 9d, bool hasMajorElement = true)
@@ -337,31 +334,18 @@ internal static class PptxChartAxesTests
         }
     }
 
-    public static void PptxChartAxisTickExpansionRejectsDenseUnitsBeforeCharging()
+    public static void PptxChartAxisTickExpansionRejectsDenseUnits()
     {
-        using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(null);
         TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadBoundedAxisTicks(0d, 1d, 1e-12));
         TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadBoundedAxisTicks(0d, 99999d, 1d));
-        TestAssert.Equal(0L, scope.Budget.ChartRangeCells);
-    }
-
-    public static void PptxChartAxisTickExpansionChargesExistingCumulativeBudget()
-    {
-        using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxChartRangeCellsPerConversion = 11 });
-        TestAssert.Equal("0,1,2,3,4", string.Join(",", ReadBoundedAxisTicks(0d, 4d, 1d)));
-        TestAssert.Equal(6L, scope.Budget.ChartRangeCells);
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadBoundedAxisTicks(0d, 4d, 1d));
-        TestAssert.Equal(6L, scope.Budget.ChartRangeCells);
     }
 
     public static void PptxChartAxisTickExpansionKeepsBoundaryAndOrdinaryTicks()
     {
-        using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(null);
         IReadOnlyList<double> boundary = ReadBoundedAxisTicks(0d, 99998d, 1d);
         TestAssert.Equal(99999, boundary.Count);
         TestAssert.Equal(0d, boundary[0]);
         TestAssert.Equal(99998d, boundary[^1]);
-        TestAssert.Equal(100000L, scope.Budget.ChartRangeCells);
         TestAssert.Equal("-7,-5,0,5,7", string.Join(",", ReadBoundedAxisTicks(-7d, 7d, 5d)));
         TestAssert.Equal("0,5,10,15,20,25,30,35,40,45,50", string.Join(",", ReadBoundedAxisTicks(0d, 50d, null)));
         TestAssert.Equal("1,2,3", string.Join(",", ReadBoundedAxisTicks(0d, 4d, 1d, includeEndpoints: false)));
@@ -416,16 +400,10 @@ internal static class PptxChartAxesTests
 
     public static void PptxChartSourceMinimumIntervalsRetainWorkAndProgressBounds()
     {
-        using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxChartRangeCellsPerConversion = 11 });
         TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadBoundedAxisTicks(7d, 107d, 1e-12, sourceMinimumIntervals: true));
-        TestAssert.Equal(0L, scope.Budget.ChartRangeCells);
         TestAssert.Equal(6, ReadBoundedAxisTicks(7d, 107d, 20d, sourceMinimumIntervals: true).Count);
-        TestAssert.Equal(7L, scope.Budget.ChartRangeCells);
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadBoundedAxisTicks(-7d, 93d, 20d, sourceMinimumIntervals: true));
-        TestAssert.Equal(7L, scope.Budget.ChartRangeCells);
-        using OoxConversionBudget.Scope progress = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxChartRangeCellsPerConversion = 100 });
+        TestAssert.Equal(6, ReadBoundedAxisTicks(-7d, 93d, 20d, sourceMinimumIntervals: true).Count);
         TestAssert.Throws<OoxPdfLimitExceededException>(() => ReadBoundedAxisTicks(1e16, 1e16 + 4d, 1d, sourceMinimumIntervals: true));
-        TestAssert.Equal(6L, progress.Budget.ChartRangeCells);
     }
 
     public static void PptxChartSourceMinimumPolicyKeepsSceneAuthorityAndUnsupportedFallbacks()

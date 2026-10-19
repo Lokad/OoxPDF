@@ -59,7 +59,6 @@ internal sealed class PdfEmbeddedFont
 
     public static PdfEmbeddedFont Create(OpenTypeFont font, IEnumerable<int> codePoints, CancellationToken cancellationToken)
     {
-        OoxConversionBudget.Current?.ChargeFontWork(1);
         var unicodeByOriginalGlyph = new SortedDictionary<ushort, int>();
         foreach (int codePoint in codePoints)
         {
@@ -135,7 +134,6 @@ internal sealed class PdfEmbeddedFont
     internal static PdfEmbeddedFont CreateForGlyphMappings(OpenTypeFont font,
         IEnumerable<(ushort Glyph, int Unicode)> mappings, CancellationToken token)
     {
-        OoxConversionBudget.Current?.ChargeFontWork(1);
         var owned = new SortedDictionary<ushort, int>();
         foreach ((ushort glyph, int unicode) in mappings)
         {
@@ -187,9 +185,6 @@ internal sealed class PdfEmbeddedFont
         string setHash = ComputeResourceMappingHash(font, sortedGlyphs);
         string baseFontName = CreateBaseFontName(font, setHash, subset is not null);
         var embedded = new PdfEmbeddedFont(font, baseFontName, setHash, sortedGlyphs, subset);
-        // R06.2: admit the retained font program at construction. Identical-merge
-        // fast paths return existing instances above and create nothing.
-        OoxConversionBudget.Current?.ChargeRetainedFontBytes(embedded.FontProgramBytes.Length);
         return embedded;
     }
 

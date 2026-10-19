@@ -213,6 +213,12 @@ internal static class CliTests
 
     private static string BuildCli()
     {
+        // Qualification supplies the immutable CLI from the same artifact.
+        if (Environment.GetEnvironmentVariable("OOXPDF_TEST_CLI_ASSEMBLY") is { Length: > 0 } frozen)
+        {
+            string path = Path.GetFullPath(frozen);
+            return File.Exists(path) ? path : throw new InvalidOperationException("Frozen CLI assembly is missing.");
+        }
         string repositoryRoot = FindRepositoryRoot();
         var start = new ProcessStartInfo("dotnet")
         {

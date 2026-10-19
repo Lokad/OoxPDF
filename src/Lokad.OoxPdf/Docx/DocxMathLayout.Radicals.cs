@@ -80,7 +80,6 @@ internal static partial class DocxMathLayout
         Lokad.OoxPdf.Pptx.RgbColor color = child.Glyphs.Count == 0 ? default : child.Glyphs[0].Color;
         if (radical.ControlText is { } control)
         { color = default; Lokad.OoxPdf.Pptx.RgbColor.TryParse(control.ColorHex, out color); }
-        OoxConversionBudget.Current?.ChargeSceneNodes(shape.Parts.Count == 0 ? 2 : shape.Parts.Count + 1);
         glyphs.Add(new(0x221A, 0x221A, resource, shape.EncodedGlyph, glyphSize, rootX, baseline,
             childX - rootX, color) { OriginalGlyph = shape.Glyph, ControlOwner = radical, AssemblyParts = shape.Parts });
         foreach (var glyph in child.Glyphs) { token.ThrowIfCancellationRequested(); glyphs.Add(glyph with { X = glyph.X + childX }); }

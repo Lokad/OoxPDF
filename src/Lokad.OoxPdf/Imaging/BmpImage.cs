@@ -20,9 +20,6 @@ internal sealed class BmpImage
 
     // Q01: cooperative cancellation inside the pixel loop (see PngImage.Read).
 
-    // Read keeps release-on-return lifetime for header probes, tests, and callers
-    // without downstream transforms. Production image paths use ReadOwned and hold
-    // the reservation across crop/recolor/compress work (R02).
     public static BmpImage Read(byte[] bytes, CancellationToken cancellationToken = default)
     {
         using DecodedPixels owned = ReadOwned(bytes, cancellationToken);
@@ -70,37 +67,26 @@ internal sealed class BmpImage
 
         int stride32 = checked((int)stride);
 
-        // R02: BMP decodes in place from caller-owned input, so the working set is
-        // exactly the output plane. Ownership transfers to the caller (see PngImage).
-        long liveEstimate = checked((long)width * height * 3L);
-        OoxConversionBudget.LiveReservation? liveReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(liveEstimate);
-        try
+        var rgb = new byte[width * height * 3];
+        for (int y = 0; y < height; y++)
         {
-            var rgb = new byte[width * height * 3];
-            for (int y = 0; y < height; y++)
+            if ((y & 255) == 0)
             {
-                if ((y & 255) == 0)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                }
-                int sourceY = topDown ? y : height - 1 - y;
-                int source = pixelOffset + sourceY * stride32;
-                int target = y * width * 3;
-                for (int x = 0; x < width; x++)
-                {
-                    rgb[target++] = bytes[source + 2];
-                    rgb[target++] = bytes[source + 1];
-                    rgb[target++] = bytes[source];
-                    source += bytesPerPixel;
-                }
+                cancellationToken.ThrowIfCancellationRequested();
             }
-            return new DecodedPixels(width, height, rgb, alpha: null, liveReservation);
+            int sourceY = topDown ? y : height - 1 - y;
+            int source = pixelOffset + sourceY * stride32;
+            int target = y * width * 3;
+            for (int x = 0; x < width; x++)
+            {
+                rgb[target++] = bytes[source + 2];
+                rgb[target++] = bytes[source + 1];
+                rgb[target++] = bytes[source];
+                source += bytesPerPixel;
+            }
         }
-        catch
-        {
-            liveReservation?.Dispose();
-            throw;
-        }
+        return new DecodedPixels(width, height, rgb, alpha: null);
+
     }
 
     private static ushort U16(byte[] bytes, int offset)

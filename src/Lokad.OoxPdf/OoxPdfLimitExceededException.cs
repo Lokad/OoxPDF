@@ -1,7 +1,7 @@
 namespace Lokad.OoxPdf;
 
 /// <summary>
-/// Reports that a conversion exceeded a bounded resource or work budget
+/// Reports that a conversion exceeded an output/input bound or was refused host memory admission.
 /// Derives from IOException so existing
 /// IO-based failure handling treats it as a conversion failure, but renderers
 /// must not swallow it as recoverable per-node content. It is deliberately not an InvalidDataException so PPTX per-node recovery does not swallow it.

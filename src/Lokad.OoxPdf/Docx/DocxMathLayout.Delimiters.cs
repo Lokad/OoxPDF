@@ -126,7 +126,6 @@ internal static partial class DocxMathLayout
             double baseline = axis - (shape.YMax + shape.YMin) / 2d * scale;
             double glyphAdvance = shape.AdvanceWidth * scale;
             delimiterHeight = Math.Max(delimiterHeight, (shape.YMax - shape.YMin) * scale);
-            OoxConversionBudget.Current?.ChargeSceneNodes(shape.Parts.Count == 0 ? 1 : shape.Parts.Count);
             glyphs.Add(new(point, point, resource, shape.EncodedGlyph, glyphSize,
                 advance, baseline, glyphAdvance, color)
                 { OriginalGlyph = shape.Glyph, ControlOwner = delimiter, AssemblyParts = shape.Parts });

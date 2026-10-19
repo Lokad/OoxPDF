@@ -26,12 +26,6 @@ internal sealed class PngImage
 
     public byte[]? Alpha { get; }
 
-    // Q01: cooperative cancellation inside the long decode loops. The token is
-    // optional so header-only probes and existing callers keep working; renderers
-    // pass the conversion token so huge images stay cancellable mid-decode.
-    // Read keeps release-on-return lifetime for header probes, tests, and callers
-    // without downstream transforms. Production image paths use ReadOwned and hold
-    // the reservation across crop/recolor/compress work (R02).
     public static PngImage Read(byte[] bytes, CancellationToken cancellationToken = default)
     {
         using DecodedPixels owned = ReadOwned(bytes, cancellationToken);
@@ -100,48 +94,31 @@ internal sealed class PngImage
             }
         }
 
-        int pngBitsPerPixel = colorType switch { 0 or 3 => bitDepth, 2 => 24, 4 => 16, 6 => 32, _ => 8 };
-        int maximumStride = checked((width * pngBitsPerPixel + 7) / 8);
         long compressedTotal = 0L;
         foreach ((int Offset, int Length) range in idatRanges)
         {
             compressedTotal = checked(compressedTotal + range.Length);
         }
-        // Reserve deterministic decode buffers before staging or pixel allocation:
-        // compressed IDAT, two maximum-width scanlines and final pixel planes.
-        // DecodedPixels keeps this estimate live through downstream transforms.
-        bool hasAlpha = colorType is 3 or 4 or 6 || (colorType == 0 && transparency is { Length: >= 2 });
-        long liveEstimate = width <= 0 || height <= 0
-            ? 0
-            : checked(compressedTotal + 2L * maximumStride + checked((long)width * height * (hasAlpha ? 4L : 3L)));
-        OoxConversionBudget.LiveReservation? liveReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(liveEstimate);
-        try
+        // Keep the existing exact-sized IDAT staging; scanlines are decoded
+        // directly from the inflater instead of retaining a full inflated image.
+        byte[] compressed = new byte[checked((int)compressedTotal)];
+        int compressedFill = 0;
+        foreach ((int Offset, int Length) range in idatRanges)
         {
-            // Keep the existing exact-sized IDAT staging; scanlines are decoded
-            // directly from the inflater instead of retaining a full inflated image.
-            byte[] compressed = new byte[checked((int)compressedTotal)];
-            int compressedFill = 0;
-            foreach ((int Offset, int Length) range in idatRanges)
-            {
-                bytes.AsSpan(range.Offset, range.Length).CopyTo(compressed.AsSpan(compressedFill));
-                compressedFill += range.Length;
-            }
+            bytes.AsSpan(range.Offset, range.Length).CopyTo(compressed.AsSpan(compressedFill));
+            compressedFill += range.Length;
+        }
 
-            using var input = new MemoryStream(compressed, 0, compressed.Length, writable: false);
-            using var zlib = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress);
-            PngImage decoded = Decode(zlib, width, height, bitDepth, colorType, interlace, palette, transparency, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            if (zlib.ReadByte() != -1)
-            {
-                throw new InvalidDataException("PNG pixel data exceeds the size implied by its dimensions.");
-            }
-            return new DecodedPixels(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha, liveReservation);
-        }
-        catch
+        using var input = new MemoryStream(compressed, 0, compressed.Length, writable: false);
+        using var zlib = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress);
+        PngImage decoded = Decode(zlib, width, height, bitDepth, colorType, interlace, palette, transparency, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (zlib.ReadByte() != -1)
         {
-            liveReservation?.Dispose();
-            throw;
+            throw new InvalidDataException("PNG pixel data exceeds the size implied by its dimensions.");
         }
+        return new DecodedPixels(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha);
+
     }
 
     private static bool IsSupportedFormat(int bitDepth, int colorType)

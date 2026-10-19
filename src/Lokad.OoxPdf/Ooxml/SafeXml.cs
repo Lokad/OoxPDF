@@ -44,7 +44,6 @@ internal static class SafeXml
             using XmlReader reader = XmlReader.Create(stream, CreateReaderSettings(maxCharacters));
             using var bounded = new DepthBoundReader(reader, maxDepth, maxNodes, maxAttributes, cancellationToken);
             XDocument document = XDocument.Load(bounded, LoadOptions.None);
-            bounded.ChargeRemaining();
             OoxMarkupCompatibility.ResolveAlternateContent(document);
             cancellationToken.ThrowIfCancellationRequested();
             return document;
@@ -63,25 +62,6 @@ internal static class SafeXml
         private long nodes;
         private long elementCount;
         private long attributeCount;
-        private long chargedObjects;
-
-        // R04: elements plus attributes accumulate against the conversion aggregate
-        // quota as parsing proceeds, so a conversion-wide budget fails mid-parse
-        // instead of materializing an unbounded retained DOM set. Cached parses do
-        // not recharge; outside a conversion scope this is a null no-op.
-        private void ChargePending()
-        {
-            long total = elementCount + attributeCount;
-            long delta = total - chargedObjects;
-            if (delta > 0)
-            {
-                OoxConversionBudget.Current?.ChargeXmlNodes(delta);
-                chargedObjects = total;
-            }
-        }
-
-        internal void ChargeRemaining() => ChargePending();
-
         public override int AttributeCount => inner.AttributeCount;
         public override string BaseURI => inner.BaseURI;
         public override int Depth => inner.Depth;
@@ -155,7 +135,6 @@ internal static class SafeXml
                 if (++nodes % 4096 == 0)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    ChargePending();
                 }
             }
 

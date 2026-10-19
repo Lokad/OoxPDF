@@ -71,9 +71,6 @@ internal sealed partial class PptxRenderer
                 throw new OoxPdfLimitExceededException("Chart data range union exceeds the maximum supported cell count.");
             }
 
-            // conversion-wide cumulative charge before growing the union list.
-            OoxConversionBudget.Current?.ChargeChartRangeCells(areaCells);
-
             values.EnsureCapacity(values.Count + (int)areaCells);
             ChartWorkbookTable sourceTable = default;
             bool hasSourceTable = !string.IsNullOrWhiteSpace(resolution.TableName) &&

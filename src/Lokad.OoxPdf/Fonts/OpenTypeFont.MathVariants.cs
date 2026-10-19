@@ -25,7 +25,6 @@ internal sealed partial class OpenTypeFont
         if (glyph == 0 || glyph >= GlyphCount || !double.IsFinite(minimumHeight) || minimumHeight < 0d ||
             minimumHeight > ushort.MaxValue || !TryGetMathVerticalConstruction(glyph, out _, out var construction)) { return false; }
         int count = U16(construction, 2);
-        if (count > 0) { OoxConversionBudget.Current?.ChargeFontWork(1); }
         bool found = false, adequate = false;
         OpenTypeMathGlyphVariant selected = default;
         for (int i = 0; i < count; i++)
@@ -57,7 +56,6 @@ internal sealed partial class OpenTypeFont
         ReadOnlySpan<byte> source = construction.Slice(offset);
         int count = U16(source, 4);
         if (count == 0 || source.Length - 6 < count * 10) return false;
-        OoxConversionBudget.Current?.ChargeFontWork(1);
         for (int index = 0; index < U16(construction, 2); index++)
         {
             token.ThrowIfCancellationRequested();
@@ -68,7 +66,6 @@ internal sealed partial class OpenTypeFont
         for (int index = 0; index < count; index++)
         {
             token.ThrowIfCancellationRequested();
-            OoxConversionBudget.Current?.ChargeFontWork(1);
             int at = 6 + index * 10;
             ushort partGlyph = U16(source, at), start = U16(source, at + 2), end = U16(source, at + 4),
                 advance = U16(source, at + 6), flags = U16(source, at + 8);

@@ -28,29 +28,28 @@ public sealed class OoxPdfOptions
     public Action<OoxPdfDiagnostic>? DiagnosticSink { get; init; }
 
     /// <summary>
-    /// Cumulative per-conversion work budgets. When null, generous
-    /// built-in defaults apply (see <see cref="OoxConversionLimits"/>). Set tighter
-    /// values to bound covered work in a shared process (counts bound work, not heap
-    /// bytes; see R04/V01); budget crossings fail
-    /// with <see cref="OoxPdfLimitExceededException"/> before further expansion and
-    /// never produce a partial PDF.
+    /// Output-size/page limits and the resident page-content staging window.
+    /// Null selects the built-in defaults. Individual archive, XML, image and
+    /// font bounds apply independently.
     /// </summary>
     public OoxConversionLimits? ConversionLimits { get; init; }
 
     /// <summary>
-    /// When true, a successful conversion emits one informational
-    /// CONVERSION_RESOURCE_SUMMARY diagnostic reporting cumulative work counters
-    /// (pages, chart cells, table fragments, images, font operations, XML nodes,
-    /// workbook cells, serialized page/content/output bytes, retained image/font
-    /// bytes, serialized font/image bytes) plus the peak live image
-    /// decode reservation so hosts can account concurrent conversions. File conversions
-    /// snapshot after serialization, so page/content/output fields carry post-write
-    /// values; stream conversions snapshot after rendering but before serialization,
-    /// so page/content fields carry render-stage values while output stays zero there.
-    /// Informational diagnostics never affect CLI strict exit codes. Disabled by default.
+    /// Optional host admission to shared memory capacity. A host chooses a coarse
+    /// reservation covering this conversion's retained storage and construction
+    /// peak. Refusal throws OoxPdfLimitExceededException before construction or
+    /// output publication. No per-object memory accounting is performed.
+    /// </summary>
+    public IOoxPdfMemoryAdmission? MemoryAdmission { get; init; }
+
+    /// <summary>
+    /// Emits an informational CONVERSION_RESOURCE_SUMMARY with page/content,
+    /// serialized output/font/image and spilled-content byte totals. Stream
+    /// conversions report before serialization so observers can fail without
+    /// writing output; file conversions report before atomic publication.
+    /// This does not measure memory. Disabled by default.
     /// </summary>
     public bool ReportResourceUsage { get; init; }
-
 
     internal void Validate()
     {

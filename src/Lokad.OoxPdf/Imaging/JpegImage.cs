@@ -43,9 +43,6 @@ internal sealed class JpegImage
 
     public byte[] Rgb { get; }
 
-    // Read keeps release-on-return lifetime for header probes, tests, and callers
-    // without downstream transforms. Production image paths use ReadOwned and hold
-    // the reservation across crop/recolor/compress work (R02).
     public static JpegImage Read(byte[] bytes, CancellationToken cancellationToken = default)
     {
         using DecodedPixels owned = ReadOwned(bytes, cancellationToken);
@@ -54,8 +51,8 @@ internal sealed class JpegImage
     public static DecodedPixels ReadOwned(byte[] bytes, CancellationToken cancellationToken = default)
     {
         var decoder = new Decoder(bytes, cancellationToken);
-        (JpegImage image, OoxConversionBudget.LiveReservation? reservation) = decoder.Decode();
-        return new DecodedPixels(image.Width, image.Height, image.Rgb, null, reservation);
+        JpegImage image = decoder.Decode();
+        return new DecodedPixels(image.Width, image.Height, image.Rgb, null);
     }
 
     private sealed class Decoder
@@ -77,18 +74,13 @@ internal sealed class JpegImage
             this.cancellationToken = cancellationToken;
         }
 
-        // R02: the scan reservation (sample planes plus output pixels) spans the
-        // entropy decode and RGB construction, then transfers to the caller via
-        // ReadOwned. It releases here only on failure; the SOS-less path keeps the
-        // legacy failure behavior below.
-        public (JpegImage Image, OoxConversionBudget.LiveReservation? Reservation) Decode()
+        public JpegImage Decode()
         {
             if (bytes.Length < 4 || bytes[0] != 0xFF || bytes[1] != 0xD8)
             {
                 throw new InvalidDataException("Data is not a JPEG image.");
             }
             int offset = 2;
-            OoxConversionBudget.LiveReservation? scanReservation = null;
             while (offset < bytes.Length)
             {
                 byte marker = ReadMarker(ref offset);
@@ -98,7 +90,7 @@ internal sealed class JpegImage
                 }
                 if (marker == 0xDA)
                 {
-                    DecodeScan(ref offset, out scanReservation);
+                    DecodeScan(ref offset);
                     break;
                 }
                 int length = ReadSegmentLength(offset);
@@ -119,19 +111,10 @@ internal sealed class JpegImage
             }
             if (width <= 0 || height <= 0 || components.Count is not (1 or 3))
             {
-                scanReservation?.Dispose();
                 throw new InvalidDataException("JPEG frame metadata is incomplete.");
             }
             ImagePixelBudget.Check(width, height, "JPEG");
-            try
-            {
-                return (new JpegImage(width, height, BuildRgb()), scanReservation);
-            }
-            catch
-            {
-                scanReservation?.Dispose();
-                throw;
-            }
+            return new JpegImage(width, height, BuildRgb());
         }
 
         private byte ReadMarker(ref int offset)
@@ -290,9 +273,8 @@ internal sealed class JpegImage
             }
         }
 
-        private void DecodeScan(ref int offset, out OoxConversionBudget.LiveReservation? reservation)
+        private void DecodeScan(ref int offset)
         {
-            reservation = null;
             int length = ReadSegmentLength(offset);
             ReadOnlySpan<byte> segment = bytes.AsSpan(offset + 2, length - 2);
             if (segment.Length < 4)
@@ -320,45 +302,32 @@ internal sealed class JpegImage
                 throw new InvalidDataException("JPEG frame metadata is incomplete.");
             }
             ImagePixelBudget.Check(width, height, "JPEG");
-            // R02: reserve sample planes plus output pixels together before allocating
-            // either; the reservation transfers to the caller through Decode and releases
-            // only after crop/recolor/compress work consumes the pixels.
-            long planeBytes = MeasureComponentPlanes();
-            long liveEstimate = checked(planeBytes + checked((long)width * height * 3L));
-            OoxConversionBudget.LiveReservation? live = OoxConversionBudget.Current?.ReserveLiveImageBytes(liveEstimate);
-            try
+            InitializeComponentDimensions();
+            AllocateComponentBuffers();
+            var reader = new EntropyReader(bytes, offset);
+            int mcuColumns = (width + maxHorizontal * 8 - 1) / (maxHorizontal * 8);
+            int mcuRows = (height + maxVertical * 8 - 1) / (maxVertical * 8);
+            for (int mcuY = 0; mcuY < mcuRows; mcuY++)
             {
-                AllocateComponentBuffers();
-                var reader = new EntropyReader(bytes, offset);
-                int mcuColumns = (width + maxHorizontal * 8 - 1) / (maxHorizontal * 8);
-                int mcuRows = (height + maxVertical * 8 - 1) / (maxVertical * 8);
-                for (int mcuY = 0; mcuY < mcuRows; mcuY++)
+                cancellationToken.ThrowIfCancellationRequested();
+                for (int mcuX = 0; mcuX < mcuColumns; mcuX++)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    for (int mcuX = 0; mcuX < mcuColumns; mcuX++)
+                    foreach (Component component in components)
                     {
-                        foreach (Component component in components)
+                        for (int v = 0; v < component.Vertical; v++)
                         {
-                            for (int v = 0; v < component.Vertical; v++)
+                            for (int h = 0; h < component.Horizontal; h++)
                             {
-                                for (int h = 0; h < component.Horizontal; h++)
-                                {
-                                    DecodeBlock(reader, component, (mcuX * component.Horizontal + h) * 8, (mcuY * component.Vertical + v) * 8);
-                                }
+                                DecodeBlock(reader, component, (mcuX * component.Horizontal + h) * 8, (mcuY * component.Vertical + v) * 8);
                             }
                         }
                     }
                 }
-                reservation = live;
             }
-            catch
-            {
-                live?.Dispose();
-                throw;
-            }
+
         }
 
-        private long MeasureComponentPlanes()
+        private void InitializeComponentDimensions()
         {
             cancellationToken.ThrowIfCancellationRequested();
             int mcuUnitX;
@@ -387,7 +356,6 @@ internal sealed class JpegImage
             {
                 throw new InvalidDataException("JPEG dimensions overflow.", ex);
             }
-            long totalBytes = 0;
             foreach (Component component in components)
             {
                 int sampleWidth;
@@ -409,9 +377,7 @@ internal sealed class JpegImage
                 component.SampleWidth = sampleWidth;
                 component.SampleHeight = sampleHeight;
                 component.DcPredictor = 0;
-                totalBytes = checked(totalBytes + planeBytes);
             }
-            return totalBytes;
 
         }
 

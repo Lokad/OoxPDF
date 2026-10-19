@@ -42,8 +42,6 @@ internal static partial class DocxMathNaryTests
                     resolveControlFont: _ => missing) && absent is null, "A missing selected CID cannot publish a partial integral.");
                 using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
                 TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, cancelled.Token, out _));
-                using var budget = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 1 });
-                TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, default, out _, out _));
             }
         }
     }

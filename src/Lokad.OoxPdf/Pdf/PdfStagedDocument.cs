@@ -12,17 +12,21 @@ internal sealed class PdfStagedDocument : IDisposable
 
     internal PdfStagedDocument(IReadOnlyList<PdfPage> pages, PdfPageContentStaging staging, IReadOnlyList<int> pageEntries, IReadOnlyDictionary<PdfTransparencyGroup, int> groupEntries)
     {
-        Pages = pages;
+        this.pages = pages;
         this.staging = staging;
         PageEntries = pageEntries;
         GroupEntries = groupEntries;
     }
 
-    public IReadOnlyList<PdfPage> Pages { get; }
+    private IReadOnlyList<PdfPage> pages;
+    public IReadOnlyList<PdfPage> Pages
+    {
+        get { ThrowIfDisposed(); return pages; }
+    }
 
-    internal IReadOnlyList<int> PageEntries { get; }
+    internal IReadOnlyList<int> PageEntries { get; private set; }
 
-    internal IReadOnlyDictionary<PdfTransparencyGroup, int> GroupEntries { get; }
+    internal IReadOnlyDictionary<PdfTransparencyGroup, int> GroupEntries { get; private set; }
 
     internal PdfPageContentStaging Staging
     {
@@ -46,6 +50,9 @@ internal sealed class PdfStagedDocument : IDisposable
         }
 
         disposed = true;
+        pages = [];
+        PageEntries = [];
+        GroupEntries = new Dictionary<PdfTransparencyGroup, int>();
         staging.Dispose();
     }
 }

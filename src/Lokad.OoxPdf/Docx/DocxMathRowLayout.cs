@@ -134,7 +134,6 @@ internal static class DocxMathRowLayout
                     token.ThrowIfCancellationRequested();
                     int rendered = run.NormalText ? rune.Value : RenderCodePoint(rune.Value, run.MathStyleValue);
                     if (rendered < 0) { fallback = "UnsupportedMathAlphabet"; return false; }
-                    OoxConversionBudget.Current?.ChargeSceneNodes(1);
                     atoms.Add(new(run, rune, new Rune(rendered), run.NormalText ? AtomKind.Ordinary : Kind(rune.Value)));
                 }
             }

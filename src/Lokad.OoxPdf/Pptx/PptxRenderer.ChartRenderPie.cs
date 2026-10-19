@@ -26,7 +26,6 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        OoxConversionBudget.Current?.ChargeChartRangeCells(slotCount);
         return BuildDensePointIndex(values)
             .Values
             .Where(point => point.Value is > 0d)

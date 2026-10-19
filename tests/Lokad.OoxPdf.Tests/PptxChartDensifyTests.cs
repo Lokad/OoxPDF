@@ -125,7 +125,7 @@ internal static class PptxChartDensifyTests
         TestAssert.True(allocated <= 262144L, "Counting dense slots must not densify 10,000-slot vectors, allocated " + allocated + " bytes.");
     }
 
-    public static void SubsetCacheChargesOncePerCodepointSet()
+    public static void SubsetCacheReusesIdenticalCodepointSets()
     {
         byte[] bytes = TestFontBuilder.CreateTestFont();
         OpenTypeFont font = OpenTypeFont.Load(bytes);
@@ -137,12 +137,10 @@ internal static class PptxChartDensifyTests
             IsFallback: false);
         var resolver = new PresentationFontResolver(new CannedFontResolver(resolution));
         int[] codePoints = Enumerable.Range(65, 200).ToArray();
-        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxFontWorkPerConversion = 100 }))
         {
             PdfEmbeddedFont first = resolver.GetOrCreateSubset(resolution, font, codePoints, CancellationToken.None);
             PdfEmbeddedFont second = resolver.GetOrCreateSubset(resolution, font, codePoints, CancellationToken.None);
             TestAssert.True(ReferenceEquals(first, second), "Identical codepoint sets must share one subset.");
-            TestAssert.Equal(1, scope.Budget.FontWork);
         }
     }
 
@@ -166,10 +164,10 @@ internal static class PptxChartDensifyTests
         TestAssert.True(InvokeBool(vectorType, declaredExtends, "HasAnyVisibleText"), "Declared counts extend (never truncate) the inferred range.");
     }
 
-    public static void RadarBuildSkipsValuelessVectorsWithoutCharging()
+    public static void RadarBuildSkipsValuelessVectors()
     {
         // R15: valueless series (even with declared slots) filter before densifying,
-        // so only valued vectors materialize and charge.
+        // so only valued vectors materialize.
         Type vectorType = NumberVectorType();
         Type pointType = NumberPointType();
         Array series = Array.CreateInstance(vectorType, 2);
@@ -177,7 +175,6 @@ internal static class PptxChartDensifyTests
         series.SetValue(BuildNumberVector(vectorType, pointType, [(0, 1d)], null), 1);
         MethodInfo build = typeof(PptxRenderer).GetMethod("BuildRadarSeries", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Expected radar builder.");
-        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxChartRangeCellsPerConversion = 5 }))
         {
             System.Collections.IList built;
             try
@@ -190,7 +187,6 @@ internal static class PptxChartDensifyTests
             }
 
             TestAssert.Equal(1, built.Count);
-            TestAssert.Equal(1, scope.Budget.ChartRangeCells);
         }
     }
 
@@ -858,7 +854,6 @@ internal static class PptxChartDensifyTests
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
-
 
     private sealed class CannedFontResolver(FontFaceResolution resolution) : IFontResolver
     {

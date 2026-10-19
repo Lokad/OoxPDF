@@ -54,7 +54,6 @@ internal static partial class DocxMathLayout
         double argumentSize = size;
         if (scriptLevel != 0 && !DocxMathArgumentMetrics.TryGetScriptFontSize(font, size, scriptLevel, out argumentSize) ||
             !TryMeasureHiddenPlaceholder(font, OfficePdfTextEmissionProfile.FontSize(argumentSize), out box)) return false;
-        OoxConversionBudget.Current?.ChargeSceneNodes(1);
         fallback = null;
         return true;
     }
@@ -133,7 +132,6 @@ internal static partial class DocxMathLayout
         if (!equation.Display && !DocxMathArgumentMetrics.TryGetScriptFontSize(font, size, 1, out argumentSize) ||
             !TryMeasureHiddenPlaceholder(font, OfficePdfTextEmissionProfile.FontSize(argumentSize), out var argument) || argument is null)
         { fallback = "MissingEmptyFractionPlaceholder"; return false; }
-        OoxConversionBudget.Current?.ChargeSceneNodes(2);
         RgbColor.TryParse(fraction.ControlText.ColorHex, out var color);
         return TryComposeFraction(equation, fraction, font, constants, size, argument, argument, color,
             useParentMetrics: true, token, out box, out fallback);

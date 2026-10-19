@@ -167,7 +167,7 @@ internal static partial class PptxImagesTests
             "Following corner markers remain painted after outlines, transforms and shadows.");
     }
 
-    public static void PptxPictureGeometryBlurMasksKeepCornersTransparentAndRespectBudgets()
+    public static void PptxPictureGeometryBlurMasksKeepCornersTransparent()
     {
         var diagnostics = new List<OoxPdfDiagnostic>();
         var effects = RenderGeometryPages(PictureGeometryCase("picture-geometry-effects"), diagnostics);
@@ -188,16 +188,7 @@ internal static partial class PptxImagesTests
             TestAssert.Equal((byte)255, alpha[shadow.Height / 2 * shadow.Width + shadow.Width / 2]);
             TestAssert.Contains("144 376 20 20 re f*", NormalizeGeometryContent(page.Content));
         }
-        foreach (var limits in new[] {
-            new OoxConversionLimits { MaxRetainedImageBytesPerConversion = 0 },
-            new OoxConversionLimits { MaxLiveImageBytesPerConversion = 0 } })
-        {
-            using var input = File.OpenRead(PictureGeometryCase("picture-geometry-blur"));
-            using var output = new MemoryStream();
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output,
-                new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, ConversionLimits = limits }));
-            TestAssert.Equal(0L, output.Length);
-        }
+
     }
 
     public static void PptxPictureGeometryCssKeywordsAndInvalidHexNeverThrow()

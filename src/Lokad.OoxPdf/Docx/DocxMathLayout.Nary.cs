@@ -130,7 +130,6 @@ internal static partial class DocxMathLayout
         double above = Math.Max(0d, baseline + bounds.YMax * scale), below = Math.Max(0d, -baseline - bounds.YMin * scale);
         RgbColor color = body.Glyphs.Count == 0 ? default : body.Glyphs[0].Color;
         if (nary.ControlText is { } control) { color = default; RgbColor.TryParse(control.ColorHex, out color); }
-        OoxConversionBudget.Current?.ChargeSceneNodes(1);
         var glyphs = new List<DocxMathGlyphPlacement> { new(point, point, resource, cid.ToString("X4", CultureInfo.InvariantCulture),
             glyphSize, operatorX, baseline, operatorAdvance, color) { OriginalGlyph = variant.Glyph, ControlOwner = nary } };
         var rules = new List<DocxMathRulePlacement>();

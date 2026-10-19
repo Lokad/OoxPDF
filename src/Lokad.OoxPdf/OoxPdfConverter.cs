@@ -116,7 +116,6 @@ public static class OoxPdfConverter
         OoxPdfInputKind inputKind = DetectInputKind(inputPath, options.InputKind);
         cancellationToken.ThrowIfCancellationRequested();
 
-        using FileStream input = File.OpenRead(inputPath);
         // one explicitly scoped conversion budget per Convert call.
         // Totals are snapshotted before publication; the summary below emits before the
         // atomic move succeeds, so a throwing observer fails the conversion while the
@@ -140,16 +139,20 @@ public static class OoxPdfConverter
         string stagingPath = Path.Combine(outputDirectory!, Path.GetFileName(outputPath) + ".tmp-" + Guid.NewGuid().ToString("N"));
         try
         {
-            using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits))
+            using (IDisposable? memoryAdmission = AcquireMemoryAdmission(options, cancellationToken))
             {
-                // R06.3: the writer drains the producer enumerable once, spilling page
-                // content past the resident window and retaining only descriptors.
-                using (FileStream output = File.Create(stagingPath))
+                using FileStream input = File.OpenRead(inputPath);
+                using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits))
                 {
-                    PdfDocumentWriter.WriteStaged(output, RenderPages(input, inputKind, options, cancellationToken), options.ConversionLimits ?? new OoxConversionLimits(), options.DiagnosticSink, cancellationToken, options.FixedCreationDate);
+                    // R06.3: the writer drains the producer enumerable once, spilling page
+                    // content past the resident window and retaining only descriptors.
+                    using (FileStream output = File.Create(stagingPath))
+                    {
+                        PdfDocumentWriter.WriteStaged(output, RenderPages(input, inputKind, options, cancellationToken), options.ConversionLimits ?? new OoxConversionLimits(), options.DiagnosticSink, cancellationToken, options.FixedCreationDate);
+                    }
+                    totals = scope.Budget.Totals;
+                    pageCount = checked((int)totals.PdfPages);
                 }
-                totals = scope.Budget.Totals;
-                pageCount = checked((int)totals.PdfPages);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -209,6 +212,7 @@ public static class OoxPdfConverter
         cancellationToken.ThrowIfCancellationRequested();
 
         OoxPdfInputKind inputKind = RequireExplicitInputKind(options.InputKind);
+        using IDisposable? memoryAdmission = AcquireMemoryAdmission(options, cancellationToken);
         OoxConversionTotals totals;
         // R06.1: like the file path, the scope stays open through serialization and
         // output chunks admit incrementally during WriteBlank; the
@@ -227,6 +231,24 @@ public static class OoxPdfConverter
                 ReportResourceUsage(options, totals, checked((int)scope.Budget.PdfPages));
                 PdfDocumentWriter.EmitStaged(output, staged, cancellationToken, options.FixedCreationDate);
             }
+        }
+    }
+
+    private static IDisposable? AcquireMemoryAdmission(OoxPdfOptions options, CancellationToken cancellationToken)
+    {
+        if (options.MemoryAdmission is not { } admission) { return null; }
+        cancellationToken.ThrowIfCancellationRequested();
+        IDisposable lease = admission.TryAcquire(cancellationToken)
+            ?? throw new OoxPdfLimitExceededException("Host refused shared-memory admission for the conversion.");
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return lease;
+        }
+        catch
+        {
+            lease.Dispose();
+            throw;
         }
     }
 

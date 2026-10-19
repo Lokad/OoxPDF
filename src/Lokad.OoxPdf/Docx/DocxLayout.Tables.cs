@@ -455,7 +455,6 @@ internal sealed partial class DocxLayoutEngine
             return gaps[gaps.Count / 2];
         }
 
-
         bool CanSplitTableRowAtPageBoundary(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale, double rowHeight, double firstFragmentHeight,
             IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? math, out double splitPitch, out double selectedFirstHeight)
         {
@@ -1814,8 +1813,6 @@ internal sealed partial class DocxLayoutEngine
 
             lastRemaining = remainingHeight;
             fragments.Add(pageChunkHeight);
-            // conversion-wide cumulative charge per constructed fragment.
-            OoxConversionBudget.Current?.ChargeTableFragments(1);
             double next = remainingHeight - pageChunkHeight;
             if (!(next < remainingHeight))
             {
@@ -1834,8 +1831,6 @@ internal sealed partial class DocxLayoutEngine
             }
 
             fragments.Add(remainingHeight);
-            // conversion-wide cumulative charge per constructed fragment.
-            OoxConversionBudget.Current?.ChargeTableFragments(1);
         }
     }
 

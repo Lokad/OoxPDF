@@ -74,15 +74,12 @@ internal sealed partial class PptxRenderer
         int pixelWidth = Math.Clamp((int)Math.Ceiling(shadowWidth * OfficeGlowRasterPixelsPerPoint), 1, OfficeGlowRasterMaxPixelsPerSide);
         int pixelHeight = Math.Clamp((int)Math.Ceiling(shadowHeight * OfficeGlowRasterPixelsPerPoint), 1, OfficeGlowRasterMaxPixelsPerSide);
         double scaleX = pixelWidth / shadowWidth;
-        OoxConversionBudget.Current?.ChargeImagesDecoded(1);
         double scaleY = pixelHeight / shadowHeight;
         // The existing preset walker supplies a bounded closed polygon, shared
         // with picture masks and vector shadows. PDF Y points upward; image rows
         // run downward, so samples map back into that same geometry.
         TryCreatePresetPolygonPoints(preset, 0d, 0d, width, height, out var polygon);
 
-        // R02: effect rasters hold decoded-size planes plus compression scratch; reserve across rasterization and PDF compression.
-        using var effectReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(checked((long)pixelWidth * pixelHeight * 4L));
         byte[] rgb = new byte[pixelWidth * pixelHeight * 3];
         byte[] alpha = new byte[pixelWidth * pixelHeight];
         for (int pixelY = 0; pixelY < pixelHeight; pixelY++)
@@ -129,7 +126,6 @@ internal sealed partial class PptxRenderer
 
         var image = PdfImageXObject.RgbPng(pixelWidth, pixelHeight, rgb, alpha);
         // RV10: admit retained bytes at creation like ordinary image producers.
-        OoxConversionBudget.Current?.ChargeRetainedImageBytes(image.RetainedByteCount);
         string name = "Im" + imageIndex++;
         graphics.SaveState();
         graphics.SetAlpha(shadow.Alpha, 1d);
@@ -233,9 +229,6 @@ internal sealed partial class PptxRenderer
         double scaleX = pixelWidth / glowWidth;
         double scaleY = pixelHeight / glowHeight;
 
-        OoxConversionBudget.Current?.ChargeImagesDecoded(1);
-        // R02: effect rasters hold decoded-size planes plus compression scratch; reserve across rasterization and PDF compression.
-        using var effectReservation = OoxConversionBudget.Current?.ReserveLiveImageBytes(checked((long)pixelWidth * pixelHeight * 4L));
         byte[] rgb = new byte[pixelWidth * pixelHeight * 3];
         byte[] alpha = new byte[pixelWidth * pixelHeight];
         for (int pixelY = 0; pixelY < pixelHeight; pixelY++)
@@ -271,7 +264,6 @@ internal sealed partial class PptxRenderer
 
         var image = PdfImageXObject.RgbPng(pixelWidth, pixelHeight, rgb, alpha);
         // RV10: admit retained bytes at creation like ordinary image producers.
-        OoxConversionBudget.Current?.ChargeRetainedImageBytes(image.RetainedByteCount);
         string name = "Im" + imageIndex++;
         graphics.SaveState();
         graphics.SetAlpha(glow.Alpha, 1d);

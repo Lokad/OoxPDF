@@ -49,7 +49,6 @@ internal sealed partial class PptxRenderer
         }
 
         int work = (int)intervalWork + endpointWork;
-        OoxConversionBudget.Current?.ChargeChartRangeCells(work);
         var values = new List<double>(work);
         if (includeEndpoints)
         {

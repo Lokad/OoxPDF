@@ -139,8 +139,6 @@ internal static partial class DocxMathNaryTests
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(Equation(nary), cancelled.Token, out _));
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(Equation(nary), _ => resource, cancelled.Token, out _, out _));
-        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 });
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(Equation(nary), _ => resource, CancellationToken.None, out _, out _));
     }
 
     public static void MathFontNarySideLimitsShareScriptArgumentsAndInlinePlacement()
@@ -264,9 +262,6 @@ internal static partial class DocxMathNaryTests
                 "Delegating an outer matrix does not recursively admit matrices inside cells.");
             using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, cancelled.Token, out _));
-            using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 1 });
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, default,
-                out _, out _, resolveControlMetrics: _ => font));
         }
     }
 

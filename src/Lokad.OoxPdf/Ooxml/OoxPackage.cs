@@ -28,18 +28,13 @@ internal sealed class OoxPackage
     private int xmlParseCount;
     private int relationshipParseCount;
 
-    private OoxPackage(Dictionary<string, OoxPart> parts, OoxContentTypes contentTypes, long retainedBytes)
+    private OoxPackage(Dictionary<string, OoxPart> parts, OoxContentTypes contentTypes)
     {
         this.parts = parts;
         ContentTypes = contentTypes;
-        RetainedBytes = retainedBytes;
     }
 
     public OoxContentTypes ContentTypes { get; }
-
-    // R04: total retained part bytes staged by Open, backing the conversion
-    // aggregate quota for nested packages.
-    internal long RetainedBytes { get; }
 
     public IReadOnlyCollection<OoxPart> Parts => parts.Values;
 
@@ -180,7 +175,6 @@ internal sealed class OoxPackage
                 throw new OoxPdfLimitExceededException($"OOXML part '{partName}' exceeds the maximum supported size.");
             }
 
-
             string? contentType = partName == "/[Content_Types].xml"
                 ? "application/xml"
                 : contentTypes.GetContentType(partName);
@@ -237,7 +231,7 @@ internal sealed class OoxPackage
             parts.Add(partName, new OoxPart(partName, contentType, partBytes));
         }
 
-            OoxPackage result = new OoxPackage(parts, contentTypes, totalBytes);
+            OoxPackage result = new OoxPackage(parts, contentTypes);
             return result;
         }
         finally

@@ -53,9 +53,6 @@ internal static partial class DocxMathFractionTests
         TestAssert.True(output.Length > 0, "The one-symbol assembly writes a complete PDF with mapped physical glyphs.");
         TestAssert.True(!DocxMathLayout.TryMeasure(equation, _ => missingParts, default, out var absent, out _,
             resolveControlFont: _ => missingParts) && absent is null, "A missing late assembly CID cannot publish a partial root or child.");
-        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 });
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, default, out _, out _,
-            resolveControlFont: _ => resource));
     }
 
     public static void MathFontVerticalAssemblyPlacementKeepsConnectorBoundsAndBalancedGrowth()
@@ -101,7 +98,5 @@ internal static partial class DocxMathFractionTests
             "Parts without enough connector material retain explicit fallback.");
         using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathGlyphAssembly.TryArrange(assembly, 1000d, cancellation.Token, out _, out _));
-        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxFontWorkPerConversion = 10 });
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathGlyphAssembly.TryArrange(assembly, ushort.MaxValue, default, out _, out _));
     }
 }

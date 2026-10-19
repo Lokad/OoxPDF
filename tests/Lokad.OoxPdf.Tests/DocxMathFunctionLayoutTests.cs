@@ -115,8 +115,6 @@ internal static class DocxMathFunctionLayoutTests
             { Content = new([Run("B"), Function(new([Run("sin")]), new([Run("C")]))]) };
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(bounded, _ => resource, cancelled.Token, out _, out _));
-        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 });
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(bounded, _ => resource, CancellationToken.None, out _, out _, resolveControlMetrics: _ => font));
     }
 
     public static void MathFontFunctionMetricOnlyControlsKeepIndependentFontsAndWholeLineFrame()
@@ -198,8 +196,6 @@ internal static class DocxMathFunctionLayoutTests
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(Equation(function), cancelled.Token, out _));
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(Equation(function), _ => resource, cancelled.Token, out _, out _));
-        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 });
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(Equation(function), _ => resource, CancellationToken.None, out _, out _, resolveControlMetrics: _ => font));
     }
 
     private static DocxMathRun Run(string text, bool normal = false, string? color = null) =>

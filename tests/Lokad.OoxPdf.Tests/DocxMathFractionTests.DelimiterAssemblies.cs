@@ -106,9 +106,6 @@ internal static partial class DocxMathFractionTests
             cancellation.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(equation, _ => resource,
                 cancellation.Token, out _, out _, resolveControlFont: _ => resource));
-            using var budget = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 });
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource,
-                default, out _, out _, resolveControlFont: _ => resource));
         }
     }
 }

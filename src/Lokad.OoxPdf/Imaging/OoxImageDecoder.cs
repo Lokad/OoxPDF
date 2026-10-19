@@ -28,15 +28,13 @@ internal static class OoxImageDecoder
 
     public static PdfImageXObject Decode(string contentType, byte[] bytes, Func<byte[], byte[]> recolorRgb, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (IsJpegContentType(contentType))
         {
-            OoxConversionBudget.Current?.ChargeImagesDecoded(1);
             JpegInfo info = JpegInfo.Read(bytes);
             return PdfImageXObject.Jpeg(info.Width, info.Height, bytes, info.ComponentCount, info.BitsPerComponent);
         }
 
-        // R02: the pixel reservation spans decoding, the recolor transform, and PDF
-        // compression as one scoped operation instead of releasing at decoder return.
         using DecodedPixels decoded = DecodePixelsOwned(contentType, bytes, cancellationToken);
         return PdfImageXObject.RgbPng(decoded.Width, decoded.Height, recolorRgb(decoded.Rgb), decoded.Alpha);
     }
@@ -47,27 +45,21 @@ internal static class OoxImageDecoder
         return (owned.Width, owned.Height, owned.Rgb, owned.Alpha);
     }
 
-    // R02/R03: single shared charge for every pixel decode (content, crop, recolor
-    // variants). Cache hits return before this boundary and do not charge. The
-    // returned ownership keeps the working-set reservation alive across the
-    // caller transform/compress steps that consume the pixels.
     public static DecodedPixels DecodePixelsOwned(string contentType, byte[] bytes, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (IsPngContentType(contentType))
         {
-            OoxConversionBudget.Current?.ChargeImagesDecoded(1);
             return PngImage.ReadOwned(bytes, cancellationToken);
         }
 
         if (IsBmpContentType(contentType))
         {
-            OoxConversionBudget.Current?.ChargeImagesDecoded(1);
             return BmpImage.ReadOwned(bytes, cancellationToken);
         }
 
         if (IsJpegContentType(contentType))
         {
-            OoxConversionBudget.Current?.ChargeImagesDecoded(1);
             return JpegImage.ReadOwned(bytes, cancellationToken);
         }
 

@@ -806,7 +806,6 @@ internal sealed partial class DocxRenderer
         {
             imageResource = OoxImageDecoder.Decode(image.ContentType, image.Bytes, static rgb => rgb, cancellationToken);
             // R06.2: admit retained bytes at creation (DOCX retains per page); cache hits create nothing.
-            OoxConversionBudget.Current?.ChargeRetainedImageBytes(imageResource.RetainedByteCount);
         }
         catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
         {

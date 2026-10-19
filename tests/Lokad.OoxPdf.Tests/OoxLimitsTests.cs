@@ -441,35 +441,6 @@ internal static partial class OoxLimitsTests
         });
     }
 
-    public static void ConversionBudgetBelowAtAboveLimits()
-    {
-        // Q01: each cumulative counter passes below/at cap and throws above it.
-        var budget = new OoxConversionBudget(new OoxConversionLimits
-        {
-            MaxChartRangeCellsPerConversion = 3,
-            MaxTableFragmentsPerConversion = 3,
-            MaxImagesDecodedPerConversion = 3,
-            MaxFontWorkPerConversion = 3,
-        });
-
-        budget.ChargeChartRangeCells(2);
-        budget.ChargeTableFragments(2);
-        budget.ChargeImagesDecoded(2);
-        budget.ChargeFontWork(2);
-        budget.ChargeChartRangeCells(1);
-        budget.ChargeTableFragments(1);
-        budget.ChargeImagesDecoded(1);
-        budget.ChargeFontWork(1);
-        TestAssert.Equal(3, budget.ChartRangeCells);
-        TestAssert.Equal(3, budget.TableFragments);
-        TestAssert.Equal(3, budget.ImagesDecoded);
-        TestAssert.Equal(3, budget.FontWork);
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => budget.ChargeChartRangeCells(1));
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => budget.ChargeTableFragments(1));
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => budget.ChargeImagesDecoded(1));
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => budget.ChargeFontWork(1));
-    }
-
     public static void ConversionBudgetScopeNestsAndRestores()
     {
         // Q01: scopes nest and always restore, so parallel conversions never share totals.
@@ -486,103 +457,6 @@ internal static partial class OoxLimitsTests
         }
 
         TestAssert.True(OoxConversionBudget.Current is null, "Disposing the outer scope must clear.");
-    }
-
-    public static void ConversionBudgetChartCellsChargedThroughReader()
-    {
-        // Q01: range expansion charges the ambient conversion budget; a tiny
-        // cumulative cap fails a small range that the per-union cap accepts.
-        object workbook = ChartWorkbookWithCells();
-        TestAssert.Equal(10, ReadCellCount(workbook, "Sheet1!$A$1:$A$10"));
-        // Fresh workbook: the per-frame memo makes repeated identical reads free,
-        // so the scoped probe must expand (memo hits perform no charged work).
-        object scoped = ChartWorkbookWithCells();
-        using (OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxChartRangeCellsPerConversion = 5 }))
-        {
-            try
-            {
-                ReadCellCount(scoped, "Sheet1!$A$1:$A$10");
-            }
-            catch (OoxPdfLimitExceededException ex)
-            {
-                TestAssert.Contains("budget", ex.Message);
-                return;
-            }
-
-            throw new InvalidOperationException("Expected the conversion chart-cell budget to trip.");
-        }
-    }
-
-    public static void ConversionBudgetFragmentsChargedThroughLayout()
-    {
-        // Q01: fragment construction charges the ambient budget; rows under the
-        // per-row cap still trip a tiny cumulative cap, with a budget message.
-        System.Reflection.MethodInfo compute = typeof(DocxLayoutEngine).GetMethod(
-            "ComputeTableRowFragmentHeights",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
-            null,
-            [typeof(double), typeof(double), typeof(double)],
-            null) ?? throw new InvalidOperationException("Expected fragment helper.");
-        object? Invoke()
-        {
-            try
-            {
-                return compute.Invoke(null, [10000d, 1000d, 1000d]);
-            }
-            catch (System.Reflection.TargetInvocationException ex)
-            {
-                throw ex.InnerException ?? ex;
-            }
-        }
-
-        object? uncapped = Invoke();
-        TestAssert.True(uncapped is System.Collections.ICollection { Count: > 5 }, "Probe geometry must need several fragments.");
-        using (OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxTableFragmentsPerConversion = 5 }))
-        {
-            try
-            {
-                Invoke();
-            }
-            catch (OoxPdfLimitExceededException ex)
-            {
-                TestAssert.Contains("budget", ex.Message);
-                return;
-            }
-
-            throw new InvalidOperationException("Expected the conversion fragment budget to trip.");
-        }
-    }
-
-    public static void ConversionBudgetImagesEnforcedEndToEnd()
-    {
-        // Q01: one legal image passes an at-limit image budget and fails a
-        // zero budget end to end, without publishing a partial PDF.
-        string input = DocxWithInlinePng();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
-        {
-            InputKind = OoxPdfInputKind.Docx,
-            ConversionLimits = new OoxConversionLimits { MaxImagesDecodedPerConversion = 1 },
-        });
-        TestAssert.True(new FileInfo(output).Length > 0, "At-limit image budget must convert.");
-
-        string failing = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        try
-        {
-            OoxPdfConverter.Convert(input, failing, new OoxPdfOptions
-            {
-                InputKind = OoxPdfInputKind.Docx,
-                ConversionLimits = new OoxConversionLimits { MaxImagesDecodedPerConversion = 0 },
-            });
-        }
-        catch (IOException ex) when (ex is OoxPdfLimitExceededException)
-        {
-            TestAssert.True(!File.Exists(failing), "Budget failure must not publish a partial PDF.");
-            return;
-        }
-
-        throw new InvalidOperationException("Expected the conversion image budget to trip.");
     }
 
     public static void ConversionResourceSummaryReportedWhenEnabled()
@@ -612,7 +486,7 @@ internal static partial class OoxLimitsTests
         TestAssert.Equal(OoxPdfSeverity.Info, summary.Severity);
         TestAssert.Equal(second.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY").Message, summary.Message);
         TestAssert.Contains("pages=1", summary.Message);
-        TestAssert.Contains("imagesDecoded=1", summary.Message);
+        TestAssert.Contains("pdfPages=1", summary.Message);
 
         var quiet = new List<OoxPdfDiagnostic>();
         string quietPdf = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
@@ -694,127 +568,7 @@ internal static partial class OoxLimitsTests
             new OoxPdfOptions
             {
                 InputKind = OoxPdfInputKind.Docx,
-                ConversionLimits = new OoxConversionLimits { MaxImagesDecodedPerConversion = -1 },
-            }));
-    }
-
-    public static void ConversionBudgetLiveReservationBelowAtAboveLimits()
-    {
-        // Q01: live reservations pass below/at cap, throw above it, and leave the
-        // current level unchanged on failure while the peak records attempts.
-        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(
-            new OoxConversionLimits { MaxLiveImageBytesPerConversion = 10 }))
-        {
-            OoxConversionBudget budget = OoxConversionBudget.Current ?? throw new InvalidOperationException("Scope must install.");
-            using (budget.ReserveLiveImageBytes(6))
-            {
-                TestAssert.Equal(6, budget.LiveImageBytes);
-                using (budget.ReserveLiveImageBytes(4))
-                {
-                    TestAssert.Equal(10, budget.LiveImageBytes);
-                    TestAssert.Equal(10, budget.PeakLiveImageBytes);
-                }
-
-                TestAssert.Equal(6, budget.LiveImageBytes);
-                TestAssert.Throws<OoxPdfLimitExceededException>(() =>
-                {
-                    budget.ReserveLiveImageBytes(5);
-                });
-                TestAssert.Equal(6, budget.LiveImageBytes);
-            }
-
-            TestAssert.Equal(0, budget.LiveImageBytes);
-            TestAssert.Equal(10, budget.PeakLiveImageBytes);
-        }
-    }
-
-    public static void ConversionBudgetLiveReservationRejectsNegative()
-    {
-        // Q01: negative live reservations are rejected before touching levels.
-        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(null))
-        {
-            OoxConversionBudget budget = OoxConversionBudget.Current ?? throw new InvalidOperationException("Scope must install.");
-            TestAssert.Throws<ArgumentOutOfRangeException>(() =>
-            {
-                budget.ReserveLiveImageBytes(-1);
-            });
-            TestAssert.Equal(0, budget.LiveImageBytes);
-            TestAssert.Equal(0, budget.PeakLiveImageBytes);
-        }
-    }
-
-    public static void ConversionResourceSummaryIncludesLivePeak()
-    {
-        // Q01: the summary reports the peak live image reservation (the 2x1 PNG pins
-        // IDAT, two scanlines, and RGB at 36 bytes) deterministically.
-        string input = DocxWithInlinePng();
-        var first = new List<OoxPdfDiagnostic>();
-        var second = new List<OoxPdfDiagnostic>();
-        string firstPdf = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        string secondPdf = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, firstPdf, new OoxPdfOptions
-        {
-            InputKind = OoxPdfInputKind.Docx,
-            ReportResourceUsage = true,
-            DiagnosticSink = first.Add,
-        });
-        OoxPdfConverter.Convert(input, secondPdf, new OoxPdfOptions
-        {
-            InputKind = OoxPdfInputKind.Docx,
-            ReportResourceUsage = true,
-            DiagnosticSink = second.Add,
-        });
-
-        OoxPdfDiagnostic summary = first.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
-        TestAssert.Equal(second.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY").Message, summary.Message);
-        TestAssert.Contains("peakLiveImageBytes=36", summary.Message);
-    }
-
-    public static void ConversionBudgetLiveCapEnforcedEndToEnd()
-    {
-        // Q01: a live cap at the 36-byte working-set estimate converts; one byte below fails
-        // before allocation without publishing a partial PDF.
-        string input = DocxWithInlinePng();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
-        {
-            InputKind = OoxPdfInputKind.Docx,
-            ConversionLimits = new OoxConversionLimits { MaxLiveImageBytesPerConversion = 36 },
-        });
-        TestAssert.True(new FileInfo(output).Length > 0, "At-limit live byte budget must convert.");
-
-        string failing = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        try
-        {
-            OoxPdfConverter.Convert(input, failing, new OoxPdfOptions
-            {
-                InputKind = OoxPdfInputKind.Docx,
-                ConversionLimits = new OoxConversionLimits { MaxLiveImageBytesPerConversion = 35 },
-            });
-        }
-        catch (IOException ex) when (ex is OoxPdfLimitExceededException)
-        {
-            TestAssert.True(!File.Exists(failing), "Budget failure must not publish a partial PDF.");
-            return;
-        }
-
-        throw new InvalidOperationException("Expected the conversion live image byte budget to trip.");
-    }
-
-    public static void ConversionLiveCapRejectsNegative()
-    {
-        // Q01: a negative live image byte cap is rejected at option validation.
-        string input = DocxWithInlinePng();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        TestAssert.Throws<ArgumentOutOfRangeException>(() => OoxPdfConverter.Convert(
-            input,
-            output,
-            new OoxPdfOptions
-            {
-                InputKind = OoxPdfInputKind.Docx,
-                ConversionLimits = new OoxConversionLimits { MaxLiveImageBytesPerConversion = -1 },
+                ConversionLimits = new OoxConversionLimits { MaxPagesPerConversion = -1 },
             }));
     }
 

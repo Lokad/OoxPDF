@@ -72,9 +72,6 @@ internal static class DocxSkewedFractionTests
             using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, cancellation.Token, out _));
             TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(equation, _ => text, cancellation.Token, out _, out _));
-            using var budget = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 1 });
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => text, default, out _, out _,
-                resolveControlFont: _ => complete));
         }
     }
 }

@@ -31,7 +31,6 @@ internal sealed class PdfImageXObject
 
     // R06.2: retained production unit for image resources: encoded bytes plus
     // soft-mask bytes, matching the serialized image charge unit.
-    public long RetainedByteCount => checked((long)Bytes.Length + (Alpha?.Length ?? 0));
 
     // R18: the identity carries full SHA-256 digests, not truncated prefixes, and
     // writer deduplication verifies byte equality on every key match (see

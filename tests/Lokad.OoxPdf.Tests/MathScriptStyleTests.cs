@@ -313,8 +313,6 @@ internal static class MathScriptStyleTests
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, cancelled.Token, out _, out _));
-        using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 2 });
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out _, out _));
     }
 
     public static void MathFontScriptBadTargetsAndOptionalGsubPreserveOrdinaryFontUse()

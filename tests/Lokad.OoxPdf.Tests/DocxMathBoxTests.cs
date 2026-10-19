@@ -262,16 +262,6 @@ internal static class DocxMathBoxTests
         TestAssert.Throws<OperationCanceledException>(() => DocxMathBoxPainter.Paint(TestAssert.NotNull(box), new PdfGraphicsBuilder(), 0d, 0d, cancelled.Token));
     }
 
-    public static void DocxMathBoxExpansionUsesTheExistingCumulativeSceneBudget()
-    {
-        var font = Resource(TestFontBuilder.LoadTestFont(), "A");
-        using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 2 });
-        TestAssert.True(DocxMathRowLayout.TryGetRenderCodePoints(Plain("A"), CancellationToken.None, out _, out _), "First expansion must fit.");
-        TestAssert.True(DocxMathRowLayout.TryMeasure(Plain("A"), _ => font, CancellationToken.None, out _, out _), "Second expansion must fit.");
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathRowLayout.TryMeasure(Plain("A"), _ => font, CancellationToken.None, out _, out _));
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathRowLayout.TryGetRenderCodePoints(Plain(new string('A', 100_000)), CancellationToken.None, out _, out _));
-    }
-
     public static void MathFontItalicCorrectionsReadBothCoverageFormatsAndSignedValues()
     {
         foreach (bool ranges in new[] { false, true })

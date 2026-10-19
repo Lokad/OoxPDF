@@ -43,9 +43,9 @@ internal static partial class DocxInlineCompositionTests
         foreach (string role in new[] { "root-body", "delimiter-argument", "nary-only" })
         {
             var document = ReadMutation("CompositionProbes/math-source-" + role + "-empty", OoxPdfDocxMarkupMode.Final, false, false);
-            using (OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 1 }))
-                TestAssert.Throws<OoxPdfLimitExceededException>(() => new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                    .RenderBlankPages(document, null, default).ToList());
+            using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() => new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .RenderBlankPages(document, null, cancelled.Token).ToList());
         }
     }
 }

@@ -54,14 +54,12 @@ internal static class MathFontTests
         }
     }
 
-    public static void MathFontVerticalAssembliesKeepCancellationAndExistingCumulativeFontWork()
+    public static void MathFontVerticalAssembliesKeepCancellation()
     {
         var font = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(AssemblyTable()));
         using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => font.TryGetMathVerticalAssembly(34, cancellation.Token, out _));
-        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxFontWorkPerConversion = 4 });
-        TestAssert.True(font.TryGetMathVerticalAssembly(34, default, out _), "One bounded table/three-part read uses the existing work budget.");
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => font.TryGetMathVerticalAssembly(34, default, out _));
+        TestAssert.True(font.TryGetMathVerticalAssembly(34, default, out _), "A complete three-part read remains available.");
     }
 
     private static byte[] AssemblyTable()
@@ -101,10 +99,8 @@ internal static class MathFontTests
         var valid=OpenTypeFont.Load(TestFontBuilder.CreateMathFont(VariantTable(false)));
         using var cancelled=new CancellationTokenSource();cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(()=>valid.TryGetNearestMathVerticalVariant(34,500d,cancelled.Token,out _));
-        using(OoxConversionBudget.Scope scope=OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxFontWorkPerConversion=1 }))
         {
             TestAssert.True(valid.TryGetNearestMathVerticalVariant(34,500d,CancellationToken.None,out _),"One bounded query is available.");
-            TestAssert.Throws<OoxPdfLimitExceededException>(()=>valid.TryGetMathVerticalVariant(34,500d,CancellationToken.None,out _));
         }
     }
 
@@ -147,15 +143,13 @@ internal static class MathFontTests
         }
     }
 
-    public static void MathFontVerticalVariantsKeepCancellationAndCumulativeFontWork()
+    public static void MathFontVerticalVariantsKeepCancellation()
     {
         var font=OpenTypeFont.Load(TestFontBuilder.CreateMathFont(VariantTable(false)));
         using var cancelled=new CancellationTokenSource();cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(()=>font.TryGetMathVerticalVariant(34,0d,cancelled.Token,out _));
-        using(OoxConversionBudget.Scope scope=OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxFontWorkPerConversion=1 }))
         {
             TestAssert.True(font.TryGetMathVerticalVariant(34,0d,CancellationToken.None,out _),"One bounded font-selection operation is available.");
-            TestAssert.Throws<OoxPdfLimitExceededException>(()=>font.TryGetMathVerticalVariant(34,500d,CancellationToken.None,out _));
         }
         TestAssert.True(!TestFontBuilder.LoadTestFont().TryGetMathVerticalVariant(34,0d,CancellationToken.None,out _),
             "An ordinary face remains usable without optional MATH variants.");

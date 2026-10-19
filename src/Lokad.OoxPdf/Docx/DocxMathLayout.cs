@@ -326,7 +326,6 @@ internal static partial class DocxMathLayout
         var glyphs = new List<DocxMathGlyphPlacement>(numerator.Glyphs.Count + denominator.Glyphs.Count);
         Append(numerator, numeratorShift);
         Append(denominator, -denominatorShift);
-        if (!stack) { OoxConversionBudget.Current?.ChargeSceneNodes(1); }
         box = new DocxMathBox(width, above, below, glyphs)
         { Rules = stack ? [] : [new DocxMathRulePlacement(0d, axis - thickness / 2d, width, thickness, ruleColor)],
             EnclosureHeight = above + below,

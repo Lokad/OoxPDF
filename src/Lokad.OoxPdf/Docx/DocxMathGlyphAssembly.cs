@@ -22,7 +22,6 @@ internal static class DocxMathGlyphAssembly
         foreach (var part in parts)
         {
             token.ThrowIfCancellationRequested();
-            OoxConversionBudget.Current?.ChargeFontWork(1);
             if (part.Glyph == 0 || part.FullAdvance == 0) return false;
             if (!part.IsExtender) fixedParts.Add(part);
             else growth += Math.Max(0, part.FullAdvance - minimum);
@@ -45,7 +44,6 @@ internal static class DocxMathGlyphAssembly
                 if (part.IsExtender && part.FullAdvance > minimum) count += additional;
             }
             if (count > int.MaxValue) return false;
-            OoxConversionBudget.Current?.ChargeFontWork(count);
             var expanded = new List<OpenTypeMathGlyphPart>((int)count);
             foreach (var part in parts)
             {
@@ -60,7 +58,6 @@ internal static class DocxMathGlyphAssembly
         if (!TryRange(selected, out double smallest, out double largest) || largest < targetHeight ||
             smallest > ushort.MaxValue) return false;
         double actualHeight = Math.Max(smallest, targetHeight);
-        OoxConversionBudget.Current?.ChargeFontWork(selected.Count);
         var capacities = new int[selected.Count - 1];
         for (int index = 0; index < capacities.Length; index++)
         {
@@ -105,7 +102,6 @@ internal static class DocxMathGlyphAssembly
             for (int index = 0; index < sequence.Count; index++)
             {
                 token.ThrowIfCancellationRequested();
-                OoxConversionBudget.Current?.ChargeFontWork(1);
                 smallest += sequence[index].FullAdvance;
                 largest += sequence[index].FullAdvance;
                 if (index == 0) continue;

@@ -76,9 +76,6 @@ internal static partial class DocxMathFractionTests
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, cancelled.Token, out _));
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, cancelled.Token, out _, out _));
-        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 1 });
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, default,
-            out _, out _, resolveControlMetrics: _ => font));
     }
 
     public static void MathFontFractionArgumentScriptsKeepStylesCancellationAndWorkBounds()
@@ -108,8 +105,6 @@ internal static partial class DocxMathFractionTests
                 "Authored nominal size is uniform while semantic child styles own their emitted sizes and baselines.");
             using var canceled = new CancellationTokenSource(); canceled.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, canceled.Token, out _, out _));
-            using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 1 });
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, default, out _, out _));
         }
     }
 
@@ -152,8 +147,6 @@ internal static partial class DocxMathFractionTests
             growthReason ?? "A fraction's complete enclosure height must fit its ready-made variant without an extra symmetric-axis expansion.");
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(growing, _ => resource, cancelled.Token, out _, out _));
-        using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 });
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(growing, _ => resource, CancellationToken.None, out _, out _));
     }
 
     public static void MathFontMixedDelimiterRowsKeepControlOwnersGrowthAndCompleteFallback()
@@ -531,9 +524,6 @@ internal static partial class DocxMathFractionTests
                 "A missing inner metric owner cannot publish the radical or a partial matrix.");
             using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, cancelled.Token, out _));
-            using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 1 });
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(equation, _ => resource, default,
-                out _, out _, resolveControlMetrics: _ => font));
         }
     }
 
@@ -695,8 +685,6 @@ internal static partial class DocxMathFractionTests
             "A selected variant needs its own encoded CID before publishing the box.");
         using var cancelled=new CancellationTokenSource();cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(()=>DocxMathLayout.TryMeasure(source,_=>resource,cancelled.Token,out _,out _));
-        using(OoxConversionBudget.Scope scope=OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxFontWorkPerConversion=0 }))
-            TestAssert.Throws<OoxPdfLimitExceededException>(()=>DocxMathLayout.TryMeasure(source,_=>resource,CancellationToken.None,out _,out _));
     }
 
     public static void MathFontRadicalAliasesKeepAuthoredUnicodeInEitherSourceOrder()
@@ -879,8 +867,6 @@ internal static partial class DocxMathFractionTests
                 "Unknown/deeper structures retain the complete source fallback.");
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(source, _ => resource, cancelled.Token, out _, out _));
-        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 }))
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(source, _ => resource, CancellationToken.None, out _, out _));
     }
 
     public static void MathFontFractionRowsShareBinaryBoundarySpacingAndRetainSourceOrder()
@@ -923,8 +909,6 @@ internal static partial class DocxMathFractionTests
             "Unsupported deeper structures cannot publish partial formula text.");
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(source, _ => resource, cancelled.Token, out _, out _));
-        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 }))
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(source, _ => resource, CancellationToken.None, out _, out _));
     }
 
     public static void MathFontFractionScriptBasesRetainChildRulesRolesAndSelectedStyles()
@@ -971,8 +955,6 @@ internal static partial class DocxMathFractionTests
             "The bounded first nesting grammar cannot admit deeper structures through recursive composition.");
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryMeasure(source, _ => resource, cancelled.Token, out _, out _));
-        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 3 }))
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(source, _ => resource, CancellationToken.None, out _, out _));
     }
 
     public static void MathFontNoBarStacksKeepSeparatedSourceRolesWithoutPaintingARule()
@@ -1148,11 +1130,9 @@ internal static partial class DocxMathFractionTests
         TestAssert.Throws<OperationCanceledException>(() => DocxMathBoxPainter.Paint(TestAssert.NotNull(box), new PdfGraphicsBuilder(), 0d, 0d, cancelled.Token));
     }
 
-    public static void MathFontFractionUsesCumulativeWorkAndRejectsInvalidSourceControls()
+    public static void MathFontFractionRejectsInvalidSourceControls()
     {
         var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
-        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxSceneNodesPerConversion = 4 }))
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => DocxMathLayout.TryMeasure(Fraction(), _ => resource, CancellationToken.None, out _, out _));
         foreach ((string properties, bool accepted) in new[]
         {
             ("<m:fPr><m:type m:val='bar'/></m:fPr>", true),

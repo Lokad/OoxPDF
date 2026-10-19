@@ -9,8 +9,6 @@ internal static class FontProgramLoader
             return null;
         }
 
-        OoxConversionBudget.Current?.ChargeFontWork(1);
-
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
