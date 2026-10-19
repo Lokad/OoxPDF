@@ -409,12 +409,11 @@ internal sealed partial class DocxLayoutEngine
             if (!row.CantSplit && !nestedMath &&
                 rowHeight > remainingPageHeight &&
                 remainingPageHeight > 0.001d &&
-                CanSplitTableRowAtPageBoundary(row, frame.EffectiveColumns, frame.Scale, rowHeight, remainingPageHeight, frame.Context.MathEquations, out double splitPitch, out double firstFragmentHeight))
+                CanSplitTableRowAtPageBoundary(row, frame, rowHeight, remainingPageHeight, out double splitPitch, out IReadOnlyList<double> fragmentBoundaries))
             {
-                // RV06 pagination probe (edge-page-auto, Word 16.0): split fragments keep
-                // whole lines that fit (floor capacity); the boundary is floored to whole
-                // line pitches so a fractional remainder never squeezes an extra line in.
-                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, firstFragmentHeight, "PageBoundary", finishPage, paragraphSpacingScale, splitPitch, cellMemo, reviewFragmentScale);
+                // Complete measured frames own explicit cuts; unknown geometry keeps
+                // the qualified median-pitch capacity and fragmentation fallback.
+                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, fragmentBoundaries, "PageBoundary", finishPage, paragraphSpacingScale, splitPitch, cellMemo);
                 markBoundaryContent();
                 continue;
             }
@@ -463,18 +462,20 @@ internal sealed partial class DocxLayoutEngine
             return gaps[gaps.Count / 2];
         }
 
-        bool CanSplitTableRowAtPageBoundary(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale, double rowHeight, double firstFragmentHeight,
-            IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? math, out double splitPitch, out double selectedFirstHeight)
+        bool CanSplitTableRowAtPageBoundary(DocxTableRow row, DocxTableLayoutFrame frame, double rowHeight, double firstFragmentHeight,
+            out double splitPitch, out IReadOnlyList<double> selectedBoundaries)
         {
             splitPitch = 0d;
-            selectedFirstHeight = 0d;
+            selectedBoundaries = [];
             if (textMeasurer is null)
             {
                 return false;
             }
 
-            double[] cellWidths = GetTableRowCellWidths(row, effectiveColumns, scale);
+            double[] cellWidths = GetTableRowCellWidths(row, frame.EffectiveColumns, frame.Scale);
             double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
+            int currentPageNumber = getPageNumber();
+            int? currentPageCount = frame.Context.PageCount;
             var laidOutCells = new List<(IReadOnlyList<DocxParagraph> Paragraphs, IReadOnlyList<DocxTextLineLayout> TextLines)>();
             var splitLineBaselines = new List<double>();
             for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
@@ -485,7 +486,7 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
 
-                IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, 0d, 0d, cellWidths[cellIndex], rowHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, null, null, paragraphSpacingScale: paragraphSpacingScale, cellMemo: cellMemo, mathEquations: math, cancellationToken: cancellationToken).Lines;
+                IReadOnlyList<DocxTextLineLayout> textLines = LayoutTableCellTextLines(cell, 0d, 0d, cellWidths[cellIndex], rowHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageNumber, currentPageCount, paragraphSpacingScale: paragraphSpacingScale, cellMemo: cellMemo, mathEquations: frame.Context.MathEquations, cancellationToken: cancellationToken).Lines;
                 // Keep only painted math boxes atomic until math-bearing row
                 // fragments have their own placement qualification.
                 if (textLines.Any(line => line.Math is not null || line.InlineMath.Count != 0)) { return false; }
@@ -558,11 +559,93 @@ internal sealed partial class DocxLayoutEngine
                     flooredFirstFragmentHeight = earlierHeight;
                     continue;
                 }
-                selectedFirstHeight = flooredFirstFragmentHeight;
+                selectedBoundaries = [flooredFirstFragmentHeight];
+                if (hasContentOnBothSides)
+                {
+                    double continuationHeight = row.IsHeader ? frame.PageContentHeight :
+                        Math.Max(1d, frame.PageContentHeight - headerRows.Sum(entry => frame.RowHeights[entry.RowIndex]));
+                    if (TryResolveMeasuredBoundaries(flooredFirstFragmentHeight, continuationHeight, splitPitch, out var measured))
+                    {
+                        selectedBoundaries = measured;
+                        splitPitch = 0d; // Explicit measured cuts must not be floored a second time.
+                    }
+                }
                 return hasContentOnBothSides;
             }
 
             return false;
+
+            // A median pitch describes capacity, not the origin of every line.
+            // Prefix objects and paragraph metrics can change that origin. Consume
+            // source only up to a complete measured continuation frame. Unknown or
+            // incompatible parallel frames retain the existing fragmentation policy.
+            bool TryResolveMeasuredBoundaries(double firstHeight, double pageHeight, double pitch,
+                out IReadOnlyList<double> boundaries)
+            {
+                boundaries = [];
+                var cuts = new List<double>();
+                double consumed = 0d;
+                double capacity = firstHeight + firstFragmentHeight - FloorTableRowFragmentHeightToPitch(firstFragmentHeight, pitch);
+                while (rowHeight - consumed > capacity + .001d)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (cuts.Count >= MaxTableRowFragments - 1) return false;
+                    double raw = consumed + FloorTableRowFragmentHeightToPitch(capacity, pitch);
+                    double oldBottom = rowHeight - raw, cut = double.PositiveInfinity;
+                    foreach (var (_, lines) in laidOutCells)
+                    {
+                        foreach (var line in lines)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            if (line.BaselineY >= oldBottom) continue;
+                            if (!DocxInlineLineGeometry.TryGetOccupiedBounds(line, out _, out double top)) return false;
+                            cut = Math.Min(cut, rowHeight - top);
+                        }
+                    }
+                    if (Math.Abs(raw - cut) < .001d) cut = raw;
+                    if (!double.IsFinite(cut) || cut <= consumed + .001d || cut > consumed + capacity + .001d) return false;
+                    double bottom = rowHeight - cut, start = rowHeight - consumed;
+                    bool hasEarlier = false, hasLater = false;
+                    foreach (var (paragraphs, lines) in laidOutCells)
+                    {
+                        foreach (var line in lines)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            if (line.BaselineY >= start + .001d) continue;
+                            if (!DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double lower, out double upper)) return false;
+                            if (line.BaselineY >= oldBottom)
+                            {
+                                if (lower < bottom - .001d) return false;
+                                hasEarlier = true;
+                            }
+                            else
+                            {
+                                if (upper > bottom + .001d) return false;
+                                hasLater = true;
+                            }
+                        }
+                        foreach (var group in lines.GroupBy(line => line.SourceParagraphIndex))
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            if (group.Key is not { } index || index < 0 || index >= paragraphs.Count) continue;
+                            var rules = paragraphs[index].EffectiveProperties.KeepRules;
+                            int before = group.Count(line => line.BaselineY < start + .001d && line.BaselineY >= bottom);
+                            int after = group.Count(line => line.BaselineY < bottom);
+                            if (before != 0 && after != 0 && (rules.KeepNext == true || rules.KeepLines == true ||
+                                (rules.WidowControl ?? (reviewFragmentScale == 1d)) && (before == 1 || after == 1))) return false;
+                            if (before != 0 && after == 0 && rules.KeepNext == true &&
+                                lines.Any(line => line.SourceParagraphIndex == index + 1) &&
+                                lines.Where(line => line.SourceParagraphIndex == index + 1).All(line => line.BaselineY < bottom)) return false;
+                        }
+                    }
+                    if (!hasEarlier || !hasLater) return false;
+                    cuts.Add(cut);
+                    consumed = cut;
+                    capacity = pageHeight;
+                }
+                boundaries = cuts;
+                return cuts.Count != 0;
+            }
         }
     }
 
@@ -1468,52 +1551,12 @@ internal sealed partial class DocxLayoutEngine
         ref List<DocxLayoutItem> currentItems,
         ref double cursorY,
         Func<DocxTableLayoutFrame> resolveFrame,
-        double firstFragmentHeight,
-        string fragmentReason,
-        Action finishPage,
-        double paragraphSpacingScale,
-        double splitPitch,
-        DocxTableCellTextLinesMemo? cellMemo = null,
-        double reviewFragmentScale = 1d)
-    {
-        AddSplitTableRowLayout(
-            table,
-            row,
-            rowIndex,
-            headerRows,
-            textMeasurer,
-            defaultTabStopPoints,
-            getPageNumber,
-            ref currentItems,
-            ref cursorY,
-            resolveFrame,
-            [firstFragmentHeight],
-            fragmentReason,
-            finishPage,
-            paragraphSpacingScale,
-            splitPitch,
-            cellMemo,
-            reviewFragmentScale);
-    }
-
-    private static void AddSplitTableRowLayout(
-        DocxTable table,
-        DocxTableRow row,
-        int rowIndex,
-        IReadOnlyList<(DocxTableRow Row, int RowIndex)> headerRows,
-        IDocxTextMeasurer? textMeasurer,
-        double defaultTabStopPoints,
-        Func<int> getPageNumber,
-        ref List<DocxLayoutItem> currentItems,
-        ref double cursorY,
-        Func<DocxTableLayoutFrame> resolveFrame,
         IReadOnlyList<double> fragmentBoundariesFromRowTop,
         string fragmentReason,
         Action finishPage,
         double paragraphSpacingScale,
         double splitPitch,
-        DocxTableCellTextLinesMemo? cellMemo = null,
-        double reviewFragmentScale = 1d)
+        DocxTableCellTextLinesMemo? cellMemo = null)
     {
         DocxTableLayoutFrame initialFrame = resolveFrame();
         IReadOnlyList<double> initialRowHeights = initialFrame.RowHeights;
