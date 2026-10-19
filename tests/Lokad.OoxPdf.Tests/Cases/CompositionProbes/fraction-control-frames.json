@@ -1,0 +1,194 @@
+[
+  {
+    "Id": "merged-span-tall-fraction",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-span-tall-fraction.docx",
+    "Sha256": "F53F3556B5F82707D126E6B77A04D7F446E9A7E170A425FCB0C85938C19FC8A7",
+    "SourceSha256": "31E9CC97E9C28632B839F56060B6E53C9D11C29A4F613062D34590A113BFC2F4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Change": "tall-fraction merge-span contract probe; only document.xml changes.",
+    "ControlPoints": 24,
+    "Container": "merged",
+    "ChangedParts": [
+      "word/document.xml"
+    ],
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-math-cell.docx"
+  },
+  {
+    "Id": "fraction-control-merged-8",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/fraction-control-merged-8.docx",
+    "Sha256": "AA278C002695D83C9214E1A06410C5D15FFEB00182C051B78337CD411E51F605",
+    "SourceSha256": "31E9CC97E9C28632B839F56060B6E53C9D11C29A4F613062D34590A113BFC2F4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "ControlPoints": 8,
+    "Container": "merged",
+    "ChangedParts": [
+      "word/document.xml"
+    ],
+    "Change": "Only author the fraction control metric size, retaining child source runs; body variant relocates the existing paragraph.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-math-cell.docx"
+  },
+  {
+    "Id": "fraction-control-merged-11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/fraction-control-merged-11.docx",
+    "Sha256": "FB57AC44FBDBABD6F8674D28A8A1F7AEE436D840622FF7548E4921F4594AA0B2",
+    "SourceSha256": "31E9CC97E9C28632B839F56060B6E53C9D11C29A4F613062D34590A113BFC2F4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "ControlPoints": 11,
+    "Container": "merged",
+    "ChangedParts": [
+      "word/document.xml"
+    ],
+    "Change": "Only author the fraction control metric size, retaining child source runs; body variant relocates the existing paragraph.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-math-cell.docx"
+  },
+  {
+    "Id": "fraction-control-merged-16",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/fraction-control-merged-16.docx",
+    "Sha256": "5CF05E18D071D257AB3496BD589455828E237C414D04E991A85F567A9880DE4D",
+    "SourceSha256": "31E9CC97E9C28632B839F56060B6E53C9D11C29A4F613062D34590A113BFC2F4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "ControlPoints": 16,
+    "Container": "merged",
+    "ChangedParts": [
+      "word/document.xml"
+    ],
+    "Change": "Only author the fraction control metric size, retaining child source runs; body variant relocates the existing paragraph.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-math-cell.docx"
+  },
+  {
+    "Id": "fraction-control-cell-24",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/fraction-control-cell-24.docx",
+    "Sha256": "4ECD2524EED2B3A57F76F93FA701A3941FA7AB409770CFE7F0079B640B8FA9E0",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "ControlPoints": 24,
+    "Container": "cell",
+    "ChangedParts": [
+      "word/document.xml"
+    ],
+    "Change": "Only author the fraction control metric size, retaining child source runs; body variant relocates the existing paragraph.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx"
+  },
+  {
+    "Id": "fraction-control-body-24",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/fraction-control-body-24.docx",
+    "Sha256": "39DF6AA6CD30256B3753C537D2B35A86826953136897B0EF663EA5E5D6012020",
+    "SourceSha256": "31E9CC97E9C28632B839F56060B6E53C9D11C29A4F613062D34590A113BFC2F4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "ControlPoints": 24,
+    "Container": "body",
+    "ChangedParts": [
+      "word/document.xml"
+    ],
+    "Change": "Only author the fraction control metric size, retaining child source runs; body variant relocates the existing paragraph.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-math-cell.docx"
+  },
+  {
+    "Id": "fraction-control-style-24",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/fraction-control-style-24.docx",
+    "Sha256": "A3AABA3A134FCE0E243AD1D84B181F6F894B34F0A4A37C46FDB69411114DCF2E",
+    "SourceSha256": "31E9CC97E9C28632B839F56060B6E53C9D11C29A4F613062D34590A113BFC2F4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "ControlPoints": 24,
+    "Container": "style",
+    "ChangedParts": [
+      "word/document.xml",
+      "word/styles.xml"
+    ],
+    "Change": "Only author the fraction control metric size, retaining child source runs; body variant relocates the existing paragraph.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-math-cell.docx"
+  },
+  {
+    "Id": "fraction-control-style-font-24",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/fraction-control-style-font-24.docx",
+    "Sha256": "F3AAE3E78860FE31C12ED08982E425D654C2731CCF40F2AB8B02E53653F09F72",
+    "SourceSha256": "31E9CC97E9C28632B839F56060B6E53C9D11C29A4F613062D34590A113BFC2F4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "ControlPoints": 24,
+    "Container": "style-font",
+    "ChangedParts": [
+      "word/document.xml",
+      "word/styles.xml"
+    ],
+    "Change": "Only author the fraction control metric size, retaining child source runs; body variant relocates the existing paragraph.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-math-cell.docx"
+  },
+  {
+    "Id": "fraction-control-stack-24",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/fraction-control-stack-24.docx",
+    "Sha256": "BD202E782E49BC36E00F074926EEF46058B65ADF9FDFC1E5239AC7FB4B1FC14D",
+    "SourceSha256": "39DF6AA6CD30256B3753C537D2B35A86826953136897B0EF663EA5E5D6012020",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "ControlPoints": 24,
+    "Container": "body",
+    "FractionType": "noBar",
+    "ChangedParts": [
+      "word/document.xml"
+    ],
+    "Change": "Only change the authored controlled fraction type to noBar.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/fraction-control-body-24.docx"
+  }
+]

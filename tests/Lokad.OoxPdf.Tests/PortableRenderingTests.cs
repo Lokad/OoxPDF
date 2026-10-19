@@ -37,6 +37,9 @@ internal static class PortableRenderingTests
     public static void PortableRenderingAdmittedMergedSourcesAppearOnce() =>
         DocxInlineCompositionTests.CheckMergedSourceConsumption(new PinnedResolver(mathFont: true));
 
+    public static void PortableRenderingFractionControlsKeepChildrenAndSourceGeometry() =>
+        DocxInlineCompositionTests.CheckFractionControlFrames(new PinnedResolver(mathFont: true));
+
     public static void PortableRenderingImplicitFootnoteSeparatorKeepsTableAndNotesClear() =>
         DocxInlineCompositionTests.CheckTableNoteReferences(new PinnedResolver(mathFont: true),
             "table-note-without-separator-report", "table-note-without-separator-office.json");

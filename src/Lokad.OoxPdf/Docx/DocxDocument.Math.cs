@@ -47,6 +47,7 @@ internal sealed record DocxMathFraction(DocxMathRow Numerator, DocxMathRow Denom
     // Empty arguments still have the authored control's metric/ink purpose.
     public DocxTextRun? ControlText { get; init; }
     public string? ControlFontFamily { get; init; }
+    public double? ControlFontSize { get; init; }
 }
 internal sealed record DocxMathScripts(DocxMathRow Base, DocxMathRow? Subscript, DocxMathRow? Superscript) : DocxMathNode, IDocxMathControl
 {

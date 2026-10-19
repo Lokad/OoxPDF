@@ -1,0 +1,832 @@
+{
+  "Rows": [
+    {
+      "Id": "merged-span-tall-fraction",
+      "Mode": "final-preserve",
+      "InputSha256": "F53F3556B5F82707D126E6B77A04D7F446E9A7E170A425FCB0C85938C19FC8A7",
+      "ReferencePdfSha256": "A24E42860947228E3FBF7D7D6B5B89555CDFAFE406AE9E9E279159E3A20D8DA9",
+      "Pages": 1,
+      "ControlPoints": 24,
+      "Container": "merged",
+      "FractionType": null,
+      "CellProseY": 726.3400268554688,
+      "AfterY": 694.1799926757812,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 68.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 714.219970703125,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -12.12005615234375
+        }
+      ]
+    },
+    {
+      "Id": "merged-span-tall-fraction",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F53F3556B5F82707D126E6B77A04D7F446E9A7E170A425FCB0C85938C19FC8A7",
+      "ReferencePdfSha256": "AEA23D84E5E825302B9D71CB500CD07BF53C375950AF7F700F1C3E52CE59132C",
+      "Pages": 1,
+      "ControlPoints": 24,
+      "Container": "merged",
+      "FractionType": null,
+      "CellProseY": 726.3400268554688,
+      "AfterY": 694.1799926757812,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 68.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 714.219970703125,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -12.12005615234375
+        }
+      ]
+    },
+    {
+      "Id": "fraction-control-merged-8",
+      "Mode": "final-preserve",
+      "InputSha256": "AA278C002695D83C9214E1A06410C5D15FFEB00182C051B78337CD411E51F605",
+      "ReferencePdfSha256": "7DAE73AEAAF6D0AE1D728B77228205E7617F241819F041718362F19B041CEA53",
+      "Pages": 1,
+      "ControlPoints": 8,
+      "Container": "merged",
+      "FractionType": null,
+      "CellProseY": 737.97998046875,
+      "AfterY": 697.6599731445312,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 4.67999267578125
+        },
+        {
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027,
+          "RelativeX": 68.5159912109375,
+          "RelativeY": 4.67999267578125
+        },
+        {
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.5159912109375,
+          "RelativeY": 4.67999267578125
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 733.9000244140625,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -4.0799560546875
+        }
+      ]
+    },
+    {
+      "Id": "fraction-control-merged-8",
+      "Mode": "all-word-compatible",
+      "InputSha256": "AA278C002695D83C9214E1A06410C5D15FFEB00182C051B78337CD411E51F605",
+      "ReferencePdfSha256": "90A61D16827E043F248B32E73A99F806B4F3F3D4128CAE7745B8976265B09461",
+      "Pages": 1,
+      "ControlPoints": 8,
+      "Container": "merged",
+      "FractionType": null,
+      "CellProseY": 737.97998046875,
+      "AfterY": 697.6599731445312,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 4.67999267578125
+        },
+        {
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027,
+          "RelativeX": 68.5159912109375,
+          "RelativeY": 4.67999267578125
+        },
+        {
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.5159912109375,
+          "RelativeY": 4.67999267578125
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 733.9000244140625,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -4.0799560546875
+        }
+      ]
+    },
+    {
+      "Id": "fraction-control-merged-11",
+      "Mode": "final-preserve",
+      "InputSha256": "FB57AC44FBDBABD6F8674D28A8A1F7AEE436D840622FF7548E4921F4594AA0B2",
+      "ReferencePdfSha256": "7A541D65F6CB93C929F4BC932A8D94CC52D389198AE8952534CBB864A2F12B93",
+      "Pages": 1,
+      "ControlPoints": 11,
+      "Container": "merged",
+      "FractionType": null,
+      "CellProseY": 736.1799926757812,
+      "AfterY": 697.6599731445312,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 6.47998046875
+        },
+        {
+          "Text": "+",
+          "X": 141.13999938964844,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.11599731445312,
+          "RelativeY": 6.47998046875
+        },
+        {
+          "Text": "2",
+          "X": 147.02000427246094,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.99600219726562,
+          "RelativeY": 6.47998046875
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 730.6599731445312,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -5.52001953125
+        }
+      ]
+    },
+    {
+      "Id": "fraction-control-merged-11",
+      "Mode": "all-word-compatible",
+      "InputSha256": "FB57AC44FBDBABD6F8674D28A8A1F7AEE436D840622FF7548E4921F4594AA0B2",
+      "ReferencePdfSha256": "619D9E8F05D9D655248BE058617A402DFF67363C90A91421E20C872D5923A879",
+      "Pages": 1,
+      "ControlPoints": 11,
+      "Container": "merged",
+      "FractionType": null,
+      "CellProseY": 736.1799926757812,
+      "AfterY": 697.6599731445312,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 6.47998046875
+        },
+        {
+          "Text": "+",
+          "X": 141.13999938964844,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.11599731445312,
+          "RelativeY": 6.47998046875
+        },
+        {
+          "Text": "2",
+          "X": 147.02000427246094,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.99600219726562,
+          "RelativeY": 6.47998046875
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 730.6599731445312,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -5.52001953125
+        }
+      ]
+    },
+    {
+      "Id": "fraction-control-merged-16",
+      "Mode": "final-preserve",
+      "InputSha256": "5CF05E18D071D257AB3496BD589455828E237C414D04E991A85F567A9880DE4D",
+      "ReferencePdfSha256": "C7BA86DC4A834E02EF4D05D503E36452FEB197D453016B294366E22201E6A5B7",
+      "Pages": 1,
+      "ControlPoints": 16,
+      "Container": "merged",
+      "FractionType": null,
+      "CellProseY": 732.0999755859375,
+      "AfterY": 697.6599731445312,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 741.5800170898438,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 9.48004150390625
+        },
+        {
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 741.5800170898438,
+          "Size": 8.039999961853027,
+          "RelativeX": 68.5159912109375,
+          "RelativeY": 9.48004150390625
+        },
+        {
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 741.5800170898438,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.5159912109375,
+          "RelativeY": 9.48004150390625
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 724.0599975585938,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -8.03997802734375
+        }
+      ]
+    },
+    {
+      "Id": "fraction-control-merged-16",
+      "Mode": "all-word-compatible",
+      "InputSha256": "5CF05E18D071D257AB3496BD589455828E237C414D04E991A85F567A9880DE4D",
+      "ReferencePdfSha256": "36E609FC0A5B129FAD9AEDD28DA7AFEDB06A320CC87A31903B9042F6874D2893",
+      "Pages": 1,
+      "ControlPoints": 16,
+      "Container": "merged",
+      "FractionType": null,
+      "CellProseY": 732.0999755859375,
+      "AfterY": 697.6599731445312,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 741.5800170898438,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 9.48004150390625
+        },
+        {
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 741.5800170898438,
+          "Size": 8.039999961853027,
+          "RelativeX": 68.5159912109375,
+          "RelativeY": 9.48004150390625
+        },
+        {
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 741.5800170898438,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.5159912109375,
+          "RelativeY": 9.48004150390625
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 724.0599975585938,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -8.03997802734375
+        }
+      ]
+    },
+    {
+      "Id": "fraction-control-cell-24",
+      "Mode": "final-preserve",
+      "InputSha256": "4ECD2524EED2B3A57F76F93FA701A3941FA7AB409770CFE7F0079B640B8FA9E0",
+      "ReferencePdfSha256": "32265BEA2C2DFD0D6728B3D3C883418DBC77D383AC158EF84D2D7D6F082E4ACD",
+      "Pages": 1,
+      "ControlPoints": 24,
+      "Container": "cell",
+      "FractionType": null,
+      "CellProseY": 726.3400268554688,
+      "AfterY": 673.5399780273438,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 68.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 714.219970703125,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -12.12005615234375
+        }
+      ]
+    },
+    {
+      "Id": "fraction-control-cell-24",
+      "Mode": "all-word-compatible",
+      "InputSha256": "4ECD2524EED2B3A57F76F93FA701A3941FA7AB409770CFE7F0079B640B8FA9E0",
+      "ReferencePdfSha256": "6DE5D2DBF95048CF703A89FCFE22C9F73F55BDFA5A35745E2C2E172AAF72F582",
+      "Pages": 1,
+      "ControlPoints": 24,
+      "Container": "cell",
+      "FractionType": null,
+      "CellProseY": 726.3400268554688,
+      "AfterY": 673.5399780273438,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 68.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 714.219970703125,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -12.12005615234375
+        }
+      ]
+    },
+    {
+      "Id": "fraction-control-body-24",
+      "Mode": "final-preserve",
+      "InputSha256": "39DF6AA6CD30256B3753C537D2B35A86826953136897B0EF663EA5E5D6012020",
+      "ReferencePdfSha256": "280490E2976D78CC0337B2E5B7D6A214D6DCC9724ED8900D42AE1F6B23298ACB",
+      "Pages": 1,
+      "ControlPoints": 24,
+      "Container": "body",
+      "FractionType": null,
+      "CellProseY": 726.3400268554688,
+      "AfterY": 694.1799926757812,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 68.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 714.219970703125,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -12.12005615234375
+        }
+      ]
+    },
+    {
+      "Id": "fraction-control-body-24",
+      "Mode": "all-word-compatible",
+      "InputSha256": "39DF6AA6CD30256B3753C537D2B35A86826953136897B0EF663EA5E5D6012020",
+      "ReferencePdfSha256": "AFA125B0EFB60F5799F72C3238BF430616C6B9FA6A3174068B4F08879A64054B",
+      "Pages": 1,
+      "ControlPoints": 24,
+      "Container": "body",
+      "FractionType": null,
+      "CellProseY": 726.3400268554688,
+      "AfterY": 694.1799926757812,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 68.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 714.219970703125,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -12.12005615234375
+        }
+      ]
+    },
+    {
+      "Id": "fraction-control-style-24",
+      "Mode": "final-preserve",
+      "InputSha256": "A3AABA3A134FCE0E243AD1D84B181F6F894B34F0A4A37C46FDB69411114DCF2E",
+      "ReferencePdfSha256": "8B9F9D17C78E99CC127BC4AFCB06524330EE118CF1E55B1C575A42D94A416CE1",
+      "Pages": 1,
+      "ControlPoints": 24,
+      "Container": "style",
+      "FractionType": null,
+      "CellProseY": 726.3400268554688,
+      "AfterY": 694.1799926757812,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 68.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 714.219970703125,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -12.12005615234375
+        }
+      ]
+    },
+    {
+      "Id": "fraction-control-style-24",
+      "Mode": "all-word-compatible",
+      "InputSha256": "A3AABA3A134FCE0E243AD1D84B181F6F894B34F0A4A37C46FDB69411114DCF2E",
+      "ReferencePdfSha256": "47DB3B4A9ED28834C6549D8608301608666DECB6D7244BA5F053C95362F0EAD0",
+      "Pages": 1,
+      "ControlPoints": 24,
+      "Container": "style",
+      "FractionType": null,
+      "CellProseY": 726.3400268554688,
+      "AfterY": 694.1799926757812,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 68.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 714.219970703125,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -12.12005615234375
+        }
+      ]
+    },
+    {
+      "Id": "fraction-control-style-font-24",
+      "Mode": "final-preserve",
+      "InputSha256": "F3AAE3E78860FE31C12ED08982E425D654C2731CCF40F2AB8B02E53653F09F72",
+      "ReferencePdfSha256": "9B11AC5526248F1AC749C2F27E27778BCAF158B282BE4BDAF60A494F83BB791B",
+      "Pages": 1,
+      "ControlPoints": 24,
+      "Container": "style-font",
+      "FractionType": null,
+      "CellProseY": 726.3400268554688,
+      "AfterY": 694.1799926757812,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 68.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 714.219970703125,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -12.12005615234375
+        }
+      ]
+    },
+    {
+      "Id": "fraction-control-style-font-24",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F3AAE3E78860FE31C12ED08982E425D654C2731CCF40F2AB8B02E53653F09F72",
+      "ReferencePdfSha256": "8891430EBDAAFE66CA969A280C585B642F70E2992E820C333E6A0069B05C9614",
+      "Pages": 1,
+      "ControlPoints": 24,
+      "Container": "style-font",
+      "FractionType": null,
+      "CellProseY": 726.3400268554688,
+      "AfterY": 694.1799926757812,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 68.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.5159912109375,
+          "RelativeY": 14.03997802734375
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 714.219970703125,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -12.12005615234375
+        }
+      ]
+    },
+    {
+      "Id": "fraction-control-stack-24",
+      "Mode": "final-preserve",
+      "InputSha256": "BD202E782E49BC36E00F074926EEF46058B65ADF9FDFC1E5239AC7FB4B1FC14D",
+      "ReferencePdfSha256": "F279395104BBCE4E58656064EB8EB862973F45E43250858806B97CAF6FE502CB",
+      "Pages": 1,
+      "ControlPoints": 24,
+      "Container": "body",
+      "FractionType": "noBar",
+      "CellProseY": 726.4600219726562,
+      "AfterY": 697.4199829101562,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 737.5,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 11.03997802734375
+        },
+        {
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 737.5,
+          "Size": 8.039999961853027,
+          "RelativeX": 68.5159912109375,
+          "RelativeY": 11.03997802734375
+        },
+        {
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 737.5,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.5159912109375,
+          "RelativeY": 11.03997802734375
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 717.4600219726562,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -9.0
+        }
+      ]
+    },
+    {
+      "Id": "fraction-control-stack-24",
+      "Mode": "all-word-compatible",
+      "InputSha256": "BD202E782E49BC36E00F074926EEF46058B65ADF9FDFC1E5239AC7FB4B1FC14D",
+      "ReferencePdfSha256": "FE1CA25EA29949B4AFB2DB4A3BD1327BC178356D9D8AE24B8276EE2E8CE07D4A",
+      "Pages": 1,
+      "ControlPoints": 24,
+      "Container": "body",
+      "FractionType": "noBar",
+      "CellProseY": 726.4600219726562,
+      "AfterY": 697.4199829101562,
+      "MathAnchors": [
+        {
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 737.5,
+          "Size": 8.039999961853027,
+          "RelativeX": 64.19599914550781,
+          "RelativeY": 11.03997802734375
+        },
+        {
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 737.5,
+          "Size": 8.039999961853027,
+          "RelativeX": 68.5159912109375,
+          "RelativeY": 11.03997802734375
+        },
+        {
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 737.5,
+          "Size": 8.039999961853027,
+          "RelativeX": 74.5159912109375,
+          "RelativeY": 11.03997802734375
+        },
+        {
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 717.4600219726562,
+          "Size": 8.039999961853027,
+          "RelativeX": 69.23599243164062,
+          "RelativeY": -9.0
+        }
+      ]
+    }
+  ]
+}
