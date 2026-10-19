@@ -57,13 +57,15 @@ internal static partial class DocxInlineCompositionTests
                 elements.Add(new DocxParagraphElement(lead));
                 elements.Add(new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null));
             }
-            elements.Add(new DocxParagraphElement(lead with { SpacingAfterPoints = 600d }));
-            elements.AddRange(document.BodyElements);
+            double capacity = document.PageHeightPoints - document.MarginTopPoints - document.MarginBottomPoints;
+            elements.Add(new DocxParagraphElement(lead with { SpacingAfterPoints = capacity - 30d }));
+            elements.AddRange(document.BodyElements.Skip(1));
             diagnostics.Clear();
             var admitted = renderer.RenderBlankPages(document with { BodyElements = elements }, diagnostics.Add, default).ToArray();
             TestAssert.Equal(10, admitted.Length);
             var tenth = DocxCommentsTests.ReadEmbeddedGlyphTextShows(admitted[9], usePageCoordinates: true).ToArray();
-            TestAssert.Equal(1, tenth.Count(show => show.Text.Trim() == "10"));
+            TestAssert.True(tenth.Count(show => show.Text.Trim() == "10") == 1,
+                "The admitted page10 box must bind its field to10: " + string.Concat(tenth.Select(show => show.Text)));
             TestAssert.True(!tenth.Any(show => show.Text.Trim() == "9"), "A moved box must discard its unplaced page9 binding.");
             TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Page admission retains prepared child math.");
         }
