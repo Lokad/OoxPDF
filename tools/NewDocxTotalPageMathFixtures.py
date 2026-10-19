@@ -19,6 +19,7 @@ probes.add_argument('--spanning-cell-probe', action='store_true')
 probes.add_argument('--spanning-frame-probes', action='store_true')
 probes.add_argument('--parallel-cell-probes', action='store_true')
 probes.add_argument('--parallel-cell-bordered-probe', action='store_true')
+probes.add_argument('--parallel-cell-short-probe', action='store_true')
 args = parser.parse_args()
 sha = lambda value: hashlib.sha256(value).hexdigest().upper()
 
@@ -34,7 +35,7 @@ def publish(jobs):
             assert target.read_bytes() == data, target.name
 
 
-if args.parallel_cell_probes or args.parallel_cell_bordered_probe:
+if args.parallel_cell_probes or args.parallel_cell_bordered_probe or args.parallel_cell_short_probe:
     parent = next(row for row in json.loads((cases / 'spanning-frame-probes.json').read_text())
         if row['Id'] == 'spanning-frame-mixed-prose')
     original = (root / parent['Input']).read_bytes()
@@ -43,7 +44,8 @@ if args.parallel_cell_probes or args.parallel_cell_bordered_probe:
         infos = archive.infolist()
         original_parts = {entry.filename: archive.read(entry.filename) for entry in infos}
     rows, jobs = [], []
-    for variant in (('bordered',) if args.parallel_cell_bordered_probe else ('aligned', 'shifted', 'mixed')):
+    variants = ('bordered',) if args.parallel_cell_bordered_probe else ('short-left',) if args.parallel_cell_short_probe else ('aligned', 'shifted', 'mixed')
+    for variant in variants:
         parts = dict(original_parts)
         tree = E.fromstring(parts['word/document.xml'])
         table = next(tree.iter(w + 'tbl'))
@@ -74,7 +76,9 @@ if args.parallel_cell_probes or args.parallel_cell_bordered_probe:
             for index, paragraph in enumerate(paragraphs[1:], 1):
                 paragraph.find('.//' + w + 't').text = side + ' source row ' + str(index) + '.'
                 paragraph.find('.//' + w + 'sz').set(w + 'val',
-                    '24' if side == 'Right' and variant == 'mixed' and index % 2 else '20')
+                    '24' if side == 'Right' and variant in ('mixed', 'short-left') and index % 2 else '20')
+            if side == 'Left' and variant == 'short-left':
+                for paragraph in paragraphs[21:]: cell.remove(paragraph)
             row_node.append(cell)
         parts['word/document.xml'] = E.tostring(tree, encoding='utf-8', xml_declaration=True)
         buffer = BytesIO()
@@ -86,10 +90,10 @@ if args.parallel_cell_probes or args.parallel_cell_bordered_probe:
             Sha256=sha(data),SourceInput=parent['Input'],SourceSha256=parent['Sha256'],HeldOut=True,
             ExpectedEquationCount=0,ExpectedRenderedEquationCount=0,SourceRowsPerCell=120,
             ExpectedText=['Before public math table.','Left source row 1.','Right source row 1.',
-                'Left source row 120.','Right source row 120.','After public math table.'],
+                'Left source row ' + ('20.' if variant == 'short-left' else '120.'),'Right source row 120.','After public math table.'],
             Change='Parallel ordinary cells: aligned source metrics, different introduction spacing, or different line metrics. No candidate-derived geometry.'))
         jobs.append((cases / (name + '.docx'), data))
-    manifest_name = 'parallel-cell-bordered-probe.json' if args.parallel_cell_bordered_probe else 'parallel-cell-probes.json'
+    manifest_name = 'parallel-cell-bordered-probe.json' if args.parallel_cell_bordered_probe else 'parallel-cell-short-probe.json' if args.parallel_cell_short_probe else 'parallel-cell-probes.json'
     jobs.append((cases / manifest_name,
         (json.dumps(rows, indent=2) + '\n').replace('\n', '\r\n').encode()))
     publish(jobs)
