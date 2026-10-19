@@ -1,5 +1,40 @@
 # Composed-document reliability checkpoint
 
+## C308 boxed math/count survives ordinary parallel-cell composition (2026-10-20)
+
+An accepted boxed fraction/NUMPAGES prefix remains source-exact inside a240pt
+left cell beside160pt ordinary prose. Both Word presets have four pages. Math
+appears only on page1, the actual field is4 and the cells resume left50/right54
+on page2.480 independent prose/eight math glyph anchors pass unchanged gates:
+proseY0.323975pt, mathY0.360947pt, frameY0.000061pt. Four viewed Word/native page1/
+page2 rasters show complete box/count/continuation ink. Keep both strict pixel
+failures and raw symmetric cached1/fldSimple screens; no missing simple math or
+Office/candidate global/page tokens. Portable checks bind to their own actual
+final count, without requiring native-font pagination.
+
+No production change/library build. Reuse C307's exact14 runtime assets; one
+harness-only build/freeze,2,483public inputs, two exact Windows checks/one Ubuntu
+pass/one native skip, one invocation/platform and no repair. Prior17Windows/
+12Ubuntu/five native skips remain separate qualification carried by unchanged
+production and unaffected source/gold, not a fresh or joined19-method claim. The
+new field-anchor assertion branch is absent from prior frame/parallel gold;
+unchanged checks retain their meaning. No extra conversion is used for math/
+field assertions. Two conversions/two independent Word exports,17 transferred
+assets/two exact integration smoke PDFs, no root build or old suite replay.
+
+One descriptive short-cell manifest replaces the ambiguous120-per-cell label
+with actual Left20/Right120. The DOCX/gold are unchanged; all other2,479existing
+inputs match, with three boxed-case additions. Record this metadata delta
+explicitly rather than asserting full input identity. Library/CLI source remains
+unchanged. Harnessdc37f19c, production526ae9f2; evidence
+artifacts/composition-c1/parallel-cell-box-evidence.json. C307CI39338643663 is
+green Windows/Ubuntu including broader/package checks; continue inset review.
+
+Infrequent workspace scan C308:16,577,016,128bytes/918,901files/83,198directories,
+23.82seconds, zero errors. The loose5GB target remains unmet; no cleanup claim or
+retry of protected rejected retirements. Evidence artifacts/workspace-footprint-
+C308.json. Keep the cap visible while preserving useful evidence and history.
+
 ## C307 admitted source windows survive parallel fragments (2026-10-20)
 
 Each natural top-aligned automatic cell now owns its consumed source offset,
