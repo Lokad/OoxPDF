@@ -1,0 +1,201 @@
+{
+  "Provenance": "Two independent Word16 exports; all body/note prose and origins exactly equal source control. No candidate-derived anchors.",
+  "Rows": [
+    {
+      "Id": "minimum-inactive-first-header-noted12",
+      "Mode": "final-preserve",
+      "InputSha256": "E58FAD6CB1854A22F3E6FA927CB08C786CC662D4CD9E6CD786A359DFE85599D4",
+      "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/note-marked-minimum-line-20.docx",
+      "SourceSha256": "7E81696732717C13824B757E4721B1DF5EE414A35205BBE136F5806ABB4D65E4",
+      "WordPdfSha256": "6E1A7D1E94355E4D25EA99820AFD4D91CE66B55084E0D1DF004E6120BE26DFA7",
+      "BaseWordPdfSha256": "01291051D4824EFC58ED7E75056ACFBDD0FBF825229534620CCF730872BA3812",
+      "WordPages": 1,
+      "WordMathAnchors": [],
+      "WordFrames": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Public minimum Top. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 88.82000732421875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Alpha public body before note 09 and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 108.739990234375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterAlpha. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 128.780029296875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Bravo public body before note 10 and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 148.82000732421875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterBravo. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 168.739990234375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Charlie public body before note 11 and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 188.780029296875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Delta public body before note 12 and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 208.82000732421875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterDelta. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 228.739990234375,
+          "Size": 12.0
+        },
+        {
+          "Text": "09 Public destination Alpha. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 668.97998046875,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "10 Public destination Bravo. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 683.6199951171875,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "11 Public destination Charlie. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 698.2559814453125,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "12 Public destination Delta. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 712.89599609375,
+          "Size": 8.039999961853027
+        }
+      ]
+    },
+    {
+      "Id": "minimum-inactive-first-header-noted12",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E58FAD6CB1854A22F3E6FA927CB08C786CC662D4CD9E6CD786A359DFE85599D4",
+      "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/note-marked-minimum-line-20.docx",
+      "SourceSha256": "7E81696732717C13824B757E4721B1DF5EE414A35205BBE136F5806ABB4D65E4",
+      "WordPdfSha256": "5B30D896AD1C8020D006DBBA03DC25B5C7BE0D13935A969B9E4A449615943250",
+      "BaseWordPdfSha256": "39AF588F077E68C18D972F6795E74BF07902A6D99EA42A776782F5C51B408AC9",
+      "WordPages": 1,
+      "WordMathAnchors": [],
+      "WordFrames": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Public minimum Top. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 88.82000732421875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Alpha public body before note 09 and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 108.739990234375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterAlpha. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 128.780029296875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Bravo public body before note 10 and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 148.82000732421875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterBravo. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 168.739990234375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Charlie public body before note 11 and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 188.780029296875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Delta public body before note 12 and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 208.82000732421875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterDelta. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 228.739990234375,
+          "Size": 12.0
+        },
+        {
+          "Text": "09 Public destination Alpha. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 668.97998046875,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "10 Public destination Bravo. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 683.6199951171875,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "11 Public destination Charlie. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 698.2559814453125,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "12 Public destination Delta. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 712.89599609375,
+          "Size": 8.039999961853027
+        }
+      ]
+    }
+  ]
+}

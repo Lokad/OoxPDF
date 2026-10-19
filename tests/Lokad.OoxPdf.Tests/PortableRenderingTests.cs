@@ -25,6 +25,9 @@ internal static class PortableRenderingTests
     public static void PortableRenderingInactiveStaticVariantsPreserveOrdinaryBodyOrigins() =>
         DocxPassiveStaticBodyTests.CheckBodyBaselines(new PinnedResolver(), compareWord: false, "minimum-inactive-static-office.json");
 
+    public static void PortableRenderingInactiveNoteTemplatesPreserveSourceNumberingAndOrigins() =>
+        DocxPassiveStaticBodyTests.CheckInactiveNoteTemplates(new PinnedResolver(), compareWord: false);
+
     public static void PortableRenderingTableGridOriginsPreserveMixedInlineContent() =>
         DocxInlineCompositionTests.CheckTableGridOrigins(new PinnedResolver(mathFont: true));
 

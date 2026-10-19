@@ -29,6 +29,70 @@ internal static class DocxPassiveStaticBodyTests
         CheckBodyBaselines(null, compareWord: true, "minimum-inactive-static-office.json");
     }
 
+    public static void DocxInactiveNoteTemplatesPreserveSourceNumberingAndWordOrigins()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent note origins require installed Windows fonts.");
+        CheckInactiveNoteTemplates(null, compareWord: true);
+    }
+
+    internal static void CheckInactiveNoteTemplates(IFontResolver? resolver, bool compareWord)
+    {
+        using var gold = JsonDocument.Parse(File.ReadAllText(Case("CompositionProbes/minimum-inactive-notes-office.json")));
+        foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string input = Case("CompositionProbes/" + row.GetProperty("Id").GetString() + ".docx");
+            string original = Case(row.GetProperty("SourceInput").GetString()!.Replace("tests/Lokad.OoxPdf.Tests/Cases/", "", StringComparison.Ordinal));
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            TestAssert.Equal(row.GetProperty("SourceSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(original))));
+            bool final = row.GetProperty("Mode").GetString() == "final-preserve";
+            var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
+            var geometry = final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+            var before = Shows(original);
+            var after = Shows(input);
+            TestAssert.True(before.Length > 8, "The control includes body, marker and note glyphs.");
+            TestAssert.Equal(before.Length, after.Length);
+            for (int index = 0; index < before.Length; index++)
+            {
+                TestAssert.Equal(before[index].Text, after[index].Text);
+                TestAssert.Equal(before[index].Page, after[index].Page);
+                TestAssert.True(Math.Abs(before[index].X - after[index].X) < .001d &&
+                    Math.Abs(before[index].Y - after[index].Y) < .001d && Math.Abs(before[index].Size - after[index].Size) < .001d,
+                    "Disabled templates preserve every source-owned body, marker and note glyph origin and size.");
+            }
+            if (compareWord)
+                foreach (var anchor in row.GetProperty("WordProseAnchors").EnumerateArray().Where(anchor =>
+                    anchor.GetProperty("Text").GetString()!.StartsWith("Public minimum ", StringComparison.Ordinal)))
+                {
+                    var show = after.Single(show => show.Text.Trim() == anchor.GetProperty("Text").GetString());
+                    TestAssert.Equal(anchor.GetProperty("Page").GetInt32(), show.Page);
+                    TestAssert.True(Math.Abs(show.X - anchor.GetProperty("X").GetDouble()) < 1d &&
+                        Math.Abs(show.Y - anchor.GetProperty("Y").GetDouble()) < 1d,
+                        "Minimum note-body lines retain independent one-point Word origins.");
+                }
+
+            (int Page, string Text, double X, double Y, double Size)[] Shows(string path) =>
+                new DocxRenderer(resolver, mode, geometry).RenderBlankPages(DocxTests.ReadDocx(path, mode), null, default)
+                    .SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
+                        .Where(show => show.Text.Length != 0).Select(show =>
+                            (index + 1, show.Text.Normalize(NormalizationForm.FormKC), show.X, page.Height - show.Y, show.Size)))
+                    .ToArray();
+        }
+    }
+
+    public static void DocxInactiveNoteTemplatesKeepEnabledStoryAndSectionFallbacks()
+    {
+        var document = DocxTests.ReadDocx(Case("CompositionProbes/minimum-inactive-first-header-noted12.docx"), OoxPdfDocxMarkupMode.Final);
+        TestAssert.True(DocxPageFootnoteNumbering.IsEligibleDocument(document));
+        TestAssert.True(!DocxPageFootnoteNumbering.IsEligibleDocument(document with
+            { PageSettings = document.PageSettings with { TitlePage = true } }), "An enabled first story retains the original fallback.");
+        var enabledEven = document with { PageSettings = document.PageSettings with { EvenAndOddHeaders = true },
+            HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
+                { ["EVEN"] = document.HeaderBodyElementsByType["first"] } };
+        TestAssert.True(!DocxPageFootnoteNumbering.IsEligibleDocument(enabledEven), "Any selectable variant retains fallback, including case-insensitive source keys.");
+        TestAssert.True(!DocxPageFootnoteNumbering.IsEligibleDocument(document with
+            { BodyElements = document.BodyElements.Append(document.FinalSectionBreak!).ToArray() }), "Multiple source sections retain their existing admission.");
+    }
+
     internal static void CheckBodyBaselines(IFontResolver? resolver, bool compareWord,
         string goldFile = "minimum-passive-static-office.json", bool compareMarginOrigins = true)
     {

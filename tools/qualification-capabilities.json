@@ -9014,6 +9014,8 @@
     "DocxSyntheticHeaderReferenceTypesSelectDefaultWhenNoFirstOrEvenSetting",
     "DocxReaderReadsEvenAndOddHeadersFromSectionProperties",
     "DocxTitlePageSuppressesDefaultHeaderWithoutFirstStory",
-    "DocxEvenPagesSuppressDefaultHeaderWithoutEvenStory"
+    "DocxEvenPagesSuppressDefaultHeaderWithoutEvenStory",
+    "DocxInactiveNoteTemplates",
+    "PortableRenderingInactiveNoteTemplatesPreserveSourceNumberingAndOrigins"
   ]
 }
