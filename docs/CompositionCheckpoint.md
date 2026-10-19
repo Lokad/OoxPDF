@@ -1,5 +1,26 @@
 # Composed-document reliability checkpoint
 
+## C278 static table grid origins, 2026-10-19
+
+Header/footer containers now own their authored unbordered grid origin; flowing
+stories keep first-text anchoring. Independent zero/wide/plain/header/footer/body
+controls confirm the semantic distinction. Six new baseline views failed by10pt
+Final/7.556pt review; inherited static-cell X5.400/4.088pt closes too. Existing
+indentation/style/compatibility/border fallbacks stay, with no fitted/font/count
+rules. Six sources/12 Word views retain all content and pass original XY gates:
+math maxX0.1139/Y0.5222pt, frame0.1071pt,
+prose0.5010pt, physical size0.0170pt.
+
+One Release build:28 Windows/21 Ubuntu/seven native skips, once/platform; two
+parent observers fail. Ten new Word exports once/two cached references; four
+neighbor PDFs byte-identical,114 prior outcomes use absent-branch source proof.
+Twelve clean content screens; all12 strict whole-page failures retained. Four
+rasters reviewed: footer lower-frame ink is clipped by Word but painted fully by
+the candidate; source-frame coordinates alone do not close that residual.17
+assets/four exact transfer smokes, no root build/suite/portfolio/package replay.
+Root7d7febc9;static-table-origins-evidence.json. Safe managed code, resource bounds,
+caches, cancellation and publication remain; implicit-border X5.736pt unresolved.
+
 ## C277 ordinary pictures and textboxes, 2026-10-19
 
 Source-owned picture/box paragraphs now use the existing ordered inline path
