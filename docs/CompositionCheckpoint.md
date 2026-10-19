@@ -1,5 +1,27 @@
 # Composed-document reliability checkpoint
 
+## C277 ordinary pictures and textboxes, 2026-10-19
+
+Source-owned picture/box paragraphs now use the existing ordered inline path
+without requiring parent mathematics. Two independently exported body/cell
+sources retain all content in four Word views. Confirmed legacy geometry errors
+(body picture/prose42pt, boxX173.59pt; cell boxY2.62pt/review pictureY2.45pt)
+close without fitted shifts or font/count guards. Max admitted frame0.098pt,
+image0.098pt, prose0.090pt and following0.056pt; physical size0.0171pt.
+Pure-picture/static-story flow and explicit/revised/nested fallbacks remain.
+
+One Release library build:40 Windows/32 Ubuntu/eight native skips. A new child
+reuse assertion initially counted parent wrapping calls; the harness-only fix
+reruns that method, retaining39 passes and proving14 runtime assets/2388 inputs
+unchanged. Two parent observers fail. Four clean content screens/four reviewed
+rasters; all four strict whole-page visual failures retained. Optional image
+geometry checks reject missing/duplicate counts;48 prior tool rows stay exact.
+112 prior outcomes use absent-branch source proof, without a new PDF identity
+claim.17 assets/four byte-exact transfer smokes; no root build/suite/portfolio/
+package replay. Root a4cb4b29/ef3025f9; evidence ordinary-picture-boxes-evidence.json.
+Static-cell X5.400/4.088pt and implicit-border X5.736pt remain unresolved; safe
+managed code, resource bounds, caching, cancellation and publication unchanged.
+
 ## C276 physical ordinary textbox children (2026-10-19)
 
 Ordinary textbox child paragraphs now reuse ordered measurement with a physical
