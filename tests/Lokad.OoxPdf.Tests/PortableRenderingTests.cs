@@ -1600,7 +1600,7 @@ internal static class PortableRenderingTests
     private static string Case(string relative) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
         "..", "..", "..", "Cases", relative));
 
-    private sealed class PinnedResolver : IFontResolver
+    internal sealed class PinnedResolver : IFontResolver
     {
         private readonly FileFontProgramSource source;
         private readonly string family;

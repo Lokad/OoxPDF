@@ -2426,7 +2426,9 @@ internal static class DocxPageTests
             new DocxParagraphElement(tail)
         };
         DocxDocument document = DocxTests.CreateLayoutTestDocument(spillElements, []);
-        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        // This emission contract requires an embedded font, including on Linux.
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(),
+            OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         DocxTextEmissionSnapshot emission = renderer.InspectTextEmission(document);
         DocxTextEmissionLineSnapshot markerLine = emission.Lines.Single(line => line.SourceBlockIndex == 0 && line.SourceLineIndex == 0);
         TestAssert.Equal(1, markerLine.TerminalSpaceSegmentCount);
