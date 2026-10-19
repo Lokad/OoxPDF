@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+## C286/C287 shared plain-body admission ownership (2026-10-19)
+
+Bounded source review finds architectural duplication, with no new demonstrated
+rendering defect: ordinary-body classification appears twice; minimum leading,
+eleven-point and ordinary kerning repeat the same complete layout guards; the
+single-line paragraph predicate belongs to kerning despite numbering/renderer
+callers. Move the exact existing ordinary/single-line expressions into
+DocxPlainBodyFrame and factor that layout gate once. Nonordinary kerning retains
+its broader single-line-only rule. All font/size/threshold/style/reference and
+spacing gates remain, including11/12pt admission. No new narrow eligibility.
+
+61 focused Windows/61 Ubuntu checks, no skips, one committed frozen Release
+artifact/2,408inputs and one invocation per platform. Existing semantic tests
+cover positive admissions, malformed/kept/wrapped/static fallbacks, actual note
+owners, slots, numbering and emission. No new tests mirror the refactor. Static
+source proof verifies moved predicate expressions are identical. Three existing
+ordinary12/ordinary11/noted12 sources yield six PDFs identical to accepted
+minimum-bookmark outcomes; all six independent Word comparisons reused, with
+original strict failures retained. Zero Word exports/new rasters, no font or
+layout performance claim.17 assets/four exact smokes, no root build/suite/corpus
+replay. Prior C285 CI39299811393 Ubuntu is green, Windows continues.
+
+Evidence:artifacts/composition-c1/plain-body-eligibility-review.json and
+plain-body-frame-evidence.json; root410b7c8c. M3’s remaining document/font/size
+regimes are concerns requiring independent evidence, not permission to widen
+admission. Next test an ordinary minimum-height body with a nonintrusive simple
+header as a bounded composition transformation; preserve existing roadmap.
+
 ## C285 preserve source-owned versus richer note placement (2026-10-19)
 
 C282’s broader Windows CI catches one existing Office-anchored mapped-note-band
