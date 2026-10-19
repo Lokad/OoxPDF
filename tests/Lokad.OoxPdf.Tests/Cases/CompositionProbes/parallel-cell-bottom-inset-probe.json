@@ -1,0 +1,36 @@
+[
+  {
+    "Id": "parallel-cell-bottom-insets",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/parallel-cell-bottom-insets.docx",
+    "Sha256": "777BEF8A9FDCEBABB8B09CEE7E5E3077711B40AB5730F26F48EFE3074AA79FD7",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-frame-mixed-prose.docx",
+    "SourceSha256": "EF0F9C1AD288737E511846F8F68E202E22B4AEDAA1B95D336D2213AC685F7514",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "SourceRowsPerCell": 120,
+    "ExpectedText": [
+      "Before public math table.",
+      "Left source row 1.",
+      "Right source row 1.",
+      "Left source row 120.",
+      "Right source row 120.",
+      "After public math table."
+    ],
+    "Change": "Explicit cell-owned vertical insets with ordinary prose; pale source fills expose shared physical fragments without border rules.",
+    "CellInsets": {
+      "Left": {
+        "Top": 3,
+        "Bottom": 18
+      },
+      "Right": {
+        "Top": 3,
+        "Bottom": 3
+      }
+    },
+    "CellFills": {
+      "Left": "DDEBF7",
+      "Right": "E2F0D9"
+    }
+  }
+]

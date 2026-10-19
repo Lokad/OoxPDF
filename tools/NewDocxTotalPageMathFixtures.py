@@ -22,6 +22,7 @@ probes.add_argument('--parallel-cell-bordered-probe', action='store_true')
 probes.add_argument('--parallel-cell-short-probe', action='store_true')
 probes.add_argument('--parallel-cell-box-probe', action='store_true')
 probes.add_argument('--parallel-cell-inset-probes', action='store_true')
+probes.add_argument('--parallel-cell-bottom-inset-probe', action='store_true')
 args = parser.parse_args()
 sha = lambda value: hashlib.sha256(value).hexdigest().upper()
 
@@ -43,6 +44,7 @@ parallel_group = next((group for enabled, group in [
     (args.parallel_cell_short_probe, ('parallel-cell-short-probe.json', ('short-left',))),
     (args.parallel_cell_box_probe, ('parallel-cell-box-probe.json', ('boxed-math',))),
     (args.parallel_cell_inset_probes, ('parallel-cell-inset-probes.json', ('uniform-insets', 'unequal-insets'))),
+    (args.parallel_cell_bottom_inset_probe, ('parallel-cell-bottom-inset-probe.json', ('bottom-insets',))),
 ] if enabled), None)
 if parallel_group:
     parent = next(row for row in json.loads((cases / 'spanning-frame-probes.json').read_text())
@@ -54,6 +56,11 @@ if parallel_group:
         original_parts = {entry.filename: archive.read(entry.filename) for entry in infos}
     rows, jobs = [], []
     manifest_name, variants = parallel_group
+    source_insets = {
+        'uniform-insets': dict(Left=(3, 3), Right=(3, 3)),
+        'unequal-insets': dict(Left=(3, 1), Right=(6, 3)),
+        'bottom-insets': dict(Left=(3, 18), Right=(3, 3)),
+    }
     for variant in variants:
         parts = dict(original_parts)
         tree = E.fromstring(parts['word/document.xml'])
@@ -75,11 +82,11 @@ if parallel_group:
                 borders = E.SubElement(cell.find(w + 'tcPr'), w + 'tcBorders')
                 for edge in ('top', 'left', 'bottom', 'right'):
                     E.SubElement(borders, w + edge, {w + 'val': 'single', w + 'sz': '8', w + 'color': '000000'})
-            if variant in ('uniform-insets', 'unequal-insets'):
+            if variant in source_insets:
                 properties = cell.find(w + 'tcPr')
                 margins = properties.find(w + 'tcMar')
                 if margins is None: margins = E.SubElement(properties, w + 'tcMar')
-                top, bottom = (3, 3) if variant == 'uniform-insets' else (3, 1) if side == 'Left' else (6, 3)
+                top, bottom = source_insets[variant][side]
                 for edge, points in [('top', top), ('bottom', bottom)]:
                     margin = margins.find(w + edge)
                     if margin is None: margin = E.SubElement(margins, w + edge)
@@ -131,9 +138,8 @@ if parallel_group:
                 SourceBoxParagraphSha256=sha(E.tostring(box_paragraph)),FieldInstruction='NUMPAGES',
                 ExpectedText=rows[-1]['ExpectedText']+['Before inline','after equation.'],
                 Change='Preserve an accepted boxed equation/NUMPAGES prefix in the left cell beside ordinary parallel prose; use source-authored widths.')
-        if variant in ('uniform-insets', 'unequal-insets'):
-            rows[-1].update(CellInsets=dict(Left=dict(Top=3,Bottom=3 if variant=='uniform-insets' else 1),
-                Right=dict(Top=3 if variant=='uniform-insets' else 6,Bottom=3)),
+        if variant in source_insets:
+            rows[-1].update(CellInsets={side:dict(Top=points[0],Bottom=points[1]) for side,points in source_insets[variant].items()},
                 CellFills=dict(Left='DDEBF7',Right='E2F0D9'),
                 Change='Explicit cell-owned vertical insets with ordinary prose; pale source fills expose shared physical fragments without border rules.')
         jobs.append((cases / (name + '.docx'), data))
