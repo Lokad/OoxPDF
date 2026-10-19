@@ -1,5 +1,17 @@
 # Measured operating envelope
 
+## C262 independent row-floor qualification (2026-10-19)
+
+Complete source spans now share wrapped prose/images while non-spanning cells
+retain row floors. Sixteen source outcomes pass Word flow anchors, max0.050pt;
+an unchanged held-out combination retains12math glyphs/image/link and following
+flow within0.060pt. One production artifact:91Windows/73Ubuntu/18native skips;
+only one model rerun/platform,14runtime assets/all2,303inputs unchanged.
+Twelve prior math PDFs remain identical;18strict visual failures remain.17assets/
+four smokes, no root build/suite or repeated Office exports. No throughput claim.
+Workspace scanC262:15.158GB/816,701files/zero errors; the loose5GBcap remains unmet.
+Evidence:artifacts/composition-c1/merge-source-row-floors-evidence.json.
+
 ## C260 inspection-only portfolio reuse (2026-10-19)
 
 Thirty accepted candidate PDFs now have identity-backed ActualText inspections;

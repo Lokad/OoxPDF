@@ -1,5 +1,30 @@
 # Composed-document reliability checkpoint
 
+## C261/C262 complete source-span row floors (2026-10-19)
+
+A held-out combination retained three equations, an image and navigation but
+exposed20.2pt later-owner and15.962pt following-flow errors. Eight separate Word
+controls establish the rule: a non-spanning cell owns its row floor; wrapped
+prose/images and multiple paragraphs belong to the complete admitted span.
+The shared span path now handles plain sources as well as math, using the existing
+cell-property eligibility rule. Where an independent floor is unknown, keep the
+prior estimate. Fixed/partial/dynamic/forced/header/note-dependent sources retain
+staging; missing inline bounds retain continuation fallback.
+Sixteen source outcomes pass existing1pt Word flow anchors, max0.050pt. The unchanged
+held-out input then passes all12math glyphs, prose, image and link checks: max glyph
+Y0.165pt, following prose0.060pt. No held-out rule fitting. All12prior math PDFs
+retain their bytes; fixed8reuse source proof.18new/held-out paired pins and18strict
+visual failures remain; source/simple-math/Office-word deficits zero. Inherited
+cell-left5.376pt remains.
+One production artifact:91Windows/73Ubuntu/18native skips, one exact invocation
+per platform; only one corrected model rerun/platform after preserving its
+line-only measurer fallback.14runtime assets/all2,303inputs unchanged; original
+failure retained. Both new observers fail C258.17assets/four smokes; no root build,
+suite replay or repeated Office export. Rootaecf7cd1; ignored
+artifacts/composition-c1/merge-source-row-floors-evidence.json. C258/C260CI are green
+on both platforms. WorkspaceC262is15.158GB/816,701files, zero errors; no reclaim
+claimed and the loose cap remains unmet.
+
 ## C260 pinned inspection reconciliation (2026-10-19)
 
 The routine portfolio command now accepts -ReuseCandidateDirectory to reinspect
