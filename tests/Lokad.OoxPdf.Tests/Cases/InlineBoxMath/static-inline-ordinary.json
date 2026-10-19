@@ -1,0 +1,82 @@
+[
+  {
+    "Id": "static-inline-ordinary-header-box",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-inline-ordinary-header-box.docx",
+    "Sha256": "80A41D9E948541DFB341CF9AC874F9EA01564FE2D21A326715BBBB68FB11AEE5",
+    "SourceSha256": "C0B6F6B2B0A86DCF0F68114946EE15CB1A1D389A1A06B660B99C41493A0C8566",
+    "HeldOut": true,
+    "Variant": "header-box",
+    "MathPart": "word/static-inline-ordinary-header-box.xml",
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "Change": "Move one source-exact ordinary paragraph into a selected header/footer; retain sibling order, complete box, picture resources and real body comment."
+  },
+  {
+    "Id": "static-inline-ordinary-footer-box",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-inline-ordinary-footer-box.docx",
+    "Sha256": "371FB6DD85FFD0BE5824B293EC5FC9D8105278714D85821F039AF281F4D045EE",
+    "SourceSha256": "C0B6F6B2B0A86DCF0F68114946EE15CB1A1D389A1A06B660B99C41493A0C8566",
+    "HeldOut": true,
+    "Variant": "footer-box",
+    "MathPart": "word/static-inline-ordinary-footer-box.xml",
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "Change": "Move one source-exact ordinary paragraph into a selected header/footer; retain sibling order, complete box, picture resources and real body comment."
+  },
+  {
+    "Id": "static-inline-ordinary-header-picture",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-inline-ordinary-header-picture.docx",
+    "Sha256": "B79D79CB06587AD02BBA01F67DA075D2F4C0DF4655AE4EAF7D1A4EF052312866",
+    "SourceSha256": "497497DD9DE8C767B0B1864CE3F55CB45341420007E8F7CF008FE724C9CF7727",
+    "HeldOut": true,
+    "Variant": "header-picture",
+    "MathPart": "word/static-inline-ordinary-header-picture.xml",
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedImageCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "Change": "Move one source-exact ordinary paragraph into a selected header/footer; retain sibling order, complete box, picture resources and real body comment."
+  },
+  {
+    "Id": "static-inline-ordinary-footer-picture",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-inline-ordinary-footer-picture.docx",
+    "Sha256": "A32D2957369E2A8F726105C85C77455F4BC92091E2A3E924DE67B365F8C00C1B",
+    "SourceSha256": "497497DD9DE8C767B0B1864CE3F55CB45341420007E8F7CF008FE724C9CF7727",
+    "HeldOut": true,
+    "Variant": "footer-picture",
+    "MathPart": "word/static-inline-ordinary-footer-picture.xml",
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedImageCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "Change": "Move one source-exact ordinary paragraph into a selected header/footer; retain sibling order, complete box, picture resources and real body comment."
+  }
+]

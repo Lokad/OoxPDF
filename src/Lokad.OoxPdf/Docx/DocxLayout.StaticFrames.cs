@@ -213,14 +213,15 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        if (paragraph.InlineTextBoxes.Count != 0 && paragraph.Equations.Count == 0)
-            return paragraph.Images.Count == 0 && paragraph.ListLabel is null &&
-                paragraph.Runs.All(run => run.EffectiveProperties.Hidden || run.Text.Length == 0) &&
-                DocxInlineContent.HasSupportedSourceMetadata(paragraph, token: token) &&
-                paragraph.InlineTextBoxes.All(box => IsNaturalInlineBoxFrame(box, width, mathEquations, token));
+        if (!paragraph.InlineTextBoxes.All(box => IsNaturalInlineBoxFrame(box, width, mathEquations, token))) return false;
+        // Legacy box-only models may lack a parsed ordered view. Mixed parsed
+        // paragraphs use the same source ownership as body and cell containers.
+        if (paragraph.InlineTextBoxes.Count != 0 && paragraph.Equations.Count == 0 &&
+            paragraph.Images.Count == 0 && paragraph.ListLabel is null &&
+            paragraph.Runs.All(run => run.EffectiveProperties.Hidden || run.Text.Length == 0))
+            return DocxInlineContent.HasSupportedSourceMetadata(paragraph, token: token);
         if (paragraph.Equations.Count != 0)
-            return paragraph.InlineTextBoxes.All(box => IsNaturalInlineBoxFrame(box, width, mathEquations, token)) &&
-                (TryGetStandaloneMath(paragraph, width, 1d, mathEquations, out _) ||
+            return (TryGetStandaloneMath(paragraph, width, 1d, mathEquations, out _) ||
                 mathEquations is not null && paragraph.InlineContent is not null &&
                 DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasPageInputs: true).Count == paragraph.Equations.Count &&
                 // Unavailable math keeps its diagnosed fallback; the remaining
@@ -231,7 +232,8 @@ internal sealed partial class DocxLayoutEngine
             paragraph.Images.All(image => image.SourceRunIndex >= 0 && image.RotationDegrees == 0d &&
                 double.IsFinite(image.WidthPoints) && double.IsFinite(image.HeightPoints) &&
                 image.WidthPoints > 0d && image.HeightPoints > 0d && image.WidthPoints <= width) &&
-            DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) &&
+            (paragraph.InlineTextBoxes.Count == 0 ? DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) :
+                paragraph.ListLabel is null && DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph)) &&
             DocxInlineContent.HasSupportedSourceOwner(paragraph, token: token);
     }
 

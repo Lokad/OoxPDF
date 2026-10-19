@@ -347,7 +347,7 @@ internal sealed partial class DocxLayoutEngine
                 paragraphIndex++;
                 continue;
             }
-            if (paragraph.Equations.Count != 0 || paragraph.ListLabel is not null)
+            if (paragraph.Equations.Count != 0 || paragraph.ListLabel is not null || paragraph.InlineTextBoxes.Count != 0)
             {
                 double size = GetParagraphFontSize(paragraph);
                 var profile = ResolveLineHeightProfile(paragraph, size, textMeasurer);
