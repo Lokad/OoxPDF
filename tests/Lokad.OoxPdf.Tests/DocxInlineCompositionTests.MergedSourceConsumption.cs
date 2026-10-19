@@ -72,7 +72,7 @@ internal static partial class DocxInlineCompositionTests
 
     public static void DocxInlineCompositionMergeConsumptionRequiresCompleteAdmittedFrames()
     {
-        foreach (string variant in new[] { "complete", "unmeasured", "center", "fixed", "dynamic" })
+        foreach (string variant in new[] { "complete", "unmeasured", "center", "fixed", "dynamic", "oversized" })
         {
             var source = ReadMutation("CompositionProbes/merged-span-three-rows", OoxPdfDocxMarkupMode.Final, false, false,
                 (xml, w, _) =>
@@ -88,11 +88,20 @@ internal static partial class DocxInlineCompositionTests
                     if (variant == "dynamic")
                         first.Element(w + "tc")!.Element(w + "p")!.Add(new XElement(w + "fldSimple", new XAttribute(w + "instr", " PAGE "),
                             new XElement(w + "r", new XElement(w + "t", "1"))));
+                    if (variant == "oversized")
+                    {
+                        var section = xml.Root!.Element(w + "body")!.Element(w + "sectPr")!;
+                        section.Element(w + "pgSz")!.SetAttributeValue(w + "h", "3000");
+                        section.Element(w + "pgMar")!.SetAttributeValue(w + "top", "200");
+                        section.Element(w + "pgMar")!.SetAttributeValue(w + "bottom", "200");
+                    }
                 });
             var equation = source.Tables.Single().Rows[0].Cells[0].Paragraphs[0].Equations.Single();
             var prepared = variant == "unmeasured" ? null :
                 new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance)
-                { [equation] = new(equation, new(18d, 12d, 4d, []), 16d, 20d) };
+                { [equation] = variant == "oversized"
+                    ? new(equation, new(18d, 180d, 20d, []), 180d, 200d)
+                    : new(equation, new(18d, 12d, 4d, []), 16d, 20d) };
             var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default, mathEquations: prepared);
             var rows = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
@@ -102,7 +111,7 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(ReferenceEquals(source.Tables.Single().Rows[0].Cells[0], cell.VisualCell),
                     "Consumption retains visual ownership for shading, borders and source inspection.");
                 TestAssert.True((cell.TextLines.Count == 0) == (variant == "complete"),
-                    "Only a complete, static, top-aligned source frame inside its admitted row is consumed. Unmeasured/fixed/shifted/dynamic sources retain fallback.");
+                    "Only a complete, static, top-aligned source frame inside its admitted row/page is consumed. Unmeasured/fixed/shifted/dynamic/oversized sources retain fallback.");
             }
         }
     }
