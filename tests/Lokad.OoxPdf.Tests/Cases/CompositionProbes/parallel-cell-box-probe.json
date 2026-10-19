@@ -1,0 +1,28 @@
+[
+  {
+    "Id": "parallel-cell-boxed-math",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/parallel-cell-boxed-math.docx",
+    "Sha256": "7D4D510168E0D67E9B4EB4FA5E8611BF7842DCFF82BD87A953EEDF134C655ADD",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-frame-mixed-prose.docx",
+    "SourceSha256": "EF0F9C1AD288737E511846F8F68E202E22B4AEDAA1B95D336D2213AC685F7514",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "SourceRowsPerCell": 120,
+    "ExpectedText": [
+      "Before public math table.",
+      "Left source row 1.",
+      "Right source row 1.",
+      "Left source row 120.",
+      "Right source row 120.",
+      "After public math table.",
+      "Before inline",
+      "after equation."
+    ],
+    "Change": "Preserve an accepted boxed equation/NUMPAGES prefix in the left cell beside ordinary parallel prose; use source-authored widths.",
+    "BoxSourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-cell-total-count.docx",
+    "BoxSourceSha256": "090D8F711EC51CF4EDFA2E6D0F92A84DE63C5291997FC37A2A69C3904F97759C",
+    "SourceBoxParagraphSha256": "1A97A708A7ABD24FD2FC3D2675C6157A1B970348C249638AC27B211B7E2F31C5",
+    "FieldInstruction": "NUMPAGES"
+  }
+]

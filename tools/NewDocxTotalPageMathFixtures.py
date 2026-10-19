@@ -20,6 +20,7 @@ probes.add_argument('--spanning-frame-probes', action='store_true')
 probes.add_argument('--parallel-cell-probes', action='store_true')
 probes.add_argument('--parallel-cell-bordered-probe', action='store_true')
 probes.add_argument('--parallel-cell-short-probe', action='store_true')
+probes.add_argument('--parallel-cell-box-probe', action='store_true')
 args = parser.parse_args()
 sha = lambda value: hashlib.sha256(value).hexdigest().upper()
 
@@ -35,7 +36,7 @@ def publish(jobs):
             assert target.read_bytes() == data, target.name
 
 
-if args.parallel_cell_probes or args.parallel_cell_bordered_probe or args.parallel_cell_short_probe:
+if args.parallel_cell_probes or args.parallel_cell_bordered_probe or args.parallel_cell_short_probe or args.parallel_cell_box_probe:
     parent = next(row for row in json.loads((cases / 'spanning-frame-probes.json').read_text())
         if row['Id'] == 'spanning-frame-mixed-prose')
     original = (root / parent['Input']).read_bytes()
@@ -44,23 +45,24 @@ if args.parallel_cell_probes or args.parallel_cell_bordered_probe or args.parall
         infos = archive.infolist()
         original_parts = {entry.filename: archive.read(entry.filename) for entry in infos}
     rows, jobs = [], []
-    variants = ('bordered',) if args.parallel_cell_bordered_probe else ('short-left',) if args.parallel_cell_short_probe else ('aligned', 'shifted', 'mixed')
+    variants = ('boxed-math',) if args.parallel_cell_box_probe else ('bordered',) if args.parallel_cell_bordered_probe else ('short-left',) if args.parallel_cell_short_probe else ('aligned', 'shifted', 'mixed')
     for variant in variants:
         parts = dict(original_parts)
         tree = E.fromstring(parts['word/document.xml'])
         table = next(tree.iter(w + 'tbl'))
-        table.find(w + 'tblPr/' + w + 'tblW').set(w + 'w', '6400')
+        widths = (240, 160) if variant == 'boxed-math' else (160, 160)
+        table.find(w + 'tblPr/' + w + 'tblW').set(w + 'w', str(sum(widths) * 20))
         if variant == 'bordered':
             E.SubElement(table.find(w + 'tblPr'), w + 'tblInd', {w + 'w': '0', w + 'type': 'dxa'})
         grid = table.find(w + 'tblGrid')
         grid.clear()
-        for _ in range(2): E.SubElement(grid, w + 'gridCol', {w + 'w': '3200'})
+        for width in widths: E.SubElement(grid, w + 'gridCol', {w + 'w': str(width * 20)})
         row_node = table.find(w + 'tr')
         source_cell = row_node.find(w + 'tc')
         for cell in row_node.findall(w + 'tc'): row_node.remove(cell)
-        for side in ('Left', 'Right'):
+        for side, width in zip(('Left', 'Right'), widths):
             cell = copy.deepcopy(source_cell)
-            cell.find(w + 'tcPr/' + w + 'tcW').set(w + 'w', '3200')
+            cell.find(w + 'tcPr/' + w + 'tcW').set(w + 'w', str(width * 20))
             if variant == 'bordered':
                 borders = E.SubElement(cell.find(w + 'tcPr'), w + 'tcBorders')
                 for edge in ('top', 'left', 'bottom', 'right'):
@@ -79,6 +81,15 @@ if args.parallel_cell_probes or args.parallel_cell_bordered_probe or args.parall
                     '24' if side == 'Right' and variant in ('mixed', 'short-left') and index % 2 else '20')
             if side == 'Left' and variant == 'short-left':
                 for paragraph in paragraphs[21:]: cell.remove(paragraph)
+            if side == 'Left' and variant == 'boxed-math':
+                box_parent = json.loads((cases / 'spanning-cell-total-count.json').read_text())[0]
+                box_bytes = (root / box_parent['Input']).read_bytes()
+                assert sha(box_bytes) == box_parent['Sha256']
+                with ZipFile(BytesIO(box_bytes)) as archive:
+                    box_tree = E.fromstring(archive.read('word/document.xml'))
+                box_paragraph = copy.deepcopy(next(box_tree.iter(w + 'tc')).find(w + 'p'))
+                cell.insert(list(cell).index(prefix), box_paragraph)
+                cell.remove(prefix)
             row_node.append(cell)
         parts['word/document.xml'] = E.tostring(tree, encoding='utf-8', xml_declaration=True)
         buffer = BytesIO()
@@ -92,8 +103,17 @@ if args.parallel_cell_probes or args.parallel_cell_bordered_probe or args.parall
             ExpectedText=['Before public math table.','Left source row 1.','Right source row 1.',
                 'Left source row ' + ('20.' if variant == 'short-left' else '120.'),'Right source row 120.','After public math table.'],
             Change='Parallel ordinary cells: aligned source metrics, different introduction spacing, or different line metrics. No candidate-derived geometry.'))
+        if variant == 'short-left':
+            del rows[-1]['SourceRowsPerCell']
+            rows[-1]['SourceRowsByCell'] = dict(Left=20, Right=120)
+        if variant == 'boxed-math':
+            rows[-1].update(ExpectedEquationCount=1,ExpectedRenderedEquationCount=1,
+                BoxSourceInput=box_parent['Input'],BoxSourceSha256=box_parent['Sha256'],
+                SourceBoxParagraphSha256=sha(E.tostring(box_paragraph)),FieldInstruction='NUMPAGES',
+                ExpectedText=rows[-1]['ExpectedText']+['Before inline','after equation.'],
+                Change='Preserve an accepted boxed equation/NUMPAGES prefix in the left cell beside ordinary parallel prose; use source-authored widths.')
         jobs.append((cases / (name + '.docx'), data))
-    manifest_name = 'parallel-cell-bordered-probe.json' if args.parallel_cell_bordered_probe else 'parallel-cell-short-probe.json' if args.parallel_cell_short_probe else 'parallel-cell-probes.json'
+    manifest_name = 'parallel-cell-box-probe.json' if args.parallel_cell_box_probe else 'parallel-cell-bordered-probe.json' if args.parallel_cell_bordered_probe else 'parallel-cell-short-probe.json' if args.parallel_cell_short_probe else 'parallel-cell-probes.json'
     jobs.append((cases / manifest_name,
         (json.dumps(rows, indent=2) + '\n').replace('\n', '\r\n').encode()))
     publish(jobs)

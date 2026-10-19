@@ -8,7 +8,6 @@
     "HeldOut": true,
     "ExpectedEquationCount": 0,
     "ExpectedRenderedEquationCount": 0,
-    "SourceRowsPerCell": 120,
     "ExpectedText": [
       "Before public math table.",
       "Left source row 1.",
@@ -17,6 +16,10 @@
       "Right source row 120.",
       "After public math table."
     ],
-    "Change": "Parallel ordinary cells: aligned source metrics, different introduction spacing, or different line metrics. No candidate-derived geometry."
+    "Change": "Parallel ordinary cells: aligned source metrics, different introduction spacing, or different line metrics. No candidate-derived geometry.",
+    "SourceRowsByCell": {
+      "Left": 20,
+      "Right": 120
+    }
   }
 ]
