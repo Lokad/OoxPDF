@@ -1,5 +1,34 @@
 # Composed-document reliability checkpoint
 
+## C306 parallel cells own independent continuation source (2026-10-20)
+
+A bounded three-source review reuses C305's immutable runtime without rebuilding
+or testing it. Six conversions/six independent Word16 exports pin1,440 ordinary
+source-row origins in both presets. Controls have aligned cells, different
+introduction spacing, or mixed line metrics. Prior fixtures regenerate identically.
+Aligned cells pass geometry within0.324pt. Shifted/mixed cells fail source-page
+allocation in both modes; all six strict pixel outcomes remain failed.
+
+Word's shifted cells both retain row53 on page1 and resume54 on page2. Native
+right53 moves to page2 and is partly clipped. With mixed metrics, Word's third
+page starts right100; native starts101. Four viewed native/Word rasters confirm
+clipped top ink for shifted/mixed continuations. All240 source rows per document
+remain extractable globally, but four raw per-page screens fail. Preserve those
+failures; global extraction does not prove complete visible content.
+
+The source model currently consumes one common row height. Independent Word
+seating demonstrates that parallel cells need their own source consumption while
+sharing physical row-fragment placement. No production correction is accepted in
+this review. Next bound the change to complete measured ordinary-cell frames,
+verify physical geometry with a bordered control, and preserve explicit breaks,
+merges, dynamic per-page reflow and rich/nested math fallbacks. No fitted offsets,
+new resource accounting or general table rewrite. Reuse retained refs/artifact.
+
+Public input/reference commits c231fcd2/9db1119f; supplemental source1d39fa3d,
+frozen runtime85e6ae19. Evidence artifacts/composition-c1/parallel-cell-review-
+evidence.json. No library/inspector build, test, package or root-runtime transfer.
+C305CI39335904396 is still running; continue implementation while it completes.
+
 ## C305 complete occupied frames survive table continuations (2026-10-20)
 
 Read-only inspection of all84 original planning paragraphs separates the defect
