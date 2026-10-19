@@ -32,12 +32,12 @@ internal sealed partial class DocxRenderer
                 continue;
             }
 
-            if (previousRow is null && IsFirstTableRowFragment(row))
+            if (previousRow is null && ShouldRenderTableRowEdge(row, top: true))
             {
                 RenderHorizontalTableCellBorder(cellLayout, "top", graphics);
             }
 
-            if (nextRow is null && IsLastTableRowFragment(row))
+            if (nextRow is null && ShouldRenderTableRowEdge(row, top: false))
             {
                 RenderHorizontalTableCellBorder(cellLayout, "bottom", graphics);
             }
@@ -68,14 +68,13 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    private static bool IsFirstTableRowFragment(DocxTableRowLayout row)
+    private static bool ShouldRenderTableRowEdge(DocxTableRowLayout row, bool top)
     {
-        return row.FragmentIndex <= 0;
-    }
-
-    private static bool IsLastTableRowFragment(DocxTableRowLayout row)
-    {
-        return row.FragmentIndex >= Math.Max(0, row.FragmentCount - 1);
+        // Natural rows repeat their edge decoration on every physical page.
+        // Declared heights and authored cell breaks retain source-edge ownership.
+        if (row.FragmentReason == "PageBoundary" &&
+            DocxLayoutEngine.HasAutomaticTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue)) return true;
+        return top ? row.FragmentIndex <= 0 : row.FragmentIndex >= Math.Max(0, row.FragmentCount - 1);
     }
 
     private static void RenderSharedHorizontalTableBorders(

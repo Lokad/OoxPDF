@@ -622,16 +622,18 @@ internal sealed partial class DocxLayoutEngine
                         !DocxMathParagraphPolicy.IsSupportedCellProperties(cell) ||
                         cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top ||
                         cell.VerticalAlignmentValue is not (null or "top") ||
-                        cell.Borders.Any(border => DocxTableBorderGeometry.ResolveVisibleWidth(border) > 0d) ||
+                        cell.Borders.Any(border => DocxTableBorderGeometry.ResolveVisibleWidth(border) > 0d && border.Value != "single") ||
                         GetTableCellLayoutBodyElements(cell).Any(element => element is not DocxParagraphElement) ||
                         (DocxFieldText.GetDependencies(GetTableCellLayoutBodyElements(cell), cancellationToken) & DocxCounterDependencies.PageNumber) != 0))
                     return false;
-                double rowBottomPadding = row.Cells.Max(cell => ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, paragraphSpacingScale));
-                // Validate the measured source with each cell's own bottom margin.
-                // Shared fragment reservation may exceed that natural row end when
-                // the tallest content and the largest inset belong to different cells.
-                double naturalHeight = laidOutCells.Select((cell, index) => cell.UsedHeight + rowTopPadding +
-                    ResolveTableCellVerticalPadding(row.Cells[index].Margins.BottomPoints, paragraphSpacingScale)).Max();
+                var topInsets = row.Cells.Select(cell => rowTopPadding + ResolveTableCellTopBorderContentInset(cell, paragraphSpacingScale)).ToArray();
+                double BottomInset(DocxTableCell cell) => ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, paragraphSpacingScale) +
+                    DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, "bottom")) * paragraphSpacingScale;
+                double rowBottomPadding = row.Cells.Max(BottomInset);
+                // Validate complete natural source frames, including their solid edges.
+                // Shared fragment reservation may exceed a cell's own source end.
+                // Unmatched collapsed/compound geometry keeps the prior fallback.
+                double naturalHeight = laidOutCells.Select((cell, index) => cell.UsedHeight + topInsets[index] + BottomInset(row.Cells[index])).Max();
                 if (Math.Abs(naturalHeight - rowHeight) > .001d) return false;
                 var bounds = new (double Top, double Bottom)[laidOutCells.Count][];
                 for (int cellIndex = 0; cellIndex < laidOutCells.Count; cellIndex++)
@@ -646,7 +648,7 @@ internal sealed partial class DocxLayoutEngine
                         var line = cell.TextLines[lineIndex];
                         if (!DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double lower, out double upper)) return false;
                         var span = (Top: rowHeight - upper, Bottom: rowHeight - lower);
-                        if (span.Top < previousBottom - .001d || span.Bottom > cell.UsedHeight + rowTopPadding + .001d) return false;
+                        if (span.Top < previousBottom - .001d || span.Bottom > cell.UsedHeight + topInsets[cellIndex] + .001d) return false;
                         bounds[cellIndex][lineIndex] = span;
                         previousBottom = span.Bottom;
                     }
@@ -674,9 +676,9 @@ internal sealed partial class DocxLayoutEngine
                             end++;
                         }
                         if (end == first) return false;
-                        double cut = end == cell.TextLines.Count ? cell.UsedHeight + rowTopPadding : bounds[cellIndex][end].Top - rowTopPadding;
+                        double cut = end == cell.TextLines.Count ? cell.UsedHeight + topInsets[cellIndex] : bounds[cellIndex][end].Top - topInsets[cellIndex];
                         if (!HasValidKeepBoundary(cell.Paragraphs, cell.TextLines, first, end)) return false;
-                        double contentHeight = (end == cell.TextLines.Count ? cell.UsedHeight + rowTopPadding : bounds[cellIndex][end - 1].Bottom) - starts[cellIndex];
+                        double contentHeight = (end == cell.TextLines.Count ? cell.UsedHeight + topInsets[cellIndex] : bounds[cellIndex][end - 1].Bottom) - starts[cellIndex];
                         double occupied = contentHeight + rowBottomPadding;
                         if (!double.IsFinite(occupied) || occupied <= 0d || occupied > capacity + .001d) return false;
                         height = Math.Max(height, occupied);

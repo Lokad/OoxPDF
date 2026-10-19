@@ -200,23 +200,23 @@ internal sealed partial class DocxRenderer
                 continue;
             }
 
-            if (previousRow is null && IsFirstTableRowFragment(row))
+            if (previousRow is null && ShouldRenderTableRowEdge(row, top: true))
             {
                 RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y + cellLayout.Height, cellLayout.VisualCell, "top", rowBoundaryIndex.SliceRaw(cellLayout.X, cellLayout.X + cellLayout.Width, cancellationToken), graphics, emittedJunctions);
             }
 
-            if (nextRow is null && IsLastTableRowFragment(row))
+            if (nextRow is null && ShouldRenderTableRowEdge(row, top: false))
             {
                 RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.VisualCell, "bottom", rowBoundaryIndex.SliceRaw(cellLayout.X, cellLayout.X + cellLayout.Width, cancellationToken), graphics, emittedJunctions);
             }
         }
 
-        if (previousRow is null && IsFirstTableRowFragment(row))
+        if (previousRow is null && ShouldRenderTableRowEdge(row, top: true))
         {
             RenderOuterHorizontalFragmentCornerJunctions(row, previousRow, rowBoundaries, "top", graphics);
         }
 
-        if (nextRow is null && IsLastTableRowFragment(row))
+        if (nextRow is null && ShouldRenderTableRowEdge(row, top: false))
         {
             RenderOuterHorizontalFragmentCornerJunctions(row, previousRow, rowBoundaries, "bottom", graphics);
         }
