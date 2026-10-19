@@ -1,5 +1,46 @@
 # Composed-document reliability checkpoint
 
+## C276 physical ordinary textbox children (2026-10-19)
+
+Ordinary textbox child paragraphs now reuse ordered measurement with a physical
+first inset inside their scaled frame. Their existing line-height profile stays
+selected; prepared mathematical rows and note/endnote/comment paths keep their
+previous contract. No API, quota, ownership-admission or unsafe-code changes.
+Independent prose gates expose11 former review failures, max3.362pt; the shared
+frame correction closes them without font/size/count guards or fitted offsets.
+
+Twenty-five sources/50 Word views retain204 math glyphs and all source prose/
+pictures.76 prose anchors and48 following anchors pass admitted one-point gates.
+Maximum admitted prose X0.204pt/Y0.784pt, math0.243/0.758pt, box edge0.908pt,
+image0.818pt and following0.029/0.788pt. Physical prose size0.021pt/math0.040pt.
+The48 primary parent math/frame/following measurements remain exactly unchanged.
+Four rasters reviewed, including plain-before-math ink inside the original box.
+Static-cell inherited X5.400/4.088pt stays explicitly unadmitted; all50 strict
+whole-page failures remain.46 clean primary content screens/two inherited
+unreferenced-header diagnostic flags, with no body content deficit. Raw flags
+and their independent source classification remain unchanged.
+
+One committed frozen Release build:53 Windows/43 Ubuntu checks, ten native
+skips, once/platform; no rejected candidate. Model scale covariance and native
+prose gates fail against the parent library. Tests cover plain paragraphs before
+and after math, source transformations, child cancellation/reuse, ownership,
+minimum/exact fallbacks, cell memo and admission. The frame inspector adds
+optional ordinary-prose origin/physical-size gates.42 prior math/frame/following
+measurements stay exact; missing/duplicate prose-prefix controls both fail.
+
+Four new Word exports once/46 references reused;33 comparisons by exact PDF
+identity. Source review caught an ordinary child in the old plain-footer case,
+so its two modes are measured separately rather than falsely carried forward.
+62 older outcomes use source proof, including the fixed portfolio.17 assets/four
+smokes, no root build/suite/portfolio/package replay. C275CI39278903063 is green
+on Windows/Ubuntu including broader/package checks; C276 CI follows the push.
+
+Evidence:artifacts/composition-c1/plain-box-child-frames-evidence.json;
+root2e2af0e5. No-parent-math picture/box combinations remain the next bounded
+item; broader mathematical/text strut unification remains unverified. No speedup
+claim. Last infrequent workspace scan C273:15.541GB/849,977files; the loose5GB
+target remains unmet and rejected retirement paths remain preserved.
+
 ## C275 source-owned box paragraphs (2026-10-19)
 
 Source ownership now admits automatic ordinary-text/box paragraphs independently
