@@ -8979,6 +8979,9 @@
     "DocxInlineBoxMathPreparationObservesCancellationBetweenChildren",
     "DocxPrintedBodyBoundaryRecoversNoteDesignCoordinates",
     "DocxEndnoteStartTopRecoversDesignBodyBottom",
-    "DocxInlineCompositionOccupiedFooterKeepsNotesAtIndependentWordOrigins"
+    "DocxInlineCompositionOccupiedFooterKeepsNotesAtIndependentWordOrigins",
+    "DocxInlineCompositionMappedNoteBandBottomMatchesIndependentWord",
+    "DocxInlineCompositionCompleteRevisionsKeepDistinctWordStoryBands",
+    "PortableRenderingCompleteRevisionsKeepContentInkAndStoryBands"
   ]
 }

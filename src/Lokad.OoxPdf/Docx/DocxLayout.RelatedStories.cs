@@ -243,7 +243,6 @@ internal sealed partial class DocxLayoutEngine
                 var documentEndPages = outputPages.ToList();
                 DocxLayoutPage activePage = documentEndPages[^1];
                 List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
-                double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale, bodyBoundaryToNoteDesign);
                 int activePageIndex = documentEndPages.Count - 1;
                 DocxRelatedStoryLayout? documentEndSeparatorLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
                 DocxRelatedStoryLayout? documentEndContinuationLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? documentEndSeparatorLayout;
@@ -274,6 +273,11 @@ internal sealed partial class DocxLayoutEngine
                     documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken);
                 bool FollowsBodyParagraph() => fittingEndnoteBoundaries || CanUseTrailingParagraphEndnoteStart(activePage,
                     activePlacedStories, documentEndSeparatorLayout, printScale, documentEndStories);
+                // Only the admitted source-owned note flow shares the body's
+                // physical origin. Rich/fragmented fallback stories retain
+                // their independently qualified legacy placement and bands.
+                double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale,
+                    FollowsBodyParagraph() ? bodyBoundaryToNoteDesign : null);
                 if (FollowsBodyParagraph() || CanUseNominalNoteSeparatorFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories))
                 {
                     cursorTop -= ResolveTrailingBodyBoundarySpacing(activePage);
@@ -489,7 +493,9 @@ internal sealed partial class DocxLayoutEngine
         int activePageIndex = sectionEndPageIndex;
         DocxLayoutPage activePage = outputPages[activePageIndex];
         List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
-        double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale, bodyBoundaryToNoteDesign);
+        double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale,
+            CanUseTrailingParagraphEndnoteStart(activePage, activePlacedStories, endnoteSeparatorLayout,
+                printScale, sectionEndStories.Select(story => story.StoryLayout).ToArray()) ? bodyBoundaryToNoteDesign : null);
         if (endnoteSeparatorLayout is not null && sectionEndStories.Count > 0)
         {
             // RV06 endnote probes: the separator space sits exactly one body pitch below
