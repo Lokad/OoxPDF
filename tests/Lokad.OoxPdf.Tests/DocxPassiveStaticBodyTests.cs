@@ -99,6 +99,9 @@ internal static class DocxPassiveStaticBodyTests
         File.Copy(input, temporary);
         try
         {
+            // Frozen inputs are read-only; the independent temporary copy is
+            // intentionally mutable, without changing the frozen source.
+            File.SetAttributes(temporary, FileAttributes.Normal);
             using (var archive = ZipFile.Open(temporary, ZipArchiveMode.Update))
             {
                 string part = "word/passive-body-" + kind + ".xml";
