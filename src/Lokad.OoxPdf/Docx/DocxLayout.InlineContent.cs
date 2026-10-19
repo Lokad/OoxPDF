@@ -812,6 +812,36 @@ internal sealed partial class DocxLayoutEngine
                     below = Math.Max(below, fragment.OccupiedHeight - fragment.BaselineInset);
                 }
             }
+            double frameAbove = 0d, frameBelow = 0d;
+            bool onlyFrames = current.Count != 0, hasFrame = false, hasText = false, hasMath = false;
+            foreach (var fragment in current)
+            {
+                token.ThrowIfCancellationRequested();
+                if (fragment.Source is DocxInlinePicture or DocxInlineBox)
+                {
+                    hasFrame = true;
+                    frameAbove = Math.Max(frameAbove, fragment.BaselineInset);
+                    frameBelow = Math.Max(frameBelow, fragment.OccupiedHeight - fragment.BaselineInset);
+                }
+                else
+                {
+                    onlyFrames = false;
+                    hasText |= fragment.Source is DocxInlineText or DocxInlineTab;
+                    hasMath |= fragment.Math is not null;
+                }
+            }
+            // An intrinsic frame that owns the row also owns its lower edge.
+            // A discarded trailing space must not leave an unused text descent.
+            // Short frames keep the paragraph strut; authored minimum/exact slots
+            // and the empty row after a hard break are resolved independently.
+            if (onlyFrames && frameAbove >= above && frameAbove + frameBelow >= lineHeight)
+                below = frameBelow;
+            // Prepared mathematical rows retain their existing shared strut.
+            // Its leading/descent contract is distinct from an ordinary text
+            // row wrapped away from its paragraph's equation.
+            else if (hasFrame && frameAbove >= above && hasText && !hasMath &&
+                physicalTextBaselineInset is { } frameTextInset)
+                below = Math.Max(below, lineHeight - frameTextInset);
             IReadOnlyList<DocxTextSegmentLayout> labelSegments = [];
             if (cursor.LineIndex == 0 && output.Count == 0 && paragraph.ListLabel is { } label)
             {

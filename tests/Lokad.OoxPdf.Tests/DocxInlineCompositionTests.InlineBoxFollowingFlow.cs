@@ -7,7 +7,12 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxInlineBoxFollowingFlowMatchesIndependentWord()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent following-flow origins use installed Windows fonts.");
-        using var gold = ReadInlineBoxMathGold("inline-box-following-flow-office.json");
+        CheckInlineBoxFollowingOrigins("inline-box-following-flow-office.json");
+    }
+
+    private static void CheckInlineBoxFollowingOrigins(string goldenFile)
+    {
+        using var gold = ReadInlineBoxMathGold(goldenFile);
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string id = row.GetProperty("Id").GetString()!;
@@ -16,11 +21,12 @@ internal static partial class DocxInlineCompositionTests
             var source = ReadMutation("InlineBoxMath/" + id, mode, false, false);
             var pages = new DocxRenderer(null, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, null, default).ToArray();
+            string followingText = row.TryGetProperty("FollowingText", out var text) ? text.GetString()! : "After public math table.";
             var following = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
                 usePageCoordinates: true).GroupBy(show => show.Y).Select(line =>
                     (Page: index + 1, Height: page.Height, Y: line.Key, X: line.Min(show => show.X),
                     Text: string.Concat(line.OrderBy(show => show.X).Select(show => show.Text)).Trim())))
-                .Single(line => line.Text == row.GetProperty("FollowingText").GetString());
+                .Single(line => line.Text == followingText);
             var expected = row.GetProperty("WordFollowingAnchor");
             TestAssert.Equal(expected.GetProperty("Page").GetInt32(), following.Page);
             TestAssert.True(Math.Abs(following.X - expected.GetProperty("X").GetDouble()) < 1d &&
