@@ -631,7 +631,7 @@ internal sealed partial class DocxLayoutEngine
 
         foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
         {
-            height += EstimateInlineTextBoxHeight(textBox, fixedScale) + InlineImageParagraphGapPoints;
+            height += EstimateInlineTextBoxHeight(textBox, fixedScale);
         }
 
         return height;

@@ -1,0 +1,94 @@
+[
+  {
+    "Id": "inline-box-boxed-equation-valid",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-boxed-equation-valid.docx",
+    "Sha256": "5986739F1666625F94485092240716E3C4884C9B3AEDD5FBD6B499ADBA915FF1",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "boxed-equation",
+    "Change": "Promote unchanged Word-accepted source; shared child-box math only. Sibling inline-box equation remains staged.",
+    "RejectedProbeSha256": "C35C9F37414D764B9160E991A026F94B83F6ADB73BB027DF344DE4699A5C4A6D",
+    "ReviewedInput": "artifacts/inline-box-composition-valid/inline-box-boxed-equation-valid.docx",
+    "ExpectedRenderedEquationCount": 1
+  },
+  {
+    "Id": "inline-box-boxed-text-valid",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-boxed-text-valid.docx",
+    "Sha256": "2A9027534A82DC3BA055464A4FAC35C237C639EADF2CF9A60597D027C4A49976",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "boxed-text",
+    "Change": "Promote unchanged Word-accepted source; shared child-box math only. Sibling inline-box equation remains staged.",
+    "RejectedProbeSha256": "A6C72CD8A1AD2F7B7FCF4AC65C6BA80DAA3FEE4A894E4B843CBA0F503640F9E1",
+    "ReviewedInput": "artifacts/inline-box-composition-valid/inline-box-boxed-text-valid.docx",
+    "ExpectedRenderedEquationCount": 0
+  },
+  {
+    "Id": "inline-box-math-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-math-cell.docx",
+    "Sha256": "94DB539C6B386447B671CE72566709F8DBB1E0924903E3C18C3B928FBFC12885",
+    "SourceSha256": "5986739F1666625F94485092240716E3C4884C9B3AEDD5FBD6B499ADBA915FF1",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "cell",
+    "Change": "Promote unchanged Word-accepted source; shared child-box math only. Sibling inline-box equation remains staged.",
+    "ReviewedInput": "artifacts/inline-box-math-containers/inline-box-math-cell.docx",
+    "ExpectedRenderedEquationCount": 1
+  },
+  {
+    "Id": "inline-box-review-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-review-body.docx",
+    "Sha256": "B67A7116789E31491156A207E458EF6FECB4B507011A5FE02ABCDA8B5F7DC88E",
+    "SourceSha256": "5986739F1666625F94485092240716E3C4884C9B3AEDD5FBD6B499ADBA915FF1",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "body",
+    "Change": "Add one ordinary body comment outside the unchanged child math frame. Final should retain ordinary placement; Word-compatible review exercises actual page scaling.",
+    "ReviewedInput": "artifacts/inline-box-review-scale/inline-box-review-body.docx",
+    "ExpectedRenderedEquationCount": 1
+  },
+  {
+    "Id": "inline-box-review-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-review-cell.docx",
+    "Sha256": "59A5E49B6549272D9B7EC77D0AD5971946AE1AEF8CF9E003170D2B482B6A0164",
+    "SourceSha256": "94DB539C6B386447B671CE72566709F8DBB1E0924903E3C18C3B928FBFC12885",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "cell",
+    "Change": "A real body comment exercises review scaling of header/cell/static-cell box frames; source math and dimensions unchanged.",
+    "ReviewedInput": "artifacts/inline-box-review-scale-neighbors/inline-box-review-cell.docx",
+    "ExpectedRenderedEquationCount": 1
+  }
+]

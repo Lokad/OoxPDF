@@ -8651,5 +8651,23 @@
     "PortableRenderingInlineBoxReviewFramesKeepMathOnPage",
     "PortableRenderingStaticCellsPreserveMixedMathImagesAndCounters",
     "PortableRenderingStaticSourceFramesKeepProseOnPage"
+  ],
+  "docx-inline-box-following-flow": [
+    "DocxInlineBoxFollowingFlowMatchesIndependentWord",
+    "DocxInlineBoxOccupiedFramesOwnZeroSpacingAdmissionInBodyAndCells",
+    "DocxInlineBoxMathKeepsIndependentContentAcrossContainers",
+    "PortableRenderingInlineBoxMathKeepsSourceContentAndResources",
+    "DocxInlineBoxReviewFramesPreserveIndependentSourceContent",
+    "DocxInlineBoxReviewStaticGlyphOriginsMatchIndependentWord",
+    "PortableRenderingInlineBoxReviewFramesKeepMathOnPage",
+    "DocxWordCompatibleInlineTextBoxLaysOutScaledContentInFlow",
+    "DocxWordCompatibleTableCellInlineTextBoxLaysOutScaledContent",
+    "DocxCellTextBoxAfterTextTucksToBaseline",
+    "DocxCellTextBoxAfterTextTuckGrowsWithFontSize",
+    "DocxCellTextBoxAfterTextHonorsSpacingExcess",
+    "DocxStaticHeaderInlineTextBoxLaysOutFileGeometryContent",
+    "DocxAllMarkupRendererPlacesTableCellInlineTextBoxMarkupBalloons",
+    "DocxAllMarkupRendererPlacesStaticInlineTextBoxMarkupBalloons",
+    "DocxWordCompatibleAllMarkupSkipsStaticInlineTextBoxCommentBalloons"
   ]
 }

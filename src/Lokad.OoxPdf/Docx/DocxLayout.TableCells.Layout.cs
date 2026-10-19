@@ -255,7 +255,7 @@ internal sealed partial class DocxLayoutEngine
             bool tuckApplied = false;
             foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
             {
-                double boxContribution = EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale) + InlineImageParagraphGapPoints;
+                double boxContribution = EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale);
                 if (!tuckApplied &&
                     previousParagraphHasText &&
                     paragraph.Images.Count == 0 &&
@@ -1044,7 +1044,7 @@ internal sealed partial class DocxLayoutEngine
                 }
 
                 boxes.Add(textBoxLayout);
-                cursorY = boxTop - textBoxLayout.BoxHeight - InlineImageParagraphGapPoints;
+                cursorY = boxTop - textBoxLayout.BoxHeight;
             }
 
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;

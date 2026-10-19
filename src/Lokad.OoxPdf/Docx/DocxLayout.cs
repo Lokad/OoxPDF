@@ -2036,7 +2036,8 @@ internal sealed partial class DocxLayoutEngine
 
                 currentItems.Add(textBoxLayout);
                 activeColumnHasContent = true;
-                cursorY -= textBoxLayout.BoxHeight + InlineImageParagraphGapPoints;
+                // Paragraph spacing owns separation after the complete frame.
+                cursorY -= textBoxLayout.BoxHeight;
             }
 
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;

@@ -1,0 +1,135 @@
+{
+  "Provenance": "Ten existing pinned Word16 views; one-point origin gates, paragraph spacing owns separation. No new Office exports.",
+  "Rows": [
+    {
+      "Id": "inline-box-boxed-equation-valid",
+      "Mode": "final-preserve",
+      "InputSha256": "5986739F1666625F94485092240716E3C4884C9B3AEDD5FBD6B499ADBA915FF1",
+      "FollowingText": "After public math table.",
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 72.02400207519531,
+        "Y": 171.01995849609375
+      },
+      "WordPdfSha256": "B947C9016A3F6982334D60865AC75BA4D12505D3CE13B6C120FC26B6BE690CA7",
+      "WordExportLogSha256": "DDBF407C75B7F47D071E3618F4D6D8757D551FE2C08452A537150FFE110AFB3D"
+    },
+    {
+      "Id": "inline-box-boxed-equation-valid",
+      "Mode": "all-word-compatible",
+      "InputSha256": "5986739F1666625F94485092240716E3C4884C9B3AEDD5FBD6B499ADBA915FF1",
+      "FollowingText": "After public math table.",
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 72.02400207519531,
+        "Y": 171.01995849609375
+      },
+      "WordPdfSha256": "8461738883C563DD192981F870A59DDF792869BE238ED0E88A342EFC58A14D52",
+      "WordExportLogSha256": "B2F027F8A1BB7353B41F6AE85B9A83F5FE64CB2E5143E8296DE935ADF8F7B599"
+    },
+    {
+      "Id": "inline-box-boxed-text-valid",
+      "Mode": "final-preserve",
+      "InputSha256": "2A9027534A82DC3BA055464A4FAC35C237C639EADF2CF9A60597D027C4A49976",
+      "FollowingText": "After public math table.",
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 72.02400207519531,
+        "Y": 171.01995849609375
+      },
+      "WordPdfSha256": "B0C71ED4DB183822D17BEBFC1DB795E6544B664EA9B44AECC6BFB8D8EB3FBE68",
+      "WordExportLogSha256": "E5CCD85AC265CD73B20BD6CDDD61F171012867EDD78818420C991C312FC31C50"
+    },
+    {
+      "Id": "inline-box-boxed-text-valid",
+      "Mode": "all-word-compatible",
+      "InputSha256": "2A9027534A82DC3BA055464A4FAC35C237C639EADF2CF9A60597D027C4A49976",
+      "FollowingText": "After public math table.",
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 72.02400207519531,
+        "Y": 171.01995849609375
+      },
+      "WordPdfSha256": "5DF88B26AF02AC8CDE702377CD876E64A1681D8E9860CA3873CB72F096557DFF",
+      "WordExportLogSha256": "4F754AD1656B9085603748021E7F55CEBE7A4E3FD60E2B40D5A1EFDE402BF453"
+    },
+    {
+      "Id": "inline-box-math-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "94DB539C6B386447B671CE72566709F8DBB1E0924903E3C18C3B928FBFC12885",
+      "FollowingText": "After public math table.",
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 72.02400207519531,
+        "Y": 171.01995849609375
+      },
+      "WordPdfSha256": "49159989D28A8980607938B3A253C852B898C00F8164DDB5BB9422DDD6F15E1A",
+      "WordExportLogSha256": "546F7BDA4488E13D8F6502515D6BB1421FF2A1BD419580C4A35E184F721A3ADE"
+    },
+    {
+      "Id": "inline-box-math-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "94DB539C6B386447B671CE72566709F8DBB1E0924903E3C18C3B928FBFC12885",
+      "FollowingText": "After public math table.",
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 72.02400207519531,
+        "Y": 171.01995849609375
+      },
+      "WordPdfSha256": "2FDB22D4837FAB20FFB63E7951A4651BD108BAC9EAA253B4E2FC5711D67BC0A2",
+      "WordExportLogSha256": "9BDE53F57BB2F05376CD10E7D62DBCC40E100AB0A51BEA1DE5E04C0151F0F663"
+    },
+    {
+      "Id": "inline-box-review-body",
+      "Mode": "final-preserve",
+      "InputSha256": "B67A7116789E31491156A207E458EF6FECB4B507011A5FE02ABCDA8B5F7DC88E",
+      "FollowingText": "After public math table.",
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 72.02400207519531,
+        "Y": 171.01995849609375
+      },
+      "WordPdfSha256": "32DF9C04CB874B8C870C687498E033F18FAAB921F78EC93FEA8CF5766172CAE6",
+      "WordExportLogSha256": "F18A6AEC769B11764824814019BAC1DE05C9C576996A2754C12605874B758E63"
+    },
+    {
+      "Id": "inline-box-review-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "B67A7116789E31491156A207E458EF6FECB4B507011A5FE02ABCDA8B5F7DC88E",
+      "FollowingText": "After public math table.",
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 54.2400016784668,
+        "Y": 232.53997802734375
+      },
+      "WordPdfSha256": "6BDDD49FDE62181E1E3DD25BDB30394FE72C5694E5C4B61CB545D41A957D0CA2",
+      "WordExportLogSha256": "F0BB6A8BDB30C11B7E0CF69108FF2D0A9E27E3591385758B3F6B906FB2772200"
+    },
+    {
+      "Id": "inline-box-review-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "59A5E49B6549272D9B7EC77D0AD5971946AE1AEF8CF9E003170D2B482B6A0164",
+      "FollowingText": "After public math table.",
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 72.02400207519531,
+        "Y": 171.01995849609375
+      },
+      "WordPdfSha256": "D98503DB4DC98F6E854F67E68BB19C5ABF781B2D717E0C3F574CBEC88BB21668",
+      "WordExportLogSha256": "3EA2AA42B94261267802D6BD34D27661217BA3CF1A33DF20E2ADE056829A9F8D"
+    },
+    {
+      "Id": "inline-box-review-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "59A5E49B6549272D9B7EC77D0AD5971946AE1AEF8CF9E003170D2B482B6A0164",
+      "FollowingText": "After public math table.",
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 54.2400016784668,
+        "Y": 232.53997802734375
+      },
+      "WordPdfSha256": "88FA0D6D598CA92633C158066523CD6DA0163AEABEB15EA94206DDF439D36752",
+      "WordExportLogSha256": "15E540ABAC15806F5F7075CCEA9B2B0FA279C07E9B7BF384CC0482F145464228"
+    }
+  ]
+}
