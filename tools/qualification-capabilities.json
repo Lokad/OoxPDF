@@ -9076,6 +9076,21 @@
     "PortableRenderingMixedDisplayCountersPreserveTotalPageDependencies",
     "DocxTableCellPageFieldsEvaluatePerFragmentPage"
   ],
+  "docx-count-preparation-reuse": [
+    "DocxCountPreparation",
+    "DocxCompoundTotalCountRetainsCompleteWordReportAndActualFieldValue",
+    "PortableRenderingCompoundTotalCountKeepsContentAndActualFieldValue",
+    "DocxComposedInlineFrameReportRetainsIndependentWordPagesAndContent",
+    "PortableRenderingComposedInlineFrameReportRetainsRepeatedStaticOwners",
+    "DocxInlineCompositionTotalPage",
+    "PortableRenderingTotalPageMath",
+    "DocxInlineBoxTotalCounters",
+    "PortableRenderingInlineBoxTotalCounters",
+    "DocxInlineCompositionMixedDisplayTotalPageCountersRetainSupportedMath",
+    "PortableRenderingMixedDisplayCountersPreserveTotalPageDependencies",
+    "DocxInlineCompositionPageFieldCacheEndsWithItsOwner",
+    "DocxFieldTextCounterInputsRemainIndependent"
+  ],
   "docx-compound-total-count": [
     "DocxCompoundTotalCountRetainsCompleteWordReportAndActualFieldValue",
     "PortableRenderingCompoundTotalCountKeepsContentAndActualFieldValue",

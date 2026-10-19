@@ -381,8 +381,8 @@ internal sealed partial class DocxRenderer
     {
         List<OoxPdfDiagnostic>? messages = diagnostics is null ? null : [];
         // Source identities/face indices retain immutable programs throughout
-        // this preparation. Numbering, kerning and page-count retries need new
-        // subsets/layout, but can reuse their parsed fonts. Ownership ends with
+        // this preparation. Changed numbering/kerning needs new subsets; a count
+        // retry can retain unchanged preparation. Ownership ends with
         // this conversion; nothing is shared across converters or resolvers.
         var fontCache = new Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>();
         var first = PrepareNoteAdjustedLayout(document, resolver, context, geometry, messages is null ? null : messages.Add, cancellationToken,
@@ -391,10 +391,16 @@ internal sealed partial class DocxRenderer
             (DocxFieldText.GetDependencies(document.BodyElements, cancellationToken) & DocxCounterDependencies.PageCount) != 0)
         {
             List<OoxPdfDiagnostic>? retryMessages = diagnostics is null ? null : [];
+            // Decimal field glyphs are already in every subset. Reuse only the
+            // same source with complete math and no warnings needing replay;
+            // changed note owners or deferred math keep full preparation.
+            var reusableFonts = ReferenceEquals(first.Document, document) &&
+                first.FontResources.DeferredPageCountEquations.Count == 0 &&
+                (messages is null || messages.Count == 0) ? first.FontResources : null;
             // Recompute note-dependent purposes too: accepting a stable count
             // must not leave numbering or kerning derived from the omitted math.
             var retry = PrepareNoteAdjustedLayout(document, resolver, context, geometry, retryMessages is null ? null : retryMessages.Add,
-                cancellationToken, fontCache, first.Layout.Pages.Count);
+                cancellationToken, fontCache, first.Layout.Pages.Count, reusableFonts);
             if (retry.Layout.Pages.Count == first.Layout.Pages.Count)
             {
                 var painted = new HashSet<DocxEquation>(EnumeratePaintedEquations(retry.Layout, cancellationToken), ReferenceEqualityComparer.Instance);
@@ -413,9 +419,11 @@ internal sealed partial class DocxRenderer
     private static (DocxDocument Document, DocxFontResources FontResources, DocxLayout Layout) PrepareNoteAdjustedLayout(
         DocxDocument document, IFontResolver resolver, DocxMarkupContext context, OoxPdfDocxMarkupGeometryMode geometry,
         Action<OoxPdfDiagnostic>? diagnostics, CancellationToken cancellationToken,
-        Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache, int? pageCount = null)
+        Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache, int? pageCount = null,
+        DocxFontResources? initialFonts = null)
     {
-        var fonts = PrepareFontResourcesCore(document, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount, fontCache);
+        cancellationToken.ThrowIfCancellationRequested();
+        var fonts = initialFonts ?? PrepareFontResourcesCore(document, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount, fontCache);
         var first = CreatePlainFootnoteTextLayout(document, fonts, context, geometry, cancellationToken, pageCount);
         DocxDocument adjusted = document;
         IReadOnlyDictionary<string, int> originalPages = new Dictionary<string, int>();
