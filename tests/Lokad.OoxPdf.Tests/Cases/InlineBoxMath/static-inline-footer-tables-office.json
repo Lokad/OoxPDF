@@ -1,0 +1,147 @@
+{
+  "Provenance": "Four independent Word16 exports for two source-exact ordinary footer-table controls; original1pt/.1pt/.01pt gates, no candidate-derived anchors. Raw clip observations remain separate.",
+  "Rows": [
+    {
+      "Id": "static-inline-footer-table-box",
+      "Mode": "final-preserve",
+      "InputSha256": "ACFE4936F1964883D1EB68DD045AD950B63105A0BBB9533DD643E7FD493F41E3",
+      "WordPdfSha256": "8DAE8B41CAA880C37EE8BC438E87911D651F1586E5AEDFC7DC1897E33365D8E8",
+      "WordMathAnchors": [],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            82.0,
+            702.27099609375,
+            298.0,
+            762.27099609375
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordImages": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Inline box content.",
+          "Page": 1,
+          "X": 89.42400360107422,
+          "Y": 716.5,
+          "Size": 11.039999961853027
+        }
+      ]
+    },
+    {
+      "Id": "static-inline-footer-table-box",
+      "Mode": "all-word-compatible",
+      "InputSha256": "ACFE4936F1964883D1EB68DD045AD950B63105A0BBB9533DD643E7FD493F41E3",
+      "WordPdfSha256": "5EFC09385D1D467FBE9B9E5071B616902426693619F52C8A7568A3C754C465CF",
+      "WordMathAnchors": [],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            61.8120002746582,
+            632.9320068359375,
+            224.6320037841797,
+            678.1599731445312
+          ],
+          "StrokeWidth": 0.37689998745918274,
+          "InsidePage": true
+        }
+      ],
+      "WordImages": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Inline box content.",
+          "Page": 1,
+          "X": 67.36799621582031,
+          "Y": 643.4599609375,
+          "Size": 8.303999900817871
+        }
+      ]
+    },
+    {
+      "Id": "static-inline-footer-table-picture",
+      "Mode": "final-preserve",
+      "InputSha256": "E17C6FFEF7EBC1F46B1A13488FAF01AFB830C47FFBF163865E503DD8FB24B32A",
+      "WordPdfSha256": "B1A285A76027F9F3A5779F18C0B2E7DC9C7D80115006DFB352D3F9529EC5AC20",
+      "WordMathAnchors": [],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            82.0,
+            709.9199829101562,
+            298.0,
+            769.9199829101562
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordImages": [
+        {
+          "Page": 1,
+          "Rect": [
+            219.58999633789062,
+            696.9199829101562,
+            255.58999633789062,
+            714.9199829101562
+          ],
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Inline box content.",
+          "Page": 1,
+          "X": 89.42400360107422,
+          "Y": 724.1799926757812,
+          "Size": 11.039999961853027
+        }
+      ]
+    },
+    {
+      "Id": "static-inline-footer-table-picture",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E17C6FFEF7EBC1F46B1A13488FAF01AFB830C47FFBF163865E503DD8FB24B32A",
+      "WordPdfSha256": "AA0FE3A5AE8EE505F947870DD67379D48AEE1F540647279C409F95173811B462",
+      "WordMathAnchors": [],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            61.8120002746582,
+            638.7019653320312,
+            224.6320037841797,
+            683.9299926757812
+          ],
+          "StrokeWidth": 0.37689998745918274,
+          "InsidePage": true
+        }
+      ],
+      "WordImages": [
+        {
+          "Page": 1,
+          "Rect": [
+            165.52999877929688,
+            628.9019775390625,
+            192.6669921875,
+            642.469970703125
+          ],
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Inline box content.",
+          "Page": 1,
+          "X": 67.36799621582031,
+          "Y": 649.25,
+          "Size": 8.303999900817871
+        }
+      ]
+    }
+  ]
+}
