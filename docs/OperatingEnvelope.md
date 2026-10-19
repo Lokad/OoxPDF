@@ -1,5 +1,47 @@
 # Measured operating envelope
 
+## C266 coarse host memory admission and bounded rule review (2026-10-19)
+
+Removed12 cumulative-work/retained-image/retained-font/live-image limit members
+and their counters. Six existing output/page/staging limits remain. Archive/XML/
+image/font bounds, cancellation, useful caches and PDF structural validation stay.
+Optional IOoxPdfMemoryAdmission supplies one host-sized shared-memory lease per
+conversion, covering significant retained storage and construction peaks. Refusal
+precedes package construction/output; refunds follow staged ownership and precede
+atomic file publication. Existing shared bounded caches remain a host baseline.
+This is coarse host admission, with no library heap-accounting promise, object
+ledger, graph tracking, finalizer, replacement fuel or extra quota knob.
+Decoded/staged owners now drop their references on disposal; crop/recolor poll
+existing cancellation tokens. Public migration:docs/PublicApiChanges.md.
+
+One committed frozen Release artifact:491Windows/484Ubuntu/7native skips. All
+refusal, cancellation, concurrent/nested admission, lifetime and publication
+checks pass. Two prequalification harness build failures are retained. One
+observer incorrectly required fonts in a picture-only deck; only that corrected
+check reran/platform,14runtime assets/all2,315inputs unchanged. Tracked joins
+preserve original failures. No complete-suite repair replay. CLI tests reuse the
+same immutable CLI; package smoke loads the exact455F6D38library and checks the
+public admission API without rebuilding it.17assets/four root smokes, no root
+build/suite replay.10fixed PDFs/Office comparisons and five picture decks/26pages
+retain identity. Both portfolio decks and25picture pages pass;8DOCXstrict gates
+and one prior cosmetic picture failure remain. Content-audit screens are zero.
+No Office exports/rasters or performance claim.
+
+S4 is a separate read-only assessment:15 chart-color regimes6..90 and the96+
+fraction curve still use count bands; five-paragraph marker/font/row guards are
+narrowly qualified. The source notes same-frame confounding; model combinations
+do not establish a general Office rule. Keep existing behavior/fallbacks and
+explicit residuals. No policy change, new special-case family or renderer rewrite.
+Resume the saved C264 shared table/grid-origin review with its independent Word
+controls. Evidence:artifacts/composition-c1/memory-admission-evidence.json and
+simplification-rendering-generalization-review.json.
+
+Workspace scan:15.300GB/822,062files/zero errors; the loose5GBtarget remains unmet.
+Automatic approval review rejected removal of four completed runner scratch
+directories/660files/1.536MBlogical as "blocked by policy" before process creation.
+Zero removed/reclaimed; preserve those four targets without alternate retry.
+Evidence:memory-admission-completed-scratch-retirement-rejected.json.
+
 ## C265 bounded simplification S1/S2 (2026-10-19)
 
 Removed13 verified unreferenced methods (111lines): PlaceRelatedStory,
