@@ -8936,6 +8936,10 @@
     "DocxStaticHeaderAutoAdvanceScalesUniformlyWithSpacing",
     "DocxInlineCompositionSourceViewRetainsPrefixOrderAndCancellation",
     "DocxInlineCompositionOrderedPictureTranslationKeepsClipsAndFallbacks",
-    "DocxStaticFrameMappingRetainsIncompleteAndDeclaredSourceFallbacks"
+    "DocxStaticFrameMappingRetainsIncompleteAndDeclaredSourceFallbacks",
+    "DocxStaticHeaderInlineTextBoxLaysOutFileGeometryContent",
+    "DocxWordCompatibleAllMarkupSkipsStaticInlineTextBoxCommentBalloons",
+    "DocxAllMarkupRendererPlacesStaticInlineTextBoxMarkupBalloons",
+    "DocxInlineBoxMathPreparationObservesCancellationBetweenChildren"
   ]
 }
