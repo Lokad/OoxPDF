@@ -65,7 +65,7 @@ internal sealed partial class DocxLayoutEngine
         foreach (var line in lines)
         {
             token.ThrowIfCancellationRequested();
-            if (line.InlineMath.Count == 0 || line.SourceParagraph is not { } paragraph) continue;
+            if (line.InlineFrame is null && line.InlineMath.Count == 0 || line.SourceParagraph is not { } paragraph) continue;
             heights ??= new(ReferenceEqualityComparer.Instance);
             heights.TryAdd(paragraph, new(0d, line));
         }
@@ -244,12 +244,12 @@ internal sealed partial class DocxLayoutEngine
         }
         else
         {
-            if (!allowStaticFallback || paragraph.Images.Count != 0 ||
+            if ((!allowStaticFallback && paragraph.InlineTextBoxes.Count == 0) || paragraph.Images.Count != 0 ||
                 !DocxInlineContent.HasSupportedSourceOwner(paragraph, hasActualFieldInputs, token) ||
                 !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
                 paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right)) return false;
-            // Ordinary text paragraphs need no parser-side mixed-content view.
-            // Reuse the same source-run affinity without mutating their model.
+            // Source-owned boxes already carry the parser's ordered view.
+            // Ordinary static text reuses run affinity without mutating its model.
             items ??= DocxInlineContent.FromPrefix(paragraph.Runs, paragraph.Images, token);
         }
         bool hasTabs = items.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden);

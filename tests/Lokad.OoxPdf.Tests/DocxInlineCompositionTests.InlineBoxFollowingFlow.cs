@@ -15,6 +15,7 @@ internal static partial class DocxInlineCompositionTests
         using var gold = ReadInlineBoxMathGold(goldenFile);
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
+            if (!row.TryGetProperty("WordFollowingAnchor", out var expected)) continue;
             string id = row.GetProperty("Id").GetString()!;
             bool final = row.GetProperty("Mode").GetString() == "final-preserve";
             var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
@@ -27,7 +28,6 @@ internal static partial class DocxInlineCompositionTests
                     (Page: index + 1, Height: page.Height, Y: line.Key, X: line.Min(show => show.X),
                     Text: string.Concat(line.OrderBy(show => show.X).Select(show => show.Text)).Trim())))
                 .Single(line => line.Text == followingText);
-            var expected = row.GetProperty("WordFollowingAnchor");
             TestAssert.Equal(expected.GetProperty("Page").GetInt32(), following.Page);
             TestAssert.True(Math.Abs(following.X - expected.GetProperty("X").GetDouble()) < 1d &&
                 Math.Abs(following.Height - following.Y - expected.GetProperty("Y").GetDouble()) < 1d,

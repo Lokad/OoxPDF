@@ -57,8 +57,8 @@ internal static class DocxMathParagraphPolicy
     public static bool IsSupportedSimpleRow(DocxTableRow row) => row.HasSupportedHeight &&
         HasSupportedTableContentRevisions(row.Revisions, DocxRevisionKind.TableRowPropertiesChange);
 
-    // Existing inline boxes own independent block frames. Prepare their direct
-    // child stories without admitting a sibling box into ordered paragraph flow.
+    // Inline boxes own independent child stories. Prepare their direct children
+    // independently of whether the enclosing paragraph contains mathematics.
     // Notes/floating/nested boxes retain their existing staged placement paths.
     public static IEnumerable<DocxParagraph> EnumerateInlineBoxPreparationCandidates(DocxDocument document, CancellationToken token)
     {
@@ -283,7 +283,7 @@ internal static class DocxMathParagraphPolicy
     public static bool NeedsOrderedInlineLayout(DocxParagraph paragraph,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? prepared = null) =>
         paragraph.Equations.Count > 1 || paragraph.Images.Count != 0 ||
-        paragraph.Equations.Count != 0 && paragraph.InlineTextBoxes.Count != 0 ||
+        paragraph.InlineTextBoxes.Count != 0 ||
         paragraph.Equations.Count != 0 && paragraph.LineSpacingPoints is not null &&
             (DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph)) ||
         paragraph.Equations.Count != 0 && paragraph.CommentRanges.Count != 0 ||

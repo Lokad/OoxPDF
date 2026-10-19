@@ -20,7 +20,7 @@ internal static class DocxInlineContent
     public static bool HasSupportedSourceOwner(DocxParagraph paragraph, bool hasPageInputs = false,
         CancellationToken token = default) =>
         HasSupportedSourceMetadata(paragraph, hasPageInputs, token) &&
-        (paragraph.InlineTextBoxes.Count == 0 || paragraph.Equations.Count != 0 && HasOwnedInlineBoxes(paragraph, token));
+        (paragraph.InlineTextBoxes.Count == 0 || HasOwnedInlineBoxes(paragraph, token));
 
     private static bool HasOwnedInlineBoxes(DocxParagraph paragraph, CancellationToken token)
     {
