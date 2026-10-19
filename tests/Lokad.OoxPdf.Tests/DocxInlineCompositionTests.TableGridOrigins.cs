@@ -13,6 +13,38 @@ internal static partial class DocxInlineCompositionTests
         CheckTableGridOrigins(null);
     }
 
+    public static void DocxInlineCompositionSignedTableIndentsMatchIndependentWord()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent signed-table typography requires installed Windows fonts.");
+        CheckTableGridOrigins(null, "table-signed-indents-office.json");
+    }
+
+    public static void DocxInlineCompositionSignedTableIndentsKeepContainerWidthAndOneGrid()
+    {
+        string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "TableGridOrigins"));
+        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "table-signed-indents-office.json")));
+        foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray()
+            .Where(row => row.GetProperty("Mode").GetString() == "final-preserve"))
+        {
+            string id = row.GetProperty("Id").GetString()!;
+            var source = ReadMutation("TableGridOrigins/" + id, OoxPdfDocxMarkupMode.Final, false, false);
+            TestAssert.True(source.BodyElements.OfType<DocxTableElement>().Single().Table.IndentPoints < 0d,
+                "The reader preserves the authored signed indentation.");
+            var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
+            var body = layout.Pages[0].Items.OfType<DocxTextLineLayout>().First();
+            var rows = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
+            var first = rows[0].Cells[0];
+            var text = first.TextLines.First(line => line.Text.StartsWith("Before inline", StringComparison.Ordinal));
+            TestAssert.True(Math.Abs(text.X - body.X - row.GetProperty("LogicalFirstCellOffsetPoints").GetDouble()) < .002d,
+                id + ": the signed first-text offset belongs to the shared grid.");
+            TestAssert.True(rows.All(item => Math.Abs(item.Cells[0].X - first.X) < .002d),
+                "Rows keep one grid when the table hangs into the margin.");
+            TestAssert.True(Math.Abs(first.Width - row.GetProperty("WordCellWidthPoints").GetDouble()) < .1d,
+                id + ": hanging placement preserves the independent Word fixed/auto/percentage width.");
+        }
+    }
+
     public static void DocxInlineCompositionAuthoredCellMarginsKeepOneGridAcrossRows()
     {
         foreach (string id in new[] { "table-origin-direct-wide", "table-origin-cell-wide", "table-origin-style-zero" })
@@ -30,10 +62,10 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    internal static void CheckTableGridOrigins(IFontResolver? resolver)
+    internal static void CheckTableGridOrigins(IFontResolver? resolver, string goldenFile = "table-grid-origins-office.json")
     {
         string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "TableGridOrigins"));
-        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "table-grid-origins-office.json")));
+        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, goldenFile)));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string id = row.GetProperty("Id").GetString()!;
@@ -76,7 +108,8 @@ internal static partial class DocxInlineCompositionTests
                 }
                 if (resolver is not null && row.GetProperty("StartingTextOriginAdmitted").GetBoolean())
                 {
-                    double expectedDelta = row.GetProperty("Anchors")[1].GetProperty("X").GetDouble() -
+                    double expectedDelta = row.TryGetProperty("LogicalFirstCellOffsetPoints", out var logicalOffset)
+                        ? logicalOffset.GetDouble() : row.GetProperty("Anchors")[1].GetProperty("X").GetDouble() -
                         row.GetProperty("Anchors")[0].GetProperty("X").GetDouble();
                     TestAssert.True(Math.Abs(anchors[1].X - anchors[0].X - expectedDelta) < .002d,
                         "Starting-margin ownership is independent of the selected portable font.");

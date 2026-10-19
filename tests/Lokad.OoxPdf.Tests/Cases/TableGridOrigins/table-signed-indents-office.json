@@ -1,0 +1,467 @@
+{
+  "Provenance": "Independent Word16 source/view/PDF/export-log pins in table-signed-indent-office. One-point origins/.1-point physical sizes retained; cell widths come from read-only Word COM properties. Logical offsets use authored signed units plus the existing legacy inset contract.",
+  "Rows": [
+    {
+      "Id": "table-signed-indent-plain",
+      "InputSha256": "BE559A53C3B5E13E4322DBE8528FEC9C25A253C20FA992204D7EEA4AAEA86426",
+      "Mode": "final-preserve",
+      "StartingTextOriginAdmitted": true,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 36.0,
+          "Y": 105.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 151.82000732421875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "LogicalFirstCellOffsetPoints": -36.0,
+      "WordCellWidthPoints": 300.0,
+      "WordPdfSha256": "470AE37C7E423AE11CF63CD536936225CF39DB0C2C6A55E705A9963BF7FE40CE",
+      "WordExportLogSha256": "B4E67277E9320ED64B8DE46D5E68FD94424053F8674873F5E432F62592D6BE30"
+    },
+    {
+      "Id": "table-signed-indent-plain",
+      "InputSha256": "BE559A53C3B5E13E4322DBE8528FEC9C25A253C20FA992204D7EEA4AAEA86426",
+      "Mode": "all-word-compatible",
+      "StartingTextOriginAdmitted": true,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 36.0,
+          "Y": 105.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 151.82000732421875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "LogicalFirstCellOffsetPoints": -36.0,
+      "WordCellWidthPoints": 300.0,
+      "WordPdfSha256": "577A266D1DC174D82BF542738744BB04989F171F4E14A18220F50DF12E98E58B",
+      "WordExportLogSha256": "D98B608B16577419A7C4142E85A2A128044ADAF183CB15D13A57B54CBC4059DD"
+    },
+    {
+      "Id": "table-signed-indent-bordered",
+      "InputSha256": "A15F747BE65EC4AE9E63D28F2721CC78F8F971F46C4EDEDF964A951E93BEB7C2",
+      "Mode": "final-preserve",
+      "StartingTextOriginAdmitted": true,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 36.0,
+          "Y": 106.219970703125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 153.3800048828125,
+          "Size": 11.039999961853027
+        }
+      ],
+      "LogicalFirstCellOffsetPoints": -36.0,
+      "WordCellWidthPoints": 300.0,
+      "WordPdfSha256": "3452B05234E4A902BEA77A64B489C4CA8FFFECE5EE86D2C36203898EC1CCA92E",
+      "WordExportLogSha256": "0F17E68D577CFD2345AC92F307D722803DF192EF3CF64375AF90BE1720D31839"
+    },
+    {
+      "Id": "table-signed-indent-bordered",
+      "InputSha256": "A15F747BE65EC4AE9E63D28F2721CC78F8F971F46C4EDEDF964A951E93BEB7C2",
+      "Mode": "all-word-compatible",
+      "StartingTextOriginAdmitted": true,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 36.0,
+          "Y": 106.219970703125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 153.3800048828125,
+          "Size": 11.039999961853027
+        }
+      ],
+      "LogicalFirstCellOffsetPoints": -36.0,
+      "WordCellWidthPoints": 300.0,
+      "WordPdfSha256": "19416787AAE716BE128726E761BFB7F079F72A239C3322A7993E29ABB2F89F69",
+      "WordExportLogSha256": "59891D1CB3F8668B4DC1A2214C9E0C1C0AE422C4524F8E7396D1093BA6FA72A9"
+    },
+    {
+      "Id": "table-signed-indent-style",
+      "InputSha256": "EEA7C4EB22628943DD6081F7E6E7667B802AAD4F0086DFBB7445953800026F9E",
+      "Mode": "final-preserve",
+      "StartingTextOriginAdmitted": true,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 36.0,
+          "Y": 106.219970703125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 153.3800048828125,
+          "Size": 11.039999961853027
+        }
+      ],
+      "LogicalFirstCellOffsetPoints": -36.0,
+      "WordCellWidthPoints": 300.0,
+      "WordPdfSha256": "5F8095EA9449EE5628528FB1F8A6310AE1AC8BE3E98FEEAE87CBEA30076645D3",
+      "WordExportLogSha256": "C5FAB6417FC1FE8F682B45E5735489D147AD106428AB6021A446CF8EB6174F68"
+    },
+    {
+      "Id": "table-signed-indent-style",
+      "InputSha256": "EEA7C4EB22628943DD6081F7E6E7667B802AAD4F0086DFBB7445953800026F9E",
+      "Mode": "all-word-compatible",
+      "StartingTextOriginAdmitted": true,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 36.0,
+          "Y": 106.219970703125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 153.3800048828125,
+          "Size": 11.039999961853027
+        }
+      ],
+      "LogicalFirstCellOffsetPoints": -36.0,
+      "WordCellWidthPoints": 300.0,
+      "WordPdfSha256": "F59B20ED8FBB548CC7195DBB0768DF3E13BBCB49853D0A6216704E61D521CABF",
+      "WordExportLogSha256": "35DC0534467D6CA1ECFB6BF98BDFB47D40D11003F607D0F85975DC16457F76F4"
+    },
+    {
+      "Id": "table-signed-indent-legacy",
+      "InputSha256": "D1DC21779E3FCEAC69991022B82E17AAC06521BDD8E0D7889DC7554B525EAC48",
+      "Mode": "final-preserve",
+      "StartingTextOriginAdmitted": true,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 41.63999938964844,
+          "Y": 106.219970703125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 153.3800048828125,
+          "Size": 11.039999961853027
+        }
+      ],
+      "LogicalFirstCellOffsetPoints": -30.36,
+      "WordCellWidthPoints": 300.0,
+      "WordPdfSha256": "C6FA9E53FDC4090AAC78362457E3248EC0BE802A5927E8F8DF50626851C1899A",
+      "WordExportLogSha256": "562268F95CFB73C88019149A89D6F9ABEAE813C5A90FE39D6C69018898950880"
+    },
+    {
+      "Id": "table-signed-indent-legacy",
+      "InputSha256": "D1DC21779E3FCEAC69991022B82E17AAC06521BDD8E0D7889DC7554B525EAC48",
+      "Mode": "all-word-compatible",
+      "StartingTextOriginAdmitted": true,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 41.63999938964844,
+          "Y": 106.219970703125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 153.3800048828125,
+          "Size": 11.039999961853027
+        }
+      ],
+      "LogicalFirstCellOffsetPoints": -30.36,
+      "WordCellWidthPoints": 300.0,
+      "WordPdfSha256": "07E5F9B85D28CA9EB0B2AA7AEEAA6A9A938A5C94AE2C95128E9F7C2987D040E3",
+      "WordExportLogSha256": "8F77D79200A8A8267F02E6BB359224D9A04FCC6FE6D08B219AC956530BC7DE18"
+    },
+    {
+      "Id": "table-signed-indent-small",
+      "InputSha256": "D65D51ACFABA406B180E7DD7402DEFCE75D366670E5CE2E7D124DF46E26BB6CC",
+      "Mode": "final-preserve",
+      "StartingTextOriginAdmitted": true,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 66.6240005493164,
+          "Y": 106.219970703125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 153.3800048828125,
+          "Size": 11.039999961853027
+        }
+      ],
+      "LogicalFirstCellOffsetPoints": -5.4,
+      "WordCellWidthPoints": 300.0,
+      "WordPdfSha256": "1116A63F546B0FFF16CBC14210297A4E4F3D73AC855911DA821788A6E3841A35",
+      "WordExportLogSha256": "988183E5DD7323D2703FBB9C5E007ECAFF5F27036E447FCCF3D895F68299C894"
+    },
+    {
+      "Id": "table-signed-indent-small",
+      "InputSha256": "D65D51ACFABA406B180E7DD7402DEFCE75D366670E5CE2E7D124DF46E26BB6CC",
+      "Mode": "all-word-compatible",
+      "StartingTextOriginAdmitted": true,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 66.6240005493164,
+          "Y": 106.219970703125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 153.3800048828125,
+          "Size": 11.039999961853027
+        }
+      ],
+      "LogicalFirstCellOffsetPoints": -5.4,
+      "WordCellWidthPoints": 300.0,
+      "WordPdfSha256": "0754FF3E2B1937350E18AF33B678E55DAA5EC15A1D5123A62C6D7DEE4271BCA4",
+      "WordExportLogSha256": "C26267D7225DB509B4F7ABEA9DA4B3D91299E848714AC62736B6FD8366A8A168"
+    },
+    {
+      "Id": "table-signed-indent-auto",
+      "InputSha256": "C9B774EF0A43F6D7A8523F99F4E5BB22008DE5537DD4960083B4D713A54B8CD7",
+      "Mode": "final-preserve",
+      "StartingTextOriginAdmitted": true,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 36.0,
+          "Y": 105.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 151.82000732421875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "LogicalFirstCellOffsetPoints": -36.0,
+      "WordCellWidthPoints": 300.0,
+      "WordPdfSha256": "FE2659BA9B144EEC2CF42502D743FE708BE50B2982A3798985AEA3FB30C3A8C1",
+      "WordExportLogSha256": "CC37ED86E04F6A100B9058A8B8051B443318BD105011D8F76EB7E56F9D3BDA0D"
+    },
+    {
+      "Id": "table-signed-indent-auto",
+      "InputSha256": "C9B774EF0A43F6D7A8523F99F4E5BB22008DE5537DD4960083B4D713A54B8CD7",
+      "Mode": "all-word-compatible",
+      "StartingTextOriginAdmitted": true,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 36.0,
+          "Y": 105.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 151.82000732421875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "LogicalFirstCellOffsetPoints": -36.0,
+      "WordCellWidthPoints": 300.0,
+      "WordPdfSha256": "6ACFFC279378880629E92295444206F33A2CE497A68B151CD33F42CF2DDB14A0",
+      "WordExportLogSha256": "B836534E99368A1F0BFFD4D9A997565D1C43B92019B75F4C87E59580442CDDD6"
+    },
+    {
+      "Id": "table-signed-indent-percent",
+      "InputSha256": "879C4599337F1CFDE818ECB14670FA2F4B04A071CCCB499BDA1B3CEAB8B17EA9",
+      "Mode": "final-preserve",
+      "StartingTextOriginAdmitted": true,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 36.0,
+          "Y": 105.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 151.82000732421875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "LogicalFirstCellOffsetPoints": -36.0,
+      "WordCellWidthPoints": 462.1,
+      "WordPdfSha256": "0473AE4A553F89B6C4F0F18C72E3D1F0D0D604A3B31F6DB58F5FCF870CF3F05A",
+      "WordExportLogSha256": "C9D715BFDF0C7525B2CF5B4A36AF05D09B3486BC92A24C6E777BFCB5EB51EADF"
+    },
+    {
+      "Id": "table-signed-indent-percent",
+      "InputSha256": "879C4599337F1CFDE818ECB14670FA2F4B04A071CCCB499BDA1B3CEAB8B17EA9",
+      "Mode": "all-word-compatible",
+      "StartingTextOriginAdmitted": true,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 36.0,
+          "Y": 105.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 151.82000732421875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "LogicalFirstCellOffsetPoints": -36.0,
+      "WordCellWidthPoints": 462.1,
+      "WordPdfSha256": "D1DA1439627F663A170677A92336B9414781020320EC2E4CF2BB561296621BD1",
+      "WordExportLogSha256": "52C30E88A9A9D9F48C09941B648D82084ABD167694AD4C832166652C2AB5E97B"
+    }
+  ]
+}

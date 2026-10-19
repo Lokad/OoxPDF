@@ -8576,5 +8576,22 @@
     "PortableRenderingMergedSourceRowFloorsRetainProseAndImages",
     "PortableRenderingStaticCellsPreserveMixedMathImagesAndCounters",
     "PortableRenderingTableGridOriginsPreserveMixedInlineContent"
+  ],
+  "docx-table-signed-indents": [
+    "DocxCompatGridAlignsOuterBorderAtMargin",
+    "DocxCompatIndentAlignsOuterBorderAtIndentedMargin",
+    "DocxDirectMarginsReplaceStyleMarginsForTextOffset",
+    "DocxIndentedTablePinsTextAtIndentOrigin",
+    "DocxInlineCompositionAuthoredCellMarginsKeepOneGridAcrossRows",
+    "DocxInlineCompositionSignedTableIndentsKeepContainerWidthAndOneGrid",
+    "DocxInlineCompositionSignedTableIndentsMatchIndependentWord",
+    "DocxInlineCompositionTableGridOriginsMatchIndependentWord",
+    "DocxStyleMarginsPinTextAtMarginWithoutCompat",
+    "DocxTableCellInlineImageEmitsBetweenSurroundingText",
+    "DocxTableCellMidlineImageBottomSitsAtBaseline",
+    "DocxTableCellTextLinesMemoSharesSplitCells",
+    "MemoReplaysAtChangedOrigin",
+    "PortableRenderingSignedTableIndentsPreserveMixedInlineContent",
+    "PortableRenderingTableGridOriginsPreserveMixedInlineContent"
   ]
 }

@@ -741,7 +741,7 @@ internal sealed partial class DocxLayoutEngine
         // scale) so the uniform shift-composition maps frames like body text. Percent and
         // auto widths key off the already-scaled available width and need no change.
         // fixedScale reuses the layout spacing scale: identical in every mode (WC: s, else 1).
-        double indentPoints = Math.Max(0d, table.IndentPoints ?? 0d) * fixedScale;
+        double indentPoints = (table.IndentPoints ?? 0d) * fixedScale;
         double tableX = x + indentPoints;
         // Grid origin by regime (Office A/B w62-w72/m1-m14 probes; reader notes on
         // UseLegacyTableGrid/PinTextToMargin): compat aligns the outer border edge at
@@ -759,7 +759,7 @@ internal sealed partial class DocxLayoutEngine
                 DocxTableCellBorder? outerLeft = DocxTableBorderGeometry.Find(firstCell.Borders, "left") ?? DocxTableBorderGeometry.Find(firstCell.Borders, "start");
                 gridX = tableX + DocxTableBorderGeometry.ResolveVisibleWidth(outerLeft) / 2d * fixedScale;
             }
-            else if (indentPoints > 0d)
+            else if (indentPoints != 0d)
             {
                 gridX = tableX - ResolveTableCellHorizontalEdgeInset(firstCell, "left", firstCell.Margins.LeftPoints, fixedScale);
             }
@@ -777,7 +777,9 @@ internal sealed partial class DocxLayoutEngine
                 gridX = tableX - ResolveTableCellHorizontalEdgeInset(firstCell, "left", firstCell.Margins.LeftPoints, fixedScale);
             }
         }
-        double tableAvailableWidth = Math.Max(1d, availableWidth - indentPoints);
+        // A hanging table moves into the margin without enlarging the container
+        // basis for percentage widths. Positive indentation still consumes it.
+        double tableAvailableWidth = Math.Max(1d, availableWidth - Math.Max(0d, indentPoints));
         IReadOnlyList<double> gridPoints = table.ColumnWidthsPoints.Select(width => width * fixedScale).ToArray();
         double gridTableWidth = gridPoints.Sum();
         double fallbackTableWidth = table.HasExplicitGrid && gridTableWidth > 0d ? gridTableWidth : tableAvailableWidth;

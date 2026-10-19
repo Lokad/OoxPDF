@@ -1,0 +1,128 @@
+[
+  {
+    "Id": "table-signed-indent-plain",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-signed-indent-plain.docx",
+    "Sha256": "BE559A53C3B5E13E4322DBE8528FEC9C25A253C20FA992204D7EEA4AAEA86426",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "plain",
+    "IndentTwips": -720,
+    "Change": "Independent Word signed-indent control; original reviewed source bytes retained."
+  },
+  {
+    "Id": "table-signed-indent-bordered",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-signed-indent-bordered.docx",
+    "Sha256": "A15F747BE65EC4AE9E63D28F2721CC78F8F971F46C4EDEDF964A951E93BEB7C2",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-bordered.docx",
+    "SourceSha256": "E8EBB66769ED892122B0FD0E409F3248984A6AD3839D4E8010D2DD9D78C6EFEB",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "bordered",
+    "IndentTwips": -720,
+    "Change": "Independent Word signed-indent control; original reviewed source bytes retained."
+  },
+  {
+    "Id": "table-signed-indent-style",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-signed-indent-style.docx",
+    "Sha256": "EEA7C4EB22628943DD6081F7E6E7667B802AAD4F0086DFBB7445953800026F9E",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-bordered.docx",
+    "SourceSha256": "E8EBB66769ED892122B0FD0E409F3248984A6AD3839D4E8010D2DD9D78C6EFEB",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "style",
+    "IndentTwips": -720,
+    "Change": "Independent Word signed-indent control; original reviewed source bytes retained."
+  },
+  {
+    "Id": "table-signed-indent-legacy",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-signed-indent-legacy.docx",
+    "Sha256": "D1DC21779E3FCEAC69991022B82E17AAC06521BDD8E0D7889DC7554B525EAC48",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-bordered.docx",
+    "SourceSha256": "E8EBB66769ED892122B0FD0E409F3248984A6AD3839D4E8010D2DD9D78C6EFEB",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "legacy",
+    "IndentTwips": -720,
+    "Change": "Independent Word signed-indent control; original reviewed source bytes retained."
+  },
+  {
+    "Id": "table-signed-indent-small",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-signed-indent-small.docx",
+    "Sha256": "D65D51ACFABA406B180E7DD7402DEFCE75D366670E5CE2E7D124DF46E26BB6CC",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-bordered.docx",
+    "SourceSha256": "E8EBB66769ED892122B0FD0E409F3248984A6AD3839D4E8010D2DD9D78C6EFEB",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "small",
+    "IndentTwips": -108,
+    "Change": "Independent Word signed-indent control; original reviewed source bytes retained."
+  },
+  {
+    "Id": "table-signed-indent-auto",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-signed-indent-auto.docx",
+    "Sha256": "C9B774EF0A43F6D7A8523F99F4E5BB22008DE5537DD4960083B4D713A54B8CD7",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "auto",
+    "IndentTwips": -720,
+    "Change": "Independent Word signed-indent control; original reviewed source bytes retained."
+  },
+  {
+    "Id": "table-signed-indent-percent",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-signed-indent-percent.docx",
+    "Sha256": "879C4599337F1CFDE818ECB14670FA2F4B04A071CCCB499BDA1B3CEAB8B17EA9",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx",
+    "SourceSha256": "6312A823705472BE79518D4A661E0046F48B6918B4D5E518D926ACF2696FD7E9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "percent",
+    "IndentTwips": -720,
+    "Change": "Independent Word signed-indent control; original reviewed source bytes retained."
+  }
+]
