@@ -7914,7 +7914,6 @@
     "DocxTableRowHeight",
     "DocxTableLayoutStageSplits",
     "DocxTableLayoutStageKeeps",
-    "DocxTableLayoutStageRepeated",
     "DocxInlineCompositionCellStructure",
     "DocxInlineCompositionExplicitControlPlacement",
     "PortableRenderingExplicitControlPlacement"
