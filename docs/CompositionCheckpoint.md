@@ -1,5 +1,29 @@
 # Composed-document reliability checkpoint
 
+## C281 bounded composition performance baseline, 2026-10-19
+
+The existing probe is built separately against C280's exact frozen library, with
+no library build, Office export or qualification replay. Reuse the historical
+fixed-portfolio baseline under its own older runtime identity. Two additional
+composed sources are measured in Final and review: each input gets a fresh child,
+one cold conversion, one warmup and three warm samples. All four repeated/staged
+PDFs match accepted hashes. MB below means calling-thread allocated decimal MB.
+
+| Input | Warm Final / review MB | Median Final / review ms | Initial fonts MB | Render Final / review MB |
+|---|---:|---:|---:|---:|
+| Mixed box/math report | 12.295 / 12.354 | 28.560 / 29.612 | 10.630 / 10.630 | 11.497 / 11.555 |
+| Ordinary picture/box footer | 2.613 / 5.711 | 14.452 / 14.478 | 1.471 / 1.475 | 2.007 / 5.026 |
+
+Diagnostic stages overlap and are not additive; coordinated snapshots include
+font preparation. The probe does not count layout invocations. Source review
+confirms per-conversion parsed-font reuse across bounded coordinator retries,
+alongside existing table/related-story measurement reuse. Font preparation remains
+a demonstrated cost; review painting adds material allocation outside coordinated
+layout. No new counter/cache/quota or speculative layout rewrite is justified by
+these four outcomes. Three timing samples do not establish speedup, and sampled
+peaks may miss brief spikes. ordinary-composition-allocation-evidence.json retains
+runtime/input/output/environment/stage pins and the historical baseline links.
+
 ## C280 ordinary mixed static inline frames, 2026-10-19
 
 Parsed ordinary text/picture/box paragraphs now share ordered measurement and
