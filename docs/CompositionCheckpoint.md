@@ -1,5 +1,31 @@
 # Composed-document reliability checkpoint
 
+## C292 disabled templates preserve note numbering and metrics (2026-10-19)
+
+A disabled rich first header changed note labels09-12 to105-108 and disabled
+minimum-leading/kerning admission. Two independent Word exports leave all12
+body/note prose lines and origins exactly unchanged. Plain one-section source
+flow now excludes only story references selectable on a possible page, using
+the existing first/even/default selector. Enabled stories, multi-section flow
+and complex-note fallbacks remain excluded; inline-numbering and fitting-endnote
+source predicates remain strict. No new font/count/threshold/API regime.
+
+78 Windows/72 Ubuntu/six native skips in one exact invocation each; one accepted
+Release freeze/2,426inputs. An earlier test compile lacked an assertion message;
+repair precedes qualification and its failed build log remains. No harness-only
+qualification join. Two parent regression observers fail. Every body/marker/note
+glyph text/origin/size equals the no-template source with native and pinned fonts.
+All24 independent Word prose origins pass original gates (maxX.025pt,Y.188pt).
+Two viewed Final rasters show correct superscript markers and clear note ink.
+
+Two strict pixel and two raw inactive-source screen failures/diagnostics remain;
+no Office prose/per-page deficits. Ten fixed/12 default-margin/six base/four C291
+views carry by source reachability, without PDF identity or conversion replay.
+17 assets/two exact transfer smokes; no root build/suite/package replay. Evidence
+artifacts/composition-c1/inactive-note-ownership-evidence.json; source d564d701/
+186ecbcf/67c33b08. CI follows coherent push; continue a bounded independent field
+metric-owner probe before extending static field geometry.
+
 ## C291 inactive templates do not own selected body metrics (2026-10-19)
 
 Two source-exact ordinary controls add rich first/even templates without enabling
