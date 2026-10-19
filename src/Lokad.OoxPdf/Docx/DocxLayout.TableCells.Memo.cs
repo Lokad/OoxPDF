@@ -7,10 +7,10 @@ namespace Lokad.OoxPdf.Docx;
 // remeasurement; keys capture every layout input so hits reproduce the computed lines
 // exactly after caller-side re-offsetting by the new origin. Stored lines are
 // origin-relative (absolute minus store origin); callers reconstruct absolute lines
-// by shifting relative lines by the lookup origin. Cells carrying PAGE/NUMPAGES runs
-// keep their page args in the key (dynamic tier); all other cells omit them (static
-// tier), which is sound because page inputs only reach text spans and wrap measurement
-// through dynamic field runs, including inline-box children. Vertical-alignment
+// by shifting relative lines by the lookup origin. Source PAGE/NUMPAGES dependencies
+// select each page input independently, including inline-box children. The memo
+// stays within one table-layout pass; math/story context remains owned by that pass.
+// Vertical-alignment
 // shifts stay outside the memo: every
 // caller applies its own height-dependent shift to the shared unshifted lines.
 // Cell identity is explicit reference identity: equal-valued distinct cell instances
@@ -34,14 +34,14 @@ internal sealed partial class DocxLayoutEngine
             double paragraphSpacingScale,
             int? pageNumber,
             int? pageCount,
-            bool pageStatic,
+            DocxCounterDependencies dependencies,
             out IReadOnlyList<DocxTextLineLayout> relativeLines,
             out IReadOnlyList<DocxInlineImageLayout> relativePlacedImages,
             out IReadOnlyList<DocxInlineTextBoxLayout> relativePlacedBoxes,
             out double usedHeight)
         {
             if (entries.TryGetValue(
-                new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageStatic ? null : pageNumber, pageStatic ? null : pageCount),
+                new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageNumber, pageCount, dependencies),
                 out StoredLines? stored) && stored is not null)
             {
                 Hits++;
@@ -69,7 +69,7 @@ internal sealed partial class DocxLayoutEngine
             double paragraphSpacingScale,
             int? pageNumber,
             int? pageCount,
-            bool pageStatic,
+            DocxCounterDependencies dependencies,
             IReadOnlyList<DocxTextLineLayout> absoluteLines,
             IReadOnlyList<DocxInlineImageLayout> absolutePlacedImages,
             IReadOnlyList<DocxInlineTextBoxLayout> absolutePlacedBoxes,
@@ -80,7 +80,7 @@ internal sealed partial class DocxLayoutEngine
             IReadOnlyList<DocxTextLineLayout> relative = ToRelativeLines(absoluteLines, originX, originY);
             IReadOnlyList<DocxInlineImageLayout> relativePlaced = ToRelativeImages(absolutePlacedImages, originX, originY);
             var relativeBoxes = absolutePlacedBoxes.Select(box => ShiftInlineTextBox(box, -originY, -originX)).ToArray();
-            entries[new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageStatic ? null : pageNumber, pageStatic ? null : pageCount)] = new StoredLines(relative, relativePlaced, relativeBoxes, usedHeight);
+            entries[new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageNumber, pageCount, dependencies)] = new StoredLines(relative, relativePlaced, relativeBoxes, usedHeight);
         }
 
         internal static IReadOnlyList<DocxTextLineLayout> ToRelativeLines(
@@ -161,7 +161,8 @@ internal sealed partial class DocxLayoutEngine
                 double rowTopPadding,
                 double paragraphSpacingScale,
                 int? pageNumber,
-                int? pageCount)
+                int? pageCount,
+                DocxCounterDependencies dependencies)
             {
                 this.cell = cell;
                 this.cellWidth = cellWidth;
@@ -169,8 +170,8 @@ internal sealed partial class DocxLayoutEngine
                 this.defaultTabStopPoints = defaultTabStopPoints;
                 this.rowTopPadding = rowTopPadding;
                 this.paragraphSpacingScale = paragraphSpacingScale;
-                this.pageNumber = pageNumber;
-                this.pageCount = pageCount;
+                this.pageNumber = (dependencies & DocxCounterDependencies.PageNumber) != 0 ? pageNumber : null;
+                this.pageCount = (dependencies & DocxCounterDependencies.PageCount) != 0 ? pageCount : null;
             }
 
             public bool Equals(MemoKey other)

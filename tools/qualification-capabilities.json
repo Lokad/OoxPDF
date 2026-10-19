@@ -9076,6 +9076,28 @@
     "PortableRenderingMixedDisplayCountersPreserveTotalPageDependencies",
     "DocxTableCellPageFieldsEvaluatePerFragmentPage"
   ],
+  "docx-cell-counter-memo": [
+    "CellMemoCounterInputs",
+    "MemoReturnsHitForSameKey",
+    "MemoReplaysAtChangedOrigin",
+    "MemoDistinguishesReferenceIdentity",
+    "MemoTiersPageStaticVsDynamic",
+    "MemoKeyIncludesMeasurerReference",
+    "DocxTableCellTextLinesMemoSharesSplitCells",
+    "DocxTableCellPageFieldsEvaluatePerFragmentPage",
+    "DocxInlineCompositionCellPageCounters",
+    "PortableRenderingCellPageCountersPreserveMathAcrossDigitBoundary",
+    "DocxInlineBoxTotalCounters",
+    "PortableRenderingInlineBoxTotalCounters",
+    "DocxInlineCompositionTotalPage",
+    "PortableRenderingTotalPageMath",
+    "DocxTableLayoutUsesResolvedPageFieldForCellLineBreaking",
+    "DocxTableLayoutUsesCompactNumPagesFieldForCellLineBreaking",
+    "DocxLayoutStageResolvesStaticHeaderTablePageFieldsPerPage",
+    "DocxLayoutStageResolvesStaticHeaderTableNumPagesFieldFromPageCount",
+    "DocxSpanningCellTotalCountersRetainWordPagesAndCompleteContent",
+    "PortableRenderingSpanningCellTotalCountersKeepCompleteSource"
+  ],
   "docx-count-preparation-reuse": [
     "DocxCountPreparation",
     "DocxCompoundTotalCountRetainsCompleteWordReportAndActualFieldValue",

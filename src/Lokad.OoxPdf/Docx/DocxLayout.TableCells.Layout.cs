@@ -349,8 +349,8 @@ internal sealed partial class DocxLayoutEngine
         double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs, textMeasurer);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
-        bool pageStatic = DocxFieldText.GetDependencies(bodyElements, context.CancellationToken) == DocxCounterDependencies.None;
-        var (lines, usedHeight, placedImages, placedBoxes) = ComputeTableCellTextLines(cell, cellX, cellWidth, context, bodyElements, paddingLeft, textWidth, startBaselineY, rowTopPadding, cellX, cellY + cellHeight, pageStatic, pageIndex);
+        var dependencies = DocxFieldText.GetDependencies(bodyElements, context.CancellationToken);
+        var (lines, usedHeight, placedImages, placedBoxes) = ComputeTableCellTextLines(cell, cellX, cellWidth, context, bodyElements, paddingLeft, textWidth, startBaselineY, rowTopPadding, cellX, cellY + cellHeight, dependencies, pageIndex);
         if (lines.Count == 0)
         {
             return (lines, placedImages, placedBoxes, usedHeight);
@@ -376,7 +376,7 @@ internal sealed partial class DocxLayoutEngine
         double rowTopPadding,
         double originX,
         double originY,
-        bool pageStatic,
+        DocxCounterDependencies dependencies,
         int pageIndex)
     {
         context.CancellationToken.ThrowIfCancellationRequested();
@@ -389,7 +389,7 @@ internal sealed partial class DocxLayoutEngine
         }
 
         if (cellMemo is not null &&
-            cellMemo.TryGetRelativeLines(cell, cellWidth, measurer, context.DefaultTabStopPoints, rowTopPadding, context.ParagraphSpacingScale, context.PageNumber, context.PageCount, pageStatic,
+            cellMemo.TryGetRelativeLines(cell, cellWidth, measurer, context.DefaultTabStopPoints, rowTopPadding, context.ParagraphSpacingScale, context.PageNumber, context.PageCount, dependencies,
                 out var cachedRelative, out var cachedPlaced, out var cachedBoxes, out double cachedUsedHeight))
         {
             return (new List<DocxTextLineLayout>(DocxTableCellTextLinesMemo.ShiftLines(cachedRelative, originX, originY)), cachedUsedHeight,
@@ -800,7 +800,7 @@ internal sealed partial class DocxLayoutEngine
 
         if (cellMemo is not null)
         {
-            cellMemo.StoreRelativeLines(cell, cellWidth, measurer, context.DefaultTabStopPoints, rowTopPadding, context.ParagraphSpacingScale, context.PageNumber, context.PageCount, pageStatic, lines, placedImages, placedBoxes, originX, originY, usedHeight);
+            cellMemo.StoreRelativeLines(cell, cellWidth, measurer, context.DefaultTabStopPoints, rowTopPadding, context.ParagraphSpacingScale, context.PageNumber, context.PageCount, dependencies, lines, placedImages, placedBoxes, originX, originY, usedHeight);
         }
 
         return (lines, usedHeight, placedImages, placedBoxes);
