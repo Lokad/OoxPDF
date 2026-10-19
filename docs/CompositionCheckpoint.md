@@ -1,5 +1,19 @@
 # Composed-document reliability checkpoint
 
+## C290 bounded static field metric-owner review (2026-10-19)
+
+Read-only Word16 metadata for four retained plain/field header/footer documents
+confirms12pt paragraph style/mark and11pt visible text in every control. Fields
+add12pt code formatting beside11pt results. Source currently measures the visible
+run maximum. This suggests a non-rendering field metric owner, but does not
+establish a general rule for simple/complex fields or other source formatting.
+Adding every paragraph mark as a strut would move validated plain controls too.
+No production correction accepted; retain1.06pt header/.032pt footer residuals,
+absolute thresholds and metadata. Zero library builds/conversions/exports/tests;
+all four source hashes unchanged. Evidence:artifacts/composition-c1/passive-page-
+field-metric-owner-review.json. Resume source/container composition: inactive
+static variants should not determine an ordinary body's metric admission.
+
 ## C289 source-owned page fields preserve body metrics (2026-10-19)
 
 A PAGE header and NUMPAGES footer leave all body origins unchanged in four
