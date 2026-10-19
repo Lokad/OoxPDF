@@ -1,5 +1,34 @@
 # Measured operating envelope
 
+## C271 scaled static textbox frames (2026-10-19)
+
+A real body comment reproduced a184.892 pt off-page footer and four missing
+visible mathematical glyphs. Independent static textboxes and their children
+now share the existing natural static-story frame; painting consumes physical
+Y and scales the authored outline once. The footer frame agrees with Word
+within0.056 pt and math Y within0.042 pt. Five controls/ten cached Word views
+retain every visible math glyph and source prose; every frame stays on-page.
+Admitted origin/edge gates remain1 pt, font size0.1 pt. Max admitted math error
+0.427 pt, edge0.107 pt, physical font0.015 pt, stroke0.001 pt. Four rasters viewed.
+Five Final PDFs are byte-identical to parent. No API/quota/unsafe-code changes.
+
+Final23 Windows/16 Ubuntu checks and seven native-font skips use one qualified
+runtime. A first Windows attempt retained22 passes/one failure:the new static
+table control mistakenly admitted an inherited5.400 pt X residual. Golden
+metadata now records admitted axes explicitly; body/cell review Y2.454 pt and
+static-table X5.400/4.088 pt remain unresolved. No threshold relaxation or
+passing join across changed inputs.14 runtime assets/2,359 common inputs remain
+identical during the harness repair; library not rebuilt. Final selection reran
+once/platform. Both new observers fail meaningfully against the parent library.
+
+All10 strict whole-page failures remain. Content audit has zero unresolved
+screens;74 previous outcomes carry forward by source reachability, with no
+new PDF identity claim for them. Reuse all10 cached Word views; no new exports.
+17 transferred assets/four byte-exact smokes, no root build/suite/package replay.
+Evidence:artifacts/composition-c1/inline-box-review-frames-evidence.json;
+rootbe229dde. C270CI39254781352 is green on Windows/Ubuntu including broader
+and package gates. S1-S4 remain complete; further composition stays bounded.
+
 ## C269/C270 child inline-box math and frame ownership (2026-10-19)
 
 Equations now survive inside existing body, cell, header and footer textbox
