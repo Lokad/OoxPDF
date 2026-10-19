@@ -1,5 +1,40 @@
 # Composed-document reliability checkpoint
 
+## C295 computed simple fields share instruction formatting (2026-10-19)
+
+Bare PAGE/NUMPAGES now use the existing paragraph-style instruction resolver,
+closing.96pt field-size/1.06pt header-origin errors and the cached Arial/Word
+Calibri mismatch in math stories. MERGEFORMAT controls independently preserve
+cached11/13pt formatting; unqualified switches keep prior fallback. Complex
+instruction runs remain unchanged. Remove the separate runless construction and
+duplicate field publication:16 production lines added/32 removed. No new layout
+offset, font/count regime, field-format framework, quota or public API change.
+
+One committed Release runtime/2,438inputs,45 Windows/36 Ubuntu/nine native skips.
+The initial catalogue refused two unregistered new methods before running any
+test; register them with one harness-only build, preserving14 runtime assets/
+all inputs. Each platform then executes one exact45-method set. Three parent
+regression observers fail. Native/portable checks cover16 field glyph sizes;
+eight published simple glyph gates and72 prose origins pass unchanged thresholds
+(max proseY.248pt, header residual now.12pt). Remove the old header-origin scope
+exception from the body-baseline observer; full margin origins are checked again.
+
+Across48 independently exported math/story pages, all96 field values/sizes and
+relative origins pass; page/count offset maxima.120/.069pt. One12-page review
+header outcome passes every strict pixel gate;11 of12 current outcomes retain
+pixel failures. This is a current qualification result, not a raster speedup or
+before/after attribution claim. Eight raw fldSimple screens remain; no prose/
+per-page deficits. Four viewed Word/native rasters show visible/clear values/math.
+
+Reuse all references:12 qualification conversions plus four preimplementation
+format-probe conversions/four exports; zero qualification Word exports. Carry38
+prior outcomes by parser reachability rather than PDF identity/replay.17 assets/
+four exact transfer smokes, no root build/suite/package replay. Evidence:artifacts/
+composition-c1/dynamic-field-format-evidence.json; sourcebcad4474/56e43bc1. C292CI
+39311132187 is green on Windows/Ubuntu including broader/package checks; coherent
+parser milestone CI follows push. Next: review PAGE/math composition in body flow
+before any extension, preserving missing-page-input and complex-field fallbacks.
+
 ## C294 simple PAGE marks do not own evaluated field formatting (2026-10-19)
 
 Two mark11/13pt controls retain every Word header/body origin exactly across
