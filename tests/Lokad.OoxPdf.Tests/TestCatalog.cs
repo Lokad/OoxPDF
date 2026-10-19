@@ -85,6 +85,7 @@ internal static class TestCatalog
         .. FromType("docx-core", typeof(DocxFontRenderingTests)),
         .. FromType("docx-core", typeof(DocxFontCacheTests)),
         .. FromType("docx-core", typeof(DocxFieldsTests)),
+        .. FromType("docx-core", typeof(DocxDynamicFieldFormatTests)),
         .. FromType("docx-core", typeof(DocxRevisionsTests)),
         .. FromType("docx-core", typeof(DocxMarkupTests)),
         .. FromType("docx-core", typeof(DocxCommentsTests)),
