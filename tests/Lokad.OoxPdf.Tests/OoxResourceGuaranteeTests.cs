@@ -1006,7 +1006,7 @@ internal static class OoxResourceGuaranteeTests
 
         public override long Position { get => TotalWritten; set => throw new NotSupportedException(); }
 
-        public override void Flush()
+        public override void Flush() { }
 
         public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 
@@ -1112,7 +1112,7 @@ internal static class OoxResourceGuaranteeTests
 
         public override void Write(ReadOnlySpan<byte> buffer) => inner.Write(buffer);
 
-        protected override void Dispose(bool disposing)
+        protected override void Dispose(bool disposing) { }
     }
 
     private sealed class ThrowingWriteStream(Exception failure) : Stream
@@ -1127,7 +1127,7 @@ internal static class OoxResourceGuaranteeTests
 
         public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
-        public override void Flush()
+        public override void Flush() { }
 
         public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 
