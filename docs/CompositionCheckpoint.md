@@ -1,5 +1,29 @@
 # Composed-document reliability checkpoint
 
+## C301 row-link placement shares cell/static contracts (2026-10-19)
+
+Place the unchanged linked-prose/implicit-math paragraph into a cell, header and
+footer. Six independent Word views pass original math/prose gates:mathX.101pt/
+Y.282pt, proseY.046pt. Native/pinned-portable checks retain all source math/text
+and confine the link annotation to its text row. Two viewed Final footer rasters
+show clear, complete content inside the page. No cross-container coordinate-
+invariance claim; each placement has independently measured Word geometry.
+
+No production change/build. One harness-only build preserves14 runtime assets/
+all2,454 prior inputs and adds five public fixture/gold files. Two exact methods
+once/platform:two Windows/one Ubuntu/one native skip. C300's18 Windows/8 Ubuntu/
+ten skips carry by production/input identity without replay or a production join.
+Six candidate conversions/six Word exports,17 assets/two exact transfer smokes;
+no root build/suite/package replay. Six strict foreground-recall gates/four SSIM
+gates remain failed; zero content deficits/unresolved source screens. No threshold,
+API, quota, native code, font/count family or placement exception changed.
+
+Harness e26926c7; evidence artifacts/composition-c1/math-authored-row-link-containers-
+evidence.json. C300CI39324029712 is in progress while work continues; C298CI
+39322199121 is green including broader/package checks. Next bounded question:
+measure the existing finalized-count retry on a realistic composed report with
+one ordinary body NUMPAGES addition before choosing a resource/layout optimization.
+
 ## C300 unrelated hyperlinks preserve authored math-row ownership (2026-10-19)
 
 A hyperlink on a preceding authored text row changed an unchanged implicit
