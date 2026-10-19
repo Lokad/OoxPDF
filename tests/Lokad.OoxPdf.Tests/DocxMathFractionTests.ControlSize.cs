@@ -26,7 +26,8 @@ internal static partial class DocxMathFractionTests
             larger.Rules.Single().Thickness == implicitSize.Rules.Single().Thickness * 2d && larger.ParentMetrics?.Size == 24d,
             "The fraction rule and line owner use the authored control; child glyph sizes remain independent.");
         TestAssert.True(DocxMathLayout.TryGetLineMetrics(larger, default, out _, out double largerHeight) &&
-            DocxMathLayout.TryGetLineMetrics(implicitSize, default, out _, out double originalHeight) && largerHeight > originalHeight);
+            DocxMathLayout.TryGetLineMetrics(implicitSize, default, out _, out double originalHeight) && largerHeight > originalHeight,
+            "The authored control's larger frame owns sufficient line leading.");
         foreach (double invalid in new[] { 0d, -1d, double.NaN, double.PositiveInfinity })
             TestAssert.True(!DocxMathLayout.TryMeasure(source with { Content = new([fraction with { ControlFontSize = invalid }]) },
                 _ => resource, default, out var absent, out _) && absent is null,

@@ -64,7 +64,8 @@ internal static partial class DocxInlineCompositionTests
                             "Ordinary containers use the measured control frame for following prose. Merged-span flow remains a separate residual.");
                     if (container == "body")
                         foreach (var pair in math.Zip(row.GetProperty("MathAnchors").EnumerateArray()))
-                            TestAssert.True(Math.Abs(pair.First.X - pair.Second.GetProperty("X").GetDouble()) < 1d);
+                            TestAssert.True(Math.Abs(pair.First.X - pair.Second.GetProperty("X").GetDouble()) < 1d,
+                                "Body fraction glyphs retain absolute independent Word X anchors.");
                 }
                 if (original is not null) SameGeometry(original, math);
                 original = math;
