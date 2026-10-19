@@ -1,0 +1,5727 @@
+{
+  "Scope": "Independent Word16 source-exact planning-paragraph origins, math and prefix frames; thresholds unchanged.",
+  "Rows": [
+    {
+      "Id": "spanning-cell-total-count",
+      "Mode": "final-preserve",
+      "InputSha256": "090D8F711EC51CF4EDFA2E6D0F92A84DE63C5291997FC37A2A69C3904F97759C",
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table.",
+        "Planning row 1 stays visible.",
+        "Planning row 84 stays visible."
+      ],
+      "PlanningParagraphs": 84,
+      "WordPdfSha256": "0630E23AC69F6015A5F1BBF4102E1BBE7A154709FF918EDFFBE012A64318374E",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "WordPages": 3,
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 143.66000366210938,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 148.5800018310547,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 154.4600067138672,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 148.6999969482422,
+          "Y": 115.0999755859375,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            72.0,
+            92.64996337890625,
+            288.0,
+            152.64996337890625
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Planning row 1 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 170.17999267578125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 2 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 182.41998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 3 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 194.65997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 4 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 206.89996337890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 5 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 219.01995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 6 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 231.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 7 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 243.5,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 8 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 255.739990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 9 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 267.88995361328125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 10 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 280.1300048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 11 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 292.3699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 12 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 304.489990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 13 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 316.72998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 14 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 328.969970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 15 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 341.2099914550781,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 16 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 353.3299865722656,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 17 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 365.5699768066406,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 18 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 377.80999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 19 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 390.04998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 20 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 402.16998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 21 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 414.40997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 22 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 426.6499938964844,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 23 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 438.7699890136719,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 24 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 451.02996826171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 25 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 463.2699890136719,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 26 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 475.5099792480469,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 27 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 487.6299743652344,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 28 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 499.8699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 29 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 512.1099853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 30 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 524.22998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 31 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 536.469970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 32 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 548.7099609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 33 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 560.949951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 34 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 573.0699462890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 35 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 585.3099975585938,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 36 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 597.5499877929688,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 37 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 609.7899780273438,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 38 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 621.9400024414062,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 39 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 634.1799926757812,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 40 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 646.4199829101562,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 41 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 658.5399780273438,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 42 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 670.7799682617188,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 43 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 683.02001953125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 44 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 695.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 45 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 707.3800048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 46 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 719.6199951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 47 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 731.8599853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 48 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 744.0960083007812,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 49 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 756.2160034179688,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 50 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 81.5999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 51 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 93.739990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 52 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 105.97998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 53 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 118.219970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 54 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 130.4599609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 55 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 142.5799560546875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 56 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 154.82000732421875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 57 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 167.05999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 58 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 179.29998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 59 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 191.41998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 60 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 203.65997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 61 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 215.89996337890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 62 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 228.01995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 63 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 240.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 64 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 252.5,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 65 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 264.76995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 66 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 276.88995361328125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 67 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 289.1300048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 68 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 301.3699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 69 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 313.6099853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 70 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 325.72998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 71 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 337.969970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 72 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 350.2099914550781,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 73 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 362.3299865722656,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 74 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 374.5699768066406,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 75 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 386.80999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 76 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 399.04998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 77 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 411.16998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 78 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 423.40997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 79 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 435.6499938964844,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 80 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 447.78997802734375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 81 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 460.02996826171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 82 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 472.2699890136719,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 83 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 484.5099792480469,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 84 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 496.6299743652344,
+          "Size": 9.960000038146973
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 3,
+        "X": 72.02400207519531,
+        "Y": 82.32000732421875
+      }
+    },
+    {
+      "Id": "spanning-cell-total-count",
+      "Mode": "all-word-compatible",
+      "InputSha256": "090D8F711EC51CF4EDFA2E6D0F92A84DE63C5291997FC37A2A69C3904F97759C",
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table.",
+        "Planning row 1 stays visible.",
+        "Planning row 84 stays visible."
+      ],
+      "PlanningParagraphs": 84,
+      "WordPdfSha256": "0C2A06F4C30E18AD6292625EE99FC23EDE529C5DCEC82770CC50CD6DFB509E0A",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "WordPages": 3,
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 143.66000366210938,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 148.5800018310547,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 154.4600067138672,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 148.6999969482422,
+          "Y": 115.0999755859375,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            72.0,
+            92.64996337890625,
+            288.0,
+            152.64996337890625
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Planning row 1 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 170.17999267578125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 2 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 182.41998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 3 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 194.65997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 4 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 206.89996337890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 5 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 219.01995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 6 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 231.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 7 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 243.5,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 8 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 255.739990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 9 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 267.88995361328125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 10 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 280.1300048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 11 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 292.3699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 12 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 304.489990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 13 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 316.72998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 14 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 328.969970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 15 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 341.2099914550781,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 16 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 353.3299865722656,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 17 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 365.5699768066406,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 18 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 377.80999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 19 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 390.04998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 20 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 402.16998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 21 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 414.40997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 22 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 426.6499938964844,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 23 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 438.7699890136719,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 24 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 451.02996826171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 25 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 463.2699890136719,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 26 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 475.5099792480469,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 27 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 487.6299743652344,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 28 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 499.8699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 29 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 512.1099853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 30 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 524.22998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 31 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 536.469970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 32 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 548.7099609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 33 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 560.949951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 34 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 573.0699462890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 35 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 585.3099975585938,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 36 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 597.5499877929688,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 37 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 609.7899780273438,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 38 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 621.9400024414062,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 39 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 634.1799926757812,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 40 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 646.4199829101562,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 41 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 658.5399780273438,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 42 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 670.7799682617188,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 43 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 683.02001953125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 44 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 695.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 45 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 707.3800048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 46 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 719.6199951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 47 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 731.8599853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 48 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 744.0960083007812,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 49 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 756.2160034179688,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 50 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 81.5999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 51 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 93.739990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 52 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 105.97998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 53 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 118.219970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 54 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 130.4599609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 55 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 142.5799560546875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 56 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 154.82000732421875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 57 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 167.05999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 58 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 179.29998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 59 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 191.41998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 60 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 203.65997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 61 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 215.89996337890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 62 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 228.01995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 63 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 240.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 64 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 252.5,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 65 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 264.76995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 66 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 276.88995361328125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 67 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 289.1300048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 68 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 301.3699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 69 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 313.6099853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 70 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 325.72998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 71 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 337.969970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 72 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 350.2099914550781,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 73 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 362.3299865722656,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 74 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 374.5699768066406,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 75 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 386.80999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 76 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 399.04998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 77 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 411.16998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 78 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 423.40997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 79 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 435.6499938964844,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 80 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 447.78997802734375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 81 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 460.02996826171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 82 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 472.2699890136719,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 83 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 484.5099792480469,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 84 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 496.6299743652344,
+          "Size": 9.960000038146973
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 3,
+        "X": 72.02400207519531,
+        "Y": 82.32000732421875
+      }
+    },
+    {
+      "Id": "spanning-frame-short-box",
+      "Mode": "final-preserve",
+      "InputSha256": "45E86FBE4F9326F673ECA904A7CB4FA46451292D40265EEC0B871D4DD8D15FD4",
+      "ExpectedText": [
+        "Before public math table.",
+        "Planning row 1 stays visible.",
+        "Planning row 84 stays visible.",
+        "After public math table."
+      ],
+      "PlanningParagraphs": 84,
+      "WordPdfSha256": "717862EF6C5566A480F99484004F47D93E932053345F8BEFAD663B54741F3E9A",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "WordPages": 3,
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 143.66000366210938,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 148.5800018310547,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 154.4600067138672,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 148.6999969482422,
+          "Y": 115.0999755859375,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            72.0,
+            92.64996337890625,
+            288.0,
+            134.64996337890625
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Planning row 1 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 152.17999267578125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 2 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 164.41998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 3 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 176.65997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 4 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 188.89996337890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 5 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 201.01995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 6 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 213.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 7 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 225.5,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 8 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 237.739990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 9 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 249.8599853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 10 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 262.1300048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 11 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 274.3699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 12 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 286.489990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 13 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 298.72998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 14 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 310.969970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 15 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 323.2099609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 16 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 335.3299865722656,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 17 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 347.5699768066406,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 18 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 359.80999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 19 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 372.04998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 20 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 384.16998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 21 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 396.40997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 22 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 408.6499938964844,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 23 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 420.7699890136719,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 24 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 433.0099792480469,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 25 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 445.2699890136719,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 26 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 457.5099792480469,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 27 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 469.6299743652344,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 28 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 481.8699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 29 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 494.1099853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 30 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 506.22998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 31 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 518.469970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 32 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 530.7099609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 33 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 542.949951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 34 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 555.0699462890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 35 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 567.3099975585938,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 36 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 579.5499877929688,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 37 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 591.7899780273438,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 38 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 603.9099731445312,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 39 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 616.1499633789062,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 40 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 628.4199829101562,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 41 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 640.5399780273438,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 42 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 652.7799682617188,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 43 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 665.02001953125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 44 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 677.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 45 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 689.3800048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 46 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 701.6199951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 47 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 713.8599853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 48 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 726.0999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 49 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 738.219970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 50 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 750.4559936523438,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 51 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 762.6959838867188,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 52 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 81.5999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 53 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 93.739990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 54 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 105.97998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 55 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 118.219970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 56 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 130.4599609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 57 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 142.5799560546875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 58 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 154.82000732421875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 59 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 167.05999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 60 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 179.29998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 61 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 191.41998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 62 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 203.65997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 63 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 215.89996337890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 64 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 228.01995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 65 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 240.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 66 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 252.5,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 67 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 264.76995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 68 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 276.88995361328125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 69 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 289.1300048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 70 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 301.3699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 71 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 313.6099853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 72 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 325.72998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 73 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 337.969970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 74 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 350.2099914550781,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 75 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 362.3299865722656,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 76 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 374.5699768066406,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 77 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 386.80999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 78 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 399.04998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 79 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 411.16998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 80 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 423.40997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 81 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 435.6499938964844,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 82 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 447.78997802734375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 83 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 460.02996826171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 84 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 472.2699890136719,
+          "Size": 9.960000038146973
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 3,
+        "X": 72.02400207519531,
+        "Y": 82.32000732421875
+      }
+    },
+    {
+      "Id": "spanning-frame-short-box",
+      "Mode": "all-word-compatible",
+      "InputSha256": "45E86FBE4F9326F673ECA904A7CB4FA46451292D40265EEC0B871D4DD8D15FD4",
+      "ExpectedText": [
+        "Before public math table.",
+        "Planning row 1 stays visible.",
+        "Planning row 84 stays visible.",
+        "After public math table."
+      ],
+      "PlanningParagraphs": 84,
+      "WordPdfSha256": "70C4A2C0746E2A79C5CDAEA5FC69762664B4804E0F7375AE9218F42BA17242CA",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "WordPages": 3,
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 143.66000366210938,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 148.5800018310547,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 154.4600067138672,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 148.6999969482422,
+          "Y": 115.0999755859375,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            72.0,
+            92.64996337890625,
+            288.0,
+            134.64996337890625
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Planning row 1 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 152.17999267578125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 2 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 164.41998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 3 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 176.65997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 4 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 188.89996337890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 5 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 201.01995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 6 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 213.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 7 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 225.5,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 8 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 237.739990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 9 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 249.8599853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 10 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 262.1300048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 11 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 274.3699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 12 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 286.489990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 13 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 298.72998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 14 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 310.969970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 15 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 323.2099609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 16 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 335.3299865722656,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 17 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 347.5699768066406,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 18 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 359.80999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 19 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 372.04998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 20 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 384.16998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 21 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 396.40997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 22 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 408.6499938964844,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 23 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 420.7699890136719,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 24 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 433.0099792480469,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 25 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 445.2699890136719,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 26 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 457.5099792480469,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 27 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 469.6299743652344,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 28 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 481.8699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 29 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 494.1099853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 30 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 506.22998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 31 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 518.469970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 32 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 530.7099609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 33 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 542.949951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 34 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 555.0699462890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 35 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 567.3099975585938,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 36 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 579.5499877929688,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 37 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 591.7899780273438,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 38 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 603.9099731445312,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 39 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 616.1499633789062,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 40 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 628.4199829101562,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 41 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 640.5399780273438,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 42 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 652.7799682617188,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 43 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 665.02001953125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 44 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 677.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 45 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 689.3800048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 46 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 701.6199951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 47 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 713.8599853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 48 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 726.0999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 49 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 738.219970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 50 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 750.4559936523438,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 51 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 762.6959838867188,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 52 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 81.5999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 53 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 93.739990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 54 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 105.97998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 55 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 118.219970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 56 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 130.4599609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 57 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 142.5799560546875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 58 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 154.82000732421875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 59 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 167.05999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 60 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 179.29998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 61 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 191.41998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 62 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 203.65997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 63 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 215.89996337890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 64 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 228.01995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 65 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 240.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 66 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 252.5,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 67 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 264.76995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 68 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 276.88995361328125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 69 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 289.1300048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 70 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 301.3699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 71 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 313.6099853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 72 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 325.72998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 73 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 337.969970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 74 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 350.2099914550781,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 75 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 362.3299865722656,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 76 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 374.5699768066406,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 77 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 386.80999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 78 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 399.04998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 79 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 411.16998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 80 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 423.40997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 81 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 435.6499938964844,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 82 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 447.78997802734375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 83 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 460.02996826171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 84 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 472.2699890136719,
+          "Size": 9.960000038146973
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 3,
+        "X": 72.02400207519531,
+        "Y": 82.32000732421875
+      }
+    },
+    {
+      "Id": "spanning-frame-tall-box",
+      "Mode": "final-preserve",
+      "InputSha256": "36B2C8E3835D9CD455DCF94F2CF991803B7E5672EBCA86A29DDB4FDFCDB9B545",
+      "ExpectedText": [
+        "Before public math table.",
+        "Planning row 1 stays visible.",
+        "Planning row 84 stays visible.",
+        "After public math table."
+      ],
+      "PlanningParagraphs": 84,
+      "WordPdfSha256": "146A8FBD951E9DA5EB914D2D44B71B88B2FFD9E4E82EFFBD284E3646C23EA757",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "WordPages": 3,
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 143.66000366210938,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 148.5800018310547,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 154.4600067138672,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 148.6999969482422,
+          "Y": 115.0999755859375,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            72.0,
+            92.64996337890625,
+            288.0,
+            170.64996337890625
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Planning row 1 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 188.17999267578125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 2 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 200.41998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 3 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 212.65997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 4 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 224.89996337890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 5 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 237.01995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 6 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 249.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 7 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 261.5,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 8 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 273.76995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 9 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 285.88995361328125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 10 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 298.1300048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 11 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 310.3699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 12 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 322.489990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 13 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 334.72998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 14 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 346.969970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 15 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 359.2099914550781,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 16 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 371.3299865722656,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 17 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 383.5699768066406,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 18 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 395.80999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 19 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 408.04998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 20 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 420.16998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 21 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 432.40997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 22 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 444.66998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 23 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 456.78997802734375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 24 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 469.02996826171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 25 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 481.2699890136719,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 26 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 493.5099792480469,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 27 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 505.6299743652344,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 28 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 517.8699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 29 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 530.1099853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 30 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 542.22998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 31 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 554.469970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 32 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 566.7099609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 33 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 578.949951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 34 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 591.0699462890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 35 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 603.3099975585938,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 36 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 615.5499877929688,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 37 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 627.8199462890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 38 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 639.9400024414062,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 39 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 652.1799926757812,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 40 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 664.4199829101562,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 41 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 676.5399780273438,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 42 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 688.7799682617188,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 43 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 701.02001953125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 44 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 713.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 45 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 725.3800048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 46 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 737.6199951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 47 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 749.85595703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 48 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 762.0960083007812,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 49 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 81.5999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 50 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 93.739990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 51 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 105.97998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 52 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 118.219970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 53 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 130.4599609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 54 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 142.5799560546875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 55 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 154.82000732421875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 56 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 167.05999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 57 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 179.29998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 58 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 191.41998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 59 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 203.65997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 60 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 215.89996337890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 61 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 228.01995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 62 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 240.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 63 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 252.5,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 64 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 264.76995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 65 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 276.88995361328125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 66 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 289.1300048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 67 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 301.3699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 68 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 313.6099853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 69 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 325.72998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 70 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 337.969970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 71 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 350.2099914550781,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 72 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 362.3299865722656,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 73 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 374.5699768066406,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 74 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 386.80999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 75 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 399.04998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 76 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 411.16998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 77 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 423.40997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 78 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 435.6499938964844,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 79 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 447.78997802734375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 80 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 460.02996826171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 81 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 472.2699890136719,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 82 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 484.5099792480469,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 83 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 496.6299743652344,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 84 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 508.8699951171875,
+          "Size": 9.960000038146973
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 3,
+        "X": 72.02400207519531,
+        "Y": 82.32000732421875
+      }
+    },
+    {
+      "Id": "spanning-frame-tall-box",
+      "Mode": "all-word-compatible",
+      "InputSha256": "36B2C8E3835D9CD455DCF94F2CF991803B7E5672EBCA86A29DDB4FDFCDB9B545",
+      "ExpectedText": [
+        "Before public math table.",
+        "Planning row 1 stays visible.",
+        "Planning row 84 stays visible.",
+        "After public math table."
+      ],
+      "PlanningParagraphs": 84,
+      "WordPdfSha256": "E2EE603EE8ED9C9CBAFBEC8ED979B812A6902CFED24644E58F5C9857DEC51491",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "WordPages": 3,
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 143.66000366210938,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 148.5800018310547,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 154.4600067138672,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 148.6999969482422,
+          "Y": 115.0999755859375,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            72.0,
+            92.64996337890625,
+            288.0,
+            170.64996337890625
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Planning row 1 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 188.17999267578125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 2 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 200.41998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 3 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 212.65997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 4 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 224.89996337890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 5 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 237.01995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 6 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 249.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 7 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 261.5,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 8 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 273.76995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 9 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 285.88995361328125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 10 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 298.1300048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 11 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 310.3699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 12 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 322.489990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 13 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 334.72998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 14 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 346.969970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 15 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 359.2099914550781,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 16 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 371.3299865722656,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 17 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 383.5699768066406,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 18 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 395.80999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 19 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 408.04998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 20 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 420.16998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 21 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 432.40997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 22 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 444.66998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 23 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 456.78997802734375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 24 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 469.02996826171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 25 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 481.2699890136719,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 26 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 493.5099792480469,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 27 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 505.6299743652344,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 28 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 517.8699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 29 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 530.1099853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 30 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 542.22998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 31 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 554.469970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 32 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 566.7099609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 33 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 578.949951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 34 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 591.0699462890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 35 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 603.3099975585938,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 36 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 615.5499877929688,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 37 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 627.8199462890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 38 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 639.9400024414062,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 39 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 652.1799926757812,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 40 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 664.4199829101562,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 41 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 676.5399780273438,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 42 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 688.7799682617188,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 43 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 701.02001953125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 44 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 713.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 45 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 725.3800048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 46 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 737.6199951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 47 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 749.85595703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 48 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 762.0960083007812,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 49 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 81.5999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 50 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 93.739990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 51 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 105.97998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 52 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 118.219970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 53 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 130.4599609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 54 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 142.5799560546875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 55 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 154.82000732421875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 56 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 167.05999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 57 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 179.29998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 58 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 191.41998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 59 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 203.65997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 60 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 215.89996337890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 61 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 228.01995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 62 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 240.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 63 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 252.5,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 64 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 264.76995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 65 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 276.88995361328125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 66 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 289.1300048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 67 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 301.3699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 68 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 313.6099853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 69 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 325.72998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 70 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 337.969970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 71 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 350.2099914550781,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 72 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 362.3299865722656,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 73 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 374.5699768066406,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 74 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 386.80999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 75 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 399.04998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 76 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 411.16998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 77 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 423.40997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 78 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 435.6499938964844,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 79 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 447.78997802734375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 80 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 460.02996826171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 81 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 472.2699890136719,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 82 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 484.5099792480469,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 83 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 496.6299743652344,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 84 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 508.8699951171875,
+          "Size": 9.960000038146973
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 3,
+        "X": 72.02400207519531,
+        "Y": 82.32000732421875
+      }
+    },
+    {
+      "Id": "spanning-frame-mixed-prose",
+      "Mode": "final-preserve",
+      "InputSha256": "EF0F9C1AD288737E511846F8F68E202E22B4AEDAA1B95D336D2213AC685F7514",
+      "ExpectedText": [
+        "Before public math table.",
+        "Planning row 1 stays visible.",
+        "Planning row 120 stays visible.",
+        "After public math table."
+      ],
+      "PlanningParagraphs": 120,
+      "WordPdfSha256": "98C426F75593CBCA2F2192FD5C1245BFAE64997EF926EF6ECB51C28008C09848",
+      "OfficeView": {
+        "ShowRevisions": false,
+        "RevisionsView": 0,
+        "MarkupMode": 0,
+        "RevisionsMode": 0,
+        "ShowComments": false,
+        "ShowFormatChanges": false,
+        "ShowInsertionsAndDeletions": false,
+        "RejectAll": false
+      },
+      "WordPages": 4,
+      "WordMathAnchors": [],
+      "WordFrames": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Planning row 1 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 124.70001220703125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 2 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 137.53997802734375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 3 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 151.5799560546875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 4 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 164.41998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 5 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 178.4599609375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 6 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 191.29998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 7 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 205.3399658203125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 8 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 218.05999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 9 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 232.0999755859375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 10 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 244.94000244140625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 11 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 258.97998046875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 12 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 271.8499755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 13 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 285.88995361328125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 14 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 298.72998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 15 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 312.76995849609375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 16 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 325.6099853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 17 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 339.6499938964844,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 18 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 352.3699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 19 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 366.40997314453125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 20 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 379.2499694824219,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 21 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 393.28997802734375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 22 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 406.1299743652344,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 23 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 420.16998291015625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 24 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 433.0099792480469,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 25 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 447.0699768066406,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 26 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 459.78997802734375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 27 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 473.8299865722656,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 28 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 486.66998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 29 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 500.7099914550781,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 30 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 513.5499877929688,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 31 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 527.5899658203125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 32 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 540.4299926757812,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 33 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 554.469970703125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 34 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 567.3099975585938,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 35 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 581.3499755859375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 36 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 594.0699462890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 37 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 608.1099853515625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 38 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 620.97998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 39 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 635.02001953125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 40 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 647.8599853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 41 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 661.8999633789062,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 42 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 674.739990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 43 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 688.7799682617188,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 44 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 701.6199951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 45 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 715.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 46 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 728.3800048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 47 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 742.416015625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 48 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 755.2559814453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 49 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 83.39996337890625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 50 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 96.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 51 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 110.29998779296875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 52 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 123.13995361328125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 53 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 137.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 54 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 149.89996337890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 55 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 163.94000244140625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 56 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 176.77996826171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 57 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 190.82000732421875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 58 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 203.65997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 59 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 217.70001220703125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 60 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 230.53997802734375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 61 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 244.5799560546875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 62 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 257.41998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 63 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 271.489990234375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 64 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 284.2099609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 65 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 298.25,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 66 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 311.0899658203125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 67 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 325.1300048828125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 68 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 337.969970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 69 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 352.0099792480469,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 70 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 364.8499755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 71 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 378.8899841308594,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 72 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 391.72998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 73 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 405.7699890136719,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 74 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 418.489990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 75 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 432.52996826171875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 76 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 445.3899841308594,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 77 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 459.42999267578125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 78 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 472.2699890136719,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 79 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 486.30999755859375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 80 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 499.1499938964844,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 81 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 513.18994140625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 82 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 526.0299682617188,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 83 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 540.0699462890625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 84 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 552.7899780273438,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 85 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 566.8299560546875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 86 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 579.6699829101562,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 87 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 593.7099609375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 88 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 606.5499877929688,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 89 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 620.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 90 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 633.4599609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 91 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 647.5,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 92 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 660.3399658203125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 93 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 674.3800048828125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 94 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 687.0999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 95 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 701.1400146484375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 96 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 713.97998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 97 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 728.0199584960938,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 98 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 740.8599853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 99 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 754.89599609375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 100 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 81.5999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 101 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 95.65997314453125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 102 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 108.5,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 103 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 122.53997802734375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 104 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 135.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 105 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 149.29998779296875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 106 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 162.13995361328125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 107 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 176.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 108 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 189.01995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 109 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 203.05999755859375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 110 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 215.89996337890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 111 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 229.94000244140625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 112 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 242.65997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 113 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 256.70001220703125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 114 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 269.57000732421875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 115 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 283.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 116 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 296.45001220703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 117 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 310.489990234375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 118 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 323.3299560546875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 119 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 337.3699951171875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 120 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 350.2099914550781,
+          "Size": 9.960000038146973
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 4,
+        "X": 72.02400207519531,
+        "Y": 82.32000732421875
+      }
+    },
+    {
+      "Id": "spanning-frame-mixed-prose",
+      "Mode": "all-word-compatible",
+      "InputSha256": "EF0F9C1AD288737E511846F8F68E202E22B4AEDAA1B95D336D2213AC685F7514",
+      "ExpectedText": [
+        "Before public math table.",
+        "Planning row 1 stays visible.",
+        "Planning row 120 stays visible.",
+        "After public math table."
+      ],
+      "PlanningParagraphs": 120,
+      "WordPdfSha256": "B56A5A77116238ED24B768B30AEDB5D3B3F957D12F341F29314BE1F1959A0AA3",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      },
+      "WordPages": 4,
+      "WordMathAnchors": [],
+      "WordFrames": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Planning row 1 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 124.70001220703125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 2 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 137.53997802734375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 3 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 151.5799560546875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 4 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 164.41998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 5 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 178.4599609375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 6 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 191.29998779296875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 7 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 205.3399658203125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 8 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 218.05999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 9 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 232.0999755859375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 10 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 244.94000244140625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 11 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 258.97998046875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 12 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 271.8499755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 13 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 285.88995361328125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 14 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 298.72998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 15 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 312.76995849609375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 16 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 325.6099853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 17 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 339.6499938964844,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 18 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 352.3699951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 19 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 366.40997314453125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 20 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 379.2499694824219,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 21 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 393.28997802734375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 22 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 406.1299743652344,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 23 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 420.16998291015625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 24 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 433.0099792480469,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 25 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 447.0699768066406,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 26 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 459.78997802734375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 27 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 473.8299865722656,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 28 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 486.66998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 29 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 500.7099914550781,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 30 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 513.5499877929688,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 31 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 527.5899658203125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 32 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 540.4299926757812,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 33 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 554.469970703125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 34 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 567.3099975585938,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 35 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 581.3499755859375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 36 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 594.0699462890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 37 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 608.1099853515625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 38 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 620.97998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 39 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 635.02001953125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 40 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 647.8599853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 41 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 661.8999633789062,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 42 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 674.739990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 43 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 688.7799682617188,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 44 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 701.6199951171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 45 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 715.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 46 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 728.3800048828125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 47 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 742.416015625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 48 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 755.2559814453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 49 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 83.39996337890625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 50 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 96.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 51 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 110.29998779296875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 52 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 123.13995361328125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 53 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 137.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 54 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 149.89996337890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 55 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 163.94000244140625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 56 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 176.77996826171875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 57 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 190.82000732421875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 58 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 203.65997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 59 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 217.70001220703125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 60 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 230.53997802734375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 61 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 244.5799560546875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 62 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 257.41998291015625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 63 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 271.489990234375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 64 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 284.2099609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 65 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 298.25,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 66 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 311.0899658203125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 67 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 325.1300048828125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 68 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 337.969970703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 69 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 352.0099792480469,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 70 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 364.8499755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 71 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 378.8899841308594,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 72 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 391.72998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 73 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 405.7699890136719,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 74 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 418.489990234375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 75 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 432.52996826171875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 76 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 445.3899841308594,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 77 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 459.42999267578125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 78 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 472.2699890136719,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 79 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 486.30999755859375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 80 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 499.1499938964844,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 81 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 513.18994140625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 82 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 526.0299682617188,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 83 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 540.0699462890625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 84 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 552.7899780273438,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 85 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 566.8299560546875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 86 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 579.6699829101562,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 87 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 593.7099609375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 88 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 606.5499877929688,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 89 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 620.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 90 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 633.4599609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 91 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 647.5,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 92 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 660.3399658203125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 93 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 674.3800048828125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 94 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 687.0999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 95 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 701.1400146484375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 96 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 713.97998046875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 97 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 728.0199584960938,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 98 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 740.8599853515625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 99 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 754.89599609375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 100 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 81.5999755859375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 101 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 95.65997314453125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 102 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 108.5,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 103 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 122.53997802734375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 104 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 135.260009765625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 105 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 149.29998779296875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 106 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 162.13995361328125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 107 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 176.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 108 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 189.01995849609375,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 109 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 203.05999755859375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 110 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 215.89996337890625,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 111 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 229.94000244140625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 112 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 242.65997314453125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 113 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 256.70001220703125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 114 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 269.57000732421875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 115 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 283.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 116 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 296.45001220703125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 117 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 310.489990234375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 118 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 323.3299560546875,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 119 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 337.3699951171875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Planning row 120 stays visible.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 350.2099914550781,
+          "Size": 9.960000038146973
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 4,
+        "X": 72.02400207519531,
+        "Y": 82.32000732421875
+      }
+    }
+  ]
+}
