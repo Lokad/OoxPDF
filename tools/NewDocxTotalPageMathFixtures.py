@@ -23,6 +23,7 @@ probes.add_argument('--parallel-cell-short-probe', action='store_true')
 probes.add_argument('--parallel-cell-box-probe', action='store_true')
 probes.add_argument('--parallel-cell-inset-probes', action='store_true')
 probes.add_argument('--parallel-cell-bottom-inset-probe', action='store_true')
+probes.add_argument('--parallel-cell-box-inset-probe', action='store_true')
 args = parser.parse_args()
 sha = lambda value: hashlib.sha256(value).hexdigest().upper()
 
@@ -45,6 +46,7 @@ parallel_group = next((group for enabled, group in [
     (args.parallel_cell_box_probe, ('parallel-cell-box-probe.json', ('boxed-math',))),
     (args.parallel_cell_inset_probes, ('parallel-cell-inset-probes.json', ('uniform-insets', 'unequal-insets'))),
     (args.parallel_cell_bottom_inset_probe, ('parallel-cell-bottom-inset-probe.json', ('bottom-insets',))),
+    (args.parallel_cell_box_inset_probe, ('parallel-cell-box-inset-probe.json', ('boxed-insets',))),
 ] if enabled), None)
 if parallel_group:
     parent = next(row for row in json.loads((cases / 'spanning-frame-probes.json').read_text())
@@ -60,12 +62,13 @@ if parallel_group:
         'uniform-insets': dict(Left=(3, 3), Right=(3, 3)),
         'unequal-insets': dict(Left=(3, 1), Right=(6, 3)),
         'bottom-insets': dict(Left=(3, 18), Right=(3, 3)),
+        'boxed-insets': dict(Left=(3, 3), Right=(3, 3)),
     }
     for variant in variants:
         parts = dict(original_parts)
         tree = E.fromstring(parts['word/document.xml'])
         table = next(tree.iter(w + 'tbl'))
-        widths = (240, 160) if variant == 'boxed-math' else (160, 160)
+        widths = (240, 160) if variant in ('boxed-math', 'boxed-insets') else (160, 160)
         table.find(w + 'tblPr/' + w + 'tblW').set(w + 'w', str(sum(widths) * 20))
         if variant == 'bordered':
             E.SubElement(table.find(w + 'tblPr'), w + 'tblInd', {w + 'w': '0', w + 'type': 'dxa'})
@@ -107,7 +110,7 @@ if parallel_group:
                     '24' if side == 'Right' and variant in ('mixed', 'short-left') and index % 2 else '20')
             if side == 'Left' and variant == 'short-left':
                 for paragraph in paragraphs[21:]: cell.remove(paragraph)
-            if side == 'Left' and variant == 'boxed-math':
+            if side == 'Left' and variant in ('boxed-math', 'boxed-insets'):
                 box_parent = json.loads((cases / 'spanning-cell-total-count.json').read_text())[0]
                 box_bytes = (root / box_parent['Input']).read_bytes()
                 assert sha(box_bytes) == box_parent['Sha256']
@@ -132,7 +135,7 @@ if parallel_group:
         if variant == 'short-left':
             del rows[-1]['SourceRowsPerCell']
             rows[-1]['SourceRowsByCell'] = dict(Left=20, Right=120)
-        if variant == 'boxed-math':
+        if variant in ('boxed-math', 'boxed-insets'):
             rows[-1].update(ExpectedEquationCount=1,ExpectedRenderedEquationCount=1,
                 BoxSourceInput=box_parent['Input'],BoxSourceSha256=box_parent['Sha256'],
                 SourceBoxParagraphSha256=sha(E.tostring(box_paragraph)),FieldInstruction='NUMPAGES',
