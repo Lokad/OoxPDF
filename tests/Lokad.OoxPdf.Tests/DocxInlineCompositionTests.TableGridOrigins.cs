@@ -7,6 +7,39 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxAuthoredZeroTableIndentsKeepIndependentWordAnchors()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent authored-zero origins use installed Windows fonts.");
+        CheckTableGridOrigins(null, "table-zero-indents-office.json");
+    }
+
+    public static void DocxAuthoredIndentPresenceKeepsImplicitAndStaticGridFallbacks()
+    {
+        foreach (double margin in new[] { 0d, 10d })
+        foreach (string width in new[] { "4", "16" })
+        {
+            var paragraph = DocxTests.CreateDocxLayoutParagraph("Public cell", 11d, 16d);
+            var borders = new[] { new DocxTableCellBorder("left", "single", "000000", width) };
+            var cell = new DocxTableCell("Public cell", [paragraph], null, null, null, null, borders,
+                DocxTableCellMargins.Empty with { LeftPoints = margin, RightPoints = margin });
+            var basis = new DocxTable("fixed", [200d], [new DocxTableRow([cell], null)]);
+            foreach (bool authored in new[] { false, true })
+            {
+                var page = LayoutSharedTable(authored ? basis with { IndentPoints = 0d } : basis);
+                var flowing = page.Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
+                var stationary = page.StaticTableRows.Single().Cells.Single();
+                TestAssert.True(Math.Abs(stationary.X - page.MarginLeft) < .001d,
+                    "Static containers preserve their grid anchor with absent or authored zero indentation.");
+                TestAssert.Equal(flowing.Width, stationary.Width);
+                if (authored)
+                    TestAssert.True(Math.Abs(flowing.TextLines.Single().X - page.MarginLeft) < .001d,
+                        "Authored zero indentation anchors flowing first text, including a visible starting border.");
+                else
+                    TestAssert.Equal(stationary.X, flowing.X);
+            }
+        }
+    }
+
     public static void DocxInlineCompositionTableGridOriginsMatchIndependentWord()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent table-grid typography requires installed Windows fonts.");

@@ -9294,5 +9294,31 @@
     "PortableRenderingParallelCellFramesKeepCompleteGlyphInk",
     "DocxParallelCellBoxesRetainIndependentWordMathAndFinalCount",
     "PortableRenderingParallelCellBoxesKeepMathAndActualCount"
+  ],
+  "docx-authored-zero-table-origins": [
+    "DocxCompatGridAlignsOuterBorderAtMargin",
+    "DocxCompatIndentAlignsOuterBorderAtIndentedMargin",
+    "DocxDirectMarginsReplaceStyleMarginsForTextOffset",
+    "DocxIndentedTablePinsTextAtIndentOrigin",
+    "DocxInlineCompositionAuthoredCellMarginsKeepOneGridAcrossRows",
+    "DocxInlineCompositionSignedTableIndentsKeepContainerWidthAndOneGrid",
+    "DocxInlineCompositionSignedTableIndentsMatchIndependentWord",
+    "DocxInlineCompositionTableGridOriginsMatchIndependentWord",
+    "DocxStyleMarginsPinTextAtMarginWithoutCompat",
+    "DocxTableCellInlineImageEmitsBetweenSurroundingText",
+    "DocxTableCellMidlineImageBottomSitsAtBaseline",
+    "DocxTableCellTextLinesMemoSharesSplitCells",
+    "MemoReplaysAtChangedOrigin",
+    "PortableRenderingSignedTableIndentsPreserveMixedInlineContent",
+    "PortableRenderingTableGridOriginsPreserveMixedInlineContent",
+    "DocxStaticTableAuthoredMarginsKeepContainerGrid",
+    "DocxStaticTableOriginKeepsIndentStyleAndCompatibilityFallbacks",
+    "DocxStaticTableOriginsMatchIndependentWordContentAndGeometry",
+    "PortableRenderingStaticTableOriginsRetainSourceContent",
+    "DocxAuthoredZeroTableIndentsKeepIndependentWordAnchors",
+    "PortableRenderingAuthoredZeroTableIndentsKeepOneGridAndMath",
+    "DocxAuthoredIndentPresenceKeepsImplicitAndStaticGridFallbacks",
+    "DocxNaturalRowFragmentsKeepIndependentWordBorderCoverage",
+    "PortableRenderingNaturalRowFragmentsKeepBorderCoverage"
   ]
 }

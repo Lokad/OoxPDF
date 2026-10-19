@@ -72,9 +72,10 @@ internal static partial class DocxInlineCompositionTests
                         if (!compareWord) continue;
                         var anchor = expected.GetProperty("WordProseAnchors").EnumerateArray().Single(anchor => anchor.GetProperty("Text").GetString() == text);
                         TestAssert.Equal(anchor.GetProperty("Page").GetInt32(), pageIndex + 1);
-                        TestAssert.True(Math.Abs(page.Height - show.Y - anchor.GetProperty("Y").GetDouble()) < 1d &&
+                        TestAssert.True(Math.Abs(show.X - anchor.GetProperty("X").GetDouble()) < 1d &&
+                            Math.Abs(page.Height - show.Y - anchor.GetProperty("Y").GetDouble()) < 1d &&
                             Math.Abs(show.Size - anchor.GetProperty("Size").GetDouble()) < .1d,
-                            "Source pages, baseline and size retain independent Word gates; horizontal origin stays a separately retained residual.");
+                            "Source pages, origins and size retain independent Word gates.");
                     }
                 }
                 TestAssert.True(fragments >= 2, "The row really spans physical page fragments.");

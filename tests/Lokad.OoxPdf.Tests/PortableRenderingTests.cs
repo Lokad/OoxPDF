@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingAuthoredZeroTableIndentsKeepOneGridAndMath() =>
+        DocxInlineCompositionTests.CheckTableGridOrigins(new PinnedResolver(mathFont: true), "table-zero-indents-office.json");
+
     public static void PortableRenderingNaturalRowFragmentsKeepBorderCoverage() =>
         DocxInlineCompositionTests.CheckNaturalFragmentBorders(new PinnedResolver(mathFont: true));
 

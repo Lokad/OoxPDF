@@ -954,10 +954,10 @@ internal sealed partial class DocxLayoutEngine
         // UseLegacyTableGrid/PinTextToMargin): compat aligns the outer border edge at
         // the origin (m13/ladder, indent or not per M14); modern pins text at an indent
         // origin (w66); pin-regime pins text at the margin via style margins (w72/m12).
-        // Modern authored starting margins also anchor text when the starting
-        // border is absent, including explicit-zero style/indent and other edges.
+        // Flowing authored indentation includes zero. Authored margins also
+        // anchor first text when the implicit starting border is absent.
         // A shared grid shift keeps rows, images and annotations in one frame.
-        // Bare tables and visible starting borders retain their existing fallback.
+        // Bare tables and implicit starting borders retain their existing fallback.
         double gridX = tableX;
         if (table.Rows.FirstOrDefault()?.Cells.FirstOrDefault() is { } firstCell)
         {
@@ -974,9 +974,10 @@ internal sealed partial class DocxLayoutEngine
             {
                 gridX = tableX - (firstCell.StyleMargins?.LeftPoints ?? 0d) * fixedScale;
             }
-            else if (anchorAuthoredCellText && firstCell.Margins.LeftPoints is not null &&
+            else if (anchorAuthoredCellText && (table.IndentPoints is not null ||
+                firstCell.Margins.LeftPoints is not null &&
                 DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(firstCell.Borders, "left")) == 0d &&
-                DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(firstCell.Borders, "start")) == 0d)
+                DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(firstCell.Borders, "start")) == 0d))
             {
                 // Flowing stories anchor the first text edge. Header/footer
                 // containers anchor the grid instead (independent zero/wide
