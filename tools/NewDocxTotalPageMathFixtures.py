@@ -17,6 +17,7 @@ probes = parser.add_mutually_exclusive_group()
 probes.add_argument('--compound-report-probe', action='store_true')
 probes.add_argument('--spanning-cell-probe', action='store_true')
 probes.add_argument('--spanning-frame-probes', action='store_true')
+probes.add_argument('--parallel-cell-probes', action='store_true')
 args = parser.parse_args()
 sha = lambda value: hashlib.sha256(value).hexdigest().upper()
 
@@ -30,6 +31,62 @@ def publish(jobs):
             stage.replace(target)
         else:
             assert target.read_bytes() == data, target.name
+
+
+if args.parallel_cell_probes:
+    parent = next(row for row in json.loads((cases / 'spanning-frame-probes.json').read_text())
+        if row['Id'] == 'spanning-frame-mixed-prose')
+    original = (root / parent['Input']).read_bytes()
+    assert sha(original) == parent['Sha256']
+    with ZipFile(BytesIO(original)) as archive:
+        infos = archive.infolist()
+        original_parts = {entry.filename: archive.read(entry.filename) for entry in infos}
+    rows, jobs = [], []
+    for variant in ('aligned', 'shifted', 'mixed'):
+        parts = dict(original_parts)
+        tree = E.fromstring(parts['word/document.xml'])
+        table = next(tree.iter(w + 'tbl'))
+        table.find(w + 'tblPr/' + w + 'tblW').set(w + 'w', '6400')
+        grid = table.find(w + 'tblGrid')
+        grid.clear()
+        for _ in range(2): E.SubElement(grid, w + 'gridCol', {w + 'w': '3200'})
+        row_node = table.find(w + 'tr')
+        source_cell = row_node.find(w + 'tc')
+        for cell in row_node.findall(w + 'tc'): row_node.remove(cell)
+        for side in ('Left', 'Right'):
+            cell = copy.deepcopy(source_cell)
+            cell.find(w + 'tcPr/' + w + 'tcW').set(w + 'w', '3200')
+            paragraphs = cell.findall(w + 'p')
+            prefix = paragraphs[0]
+            prefix.find('.//' + w + 't').text = side + ' ordinary introduction.'
+            properties = prefix.find(w + 'pPr')
+            if properties is None:
+                properties = E.Element(w + 'pPr')
+                prefix.insert(0, properties)
+            E.SubElement(properties, w + 'spacing', {w + 'after': '320' if side == 'Right' and variant == 'shifted' else '160'})
+            for index, paragraph in enumerate(paragraphs[1:], 1):
+                paragraph.find('.//' + w + 't').text = side + ' source row ' + str(index) + '.'
+                paragraph.find('.//' + w + 'sz').set(w + 'val',
+                    '24' if side == 'Right' and variant == 'mixed' and index % 2 else '20')
+            row_node.append(cell)
+        parts['word/document.xml'] = E.tostring(tree, encoding='utf-8', xml_declaration=True)
+        buffer = BytesIO()
+        with ZipFile(buffer, 'w') as archive:
+            for entry in infos: archive.writestr(copy.copy(entry), parts[entry.filename])
+        data = buffer.getvalue()
+        name = 'parallel-cell-' + variant
+        rows.append(dict(Id=name,Input='tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/' + name + '.docx',
+            Sha256=sha(data),SourceInput=parent['Input'],SourceSha256=parent['Sha256'],HeldOut=True,
+            ExpectedEquationCount=0,ExpectedRenderedEquationCount=0,SourceRowsPerCell=120,
+            ExpectedText=['Before public math table.','Left source row 1.','Right source row 1.',
+                'Left source row 120.','Right source row 120.','After public math table.'],
+            Change='Parallel ordinary cells: aligned source metrics, different introduction spacing, or different line metrics. No candidate-derived geometry.'))
+        jobs.append((cases / (name + '.docx'), data))
+    jobs.append((cases / 'parallel-cell-probes.json',
+        (json.dumps(rows, indent=2) + '\n').replace('\n', '\r\n').encode()))
+    publish(jobs)
+    print('Three ordinary parallel-cell controls verified; earlier inputs unchanged.')
+    raise SystemExit(0)
 
 
 if args.spanning_frame_probes:

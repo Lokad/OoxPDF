@@ -1,0 +1,62 @@
+[
+  {
+    "Id": "parallel-cell-aligned",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/parallel-cell-aligned.docx",
+    "Sha256": "7532207EC4D496EC0ED727A1B8A4FF9B72ADBF392F5D414B549DC1E357BB9238",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-frame-mixed-prose.docx",
+    "SourceSha256": "EF0F9C1AD288737E511846F8F68E202E22B4AEDAA1B95D336D2213AC685F7514",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "SourceRowsPerCell": 120,
+    "ExpectedText": [
+      "Before public math table.",
+      "Left source row 1.",
+      "Right source row 1.",
+      "Left source row 120.",
+      "Right source row 120.",
+      "After public math table."
+    ],
+    "Change": "Parallel ordinary cells: aligned source metrics, different introduction spacing, or different line metrics. No candidate-derived geometry."
+  },
+  {
+    "Id": "parallel-cell-shifted",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/parallel-cell-shifted.docx",
+    "Sha256": "448252785DDA813630FB50BDEBD8CBF2CDEAF423DC5172436997F2D5BA4F7CA7",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-frame-mixed-prose.docx",
+    "SourceSha256": "EF0F9C1AD288737E511846F8F68E202E22B4AEDAA1B95D336D2213AC685F7514",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "SourceRowsPerCell": 120,
+    "ExpectedText": [
+      "Before public math table.",
+      "Left source row 1.",
+      "Right source row 1.",
+      "Left source row 120.",
+      "Right source row 120.",
+      "After public math table."
+    ],
+    "Change": "Parallel ordinary cells: aligned source metrics, different introduction spacing, or different line metrics. No candidate-derived geometry."
+  },
+  {
+    "Id": "parallel-cell-mixed",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/parallel-cell-mixed.docx",
+    "Sha256": "D46A30884874DAF566DE54432810BE2ADB2B3A3E8B549760F82A8FCAEA977F58",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-frame-mixed-prose.docx",
+    "SourceSha256": "EF0F9C1AD288737E511846F8F68E202E22B4AEDAA1B95D336D2213AC685F7514",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "SourceRowsPerCell": 120,
+    "ExpectedText": [
+      "Before public math table.",
+      "Left source row 1.",
+      "Right source row 1.",
+      "Left source row 120.",
+      "Right source row 120.",
+      "After public math table."
+    ],
+    "Change": "Parallel ordinary cells: aligned source metrics, different introduction spacing, or different line metrics. No candidate-derived geometry."
+  }
+]
