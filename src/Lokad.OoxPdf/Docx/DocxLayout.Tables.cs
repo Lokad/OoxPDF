@@ -48,7 +48,7 @@ internal sealed partial class DocxLayoutEngine
                 DocxTableCellLayout cell = row.Cells[cellIndex];
                 IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell.VisualCell));
                 if (cell.TextLines.Count == 0 && cell.NestedRows.Count == 0 ||
-                    !HasOrderedPictureLineOwners(cell, cancellationToken) || cell.InlineTextBoxes.Count != 0 ||
+                    !HasOrderedInlineObjectOwners(cell, cancellationToken) ||
                     cell.Cell.HasVerticalMerge ||
                     hasNestedRows && !DocxMathParagraphPolicy.IsSupportedCellProperties(cell.VisualCell) ||
                     paragraphs.Any(paragraph => paragraph.EffectiveProperties.LineSpacingPoints is not null) ||
@@ -207,6 +207,8 @@ internal sealed partial class DocxLayoutEngine
                         (line.InlineFrame is null ? baselineCorrection : ownedCorrection) + Reduction(line.SourceParagraphIndex) }).ToArray(),
                     InlineImages = cell.InlineImages.Count == 0 ? cell.InlineImages :
                         cell.InlineImages.Select(image => image.Translate(0d, ownedCorrection + Reduction(image.SourceParagraphIndex))).ToArray(),
+                    InlineTextBoxes = cell.InlineTextBoxes.Select(box =>
+                        ShiftInlineTextBox(box, ownedCorrection + Reduction(box.SourceParagraphIndex), 0d)).ToArray(),
                     NestedTableRows = children is null ? cell.NestedRows : children
                 };
             }
@@ -306,10 +308,10 @@ internal sealed partial class DocxLayoutEngine
         return true;
     }
 
-    private static bool HasOrderedPictureLineOwners(DocxTableCellLayout cell, CancellationToken token)
+    private static bool HasOrderedInlineObjectOwners(DocxTableCellLayout cell, CancellationToken token)
     {
-        if (cell.InlineImages.Count == 0) return true;
-        // The measured line owns the physical frame; pictures retain its source
+        if (cell.InlineImages.Count == 0 && cell.InlineTextBoxes.Count == 0) return true;
+        // The measured line owns the physical frame; objects retain its source
         // key instead of publishing another copy of the same geometry.
         var owners = new HashSet<(int? Paragraph, int? Line)>();
         foreach (var line in cell.TextLines)
@@ -323,6 +325,12 @@ internal sealed partial class DocxLayoutEngine
             token.ThrowIfCancellationRequested();
             if (image.SourceParagraphIndex is not >= 0 || image.SourceLineIndex is not >= 0 ||
                 !owners.Contains((image.SourceParagraphIndex, image.SourceLineIndex))) return false;
+        }
+        foreach (var box in cell.InlineTextBoxes)
+        {
+            token.ThrowIfCancellationRequested();
+            if (box.SourceParagraphIndex is not >= 0 || box.SourceLineIndex is not >= 0 ||
+                !owners.Contains((box.SourceParagraphIndex, box.SourceLineIndex))) return false;
         }
         return true;
     }
@@ -1962,8 +1970,8 @@ internal sealed partial class DocxLayoutEngine
             double contentPaddingTop = rowTopPadding;
             double contentPaddingRight = ResolveTableCellHorizontalEdgeInset(contentCell, "right", contentCell.Margins.RightPoints, paragraphSpacingScale);
             double contentPaddingBottom = ResolveTableCellVerticalPadding(contentCell.Margins.BottomPoints, paragraphSpacingScale);
-            (IReadOnlyList<DocxTextLineLayout> cellTextLines, IReadOnlyList<DocxInlineImageLayout> cellPlacedImages, double cellUsedHeight) = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
-                ? (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>(), 0d)
+            var (cellTextLines, cellPlacedImages, cellPlacedBoxes, cellUsedHeight) = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
+                ? (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>(), 0d)
                 : LayoutTableCellTextLines(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, currentPageNumber, pageCount, paragraphSpacingScale, cellMemo, currentPageIndex, tableContext.MathEquations, tableContext.CancellationToken);
             if (adjustAtLeastBodySpacing && FragmentCount == 1 && paragraphSpacingScale == 1d)
                 (cellTextLines, cellPlacedImages) = AdjustTableMinimumLinePlacement(table, row, contentCell, cellTextLines, cellPlacedImages, textMeasurer,
@@ -1977,8 +1985,11 @@ internal sealed partial class DocxLayoutEngine
                 ? ResolveTableCellFirstBaselineInset(GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(contentCell)),
                     textMeasurer) * (1d - fragmentBaselineScale) : 0d;
             if (fragmentBaselineCorrection != 0d)
+            {
                 cellTextLines = cellTextLines.Select(line => line with
                     { BaselineY = line.BaselineY + fragmentBaselineCorrection }).ToArray();
+                cellPlacedBoxes = cellPlacedBoxes.Select(box => ShiftInlineTextBox(box, fragmentBaselineCorrection, 0d)).ToArray();
+            }
             IReadOnlyList<DocxTextLineLayout> textLines = cellTextLines
                     .Where(line => IsTextLineOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerParagraphBoundaryIndex, cellPageBreakUpperParagraphBoundaryIndex, cell, line, FragmentIndex, FragmentCount))
                     .Where(line => IsTextLineVisibleInCellFragmentGeometry(useCellPageBreakBoundaryPartition, line, visualY, visualHeight,
@@ -1995,6 +2006,7 @@ internal sealed partial class DocxLayoutEngine
                     .Where(image => IsInlineImageVisibleInCellFragmentGeometry(useCellPageBreakBoundaryPartition, image, visualY, visualHeight, FragmentIndex, FragmentCount))
                     .ToArray();
             IReadOnlyList<DocxInlineTextBoxLayout> inlineTextBoxes = cellInlineTextBoxes
+                    .Concat(cellPlacedBoxes)
                     .Where(box => IsInlineTextBoxOnVisibleSideOfCellPageBreak(useCellPageBreakBoundaryPartition, cellPageBreakLowerParagraphBoundaryIndex, cellPageBreakUpperParagraphBoundaryIndex, cell, box, FragmentIndex, FragmentCount))
                     .Where(box => IsInlineTextBoxVisibleInCellFragmentGeometry(useCellPageBreakBoundaryPartition, box, visualY, visualHeight, FragmentIndex, FragmentCount))
                     .ToArray();
@@ -2010,7 +2022,7 @@ internal sealed partial class DocxLayoutEngine
             // shading/borders, without resetting that source at another origin.
             if (verticalMergeOwner is { } sourceOwner && cellTextLines.Count != 0 &&
                 IsStaticTopAlignedMergeSource(contentCell) &&
-                cellInlineTextBoxes.Count == 0 &&
+                cellInlineTextBoxes.Count == 0 && cellPlacedBoxes.Count == 0 &&
                 HasAdmittedMergeSourceFrame(table, tableContext, sourceOwner, rowHeights,
                     cellTextLines, cellInlineImages.Concat(cellPlacedImages), contentY + contentHeight))
             {

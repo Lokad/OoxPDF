@@ -249,6 +249,7 @@ internal static class DocxMathParagraphPolicy
                     break;
                 case DocxInlineText:
                 case DocxInlinePicture:
+                case DocxInlineBox:
                     hasInlineOwner = true;
                     hasOtherContent = true;
                     break;
@@ -282,6 +283,7 @@ internal static class DocxMathParagraphPolicy
     public static bool NeedsOrderedInlineLayout(DocxParagraph paragraph,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? prepared = null) =>
         paragraph.Equations.Count > 1 || paragraph.Images.Count != 0 ||
+        paragraph.Equations.Count != 0 && paragraph.InlineTextBoxes.Count != 0 ||
         paragraph.Equations.Count != 0 && paragraph.LineSpacingPoints is not null &&
             (DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph)) ||
         paragraph.Equations.Count != 0 && paragraph.CommentRanges.Count != 0 ||
@@ -371,7 +373,7 @@ internal static class DocxMathParagraphPolicy
 
     private static bool HasSupportedOwner(DocxParagraph paragraph) =>
         HasSupportedSourceOwner(paragraph) && paragraph.Equations.Count == 1 &&
-        paragraph.Images.Count == 0;
+        paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
 
     private static bool HasSupportedSourceOwner(DocxParagraph paragraph, bool hasPageInputs = false,
         CancellationToken token = default) =>

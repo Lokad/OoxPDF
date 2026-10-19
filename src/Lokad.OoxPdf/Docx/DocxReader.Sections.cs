@@ -180,25 +180,32 @@ internal sealed partial class DocxReader
 
         (int Offset, int Order) GetPosition(XElement target)
         {
-            if (positions is null)
-            {
-                positions = new Dictionary<XElement, (int Offset, int Order)>();
-                int textOffset = 0, order = 0;
-                foreach (XElement child in run.Elements())
-                {
-                    foreach (XElement source in child.DescendantsAndSelf().Where(element =>
-                        element.Name == WordprocessingDrawingNamespace + "inline" || element.Name == VmlNamespace + "shape"))
-                        positions[source] = (textOffset, order++);
-                    textOffset += ReadRunTextChild(child).Length;
-                }
-            }
-            return positions[target];
+            return (positions ??= ReadRunDrawingPositions(run, cancellationToken))[target];
         }
     }
 
+    private static Dictionary<XElement, (int Offset, int Order)> ReadRunDrawingPositions(
+        XElement run, CancellationToken token)
+    {
+        var positions = new Dictionary<XElement, (int Offset, int Order)>();
+        int textOffset = 0, order = 0;
+        foreach (XElement child in run.Elements())
+        {
+            token.ThrowIfCancellationRequested();
+            foreach (XElement source in child.DescendantsAndSelf())
+            {
+                token.ThrowIfCancellationRequested();
+                if (source.Name == WordprocessingDrawingNamespace + "inline" || source.Name == VmlNamespace + "shape")
+                    positions[source] = (textOffset, order++);
+            }
+            textOffset += ReadRunTextChild(child).Length;
+        }
+        return positions;
+    }
+
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
-    // Inline DrawingML textboxes (wp:inline plus wps:txbx, no blip) parse beside inline
-    // pictures; the content joins body flow as a block at layout time.
+    // Inline DrawingML textboxes retain the same drawing order as pictures.
+    // Layout can consume the measured frame or keep the existing block fallback.
     private static IReadOnlyList<DocxInlineTextBox> ReadInlineTextBoxes(
         XElement run,
         DocxStyleSet styles,
@@ -207,9 +214,11 @@ internal sealed partial class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         OoxPdfDocxMarkupMode markupMode,
         DocxRevisionInfo? revision,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        int sourceRunIndex)
     {
         var textBoxes = new List<DocxInlineTextBox>();
+        Dictionary<XElement, (int Offset, int Order)>? positions = null;
         foreach (XElement inline in EnumerateRunOwnedDrawings(run, WordprocessingDrawingNamespace + "inline", cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -234,6 +243,7 @@ internal sealed partial class DocxReader
             XElement? textBoxOutline = EnumerateDrawingOwnedElements(inline, DrawingNamespace + "ln", cancellationToken)
                 .FirstOrDefault(element => element.Attribute("w") is not null);
             string? textBoxStrokeWidthEmuValue = (string?)textBoxOutline?.Attribute("w");
+            var position = (positions ??= ReadRunDrawingPositions(run, cancellationToken))[inline];
             textBoxes.Add(new DocxInlineTextBox(
                 (string?)extent?.Attribute("cx"),
                 (string?)extent?.Attribute("cy"),
@@ -244,6 +254,9 @@ internal sealed partial class DocxReader
                 TextBoxStrokeWidthEmuValue: textBoxStrokeWidthEmuValue,
                 TextBoxStrokeColorHex: ResolveTextBoxOutlineColorHex(textBoxOutline))
             {
+                SourceRunIndex = sourceRunIndex,
+                SourceTextOffsetInRun = position.Offset,
+                SourceOrderInRun = position.Order,
                 Revisions = RevisionList(revision),
                 BodyElements = ReadRelatedStoryBodyElements(
                     textBoxContent.Elements(),

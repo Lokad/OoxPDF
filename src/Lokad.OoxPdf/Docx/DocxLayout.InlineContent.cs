@@ -13,6 +13,7 @@ internal sealed record DocxMeasuredInlineFragment(DocxInlineItem Source, double 
     public DocxInlineSourceExtent? VisibleSourceExtent { get; init; }
     public double? MathContinuationAdvance { get; init; }
     public IReadOnlyList<DocxTextSegmentLayout> TextSegments { get; init; } = [];
+    public DocxInlineTextBoxLayout? TextBox { get; init; }
 }
 internal sealed record DocxMeasuredInlineLine(IReadOnlyList<DocxMeasuredInlineFragment> Fragments,
     double Advance, double BaselineInset, double OccupiedHeight)
@@ -100,7 +101,8 @@ internal sealed partial class DocxLayoutEngine
             defaultTabStopPoints: context.DefaultTabStopPoints, pageNumber: context.PageNumber, pageCount: context.PageCount);
     }
 
-    private static (DocxTextLineLayout Line, IReadOnlyList<DocxInlineImageLayout> Images) PlaceOrderedInlineLine(
+    private static (DocxTextLineLayout Line, IReadOnlyList<DocxInlineImageLayout> Images,
+        IReadOnlyList<DocxInlineTextBoxLayout> TextBoxes) PlaceOrderedInlineLine(
         DocxParagraph paragraph, DocxMeasuredInlineLine measured,
         double x, double frameOriginX, double top, double fontSize, double scale, int pageIndex,
         int? sourceBlock, int? sourceParagraph, int sourceLine, DocxStoryId story)
@@ -108,6 +110,7 @@ internal sealed partial class DocxLayoutEngine
         var segments = new List<DocxTextSegmentLayout>();
         segments.AddRange(measured.ListLabelSegments.Select(segment => segment with { X = frameOriginX + segment.X }));
         var images = new List<DocxInlineImageLayout>();
+        var boxes = new List<DocxInlineTextBoxLayout>();
         var equations = new List<DocxInlineMathPlacement>();
         List<DocxInlineSourceExtent>? sourceExtents = DocxInlineContent.RequiresMeasuredSourceRanges(paragraph) ? new() : null;
         var text = new System.Text.StringBuilder();
@@ -129,6 +132,10 @@ internal sealed partial class DocxLayoutEngine
                 images.Add(new(picture.Image, x + offset, top - measured.BaselineInset, fragment.Advance,
                     fragment.OccupiedHeight, pageIndex, sourceBlock, sourceParagraph, story)
                     { SourceLineIndex = sourceLine });
+            else if (fragment.TextBox is { } frame)
+                boxes.Add(ShiftInlineTextBox(frame, top - measured.BaselineInset + fragment.BaselineInset,
+                    x + offset, pageIndex) with
+                { SourceBlockIndex = sourceBlock, SourceParagraphIndex = sourceParagraph, SourceLineIndex = sourceLine, Story = story });
             else if (fragment.Source is DocxInlineTab) text.Append('\t');
             if (sourceExtents is not null)
                 sourceExtents.Add(fragment.VisibleSourceExtent is { } visible
@@ -150,7 +157,7 @@ internal sealed partial class DocxLayoutEngine
             InlineFrame = new(measured.BaselineInset, measured.OccupiedHeight)
                 { TextBaselineInset = measured.IsDisplayGroup ? null : measured.TextBaselineInset },
             InlineSourceExtents = sourceExtents is null ? [] : sourceExtents };
-        return (line, images);
+        return (line, images, boxes);
     }
 
     // Wrapping splits a source run into word atoms. Painting retains one glyph
@@ -346,6 +353,16 @@ internal sealed partial class DocxLayoutEngine
                     if (!double.IsFinite(imageWidth) || !double.IsFinite(imageHeight) || imageWidth <= 0d || imageHeight <= 0d) return false;
                     measured.Add(new(item, imageWidth, imageHeight, imageHeight, []));
                     break;
+                case DocxInlineBox box:
+                    if (!IsNaturalInlineBoxFrame(box.Box, double.MaxValue, equations, token) ||
+                        ReadEmuPoints(box.Box.ExtentCxValue) is not { } boxWidth ||
+                        !double.IsFinite(boxWidth * scale)) return false;
+                    var frame = CreateInlineTextBoxLayout(box.Box, null, 0d, boxWidth * scale, 0d,
+                        DocxTextAlignment.Left, measurer, defaultTabStopPoints, scale, pageNumber ?? 0, token,
+                        mathEquations: equations);
+                    if (frame is null) return false;
+                    measured.Add(new(item, frame.BoxWidth, frame.BoxHeight, frame.BoxHeight, []) { TextBox = frame });
+                    break;
                 case DocxInlineTab:
                 case DocxInlineBreak:
                     measured.Add(new(item, 0d, baselineInset, Math.Max(lineHeight, baselineInset), []));
@@ -374,10 +391,13 @@ internal sealed partial class DocxLayoutEngine
                         fragment = fragment with { VisibleSourceExtent = new(sourceItemIndex, left * scale, right * scale,
                             math.Box.AboveBaseline * scale, math.Box.BelowBaseline * scale, IsMath: true) };
                 }
+                else if (fragment.TextBox is { } box)
+                    fragment = fragment with { VisibleSourceExtent = new(sourceItemIndex, 0d, box.BoxWidth, box.BoxHeight, 0d) };
                 measured[fragmentIndex] = fragment;
             }
             sourceItemIndex++;
         }
+        token.ThrowIfCancellationRequested();
         if (measured.Any(fragment => !double.IsFinite(fragment.Advance) || fragment.Advance < 0d ||
             !double.IsFinite(fragment.BaselineInset) || fragment.BaselineInset < 0d ||
             !double.IsFinite(fragment.OccupiedHeight) || fragment.OccupiedHeight < fragment.BaselineInset)) return false;

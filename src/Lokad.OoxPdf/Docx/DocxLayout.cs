@@ -1527,7 +1527,7 @@ internal sealed partial class DocxLayoutEngine
                         }
                         double objectInset = 0d;
                         foreach (var fragment in line.Fragments)
-                            if (fragment.Math is not null || fragment.Source is DocxInlinePicture)
+                            if (fragment.Math is not null || fragment.Source is DocxInlinePicture or DocxInlineBox)
                                 objectInset = Math.Max(objectInset, fragment.BaselineInset);
                         // Placement shares the ordinary body's scaled local inset
                         // and page anchor. The measured occupied height stays intact.
@@ -1559,6 +1559,7 @@ internal sealed partial class DocxLayoutEngine
                             BodyLineBoxHeightPoints = line.OccupiedHeight
                         });
                         currentItems.AddRange(placed.Images);
+                        currentItems.AddRange(placed.TextBoxes);
                         sourceCursor = line.EndCursor;
                         cursorY -= line.OccupiedHeight;
                         activeColumnHasContent = true;
@@ -2172,10 +2173,11 @@ internal sealed partial class DocxLayoutEngine
             .ToArray();
     }
 
-    private static IReadOnlyList<DocxInlineImageLayout> ShiftInlineImages(IReadOnlyList<DocxInlineImageLayout> images, double deltaY, double deltaX)
+    private static IReadOnlyList<DocxInlineImageLayout> ShiftInlineImages(IReadOnlyList<DocxInlineImageLayout> images,
+        double deltaY, double deltaX, int? pageIndex = null)
     {
         return images
-            .Select(image => image.Translate(deltaX, deltaY))
+            .Select(image => image.Translate(deltaX, deltaY) with { PageIndex = pageIndex ?? image.PageIndex })
             .ToArray();
     }
 
@@ -2209,19 +2211,21 @@ internal sealed partial class DocxLayoutEngine
         return value is null ? null : value.Value + delta;
     }
 
-    private static DocxInlineTextBoxLayout ShiftInlineTextBox(DocxInlineTextBoxLayout box, double deltaY, double deltaX)
+    private static DocxInlineTextBoxLayout ShiftInlineTextBox(DocxInlineTextBoxLayout box,
+        double deltaY, double deltaX, int? pageIndex = null)
     {
         return box with
         {
             BoxX = box.BoxX + deltaX,
             BoxTop = box.BoxTop + deltaY,
             TextLines = ShiftTextLines(box.TextLines, deltaY, deltaX),
-            InlineImages = ShiftInlineImages(box.InlineImages, deltaY, deltaX),
-            TableRows = ShiftTableRows(box.TableRows, deltaY, deltaX)
+            InlineImages = ShiftInlineImages(box.InlineImages, deltaY, deltaX, pageIndex),
+            TableRows = ShiftTableRows(box.TableRows, deltaY, deltaX, pageIndex)
         };
     }
 
-    private static IReadOnlyList<DocxTableRowLayout> ShiftTableRows(IReadOnlyList<DocxTableRowLayout> rows, double deltaY, double deltaX)
+    private static IReadOnlyList<DocxTableRowLayout> ShiftTableRows(IReadOnlyList<DocxTableRowLayout> rows,
+        double deltaY, double deltaX, int? pageIndex = null)
     {
         return rows
             .Select(row => row with
@@ -2231,20 +2235,22 @@ internal sealed partial class DocxLayoutEngine
                     TableX = row.Table.TableX + deltaX
                 },
                 Y = row.Y + deltaY,
-                Cells = row.Cells.Select(cell => ShiftTableCell(cell, deltaY, deltaX)).ToArray()
+                Cells = row.Cells.Select(cell => ShiftTableCell(cell, deltaY, deltaX, pageIndex)).ToArray()
             })
             .ToArray();
     }
 
-    private static DocxTableCellLayout ShiftTableCell(DocxTableCellLayout cell, double deltaY, double deltaX)
+    private static DocxTableCellLayout ShiftTableCell(DocxTableCellLayout cell,
+        double deltaY, double deltaX, int? pageIndex = null)
     {
         return cell with
         {
             X = cell.X + deltaX,
             Y = cell.Y + deltaY,
             TextLines = ShiftTextLines(cell.TextLines, deltaY, deltaX),
-            InlineImages = ShiftInlineImages(cell.InlineImages, deltaY, deltaX),
-            NestedTableRows = ShiftTableRows(cell.NestedRows, deltaY, deltaX)
+            InlineImages = ShiftInlineImages(cell.InlineImages, deltaY, deltaX, pageIndex),
+            InlineTextBoxes = cell.InlineTextBoxes.Select(box => ShiftInlineTextBox(box, deltaY, deltaX, pageIndex)).ToArray(),
+            NestedTableRows = ShiftTableRows(cell.NestedRows, deltaY, deltaX, pageIndex)
         };
     }
 

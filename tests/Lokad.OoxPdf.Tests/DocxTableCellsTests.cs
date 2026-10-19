@@ -3832,9 +3832,9 @@ internal static class DocxTableCellsTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
             ?? throw new InvalidOperationException("Expected live cell-layout method.");
 
-        (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> Images, double Height)
+        (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> Images, IReadOnlyList<DocxInlineTextBoxLayout> Boxes, double Height)
             Place(double y, double height, DocxLayoutEngine.DocxTableCellTextLinesMemo? cache) =>
-            ((IReadOnlyList<DocxTextLineLayout>, IReadOnlyList<DocxInlineImageLayout>, double))method.Invoke(null,
+            ((IReadOnlyList<DocxTextLineLayout>, IReadOnlyList<DocxInlineImageLayout>, IReadOnlyList<DocxInlineTextBoxLayout>, double))method.Invoke(null,
                 [cell, 10d, y, 60d, height, 0d, measurer, 36d, 1, 2, 1d, cache, 0, null, CancellationToken.None])!;
 
         var first = Place(70d, 20d, memo);

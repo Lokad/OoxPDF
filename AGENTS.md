@@ -41,6 +41,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/JoinQualificationTestReports.ps1`: join reviewed harness repairs from a manifest after checking unchanged production source, runtime assets, public inputs and complete exact-test coverage; retain failed attempts.
 - `tools/JoinCompositionPortfolio.ps1`: join measured outcomes from one runtime using a manifest; copy independent PDFs/inspection summaries and reuse source comparisons instead of copying raster/diff trees.
 - `tools/SummarizeDocxTableCellGeometry.ps1`: supplement raw graphics gates with source-backed table-cell clip mapping and unresolved counts.
+- `tools/SummarizeDocxInlineFrameGeometry.py`: compare pinned native math and textbox frames; retain per-axis residuals and Office thresholds (PyMuPDF validation only).
 - `tools/CheckVisualCase.ps1`: run a public visual case.
 - `tools/CheckVisualFamily.ps1`: run or list a public visual capability family.
 - `tools/CompareVisualReports.ps1`: compare two visual family reports for regressions.

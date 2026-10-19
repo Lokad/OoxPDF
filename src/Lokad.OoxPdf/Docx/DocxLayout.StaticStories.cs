@@ -377,6 +377,7 @@ internal sealed partial class DocxLayoutEngine
                         lines.Add(placed.Line with { SingleLineHeight = sourceHeight,
                             AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d });
                         images.AddRange(placed.Images);
+                        boxes.AddRange(placed.TextBoxes);
                         cursorY -= line.OccupiedHeight;
                     }
                     pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;

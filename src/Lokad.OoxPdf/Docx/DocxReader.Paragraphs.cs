@@ -368,7 +368,7 @@ internal sealed partial class DocxReader
             // Page fields retain their canonical source placeholders. Layout
             // eligibility separately requires the actual page inputs.
             InlineContent = inlineItems is not null && DocxInlineContent.HasSourceFieldResults(fieldReferences, runs) && DocxInlineContent.HasSupportedReferences(inlineReferences, runs, cancellationToken) &&
-                inlineTextBoxes.Count == 0 && DocxInlineContent.HasSupportedRunRevisionOwners(paragraphRevisions, runs, cancellationToken,
+                DocxInlineContent.HasSupportedRunRevisionOwners(paragraphRevisions, runs, cancellationToken,
                     listLabel is null ? null : retainedMark, images, nonRenderingRunOwners, equations)
                 ? inlineItems : null,
             InlineReferences = inlineReferences,
@@ -389,7 +389,7 @@ internal sealed partial class DocxReader
         {
             if (inlineItems is null)
             {
-                inlineItems = DocxInlineContent.FromPrefix(runs, images, cancellationToken);
+                inlineItems = DocxInlineContent.FromPrefix(runs, images, cancellationToken, inlineTextBoxes);
                 // Anchors immediately before the first formula have no text run
                 // to identify their target. Capture their ordered boundary once.
                 for (int index = 0; index < bookmarkAnchors.Count; index++)
@@ -402,10 +402,11 @@ internal sealed partial class DocxReader
             }
         }
 
-        void PublishInlineRunItems(int firstRun, int firstImage)
+        void PublishInlineRunItems(int firstRun, int firstImage, int? firstBox = null)
         {
             if (inlineItems is not null)
-                DocxInlineContent.AppendRun(inlineItems, runs.Skip(firstRun), images.Skip(firstImage), cancellationToken);
+                DocxInlineContent.AppendRun(inlineItems, runs.Skip(firstRun), images.Skip(firstImage), cancellationToken,
+                    inlineTextBoxes.Skip(firstBox ?? inlineTextBoxes.Count));
         }
 
         int GetInlineItemCount()
@@ -625,7 +626,13 @@ internal sealed partial class DocxReader
         {
             int firstRun = runs.Count;
             int firstImage = images.Count;
-            int currentSourceRunIndex = sourceRunIndex++;
+            int currentSourceRunIndex = sourceRunIndex;
+            int firstBox = inlineTextBoxes.Count;
+            var runBoxes = ReadInlineTextBoxes(run, styles, numbering, package, relationships,
+                markupMode, revision, cancellationToken, currentSourceRunIndex);
+            if (runBoxes.Count != 0) EnsureInlineContent();
+            sourceRunIndex++;
+            inlineTextBoxes.AddRange(runBoxes);
             string text = ReadRunText(run);
             string? fieldInstruction = run
                 .Elements(WordprocessingNamespace + "instrText")
@@ -673,8 +680,7 @@ internal sealed partial class DocxReader
                     effectiveRevisions,
                     ref currentPageInstructionSeen);
                 AddRunImages();
-                inlineTextBoxes.AddRange(ReadInlineTextBoxes(run, styles, numbering, package, relationships, markupMode, revision, cancellationToken));
-                PublishInlineRunItems(firstRun, firstImage);
+                PublishInlineRunItems(firstRun, firstImage, firstBox);
                 return;
             }
 
@@ -730,8 +736,7 @@ internal sealed partial class DocxReader
             }
 
             AddRunImages();
-            inlineTextBoxes.AddRange(ReadInlineTextBoxes(run, styles, numbering, package, relationships, markupMode, revision, cancellationToken));
-            PublishInlineRunItems(firstRun, firstImage);
+            PublishInlineRunItems(firstRun, firstImage, firstBox);
 
             void AddRunImages()
             {

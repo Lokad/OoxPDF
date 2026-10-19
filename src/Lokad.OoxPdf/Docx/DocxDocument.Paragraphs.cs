@@ -33,18 +33,21 @@ internal sealed record DocxParagraph(
     private IReadOnlyList<DocxTextRun>? inlineContentRuns;
     private IReadOnlyList<DocxInlineImage>? inlineContentImages;
     private IReadOnlyList<DocxEquation>? inlineContentEquations;
+    private IReadOnlyList<DocxInlineTextBox>? inlineContentTextBoxes;
     public IReadOnlyList<DocxInlineItem>? InlineContent
     {
         // Transformed legacy paragraphs must rebuild this source view. Do not
         // read stale text/style objects after a coordinator replaces a collection.
         get => ReferenceEquals(inlineContentRuns, Runs) && ReferenceEquals(inlineContentImages, Images) &&
-            ReferenceEquals(inlineContentEquations, Equations) ? inlineContent : null;
+            ReferenceEquals(inlineContentEquations, Equations) && ReferenceEquals(inlineContentTextBoxes, InlineTextBoxes)
+                ? inlineContent : null;
         init
         {
             inlineContent = value;
             inlineContentRuns = Runs;
             inlineContentImages = Images;
             inlineContentEquations = Equations;
+            inlineContentTextBoxes = InlineTextBoxes;
         }
     }
     public IReadOnlyList<DocxFieldReference> FieldReferences { get; init; } = [];
@@ -720,8 +723,8 @@ internal readonly record struct DocxPictureFrame(double Width, double Height)
 }
 
 // An inline DrawingML textbox (wp:inline plus wps:txbx, no blip): unlike floating
-// drawings it has no page placement and joins body flow as a block. Extents and
-// insets are file values; the layout scales them into its space.
+// drawings it has no page anchor. Source order lets layout use an inline frame;
+// unsupported source owners keep block placement. Extents/insets are file values.
 internal sealed record DocxInlineTextBox(
     string? ExtentCxValue,
     string? ExtentCyValue,
@@ -736,6 +739,9 @@ internal sealed record DocxInlineTextBox(
     // legacy borderless rendering.
     string? TextBoxStrokeColorHex = null)
 {
+    public int SourceRunIndex { get; init; } = -1;
+    public int SourceTextOffsetInRun { get; init; }
+    public int SourceOrderInRun { get; init; }
     public IReadOnlyList<DocxBodyElement> BodyElements { get; init; } = [];
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
 }

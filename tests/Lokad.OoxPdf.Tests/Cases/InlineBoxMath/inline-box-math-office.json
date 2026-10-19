@@ -109,8 +109,8 @@
       "InputSha256": "515A53E52166ED841334643C57390BD2300053C67CB208BFA47AB565F240FE85",
       "MathPart": "word/document.xml",
       "BoxEquationCount": 0,
-      "ExpectedPaintedMathText": "",
-      "ExpectedPaintedMathGlyphs": 0,
+      "ExpectedPaintedMathText": "x+2y",
+      "ExpectedPaintedMathGlyphs": 4,
       "WordMathText": "x+2y",
       "WordMathAnchors": [
         {
@@ -143,10 +143,8 @@
         }
       ],
       "WordImageCount": 0,
-      "IgnoredEquationDiagnostics": 1,
-      "IgnoredEquationParts": [
-        "/word/document.xml"
-      ],
+      "IgnoredEquationDiagnostics": 0,
+      "IgnoredEquationParts": [],
       "ExpectedText": [
         "Before public math table.",
         "Before inline",
@@ -163,8 +161,8 @@
       "InputSha256": "515A53E52166ED841334643C57390BD2300053C67CB208BFA47AB565F240FE85",
       "MathPart": "word/document.xml",
       "BoxEquationCount": 0,
-      "ExpectedPaintedMathText": "",
-      "ExpectedPaintedMathGlyphs": 0,
+      "ExpectedPaintedMathText": "x+2y",
+      "ExpectedPaintedMathGlyphs": 4,
       "WordMathText": "x+2y",
       "WordMathAnchors": [
         {
@@ -197,10 +195,8 @@
         }
       ],
       "WordImageCount": 0,
-      "IgnoredEquationDiagnostics": 1,
-      "IgnoredEquationParts": [
-        "/word/document.xml"
-      ],
+      "IgnoredEquationDiagnostics": 0,
+      "IgnoredEquationParts": [],
       "ExpectedText": [
         "Before public math table.",
         "Before inline",

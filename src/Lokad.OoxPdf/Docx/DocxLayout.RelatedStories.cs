@@ -2469,7 +2469,7 @@ internal sealed partial class DocxLayoutEngine
                 double firstInset = GetParagraphFirstLineTextStartOffset(paragraph, size, textMeasurer, paragraphSpacingScale, defaultTabStopPoints);
                 double nextInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
                 double rightInset = GetParagraphRightInset(paragraph, paragraphSpacingScale);
-                if (TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, size,
+                if (paragraph.InlineTextBoxes.Count == 0 && TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, size,
                     Math.Max(1d, bodyWidth - firstInset - rightInset), Math.Max(1d, bodyWidth - nextInset - rightInset),
                     baseline, lineHeight, paragraphSpacingScale, cancellationToken, out var measured,
                     defaultTabStopPoints: defaultTabStopPoints))

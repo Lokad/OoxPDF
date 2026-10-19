@@ -204,9 +204,8 @@ internal readonly record struct DocxPictureLineFrame(double Bottom, double Heigh
         new(cursorY - lineHeight - afterSpacing, lineHeight + imageGrowth + afterSpacing) { ImageGrowth = imageGrowth };
 }
 
-// An inline textbox laid out as a body-flow block. Coordinates are absolute flow
-// space (the box origin is known at layout time), so consumers use them directly
-// with the body offsets; no emission map applies.
+// A measured inline textbox frame. Placement publishes flow coordinates or the
+// complete static-story physical frame; painting consumes the resulting geometry.
 internal sealed record DocxInlineTextBoxLayout(
     DocxInlineTextBox TextBox,
     double BoxX,
@@ -222,6 +221,7 @@ internal sealed record DocxInlineTextBoxLayout(
 {
     // Geometry is already placed; authored outline widths still need this scale.
     public double PrintScale { get; init; } = 1d;
+    public int? SourceLineIndex { get; init; }
 }
 
 internal sealed record DocxTableRowLayout(

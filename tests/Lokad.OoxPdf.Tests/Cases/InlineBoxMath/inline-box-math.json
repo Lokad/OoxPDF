@@ -32,10 +32,10 @@
       "Inline box content."
     ],
     "Variant": "body-equation-inline-box",
-    "Change": "Promote unchanged Word-accepted source; shared child-box math only. Sibling inline-box equation remains staged.",
+    "Change": "Source-owned sibling equation and textbox share an ordered inline frame; richer and unowned frames retain block fallback.",
     "RejectedProbeSha256": "536EFD07D25A9837A40F176C96109318496F3A73D548F27517F728407E453F63",
     "ReviewedInput": "artifacts/inline-box-composition-valid/inline-box-body-equation-inline-box-valid.docx",
-    "ExpectedRenderedEquationCount": 0
+    "ExpectedRenderedEquationCount": 1
   },
   {
     "Id": "inline-box-boxed-equation-valid",

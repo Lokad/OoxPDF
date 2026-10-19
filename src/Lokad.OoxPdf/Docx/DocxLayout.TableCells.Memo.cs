@@ -68,6 +68,7 @@ internal sealed partial class DocxLayoutEngine
             bool pageStatic,
             out IReadOnlyList<DocxTextLineLayout> relativeLines,
             out IReadOnlyList<DocxInlineImageLayout> relativePlacedImages,
+            out IReadOnlyList<DocxInlineTextBoxLayout> relativePlacedBoxes,
             out double usedHeight)
         {
             if (entries.TryGetValue(
@@ -77,6 +78,7 @@ internal sealed partial class DocxLayoutEngine
                 Hits++;
                 relativeLines = stored.Lines;
                 relativePlacedImages = stored.PlacedImages;
+                relativePlacedBoxes = stored.PlacedBoxes;
                 usedHeight = stored.UsedHeight;
                 return true;
             }
@@ -84,6 +86,7 @@ internal sealed partial class DocxLayoutEngine
             Misses++;
             relativeLines = [];
             relativePlacedImages = [];
+            relativePlacedBoxes = [];
             usedHeight = 0d;
             return false;
         }
@@ -100,13 +103,15 @@ internal sealed partial class DocxLayoutEngine
             bool pageStatic,
             IReadOnlyList<DocxTextLineLayout> absoluteLines,
             IReadOnlyList<DocxInlineImageLayout> absolutePlacedImages,
+            IReadOnlyList<DocxInlineTextBoxLayout> absolutePlacedBoxes,
             double originX,
             double originY,
             double usedHeight)
         {
             IReadOnlyList<DocxTextLineLayout> relative = ToRelativeLines(absoluteLines, originX, originY);
             IReadOnlyList<DocxInlineImageLayout> relativePlaced = ToRelativeImages(absolutePlacedImages, originX, originY);
-            entries[new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageStatic ? null : pageNumber, pageStatic ? null : pageCount)] = new StoredLines(relative, relativePlaced, usedHeight);
+            var relativeBoxes = absolutePlacedBoxes.Select(box => ShiftInlineTextBox(box, -originY, -originX)).ToArray();
+            entries[new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageStatic ? null : pageNumber, pageStatic ? null : pageCount)] = new StoredLines(relative, relativePlaced, relativeBoxes, usedHeight);
         }
 
         internal static IReadOnlyList<DocxTextLineLayout> ToRelativeLines(
@@ -231,8 +236,10 @@ internal sealed partial class DocxLayoutEngine
             }
         }
 
-        private sealed class StoredLines(IReadOnlyList<DocxTextLineLayout> lines, IReadOnlyList<DocxInlineImageLayout> placedImages, double usedHeight)
+        private sealed class StoredLines(IReadOnlyList<DocxTextLineLayout> lines, IReadOnlyList<DocxInlineImageLayout> placedImages,
+            IReadOnlyList<DocxInlineTextBoxLayout> placedBoxes, double usedHeight)
         {
+            public IReadOnlyList<DocxInlineTextBoxLayout> PlacedBoxes { get; } = placedBoxes;
             public IReadOnlyList<DocxTextLineLayout> Lines { get; } = lines;
 
             public IReadOnlyList<DocxInlineImageLayout> PlacedImages { get; } = placedImages;

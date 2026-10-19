@@ -10,6 +10,7 @@ internal sealed record DocxInlineText(DocxTextRun Run, int Start, int Length) : 
 internal sealed record DocxInlineTab(DocxTextRun Run, int Offset) : DocxInlineItem;
 internal sealed record DocxInlineBreak(DocxTextRun Run, int Offset) : DocxInlineItem;
 internal sealed record DocxInlinePicture(DocxInlineImage Image) : DocxInlineItem;
+internal sealed record DocxInlineBox(DocxInlineTextBox Box) : DocxInlineItem;
 internal sealed record DocxInlineEquation(DocxEquation Equation) : DocxInlineItem;
 
 internal static class DocxInlineContent
@@ -18,10 +19,24 @@ internal static class DocxInlineContent
     // Containers retain their own supported measurement and line-flow rules.
     public static bool HasSupportedSourceOwner(DocxParagraph paragraph, bool hasPageInputs = false,
         CancellationToken token = default) =>
-        HasSupportedSourceMetadata(paragraph, hasPageInputs, token) && paragraph.InlineTextBoxes.Count == 0;
+        HasSupportedSourceMetadata(paragraph, hasPageInputs, token) &&
+        (paragraph.InlineTextBoxes.Count == 0 || paragraph.Equations.Count != 0 && HasOwnedInlineBoxes(paragraph, token));
 
-    // An independent box can validate its source metadata without admitting
-    // sibling boxes into the ordered text/math paragraph path.
+    private static bool HasOwnedInlineBoxes(DocxParagraph paragraph, CancellationToken token)
+    {
+        if (paragraph.InlineContent is not { } items) return false;
+        var remaining = new HashSet<DocxInlineTextBox>(paragraph.InlineTextBoxes, ReferenceEqualityComparer.Instance);
+        if (remaining.Count != paragraph.InlineTextBoxes.Count) return false;
+        foreach (var item in items)
+        {
+            token.ThrowIfCancellationRequested();
+            if (item is DocxInlineBox box && (box.Box.SourceRunIndex < 0 || box.Box.Revisions.Count != 0 ||
+                !remaining.Remove(box.Box))) return false;
+        }
+        return remaining.Count == 0;
+    }
+
+    // Source metadata validation is independent of measured inline-frame support.
     public static bool HasSupportedSourceMetadata(DocxParagraph paragraph, bool hasPageInputs = false,
         CancellationToken token = default) =>
         HasSupportedParagraphRevisionOwners(paragraph, token) &&
@@ -109,41 +124,50 @@ internal static class DocxInlineContent
     }
 
     public static List<DocxInlineItem> FromPrefix(IReadOnlyList<DocxTextRun> runs,
-        IReadOnlyList<DocxInlineImage> images, CancellationToken token)
+        IReadOnlyList<DocxInlineImage> images, CancellationToken token,
+        IReadOnlyList<DocxInlineTextBox>? boxes = null)
     {
         var items = new List<DocxInlineItem>();
         var textGroups = runs.GroupBy(run => run.SourceRunIndex).ToDictionary(group => group.Key, group => group.ToArray());
         var imageGroups = images.GroupBy(image => image.SourceRunIndex).ToDictionary(group => group.Key, group => group.ToArray());
-        foreach (int source in textGroups.Keys.Concat(imageGroups.Keys).Distinct().Order())
+        var boxGroups = boxes is { Count: > 0 }
+            ? boxes.GroupBy(box => box.SourceRunIndex).ToDictionary(group => group.Key, group => group.ToArray()) : null;
+        foreach (int source in textGroups.Keys.Concat(imageGroups.Keys).Concat(boxGroups?.Keys ?? Enumerable.Empty<int>()).Distinct().Order())
         {
             token.ThrowIfCancellationRequested();
-            AppendRun(items, textGroups.GetValueOrDefault(source) ?? [], imageGroups.GetValueOrDefault(source) ?? [], token);
+            AppendRun(items, textGroups.GetValueOrDefault(source) ?? [], imageGroups.GetValueOrDefault(source) ?? [], token,
+                boxGroups?.GetValueOrDefault(source));
         }
         return items;
     }
 
     public static void AppendRun(List<DocxInlineItem> items, IEnumerable<DocxTextRun> runs,
-        IEnumerable<DocxInlineImage> images, CancellationToken token)
+        IEnumerable<DocxInlineImage> images, CancellationToken token,
+        IEnumerable<DocxInlineTextBox>? boxes = null)
     {
-        var pictures = images.OrderBy(image => image.SourceTextOffsetInRun).ThenBy(image => image.SourceOrderInRun).ToArray();
-        int picture = 0;
+        var drawings = images.Select(image => (Item: (DocxInlineItem)new DocxInlinePicture(image),
+                Offset: image.SourceTextOffsetInRun, Order: image.SourceOrderInRun))
+            .Concat((boxes ?? []).Select(box => (Item: (DocxInlineItem)new DocxInlineBox(box),
+                Offset: box.SourceTextOffsetInRun, Order: box.SourceOrderInRun)))
+            .OrderBy(item => item.Offset).ThenBy(item => item.Order).ToArray();
+        int drawing = 0;
         foreach (DocxTextRun run in runs)
         {
             token.ThrowIfCancellationRequested();
             int start = 0;
-            while (picture < pictures.Length && pictures[picture].SourceTextOffsetInRun <= run.SourceTextOffsetInRun + run.Text.Length)
+            while (drawing < drawings.Length && drawings[drawing].Offset <= run.SourceTextOffsetInRun + run.Text.Length)
             {
-                int end = Math.Clamp(pictures[picture].SourceTextOffsetInRun - run.SourceTextOffsetInRun, start, run.Text.Length);
+                int end = Math.Clamp(drawings[drawing].Offset - run.SourceTextOffsetInRun, start, run.Text.Length);
                 AppendText(run, start, end);
-                items.Add(new DocxInlinePicture(pictures[picture++]));
+                items.Add(drawings[drawing++].Item);
                 start = end;
             }
             AppendText(run, start, run.Text.Length);
         }
-        while (picture < pictures.Length)
+        while (drawing < drawings.Length)
         {
             token.ThrowIfCancellationRequested();
-            items.Add(new DocxInlinePicture(pictures[picture++]));
+            items.Add(drawings[drawing++].Item);
         }
 
         void AppendText(DocxTextRun run, int start, int end)

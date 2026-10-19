@@ -14,7 +14,12 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxInlineBoxReviewStaticGlyphOriginsMatchIndependentWord()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent review-frame geometry uses installed Windows fonts.");
-        using var gold = ReadInlineBoxMathGold("inline-box-review-frames-office.json");
+        CheckInlineBoxWordOrigins("inline-box-review-frames-office.json");
+    }
+
+    private static void CheckInlineBoxWordOrigins(string goldenFile)
+    {
+        using var gold = ReadInlineBoxMathGold(goldenFile);
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string id = row.GetProperty("Id").GetString()!;

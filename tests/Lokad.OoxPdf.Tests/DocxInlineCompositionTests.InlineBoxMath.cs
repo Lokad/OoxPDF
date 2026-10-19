@@ -16,7 +16,7 @@ internal static partial class DocxInlineCompositionTests
         CheckInlineBoxMath(null);
     }
 
-    public static void DocxInlineBoxMathPreparationRetainsChildSourceIdentityAndSiblingFallback()
+    public static void DocxInlineBoxMathPreparationRetainsChildAndSiblingSourceIdentity()
     {
         using var gold = ReadInlineBoxMathGold();
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray()
@@ -36,7 +36,7 @@ internal static partial class DocxInlineCompositionTests
                 "Prepared math retains actual child owners across body, cell and static-story frames.");
             foreach (var parent in DocxBlockTraversal.EnumerateBodyParagraphs(source)
                 .Where(paragraph => paragraph.InlineTextBoxes.Count != 0 && paragraph.Equations.Count != 0))
-                TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(parent).Count);
+                TestAssert.Equal(parent.Equations.Count, DocxMathParagraphPolicy.GetPreparationEquations(parent).Count);
         }
     }
 

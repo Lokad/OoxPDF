@@ -213,19 +213,20 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        if (paragraph.InlineTextBoxes.Count != 0)
-            return paragraph.Equations.Count == 0 && paragraph.Images.Count == 0 && paragraph.ListLabel is null &&
+        if (paragraph.InlineTextBoxes.Count != 0 && paragraph.Equations.Count == 0)
+            return paragraph.Images.Count == 0 && paragraph.ListLabel is null &&
                 paragraph.Runs.All(run => run.EffectiveProperties.Hidden || run.Text.Length == 0) &&
                 DocxInlineContent.HasSupportedSourceMetadata(paragraph, token: token) &&
-                paragraph.InlineTextBoxes.All(box => IsNaturalStaticBox(box, width, mathEquations, token));
+                paragraph.InlineTextBoxes.All(box => IsNaturalInlineBoxFrame(box, width, mathEquations, token));
         if (paragraph.Equations.Count != 0)
-            return TryGetStandaloneMath(paragraph, width, 1d, mathEquations, out _) ||
+            return paragraph.InlineTextBoxes.All(box => IsNaturalInlineBoxFrame(box, width, mathEquations, token)) &&
+                (TryGetStandaloneMath(paragraph, width, 1d, mathEquations, out _) ||
                 mathEquations is not null && paragraph.InlineContent is not null &&
                 DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasPageInputs: true).Count == paragraph.Equations.Count &&
                 // Unavailable math keeps its diagnosed fallback; the remaining
                 // ordered source items still own a static frame.
                 paragraph.Equations.All(equation => !mathEquations.TryGetValue(equation, out var math) || math.Box.AdvanceWidth <= width) &&
-                paragraph.Images.All(image => image.WidthPoints <= width);
+                paragraph.Images.All(image => image.WidthPoints <= width));
         return paragraph.Alignment is DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right &&
             paragraph.Images.All(image => image.SourceRunIndex >= 0 && image.RotationDegrees == 0d &&
                 double.IsFinite(image.WidthPoints) && double.IsFinite(image.HeightPoints) &&
@@ -234,11 +235,11 @@ internal sealed partial class DocxLayoutEngine
             DocxInlineContent.HasSupportedSourceOwner(paragraph, token: token);
     }
 
-    private static bool IsNaturalStaticBox(DocxInlineTextBox box, double width,
+    private static bool IsNaturalInlineBoxFrame(DocxInlineTextBox box, double width,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        if (ReadEmuPoints(box.ExtentCxValue) is not { } boxWidth || boxWidth <= 0d || boxWidth > width ||
+        if (box.Revisions.Count != 0 || ReadEmuPoints(box.ExtentCxValue) is not { } boxWidth || boxWidth <= 0d || boxWidth > width ||
             ReadEmuPoints(box.ExtentCyValue) is not > 0d || box.BodyElements.Count == 0) return false;
         // Nested boxes retain their existing placement until their own source
         // frames are supported. Tables inside one independent box may still map.
