@@ -49,7 +49,7 @@ internal static partial class DocxInlineCompositionTests
 
     public static void DocxInlineCompositionNestedCellNeighborsRetainUnqualifiedAncestorAndChildFallbacks()
     {
-        foreach (string variant in new[] { "merge", "fit", "vertical", "height", "move", "nested-vertical" })
+        foreach (string variant in new[] { "merge-restart", "merge-continuation", "merge-unknown", "fit", "vertical", "height", "move", "nested-vertical" })
         {
             var source = ReadMutation("CompositionProbes/mixed-nested-cell-" + (variant == "nested-vertical" ? "inside" : "after"),
                 OoxPdfDocxMarkupMode.Final, false, false, (xml, w, _) =>
@@ -69,13 +69,19 @@ internal static partial class DocxInlineCompositionTests
                     else
                         cell.Element(w + "tcPr")!.Add(variant switch
                         {
-                            "merge" => new XElement(w + "vMerge", new XAttribute(w + "val", "restart")),
+                            "merge-restart" => new XElement(w + "vMerge", new XAttribute(w + "val", "restart")),
+                            "merge-continuation" => new XElement(w + "vMerge"),
+                            "merge-unknown" => new XElement(w + "vMerge", new XAttribute(w + "val", "unknown")),
                             "fit" => new XElement(w + "tcFitText"),
                             _ => new XElement(w + "textDirection", new XAttribute(w + "val", "tbRl"))
                         });
                 });
-            TestAssert.True(!DocxMathParagraphPolicy.EnumeratePreparationCandidates(source, default).Any(p => p.Equations.Count != 0),
-                "Unqualified cell properties and nested math retain explicit fallback: " + variant);
+            var candidates = DocxMathParagraphPolicy.EnumeratePreparationCandidates(source, default)
+                .Where(paragraph => paragraph.Equations.Count != 0).ToArray();
+            TestAssert.Equal(variant == "merge-restart" ? 2 : 0, candidates.Sum(paragraph => paragraph.Equations.Count));
+            if (variant == "merge-restart")
+                TestAssert.True(!DocxMathParagraphPolicy.IsSupportedSimpleCell(source.Tables[0].Rows[0].Cells[0]),
+                    "Preparing the explicit owning source retains whole-cell placement guards.");
         }
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();

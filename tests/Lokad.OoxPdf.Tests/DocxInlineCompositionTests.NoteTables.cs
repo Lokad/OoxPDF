@@ -42,7 +42,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxInlineCompositionNoteTablesRetainComplexCellAndStoryFallbacks()
     {
         foreach (string kind in new[] { "footnote", "endnote" })
-        foreach (string variant in new[] { "merge", "vertical", "nested-vertical", "height", "unknown-story" })
+        foreach (string variant in new[] { "merge-restart", "merge-continuation", "merge-unknown", "vertical", "nested-vertical", "height", "unknown-story" })
         {
             var source = ReadMutation("CompositionProbes/mixed-note-" + kind + "-table", OoxPdfDocxMarkupMode.Final,
                 false, false, (xml, w, _) =>
@@ -64,12 +64,17 @@ internal static partial class DocxInlineCompositionTests
                         row.AddFirst(new XElement(w + "trPr", new XElement(w + "trHeight",
                             new XAttribute(w + "val", "320"), new XAttribute(w + "hRule", "unknown"))));
                     }
-                    else cell.Element(w + "tcPr")!.Add(variant == "merge"
-                        ? new XElement(w + "vMerge", new XAttribute(w + "val", "restart"))
-                        : new XElement(w + "textDirection", new XAttribute(w + "val", "tbRl")));
+                    else cell.Element(w + "tcPr")!.Add(variant switch
+                    {
+                        "merge-restart" => new XElement(w + "vMerge", new XAttribute(w + "val", "restart")),
+                        "merge-continuation" => new XElement(w + "vMerge"),
+                        "merge-unknown" => new XElement(w + "vMerge", new XAttribute(w + "val", "unknown")),
+                        _ => new XElement(w + "textDirection", new XAttribute(w + "val", "tbRl"))
+                    });
                 }, partOverride: "word/" + kind + "s.xml");
-            TestAssert.True(!DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(source, default).Any(),
-                "Unqualified note/cell owners retain the same preparation fallback: " + variant);
+            var candidates = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(source, default).ToArray();
+            TestAssert.Equal(variant == "merge-restart" ? 2 : 0,
+                candidates.Sum(candidate => candidate.Paragraph.Equations.Count));
         }
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
