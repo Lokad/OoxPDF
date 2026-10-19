@@ -26,23 +26,25 @@ internal static class TestRunner
 
     public static int Run(string[] args, IEnumerable<TestCase> tests)
     {
+        Dictionary<string, string?>? options = ReadOptions(args);
+        if (options is null) return 1;
         TestCase[] testCases = tests.ToArray();
         int passed = 0;
         int failed = 0;
         int skipped = 0;
-        bool skipSlow = args.Contains("--skip-slow", StringComparer.Ordinal);
-        bool onlySlow = args.Contains("--only-slow", StringComparer.Ordinal);
+        bool skipSlow = options.ContainsKey("--skip-slow");
+        bool onlySlow = options.ContainsKey("--only-slow");
         if (skipSlow && onlySlow)
         {
             Console.WriteLine("Conflicting options: --skip-slow and --only-slow cannot be combined.");
             return 1;
         }
-        bool list = args.Contains("--list", StringComparer.Ordinal);
-        string? group = ReadOption(args, "--group");
-        string? name = ReadOption(args, "--test");
-        string? testSetPath = ReadOption(args, "--test-set");
+        bool list = options.ContainsKey("--list");
+        string? group = options.GetValueOrDefault("--group");
+        string? name = options.GetValueOrDefault("--test");
+        string? testSetPath = options.GetValueOrDefault("--test-set");
         HashSet<string>? exactNames = null;
-        if (args.Contains("--test-set", StringComparer.Ordinal))
+        if (options.ContainsKey("--test-set"))
         {
             if (testSetPath is null || testSetPath.StartsWith("--", StringComparison.Ordinal) ||
                 group is not null || name is not null)
@@ -166,7 +168,7 @@ internal static class TestRunner
             }
         }
         Console.WriteLine($"{passed} passed, {failed} failed, {skipped} skipped");
-        string? reportPath = ReadOption(args, "--report");
+        string? reportPath = options.GetValueOrDefault("--report");
         if (reportPath is not null)
         {
             var report = new System.Text.Json.Nodes.JsonObject
@@ -190,16 +192,34 @@ internal static class TestRunner
         return failed == 0 ? 0 : 1;
     }
 
-    private static string? ReadOption(string[] args, string option)
+    private static Dictionary<string, string?>? ReadOptions(string[] args)
     {
-        for (int i = 0; i < args.Length - 1; i++)
+        var options = new Dictionary<string, string?>(StringComparer.Ordinal);
+        for (int i = 0; i < args.Length; i++)
         {
-            if (string.Equals(args[i], option, StringComparison.Ordinal))
+            string option = args[i];
+            bool needsValue = option is "--group" or "--test" or "--test-set" or "--report";
+            if (!needsValue && option is not ("--skip-slow" or "--only-slow" or "--list"))
             {
-                return args[i + 1];
+                Console.WriteLine($"Unknown argument '{option}'. Use --test for a name filter or --test-set for exact methods.");
+                return null;
+            }
+            string? value = null;
+            if (needsValue)
+            {
+                if (++i >= args.Length || string.IsNullOrWhiteSpace(args[i]) || args[i].StartsWith("--", StringComparison.Ordinal))
+                {
+                    Console.WriteLine($"{option} requires a value.");
+                    return null;
+                }
+                value = args[i];
+            }
+            if (!options.TryAdd(option, value))
+            {
+                Console.WriteLine($"Repeated option '{option}'.");
+                return null;
             }
         }
-
-        return null;
+        return options;
     }
 }
