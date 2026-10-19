@@ -1,5 +1,41 @@
 # Composed-document reliability checkpoint
 
+## C298 total-page dependencies preserve boxed math and plain layout (2026-10-19)
+
+One source-exact NUMPAGES probe loses all4 accepted fraction glyphs in both
+presets and moves prose2.762pt; independent Word keeps the prior PAGE math,
+frame, prose and field geometry exactly. Parent native/portable observers also
+prove plain boxed layout retains41 placeholder characters instead of32 resolved
+characters. Math-dependent field correctness is a confirmed defect, not a
+speculative resource or corruption claim.
+
+Replace the duplicated cell boolean scan with shared source-owned number/count
+dependencies. Child measurement and rebinding consume only needed inputs and
+forward actual counts. Reuse the existing single finalized-count retry for
+ordinary child text too; accept only stable pagination and retained prepared
+math. One traversal now supplies painted equations for diagnostics and retry
+acceptance, including static boxes. Unknown/unstable/nested-story fallbacks stay
+explicit. No new retry framework, public API, quota, font/count regime or native
+code; safe managed/resource/publication contracts remain.
+
+One committed Release runtime/2,444inputs;42 Windows/32 Ubuntu/ten native skips,
+one exact runner invocation per platform. No harness repair/production join.
+Coverage includes independent Word origins, stable/unstable totals, notes,
+mixed inputs, PAGE/cell-memo neighbors and cancellation during child remeasurement
+without source mutation. Both new outcomes pass original math/frame/prose gates:
+mathX.047pt/Y.361pt, proseY.373pt. Four parent tests fail (two omissions, two plain
+layout placeholders). Two viewed Word/native Final rasters show clear content.
+Strict foreground-recall/SSIM and raw fldSimple screens remain2each; zero source,
+Office or page content deficits. Thresholds are unchanged.
+
+Two candidate conversions/two independent Word exports. Carry24 prior views by
+source reachability, not fresh current-runtime PDF identity.17 assets/two exact
+transfer smokes, no root build/suite/package replay. Source4edc82c7; evidence:
+artifacts/composition-c1/inline-box-total-evidence.json. C297CI39318812272 is green
+on both platforms including broader/package checks. Push this coherent shared-
+dependency batch, work meanwhile, then qualify cell/header/footer transformations
+with the same runtime and independent references before changing eligibility.
+
 ## C297 PAGE no longer removes inline-box mathematics (2026-10-19)
 
 Adding PAGE to one accepted box dropped all four fraction glyphs and moved prose
