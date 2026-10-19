@@ -1,0 +1,62 @@
+[
+  {
+    "Id": "math-authored-row-linked-prose-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-authored-row-linked-prose-cell.docx",
+    "Sha256": "08249C739AEB5198B8AA525DA2691ABBCC4663F699B78EB91571005AE24D0E29",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-authored-row-linked-prose.docx",
+    "SourceSha256": "39202ABCE30109940D9568C54242F16F219B392E9E86E071147A9F7FB543D6D3",
+    "SourceParagraphSha256": "24BB94B123B233DA54AD2C4613F26172F74A7805C6037CC1755FD0E5FC52287A",
+    "MathPart": "word/document.xml",
+    "Variant": "linked-prose",
+    "Container": "cell",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Reference row.",
+      "After public math table."
+    ],
+    "Change": "Move the unchanged linked-prose/implicit-math paragraph into a cell source frame."
+  },
+  {
+    "Id": "math-authored-row-linked-prose-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-authored-row-linked-prose-header.docx",
+    "Sha256": "C52956D3286568C83083E43BAF6FBF315C2BDCEB05DFB5E9613DF79166BC80FE",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-authored-row-linked-prose.docx",
+    "SourceSha256": "39202ABCE30109940D9568C54242F16F219B392E9E86E071147A9F7FB543D6D3",
+    "SourceParagraphSha256": "24BB94B123B233DA54AD2C4613F26172F74A7805C6037CC1755FD0E5FC52287A",
+    "MathPart": "word/math-row-header.xml",
+    "Variant": "linked-prose",
+    "Container": "header",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Reference row.",
+      "After public math table."
+    ],
+    "Change": "Move the unchanged linked-prose/implicit-math paragraph into a header source frame."
+  },
+  {
+    "Id": "math-authored-row-linked-prose-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-authored-row-linked-prose-footer.docx",
+    "Sha256": "22FE14E2D01FF8AA484EAA102EA0DE71296579257C9CB6045244CF653E57672A",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-authored-row-linked-prose.docx",
+    "SourceSha256": "39202ABCE30109940D9568C54242F16F219B392E9E86E071147A9F7FB543D6D3",
+    "SourceParagraphSha256": "24BB94B123B233DA54AD2C4613F26172F74A7805C6037CC1755FD0E5FC52287A",
+    "MathPart": "word/math-row-footer.xml",
+    "Variant": "linked-prose",
+    "Container": "footer",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Reference row.",
+      "After public math table."
+    ],
+    "Change": "Move the unchanged linked-prose/implicit-math paragraph into a footer source frame."
+  }
+]
