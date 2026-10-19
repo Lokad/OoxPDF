@@ -18,6 +18,7 @@ probes.add_argument('--compound-report-probe', action='store_true')
 probes.add_argument('--spanning-cell-probe', action='store_true')
 probes.add_argument('--spanning-frame-probes', action='store_true')
 probes.add_argument('--parallel-cell-probes', action='store_true')
+probes.add_argument('--parallel-cell-bordered-probe', action='store_true')
 args = parser.parse_args()
 sha = lambda value: hashlib.sha256(value).hexdigest().upper()
 
@@ -33,7 +34,7 @@ def publish(jobs):
             assert target.read_bytes() == data, target.name
 
 
-if args.parallel_cell_probes:
+if args.parallel_cell_probes or args.parallel_cell_bordered_probe:
     parent = next(row for row in json.loads((cases / 'spanning-frame-probes.json').read_text())
         if row['Id'] == 'spanning-frame-mixed-prose')
     original = (root / parent['Input']).read_bytes()
@@ -42,11 +43,13 @@ if args.parallel_cell_probes:
         infos = archive.infolist()
         original_parts = {entry.filename: archive.read(entry.filename) for entry in infos}
     rows, jobs = [], []
-    for variant in ('aligned', 'shifted', 'mixed'):
+    for variant in (('bordered',) if args.parallel_cell_bordered_probe else ('aligned', 'shifted', 'mixed')):
         parts = dict(original_parts)
         tree = E.fromstring(parts['word/document.xml'])
         table = next(tree.iter(w + 'tbl'))
         table.find(w + 'tblPr/' + w + 'tblW').set(w + 'w', '6400')
+        if variant == 'bordered':
+            E.SubElement(table.find(w + 'tblPr'), w + 'tblInd', {w + 'w': '0', w + 'type': 'dxa'})
         grid = table.find(w + 'tblGrid')
         grid.clear()
         for _ in range(2): E.SubElement(grid, w + 'gridCol', {w + 'w': '3200'})
@@ -56,6 +59,10 @@ if args.parallel_cell_probes:
         for side in ('Left', 'Right'):
             cell = copy.deepcopy(source_cell)
             cell.find(w + 'tcPr/' + w + 'tcW').set(w + 'w', '3200')
+            if variant == 'bordered':
+                borders = E.SubElement(cell.find(w + 'tcPr'), w + 'tcBorders')
+                for edge in ('top', 'left', 'bottom', 'right'):
+                    E.SubElement(borders, w + edge, {w + 'val': 'single', w + 'sz': '8', w + 'color': '000000'})
             paragraphs = cell.findall(w + 'p')
             prefix = paragraphs[0]
             prefix.find('.//' + w + 't').text = side + ' ordinary introduction.'
@@ -63,7 +70,7 @@ if args.parallel_cell_probes:
             if properties is None:
                 properties = E.Element(w + 'pPr')
                 prefix.insert(0, properties)
-            E.SubElement(properties, w + 'spacing', {w + 'after': '320' if side == 'Right' and variant == 'shifted' else '160'})
+            E.SubElement(properties, w + 'spacing', {w + 'after': '320' if side == 'Right' and variant in ('shifted', 'bordered') else '160'})
             for index, paragraph in enumerate(paragraphs[1:], 1):
                 paragraph.find('.//' + w + 't').text = side + ' source row ' + str(index) + '.'
                 paragraph.find('.//' + w + 'sz').set(w + 'val',
@@ -82,10 +89,11 @@ if args.parallel_cell_probes:
                 'Left source row 120.','Right source row 120.','After public math table.'],
             Change='Parallel ordinary cells: aligned source metrics, different introduction spacing, or different line metrics. No candidate-derived geometry.'))
         jobs.append((cases / (name + '.docx'), data))
-    jobs.append((cases / 'parallel-cell-probes.json',
+    manifest_name = 'parallel-cell-bordered-probe.json' if args.parallel_cell_bordered_probe else 'parallel-cell-probes.json'
+    jobs.append((cases / manifest_name,
         (json.dumps(rows, indent=2) + '\n').replace('\n', '\r\n').encode()))
     publish(jobs)
-    print('Three ordinary parallel-cell controls verified; earlier inputs unchanged.')
+    print(str(len(rows)) + ' ordinary parallel-cell controls verified; earlier inputs unchanged.')
     raise SystemExit(0)
 
 
