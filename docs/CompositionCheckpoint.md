@@ -1,5 +1,47 @@
 # Composed-document reliability checkpoint
 
+## C275 source-owned box paragraphs (2026-10-19)
+
+Source ownership now admits automatic ordinary-text/box paragraphs independently
+of parent mathematics. Body/cell layout reuses existing ordered measurement,
+wrapping and placement; the legacy cell object walk recognizes measured frame
+ownership and avoids a second publication. This closes the2.454pt review box
+Y offset without changing paragraph advance or adding a fitted offset. Qualified
+static stories and explicit-slot/revised/unowned/nested fallbacks stay intact.
+No public API, memory-admission, bounds or safe-managed-code changes.
+
+Eleven controls/22 independent Word views retain92 mathematical glyphs, source
+prose and pictures. Body/cell review box edges0.098pt and child math Y0.523pt
+now pass the original one-point gate; surrounding prose remains aligned. Across
+admitted axes:math X0.097pt/Y0.758pt, box edge0.908pt, image0.818pt, following
+X0.029pt/Y0.788pt; physical math size0.040pt.20 following anchors pass. Four
+rasters reviewed. All22 strict whole-page failures remain.18 primary content
+screens pass; two inherited unused-header diagnostic flags stay raw. Source
+inspection confirms their header has no section reference; body content has no
+deficit. Static-table X5.400pt Final/4.088pt review remains explicitly unadmitted.
+
+One final frozen runtime:35 Windows/28 Ubuntu checks, seven native skips, once
+per platform. Cover source identity, child reuse, cancellation, explicit/revised/
+nested fallbacks, cell memo relocation and complete-frame admission. The first
+candidate27pass/8fail exposed duplicate cell painting because the legacy walk
+recognized only equation owners. Its20 PDFs and failed reports remain; the
+corrective runtime preserves all2,380 public inputs. No cross-production report
+join. Two parent observers fail for source ownership and independent Word Y.
+
+Four new Word exports (two no-parent-equation controls) occur once;18 references
+are reused. Twelve comparisons reuse exact PDF identity.86 prior outcomes use
+source reachability, including the fixed portfolio and C274 sibling family;
+the unscaled cell is measured separately rather than wrongly carried forward.
+17 assets/four root smokes, including two byte-exact neighboring compositions;
+no root build, suite, portfolio or package replay. C274CI39275089226 is green on
+Windows/Ubuntu including broader/package gates. C275 CI follows the scoped push.
+
+Evidence:artifacts/composition-c1/owned-box-owners-evidence.json; rootad08f657.
+No-parent-math picture+box paragraphs retain their legacy fallback; qualify that
+bounded combination next. Broader mathematical/text strut unification and the
+inherited chart/balloon regimes remain unverified. No speedup claim. Last loose
+workspace check C273:15.541GB/849,977files; preserve rejected cleanup targets.
+
 ## C274 intrinsic-frame row ends (2026-10-19)
 
 Shared ordered wrapping now lets a dominant picture/textbox-only row own its
