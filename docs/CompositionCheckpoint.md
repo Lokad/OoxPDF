@@ -1,5 +1,38 @@
 # Composed-document reliability checkpoint
 
+## C303 unchanged preparation survives the count retry (2026-10-19)
+
+An unchanged source no longer rebuilds its font plan/subsets/prepared math solely
+for the finalized count. Reuse one conversion-local resource reference only when
+the returned document is the same object, no math is deferred and no captured
+font warning requires replay. Decimal glyphs are already in ordinary/fallback
+subsets. All note/kerning/numbering/layout passes remain; changed sources, deferred
+math and warnings keep complete preparation. Explicit cancellation remains before
+reuse.13added/5removed production lines, no new cache, state, counter, API or quota.
+
+One committed Release runtime/2,462inputs;26 Windows/17 Ubuntu/nine native skips,
+one exact invocation/platform, no harness repair/production join. Tests observe
+one resolver call versus the parent's two for the same stable count source,
+preserve warning replay and silent paint output, bound preparation to conversion/
+resolver lifetime, honor cancellation and retain deferred/unstable math/note cases.
+Two expected parent work observers fail, lifetime control passes. Both composed
+report PDFs/diagnostics match C302 exactly. Reuse independent comparisons and
+retain all review geometry, strict pixel and cached-source/token-screen failures.
+
+One existing probe-only build, same input/default fonts/fresh child per mode,
+one cold/one warmup/three warm conversions: warm allocation44.525-to43.112MB Final
+(1.413MB/3.17percent),49.403-to48.085MB review (1.318MB/2.67percent). Whole/staged
+PDF hashes match. Volumes are calling-thread allocation, not live heap; diagnostic
+stages overlap and do not count layout calls. No speedup claim. Much of the extra
+count-layout allocation remains; a new cache/pipeline redesign is not justified.
+
+Two conversions/zero Word exports,24 prior views carried by source reachability,
+not fresh PDF identity.17 assets/two exact transfer smokes; no root build/suite/
+package replay. Source c8942bbc; evidence artifacts/composition-c1/count-preparation-
+reuse-evidence.json. C302CI39327006187 is green Windows/Ubuntu including broader/
+package checks. Review existing measurement memo keys/lifetime next; require safe
+ownership, unchanged PDFs and measured benefit before extending reuse.
+
 ## C302 complete report total-count baseline (2026-10-19)
 
 One bare NUMPAGES addition to the ordinary title retains Word's three pages and
