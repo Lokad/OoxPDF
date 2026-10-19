@@ -17,9 +17,16 @@ internal static class DocxPassiveStaticBodyTests
         CheckBodyBaselines(null, compareWord: true);
     }
 
-    internal static void CheckBodyBaselines(IFontResolver? resolver, bool compareWord)
+    public static void DocxPassivePageFieldsPreserveIndependentWordBodyBaselines()
     {
-        using var gold = JsonDocument.Parse(File.ReadAllText(Case("CompositionProbes/minimum-passive-static-office.json")));
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent minimum body/page-field origins require installed Windows fonts.");
+        CheckBodyBaselines(null, compareWord: true, "minimum-passive-page-fields-office.json");
+    }
+
+    internal static void CheckBodyBaselines(IFontResolver? resolver, bool compareWord,
+        string goldFile = "minimum-passive-static-office.json")
+    {
+        using var gold = JsonDocument.Parse(File.ReadAllText(Case("CompositionProbes/" + goldFile)));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string id = row.GetProperty("Id").GetString()!;
@@ -61,7 +68,7 @@ internal static class DocxPassiveStaticBodyTests
         }
     }
 
-    public static void DocxPassiveStaticTextKeepsIntrusiveDynamicAndUnmeasuredFallbacks()
+    public static void DocxPassiveStaticTextKeepsIntrusiveUnsupportedAndUnmeasuredFallbacks()
     {
         foreach (string kind in new[] { "header", "footer" })
         {
@@ -78,10 +85,10 @@ internal static class DocxPassiveStaticBodyTests
             foreach (var unsupported in new[] { intrusive, unmeasured, annotationLane })
                 TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(document, unsupported, out var unchanged) && ReferenceEquals(unsupported, unchanged),
                     "Intrusive, unmeasured and annotation-lane frames retain the existing fallback.");
-            var dynamic = ReadDynamicStory(input, kind);
+            var dynamic = ReadUnsupportedFieldStory(input, kind);
             var dynamicLayout = Layout(dynamic);
             TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(dynamic, dynamicLayout, out var fallback) && ReferenceEquals(dynamicLayout, fallback),
-                "A page-dependent story remains outside plain static-text admission.");
+                "An unsupported cached field remains outside source-owned margin-text admission.");
         }
     }
 
@@ -93,7 +100,7 @@ internal static class DocxPassiveStaticBodyTests
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, default);
     }
 
-    private static DocxDocument ReadDynamicStory(string input, string kind)
+    private static DocxDocument ReadUnsupportedFieldStory(string input, string kind)
     {
         string temporary = Path.Combine(Path.GetTempPath(), "ooxpdf-passive-" + Guid.NewGuid().ToString("N") + ".docx");
         File.Copy(input, temporary);
@@ -112,7 +119,7 @@ internal static class DocxPassiveStaticBodyTests
                 var paragraph = xml.Root!.Element(w + "p")!;
                 var run = paragraph.Element(w + "r")!;
                 run.Remove();
-                paragraph.Add(new XElement(w + "fldSimple", new XAttribute(w + "instr", "PAGE"), run));
+                paragraph.Add(new XElement(w + "fldSimple", new XAttribute(w + "instr", "DATE"), run));
                 entry.Delete();
                 using var output = archive.CreateEntry(part).Open();
                 xml.Save(output);

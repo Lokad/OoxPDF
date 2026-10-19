@@ -9004,6 +9004,10 @@
     "PortableRenderingBodyPageCountersFollowLineAdmission",
     "PortableRenderingScaledFootnoteSharesPrintedBodyCapacity",
     "DocxPassiveStaticText",
-    "PortableRenderingPassiveStaticTextPreservesOrdinaryBodyOrigins"
+    "PortableRenderingPassiveStaticTextPreservesOrdinaryBodyOrigins",
+    "DocxPassivePageFields",
+    "PortableRenderingPassivePageFieldsPreserveOrdinaryBodyOrigins",
+    "DocxInlineCompositionStaticPageFieldsMatchIndependentWordFrames",
+    "PortableRenderingStaticPageFieldsPreserveMathAcrossDigitBoundary"
   ]
 }

@@ -22,7 +22,7 @@ internal static class DocxPlainBodyFrame
         HasPlainBody(document) && HasSingleLineLayout(document, layout);
 
     // A measured text story wholly inside its margin does not own the body's
-    // line metrics. Rich, dynamic, intrusive and unmeasured stories keep the
+    // line metrics. Rich, unsupported, intrusive and unmeasured stories keep the
     // previous fallback; annotation lanes retain their scaled frame policy.
     private static bool HasIndependentStaticTextLayout(DocxDocument document, DocxLayout layout)
     {
@@ -60,7 +60,12 @@ internal static class DocxPlainBodyFrame
             DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph.Paragraph, element.Revisions));
 
     private static bool IsPlainStaticText(DocxParagraph paragraph) =>
-        HasPlainTextContent(paragraph) && HasAutomaticLineFlow(paragraph) && paragraph.InlineReferences.Count == 0;
+        HasPlainTextProperties(paragraph) && HasAutomaticLineFlow(paragraph) && paragraph.InlineReferences.Count == 0 &&
+        // PAGE/NUMPAGES already receive page inputs during static measurement.
+        // Reuse their source/placeholder contract; arbitrary cached fields do
+        // not gain admission merely because their current result is text.
+        paragraph.FieldReferences.All(field => field.Kind.IsDynamic()) &&
+        DocxInlineContent.HasSourceFieldResults(paragraph.FieldReferences, paragraph.Runs);
 
     internal static bool IsEligible(DocxDocument document) =>
         HasPlainBody(document) && HasNoStaticStories(document);
@@ -99,8 +104,11 @@ internal static class DocxPlainBodyFrame
     // Bookmarks are non-rendering source metadata. Navigation validates their
     // anchor ownership separately; they do not change the plain flow frame.
     internal static bool HasPlainTextContent(DocxParagraph p) =>
+        p.FieldReferences.Count == 0 && HasPlainTextProperties(p);
+
+    private static bool HasPlainTextProperties(DocxParagraph p) =>
         p.Images.Count == 0 && p.InlineTextBoxes.Count == 0 && p.Equations.Count == 0 &&
-        p.FieldReferences.Count == 0 && p.CommentRanges.Count == 0 && DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(p, p.Revisions) &&
+        p.CommentRanges.Count == 0 && DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(p, p.Revisions) &&
         p.RevisionRanges.Count == 0 && !p.HasDeletedParagraphMark && p.DeletedText.Length == 0 &&
         p.ListLabel is null && p.Hyperlinks.Count == 0 &&
         p.Runs.All(r => r.Revision is null && r.Revisions.Count == 0 &&
