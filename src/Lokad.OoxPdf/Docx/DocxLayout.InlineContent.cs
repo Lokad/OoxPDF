@@ -244,11 +244,11 @@ internal sealed partial class DocxLayoutEngine
         }
         else
         {
-            if ((!allowStaticFallback && paragraph.InlineTextBoxes.Count == 0) || paragraph.Images.Count != 0 ||
+            if ((!allowStaticFallback || paragraph.Images.Count != 0) && paragraph.InlineTextBoxes.Count == 0 ||
                 !DocxInlineContent.HasSupportedSourceOwner(paragraph, hasActualFieldInputs, token) ||
                 !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
                 paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right)) return false;
-            // Source-owned boxes already carry the parser's ordered view.
+            // Source-owned boxes and sibling pictures carry the parser's ordered view.
             // Ordinary static text reuses run affinity without mutating its model.
             items ??= DocxInlineContent.FromPrefix(paragraph.Runs, paragraph.Images, token);
         }

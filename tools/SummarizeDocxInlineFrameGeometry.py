@@ -57,6 +57,13 @@ def measure_prose(path, prefixes):
     return [match for prefix in prefixes for match in matches[prefix]]
 
 
+def measure_images(path):
+    with pymupdf.open(path) as pdf:
+        return [{'Page': index + 1, 'Rect': list(item['bbox']),
+            'InsidePage': pymupdf.Rect(item['bbox']) in page.rect}
+            for index, page in enumerate(pdf) for item in page.get_image_info()]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--golden', type=Path, required=True)
@@ -106,6 +113,20 @@ def main():
                 result['Failures'].append('StrokeWidth')
         if any(not frame['InsidePage'] for frame in frames):
             result['Failures'].append('OffPageFrame')
+        if 'WordImages' in row:
+            images = measure_images(path)
+            expected_images = row['WordImages']
+            result['NativeImages'] = images
+            if len(images) != len(expected_images) or any(a['Page'] != e['Page'] for a, e in zip(images, expected_images)):
+                result['Failures'].append('ImageCountOrPage')
+            elif expected_images:
+                for axis, indices in [('X', [0, 2]), ('Y', [1, 3])]:
+                    result['MaxImage' + axis + 'Error'] = max(abs(a['Rect'][i] - e['Rect'][i])
+                        for a, e in zip(images, expected_images) for i in indices)
+                result['Failures'] += ['Image' + axis for axis in row.get('ImageGeometryAxes', axes)
+                    if result['MaxImage' + axis + 'Error'] >= 1.]
+            if any(not item['InsidePage'] for item in images):
+                result['Failures'].append('OffPageImage')
         expected_prose = row.get('WordProseAnchors', [])
         if expected_prose:
             prose = measure_prose(path, [anchor['Text'] for anchor in expected_prose])

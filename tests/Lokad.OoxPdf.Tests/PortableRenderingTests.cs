@@ -40,6 +40,9 @@ internal static class PortableRenderingTests
     public static void PortableRenderingPlainBoxChildrenRetainMixedContent() =>
         DocxInlineCompositionTests.CheckInlineBoxMath(new PinnedResolver(mathFont: true), "inline-box-plain-child-frames-office.json");
 
+    public static void PortableRenderingOrdinaryPicturesAndBoxesRetainSourceContent() =>
+        DocxInlineCompositionTests.CheckInlineBoxMath(new PinnedResolver(mathFont: true), "inline-box-ordinary-pictures-office.json");
+
     public static void PortableRenderingPictureNoteBatchesRetainEveryImageOnce() =>
         DocxInlineCompositionTests.CheckPictureNoteBatches(new PinnedResolver(mathFont: true));
 

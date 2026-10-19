@@ -37,7 +37,12 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxPlainBoxChildTextOriginsMatchIndependentWord()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent ordinary child origins use installed Windows fonts.");
-        using var gold = ReadInlineBoxMathGold("inline-box-plain-child-frames-office.json");
+        CheckInlineBoxProseOrigins("inline-box-plain-child-frames-office.json");
+    }
+
+    private static void CheckInlineBoxProseOrigins(string goldenFile)
+    {
+        using var gold = ReadInlineBoxMathGold(goldenFile);
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             if (!row.TryGetProperty("WordProseAnchors", out var expected)) continue;

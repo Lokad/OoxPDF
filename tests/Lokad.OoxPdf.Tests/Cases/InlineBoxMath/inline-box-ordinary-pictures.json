@@ -1,0 +1,44 @@
+[
+  {
+    "Id": "inline-box-picture-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-picture-body.docx",
+    "Sha256": "497497DD9DE8C767B0B1864CE3F55CB45341420007E8F7CF008FE724C9CF7727",
+    "SourceSha256": "AF81436D026A847A086B74D2BF3AA5950614B27D0AA4D4867E4EE8FF9CF6A732",
+    "SiblingSourceSha256": "AF81436D026A847A086B74D2BF3AA5950614B27D0AA4D4867E4EE8FF9CF6A732",
+    "HeldOut": true,
+    "Variant": "body",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedImageCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "Change": "Remove parent mathematics while retaining ordinary text, source picture, textbox, real comment and container constraints."
+  },
+  {
+    "Id": "inline-box-picture-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-picture-cell.docx",
+    "Sha256": "A25507F39F1D74A3A63F3511E4F2308E2A1E74F87ECD9BE931AD735435913F81",
+    "SourceSha256": "24CC3C178E5086CAFC0463AB50FA6A832F04724178820DC0E4178045A335A4FE",
+    "SiblingSourceSha256": "AF81436D026A847A086B74D2BF3AA5950614B27D0AA4D4867E4EE8FF9CF6A732",
+    "HeldOut": true,
+    "Variant": "cell",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedImageCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "Change": "Remove parent mathematics while retaining ordinary text, source picture, textbox, real comment and container constraints."
+  }
+]
