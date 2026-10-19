@@ -159,7 +159,11 @@ manifest = [baseline | dict(Id=output.stem, Input=output.relative_to(root).as_po
         (['ordered equations/picture/box in body and ordinary ordered frames alongside existing static tables/page fields'] if args.include_inline_frames else []))]
 if inline_sources:
     manifest[0]['InlineFrameSources'] = inline_sources
-(cases / (output.stem + '.json')).write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')
+manifest_path = cases / (output.stem + '.json')
+manifest_staging = manifest_path.with_suffix('.json.staging')
+with manifest_staging.open('x', encoding='utf-8', newline='\r\n') as stream:
+    stream.write(json.dumps(manifest, indent=2)+'\n')
+manifest_staging.replace(manifest_path)
 print('Pinned one held-out endnote report; existing prose, six equations, media and unrelated package parts preserved' +
       ('; two note fractions added' if args.include_math else '') +
       ('; source PNG also embedded in the note.' if args.include_image else '.'))
