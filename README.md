@@ -235,11 +235,15 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --no-restore
 
 Packages are written to `artifacts/nuget/`.
 
+Use `--test <name>` for a name filter or `--test-set <file.json>` for a JSON
+array of exact method names. Unknown arguments, missing values and repeated
+options fail before tests run. Exact sets cannot be combined with `--group` or `--test`.
+
 CI runs on Windows and Ubuntu. Both build the full solution and run the visual
 manifest, allocation, package, comparison, tokenizer, and chart-classifier gates.
 Windows runs the full console suite (excluding slow tests), the text-content
 gate, and the PDFium visual probe. Ubuntu intentionally runs the portable `api`,
-`ooxml`, `pdf`, `imaging`, and `fonts` console groups; tests requiring installed
+`ooxml`, `pdf`, `imaging`, `fonts`, and `rendering-portable` console groups; tests requiring installed
 Windows fonts skip when those fonts are absent. Its package smoke test supplies
 DejaVu Sans through a custom font resolver and checks font embedding. Console
 test reports are uploaded separately for each operating system.
