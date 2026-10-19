@@ -9226,5 +9226,9 @@
     "PortableRenderingInlineBoxTotalCountersKeepContentAcrossContainers",
     "DocxParallelCellFramesRetainIndependentWordPagesAndCompleteInk",
     "PortableRenderingParallelCellFramesKeepCompleteGlyphInk"
+  ],
+  "docx-parallel-box-composition": [
+    "DocxParallelCellBoxesRetainIndependentWordMathAndFinalCount",
+    "PortableRenderingParallelCellBoxesKeepMathAndActualCount"
   ]
 }

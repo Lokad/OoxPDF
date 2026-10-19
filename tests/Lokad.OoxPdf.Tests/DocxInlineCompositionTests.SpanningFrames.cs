@@ -21,6 +21,12 @@ internal static partial class DocxInlineCompositionTests
         CheckSpanningFrames(null, compareWord: true, "parallel-cell-office.json", parallelCells: true);
     }
 
+    public static void DocxParallelCellBoxesRetainIndependentWordMathAndFinalCount()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent Word origins use installed Windows fonts.");
+        CheckSpanningFrames(null, compareWord: true, "parallel-cell-box-office.json", parallelCells: true);
+    }
+
     internal static void CheckSpanningFrames(IFontResolver? resolver, bool compareWord,
         string goldenFile = "spanning-frame-office.json", bool parallelCells = false)
     {
@@ -45,7 +51,30 @@ internal static partial class DocxInlineCompositionTests
             for (int pageIndex = 0; pageIndex < pages.Length; pageIndex++)
             {
                 var page = pages[pageIndex];
-                foreach (var show in DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
+                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
+                if (row.TryGetProperty("WordFieldGlyphs", out var fieldAnchors))
+                {
+                    var mathFonts = page.Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(font => font.Font).ToHashSet();
+                    var math = shows.Where(show => mathFonts.Contains(show.Font) && show.Text.Trim().Length != 0).ToArray();
+                    var expectedMath = row.GetProperty("WordMathAnchors").EnumerateArray().Where(anchor => anchor.GetProperty("Page").GetInt32() == pageIndex + 1).ToArray();
+                    TestAssert.Equal(expectedMath.Length, math.Length);
+                    if (pageIndex == 0)
+                    {
+                        TestAssert.Equal("x+2y", string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
+                        var before = shows.First(show => show.Text.Contains("Before inline", StringComparison.Ordinal));
+                        string count = pages.Length.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        var field = shows.First(show => !mathFonts.Contains(show.Font) && show.Text.Trim() == count && Math.Abs(show.Y - before.Y) < .01d);
+                        if (compareWord)
+                        {
+                            TestAssert.Equal(fieldAnchors[0].GetProperty("Text").GetString(), count);
+                            CheckOrigin(field.X, page.Height - field.Y, field.Size, fieldAnchors[0]);
+                        }
+                    }
+                    if (compareWord)
+                        for (int index = 0; index < math.Length; index++)
+                            CheckOrigin(math[index].X, page.Height - math[index].Y, math[index].Size, expectedMath[index]);
+                }
+                foreach (var show in shows
                     .Where(show => parallelCells
                         ? show.Text.StartsWith("Left source row ", StringComparison.Ordinal) || show.Text.StartsWith("Right source row ", StringComparison.Ordinal)
                         : show.Text.StartsWith("Planning row ", StringComparison.Ordinal)))
@@ -81,5 +110,10 @@ internal static partial class DocxInlineCompositionTests
             canceled.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => renderer.RenderBlankPages(source, null, canceled.Token).ToArray());
         }
+
+        static void CheckOrigin(double x, double y, double size, JsonElement expected) =>
+            TestAssert.True(Math.Abs(x - expected.GetProperty("X").GetDouble()) < 1d &&
+                Math.Abs(y - expected.GetProperty("Y").GetDouble()) < 1d && Math.Abs(size - expected.GetProperty("Size").GetDouble()) < .1d,
+                "Box math and actual-count field retain independent Word origins and sizes.");
     }
 }
