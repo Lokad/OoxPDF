@@ -14,9 +14,16 @@ internal static partial class DocxInlineCompositionTests
         CheckMergedSourceConsumption(null);
     }
 
-    internal static void CheckMergedSourceConsumption(IFontResolver? resolver)
+    public static void DocxInlineCompositionAdmittedMergeSpansMatchIndependentWordFlow()
     {
-        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath("merged-source-consumption-office.json")));
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent span flow requires installed Windows fonts.");
+        CheckMergedSourceConsumption(null, "merged-span-admission-office.json");
+    }
+
+    internal static void CheckMergedSourceConsumption(IFontResolver? resolver,
+        string goldenFile = "merged-source-consumption-office.json")
+    {
+        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath(goldenFile)));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string id = row.GetProperty("Id").GetString()!;
@@ -59,6 +66,21 @@ internal static partial class DocxInlineCompositionTests
                             pair.First.Text == pair.Second.GetProperty("Text").GetString() &&
                             Math.Abs(pair.First.Y - pair.Second.GetProperty("Y").GetDouble()) < 1d,
                             "Each source fraction is painted once at its independent Word page/baseline. Absolute cell-left/row-flow residuals remain explicit.");
+                    if (row.TryGetProperty("FlowAnchors", out var flow))
+                    {
+                        var prose = pages.SelectMany((page, index) =>
+                            DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
+                                .GroupBy(show => show.Y).Select(group => (Page: index + 1, Y: group.Key,
+                                    Text: string.Concat(group.OrderBy(show => show.X).Select(show => show.Text)).Trim()))).ToArray();
+                        foreach (var anchor in flow.EnumerateArray())
+                        {
+                            string expected = anchor.GetProperty("Text").GetString()!;
+                            var actual = prose.Single(line => line.Text == expected);
+                            TestAssert.True(actual.Page == anchor.GetProperty("Page").GetInt32() &&
+                                Math.Abs(actual.Y - anchor.GetProperty("Y").GetDouble()) < 1d,
+                                "Complete span admission preserves independent Word following-flow/page anchors, including side cells and authored row floors.");
+                        }
+                    }
                 }
                 if (originalMath is not null)
                     foreach (var pair in originalMath.Zip(math))

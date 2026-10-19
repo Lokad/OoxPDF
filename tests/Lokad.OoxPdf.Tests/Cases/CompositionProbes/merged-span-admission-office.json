@@ -1,0 +1,630 @@
+{
+  "Rows": [
+    {
+      "Id": "merged-span-three-rows",
+      "Mode": "final-preserve",
+      "InputSha256": "130FF9C4571117F698E6FA76B102F5600ACCE7DED176845EA6DA2387B62BAC2E",
+      "ReferencePdfSha256": "2EF01182F79AD2680F22F14208C7A97B75FAB2DE9864C8BB5B9C122A42DD9240",
+      "Pages": 1,
+      "SourceEquations": 1,
+      "MathAnchors": [
+        {
+          "Page": 1,
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "+",
+          "X": 141.13999938964844,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "2",
+          "X": 147.02000427246094,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 730.6599731445312,
+          "Size": 8.039999961853027
+        }
+      ],
+      "FlowAnchors": [
+        {
+          "Page": 1,
+          "Text": "After public math table.",
+          "Y": 677.02001953125
+        }
+      ]
+    },
+    {
+      "Id": "merged-span-three-rows",
+      "Mode": "all-word-compatible",
+      "InputSha256": "130FF9C4571117F698E6FA76B102F5600ACCE7DED176845EA6DA2387B62BAC2E",
+      "ReferencePdfSha256": "96243AB382AB539D5ED4C0C776D449A1DDF11671583C612C61A7302D9CF36732",
+      "Pages": 1,
+      "SourceEquations": 1,
+      "MathAnchors": [
+        {
+          "Page": 1,
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "+",
+          "X": 141.13999938964844,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "2",
+          "X": 147.02000427246094,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 730.6599731445312,
+          "Size": 8.039999961853027
+        }
+      ],
+      "FlowAnchors": [
+        {
+          "Page": 1,
+          "Text": "After public math table.",
+          "Y": 677.02001953125
+        }
+      ]
+    },
+    {
+      "Id": "merged-span-minimum-rows",
+      "Mode": "final-preserve",
+      "InputSha256": "105BE648FD353FAA8C3E87FA8519359952313B1B2A8DDD52CA893DEA4373F970",
+      "ReferencePdfSha256": "9BB86D42439DFABC94469B66543956A65D4104F85FEA1D84FAEB83CAF86E8013",
+      "Pages": 1,
+      "SourceEquations": 1,
+      "MathAnchors": [
+        {
+          "Page": 1,
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "+",
+          "X": 141.13999938964844,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "2",
+          "X": 147.02000427246094,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 730.6599731445312,
+          "Size": 8.039999961853027
+        }
+      ],
+      "FlowAnchors": [
+        {
+          "Page": 1,
+          "Text": "After public math table.",
+          "Y": 697.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "merged-span-minimum-rows",
+      "Mode": "all-word-compatible",
+      "InputSha256": "105BE648FD353FAA8C3E87FA8519359952313B1B2A8DDD52CA893DEA4373F970",
+      "ReferencePdfSha256": "6EC6E7907A6B022AA5E7761F76125B937862F0E8EEA3BBE057D13D53E96DE89E",
+      "Pages": 1,
+      "SourceEquations": 1,
+      "MathAnchors": [
+        {
+          "Page": 1,
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "+",
+          "X": 141.13999938964844,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "2",
+          "X": 147.02000427246094,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 730.6599731445312,
+          "Size": 8.039999961853027
+        }
+      ],
+      "FlowAnchors": [
+        {
+          "Page": 1,
+          "Text": "After public math table.",
+          "Y": 697.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "merged-span-exact-rows",
+      "Mode": "final-preserve",
+      "InputSha256": "8E3B80A53B94DC8C4A04AAB0F9A039E786B059E067F6623FEEAE98A913BE094D",
+      "ReferencePdfSha256": "A5443F2ED4761E8CFFE1A734C1D4212FCDB9EB4F8453455997A7C8C7B8EB6F10",
+      "Pages": 1,
+      "SourceEquations": 1,
+      "MathAnchors": [
+        {
+          "Page": 1,
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "+",
+          "X": 141.13999938964844,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "2",
+          "X": 147.02000427246094,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 730.6599731445312,
+          "Size": 8.039999961853027
+        }
+      ],
+      "FlowAnchors": [
+        {
+          "Page": 1,
+          "Text": "After public math table.",
+          "Y": 708.9400024414062
+        }
+      ]
+    },
+    {
+      "Id": "merged-span-exact-rows",
+      "Mode": "all-word-compatible",
+      "InputSha256": "8E3B80A53B94DC8C4A04AAB0F9A039E786B059E067F6623FEEAE98A913BE094D",
+      "ReferencePdfSha256": "7D094BA08FFBE532EDD4BAA3A3BC697C49DB6B538DC75BA52CC71D38DE0B1A3A",
+      "Pages": 1,
+      "SourceEquations": 1,
+      "MathAnchors": [
+        {
+          "Page": 1,
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "+",
+          "X": 141.13999938964844,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "2",
+          "X": 147.02000427246094,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 730.6599731445312,
+          "Size": 8.039999961853027
+        }
+      ],
+      "FlowAnchors": [
+        {
+          "Page": 1,
+          "Text": "After public math table.",
+          "Y": 708.9400024414062
+        }
+      ]
+    },
+    {
+      "Id": "merged-span-page-boundary",
+      "Mode": "final-preserve",
+      "InputSha256": "4E60A8C7DC0EDEBE82CC2D0FFBE80D4BFCCABB4D4E884A52B844E129D8185F5F",
+      "ReferencePdfSha256": "74D0DD4E01B26A2989FE7F943B9CFD812E38DC0FD37219D4844D0BE940F26B06",
+      "Pages": 2,
+      "SourceEquations": 1,
+      "MathAnchors": [
+        {
+          "Page": 1,
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 112.58001708984375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "+",
+          "X": 141.13999938964844,
+          "Y": 112.58001708984375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "2",
+          "X": 147.02000427246094,
+          "Y": 112.58001708984375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 100.58001708984375,
+          "Size": 8.039999961853027
+        }
+      ],
+      "FlowAnchors": [
+        {
+          "Page": 1,
+          "Text": "Side row 1.",
+          "Y": 108.8599853515625
+        },
+        {
+          "Page": 1,
+          "Text": "Side row 2.",
+          "Y": 88.2239990234375
+        },
+        {
+          "Page": 2,
+          "Text": "After public math table.",
+          "Y": 759.5999755859375
+        }
+      ]
+    },
+    {
+      "Id": "merged-span-page-boundary",
+      "Mode": "all-word-compatible",
+      "InputSha256": "4E60A8C7DC0EDEBE82CC2D0FFBE80D4BFCCABB4D4E884A52B844E129D8185F5F",
+      "ReferencePdfSha256": "0116B4B12C6863761BF91D0BA2D85AD2D27723B72A2D130D5096BF51A3EF50E9",
+      "Pages": 2,
+      "SourceEquations": 1,
+      "MathAnchors": [
+        {
+          "Page": 1,
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 112.58001708984375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "+",
+          "X": 141.13999938964844,
+          "Y": 112.58001708984375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "2",
+          "X": 147.02000427246094,
+          "Y": 112.58001708984375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 100.58001708984375,
+          "Size": 8.039999961853027
+        }
+      ],
+      "FlowAnchors": [
+        {
+          "Page": 1,
+          "Text": "Side row 1.",
+          "Y": 108.8599853515625
+        },
+        {
+          "Page": 1,
+          "Text": "Side row 2.",
+          "Y": 88.2239990234375
+        },
+        {
+          "Page": 2,
+          "Text": "After public math table.",
+          "Y": 759.5999755859375
+        }
+      ]
+    },
+    {
+      "Id": "merged-span-two-owners",
+      "Mode": "final-preserve",
+      "InputSha256": "B6DE7F340CCC9BBF3978CE8554A321564F6011562410F9341DDFE6DB260F6E1A",
+      "ReferencePdfSha256": "748FF24C182A17EF8392568FF6CE0FDE082E7A90D074A7F8BEF772EC71D66A5B",
+      "Pages": 1,
+      "SourceEquations": 2,
+      "MathAnchors": [
+        {
+          "Page": 1,
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "+",
+          "X": 141.13999938964844,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "2",
+          "X": 147.02000427246094,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 730.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "\ud835\udc65",
+          "X": 346.2699890136719,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "+",
+          "X": 351.19000244140625,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "2",
+          "X": 357.07000732421875,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "\ud835\udc66",
+          "X": 351.30999755859375,
+          "Y": 730.6599731445312,
+          "Size": 8.039999961853027
+        }
+      ],
+      "FlowAnchors": [
+        {
+          "Page": 1,
+          "Text": "Tail after first owner.",
+          "Y": 697.6599731445312
+        },
+        {
+          "Page": 1,
+          "Text": "After public math table.",
+          "Y": 677.02001953125
+        }
+      ]
+    },
+    {
+      "Id": "merged-span-two-owners",
+      "Mode": "all-word-compatible",
+      "InputSha256": "B6DE7F340CCC9BBF3978CE8554A321564F6011562410F9341DDFE6DB260F6E1A",
+      "ReferencePdfSha256": "B0AA9E2CB48F22EA3E7F726503CA58F23E09AD2103C083B73672064FD5AAFEBB",
+      "Pages": 1,
+      "SourceEquations": 2,
+      "MathAnchors": [
+        {
+          "Page": 1,
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "+",
+          "X": 141.13999938964844,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "2",
+          "X": 147.02000427246094,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 730.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "\ud835\udc65",
+          "X": 346.2699890136719,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "+",
+          "X": 351.19000244140625,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "2",
+          "X": 357.07000732421875,
+          "Y": 742.6599731445312,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "\ud835\udc66",
+          "X": 351.30999755859375,
+          "Y": 730.6599731445312,
+          "Size": 8.039999961853027
+        }
+      ],
+      "FlowAnchors": [
+        {
+          "Page": 1,
+          "Text": "Tail after first owner.",
+          "Y": 697.6599731445312
+        },
+        {
+          "Page": 1,
+          "Text": "After public math table.",
+          "Y": 677.02001953125
+        }
+      ]
+    },
+    {
+      "Id": "merged-span-tall-fraction",
+      "Mode": "final-preserve",
+      "InputSha256": "F53F3556B5F82707D126E6B77A04D7F446E9A7E170A425FCB0C85938C19FC8A7",
+      "ReferencePdfSha256": "A24E42860947228E3FBF7D7D6B5B89555CDFAFE406AE9E9E279159E3A20D8DA9",
+      "Pages": 1,
+      "SourceEquations": 1,
+      "MathAnchors": [
+        {
+          "Page": 1,
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 714.219970703125,
+          "Size": 8.039999961853027
+        }
+      ],
+      "FlowAnchors": [
+        {
+          "Page": 1,
+          "Text": "After public math table.",
+          "Y": 694.1799926757812
+        }
+      ]
+    },
+    {
+      "Id": "merged-span-tall-fraction",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F53F3556B5F82707D126E6B77A04D7F446E9A7E170A425FCB0C85938C19FC8A7",
+      "ReferencePdfSha256": "AEA23D84E5E825302B9D71CB500CD07BF53C375950AF7F700F1C3E52CE59132C",
+      "Pages": 1,
+      "SourceEquations": 1,
+      "MathAnchors": [
+        {
+          "Page": 1,
+          "Text": "\ud835\udc65",
+          "X": 136.22000122070312,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "+",
+          "X": 140.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "2",
+          "X": 146.5399932861328,
+          "Y": 740.3800048828125,
+          "Size": 8.039999961853027
+        },
+        {
+          "Page": 1,
+          "Text": "\ud835\udc66",
+          "X": 141.25999450683594,
+          "Y": 714.219970703125,
+          "Size": 8.039999961853027
+        }
+      ],
+      "FlowAnchors": [
+        {
+          "Page": 1,
+          "Text": "After public math table.",
+          "Y": 694.1799926757812
+        }
+      ]
+    }
+  ]
+}

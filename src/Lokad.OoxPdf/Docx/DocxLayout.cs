@@ -1312,10 +1312,10 @@ internal sealed partial class DocxLayoutEngine
                 Func<bool> hasTableBoundaryContent = page.ColumnFrames.Count > 1
                     ? () => HasCurrentColumnContent() || tableActiveFrameHasContent
                     : HasPageContent;
-                DocxTableLayoutFrame? qualifiedThreeRowTopFrame = null;
+                DocxTableLayoutFrame? admittedCompleteTableFrame = null;
                 DocxTableLayoutFrame ResolveCurrentTableFrame()
                 {
-                    if (qualifiedThreeRowTopFrame is not null) return qualifiedThreeRowTopFrame;
+                    if (admittedCompleteTableFrame is not null) return admittedCompleteTableFrame;
                     var frame = CreateTableLayoutFrame(
                         bodyTable,
                         currentTableIndex,
@@ -1334,12 +1334,13 @@ internal sealed partial class DocxLayoutEngine
                         alignedMinimumAvailableHeight: cursorY - CurrentTableFrameBottom(),
                         allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1,
                         mathEquations: mathEquations);
-                    // An admitted complete three-row table fits at its original
+                    // An admitted complete table fits at its original
                     // origin. Later rows must not recheck its full height against
                     // the remaining space after preceding rows have advanced.
-                    if (bodyTable.Rows.Count == 3 && (frame.Context.AutomaticTopRowContentClip ||
-                        frame.Context.DeclaredTopRowContentClips.Any(admitted => admitted)))
-                        qualifiedThreeRowTopFrame = frame;
+                    if (frame.Context.AdmittedMergeSpanHeights.Count != 0 ||
+                        bodyTable.Rows.Count == 3 && (frame.Context.AutomaticTopRowContentClip ||
+                            frame.Context.DeclaredTopRowContentClips.Any(admitted => admitted)))
+                        admittedCompleteTableFrame = frame;
                     return frame;
                 }
 

@@ -279,6 +279,8 @@ internal sealed record DocxTableLayoutContext(
     public bool AutomaticMinimumRowPlacement { get; init; }
     public bool AutomaticTopRowContentClip { get; init; }
     public IReadOnlyList<bool> DeclaredTopRowContentClips { get; init; } = [];
+    public IReadOnlyDictionary<DocxTableCell, double> AdmittedMergeSpanHeights { get; init; } =
+        new Dictionary<DocxTableCell, double>(ReferenceEqualityComparer.Instance);
 }
 
 internal sealed record DocxTableCellLayout(

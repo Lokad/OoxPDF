@@ -621,6 +621,9 @@ internal sealed partial class DocxLayoutEngine
         var rowHeights = new double[table.Rows.Count];
         var rowBottomMargins = new double[table.Rows.Count];
         var boundaryMinimumRowHeights = new double[table.Rows.Count];
+        var mergeSpans = adjustAlignedMinimumMargins && alignedMinimumAvailableHeight is not null && textMeasurer is not null
+            ? FindCompleteMathMergeSpans(table, mathEquations, cancellationToken) : [];
+        var unexpandedRowHeights = mergeSpans.Count == 0 ? [] : new double[table.Rows.Count];
         bool allowDeclaredTopMargins = allowAutomaticMinimumGridPlacement &&
             IsEligibleDeclaredTopContentTable(table, textMeasurer, paragraphSpacingScale);
         bool[] declaredTopContentClips = allowDeclaredTopMargins ? new bool[table.Rows.Count] : [];
@@ -631,6 +634,7 @@ internal sealed partial class DocxLayoutEngine
             bool canDiscardAfter = CanDiscardTableRowAfterSpacing(row);
             bool containsMath = false;
             double minimumContentHeight = 0d;
+            double unexpandedContentHeight = 0d;
             var cellContentHeights = sourceMeasurements.Length == 0 ? [] : new double[row.Cells.Count];
             double contentHeight = textMeasurer is null
                 ? 0d
@@ -641,6 +645,15 @@ internal sealed partial class DocxLayoutEngine
                         double full = measured.Resolve(adjustAlignedMinimumMargins && paragraphSpacingScale == 1d &&
                             IsEligibleTableMinimumCell(table, row, cell, textMeasurer));
                         if (cellContentHeights.Length != 0) cellContentHeights[columnIndex] = full;
+                        double unexpanded = full;
+                        if (mergeSpans.TryGetValue(cell, out var span))
+                        {
+                            span.RequiredHeight = full;
+                            unexpanded = MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer,
+                                defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale,
+                                mathEquations: null, cancellationToken).Resolve(false);
+                        }
+                        unexpandedContentHeight = Math.Max(unexpandedContentHeight, unexpanded);
                         minimumContentHeight = Math.Max(minimumContentHeight,
                             Math.Max(0d, full - (canDiscardAfter ? measured.TrailingAfterSpacing : 0d)));
                         containsMath |= measured.ContainsMath;
@@ -659,6 +672,9 @@ internal sealed partial class DocxLayoutEngine
             rowBottomMargins[rowIndex] = bottomMargin;
             if (sourceMeasurements.Length != 0) sourceMeasurements[rowIndex] = new(row, cellContentHeights);
             double fullHeight = ResolveTableRowHeight(row, contentHeight, paragraphSpacingScale, isLastRow, bottomMargin);
+            if (unexpandedRowHeights.Length != 0)
+                unexpandedRowHeights[rowIndex] = ResolveTableRowHeight(row, unexpandedContentHeight,
+                    paragraphSpacingScale, isLastRow, bottomMargin);
             boundaryMinimumRowHeights[rowIndex] = canDiscardAfter && containsMath
                 ? ResolveTableRowHeight(row, minimumContentHeight, paragraphSpacingScale, isLastRow, bottomMargin)
                 : fullHeight;
@@ -670,6 +686,15 @@ internal sealed partial class DocxLayoutEngine
             cancellationToken.ThrowIfCancellationRequested();
             rowHeights[rowIndex] = MeasureTableRowHeight(table.Rows[rowIndex], grid.EffectiveColumns, grid.Scale,
                 isLastRow: rowIndex == table.Rows.Count - 1, rowIndex: rowIndex);
+        }
+
+        if (alignedMinimumAvailableHeight is { } mergeAvailable &&
+            TryAdmitMathMergeSpans(unexpandedRowHeights, mergeSpans, Math.Min(mergeAvailable, pageContentHeight),
+                cancellationToken, out var admittedRows, out var admittedSpans))
+        {
+            rowHeights = admittedRows;
+            tableContext = tableContext with { AdmittedMergeSpanHeights = admittedSpans };
+            Array.Copy(rowHeights, boundaryMinimumRowHeights, rowHeights.Length);
         }
 
         // Admit the new declared-margin geometry only when the complete table
@@ -1963,12 +1988,9 @@ internal sealed partial class DocxLayoutEngine
             // row is consumed once. Continuations retain the visual cell for
             // shading/borders, without resetting that source at another origin.
             if (verticalMergeOwner is { } sourceOwner && cellTextLines.Count != 0 &&
-                !HasPageDynamicFields(GetTableCellLayoutBodyElements(contentCell)) &&
-                GetTableCellLayoutBodyElements(contentCell).All(element => element is DocxParagraphElement) &&
-                (string.IsNullOrEmpty(contentCell.VerticalAlignmentValue) ||
-                    string.Equals(contentCell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase)) &&
+                IsStaticTopAlignedMergeSource(contentCell) &&
                 cellInlineTextBoxes.Count == 0 &&
-                HasAdmittedMergeSourceFrame(table, tableContext, sourceOwner.RowIndex, rowHeights,
+                HasAdmittedMergeSourceFrame(table, tableContext, sourceOwner, rowHeights,
                     cellTextLines, cellInlineImages.Concat(cellPlacedImages), contentY + contentHeight))
             {
                 textLines = [];

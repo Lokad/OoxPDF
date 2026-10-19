@@ -1,0 +1,98 @@
+[
+  {
+    "Id": "merged-span-three-rows",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-span-three-rows.docx",
+    "Sha256": "130FF9C4571117F698E6FA76B102F5600ACCE7DED176845EA6DA2387B62BAC2E",
+    "SourceSha256": "31E9CC97E9C28632B839F56060B6E53C9D11C29A4F613062D34590A113BFC2F4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Change": "three-rows merge-span contract probe; only document.xml changes.",
+    "Shape": "three-rows"
+  },
+  {
+    "Id": "merged-span-minimum-rows",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-span-minimum-rows.docx",
+    "Sha256": "105BE648FD353FAA8C3E87FA8519359952313B1B2A8DDD52CA893DEA4373F970",
+    "SourceSha256": "31E9CC97E9C28632B839F56060B6E53C9D11C29A4F613062D34590A113BFC2F4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Change": "minimum-rows merge-span contract probe; only document.xml changes.",
+    "Shape": "minimum-rows"
+  },
+  {
+    "Id": "merged-span-exact-rows",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-span-exact-rows.docx",
+    "Sha256": "8E3B80A53B94DC8C4A04AAB0F9A039E786B059E067F6623FEEAE98A913BE094D",
+    "SourceSha256": "31E9CC97E9C28632B839F56060B6E53C9D11C29A4F613062D34590A113BFC2F4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Change": "exact-rows merge-span contract probe; only document.xml changes.",
+    "Shape": "exact-rows"
+  },
+  {
+    "Id": "merged-span-page-boundary",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-span-page-boundary.docx",
+    "Sha256": "4E60A8C7DC0EDEBE82CC2D0FFBE80D4BFCCABB4D4E884A52B844E129D8185F5F",
+    "SourceSha256": "31E9CC97E9C28632B839F56060B6E53C9D11C29A4F613062D34590A113BFC2F4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Change": "page-boundary merge-span contract probe; only document.xml changes.",
+    "Shape": "page-boundary"
+  },
+  {
+    "Id": "merged-span-two-owners",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-span-two-owners.docx",
+    "Sha256": "B6DE7F340CCC9BBF3978CE8554A321564F6011562410F9341DDFE6DB260F6E1A",
+    "SourceSha256": "31E9CC97E9C28632B839F56060B6E53C9D11C29A4F613062D34590A113BFC2F4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 2,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Change": "two-owners merge-span contract probe; only document.xml changes.",
+    "Shape": "two-owners"
+  },
+  {
+    "Id": "merged-span-tall-fraction",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merged-span-tall-fraction.docx",
+    "Sha256": "F53F3556B5F82707D126E6B77A04D7F446E9A7E170A425FCB0C85938C19FC8A7",
+    "SourceSha256": "31E9CC97E9C28632B839F56060B6E53C9D11C29A4F613062D34590A113BFC2F4",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Change": "tall-fraction merge-span contract probe; only document.xml changes.",
+    "Shape": "tall-fraction"
+  }
+]
