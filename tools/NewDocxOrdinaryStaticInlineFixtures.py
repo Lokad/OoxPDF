@@ -1,4 +1,4 @@
-"""Verify ordinary text/box/picture paragraphs moved into selected static stories."""
+"""Verify ordinary inline paragraphs in static stories or two footer-table controls."""
 import argparse
 import copy
 import hashlib
@@ -8,6 +8,10 @@ from pathlib import Path
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 from xml.etree import ElementTree as E
 
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--write', action='store_true')
+parser.add_argument('--footer-table-probes', action='store_true')
+args = parser.parse_args()
 root = Path(__file__).resolve().parent.parent
 directory = root / 'tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath'
 w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
@@ -25,7 +29,7 @@ for content, source_id in [('box', 'inline-box-owned-text-first'), ('picture', '
     with ZipFile(BytesIO(original)) as archive:
         infos = archive.infolist()
         original_parts = {info.filename: archive.read(info.filename) for info in infos}
-    for kind in ['header', 'footer']:
+    for kind in (['footer'] if args.footer_table_probes else ['header', 'footer']):
         parts = original_parts.copy()
         document = E.fromstring(parts['word/document.xml'])
         body = document.find(w + 'body')
@@ -35,10 +39,26 @@ for content, source_id in [('box', 'inline-box-owned-text-first'), ('picture', '
         for child in list(section):
             if child.tag in [w + 'headerReference', w + 'footerReference']:
                 section.remove(child)
-        id = 'static-inline-ordinary-' + kind + '-' + content
+        id = ('static-inline-footer-table-' + content if args.footer_table_probes else
+            'static-inline-ordinary-' + kind + '-' + content)
         part = 'word/' + id + '.xml'
         story = E.Element(w + ('hdr' if kind == 'header' else 'ftr'))
-        story.append(paragraph)
+        if args.footer_table_probes:
+            table = E.SubElement(story, w + 'tbl')
+            properties = E.SubElement(table, w + 'tblPr')
+            E.SubElement(properties, w + 'tblW', {w + 'w': '6000', w + 'type': 'dxa'})
+            E.SubElement(properties, w + 'tblLayout', {w + 'type': 'fixed'})
+            margins = E.SubElement(properties, w + 'tblCellMar')
+            for side in ['top', 'left', 'bottom', 'right']:
+                E.SubElement(margins, w + side, {w + 'w': '200' if side in ['left', 'right'] else '0', w + 'type': 'dxa'})
+            grid = E.SubElement(table, w + 'tblGrid')
+            E.SubElement(grid, w + 'gridCol', {w + 'w': '6000'})
+            cell = E.SubElement(E.SubElement(table, w + 'tr'), w + 'tc')
+            E.SubElement(E.SubElement(cell, w + 'tcPr'), w + 'tcW', {w + 'w': '6000', w + 'type': 'dxa'})
+            cell.append(paragraph)
+            E.SubElement(story, w + 'p')
+        else:
+            story.append(paragraph)
         parts[part] = E.tostring(story, encoding='utf-8', xml_declaration=True)
         relationships = E.fromstring(parts['word/_rels/document.xml.rels'])
         source_ids = {node.get(r + 'embed') for node in paragraph.iter() if node.get(r + 'embed') is not None}
@@ -70,18 +90,17 @@ for content, source_id in [('box', 'inline-box-owned-text-first'), ('picture', '
         data = output.getvalue()
         cases.append({'Id': id, 'Input': 'tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/' + id + '.docx',
             'Sha256': sha(data), 'SourceSha256': source['Sha256'], 'HeldOut': True,
-            'Variant': kind + '-' + content, 'MathPart': part, 'ExpectedEquationCount': 0,
+            'Variant': ('footer-table-' if args.footer_table_probes else kind + '-') + content, 'MathPart': part, 'ExpectedEquationCount': 0,
             'ExpectedRenderedEquationCount': 0, 'ExpectedImageCount': 1 if content == 'picture' else 0,
             'ExpectedText': source['ExpectedText'],
-            'Change': 'Move one source-exact ordinary paragraph into a selected header/footer; retain sibling order, complete box, picture resources and real body comment.'})
+            'Change': ('Move one source-exact ordinary paragraph into a single footer table cell; compare table viewport, box and picture ownership.' if args.footer_table_probes else
+                'Move one source-exact ordinary paragraph into a selected header/footer; retain sibling order, complete box, picture resources and real body comment.')})
         prepared.append((root / cases[-1]['Input'], data))
-manifest = directory / 'static-inline-ordinary.json'
+manifest = directory / ('static-inline-footer-tables.json' if args.footer_table_probes else 'static-inline-ordinary.json')
 manifest_bytes = (json.dumps(cases, indent=2) + '\n').replace('\n', '\r\n').encode()
 if manifest.exists():
     assert json.loads(manifest.read_text()) == cases
-parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--write', action='store_true')
-if parser.parse_args().write:
+if args.write:
     for target, data in prepared + [(manifest, manifest_bytes)]:
         staging = target.with_suffix(target.suffix + '.staging')
         with staging.open('xb') as stream:
@@ -90,4 +109,4 @@ if parser.parse_args().write:
 else:
     for target, data in prepared:
         assert target.read_bytes() == data, target.name
-print('Four source-exact ordinary mixed static-story controls verified.')
+print(f'{len(cases)} source-exact ordinary static-story controls verified.')
