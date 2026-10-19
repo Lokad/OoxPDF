@@ -62,7 +62,8 @@ internal static partial class DocxInlineCompositionTests
             "An image retains its child run position instead of being duplicated at the outer box's extent.");
     }
 
-    internal static void CheckInlineBoxMath(IFontResolver? resolver, string goldenFile = "inline-box-math-office.json")
+    internal static void CheckInlineBoxMath(IFontResolver? resolver, string goldenFile = "inline-box-math-office.json",
+        bool compareFieldOrigins = false)
     {
         using var gold = ReadInlineBoxMathGold(goldenFile);
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
@@ -88,6 +89,20 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(row.GetProperty("ExpectedPaintedMathText").GetString(),
                     string.Concat(math.Select(item => item.Show.Text)).Normalize(NormalizationForm.FormKC));
                 TestAssert.Equal(row.GetProperty("ExpectedPaintedMathGlyphs").GetInt32(), math.Length);
+                if (row.TryGetProperty("WordFieldGlyphs", out var fieldGlyphs))
+                {
+                    foreach (var anchor in fieldGlyphs.EnumerateArray())
+                    {
+                        string value = anchor.GetProperty("Text").GetString()!;
+                        var field = shows.Single(item => item.Show.Text.Trim() == value);
+                        TestAssert.Equal(anchor.GetProperty("Page").GetInt32(), field.PageIndex + 1);
+                        if (compareFieldOrigins)
+                            TestAssert.True(Math.Abs(field.Show.X - anchor.GetProperty("X").GetDouble()) < 1d &&
+                                Math.Abs(field.Page.Height - field.Show.Y - anchor.GetProperty("Y").GetDouble()) < 1d &&
+                                Math.Abs(field.Show.Size - anchor.GetProperty("Size").GetDouble()) < .1d,
+                                id + ": source field glyph retains its independent Word origin and size.");
+                    }
+                }
                 TestAssert.True(math.All(item => item.Show.X >= 0d && item.Show.X <= item.Page.Width &&
                     item.Show.Y > 0d && item.Show.Y < item.Page.Height),
                     id + ": prepared glyph origins must remain inside the printed page, including footer boxes.");

@@ -6,6 +6,12 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxInlineBoxTotalCountersKeepContentAcrossContainers()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent container-field origins require installed Windows fonts.");
+        CheckInlineBoxMath(null, "inline-box-total-counter-containers-office.json", compareFieldOrigins: true);
+    }
+
     public static void DocxInlineBoxTotalCountersKeepIndependentWordMathAndFieldOrigins()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent inline-box origins require installed Windows fonts.");

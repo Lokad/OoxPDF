@@ -9076,6 +9076,10 @@
     "PortableRenderingMixedDisplayCountersPreserveTotalPageDependencies",
     "DocxTableCellPageFieldsEvaluatePerFragmentPage"
   ],
+  "docx-inline-box-total-counter-containers": [
+    "DocxInlineBoxTotalCountersKeepContentAcrossContainers",
+    "PortableRenderingInlineBoxTotalCountersKeepContentAcrossContainers"
+  ],
   "docx-inline-box-total-counters": [
     "DocxInlineBoxTotalCounters",
     "PortableRenderingInlineBoxTotalCounters",
