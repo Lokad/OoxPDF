@@ -13,6 +13,13 @@ internal sealed partial class DocxReader
     private static string? ResolveFieldPlaceholder(string? instruction)
         => DocxFieldText.Placeholder(ResolveFieldKind(instruction));
 
+    private static bool UsesDefaultDynamicFieldFormatting(string? instruction, DocxFieldKind kind) => kind switch
+    {
+        DocxFieldKind.Page => instruction.AsSpan().Trim().Equals("PAGE", StringComparison.OrdinalIgnoreCase),
+        DocxFieldKind.NumPages => instruction.AsSpan().Trim().Equals("NUMPAGES", StringComparison.OrdinalIgnoreCase),
+        _ => false
+    };
+
     private static DocxFieldKind ResolveFieldKind(string? instruction)
     {
             string? ReadFieldOpcode(string? instruction)

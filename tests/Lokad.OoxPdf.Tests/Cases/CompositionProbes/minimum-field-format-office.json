@@ -1,0 +1,349 @@
+{
+  "Provenance": "Four independent Word16 MERGEFORMAT views preserve cached11/13pt field formatting and all8 body origins. No candidate-derived anchors.",
+  "Rows": [
+    {
+      "Id": "minimum-page-mergeformat-11",
+      "Mode": "final-preserve",
+      "InputSha256": "DA8B3E5D31F0F02553CDE30A76AFABDA3124C9482665756ED1E77679029599BC",
+      "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-passive-header-page.docx",
+      "SourceSha256": "995E83A533A0B1C7738D41C1B2CE674166C0403C37BB6DC293526A5C458D05AD",
+      "WordPdfSha256": "B509F2BA85DCF7763596F0B5E45139019F750FB1FFDF1BD0C430E76D41C95FF1",
+      "BaseWordPdfSha256": "214F47B215FDD9D31E949773000D721082893E3D21A022C78E606039280C56B4",
+      "WordPages": 1,
+      "WordMathAnchors": [],
+      "WordFrames": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Public minimum Top. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 88.82000732421875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Alpha public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 103.46002197265625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterAlpha. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 123.3800048828125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Bravo public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 138.02001953125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterBravo. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 158.05999755859375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Charlie public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 172.70001220703125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Delta public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 187.34002685546875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterDelta. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 207.3800048828125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public passive header. 1",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 46.44000244140625,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFieldGlyphs": [
+        {
+          "Text": "1",
+          "Page": 1,
+          "X": 173.5399932861328,
+          "Y": 46.44000244140625,
+          "Size": 11.039999961853027
+        }
+      ]
+    },
+    {
+      "Id": "minimum-page-mergeformat-11",
+      "Mode": "all-word-compatible",
+      "InputSha256": "DA8B3E5D31F0F02553CDE30A76AFABDA3124C9482665756ED1E77679029599BC",
+      "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-passive-header-page.docx",
+      "SourceSha256": "995E83A533A0B1C7738D41C1B2CE674166C0403C37BB6DC293526A5C458D05AD",
+      "WordPdfSha256": "0932CCA0F8870C5CFC7681FE51B31F2042F9F4ADD735F7EBE21645375754DBB6",
+      "BaseWordPdfSha256": "5328DB2057CF91587AAA3A659C4CEAD6B563D2E90149AEAA17E90A5D90DCAF73",
+      "WordPages": 1,
+      "WordMathAnchors": [],
+      "WordFrames": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Public minimum Top. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 88.82000732421875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Alpha public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 103.46002197265625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterAlpha. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 123.3800048828125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Bravo public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 138.02001953125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterBravo. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 158.05999755859375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Charlie public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 172.70001220703125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Delta public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 187.34002685546875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterDelta. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 207.3800048828125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public passive header. 1",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 46.44000244140625,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFieldGlyphs": [
+        {
+          "Text": "1",
+          "Page": 1,
+          "X": 173.5399932861328,
+          "Y": 46.44000244140625,
+          "Size": 11.039999961853027
+        }
+      ]
+    },
+    {
+      "Id": "minimum-page-mergeformat-13",
+      "Mode": "final-preserve",
+      "InputSha256": "3789432F56F1D5B70B5703BD29B25D0149ABED051BBD391A859507DF16F95068",
+      "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-passive-header-page.docx",
+      "SourceSha256": "995E83A533A0B1C7738D41C1B2CE674166C0403C37BB6DC293526A5C458D05AD",
+      "WordPdfSha256": "B701518CC70A5974A71A4B954735AD1A190E87A1AAA00D2A1941636928B7222F",
+      "BaseWordPdfSha256": "214F47B215FDD9D31E949773000D721082893E3D21A022C78E606039280C56B4",
+      "WordPages": 1,
+      "WordMathAnchors": [],
+      "WordFrames": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Public minimum Top. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 88.82000732421875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Alpha public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 103.46002197265625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterAlpha. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 123.3800048828125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Bravo public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 138.02001953125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterBravo. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 158.05999755859375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Charlie public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 172.70001220703125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Delta public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 187.34002685546875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterDelta. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 207.3800048828125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public passive header. 1",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 48.3599853515625,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFieldGlyphs": [
+        {
+          "Text": "1",
+          "Page": 1,
+          "X": 173.5399932861328,
+          "Y": 48.3599853515625,
+          "Size": 12.960000038146973
+        }
+      ]
+    },
+    {
+      "Id": "minimum-page-mergeformat-13",
+      "Mode": "all-word-compatible",
+      "InputSha256": "3789432F56F1D5B70B5703BD29B25D0149ABED051BBD391A859507DF16F95068",
+      "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-passive-header-page.docx",
+      "SourceSha256": "995E83A533A0B1C7738D41C1B2CE674166C0403C37BB6DC293526A5C458D05AD",
+      "WordPdfSha256": "8C18D93E6BBAFD279D1C6A4836C3812098CC6C05D69AA2870F8DCF1471D7C2E2",
+      "BaseWordPdfSha256": "5328DB2057CF91587AAA3A659C4CEAD6B563D2E90149AEAA17E90A5D90DCAF73",
+      "WordPages": 1,
+      "WordMathAnchors": [],
+      "WordFrames": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Public minimum Top. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 88.82000732421875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Alpha public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 103.46002197265625,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterAlpha. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 123.3800048828125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Bravo public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 138.02001953125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterBravo. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 158.05999755859375,
+          "Size": 12.0
+        },
+        {
+          "Text": "Charlie public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 172.70001220703125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Delta public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 187.34002685546875,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public minimum AfterDelta. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 207.3800048828125,
+          "Size": 12.0
+        },
+        {
+          "Text": "Public passive header. 1",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 48.3599853515625,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFieldGlyphs": [
+        {
+          "Text": "1",
+          "Page": 1,
+          "X": 173.5399932861328,
+          "Y": 48.3599853515625,
+          "Size": 12.960000038146973
+        }
+      ]
+    }
+  ]
+}

@@ -107,7 +107,7 @@ if args.field_code_probes or args.simple_field_mark_probes or args.simple_field_
             publish(path, data)
         else:
             assert path.read_bytes() == data, path.name
-    print('Two PAGE metric controls verified; cached result formatting, visible text and body unchanged.')
+    print('Two PAGE metric controls verified; visible text and document body unchanged.')
     raise SystemExit(0)
 
 if args.inactive_static_probes or args.inactive_note_probe:

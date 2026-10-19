@@ -494,37 +494,16 @@ internal sealed partial class DocxReader
             if (placeholder is not null)
             {
                 XElement? firstRun = field.Elements(WordprocessingNamespace + "r").FirstOrDefault();
-                if (firstRun is null)
-                {
-                    double placeholderSize = ResolveRunProperties(null, paragraphStyleId, null, styles, tableCellStyle?.Run).FontSize ?? DocxDefaults.UnstyledRunFontSizePoints;
-                    runs.Add(new DocxTextRun(placeholder, placeholderSize, null, false, false, false, null, null)
-                    {
-                        SourceRunIndex = fieldSourceRunIndex,
-                        Revision = revision,
-                        Revisions = RevisionList(revision),
-                        FieldKind = kind
-                    });
-                    AddFieldReference(
-                        kind,
-                        DocxFieldSourceKind.Simple,
-                        instruction,
-                        placeholder,
-                        fieldSourceRunIndex,
-                        fieldTextRunIndex,
-                        fieldTextLengthStart,
-                        hasCachedResult,
-                        rendersCachedResult: false,
-                        usesPlaceholder: true, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
-                        fieldReferences: fieldReferences,
-                        runs: runs);
-                    PublishInlineRunItems(fieldTextRunIndex, fieldImageIndex);
-                    return;
-                }
-
-                AddFieldPlaceholderRun(firstRun, placeholder, fieldSourceRunIndex, revision, kind);
-                foreach (var image in ReadInlineImages(firstRun, package, relationships, revision, fieldSourceRunIndex, cancellationToken))
-                    images.Add(revision?.Kind == DocxRevisionKind.Insertion && runs.Count > fieldTextRunIndex
-                        ? image with { SourceRunStyle = runs[fieldTextRunIndex] } : image);
+                // Bare computed values inherit their instruction's paragraph-style
+                // formatting, rather than stale cached-result formatting. Explicit
+                // MERGEFORMAT and unqualified switches keep the cached-style fallback.
+                XElement formattingRun = firstRun is null || UsesDefaultDynamicFieldFormatting(instruction, kind)
+                    ? new XElement(WordprocessingNamespace + "r") : firstRun;
+                AddFieldPlaceholderRun(formattingRun, placeholder, fieldSourceRunIndex, revision, kind);
+                if (firstRun is not null)
+                    foreach (var image in ReadInlineImages(firstRun, package, relationships, revision, fieldSourceRunIndex, cancellationToken))
+                        images.Add(revision?.Kind == DocxRevisionKind.Insertion && runs.Count > fieldTextRunIndex
+                            ? image with { SourceRunStyle = runs[fieldTextRunIndex] } : image);
                 AddFieldReference(
                     kind,
                     DocxFieldSourceKind.Simple,

@@ -20,7 +20,7 @@ internal static class DocxPassiveStaticBodyTests
     public static void DocxPassivePageFieldsPreserveIndependentWordBodyBaselines()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent minimum body/page-field origins require installed Windows fonts.");
-        CheckBodyBaselines(null, compareWord: true, "minimum-passive-page-fields-office.json", compareMarginOrigins: false);
+        CheckBodyBaselines(null, compareWord: true, "minimum-passive-page-fields-office.json");
     }
 
     public static void DocxInactiveStaticVariantsPreserveIndependentWordBodyOrigins()
@@ -94,7 +94,7 @@ internal static class DocxPassiveStaticBodyTests
     }
 
     internal static void CheckBodyBaselines(IFontResolver? resolver, bool compareWord,
-        string goldFile = "minimum-passive-static-office.json", bool compareMarginOrigins = true)
+        string goldFile = "minimum-passive-static-office.json")
     {
         using var gold = JsonDocument.Parse(File.ReadAllText(Case("CompositionProbes/" + goldFile)));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
@@ -124,10 +124,7 @@ internal static class DocxPassiveStaticBodyTests
             foreach (var expected in row.GetProperty("WordProseAnchors").EnumerateArray())
             {
                 var actual = source.Single(line => line.Text == expected.GetProperty("Text").GetString());
-                // The body admission does not alter static field painting.
-                // Its pre-existing absolute origin residual stays failed in
-                // the full external Word geometry report.
-                if (!compareWord || !compareMarginOrigins && !bodyTexts.Contains(actual.Text)) continue;
+                if (!compareWord) continue;
                 TestAssert.Equal(expected.GetProperty("Page").GetInt32(), actual.Page);
                 TestAssert.True(Math.Abs(actual.X - expected.GetProperty("X").GetDouble()) < 1d &&
                     Math.Abs(actual.Y - expected.GetProperty("Y").GetDouble()) < 1d,
@@ -228,6 +225,27 @@ internal static class DocxPassiveStaticBodyTests
         using var output = archive.CreateEntry(part).Open();
         xml.Save(output);
     });
+
+    public static void DocxDynamicFieldFormatKeepsUnqualifiedInstructionFallbacks()
+    {
+        foreach (string instruction in new[] { "PAGE \\* CHARFORMAT", "PAGE \\# \"0000\"", "PAGE \\* FutureFormat" })
+        {
+            var document = ReadMutation(Case("CompositionProbes/minimum-passive-header-page.docx"), archive =>
+            {
+                var entry = archive.GetEntry("word/passive-body-header.xml")!;
+                XDocument xml;
+                using (var stream = entry.Open()) xml = XDocument.Load(stream);
+                XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+                xml.Descendants(w + "fldSimple").Single().SetAttributeValue(w + "instr", instruction);
+                entry.Delete();
+                using var output = archive.CreateEntry("word/passive-body-header.xml").Open();
+                xml.Save(output);
+            });
+            var paragraph = document.HeaderParagraphs.Single();
+            TestAssert.Equal(11d, paragraph.Runs.Single(run => run.FieldKind == DocxFieldKind.Page).FontSize);
+            TestAssert.Equal(instruction, paragraph.FieldReferences.Single().Instruction);
+        }
+    }
 
     private static DocxDocument ReadMutation(string input, Action<ZipArchive> mutate)
     {
