@@ -22,7 +22,7 @@ internal static partial class DocxInlineCompositionTests
                 "Ordinary pictures and boxes share ordered measurement without a parent equation.");
             var measured = TestAssert.NotNull(atoms);
             var frame = TestAssert.NotNull(measured.Fragments.Single(fragment => fragment.TextBox is not null).TextBox);
-            int calls = measurer.Calls;
+            int childCalls = measurer.ChildCalls;
             foreach (double width in new[] { 450d, 300d, 220d })
             {
                 TestAssert.True(DocxLayoutEngine.TryWrapOrderedInlineAtoms(measured, width, width, default, out var rows),
@@ -34,7 +34,7 @@ internal static partial class DocxInlineCompositionTests
                     Array.FindIndex(fragments, fragment => fragment.TextBox is not null), "The image precedes its sibling box.");
                 TestAssert.Equal(0, fragments.Count(fragment => fragment.Math is not null));
             }
-            TestAssert.Equal(calls, measurer.Calls);
+            TestAssert.Equal(childCalls, measurer.ChildCalls);
         }
     }
 
