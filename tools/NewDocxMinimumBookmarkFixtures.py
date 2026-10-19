@@ -23,7 +23,9 @@ def manifest_bytes(rows):
     return (json.dumps(rows, indent=2) + '\n').replace('\n', '\r\n').encode('utf-8')
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--passive-headers', action='store_true')
+passive = parser.add_mutually_exclusive_group()
+passive.add_argument('--passive-headers', action='store_true')
+passive.add_argument('--passive-footers', action='store_true')
 parser.add_argument('--write', action='store_true', help='Publish passive-header controls; otherwise verify them.')
 args = parser.parse_args()
 
@@ -33,7 +35,8 @@ output = cases / 'CompositionProbes'
 output.mkdir(exist_ok=True)
 w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 
-if args.passive_headers:
+if args.passive_headers or args.passive_footers:
+    kind = 'header' if args.passive_headers else 'footer'
     r = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
     rel = '{http://schemas.openxmlformats.org/package/2006/relationships}'
     ct = '{http://schemas.openxmlformats.org/package/2006/content-types}'
@@ -49,10 +52,10 @@ if args.passive_headers:
         body = document.find(w + 'body')
         before = b''.join(E.tostring(node) for node in body if node.tag != w + 'sectPr')
         section = body.find(w + 'sectPr')
-        assert section is not None and section.find(w + 'headerReference') is None
-        part = 'word/passive-body-header.xml'
+        assert section is not None and section.find(w + kind + 'Reference') is None
+        part = 'word/passive-body-' + kind + '.xml'
         assert part not in entries
-        header = E.Element(w + 'hdr')
+        header = E.Element(w + ('hdr' if kind == 'header' else 'ftr'))
         paragraph = E.SubElement(header, w + 'p')
         properties = E.SubElement(paragraph, w + 'pPr')
         E.SubElement(properties, w + 'spacing', {w + 'before': '0', w + 'after': '0', w + 'line': '240', w + 'lineRule': 'auto'})
@@ -60,36 +63,36 @@ if args.passive_headers:
         properties = E.SubElement(run, w + 'rPr')
         E.SubElement(properties, w + 'rFonts', {w + 'ascii': 'Calibri', w + 'hAnsi': 'Calibri'})
         E.SubElement(properties, w + 'sz', {w + 'val': '22'})
-        E.SubElement(run, w + 't').text = 'Public passive header.'
+        E.SubElement(run, w + 't').text = 'Public passive ' + kind + '.'
         entries[part] = E.tostring(header, encoding='utf-8', xml_declaration=True)
         relationships = E.fromstring(entries['word/_rels/document.xml.rels'])
-        relationship_id = 'rPassiveBodyHeader'
+        relationship_id = 'rPassiveBody' + kind.title()
         assert all(node.get('Id') != relationship_id for node in relationships)
         E.SubElement(relationships, rel + 'Relationship', Id=relationship_id, Target=part.removeprefix('word/'),
-            Type=r[1:-1] + '/header')
-        section.insert(0, E.Element(w + 'headerReference', {w + 'type': 'default', r + 'id': relationship_id}))
+            Type=r[1:-1] + '/' + kind)
+        section.insert(0, E.Element(w + kind + 'Reference', {w + 'type': 'default', r + 'id': relationship_id}))
         entries['word/_rels/document.xml.rels'] = E.tostring(relationships, encoding='utf-8', xml_declaration=True)
         entries['word/document.xml'] = E.tostring(document, encoding='utf-8', xml_declaration=True)
         after = b''.join(E.tostring(node) for node in E.fromstring(entries['word/document.xml']).find(w + 'body') if node.tag != w + 'sectPr')
         assert before == after
         types = E.fromstring(entries['[Content_Types].xml'])
         E.SubElement(types, ct + 'Override', PartName='/' + part,
-            ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml')
+            ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.' + kind + '+xml')
         entries['[Content_Types].xml'] = E.tostring(types, encoding='utf-8', xml_declaration=True)
-        name = 'minimum-passive-header-' + context
+        name = 'minimum-passive-' + kind + '-' + context
         data = package_bytes(entries)
         rows.append(dict(Id=name, Input='tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/' + name + '.docx',
             Sha256=hashlib.sha256(data).hexdigest().upper(), SourceId=source['Id'], SourceSha256=source['Sha256'],
             SourceBodySha256=hashlib.sha256(before).hexdigest().upper(), HeldOut=True, ExpectedEquationCount=0,
-            ExpectedText=source['ExpectedText'] + ['Public passive header.'], Context=context, FontPoints=source['FontPoints']))
+            ExpectedText=source['ExpectedText'] + ['Public passive ' + kind + '.'], Context=context, FontPoints=source['FontPoints']))
         prepared.append((output / (name + '.docx'), data))
-    prepared.append((output / 'minimum-passive-headers.json', manifest_bytes(rows)))
+    prepared.append((output / ('minimum-passive-' + kind + 's.json'), manifest_bytes(rows)))
     for path, data in prepared:
         if args.write:
             publish(path, data)
         else:
             assert path.read_bytes() == data, path.name
-    print('Two ordinary minimum-body/passive-header controls verified; body contents/properties unchanged.')
+    print('Two ordinary minimum-body/passive-' + kind + ' controls verified; body contents/properties unchanged.')
     raise SystemExit(0)
 
 rows = []
