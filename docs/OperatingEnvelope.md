@@ -1,5 +1,35 @@
 # Measured operating envelope
 
+## C280 ordinary mixed static inline frames, 2026-10-19
+
+Parsed ordinary text/picture/box paragraphs now share ordered measurement and
+complete header/footer frame mapping. Eight independent baselines exposed
+review footer frames180.002pt off-page with missing page-clipped prose, sibling
+textX216.05pt and header pictureY42pt errors. All eight new views and14 existing
+neighbors pass original geometry gates. Legacy box-only models without parsed
+views and explicit/revised/nested/floating/list fallbacks remain; no fitted shifts
+or font/count regimes. Eleven sources/22 Word views retain56 math glyphs and28
+prose anchors: max frame0.1081pt, image0.1051pt, proseX0.0890/Y0.4490pt,
+physical size0.0170pt. Four footer rasters confirm admitted content is visible on-page.
+
+One Release library build:31 Windows/22 Ubuntu/nine native skips, once/platform;
+two parent observers fail. A selection-only commit adds legacy-box/markup and
+child-cancellation neighbors without rebuilding/changing runtime or public inputs.
+Eight clean primary content screens; neighbor scope is independently pinned math/
+frame/following/prose anchors. All22 strict whole-page failures retained. Eight
+new Word exports once/14 cached references;14 PDF/threshold comparisons reused.
+112 other outcomes use absent-branch proof.17 assets/four exact transfer smokes;
+no root build/suite/portfolio/package replay. Root0f687c78/fd26f803;
+ordinary-static-inline-evidence.json. C276/C277 CI green; C278 CI pending.
+
+C279 read-only clip review inspects ten cached Word views/two current PDFs, with
+no builds/conversions/exports/tests/rasters. Only the table-contained footer box
+has an outer outline viewport ending at the source body-bottom margin; standalone
+footer boxes stay full. Child text has separate clips. One footer-table source
+does not establish a general contract: retain the raw failure and avoid blanket
+footer clipping. footer-table-outline-clip-review.json. Runtime/resource/safe-
+managed constraints remain unchanged; release preparation stays deferred.
+
 ## C278 static table grid origins, 2026-10-19
 
 Header/footer containers now own their authored unbordered grid origin; flowing
