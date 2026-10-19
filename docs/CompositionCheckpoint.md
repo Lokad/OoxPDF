@@ -1,5 +1,23 @@
 # Composed-document reliability checkpoint
 
+## C313 authored zero and implicit table origins remain distinct (2026-10-20)
+
+Read-only source review verifies30 tracked source hashes/60 retained independent
+Word PDF identities for flowing margins, signed indentation, static grids and
+three explicit-zero solid-edge controls. These are retained identities, not60
+fresh visual passes. Nullable IndentPoints preserves zero versus absence; no new
+parser flag/model API is needed. Existing nonzero-indent/style/compatibility
+precedence and static-container origin contracts remain independently qualified.
+
+The three explicit-zero controls share5.390pt prose-X error because zero falls
+through the visible-starting-border exclusion. Nine implicit-border Final views
+retain varying computed Word indentation and a mixed-cell sentinel; they do not
+justify a blanket border shift. Preserve the separate5.736pt implicit concern.
+No build/conversion/export/test/raster. Evidence artifacts/composition-c1/authored-
+table-anchor-review.json. Continue C314 one flowing starting-anchor contract with
+two independent mathematical-cell holdouts, preserving style/static fallbacks.
+C312CI39344256222 continues; version0.1.5/release preparation remains deferred.
+
 ## C312 complete text and solid borders on natural page fragments (2026-10-20)
 
 A single edge predicate shared by strips and junctions repeats decoration for
