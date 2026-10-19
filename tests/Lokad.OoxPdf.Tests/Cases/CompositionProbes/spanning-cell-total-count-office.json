@@ -1,0 +1,221 @@
+{
+  "Provenance": "Two independent Word16 views of the accepted total-count/math box within a cell extended by84 ordinary paragraphs. The row spans two pages; following prose starts page3. Original glyph/frame/prose thresholds retained, no candidate-derived anchors.",
+  "Rows": [
+    {
+      "Id": "spanning-cell-total-count",
+      "Mode": "final-preserve",
+      "InputSha256": "090D8F711EC51CF4EDFA2E6D0F92A84DE63C5291997FC37A2A69C3904F97759C",
+      "WordPdfSha256": "0630E23AC69F6015A5F1BBF4102E1BBE7A154709FF918EDFFBE012A64318374E",
+      "WordPages": 3,
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 143.66000366210938,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 148.5800018310547,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 154.4600067138672,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 148.6999969482422,
+          "Y": 115.0999755859375,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            72.0,
+            92.64996337890625,
+            288.0,
+            152.64996337890625
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 79.46399688720703,
+          "Y": 109.5799560546875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Planning row 1 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 170.17999267578125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 84 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 496.6299743652344,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFieldGlyphs": [
+        {
+          "Text": "3",
+          "Page": 1,
+          "X": 235.61000061035156,
+          "Y": 109.5799560546875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table.",
+        "Planning row 1 stays visible.",
+        "Planning row 84 stays visible."
+      ],
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ]
+    },
+    {
+      "Id": "spanning-cell-total-count",
+      "Mode": "all-word-compatible",
+      "InputSha256": "090D8F711EC51CF4EDFA2E6D0F92A84DE63C5291997FC37A2A69C3904F97759C",
+      "WordPdfSha256": "0C2A06F4C30E18AD6292625EE99FC23EDE529C5DCEC82770CC50CD6DFB509E0A",
+      "WordPages": 3,
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 143.66000366210938,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 148.5800018310547,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 154.4600067138672,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 148.6999969482422,
+          "Y": 115.0999755859375,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            72.0,
+            92.64996337890625,
+            288.0,
+            152.64996337890625
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 79.46399688720703,
+          "Y": 109.5799560546875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Planning row 1 stays visible.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 170.17999267578125,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "Planning row 84 stays visible.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 496.6299743652344,
+          "Size": 9.960000038146973
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 3,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFieldGlyphs": [
+        {
+          "Text": "3",
+          "Page": 1,
+          "X": 235.61000061035156,
+          "Y": 109.5799560546875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table.",
+        "Planning row 1 stays visible.",
+        "Planning row 84 stays visible."
+      ],
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ]
+    }
+  ]
+}
