@@ -35,6 +35,12 @@ internal static partial class DocxInlineCompositionTests
         CheckComposedInlineFrameReport(null, independentWordGeometry: true);
     }
 
+    public static void DocxCompoundTotalCountRetainsCompleteWordReportAndActualFieldValue()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent counted report geometry uses installed Windows fonts.");
+        CheckComposedInlineFrameReport(null, independentWordGeometry: true, "composed-inline-frame-total-count-office.json");
+    }
+
     public static void DocxPrintedBodyBoundaryRecoversNoteDesignCoordinates()
     {
         foreach (double scale in new[] { .5d, .75d, 1d })
@@ -51,13 +57,14 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    internal static void CheckComposedInlineFrameReport(IFontResolver? resolver, bool independentWordGeometry)
+    internal static void CheckComposedInlineFrameReport(IFontResolver? resolver, bool independentWordGeometry,
+        string goldFile = "composed-inline-frame-office.json")
     {
         string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "Composition"));
-        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "composed-inline-frame-office.json")));
-        string input = Path.Combine(directory, "composed-inline-frame-report.docx");
+        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, goldFile)));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
+            string input = Path.Combine(directory, row.GetProperty("Id").GetString() + ".docx");
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
             bool final = row.GetProperty("Mode").GetString() == "final-preserve";
             var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
@@ -67,6 +74,32 @@ internal static partial class DocxInlineCompositionTests
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, diagnostics.Add, default).ToArray();
             var shows = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
                 usePageCoordinates: true).Select(show => (Page: index + 1, Height: page.Height, Show: show))).ToArray();
+            if (row.TryGetProperty("WordFieldGlyphs", out var fieldGlyphs))
+            {
+                TestAssert.Equal(1, source.BodyElements.OfType<DocxParagraphElement>().First().Paragraph.Runs
+                    .Count(run => run.FieldKind == DocxFieldKind.NumPages));
+                var title = shows.Where(item => item.Page == 1 && item.Show.Text.Contains("Quarterly operations report", StringComparison.Ordinal))
+                    .OrderByDescending(item => item.Show.Size).First();
+                string count = pages.Length.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                var fields = shows.Where(item => item.Page == title.Page && item.Show.Text.Trim() == count &&
+                    Math.Abs(item.Show.Y - title.Show.Y) < .01d && Math.Abs(item.Show.Size - title.Show.Size) < .01d &&
+                    item.Show.X > title.Show.X).ToArray();
+                // Pinned regular fonts can paint synthetic bold twice. The
+                // single source field still owns one baseline/style, as do lists.
+                TestAssert.True(fields.Length != 0 && fields.Select(item => (item.Page, item.Show.Y, item.Show.Size)).Distinct().Count() == 1,
+                    "The ordinary title owns one count row/style, including synthetic bold paint: " +
+                    string.Join("; ", fields.Select(item => $"{item.Show.Text}@{item.Show.X},{item.Show.Y}/{item.Show.Size}")));
+                var field = fields[0];
+                if (independentWordGeometry)
+                {
+                    var anchor = fieldGlyphs[0];
+                    TestAssert.Equal(anchor.GetProperty("Text").GetString(), count);
+                    TestAssert.True(Math.Abs(field.Show.X - anchor.GetProperty("X").GetDouble()) < 1d &&
+                        Math.Abs(field.Height - field.Show.Y - anchor.GetProperty("Y").GetDouble()) < 1d &&
+                        Math.Abs(field.Show.Size - anchor.GetProperty("Size").GetDouble()) < .1d,
+                        "The ordinary title field retains its independent Word value, origin and size.");
+                }
+            }
             var lines = shows.GroupBy(item => (item.Page, item.Show.Y)).Select(line =>
                 (line.Key.Page, Y: line.First().Height - line.Key.Y, X: line.Min(item => item.Show.X),
                     Text: Regex.Replace(string.Concat(line.OrderBy(item => item.Show.X).Select(item => item.Show.Text))

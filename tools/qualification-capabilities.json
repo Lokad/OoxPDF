@@ -9076,6 +9076,12 @@
     "PortableRenderingMixedDisplayCountersPreserveTotalPageDependencies",
     "DocxTableCellPageFieldsEvaluatePerFragmentPage"
   ],
+  "docx-compound-total-count": [
+    "DocxCompoundTotalCountRetainsCompleteWordReportAndActualFieldValue",
+    "PortableRenderingCompoundTotalCountKeepsContentAndActualFieldValue",
+    "DocxComposedInlineFrameReportRetainsIndependentWordPagesAndContent",
+    "PortableRenderingComposedInlineFrameReportRetainsRepeatedStaticOwners"
+  ],
   "docx-authored-row-link-containers": [
     "DocxAuthoredRowLinksRetainWordPlacementAcrossContainers",
     "PortableRenderingAuthoredRowLinksRetainContentAndAnnotationsAcrossContainers"
