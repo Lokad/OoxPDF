@@ -1,5 +1,36 @@
 # Composed-document reliability checkpoint
 
+## C300 unrelated hyperlinks preserve authored math-row ownership (2026-10-19)
+
+A hyperlink on a preceding authored text row changed an unchanged implicit
+fraction to inline style/left placement: maximum221.434pt X/6.561pt Y/3pt size
+errors and7.314pt following-prose displacement. Six independent Word controls
+prove unlinked/linked-prose math and prose anchors identical; an equation inside
+the actual link deliberately stays inline. This is a confirmed composition defect.
+
+Remove the paragraph-wide hyperlink exclusion. Existing math-only authored-row
+sets promote eligible formulas; exclude only equations in actual hyperlink source
+ranges. The original source stays implicitly inline with stable identity. One
+policy file changes11added/5removed lines, with no offset, API, font/count family,
+quota or native code. Private concrete set returns avoid another set copy.
+
+One committed Release runtime/2,454inputs;18 Windows/8 Ubuntu/ten native skips,
+one exact invocation/platform, no harness repair/join. Coverage includes source
+ownership, cancellation, annotation bounds, native/pinned-portable rendering and
+mixed/explicit/ordinary linked math neighbors. All six original Word math/prose
+gates pass (mathX.101pt/Y.321pt, proseY.354pt). Three parent tests fail, two viewed
+Final Word/native rasters show clear spacing/content. Six strict foreground-
+recall/SSIM failures remain; zero content deficits or unresolved source screens.
+
+Four unlinked/linked-equation control PDFs are byte-identical to the C298 runtime.
+At this coherent milestone ten fixed portfolio PDFs also match accepted C274 bytes;
+reuse all14 comparisons with pinned Word references/thresholds. Six affected/ten
+fixed conversions, six Word exports.17 assets/two exact transfer smokes, no root
+build/suite/package replay. Source3b05d9f7; evidence artifacts/composition-c1/math-
+authored-row-link-evidence.json. C298CI39322199121 is green Windows/Ubuntu including
+broader/package checks. Push C299 harness/C300 row ownership together; qualify
+cell/header/footer source placements with this same runtime while CI runs.
+
 ## C299 total-counter boxes compose across cells and static stories (2026-10-19)
 
 Reuse C298's library for three source-exact NUMPAGES additions to accepted cell,
