@@ -1,5 +1,49 @@
 # Composed-document reliability checkpoint
 
+## C304 independent cell-counter measurement inputs (2026-10-20)
+
+The old dynamic boolean keyed PAGE-only cells by total count and NUMPAGES-only
+cells by current page. Reuse the existing source dependency flags to mask each
+input once in the live memo key; remove boolean forwarding. Keep source reference
+identity, geometry/measurer keys, immutable stored frames and one-table-pass
+lifetime. Math/story context remains pass-owned; do not extend the cache across
+passes. This confirms redundant measurement, not cache corruption. Two existing
+production files change; no API, global counter, quota or retained-storage change.
+
+One committed Release runtime/2,465 inputs;33 Windows/24 Ubuntu/nine native skips,
+one exact invocation/platform, no harness repair/production join. Explicit input
+truth-table and actual measured-call tests cover unrelated-input reuse, relevant
+invalidation, origin/height changes, immutable prior text/box math and cancellation
+before a hit. Both focused observers fail on the parent. Native/pinned-portable
+spanning-source tests retain complete equations, final count, pages and following
+source break. Independent Word math/field origins stay within existing gates.
+
+Both PDFs equal the accepted parent; reuse both independent comparisons. Four
+accepted conversions/two Word exports. An initial generator chose a noncounter
+header cell: preserve that input/two conversions/two exports separately, not as
+accepted counter evidence. A gold extraction attempt refused Word's split runs;
+corrected extraction locates the independent nonmath field inside its Word box.
+
+Four viewed Final page1/page2 Word/native rasters retain boxed math/count3, but
+confirm that native continuation row50 is partly clipped. Lower continuation prose
+is5.312pt above Word; row1 agrees within0.009pt. Both proseY and strict pixel
+outcomes remain failed. Raw cached source1 deficits are symmetric; neither Office
+nor candidate emits stale1, and final3 is independently checked. Retain fldSimple
+flags and distinguish extraction content from visible ink. Next inspect all84
+paragraph positions and shared continuation admission/clipping, without fitted
+font/size/count rules or speculative paragraph-advance shifts.
+
+One probe-only build, same accepted input/default Windows fonts, fresh child/mode,
+one cold/one warmup/three warm conversions: calling-thread warm allocations
+114.020592-to98.843224MB Final (15.177368MB/13.31percent) and
+114.857520-to99.638632MB review (15.218888MB/13.25percent). Whole/staged PDFs match.
+This measures allocation volume, not live heap; stages overlap, timing is noisy,
+and no speedup is claimed.17 transferred assets/two exact smoke PDFs; no root
+build/suite/corpus/package replay. Source13a22f44; evidence
+artifacts/composition-c1/cell-counter-memo-evidence.json. C303CI39329221842 is green
+Windows/Ubuntu including broader/package checks. The C304 push closes this memo
+batch; continue the rendering review while CI runs.
+
 ## C303 unchanged preparation survives the count retry (2026-10-19)
 
 An unchanged source no longer rebuilds its font plan/subsets/prepared math solely
