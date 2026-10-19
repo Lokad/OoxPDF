@@ -1,5 +1,37 @@
 # Composed-document reliability checkpoint
 
+## C288 passive margin text preserves ordinary body metrics (2026-10-19)
+
+Four source-exact11/12pt ordinary bodies gain a plain header or footer entirely
+inside the margin. Eight independently pinned Word exports leave every body
+origin unchanged. Native output had shifted minimum lines up5.54/6.732pt because
+static-story presence disabled leading/kerning qualification. Shared body-frame
+admission now accepts measured plain margin text that clears the nominal body
+frame. Preserve the original no-static path and all font/size/threshold/style/
+reference rules. Nonordinary note/kerning admission remains unchanged. Rich,
+dynamic, intrusive and unmeasured stories/annotation lanes keep explicit fallback;
+no fitted offsets, font/count family or blanket static-story admission.
+
+64 Windows/63 Ubuntu/one native skip, one frozen Release runtime/2,415inputs,
+one invocation per platform plus one harness-only method repair. File.Copy had
+inherited frozen read-only attributes; clear only the owned temporary copy before
+mutation. The failed attempt stays retained;14 runtime assets/inputs unchanged,
+no production report join. Parent native and portable observers both fail the
+neutral-transformation contract. Eight clean raw content screens and72 measured
+prose origins pass original geometry gates(maxX.0241pt,Y.2081pt,size0). Four
+rasters confirm visible body/margin prose and clear frames; all eight strict
+pixel failures remain. No claim of complete Office fidelity or measured speedup.
+
+Eight fixed-portfolio DOCX PDFs are identical and their independent comparisons
+reused. PPTX retains its distinct path with no replay. Six prior plain base views
+carry by unchanged no-static admission. Eight new Office exports once,17assets/
+four exact transfer smokes, no root build/suite/corpus qualification replay.
+Generator publication is atomic; ten original inputs and frozen snapshots remain
+byte-identical. Evidence:artifacts/composition-c1/passive-static-body-evidence.json;
+rootb85a8fb1/78009346. C287CI39300897414 and C28539299811393 are green,
+including established broader/package checks. New shared-contract CI follows
+push; work continues on source-owned page fields without weakening fallbacks.
+
 ## C286/C287 shared plain-body admission ownership (2026-10-19)
 
 Bounded source review finds architectural duplication, with no new demonstrated
