@@ -13,7 +13,9 @@ cases = root / 'tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes'
 w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--write', action='store_true')
-parser.add_argument('--compound-report-probe', action='store_true')
+probes = parser.add_mutually_exclusive_group()
+probes.add_argument('--compound-report-probe', action='store_true')
+probes.add_argument('--spanning-cell-probe', action='store_true')
 args = parser.parse_args()
 sha = lambda value: hashlib.sha256(value).hexdigest().upper()
 
@@ -28,6 +30,56 @@ def publish(jobs):
         else:
             assert target.read_bytes() == data, target.name
 
+
+if args.spanning_cell_probe:
+    parent = next(row for row in json.loads((cases.parent / 'InlineBoxMath/inline-box-total-counter-containers.json').read_text())
+        if row['Variant'] == 'cell')
+    source = root / parent['Input']
+    original = source.read_bytes()
+    assert sha(original) == parent['Sha256']
+    with ZipFile(BytesIO(original)) as archive:
+        infos = archive.infolist()
+        parts = {entry.filename: archive.read(entry.filename) for entry in infos}
+    tree = E.fromstring(parts['word/document.xml'])
+    cell = next(cell for cell in tree.iter(w + 'tc')
+        if any(field.get(w + 'instr', '').strip() == 'NUMPAGES' for field in cell.iter(w + 'fldSimple')))
+    children = [E.tostring(child) for child in cell]
+    assert all(field.get(w + 'instr', '').strip() == 'NUMPAGES' for field in cell.iter(w + 'fldSimple'))
+    assert not list(tree.iter(w + 'cantSplit'))
+    for index in range(1, 85):
+        paragraph = E.SubElement(cell, w + 'p')
+        E.SubElement(E.SubElement(paragraph, w + 'pPr'), w + 'spacing',
+            {w + 'after': '0', w + 'line': '240', w + 'lineRule': 'auto'})
+        run = E.SubElement(paragraph, w + 'r')
+        props = E.SubElement(run, w + 'rPr')
+        E.SubElement(props, w + 'rFonts', {w + 'ascii': 'Calibri', w + 'hAnsi': 'Calibri'})
+        E.SubElement(props, w + 'sz', {w + 'val': '20'})
+        E.SubElement(run, w + 't').text = 'Planning row ' + str(index) + ' stays visible.'
+    assert [E.tostring(child) for child in list(cell)[:len(children)]] == children
+    following = next(paragraph for paragraph in tree.find(w + 'body').findall(w + 'p')
+        if ''.join(node.text or '' for node in paragraph.iter(w + 't')) == 'After public math table.')
+    properties = following.find(w + 'pPr')
+    if properties is None:
+        properties = E.Element(w + 'pPr')
+        following.insert(0, properties)
+    E.SubElement(properties, w + 'pageBreakBefore')
+    parts['word/document.xml'] = E.tostring(tree, encoding='utf-8', xml_declaration=True)
+    buffer = BytesIO()
+    with ZipFile(buffer, 'w') as archive:
+        for entry in infos:
+            archive.writestr(copy.copy(entry), parts[entry.filename])
+    data = buffer.getvalue()
+    name = 'spanning-cell-total-count'
+    row = dict(parent, Id=name, Input='tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/' + name + '.docx',
+        Sha256=sha(data), SourceInput=parent['Input'], SourceSha256=parent['Sha256'],
+        SourceCellChildrenSha256=sha(b''.join(children)), HeldOut=True,
+        AddedCellParagraphs=84, FieldInstruction='NUMPAGES',
+        ExpectedText=parent['ExpectedText'] + ['Planning row 1 stays visible.', 'Planning row 84 stays visible.'],
+        Change='Append ordinary source paragraphs to the accepted NUMPAGES-only boxed-math cell; preserve original cell items and move following prose to a new page.')
+    publish([(cases / (name + '.docx'), data), (cases / (name + '.json'),
+        (json.dumps([row], indent=2) + '\n').replace('\n', '\r\n').encode())])
+    print('Source-exact spanning total-count cell verified; original math/fields unchanged.')
+    raise SystemExit(0)
 
 if args.compound_report_probe:
     manifest = cases.parent / 'Composition/composed-inline-frame-report.json'

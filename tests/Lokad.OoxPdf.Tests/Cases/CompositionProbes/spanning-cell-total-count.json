@@ -1,0 +1,28 @@
+[
+  {
+    "Id": "spanning-cell-total-count",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-cell-total-count.docx",
+    "Sha256": "090D8F711EC51CF4EDFA2E6D0F92A84DE63C5291997FC37A2A69C3904F97759C",
+    "SourceId": "inline-box-math-cell",
+    "SourceSha256": "C79EA316E56AB9AB90DE8CFF61A1C8C3F3D6AB79F8BCDFB2E00056873309687E",
+    "SourceChildParagraphSha256": "02835D7A763793F936EB049D5388D44DE6069B6758F6DD184468A78604FDC631",
+    "MathPart": "word/document.xml",
+    "Variant": "cell",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table.",
+      "Planning row 1 stays visible.",
+      "Planning row 84 stays visible."
+    ],
+    "FieldInstruction": "NUMPAGES",
+    "Change": "Append ordinary source paragraphs to the accepted NUMPAGES-only boxed-math cell; preserve original cell items and move following prose to a new page.",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-total-counter-cell.docx",
+    "SourceCellChildrenSha256": "3DC538DAD6425D2200489C3B5FBB7BF7AEDC5F741333E9B7AD92451CB109B3ED",
+    "AddedCellParagraphs": 84
+  }
+]
