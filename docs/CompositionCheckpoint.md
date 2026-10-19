@@ -1,5 +1,19 @@
 # Composed-document reliability checkpoint
 
+## C260 pinned inspection reconciliation (2026-10-19)
+
+The routine portfolio command now accepts -ReuseCandidateDirectory to reinspect
+source/PDF/runtime-pinned candidates with a different qualified inspector.
+Preflight rejects changed runtime/input/PDF, missing assets and duplicate outcomes
+before publishing output. Original PDF bytes, cold CLI timings and outcome/report
+provenance remain pinned; the tracked self-test proves zero converter calls.
+C259/C258's30PDFs and30strict comparisons are unchanged. The existing immutable
+ActualText inspector84EA672B corrects older root-inspector y-to-x extraction:
+current source/simple-math/Office-word and per-page deficits are zero. All30strict
+visual failures and original30raw token screens remain in evidence; this is no
+new visual pass. No conversion, library build, rendering test replay, Office export
+or raster work. Rootccee67e7; artifacts/composition-c1/portfolio-reinspection-evidence.json.
+
 ## C258 complete merged-span admission (2026-10-19)
 
 Static measured mathematics pays its expansion once across a complete admitted

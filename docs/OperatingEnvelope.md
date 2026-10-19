@@ -1,5 +1,14 @@
 # Measured operating envelope
 
+## C260 inspection-only portfolio reuse (2026-10-19)
+
+Thirty accepted candidate PDFs now have identity-backed ActualText inspections;
+source/simple-math/Office-word/per-page deficits are zero. Original timing samples,
+PDFs, references,30failed strict comparisons and raw audit attempts are retained.
+No conversions/library builds/rendering-suite replays/Office exports/new rasters.
+Use MeasureCompositionPortfolio.ps1 -ReuseCandidateDirectory for this maintenance.
+Evidence:artifacts/composition-c1/portfolio-reinspection-evidence.json.
+
 ## C258 complete merged spans (2026-10-19)
 
 Complete static body-table math spans retain row floors and consume measured
