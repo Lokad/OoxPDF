@@ -4120,6 +4120,7 @@ internal static class DocxTableCellsTests
 
     public static void DocxTableCellTextStartsAtMaxBorderMarginInset()
     {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent raw PDF geometry uses installed Windows Arial metrics.");
         // Office A/B (w63/w65 border-size probes, Word-COM rendered plus PdfInspect):
         // first-column text starts at grid + max(borderHalf, margin) with unset
         // margins defaulting to 0.48pt: sz4 text at 72.504 for grid 72.024 while
@@ -4135,6 +4136,7 @@ internal static class DocxTableCellsTests
 
     public static void DocxTableVerticalBordersCenterOnGridLines()
     {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent raw PDF geometry uses installed Windows Arial metrics.");
         // Office A/B (w63 border-size probe, Word-COM rendered plus PdfInspect):
         // vertical border bands center on grid lines: sz4 outer-left at 71.784
         // for grid 72.024 with top bands butting from grid + half width, while
@@ -4152,6 +4154,7 @@ internal static class DocxTableCellsTests
 
     public static void DocxIndentedTablePinsTextAtIndentOrigin()
     {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent raw PDF geometry uses installed Windows Arial metrics.");
         // Office A/B (w62/w66/w68 indent probes, Word-COM rendered plus PdfInspect):
         // tblInd pins first-column TEXT at margin + indent for every border size
         // (w66 B4/D12/C24 all at 108.02), so the grid hangs left by
@@ -4169,6 +4172,7 @@ internal static class DocxTableCellsTests
 
     public static void DocxCompatGridAlignsOuterBorderAtMargin()
     {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent raw PDF geometry uses installed Windows Arial metrics.");
         // Office A/B (m13 bare+compat15 probe, Word-COM rendered plus PdfInspect):
         // a present compatibilityMode aligns the outer border edge at the margin,
         // so the sz4 grid sits at 72.24 and text at 72.72 (modern grid would give
@@ -4208,6 +4212,7 @@ internal static class DocxTableCellsTests
 
     public static void DocxCompatIndentAlignsOuterBorderAtIndentedMargin()
     {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent raw PDF geometry uses installed Windows Arial metrics.");
         // Office A/B (m14 compat+indent probe, Word-COM rendered plus PdfInspect):
         // compatibilityMode aligns the outer border edge at margin+indent with text
         // at grid+max (Office col1 text 108.74, band [108.02, 108.50], top strip
@@ -4247,6 +4252,7 @@ internal static class DocxTableCellsTests
     }
     public static void DocxStyleMarginsPinTextAtMarginWithoutCompat()
     {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent raw PDF geometry uses installed Windows Arial metrics.");
         // Office A/B (w72 bare+styles probe, Word-COM rendered plus PdfInspect):
         // without compat, table-style margins pin text at the margin (grid hangs
         // left by the style margin: TN-108dxa grid at 66.6, text at 72.0).
@@ -4284,6 +4290,7 @@ internal static class DocxTableCellsTests
 
     public static void DocxTableNormalMissingCellMarginsFallBackToBuiltIn()
     {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent raw PDF geometry uses installed Windows Arial metrics.");
         // Office A/B (m1 ladder mutant, Word-COM rendered plus PdfInspect): a present
         // TableNormal style without stored cell margins still contributes the built-in
         // 108dxa margins (Word col1 text at 77.664 for grid 72.264 under compat;
@@ -4326,6 +4333,7 @@ internal static class DocxTableCellsTests
 
     public static void DocxDirectMarginsReplaceStyleMarginsForTextOffset()
     {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent raw PDF geometry uses installed Windows Arial metrics.");
         // Office A/B (w74 ladder+direct-20dxa probe, Word-COM rendered plus PdfInspect):
         // direct margins cascade-replace style margins for the text offset (col1 at
         // 73.224 for grid 72.264, i.e. grid + max(borderHalf, direct);
