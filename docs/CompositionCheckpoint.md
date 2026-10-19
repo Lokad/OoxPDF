@@ -1,5 +1,30 @@
 # Composed-document reliability checkpoint
 
+## C268 authored signed table indentation (2026-10-19)
+
+Negative authored table indents were clamped to zero, causing36pt/41.4pt text
+placement errors. The shared grid now preserves signed placement; modern text
+and legacy outer-border anchors keep their existing roles. Hanging placement
+does not enlarge the container basis for percentage widths. Seven source-exact
+controls/14Word views cover fixed/auto/percentage, style, border, legacy and
+small negative indents. All prose/math are retained; glyph origins meet1pt,
+maxX0.036pt/Y0.371pt. Word object-model cell widths match within0.1pt. Bookmarks
+and unchanged-format run splitting preserve content/placement. Four rasters
+reviewed; all14strict visual failures remain under unchanged thresholds.
+
+One committed frozen Release artifact:15Windows/8Ubuntu/7native font skips,
+one exact invocation/platform, no harness repairs. Both new observers fail the
+parent. Existing28table-control/10fixed comparisons reuse actual source/parsed
+reachability proof; no repeated conversions/Office export for those outcomes.
+17assets/four smokes, no root build/suite/package replay. Evidence:
+artifacts/composition-c1/table-signed-indents-evidence.json.
+
+A separate nine-source Final-only starting-border review found varying implicit
+Word indentation; removing just the border exclusion leaves an unexplained
+offset. No implicit-border correction or border-width family accepted. Preserve
+the5.736pt residual. table-start-border-ownership-review.json. C267CI39244587426
+is green on Windows/Ubuntu, including broader/package checks.
+
 ## C267 shared modern table-grid origin (2026-10-19)
 
 Authored starting margins without a visible starting border now belong once to
