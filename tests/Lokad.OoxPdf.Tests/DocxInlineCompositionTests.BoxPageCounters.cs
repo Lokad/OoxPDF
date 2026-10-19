@@ -16,9 +16,10 @@ internal static partial class DocxInlineCompositionTests
         CheckBoxPageCounters(null, compareWord: true);
     }
 
-    internal static void CheckBoxPageCounters(IFontResolver? resolver, bool compareWord)
+    internal static void CheckBoxPageCounters(IFontResolver? resolver, bool compareWord,
+        string goldFile = "inline-box-page-counter-office.json")
     {
-        using var gold = ReadInlineBoxMathGold("inline-box-page-counter-office.json");
+        using var gold = ReadInlineBoxMathGold(goldFile);
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string id = row.GetProperty("Id").GetString()!;
@@ -80,7 +81,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxInlineBoxPageCountersRebindOnlyUnplacedFramesAndKeepSourceOwners()
     {
         var (document, parent, equations) = BoxCounterSource();
-        TestAssert.True(DocxLayoutEngine.HasPageDynamicFields(document.BodyElements), "Inline-box fields make their enclosing cell memo page-dependent.");
+        TestAssert.Equal(DocxCounterDependencies.PageNumber, DocxFieldText.GetDependencies(document.BodyElements));
         TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(parent, equations, new TrackingMeasurer(),
             12d, 9d, 16d, 1d, default, out var measured, pageNumber: 9), "PAGE owns a known page input.");
         var atoms = TestAssert.NotNull(measured);
@@ -129,9 +130,10 @@ internal static partial class DocxInlineCompositionTests
             DocxMathParagraphPolicy.GetPreparationEquations(child).Count == 0, "Total counts keep their existing unavailable-input preparation fallback.");
     }
 
-    private static (DocxDocument Document, DocxParagraph Parent, IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph> Equations) BoxCounterSource()
+    private static (DocxDocument Document, DocxParagraph Parent, IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph> Equations) BoxCounterSource(
+        string fixture = "inline-box-child-page-counter")
     {
-        var document = ReadMutation("InlineBoxMath/inline-box-child-page-counter", OoxPdfDocxMarkupMode.Final, false, false);
+        var document = ReadMutation("InlineBoxMath/" + fixture, OoxPdfDocxMarkupMode.Final, false, false);
         var parent = document.Paragraphs.Single(paragraph => paragraph.InlineTextBoxes.Count != 0);
         var child = DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(document, default).Single();
         var equations = child.Equations.ToDictionary(equation => equation,
@@ -139,8 +141,9 @@ internal static partial class DocxInlineCompositionTests
         return (document, parent, equations);
     }
 
-    private static string CounterText(DocxInlineTextBoxLayout box) => string.Concat(box.TextLines.SelectMany(line => line.Segments)
-        .Where(segment => segment.StyleRun.FieldKind == DocxFieldKind.Page).Select(segment => segment.Text));
+    private static string CounterText(DocxInlineTextBoxLayout box, DocxFieldKind kind = DocxFieldKind.Page) =>
+        string.Concat(box.TextLines.SelectMany(line => line.Segments)
+            .Where(segment => segment.StyleRun.FieldKind == kind).Select(segment => segment.Text));
 
     private sealed class BoxCounterMeasurer : IDocxTextMeasurer
     {

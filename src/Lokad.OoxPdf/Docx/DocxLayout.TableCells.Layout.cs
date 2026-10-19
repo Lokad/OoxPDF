@@ -349,7 +349,7 @@ internal sealed partial class DocxLayoutEngine
         double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs, textMeasurer);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
-        bool pageStatic = !HasPageDynamicFields(bodyElements, context.CancellationToken);
+        bool pageStatic = DocxFieldText.GetDependencies(bodyElements, context.CancellationToken) == DocxCounterDependencies.None;
         var (lines, usedHeight, placedImages, placedBoxes) = ComputeTableCellTextLines(cell, cellX, cellWidth, context, bodyElements, paddingLeft, textWidth, startBaselineY, rowTopPadding, cellX, cellY + cellHeight, pageStatic, pageIndex);
         if (lines.Count == 0)
         {
@@ -1045,7 +1045,7 @@ internal sealed partial class DocxLayoutEngine
                     pageNumber ?? pageIndex,
                     cancellationToken,
                     sourceParagraphIndex: paragraphIndex,
-                    mathEquations: mathEquations);
+                    mathEquations: mathEquations, pageCount: pageCount);
                 if (textBoxLayout is null)
                 {
                     continue;

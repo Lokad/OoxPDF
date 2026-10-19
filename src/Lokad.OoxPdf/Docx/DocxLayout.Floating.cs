@@ -665,7 +665,8 @@ internal sealed partial class DocxLayoutEngine
         int pageNumber,
         CancellationToken cancellationToken,
         int sourceParagraphIndex = 0,
-        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null,
+        int? pageCount = null)
     {
         double? extentWidth = ReadEmuPoints(textBox.ExtentCxValue);
         double? extentHeight = ReadEmuPoints(textBox.ExtentCyValue);
@@ -697,7 +698,7 @@ internal sealed partial class DocxLayoutEngine
             defaultTabStopPoints,
             paragraphSpacingScale,
             pageNumber: pageNumber,
-            pageCount: null,
+            pageCount: pageCount,
             cancellationToken: cancellationToken,
             mathEquations: mathEquations);
         double boxX = alignment switch

@@ -14,6 +14,7 @@ internal sealed record DocxMeasuredInlineFragment(DocxInlineItem Source, double 
     public double? MathContinuationAdvance { get; init; }
     public IReadOnlyList<DocxTextSegmentLayout> TextSegments { get; init; } = [];
     public DocxInlineTextBoxLayout? TextBox { get; init; }
+    public DocxCounterDependencies CounterDependencies { get; init; }
 }
 internal sealed record DocxMeasuredInlineLine(IReadOnlyList<DocxMeasuredInlineFragment> Fragments,
     double Advance, double BaselineInset, double OccupiedHeight)
@@ -38,6 +39,7 @@ internal sealed record DocxMeasuredInlineAtoms(DocxParagraph Paragraph,
     IReadOnlyList<DocxTabStop> TabStops, IReadOnlyList<int> CounterFragmentIndices)
 {
     public int? BoundPageNumber { get; init; }
+    public int? BoundPageCount { get; init; }
     public IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? MathEquations { get; init; }
 }
 internal readonly record struct DocxInlineParagraphFrame(double OccupiedHeight, DocxTextLineLayout LastLine);
@@ -310,7 +312,7 @@ internal sealed partial class DocxLayoutEngine
                     var fieldSegments = CreateTextSegments([fieldSpan], 0d, fontSize, measurer, [], 36d);
                     double fieldWidth = fieldSegments.Count == 0 ? 0d : fieldSegments[^1].X + fieldSegments[^1].Width;
                     measured.Add(new(text, fieldWidth, baselineInset, Math.Max(lineHeight, baselineInset), [fieldSpan])
-                        { TextSegments = fieldSegments });
+                        { TextSegments = fieldSegments, CounterDependencies = DocxFieldText.Dependencies(kind) });
                     break;
                 case DocxInlineText text:
                     int start = text.Start, end = start + text.Length;
@@ -359,14 +361,16 @@ internal sealed partial class DocxLayoutEngine
                     break;
                 case DocxInlineBox box:
                     if (!IsNaturalInlineBoxFrame(box.Box, double.MaxValue, equations, token) ||
-                        pageNumber is null && HasPageDynamicFields(box.Box.BodyElements, token) ||
                         ReadEmuPoints(box.Box.ExtentCxValue) is not { } boxWidth ||
                         !double.IsFinite(boxWidth * scale)) return false;
+                    var boxDependencies = DocxFieldText.GetDependencies(box.Box.BodyElements, token);
+                    if (!DocxFieldText.HasInputs(boxDependencies, pageNumber, pageCount)) return false;
                     var frame = CreateInlineTextBoxLayout(box.Box, null, 0d, boxWidth * scale, 0d,
                         DocxTextAlignment.Left, measurer, defaultTabStopPoints, scale, pageNumber ?? 0, token,
-                        mathEquations: equations);
+                        mathEquations: equations, pageCount: pageCount);
                     if (frame is null) return false;
-                    measured.Add(new(item, frame.BoxWidth, frame.BoxHeight, frame.BoxHeight, []) { TextBox = frame });
+                    measured.Add(new(item, frame.BoxWidth, frame.BoxHeight, frame.BoxHeight, [])
+                        { TextBox = frame, CounterDependencies = boxDependencies });
                     break;
                 case DocxInlineTab:
                 case DocxInlineBreak:
@@ -410,9 +414,9 @@ internal sealed partial class DocxLayoutEngine
         atoms = new(paragraph, measured, measurer, fontSize, baselineInset, lineHeight, scale, defaultTabStopPoints,
             hasTabs ? ScaleTabStopPositions(paragraph.TabStops, scale) : [],
             measured.Select((fragment, index) => (fragment, index))
-                .Where(item => item.fragment.Source is DocxInlineText { Run.FieldKind: { } kind } && kind.IsDynamic() ||
-                    item.fragment.Source is DocxInlineBox box && HasPageDynamicFields(box.Box.BodyElements, token))
-                .Select(item => item.index).ToArray()) { BoundPageNumber = pageNumber, MathEquations = equations };
+                .Where(item => item.fragment.CounterDependencies != DocxCounterDependencies.None)
+                .Select(item => item.index).ToArray())
+            { BoundPageNumber = pageNumber, BoundPageCount = pageCount, MathEquations = equations };
         return true;
 
         void AddMeasuredMath(DocxInlineItem source, DocxPreparedMathParagraph prepared)
@@ -468,11 +472,14 @@ internal sealed partial class DocxLayoutEngine
             {
                 // A box is one atomic source item. Its placed predecessors keep
                 // their frames; only an unplaced, newly bound child is measured.
-                if (index < firstUnplacedFragment || atoms.BoundPageNumber == pageNumber) continue;
-                if (pageNumber is null || fragment.TextBox is null) return false;
+                var dependencies = fragment.CounterDependencies;
+                bool bindingChanged = (dependencies & DocxCounterDependencies.PageNumber) != 0 && atoms.BoundPageNumber != pageNumber ||
+                    (dependencies & DocxCounterDependencies.PageCount) != 0 && atoms.BoundPageCount != pageCount;
+                if (index < firstUnplacedFragment || !bindingChanged) continue;
+                if (!DocxFieldText.HasInputs(dependencies, pageNumber, pageCount) || fragment.TextBox is null) return false;
                 var frame = CreateInlineTextBoxLayout(box.Box, null, 0d, fragment.Advance, 0d,
                     DocxTextAlignment.Left, atoms.Measurer, atoms.DefaultTabStopPoints, atoms.Scale,
-                    pageNumber.Value, token, mathEquations: atoms.MathEquations);
+                    pageNumber ?? 0, token, mathEquations: atoms.MathEquations, pageCount: pageCount);
                 if (frame is null) return false;
                 changed ??= atoms.Fragments.ToArray();
                 changed[index] = fragment with { Advance = frame.BoxWidth, BaselineInset = frame.BoxHeight,
@@ -493,7 +500,7 @@ internal sealed partial class DocxLayoutEngine
             changed ??= atoms.Fragments.ToArray();
             changed[index] = fragment with { Advance = width, Text = [span], TextSegments = segments };
         }
-        rebound = changed is null ? atoms : atoms with { Fragments = changed, BoundPageNumber = pageNumber };
+        rebound = changed is null ? atoms : atoms with { Fragments = changed, BoundPageNumber = pageNumber, BoundPageCount = pageCount };
         return true;
     }
 

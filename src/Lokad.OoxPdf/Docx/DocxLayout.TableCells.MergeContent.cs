@@ -20,7 +20,7 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static bool IsStaticTopAlignedMergeSource(DocxTableCell cell) =>
-        !HasPageDynamicFields(GetTableCellLayoutBodyElements(cell)) &&
+        DocxFieldText.GetDependencies(GetTableCellLayoutBodyElements(cell)) == DocxCounterDependencies.None &&
         GetTableCellLayoutBodyElements(cell).All(element => element is DocxParagraphElement) &&
         (string.IsNullOrEmpty(cell.VerticalAlignmentValue) ||
             string.Equals(cell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase));
@@ -58,7 +58,7 @@ internal sealed partial class DocxLayoutEngine
             if (row.IsHeader || string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase)) return result;
             foreach (var cell in row.Cells)
                 if (GetTableCellLayoutBodyElements(cell).Any(element => element is not DocxParagraphElement) ||
-                    HasPageDynamicFields(GetTableCellLayoutBodyElements(cell)) ||
+                    DocxFieldText.GetDependencies(GetTableCellLayoutBodyElements(cell)) != DocxCounterDependencies.None ||
                     cell.Paragraphs.Any(paragraph => paragraph.InlineReferences.Count != 0)) return result;
         }
         for (int first = 0; first < table.Rows.Count; first++)

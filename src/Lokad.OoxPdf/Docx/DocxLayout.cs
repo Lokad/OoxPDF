@@ -2033,7 +2033,7 @@ internal sealed partial class DocxLayoutEngine
                     paragraphSpacingScale,
                     pages.Count + 1,
                     cancellationToken,
-                    mathEquations: mathEquations);
+                    mathEquations: mathEquations, pageCount: knownPageCount);
                 if (textBoxLayout is null)
                 {
                     continue;

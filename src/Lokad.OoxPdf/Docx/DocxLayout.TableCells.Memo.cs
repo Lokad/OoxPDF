@@ -17,43 +17,6 @@ namespace Lokad.OoxPdf.Docx;
 // must not share entries.
 internal sealed partial class DocxLayoutEngine
 {
-    internal static bool HasPageDynamicFields(IReadOnlyList<DocxBodyElement> bodyElements, CancellationToken token = default)
-    {
-        foreach (DocxBodyElement element in bodyElements)
-        {
-            token.ThrowIfCancellationRequested();
-            if (element is DocxParagraphElement paragraphElement)
-            {
-                foreach (DocxTextRun run in paragraphElement.Paragraph.Runs)
-                {
-                    token.ThrowIfCancellationRequested();
-                    if (run.FieldKind is DocxFieldKind.Page or DocxFieldKind.NumPages)
-                    {
-                        return true;
-                    }
-                }
-                foreach (var box in paragraphElement.Paragraph.InlineTextBoxes)
-                    if (HasPageDynamicFields(box.BodyElements, token)) return true;
-            }
-            else if (element is DocxTableElement tableElement)
-            {
-                foreach (DocxTableRow row in tableElement.Table.Rows)
-                {
-                    token.ThrowIfCancellationRequested();
-                    foreach (DocxTableCell nested in row.Cells)
-                    {
-                        if (HasPageDynamicFields(GetTableCellLayoutBodyElements(nested), token))
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-
-        return false;
-    }
-
     internal sealed class DocxTableCellTextLinesMemo
     {
         public long Hits { get; private set; }

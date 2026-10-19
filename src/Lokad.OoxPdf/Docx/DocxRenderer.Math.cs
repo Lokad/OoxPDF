@@ -50,8 +50,11 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    private static IEnumerable<DocxEquation> EnumeratePaintedEquations(IEnumerable<DocxLayoutItem> items, CancellationToken token)
+    private static IEnumerable<DocxEquation> EnumeratePaintedEquations(DocxLayout layout, CancellationToken token)
     {
+        var items = layout.Pages.SelectMany(page => page.Items.Concat(page.StaticTextLines).Concat(page.StaticTableRows)
+            .Concat(page.StaticInlineTextBoxes).Concat(page.PlacedRelatedStories.SelectMany(story =>
+                story.TextLines.Cast<DocxLayoutItem>().Concat(story.TableRows))));
         var pending = new Stack<DocxLayoutItem>();
         foreach (var source in items)
         {
@@ -128,14 +131,13 @@ internal sealed partial class DocxRenderer
             .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, token)
                 .Select(owner => (owner.Paragraph, owner.HasPageInputs, NeedsFinalCount: false)))
             .Concat(DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(document, token)
-                .Select(paragraph => (Paragraph: paragraph,
-                    HasPageInputs: DocxMathParagraphPolicy.UsesOnlyPageNumberCounters(paragraph), NeedsFinalCount: false))))
+                .Select(paragraph => (Paragraph: paragraph, HasPageInputs: true, NeedsFinalCount: true))))
         {
             token.ThrowIfCancellationRequested();
             DocxParagraph paragraph = owner.Paragraph;
             var sourceEquations = DocxMathParagraphPolicy.GetPreparationEquations(paragraph, owner.HasPageInputs, token);
             if (sourceEquations.Count == 0) { continue; }
-            // Body/cell NUMPAGES needs finalized pagination. Discover it while
+            // NUMPAGES in flow content needs finalized pagination. Discover it while
             // traversing the existing candidates, without loading unused math fonts.
             if (pageCount is null && owner.NeedsFinalCount &&
                 (paragraph.Runs.Any(run => run.FieldKind == DocxFieldKind.NumPages) ||

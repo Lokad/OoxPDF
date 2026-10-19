@@ -643,7 +643,7 @@ internal sealed partial class DocxLayoutEngine
                     pageNumber,
                     cancellationToken,
                     sourceParagraphIndex: paragraphIndex,
-                    mathEquations: mathEquations);
+                    mathEquations: mathEquations, pageCount: pageCount);
                 if (textBoxLayout is null)
                 {
                     continue;

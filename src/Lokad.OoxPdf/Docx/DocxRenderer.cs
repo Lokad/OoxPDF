@@ -387,7 +387,8 @@ internal sealed partial class DocxRenderer
         var fontCache = new Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>();
         var first = PrepareNoteAdjustedLayout(document, resolver, context, geometry, messages is null ? null : messages.Add, cancellationToken,
             fontCache);
-        if (first.FontResources.DeferredPageCountEquations.Count != 0)
+        if (first.FontResources.DeferredPageCountEquations.Count != 0 ||
+            (DocxFieldText.GetDependencies(document.BodyElements, cancellationToken) & DocxCounterDependencies.PageCount) != 0)
         {
             List<OoxPdfDiagnostic>? retryMessages = diagnostics is null ? null : [];
             // Recompute note-dependent purposes too: accepting a stable count
@@ -396,8 +397,7 @@ internal sealed partial class DocxRenderer
                 cancellationToken, fontCache, first.Layout.Pages.Count);
             if (retry.Layout.Pages.Count == first.Layout.Pages.Count)
             {
-                var painted = new HashSet<DocxEquation>(EnumeratePaintedEquations(
-                    retry.Layout.Pages.SelectMany(page => page.Items), cancellationToken), ReferenceEqualityComparer.Instance);
+                var painted = new HashSet<DocxEquation>(EnumeratePaintedEquations(retry.Layout, cancellationToken), ReferenceEqualityComparer.Instance);
                 if (first.FontResources.DeferredPageCountEquations.All(painted.Contains))
                 {
                     first = retry;
@@ -1122,8 +1122,7 @@ internal sealed partial class DocxRenderer
         document = prepared.Document;
         DocxFontResources fontResources = prepared.FontResources;
         DocxLayout layout = prepared.Layout;
-        ReportEquationDiagnostics(document, EnumeratePaintedEquations(layout.Pages.SelectMany(page => page.Items.Concat(page.StaticTextLines).Concat(page.StaticTableRows).Concat(page.StaticInlineTextBoxes)
-            .Concat(page.PlacedRelatedStories.SelectMany(story => story.TextLines.Cast<DocxLayoutItem>().Concat(story.TableRows)))), cancellationToken), diagnosticSink, cancellationToken);
+        ReportEquationDiagnostics(document, EnumeratePaintedEquations(layout, cancellationToken), diagnosticSink, cancellationToken);
         // RV06: comment balloons and range washes wear first-seen author colors;
         // the slots ride the markup context so static emission helpers can resolve
         // them per comment reference without signature changes.

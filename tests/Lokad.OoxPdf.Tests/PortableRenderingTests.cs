@@ -16,6 +16,13 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingInlineBoxTotalCountersKeepMathAtFinalCount() =>
+        DocxInlineCompositionTests.CheckBoxPageCounters(new PinnedResolver(mathFont: true), compareWord: false,
+            "inline-box-total-counter-office.json");
+
+    public static void PortableRenderingInlineBoxTotalCountersResolvePlainChildLayout() =>
+        DocxInlineCompositionTests.CheckPlainBoxTotalCount(new PinnedResolver());
+
     public static void PortableRenderingInlineBoxPageCountersKeepMathAtActualPage() =>
         DocxInlineCompositionTests.CheckBoxPageCounters(new PinnedResolver(mathFont: true), compareWord: false);
 
