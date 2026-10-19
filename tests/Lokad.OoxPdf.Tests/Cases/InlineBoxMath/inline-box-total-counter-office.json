@@ -1,0 +1,175 @@
+{
+  "Provenance": "Two independent Word16 views: PAGE-to-NUMPAGES on the one-page child preserves every math/frame/prose/field glyph origin and size exactly. No candidate-derived coordinates.",
+  "Rows": [
+    {
+      "Id": "inline-box-child-total-counter",
+      "Mode": "final-preserve",
+      "InputSha256": "29B5587DAAA1AE70E9A00A8449047D5D0CA4A0D62FF01F2FE08026D73DA60646",
+      "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-child-page-counter.docx",
+      "SourceSha256": "D507944E8408B00566420553EBA462C5B84182342939565046524BAD81BF9452",
+      "WordPdfSha256": "F31CAA8D770C27EC33AE4FA7D91793183920E2374CFE6122BFA30A5F942B6D66",
+      "BaseWordPdfSha256": "AB026CFC80FB10D36B435C5C0041CF304FEDAFF9D993C66B195F50658B4E6428",
+      "WordPages": 1,
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 143.66000366210938,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 148.5800018310547,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 154.4600067138672,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 148.6999969482422,
+          "Y": 115.0999755859375,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            72.0,
+            92.64996337890625,
+            288.0,
+            152.64996337890625
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 79.46399688720703,
+          "Y": 109.5799560546875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 171.01995849609375,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFieldGlyphs": [
+        {
+          "Text": "1",
+          "Page": 1,
+          "X": 235.61000061035156,
+          "Y": 109.5799560546875,
+          "Size": 11.039999961853027
+        }
+      ]
+    },
+    {
+      "Id": "inline-box-child-total-counter",
+      "Mode": "all-word-compatible",
+      "InputSha256": "29B5587DAAA1AE70E9A00A8449047D5D0CA4A0D62FF01F2FE08026D73DA60646",
+      "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-child-page-counter.docx",
+      "SourceSha256": "D507944E8408B00566420553EBA462C5B84182342939565046524BAD81BF9452",
+      "WordPdfSha256": "96CE1941D0B2FF47B8281D706CEC05B804FB9F2D66A5B3805E093562F7F51993",
+      "BaseWordPdfSha256": "AAA1BD3AB679787A9F35EF1A2A5EF601448E4F4600C37484B2DF020F356E0772",
+      "WordPages": 1,
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 143.66000366210938,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 148.5800018310547,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 154.4600067138672,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 148.6999969482422,
+          "Y": 115.0999755859375,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            72.0,
+            92.64996337890625,
+            288.0,
+            152.64996337890625
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 79.46399688720703,
+          "Y": 109.5799560546875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 171.01995849609375,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFieldGlyphs": [
+        {
+          "Text": "1",
+          "Page": 1,
+          "X": 235.61000061035156,
+          "Y": 109.5799560546875,
+          "Size": 11.039999961853027
+        }
+      ]
+    }
+  ]
+}
