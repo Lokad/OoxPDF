@@ -1,5 +1,16 @@
 # Measured operating envelope
 
+## C263 cell-marker floor qualification (2026-10-19)
+
+Parsed terminal marks now own minimum row struts where no separate cell provides
+a floor. Twenty source outcomes pass independent Word1pt geometry, max0.401pt;
+source/Office/simple-math deficits zero. Twenty strict visual failures remain.
+One production artifact:98Windows/79Ubuntu/19native skips. Only one font-dependent
+observer reran/platform after pinning its font;14runtime assets/all2,315inputs
+unchanged.17assets/four smokes, including two byte-identical24pt math neighbors.
+No root build/suite or repeated Office exports; no throughput claim.
+Evidence:artifacts/composition-c1/merge-cell-mark-floors-evidence.json.
+
 ## C262 independent row-floor qualification (2026-10-19)
 
 Complete source spans now share wrapped prose/images while non-spanning cells

@@ -1,5 +1,27 @@
 # Composed-document reliability checkpoint
 
+## C263 cell-terminal paragraph-mark floors (2026-10-19)
+
+Without a separate non-spanning cell, a merged source now gets its minimum row
+strut from the parsed terminal paragraph mark. Wrapped content/visible run size
+remain a complete-span requirement. Reuse existing line-height/spacing rules;
+unknown marker metrics preserve the prior estimate. No font/size-specific branch.
+Ten separate controls/both presets distinguish source/continuation marks, visible
+run size/face, marker face, document defaults and multiple paragraphs. Twenty
+outcomes pass existing1pt Word geometry, maximum0.401pt. The former20.65pt wrapped
+source overcharge closes; source/Office/simple-math deficits zero. Both new
+observers fail C262. Twenty paired pins/strict visual failures remain, alongside
+inherited cell-left5.376pt.
+One production artifact:98Windows/79Ubuntu/19native skips, one exact invocation
+per platform. Ubuntu exposed an older terminal-space observer's installed-font
+assumption; it also fails on C262. The observer now uses the existing pinned font;
+only that method reran/platform, with14runtime assets/all2,315inputs unchanged.
+Original failed attempt/parent diagnostic retained. Prior18source outcomes/fixed8
+reuse source proof.17assets/four smokes include two new wraps and two byte-identical
+24pt math spans; no root build/suite or repeated Office export. Root8432e284;
+artifacts/composition-c1/merge-cell-mark-floors-evidence.json. C262CI39229269664 is
+green on Windows/Ubuntu. Next:C264shared table/grid horizontal-origin review.
+
 ## C261/C262 complete source-span row floors (2026-10-19)
 
 A held-out combination retained three equations, an image and navigation but
