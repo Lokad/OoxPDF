@@ -154,6 +154,58 @@ for case in cases:
     assert sha(data) == case['Sha256'], case['Id']
     prepared.append((root / case['Input'], data))
 
+review_cases = json.loads((directory / 'inline-box-review-frames.json').read_text())
+for case in review_cases:
+    variant = case['Variant']
+    source_case = by_variant['boxed-equation' if variant == 'body' else
+        'cell' if variant == 'static-cell' else variant]
+    source = (root / source_case['Input']).read_bytes()
+    assert sha(source) == case['SourceSha256']
+    infos, parts = unpack(source)
+    tree = E.fromstring(parts['word/document.xml'])
+    body = tree.find(w + 'body')
+    if variant == 'static-cell':
+        table = body.find(w + 'tbl')
+        body.remove(table)
+        story = E.Element(w + 'hdr')
+        story.append(table)
+        parts['word/inline-box-review-header.xml'] = E.tostring(story, encoding='utf-8', xml_declaration=True)
+        section = body.find(w + 'sectPr')
+        section.find(w + 'pgMar').set(w + 'header', '180')
+        E.SubElement(section, w + 'headerReference', {w + 'type': 'default',
+            '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id': 'rBoxReviewHeader'})
+        links = E.fromstring(parts['word/_rels/document.xml.rels'])
+        E.SubElement(links, rel + 'Relationship', {'Id': 'rBoxReviewHeader',
+            'Type': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/header',
+            'Target': 'inline-box-review-header.xml'})
+        parts['word/_rels/document.xml.rels'] = E.tostring(links, encoding='utf-8', xml_declaration=True)
+        types = E.fromstring(parts['[Content_Types].xml'])
+        E.SubElement(types, ct + 'Override', {'PartName': '/word/inline-box-review-header.xml',
+            'ContentType': 'application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml'})
+        parts['[Content_Types].xml'] = E.tostring(types, encoding='utf-8', xml_declaration=True)
+    paragraph = body.find(w + 'p')
+    paragraph.insert(0, E.Element(w + 'commentRangeStart', {w + 'id': '51'}))
+    paragraph.append(E.Element(w + 'commentRangeEnd', {w + 'id': '51'}))
+    E.SubElement(E.SubElement(paragraph, w + 'r'), w + 'commentReference', {w + 'id': '51'})
+    parts['word/document.xml'] = E.tostring(tree, encoding='utf-8', xml_declaration=True)
+    comments = E.Element(w + 'comments')
+    comment = E.SubElement(comments, w + 'comment', {w + 'id': '51', w + 'author': 'Public Reviewer',
+        w + 'initials': 'PR', w + 'date': '2026-10-19T00:00:00Z'})
+    E.SubElement(E.SubElement(E.SubElement(comment, w + 'p'), w + 'r'), w + 't').text = 'Review the public calculation frame.'
+    parts['word/comments.xml'] = E.tostring(comments, encoding='utf-8', xml_declaration=True)
+    links = E.fromstring(parts['word/_rels/document.xml.rels'])
+    assert not any(link.get('Type', '').endswith('/comments') for link in links)
+    E.SubElement(links, rel + 'Relationship', {'Id': 'rBoxReviewComment',
+        'Type': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments', 'Target': 'comments.xml'})
+    parts['word/_rels/document.xml.rels'] = E.tostring(links, encoding='utf-8', xml_declaration=True)
+    types = E.fromstring(parts['[Content_Types].xml'])
+    E.SubElement(types, ct + 'Override', {'PartName': '/word/comments.xml',
+        'ContentType': 'application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml'})
+    parts['[Content_Types].xml'] = E.tostring(types, encoding='utf-8', xml_declaration=True)
+    data = pack(infos, parts)
+    assert sha(data) == case['Sha256'], case['Id']
+    prepared.append((root / case['Input'], data))
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--write', action='store_true')
 if parser.parse_args().write:
@@ -162,4 +214,4 @@ if parser.parse_args().write:
         with temporary.open('xb') as output:
             output.write(data)
         temporary.replace(target)  # Replace the entry; never write through frozen links.
-print('Canonical frame verified; ten derived fixtures reproduce byte-identically.')
+print('Canonical frame verified; ten ordinary and five review fixtures reproduce byte-identically.')

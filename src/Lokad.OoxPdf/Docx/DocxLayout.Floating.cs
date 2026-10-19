@@ -724,7 +724,7 @@ internal sealed partial class DocxLayoutEngine
             ShiftTableRows(storyLayout.TableRows, contentTop, contentX),
             sourceBlockIndex,
             SourceParagraphIndex: sourceParagraphIndex,
-            Story: null);
+            Story: null) { PrintScale = paragraphSpacingScale };
     }
     private static double ReadInsetEmuPoints(string? value, long defaultEmu)
     {

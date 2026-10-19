@@ -62,9 +62,9 @@ internal static partial class DocxInlineCompositionTests
             "An image retains its child run position instead of being duplicated at the outer box's extent.");
     }
 
-    internal static void CheckInlineBoxMath(IFontResolver? resolver)
+    internal static void CheckInlineBoxMath(IFontResolver? resolver, string goldenFile = "inline-box-math-office.json")
     {
-        using var gold = ReadInlineBoxMathGold();
+        using var gold = ReadInlineBoxMathGold(goldenFile);
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string id = row.GetProperty("Id").GetString()!;
@@ -112,6 +112,6 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    private static JsonDocument ReadInlineBoxMathGold() => JsonDocument.Parse(File.ReadAllText(Path.GetFullPath(
-        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "InlineBoxMath", "inline-box-math-office.json"))));
+    private static JsonDocument ReadInlineBoxMathGold(string goldenFile = "inline-box-math-office.json") => JsonDocument.Parse(File.ReadAllText(Path.GetFullPath(
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "InlineBoxMath", goldenFile))));
 }

@@ -25,6 +25,9 @@ internal static class PortableRenderingTests
     public static void PortableRenderingInlineBoxMathKeepsSourceContentAndResources() =>
         DocxInlineCompositionTests.CheckInlineBoxMath(new PinnedResolver(mathFont: true));
 
+    public static void PortableRenderingInlineBoxReviewFramesKeepMathOnPage() =>
+        DocxInlineCompositionTests.CheckInlineBoxMath(new PinnedResolver(mathFont: true), "inline-box-review-frames-office.json");
+
     public static void PortableRenderingPictureNoteBatchesRetainEveryImageOnce() =>
         DocxInlineCompositionTests.CheckPictureNoteBatches(new PinnedResolver(mathFont: true));
 

@@ -18,8 +18,13 @@ internal static class DocxInlineContent
     // Containers retain their own supported measurement and line-flow rules.
     public static bool HasSupportedSourceOwner(DocxParagraph paragraph, bool hasPageInputs = false,
         CancellationToken token = default) =>
+        HasSupportedSourceMetadata(paragraph, hasPageInputs, token) && paragraph.InlineTextBoxes.Count == 0;
+
+    // An independent box can validate its source metadata without admitting
+    // sibling boxes into the ordered text/math paragraph path.
+    public static bool HasSupportedSourceMetadata(DocxParagraph paragraph, bool hasPageInputs = false,
+        CancellationToken token = default) =>
         HasSupportedParagraphRevisionOwners(paragraph, token) &&
-        paragraph.InlineTextBoxes.Count == 0 &&
         HasSupportedReferences(paragraph.InlineReferences, paragraph.Runs, token) &&
         (hasPageInputs ? HasSourceFieldResults(paragraph.FieldReferences, paragraph.Runs)
             : HasMaterializedFieldResults(paragraph.FieldReferences, paragraph.Runs)) &&

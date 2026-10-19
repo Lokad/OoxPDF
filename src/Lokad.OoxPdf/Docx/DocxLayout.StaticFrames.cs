@@ -118,9 +118,24 @@ internal sealed partial class DocxLayoutEngine
                         ContentPaddingLeft = cell.ContentPaddingLeft * scale, ContentPaddingRight = cell.ContentPaddingRight * scale,
                         ContentPaddingTop = cell.ContentPaddingTop * scale, ContentPaddingBottom = cell.ContentPaddingBottom * scale,
                         TextLines = cell.TextLines.Select(MapLine).ToArray(), InlineImages = cell.InlineImages.Select(MapImage).ToArray(),
-                        NestedTableRows = cell.NestedRows.Select(MapRow).ToArray()
+                        NestedTableRows = cell.NestedRows.Select(MapRow).ToArray(),
+                        InlineTextBoxes = cell.InlineTextBoxes.Select(MapBox).ToArray()
                     };
                 }).ToArray()
+            };
+        }
+        DocxInlineTextBoxLayout MapBox(DocxInlineTextBoxLayout box)
+        {
+            token.ThrowIfCancellationRequested();
+            return box with
+            {
+                BoxX = x + (box.BoxX - x) * scale,
+                BoxTop = center + (box.BoxTop - center) * scale,
+                BoxWidth = box.BoxWidth * scale, BoxHeight = box.BoxHeight * scale,
+                PrintScale = box.PrintScale * scale, StaticStoryUsesPhysicalY = true,
+                TextLines = box.TextLines.Select(MapLine).ToArray(),
+                InlineImages = box.InlineImages.Select(MapImage).ToArray(),
+                TableRows = box.TableRows.Select(MapRow).ToArray()
             };
         }
         double footerTop = isHeader ? double.NegativeInfinity :
@@ -130,6 +145,7 @@ internal sealed partial class DocxLayoutEngine
             TextLines = source.TextLines.Select(MapLine).ToArray(),
             InlineImages = source.InlineImages.Select(MapImage).ToArray(),
             TableRows = source.TableRows.Select(MapRow).ToArray(),
+            InlineTextBoxes = source.InlineTextBoxes.Select(MapBox).ToArray(),
             EndCursorY = frameAnchor + (source.EndCursorY - frameAnchor) * scale,
             EndPendingAfterSpacing = source.EndPendingAfterSpacing * scale,
             MappedFooterContentTop = isHeader ? null : frameAnchor + (footerTop - frameAnchor) * scale,
@@ -141,8 +157,12 @@ internal sealed partial class DocxLayoutEngine
 
     private static bool IsNaturalStaticStory(DocxSelectedStaticStory story, double width,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
+        => IsNaturalStaticBody(story.BodyElements, width, mathEquations, token);
+
+    private static bool IsNaturalStaticBody(IReadOnlyList<DocxBodyElement> elements, double width,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
     {
-        foreach (var element in story.BodyElements)
+        foreach (var element in elements)
         {
             token.ThrowIfCancellationRequested();
             if (element is DocxParagraphElement direct &&
@@ -193,6 +213,11 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
+        if (paragraph.InlineTextBoxes.Count != 0)
+            return paragraph.Equations.Count == 0 && paragraph.Images.Count == 0 && paragraph.ListLabel is null &&
+                paragraph.Runs.All(run => run.EffectiveProperties.Hidden || run.Text.Length == 0) &&
+                DocxInlineContent.HasSupportedSourceMetadata(paragraph, token: token) &&
+                paragraph.InlineTextBoxes.All(box => IsNaturalStaticBox(box, width, mathEquations, token));
         if (paragraph.Equations.Count != 0)
             return TryGetStandaloneMath(paragraph, width, 1d, mathEquations, out _) ||
                 mathEquations is not null && paragraph.InlineContent is not null &&
@@ -207,5 +232,23 @@ internal sealed partial class DocxLayoutEngine
                 image.WidthPoints > 0d && image.HeightPoints > 0d && image.WidthPoints <= width) &&
             DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) &&
             DocxInlineContent.HasSupportedSourceOwner(paragraph, token: token);
+    }
+
+    private static bool IsNaturalStaticBox(DocxInlineTextBox box, double width,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (ReadEmuPoints(box.ExtentCxValue) is not { } boxWidth || boxWidth <= 0d || boxWidth > width ||
+            ReadEmuPoints(box.ExtentCyValue) is not > 0d || box.BodyElements.Count == 0) return false;
+        // Nested boxes retain their existing placement until their own source
+        // frames are supported. Tables inside one independent box may still map.
+        foreach (var paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(box.BodyElements))
+        {
+            token.ThrowIfCancellationRequested();
+            if (paragraph.InlineTextBoxes.Count != 0) return false;
+        }
+        ResolveInlineTextBoxContentInsets(box, out double left, out _, out double right, out _);
+        double contentWidth = boxWidth - left - right;
+        return contentWidth > 0d && IsNaturalStaticBody(box.BodyElements, contentWidth, mathEquations, token);
     }
 }

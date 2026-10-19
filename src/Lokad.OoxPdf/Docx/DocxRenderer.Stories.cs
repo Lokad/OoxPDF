@@ -331,12 +331,10 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        // Box coordinates are absolute flow space; the clip feeds graphics directly in
-        // emission space, so it carries the body offsets explicitly while content lines
-        // pick them up through the regular text emission path (no emission map: inline
-        // boxes live in the pin-shifted flow world, unlike page-anchored floatings).
+        // Body boxes carry the body emission offset. Mapped static boxes already
+        // own physical Y; their children consume that same frame when painting.
         double clipX = box.BoxX + ResolveTextEmissionXOffset(markupContext);
-        double clipTop = box.BoxTop - ResolveTextEmissionBaselineOffset(markupContext);
+        double clipTop = box.BoxTop - (box.StaticStoryUsesPhysicalY ? 0d : ResolveTextEmissionBaselineOffset(markupContext));
         graphics.SaveState();
         graphics.ClipRectangle(clipX, clipTop - box.BoxHeight, box.BoxWidth, box.BoxHeight);
         // RV05 inline-box probe (Word COM reference edge-inlinebox): stroked inline
@@ -344,7 +342,7 @@ internal sealed partial class DocxRenderer
         if (TryResolveInlineTextBoxStroke(box.TextBox, box.BoxWidth, box.BoxHeight, out double inlineStrokeWidth, out byte inlineStrokeRed, out byte inlineStrokeGreen, out byte inlineStrokeBlue))
         {
             graphics.SetStrokeRgb(inlineStrokeRed, inlineStrokeGreen, inlineStrokeBlue);
-            graphics.SetLineWidth(inlineStrokeWidth);
+            graphics.SetLineWidth(inlineStrokeWidth * box.PrintScale);
             graphics.StrokeRectangle(clipX, clipTop - box.BoxHeight, box.BoxWidth, box.BoxHeight);
         }
         IReadOnlyList<DocxLayoutItem> items = box.TextLines
@@ -357,6 +355,8 @@ internal sealed partial class DocxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutItem item = items[itemIndex];
+            if (item is DocxTextLineLayout { StaticStoryUsesPhysicalY: true } line)
+                item = AdjustStaticTextLine(line, markupContext);
             DocxTableRowLayout? previousRow = itemIndex > 0 ? items[itemIndex - 1] as DocxTableRowLayout : null;
             DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
             RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex);

@@ -1,0 +1,92 @@
+[
+  {
+    "Id": "inline-box-review-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-review-body.docx",
+    "Sha256": "B67A7116789E31491156A207E458EF6FECB4B507011A5FE02ABCDA8B5F7DC88E",
+    "SourceSha256": "5986739F1666625F94485092240716E3C4884C9B3AEDD5FBD6B499ADBA915FF1",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "body",
+    "Change": "Add one ordinary body comment outside the unchanged child math frame. Final should retain ordinary placement; Word-compatible review exercises actual page scaling.",
+    "ReviewedInput": "artifacts/inline-box-review-scale/inline-box-review-body.docx",
+    "ExpectedRenderedEquationCount": 1
+  },
+  {
+    "Id": "inline-box-review-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-review-footer.docx",
+    "Sha256": "30BEB8936CF2E24B10EA794D3C110424D22742AB7452FC47C5834217226C7280",
+    "SourceSha256": "C5F105611F3B4E223DC3C5E13687812DC4427FDF27C394B89B7FAAC4AC9EB399",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "footer",
+    "Change": "Add one ordinary body comment outside the unchanged child math frame. Final should retain ordinary placement; Word-compatible review exercises actual page scaling.",
+    "ReviewedInput": "artifacts/inline-box-review-scale/inline-box-review-footer.docx",
+    "ExpectedRenderedEquationCount": 1
+  },
+  {
+    "Id": "inline-box-review-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-review-header.docx",
+    "Sha256": "3819F1216A9AC659768070B52D4B88F3AD71E16C97BB9FF2F8C0BEA95B65E76E",
+    "SourceSha256": "C080AE29F5D181392D7C24000D4EED7B3B991D4909D8A65F9C94792033526451",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "header",
+    "Change": "A real body comment exercises review scaling of header/cell/static-cell box frames; source math and dimensions unchanged.",
+    "ReviewedInput": "artifacts/inline-box-review-scale-neighbors/inline-box-review-header.docx",
+    "ExpectedRenderedEquationCount": 1
+  },
+  {
+    "Id": "inline-box-review-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-review-cell.docx",
+    "Sha256": "59A5E49B6549272D9B7EC77D0AD5971946AE1AEF8CF9E003170D2B482B6A0164",
+    "SourceSha256": "94DB539C6B386447B671CE72566709F8DBB1E0924903E3C18C3B928FBFC12885",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "cell",
+    "Change": "A real body comment exercises review scaling of header/cell/static-cell box frames; source math and dimensions unchanged.",
+    "ReviewedInput": "artifacts/inline-box-review-scale-neighbors/inline-box-review-cell.docx",
+    "ExpectedRenderedEquationCount": 1
+  },
+  {
+    "Id": "inline-box-review-static-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-review-static-cell.docx",
+    "Sha256": "E24B711AC3871AFD9367D01E538E4AE011BC3D5D03252E355C8705AC4B6FB0A7",
+    "SourceSha256": "94DB539C6B386447B671CE72566709F8DBB1E0924903E3C18C3B928FBFC12885",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "static-cell",
+    "Change": "A real body comment exercises review scaling of header/cell/static-cell box frames; source math and dimensions unchanged.",
+    "ReviewedInput": "artifacts/inline-box-review-scale-neighbors/inline-box-review-static-cell.docx",
+    "ExpectedRenderedEquationCount": 1
+  }
+]

@@ -1018,7 +1018,8 @@ internal sealed partial class DocxRenderer
 
         bool hasBalloons = markupContext.WordCompatibleHasPrintedBalloons ?? HasAnyWordCompatibleBalloon(document);
         if ((page.StaticTextLines.Any(line => line.StaticStoryUsesPhysicalY) ||
-            page.StaticTableRows.Any(row => row.StaticStoryUsesPhysicalY)) && firstBodyBaselineY is { } bodyBaseline)
+            page.StaticTableRows.Any(row => row.StaticStoryUsesPhysicalY) ||
+            page.StaticInlineTextBoxes.Any(box => box.StaticStoryUsesPhysicalY)) && firstBodyBaselineY is { } bodyBaseline)
         {
             double headerDisplacement = layout.HeaderContentBottomByPage.TryGetValue(0, out double headerBottom)
                 ? Math.Max(0d, page.Height - page.MarginTop - headerBottom) : 0d;

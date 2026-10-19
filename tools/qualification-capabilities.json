@@ -8626,5 +8626,30 @@
     "PortableRenderingCellPageNotesKeepLabelsMathImagesAndDestinations",
     "PortableRenderingInlineBoxMathKeepsSourceContentAndResources",
     "PortableRenderingStaticCellsPreserveMixedMathImagesAndCounters"
+  ],
+  "docx-inline-box-review-frames": [
+    "DocxFooterInlineImageReservesItsVisibleHeight",
+    "DocxInlineBoxMathKeepsIndependentContentAcrossContainers",
+    "DocxInlineBoxMathPreparationObservesCancellationBetweenChildren",
+    "DocxInlineBoxMathPreparationRetainsChildSourceIdentityAndSiblingFallback",
+    "DocxInlineBoxReviewFramesPreserveIndependentSourceContent",
+    "DocxInlineBoxReviewStaticGlyphOriginsMatchIndependentWord",
+    "DocxInlineCompositionStaticSourceFramesMatchIndependentWord",
+    "DocxInlineImageClipTravelsWithScaledStoryPlacement",
+    "DocxNativeAlignedStaticFramesRetainOfficeBodyAndFooterSlots",
+    "DocxNativeScaledStaticFramesKeepFooterVisibleAndHeaderBodyInOfficeSlots",
+    "DocxStaticFrameMappingKeepsFooterAnchoredAndUsesOneHeaderAdvance",
+    "DocxStaticFrameMappingRetainsIncompleteAndDeclaredSourceFallbacks",
+    "DocxStaticFrameMappingSeparatesAlignmentFromPlainContentOwnership",
+    "DocxStaticHeaderInlineTextBoxLaysOutFileGeometryContent",
+    "DocxStaticStoryInlineImagesShareTheTextBaseline",
+    "DocxStaticTableMathCompleteReportMatchesIndependentPrintedFrames",
+    "DocxWordCompatibleInlineTextBoxLaysOutScaledContentInFlow",
+    "DocxWordCompatibleTableCellInlineTextBoxLaysOutScaledContent",
+    "PortableRenderingFooterTableAdmissionKeepsBodyAboveTheCompleteFrame",
+    "PortableRenderingInlineBoxMathKeepsSourceContentAndResources",
+    "PortableRenderingInlineBoxReviewFramesKeepMathOnPage",
+    "PortableRenderingStaticCellsPreserveMixedMathImagesAndCounters",
+    "PortableRenderingStaticSourceFramesKeepProseOnPage"
   ]
 }

@@ -218,7 +218,11 @@ internal sealed record DocxInlineTextBoxLayout(
     IReadOnlyList<DocxTableRowLayout> TableRows,
     int? SourceBlockIndex,
     int? SourceParagraphIndex,
-    DocxStoryId? Story) : DocxLayoutItem;
+    DocxStoryId? Story) : DocxLayoutItem
+{
+    // Geometry is already placed; authored outline widths still need this scale.
+    public double PrintScale { get; init; } = 1d;
+}
 
 internal sealed record DocxTableRowLayout(
     DocxTableLayoutContext Table,
