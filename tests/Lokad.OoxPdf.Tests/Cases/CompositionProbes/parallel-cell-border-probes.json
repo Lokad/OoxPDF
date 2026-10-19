@@ -1,0 +1,46 @@
+[
+  {
+    "Id": "parallel-cell-bordered-aligned",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/parallel-cell-bordered-aligned.docx",
+    "Sha256": "DB465C4295667996F09A49E56D88D45065FF701551930A3A25702762F2395ADC",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-frame-mixed-prose.docx",
+    "SourceSha256": "EF0F9C1AD288737E511846F8F68E202E22B4AEDAA1B95D336D2213AC685F7514",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "SourceRowsPerCell": 120,
+    "ExpectedText": [
+      "Before public math table.",
+      "Left source row 1.",
+      "Right source row 1.",
+      "Left source row 120.",
+      "Right source row 120.",
+      "After public math table."
+    ],
+    "Change": "Independently vary border thickness or introduction spacing; preserve explicit zero table indentation and source paragraph content.",
+    "BorderWidthPoints": 1.0,
+    "RightIntroductionAfterPoints": 8
+  },
+  {
+    "Id": "parallel-cell-bordered-thick",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/parallel-cell-bordered-thick.docx",
+    "Sha256": "B121D3E76427DAE12D265C9D8000F08D0241D23E12679E2D546C20D3C97D386B",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-frame-mixed-prose.docx",
+    "SourceSha256": "EF0F9C1AD288737E511846F8F68E202E22B4AEDAA1B95D336D2213AC685F7514",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "SourceRowsPerCell": 120,
+    "ExpectedText": [
+      "Before public math table.",
+      "Left source row 1.",
+      "Right source row 1.",
+      "Left source row 120.",
+      "Right source row 120.",
+      "After public math table."
+    ],
+    "Change": "Independently vary border thickness or introduction spacing; preserve explicit zero table indentation and source paragraph content.",
+    "BorderWidthPoints": 2.0,
+    "RightIntroductionAfterPoints": 16
+  }
+]

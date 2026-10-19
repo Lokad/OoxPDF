@@ -24,6 +24,7 @@ probes.add_argument('--parallel-cell-box-probe', action='store_true')
 probes.add_argument('--parallel-cell-inset-probes', action='store_true')
 probes.add_argument('--parallel-cell-bottom-inset-probe', action='store_true')
 probes.add_argument('--parallel-cell-box-inset-probe', action='store_true')
+probes.add_argument('--parallel-cell-border-probes', action='store_true')
 args = parser.parse_args()
 sha = lambda value: hashlib.sha256(value).hexdigest().upper()
 
@@ -47,6 +48,7 @@ parallel_group = next((group for enabled, group in [
     (args.parallel_cell_inset_probes, ('parallel-cell-inset-probes.json', ('uniform-insets', 'unequal-insets'))),
     (args.parallel_cell_bottom_inset_probe, ('parallel-cell-bottom-inset-probe.json', ('bottom-insets',))),
     (args.parallel_cell_box_inset_probe, ('parallel-cell-box-inset-probe.json', ('boxed-insets',))),
+    (args.parallel_cell_border_probes, ('parallel-cell-border-probes.json', ('bordered-aligned', 'bordered-thick'))),
 ] if enabled), None)
 if parallel_group:
     parent = next(row for row in json.loads((cases / 'spanning-frame-probes.json').read_text())
@@ -64,13 +66,14 @@ if parallel_group:
         'bottom-insets': dict(Left=(3, 18), Right=(3, 3)),
         'boxed-insets': dict(Left=(3, 3), Right=(3, 3)),
     }
+    source_borders = {'bordered': (8, True), 'bordered-aligned': (8, False), 'bordered-thick': (16, True)}
     for variant in variants:
         parts = dict(original_parts)
         tree = E.fromstring(parts['word/document.xml'])
         table = next(tree.iter(w + 'tbl'))
         widths = (240, 160) if variant in ('boxed-math', 'boxed-insets') else (160, 160)
         table.find(w + 'tblPr/' + w + 'tblW').set(w + 'w', str(sum(widths) * 20))
-        if variant == 'bordered':
+        if variant in source_borders:
             E.SubElement(table.find(w + 'tblPr'), w + 'tblInd', {w + 'w': '0', w + 'type': 'dxa'})
         grid = table.find(w + 'tblGrid')
         grid.clear()
@@ -81,10 +84,10 @@ if parallel_group:
         for side, width in zip(('Left', 'Right'), widths):
             cell = copy.deepcopy(source_cell)
             cell.find(w + 'tcPr/' + w + 'tcW').set(w + 'w', str(width * 20))
-            if variant == 'bordered':
+            if variant in source_borders:
                 borders = E.SubElement(cell.find(w + 'tcPr'), w + 'tcBorders')
                 for edge in ('top', 'left', 'bottom', 'right'):
-                    E.SubElement(borders, w + edge, {w + 'val': 'single', w + 'sz': '8', w + 'color': '000000'})
+                    E.SubElement(borders, w + edge, {w + 'val': 'single', w + 'sz': str(source_borders[variant][0]), w + 'color': '000000'})
             if variant in source_insets:
                 properties = cell.find(w + 'tcPr')
                 margins = properties.find(w + 'tcMar')
@@ -103,7 +106,7 @@ if parallel_group:
             if properties is None:
                 properties = E.Element(w + 'pPr')
                 prefix.insert(0, properties)
-            E.SubElement(properties, w + 'spacing', {w + 'after': '320' if side == 'Right' and variant in ('shifted', 'bordered') else '160'})
+            E.SubElement(properties, w + 'spacing', {w + 'after': '320' if side == 'Right' and (variant == 'shifted' or source_borders.get(variant, (0, False))[1]) else '160'})
             for index, paragraph in enumerate(paragraphs[1:], 1):
                 paragraph.find('.//' + w + 't').text = side + ' source row ' + str(index) + '.'
                 paragraph.find('.//' + w + 'sz').set(w + 'val',
@@ -141,6 +144,10 @@ if parallel_group:
                 SourceBoxParagraphSha256=sha(E.tostring(box_paragraph)),FieldInstruction='NUMPAGES',
                 ExpectedText=rows[-1]['ExpectedText']+['Before inline','after equation.'],
                 Change='Preserve an accepted boxed equation/NUMPAGES prefix in the left cell beside ordinary parallel prose; use source-authored widths.')
+        if variant in ('bordered-aligned', 'bordered-thick'):
+            rows[-1].update(BorderWidthPoints=source_borders[variant][0] / 8,
+                RightIntroductionAfterPoints=16 if source_borders[variant][1] else 8,
+                Change='Independently vary border thickness or introduction spacing; preserve explicit zero table indentation and source paragraph content.')
         if variant in source_insets:
             rows[-1].update(CellInsets={side:dict(Top=points[0],Bottom=points[1]) for side,points in source_insets[variant].items()},
                 CellFills=dict(Left='DDEBF7',Right='E2F0D9'),
