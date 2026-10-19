@@ -29,6 +29,7 @@ passive.add_argument('--passive-footers', action='store_true')
 passive.add_argument('--page-field-probes', action='store_true')
 passive.add_argument('--inactive-static-probes', action='store_true')
 passive.add_argument('--inactive-note-probe', action='store_true')
+passive.add_argument('--field-code-probes', action='store_true')
 parser.add_argument('--write', action='store_true', help='Publish selected composition controls; otherwise verify them.')
 args = parser.parse_args()
 
@@ -37,6 +38,58 @@ cases = root / 'tests/Lokad.OoxPdf.Tests/Cases'
 output = cases / 'CompositionProbes'
 output.mkdir(exist_ok=True)
 w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+
+if args.field_code_probes:
+    source = next(row for row in json.loads((output / 'minimum-passive-page-fields.json').read_text())
+        if row['FieldInstruction'] == 'PAGE')
+    original = (root / source['Input']).read_bytes()
+    assert hashlib.sha256(original).hexdigest().upper() == source['Sha256']
+    prepared, rows = [], []
+    for code_points in [11, 13]:
+        with ZipFile(BytesIO(original)) as archive:
+            entries = {name: archive.read(name) for name in archive.namelist()}
+        body = entries['word/document.xml']
+        part = 'word/passive-body-header.xml'
+        story = E.fromstring(entries[part])
+        paragraph = story.find(w + 'p')
+        field = paragraph.find(w + 'fldSimple')
+        result = copy.deepcopy(field.find(w + 'r'))
+        visible = ''.join(story.itertext())
+        paragraph.remove(field)
+        def field_run(tag, value):
+            run = E.SubElement(paragraph, w + 'r')
+            run.append(copy.deepcopy(result.find(w + 'rPr')))
+            node = E.SubElement(run, w + tag)
+            if tag == 'fldChar':
+                node.set(w + 'fldCharType', value)
+            else:
+                run.find(w + 'rPr').find(w + 'sz').set(w + 'val', str(code_points * 2))
+                node.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+                node.text = value
+        field_run('fldChar', 'begin')
+        field_run('instrText', ' PAGE ')
+        field_run('fldChar', 'separate')
+        paragraph.append(result)
+        field_run('fldChar', 'end')
+        assert ''.join(node.text or '' for node in story.iter(w + 't')) == visible
+        entries[part] = E.tostring(story, encoding='utf-8', xml_declaration=True)
+        assert entries['word/document.xml'] == body
+        name = 'minimum-page-code-' + str(code_points)
+        data = package_bytes(entries)
+        rows.append(dict(Id=name, Input='tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/' + name + '.docx',
+            Sha256=hashlib.sha256(data).hexdigest().upper(), SourceId=source['Id'], SourceSha256=source['Sha256'],
+            SourceBodySha256=source['SourceBodySha256'], HeldOut=True, ExpectedEquationCount=0,
+            ExpectedText=source['ExpectedText'], FieldInstruction='PAGE', CodeFontPoints=code_points,
+            VisibleFontPoints=11, Context='ordinary12'))
+        prepared.append((output / (name + '.docx'), data))
+    prepared.append((output / 'minimum-field-code.json', manifest_bytes(rows)))
+    for path, data in prepared:
+        if args.write:
+            publish(path, data)
+        else:
+            assert path.read_bytes() == data, path.name
+    print('Two complex PAGE controls verified; only non-rendering instruction font size varies, visible content/body unchanged.')
+    raise SystemExit(0)
 
 if args.inactive_static_probes or args.inactive_note_probe:
     r = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
