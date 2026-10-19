@@ -349,7 +349,7 @@ internal sealed partial class DocxLayoutEngine
         double baselineInset = ResolveTableCellFirstBaselineInset(paragraphs, textMeasurer);
         double textWidth = Math.Max(1d, cellWidth - paddingLeft - paddingRight);
         double startBaselineY = cellY + cellHeight - baselineInset - paddingTop;
-        bool pageStatic = !HasPageDynamicFields(bodyElements);
+        bool pageStatic = !HasPageDynamicFields(bodyElements, context.CancellationToken);
         var (lines, usedHeight, placedImages, placedBoxes) = ComputeTableCellTextLines(cell, cellX, cellWidth, context, bodyElements, paddingLeft, textWidth, startBaselineY, rowTopPadding, cellX, cellY + cellHeight, pageStatic, pageIndex);
         if (lines.Count == 0)
         {

@@ -35,7 +35,11 @@ internal readonly record struct DocxInlineSourceCursor(int AtomIndex, int TextOf
 internal sealed record DocxMeasuredInlineAtoms(DocxParagraph Paragraph,
     IReadOnlyList<DocxMeasuredInlineFragment> Fragments, IDocxTextMeasurer Measurer,
     double FontSize, double BaselineInset, double LineHeight, double Scale, double DefaultTabStopPoints,
-    IReadOnlyList<DocxTabStop> TabStops, IReadOnlyList<int> CounterFragmentIndices);
+    IReadOnlyList<DocxTabStop> TabStops, IReadOnlyList<int> CounterFragmentIndices)
+{
+    public int? BoundPageNumber { get; init; }
+    public IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? MathEquations { get; init; }
+}
 internal readonly record struct DocxInlineParagraphFrame(double OccupiedHeight, DocxTextLineLayout LastLine);
 
 internal sealed partial class DocxLayoutEngine
@@ -355,6 +359,7 @@ internal sealed partial class DocxLayoutEngine
                     break;
                 case DocxInlineBox box:
                     if (!IsNaturalInlineBoxFrame(box.Box, double.MaxValue, equations, token) ||
+                        pageNumber is null && HasPageDynamicFields(box.Box.BodyElements, token) ||
                         ReadEmuPoints(box.Box.ExtentCxValue) is not { } boxWidth ||
                         !double.IsFinite(boxWidth * scale)) return false;
                     var frame = CreateInlineTextBoxLayout(box.Box, null, 0d, boxWidth * scale, 0d,
@@ -405,8 +410,9 @@ internal sealed partial class DocxLayoutEngine
         atoms = new(paragraph, measured, measurer, fontSize, baselineInset, lineHeight, scale, defaultTabStopPoints,
             hasTabs ? ScaleTabStopPositions(paragraph.TabStops, scale) : [],
             measured.Select((fragment, index) => (fragment, index))
-                .Where(item => item.fragment.Source is DocxInlineText { Run.FieldKind: { } kind } && kind.IsDynamic())
-                .Select(item => item.index).ToArray());
+                .Where(item => item.fragment.Source is DocxInlineText { Run.FieldKind: { } kind } && kind.IsDynamic() ||
+                    item.fragment.Source is DocxInlineBox box && HasPageDynamicFields(box.Box.BodyElements, token))
+                .Select(item => item.index).ToArray()) { BoundPageNumber = pageNumber, MathEquations = equations };
         return true;
 
         void AddMeasuredMath(DocxInlineItem source, DocxPreparedMathParagraph prepared)
@@ -449,7 +455,7 @@ internal sealed partial class DocxLayoutEngine
     }
 
     internal static bool TryRebindInlineCounters(DocxMeasuredInlineAtoms atoms, int? pageNumber, int? pageCount,
-        CancellationToken token, [NotNullWhen(true)] out DocxMeasuredInlineAtoms? rebound)
+        CancellationToken token, [NotNullWhen(true)] out DocxMeasuredInlineAtoms? rebound, int firstUnplacedFragment = 0)
     {
         rebound = null;
         token.ThrowIfCancellationRequested();
@@ -458,6 +464,23 @@ internal sealed partial class DocxLayoutEngine
         {
             token.ThrowIfCancellationRequested();
             var fragment = atoms.Fragments[index];
+            if (fragment.Source is DocxInlineBox box)
+            {
+                // A box is one atomic source item. Its placed predecessors keep
+                // their frames; only an unplaced, newly bound child is measured.
+                if (index < firstUnplacedFragment || atoms.BoundPageNumber == pageNumber) continue;
+                if (pageNumber is null || fragment.TextBox is null) return false;
+                var frame = CreateInlineTextBoxLayout(box.Box, null, 0d, fragment.Advance, 0d,
+                    DocxTextAlignment.Left, atoms.Measurer, atoms.DefaultTabStopPoints, atoms.Scale,
+                    pageNumber.Value, token, mathEquations: atoms.MathEquations);
+                if (frame is null) return false;
+                changed ??= atoms.Fragments.ToArray();
+                changed[index] = fragment with { Advance = frame.BoxWidth, BaselineInset = frame.BoxHeight,
+                    OccupiedHeight = frame.BoxHeight, TextBox = frame,
+                    VisibleSourceExtent = fragment.VisibleSourceExtent is { } visible
+                        ? visible with { EndOffset = frame.BoxWidth, AboveBaseline = frame.BoxHeight } : null };
+                continue;
+            }
             if (fragment.Source is not DocxInlineText { Run.FieldKind: { } kind } source || !kind.IsDynamic()) continue;
             if (fragment.Text.Count != 1 || !DocxFieldText.TryResolve(source.Run,
                 source.Run.Text.Substring(source.Start, source.Length), pageNumber, pageCount, out string value)) return false;
@@ -470,7 +493,7 @@ internal sealed partial class DocxLayoutEngine
             changed ??= atoms.Fragments.ToArray();
             changed[index] = fragment with { Advance = width, Text = [span], TextSegments = segments };
         }
-        rebound = changed is null ? atoms : atoms with { Fragments = changed };
+        rebound = changed is null ? atoms : atoms with { Fragments = changed, BoundPageNumber = pageNumber };
         return true;
     }
 

@@ -1502,7 +1502,8 @@ internal sealed partial class DocxLayoutEngine
                         // available here. Losing one is an internal invariant.
                         if (boundPage != pages.Count + 1)
                         {
-                            if (!TryRebindInlineCounters(atoms, pages.Count + 1, knownPageCount, cancellationToken, out var rebound))
+                            if (!TryRebindInlineCounters(atoms, pages.Count + 1, knownPageCount, cancellationToken, out var rebound,
+                                firstUnplacedFragment: sourceCursor.AtomIndex))
                                 throw new InvalidOperationException("An admitted body counter has no page input.");
                             bound = rebound;
                             boundPage = pages.Count + 1;

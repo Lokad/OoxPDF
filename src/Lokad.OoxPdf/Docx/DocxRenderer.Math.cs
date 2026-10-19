@@ -128,7 +128,8 @@ internal sealed partial class DocxRenderer
             .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, token)
                 .Select(owner => (owner.Paragraph, owner.HasPageInputs, NeedsFinalCount: false)))
             .Concat(DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(document, token)
-                .Select(paragraph => (Paragraph: paragraph, HasPageInputs: false, NeedsFinalCount: false))))
+                .Select(paragraph => (Paragraph: paragraph,
+                    HasPageInputs: DocxMathParagraphPolicy.UsesOnlyPageNumberCounters(paragraph), NeedsFinalCount: false))))
         {
             token.ThrowIfCancellationRequested();
             DocxParagraph paragraph = owner.Paragraph;

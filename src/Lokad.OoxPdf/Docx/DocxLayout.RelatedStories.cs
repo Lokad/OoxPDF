@@ -2484,7 +2484,8 @@ internal sealed partial class DocxLayoutEngine
                 if (paragraph.InlineTextBoxes.Count == 0 && TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, size,
                     Math.Max(1d, bodyWidth - firstInset - rightInset), Math.Max(1d, bodyWidth - nextInset - rightInset),
                     baseline, lineHeight, paragraphSpacingScale, cancellationToken, out var measured,
-                    defaultTabStopPoints: defaultTabStopPoints, allowStaticFallback: ordinaryBoxParagraph))
+                    defaultTabStopPoints: defaultTabStopPoints, pageNumber: pageNumber, pageCount: pageCount,
+                    allowStaticFallback: ordinaryBoxParagraph))
                 {
                     for (int index = 0; index < measured.Count; index++)
                     {

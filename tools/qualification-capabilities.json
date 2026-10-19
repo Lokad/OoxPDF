@@ -9075,5 +9075,24 @@
     "PortableRenderingTotalPageMath",
     "PortableRenderingMixedDisplayCountersPreserveTotalPageDependencies",
     "DocxTableCellPageFieldsEvaluatePerFragmentPage"
+  ],
+  "docx-inline-box-page-counters": [
+    "DocxInlineBoxPageCounters",
+    "PortableRenderingInlineBoxPageCountersKeepMathAtActualPage",
+    "DocxInlineBoxMathKeepsIndependentContentAcrossContainers",
+    "DocxInlineBoxMathPreparationRetainsChildAndSiblingSourceIdentity",
+    "DocxInlineBoxMathPreparationObservesCancellationBetweenChildren",
+    "DocxInlineBoxMathReaderKeepsPicturesWithTheirChildSourceFrame",
+    "PortableRenderingInlineBoxMathKeepsSourceContentAndResources",
+    "DocxInlineCompositionSourceCursorRebindsUnplacedPageCounters",
+    "DocxInlineCompositionCounterAtomsMeasureOnlyTheirOwnedInputs",
+    "DocxInlineCompositionMeasuredAtomsRebindOnlyCounters",
+    "DocxFieldTextCounterInputsRemainIndependent",
+    "DocxTableCellPageFieldsEvaluatePerFragmentPage",
+    "MemoTiersPageStaticVsDynamic",
+    "DocxTableCellTextLinesMemoSharesSplitCells",
+    "DocxInlineCompositionStaticPageFieldsRequireActualPageInputs",
+    "DocxInlineCompositionMappedNoteBandBottomMatchesIndependentWord",
+    "PortableRenderingCompleteRevisionsKeepContentInkAndStoryBands"
   ]
 }

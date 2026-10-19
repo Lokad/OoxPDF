@@ -10,33 +10,39 @@ namespace Lokad.OoxPdf.Docx;
 // by shifting relative lines by the lookup origin. Cells carrying PAGE/NUMPAGES runs
 // keep their page args in the key (dynamic tier); all other cells omit them (static
 // tier), which is sound because page inputs only reach text spans and wrap measurement
-// through dynamic field runs. Vertical-alignment shifts stay outside the memo: every
+// through dynamic field runs, including inline-box children. Vertical-alignment
+// shifts stay outside the memo: every
 // caller applies its own height-dependent shift to the shared unshifted lines.
 // Cell identity is explicit reference identity: equal-valued distinct cell instances
 // must not share entries.
 internal sealed partial class DocxLayoutEngine
 {
-    internal static bool HasPageDynamicFields(IReadOnlyList<DocxBodyElement> bodyElements)
+    internal static bool HasPageDynamicFields(IReadOnlyList<DocxBodyElement> bodyElements, CancellationToken token = default)
     {
         foreach (DocxBodyElement element in bodyElements)
         {
+            token.ThrowIfCancellationRequested();
             if (element is DocxParagraphElement paragraphElement)
             {
                 foreach (DocxTextRun run in paragraphElement.Paragraph.Runs)
                 {
+                    token.ThrowIfCancellationRequested();
                     if (run.FieldKind is DocxFieldKind.Page or DocxFieldKind.NumPages)
                     {
                         return true;
                     }
                 }
+                foreach (var box in paragraphElement.Paragraph.InlineTextBoxes)
+                    if (HasPageDynamicFields(box.BodyElements, token)) return true;
             }
             else if (element is DocxTableElement tableElement)
             {
                 foreach (DocxTableRow row in tableElement.Table.Rows)
                 {
+                    token.ThrowIfCancellationRequested();
                     foreach (DocxTableCell nested in row.Cells)
                     {
-                        if (HasPageDynamicFields(GetTableCellLayoutBodyElements(nested)))
+                        if (HasPageDynamicFields(GetTableCellLayoutBodyElements(nested), token))
                         {
                             return true;
                         }
