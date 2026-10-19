@@ -38,7 +38,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(2, rows[0].Table.AdmittedMergeSpanHeights.Count);
             var baseline = engine.Create(source, new DocxTests.FamilyWidthTextMeasurer(), default).Pages
                 .SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
-            TestAssert.True(rows.Zip(baseline).All(pair => pair.First.Height >= pair.Second.Height),
+            TestAssert.True(rows.Zip(baseline).All(pair => pair.First.Height + 1e-9d >= pair.Second.Height),
                 "Overlapping constraints cannot spend another row's existing floor.");
             foreach (var owner in owners)
             {
@@ -109,8 +109,8 @@ internal static partial class DocxInlineCompositionTests
                 "All rows reuse the complete frame admitted at the original origin.");
             var baseline = engine.Create(source, new DocxTests.FamilyWidthTextMeasurer(), default).Pages
                 .SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
-            TestAssert.True(rows.Zip(baseline).All(pair => pair.First.Height >= pair.Second.Height),
-                "Measured span ownership preserves every pre-existing row floor.");
+            TestAssert.True(rows.Zip(baseline).All(pair => pair.First.Height + 1e-9d >= pair.Second.Height),
+                variant + ": measured span ownership preserves every pre-existing row floor (within floating-point subtraction precision).");
             if (variant == "minimum") TestAssert.True(rows.All(row => row.Height >= 40d), "Authored minimum heights remain floors.");
             var table = source.Tables.Single();
             var cell = table.Rows[0].Cells[0] with { HasVerticalMerge = false, VerticalMergeValue = null };
