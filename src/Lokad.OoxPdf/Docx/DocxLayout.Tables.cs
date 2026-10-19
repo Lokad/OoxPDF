@@ -602,9 +602,10 @@ internal sealed partial class DocxLayoutEngine
         bool adjustAlignedMinimumMargins = false,
         double? alignedMinimumAvailableHeight = null,
         bool allowAutomaticMinimumGridPlacement = false,
-        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null,
+        bool anchorAuthoredCellText = true)
     {
-        DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth, paragraphSpacingScale, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, commentMarkerLabels, mathEquations, cancellationToken);
+        DocxResolvedTableGrid grid = ResolveTableGrid(table, x, availableWidth, paragraphSpacingScale, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, commentMarkerLabels, mathEquations, cancellationToken, anchorAuthoredCellText);
         var sourceMeasurements = paragraphSpacingScale is > 0d and < 1d
             ? new DocxTableRowMeasurement[table.Rows.Count] : [];
         var tableContext = new DocxTableLayoutContext(
@@ -743,7 +744,7 @@ internal sealed partial class DocxLayoutEngine
         { BoundaryMinimumRowHeights = boundaryMinimumRowHeights };
     }
 
-    private static DocxResolvedTableGrid ResolveTableGrid(DocxTable table, double x, double availableWidth, double fixedScale, IDocxTextMeasurer? textMeasurer, double defaultTabStopPoints, int? pageNumber, int? pageCount, IReadOnlyDictionary<string, string>? commentMarkerLabels = null, IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null, CancellationToken cancellationToken = default)
+    private static DocxResolvedTableGrid ResolveTableGrid(DocxTable table, double x, double availableWidth, double fixedScale, IDocxTextMeasurer? textMeasurer, double defaultTabStopPoints, int? pageNumber, int? pageCount, IReadOnlyDictionary<string, string>? commentMarkerLabels = null, IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null, CancellationToken cancellationToken = default, bool anchorAuthoredCellText = true)
     {
         // W6-a1: fixed table geometry joins scaled space (fixed lengths times the layout
         // scale) so the uniform shift-composition maps frames like body text. Percent and
@@ -775,13 +776,14 @@ internal sealed partial class DocxLayoutEngine
             {
                 gridX = tableX - (firstCell.StyleMargins?.LeftPoints ?? 0d) * fixedScale;
             }
-            else if (firstCell.Margins.LeftPoints is not null &&
+            else if (anchorAuthoredCellText && firstCell.Margins.LeftPoints is not null &&
                 DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(firstCell.Borders, "left")) == 0d &&
                 DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(firstCell.Borders, "start")) == 0d)
             {
-                // Authored margins without a visible starting border locate the
-                // first text edge at the container origin. The grid carries
-                // that inset once for all rows and their source annotations.
+                // Flowing stories anchor the first text edge. Header/footer
+                // containers anchor the grid instead (independent zero/wide
+                // margin and ordinary/math-frame Word controls). Explicit
+                // indentation, style and compatibility retain their own rules.
                 gridX = tableX - ResolveTableCellHorizontalEdgeInset(firstCell, "left", firstCell.Margins.LeftPoints, fixedScale);
             }
         }

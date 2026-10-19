@@ -286,7 +286,8 @@ internal sealed partial class DocxLayoutEngine
                     pageNumber,
                     pageCount: pageCount,
                     paragraphSpacingScale: paragraphSpacingScale,
-                    mathEquations: mathEquations);
+                    mathEquations: mathEquations,
+                    anchorAuthoredCellText: false);
                 for (int rowIndex = 0; rowIndex < tableElement.Table.Rows.Count; rowIndex++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();

@@ -1,0 +1,1007 @@
+{
+  "Provenance": "Ten independent Word16 views before any library change; authored margin/container/plain-content variations from one pinned source. Original1pt origins/.1pt size/.01pt stroke gates. No candidate anchors. Two inherited pinned static-cell Word views now admit X and Y with the original thresholds; cached references unchanged.",
+  "Rows": [
+    {
+      "Id": "static-table-origin-header-zero",
+      "Mode": "final-preserve",
+      "InputSha256": "4233F2542A665F601926AD397FA72B8566A61B415FBFA47B4D669661902F9995",
+      "MathPart": "word/inline-box-review-header.xml",
+      "BoxEquationCount": 1,
+      "ExpectedPaintedMathText": "x+2y",
+      "ExpectedPaintedMathGlyphs": 4,
+      "WordMathText": "x+2y",
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 143.66000366210938,
+          "Y": 19.44000244140625,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 148.5800018310547,
+          "Y": 19.44000244140625,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 154.4600067138672,
+          "Y": 19.44000244140625,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 148.6999969482422,
+          "Y": 31.44000244140625,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            72.0,
+            9.0,
+            288.0,
+            69.0
+          ],
+          "StrokeWidth": 0.5
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 79.46399688720703,
+          "Y": 25.91998291015625,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 72.02400207519531,
+        "Y": 108.01995849609375
+      },
+      "FollowingText": "After public math table.",
+      "WordImageCount": 0,
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "FollowingGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "IgnoredEquationDiagnostics": 0,
+      "IgnoredEquationParts": [],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table."
+      ],
+      "WordPdfSha256": "802C172336517754E33F25183E80EAA3779CF2990F0CF50FC4E3E69A1BD3BC67",
+      "WordExportLogSha256": "48129EBCEFCF6B92047FDFF66BD4B5ABFF7766E5C98628E5F60DB83077E6C47F"
+    },
+    {
+      "Id": "static-table-origin-header-zero",
+      "Mode": "all-word-compatible",
+      "InputSha256": "4233F2542A665F601926AD397FA72B8566A61B415FBFA47B4D669661902F9995",
+      "MathPart": "word/inline-box-review-header.xml",
+      "BoxEquationCount": 1,
+      "ExpectedPaintedMathText": "x+2y",
+      "ExpectedPaintedMathGlyphs": 4,
+      "WordMathText": "x+2y",
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 108.23999786376953,
+          "Y": 118.3399658203125,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 111.94000244140625,
+          "Y": 118.3399658203125,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 116.37999725341797,
+          "Y": 118.3399658203125,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 112.02999877929688,
+          "Y": 127.38995361328125,
+          "Size": 6.047999858856201
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            54.27399826049805,
+            110.34197998046875,
+            217.09400939941406,
+            155.57000732421875
+          ],
+          "StrokeWidth": 0.37689998745918274
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 59.85599899291992,
+          "Y": 123.219970703125,
+          "Size": 8.303999900817871
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 54.2400016784668,
+        "Y": 185.05999755859375
+      },
+      "FollowingText": "After public math table.",
+      "WordImageCount": 0,
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "FollowingGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "IgnoredEquationDiagnostics": 0,
+      "IgnoredEquationParts": [],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table."
+      ],
+      "WordPdfSha256": "7ABA1001A0ACAF98CE6364A0EEE7002F85C147E02435F8A06B563F022F8DC430",
+      "WordExportLogSha256": "FFC3A849AD855886492B85AF794A5D1CCBE2FFF7C8209EAAED5935E7F92D387C"
+    },
+    {
+      "Id": "static-table-origin-header-wide",
+      "Mode": "final-preserve",
+      "InputSha256": "CDA620C89F9481657073B5D8343B3F04FDEF81C0BA9072D1036BA8EF76323F8F",
+      "MathPart": "word/inline-box-review-header.xml",
+      "BoxEquationCount": 1,
+      "ExpectedPaintedMathText": "x+2y",
+      "ExpectedPaintedMathGlyphs": 4,
+      "WordMathText": "x+2y",
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 153.6199951171875,
+          "Y": 19.44000244140625,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 158.5399932861328,
+          "Y": 19.44000244140625,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 164.4199981689453,
+          "Y": 19.44000244140625,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 158.66000366210938,
+          "Y": 31.44000244140625,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            82.0,
+            9.0,
+            298.0,
+            69.0
+          ],
+          "StrokeWidth": 0.5
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 89.42400360107422,
+          "Y": 25.91998291015625,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 72.02400207519531,
+        "Y": 108.01995849609375
+      },
+      "FollowingText": "After public math table.",
+      "WordImageCount": 0,
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "FollowingGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "IgnoredEquationDiagnostics": 0,
+      "IgnoredEquationParts": [],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table."
+      ],
+      "WordPdfSha256": "BE524794221FAE86A8A88B3E69FF2609C15343EA16ABC149C43F6547F2E927B0",
+      "WordExportLogSha256": "237C0D216A346EECCDBA7936C78FAE0256E02F45C5D0CB39BFE05174E596D0B2"
+    },
+    {
+      "Id": "static-table-origin-header-wide",
+      "Mode": "all-word-compatible",
+      "InputSha256": "CDA620C89F9481657073B5D8343B3F04FDEF81C0BA9072D1036BA8EF76323F8F",
+      "MathPart": "word/inline-box-review-header.xml",
+      "BoxEquationCount": 1,
+      "ExpectedPaintedMathText": "x+2y",
+      "ExpectedPaintedMathGlyphs": 4,
+      "WordMathText": "x+2y",
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 115.7300033569336,
+          "Y": 118.3399658203125,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 119.44999694824219,
+          "Y": 118.3399658203125,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 123.86000061035156,
+          "Y": 118.3399658203125,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 119.54000091552734,
+          "Y": 127.38995361328125,
+          "Size": 6.047999858856201
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            61.8120002746582,
+            110.34197998046875,
+            224.6320037841797,
+            155.57000732421875
+          ],
+          "StrokeWidth": 0.37689998745918274
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 67.36799621582031,
+          "Y": 123.219970703125,
+          "Size": 8.303999900817871
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 54.2400016784668,
+        "Y": 185.05999755859375
+      },
+      "FollowingText": "After public math table.",
+      "WordImageCount": 0,
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "FollowingGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "IgnoredEquationDiagnostics": 0,
+      "IgnoredEquationParts": [],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table."
+      ],
+      "WordPdfSha256": "901C4C63F7F56507E2F2FBDE8A5A145978CE041C292F1B3BDCBC8E581D8FB4F0",
+      "WordExportLogSha256": "A1FD54A466577EA9B19786BA12C90468BB4EECB77DADE403DB80AA162C309C89"
+    },
+    {
+      "Id": "static-table-origin-header-prose-wide",
+      "Mode": "final-preserve",
+      "InputSha256": "2A235DC3EB9FAB1E0890D779C34979CD475C8E8D605CD1A5815D1B35E67FF5F4",
+      "MathPart": "word/inline-box-review-header.xml",
+      "BoxEquationCount": 0,
+      "ExpectedPaintedMathText": "",
+      "ExpectedPaintedMathGlyphs": 0,
+      "WordMathText": "",
+      "WordMathAnchors": [],
+      "WordFrames": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Public table cell text.",
+          "Page": 1,
+          "X": 81.98400115966797,
+          "Y": 19.32000732421875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 72.02400207519531,
+        "Y": 102.97998046875
+      },
+      "FollowingText": "After public math table.",
+      "WordImageCount": 0,
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "FollowingGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "IgnoredEquationDiagnostics": 0,
+      "IgnoredEquationParts": [],
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table.",
+        "Public table cell text."
+      ],
+      "WordPdfSha256": "BBDF96CCBF6300A564E5679411A7A49EA4E8F754CF4B18D084CC7A6C86FDF172",
+      "WordExportLogSha256": "260A2DD068AC1BD17C0F9D508EE1E3C8049FABEA28A4F980F418B9C810A24EB1"
+    },
+    {
+      "Id": "static-table-origin-header-prose-wide",
+      "Mode": "all-word-compatible",
+      "InputSha256": "2A235DC3EB9FAB1E0890D779C34979CD475C8E8D605CD1A5815D1B35E67FF5F4",
+      "MathPart": "word/inline-box-review-header.xml",
+      "BoxEquationCount": 0,
+      "ExpectedPaintedMathText": "",
+      "ExpectedPaintedMathGlyphs": 0,
+      "WordMathText": "",
+      "WordMathAnchors": [],
+      "WordFrames": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Public table cell text.",
+          "Page": 1,
+          "X": 61.75199890136719,
+          "Y": 118.25,
+          "Size": 8.303999900817871
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 54.2400016784668,
+        "Y": 181.26995849609375
+      },
+      "FollowingText": "After public math table.",
+      "WordImageCount": 0,
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "FollowingGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "IgnoredEquationDiagnostics": 0,
+      "IgnoredEquationParts": [],
+      "ExpectedText": [
+        "Before public math table.",
+        "After public math table.",
+        "Public table cell text."
+      ],
+      "WordPdfSha256": "288D44ED5D749D6E1B7D54B778AE157C05810F899BDEF4BF9BDF441D99DA8B98",
+      "WordExportLogSha256": "71353F777BC9D30C832ED3DCA9485FAFCA7A99DF177A3BD71F1BEB48EF9100F0"
+    },
+    {
+      "Id": "static-table-origin-footer-wide",
+      "Mode": "final-preserve",
+      "InputSha256": "6BDF80C3631BB51E6925302F6BC1ABFF1137D30DAAC61C74327B0D9F69208A97",
+      "MathPart": "word/inline-box-review-header.xml",
+      "BoxEquationCount": 1,
+      "ExpectedPaintedMathText": "x+2y",
+      "ExpectedPaintedMathGlyphs": 4,
+      "WordMathText": "x+2y",
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 153.6199951171875,
+          "Y": 748.416015625,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 158.5399932861328,
+          "Y": 748.416015625,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 164.4199981689453,
+          "Y": 748.416015625,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 158.66000366210938,
+          "Y": 760.416015625,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            82.0,
+            737.8999633789062,
+            298.0,
+            797.8999633789062
+          ],
+          "StrokeWidth": 0.5
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 89.42400360107422,
+          "Y": 754.89599609375,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 72.02400207519531,
+        "Y": 102.97998046875
+      },
+      "FollowingText": "After public math table.",
+      "WordImageCount": 0,
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "FollowingGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "IgnoredEquationDiagnostics": 0,
+      "IgnoredEquationParts": [],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table."
+      ],
+      "WordPdfSha256": "1078CD8F9B15A057EF185A8A19D2D92547366761DDC432E674A1CEEFB9644DB3",
+      "WordExportLogSha256": "A597E534377BF54AF47CC36987930C606613FE079C9FE31C0E90833F7A30E684"
+    },
+    {
+      "Id": "static-table-origin-footer-wide",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6BDF80C3631BB51E6925302F6BC1ABFF1137D30DAAC61C74327B0D9F69208A97",
+      "MathPart": "word/inline-box-review-header.xml",
+      "BoxEquationCount": 1,
+      "ExpectedPaintedMathText": "x+2y",
+      "ExpectedPaintedMathGlyphs": 4,
+      "WordMathText": "x+2y",
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 115.7300033569336,
+          "Y": 667.510009765625,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 119.44999694824219,
+          "Y": 667.510009765625,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 123.86000061035156,
+          "Y": 667.510009765625,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 119.54000091552734,
+          "Y": 676.5399780273438,
+          "Size": 6.047999858856201
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            61.8120002746582,
+            659.7919921875,
+            224.6320037841797,
+            705.02001953125
+          ],
+          "StrokeWidth": 0.37689998745918274
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 67.36799621582031,
+          "Y": 672.3800048828125,
+          "Size": 8.303999900817871
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 54.2400016784668,
+        "Y": 181.26995849609375
+      },
+      "FollowingText": "After public math table.",
+      "WordImageCount": 0,
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "FollowingGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "IgnoredEquationDiagnostics": 0,
+      "IgnoredEquationParts": [],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table."
+      ],
+      "WordPdfSha256": "DA1A62E6EA3D561F3EF47385FBF2D763DBFC0BCAC45471AE5371BEDDCDCDBC68",
+      "WordExportLogSha256": "9E3A30C810C920E1F127A95AA2672B238FB06F1D85823DA88A9E5E649231677F"
+    },
+    {
+      "Id": "static-table-origin-body-wide",
+      "Mode": "final-preserve",
+      "InputSha256": "E898A53463FE42A52B121C64D94EA13CAEE0E5D120120FA65387709F8C87D37E",
+      "MathPart": "word/document.xml",
+      "BoxEquationCount": 1,
+      "ExpectedPaintedMathText": "x+2y",
+      "ExpectedPaintedMathGlyphs": 4,
+      "WordMathText": "x+2y",
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 143.66000366210938,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 148.5800018310547,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 154.4600067138672,
+          "Y": 103.0999755859375,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 148.6999969482422,
+          "Y": 115.0999755859375,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            72.0,
+            92.64996337890625,
+            288.0,
+            152.64996337890625
+          ],
+          "StrokeWidth": 0.5
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 79.46399688720703,
+          "Y": 109.5799560546875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 72.02400207519531,
+        "Y": 171.01995849609375
+      },
+      "FollowingText": "After public math table.",
+      "WordImageCount": 0,
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "FollowingGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "IgnoredEquationDiagnostics": 0,
+      "IgnoredEquationParts": [],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table."
+      ],
+      "WordPdfSha256": "91D050492B1E6E7D066794F5AC01CBC4015EA276BE4DB9B7D77595BE583EB230",
+      "WordExportLogSha256": "6D800CA59CA11FC3A05366059003F9881B15BEC3D9775E768B9CFC434932D59C"
+    },
+    {
+      "Id": "static-table-origin-body-wide",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E898A53463FE42A52B121C64D94EA13CAEE0E5D120120FA65387709F8C87D37E",
+      "MathPart": "word/document.xml",
+      "BoxEquationCount": 1,
+      "ExpectedPaintedMathText": "x+2y",
+      "ExpectedPaintedMathGlyphs": 4,
+      "WordMathText": "x+2y",
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 108.23999786376953,
+          "Y": 181.3699951171875,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 111.94000244140625,
+          "Y": 181.3699951171875,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 116.37999725341797,
+          "Y": 181.3699951171875,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 112.02999877929688,
+          "Y": 190.38995361328125,
+          "Size": 6.047999858856201
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            54.27399826049805,
+            173.4019775390625,
+            217.09400939941406,
+            218.6300048828125
+          ],
+          "StrokeWidth": 0.37689998745918274
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 59.85599899291992,
+          "Y": 186.239990234375,
+          "Size": 8.303999900817871
+        }
+      ],
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 54.2400016784668,
+        "Y": 232.53997802734375
+      },
+      "FollowingText": "After public math table.",
+      "WordImageCount": 0,
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "FollowingGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "IgnoredEquationDiagnostics": 0,
+      "IgnoredEquationParts": [],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table."
+      ],
+      "WordPdfSha256": "4F326EE7386CFEE850AAF25CAC5440391786C28F2C1829F7CD7A72D1BA274189",
+      "WordExportLogSha256": "8D54CB097E11BB547B5E38821143DFDB25B29A9B3D918E08334586B2DA21D7D3"
+    },
+    {
+      "Id": "inline-box-review-static-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "E24B711AC3871AFD9367D01E538E4AE011BC3D5D03252E355C8705AC4B6FB0A7",
+      "MathPart": "word/inline-box-review-header.xml",
+      "BoxEquationCount": 1,
+      "ExpectedPaintedMathText": "x+2y",
+      "ExpectedPaintedMathGlyphs": 4,
+      "WordMathText": "x+2y",
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 149.05999755859375,
+          "Y": 19.44000244140625,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 153.97999572753906,
+          "Y": 19.44000244140625,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 159.86000061035156,
+          "Y": 19.44000244140625,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 154.10000610351562,
+          "Y": 31.44000244140625,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            77.4000015258789,
+            9.0,
+            293.3999938964844,
+            69.0
+          ],
+          "StrokeWidth": 0.5
+        }
+      ],
+      "GeometryAdmitted": false,
+      "WordImageCount": 0,
+      "IgnoredEquationDiagnostics": 0,
+      "IgnoredEquationParts": [],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table."
+      ],
+      "WordPdfSha256": "BE7FD8A85C4DB4E0FB8FDDE680CFDB1503831357A6F234946F87CDD566BCA9C5",
+      "WordExportLogSha256": "D7F3C69A0BF7BF6B5190AB3EEB7BD67D68DFDC4CD344D0D0325D7972BE26B34A",
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "GeometryResidual": "Inherited table starting-margin X: Final5.400pt/review4.088pt. Parent and candidate frame X identical; static Y remains admitted.",
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 72.02400207519531,
+        "Y": 108.01995849609375
+      },
+      "FollowingText": "After public math table.",
+      "FollowingGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 84.86399841308594,
+          "Y": 25.91998291015625,
+          "Size": 11.039999961853027
+        }
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ]
+    },
+    {
+      "Id": "inline-box-review-static-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E24B711AC3871AFD9367D01E538E4AE011BC3D5D03252E355C8705AC4B6FB0A7",
+      "MathPart": "word/inline-box-review-header.xml",
+      "BoxEquationCount": 1,
+      "ExpectedPaintedMathText": "x+2y",
+      "ExpectedPaintedMathGlyphs": 4,
+      "WordMathText": "x+2y",
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 112.30000305175781,
+          "Y": 118.3399658203125,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 116.0199966430664,
+          "Y": 118.3399658203125,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 120.43000030517578,
+          "Y": 118.3399658203125,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 116.08999633789062,
+          "Y": 127.38995361328125,
+          "Size": 6.047999858856201
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            58.34400177001953,
+            110.34197998046875,
+            221.16400146484375,
+            155.57000732421875
+          ],
+          "StrokeWidth": 0.37689998745918274
+        }
+      ],
+      "GeometryAdmitted": false,
+      "WordImageCount": 0,
+      "IgnoredEquationDiagnostics": 0,
+      "IgnoredEquationParts": [],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table."
+      ],
+      "WordPdfSha256": "8E004550A526224D161757692EE9097E851003119544ACE6AE0637E7FC22126F",
+      "WordExportLogSha256": "7107BFD2E4004C82B3D888B5EBDE08C1DDBF93DBFBEF06F8B1584729D5D90AA0",
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "GeometryResidual": "Inherited table starting-margin X: Final5.400pt/review4.088pt. Parent and candidate frame X identical; static Y remains admitted.",
+      "WordFollowingAnchor": {
+        "Page": 1,
+        "X": 54.2400016784668,
+        "Y": 185.05999755859375
+      },
+      "FollowingText": "After public math table.",
+      "FollowingGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 63.93600082397461,
+          "Y": 123.219970703125,
+          "Size": 8.303999900817871
+        }
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ]
+    }
+  ]
+}

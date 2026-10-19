@@ -1,0 +1,114 @@
+[
+  {
+    "Id": "inline-box-review-static-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-review-static-cell.docx",
+    "Sha256": "E24B711AC3871AFD9367D01E538E4AE011BC3D5D03252E355C8705AC4B6FB0A7",
+    "SourceSha256": "94DB539C6B386447B671CE72566709F8DBB1E0924903E3C18C3B928FBFC12885",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "static-cell",
+    "Change": "A real body comment exercises review scaling of header/cell/static-cell box frames; source math and dimensions unchanged.",
+    "ReviewedInput": "artifacts/inline-box-review-scale-neighbors/inline-box-review-static-cell.docx",
+    "ExpectedRenderedEquationCount": 1
+  },
+  {
+    "Id": "static-table-origin-header-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-table-origin-header-zero.docx",
+    "Sha256": "4233F2542A665F601926AD397FA72B8566A61B415FBFA47B4D669661902F9995",
+    "SourceSha256": "E24B711AC3871AFD9367D01E538E4AE011BC3D5D03252E355C8705AC4B6FB0A7",
+    "HeldOut": true,
+    "Variant": "header-zero",
+    "MathPart": "word/inline-box-review-header.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Change": "Vary authored cell margin or container/content while retaining the source table, frame and real body comment."
+  },
+  {
+    "Id": "static-table-origin-header-wide",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-table-origin-header-wide.docx",
+    "Sha256": "CDA620C89F9481657073B5D8343B3F04FDEF81C0BA9072D1036BA8EF76323F8F",
+    "SourceSha256": "E24B711AC3871AFD9367D01E538E4AE011BC3D5D03252E355C8705AC4B6FB0A7",
+    "HeldOut": true,
+    "Variant": "header-wide",
+    "MathPart": "word/inline-box-review-header.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Change": "Vary authored cell margin or container/content while retaining the source table, frame and real body comment."
+  },
+  {
+    "Id": "static-table-origin-header-prose-wide",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-table-origin-header-prose-wide.docx",
+    "Sha256": "2A235DC3EB9FAB1E0890D779C34979CD475C8E8D605CD1A5815D1B35E67FF5F4",
+    "SourceSha256": "E24B711AC3871AFD9367D01E538E4AE011BC3D5D03252E355C8705AC4B6FB0A7",
+    "HeldOut": true,
+    "Variant": "header-prose-wide",
+    "MathPart": "word/inline-box-review-header.xml",
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "After public math table.",
+      "Public table cell text."
+    ],
+    "Change": "Vary authored cell margin or container/content while retaining the source table, frame and real body comment."
+  },
+  {
+    "Id": "static-table-origin-footer-wide",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-table-origin-footer-wide.docx",
+    "Sha256": "6BDF80C3631BB51E6925302F6BC1ABFF1137D30DAAC61C74327B0D9F69208A97",
+    "SourceSha256": "E24B711AC3871AFD9367D01E538E4AE011BC3D5D03252E355C8705AC4B6FB0A7",
+    "HeldOut": true,
+    "Variant": "footer-wide",
+    "MathPart": "word/inline-box-review-header.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Change": "Vary authored cell margin or container/content while retaining the source table, frame and real body comment."
+  },
+  {
+    "Id": "static-table-origin-body-wide",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-table-origin-body-wide.docx",
+    "Sha256": "E898A53463FE42A52B121C64D94EA13CAEE0E5D120120FA65387709F8C87D37E",
+    "SourceSha256": "E24B711AC3871AFD9367D01E538E4AE011BC3D5D03252E355C8705AC4B6FB0A7",
+    "HeldOut": true,
+    "Variant": "body-wide",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Change": "Vary authored cell margin or container/content while retaining the source table, frame and real body comment."
+  }
+]
