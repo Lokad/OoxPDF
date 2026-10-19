@@ -1,5 +1,70 @@
 # Composed-document reliability checkpoint
 
+## C305 complete occupied frames survive table continuations (2026-10-20)
+
+Read-only inspection of all84 original planning paragraphs separates the defect
+from line pitch: page-local error ranges stay below0.19pt, while the continuation
+jumps5.32pt and the first line is partly clipped. The split code floors capacity
+from the row's zero origin using a median pitch, although a prefix object and
+paragraph metrics determine actual line origins. Its preflight also passed null
+page/count values where placement already had known counters, changing boxed
+content preparation. Both are confirmed ownership defects, not a fitted font fix.
+
+Use the existing caller-owned table frame and actual counter inputs. Complete
+occupied source lines select explicit cuts across every fragment; check all
+participating cells and keeps/widows, then never floor those cuts again. Preserve
+the existing fragmentation fallback for unknown/incompatible parallel frames.
+Main-line/nested mathematical row fallbacks remain atomic; no eligibility family
+is widened. Remove the39-line scalar AddSplitTableRowLayout forwarding overload
+and its unused reviewFragmentScale parameter. Separate columns/scale/math inputs
+collapse into the existing frame. No public API, new cache, global counter,
+resource quota, framework or unsafe/native library code.
+
+Three new controls vary the box height in both directions and replace it with
+mixed-size ordinary prose spanning three cell pages. Six independent Word exports
+plus two retained original views pin744 prose origins, complete source text,
+math/box geometry and pages. Final geometry passes all8 outcomes: proseY max
+0.326905pt; mathY0.360947pt; frameY0.000061pt. Four viewed native/Word Final rasters
+show complete original continuation row50 and mixed-prose page3 row100, with no
+observed overlap on those pages. Strict pixel gates remain failed in all8 views.
+
+Three Release runtime attempts are retained. a18ef1b6 leaves13Windows pass/2fail
+and10Ubuntu pass/1fail/four skips: its preflight still lost counter context.
+da9113c1 qualifies15Windows/11Ubuntu/four skips but allocates116.096/117.005MB in
+Final/review because it constructs two extra table frames.85e6ae19 passes the
+existing caller frame and removes that repeated work. Final qualification uses
+one immutable runtime/2,470inputs,15 exact Windows/11 Ubuntu/four native skips,
+one invocation/platform. No harness repair, production join or failed-to-skip
+relabel. Both new ink/Word observers fail under C304's parent runtime.
+
+Final20 conversions match the reviewed geometry candidate byte-for-byte, so all
+20 independent comparisons are reused. Ten fixed PDFs also equal accepted C274.
+The two additional complete static-cell modes get fresh Office comparisons and
+retain strict failures. Overall18/20 strict outcomes fail. The fixed raw audit
+has ten clean/two unresolved screens: symmetric cached1 deficits2Final/1review,
+Office rate/time extraction deficits4each per mode, and document fldChar/
+fldSimple plus footer fldSimple flags. No missing simple math. These are retained
+screens, not proof of missing ink; eight spanning-source semantic checks instead
+paint every planning paragraph exactly once and check glyph ink against clips.
+No fresh broad raw screen for those eight is claimed. Earlier compound residuals
+remain intact. An ambiguous reference-cache combination was refused at preflight;
+one explicit verified cache resolved it before additional raster work.
+
+Same-source/default-font fresh-child probes, one cold/one warmup/three warm
+conversions per mode: warm allocation98.843224-to94.357872MB Final (4.485352MB/
+4.54percent) and99.638632-to94.649200MB review (4.989432MB/5.01percent) versus C304.
+Two allocation-probe-only builds cover intermediate/final; no library rebuild in
+those tools. Whole/staged PDFs agree. Calling-thread volume is not live heap;
+stages overlap and timing does not establish a speedup. A diagnostic-only frame
+probe's compile/resolver setup failures and corrected observations remain local.
+
+Final20 conversions plus34 development conversions are counted separately; six
+new Office exports/two prior Word views reused.17 transferred assets/two exact
+integration smoke PDFs; no root build/suite/corpus/package replay. Source0f9078d7;
+artifacts/composition-c1/spanning-frame-evidence.json. C304CI39333632418 is green
+Windows/Ubuntu including broader/package checks. Push C305 and continue bounded
+independent parallel-cell source-ownership review while its milestone CI runs.
+
 ## C304 independent cell-counter measurement inputs (2026-10-20)
 
 The old dynamic boolean keyed PAGE-only cells by total count and NUMPAGES-only
