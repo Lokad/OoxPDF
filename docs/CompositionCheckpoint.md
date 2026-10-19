@@ -1,5 +1,22 @@
 # Composed-document reliability checkpoint
 
+## C296 reuse existing body/cell counter composition controls (2026-10-19)
+
+Source review confirms PAGE/math and finalized NUMPAGES/math body/cell flow are
+already implemented, including deferred math fonts, actual page admission and a
+bounded stable-count retry. Reuse existing independent Word/body/cell/total-count
+controls rather than add fixtures or widen eligibility.24 additional Windows/
+16 Ubuntu/eight native skips pass on C295's same frozen runtime; no overlap with
+the prior45. Combined69 distinct Windows/52 Ubuntu/17 native skips, each method
+once. Add an explicit neighboring capability selection for future formatting work.
+
+Zero production changes/builds/conversions/Office exports/comparison replay.
+Evidence:artifacts/composition-c1/dynamic-field-composition-neighbors-evidence.json.
+The infrequent C295 workspace scan records16.086GB/893,124files/zero errors;5GB
+remains unmet. No cleanup attempted against previously rejected protected targets.
+Next bounded source review: inline-box child preparation still lacks page inputs;
+verify a PAGE/math control before claiming a visible gap or changing admission.
+
 ## C295 computed simple fields share instruction formatting (2026-10-19)
 
 Bare PAGE/NUMPAGES now use the existing paragraph-style instruction resolver,
