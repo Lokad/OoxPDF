@@ -1,5 +1,31 @@
 # Composed-document reliability checkpoint
 
+## C309 shared maximum row insets: independent Word review (2026-10-20)
+
+Three ordinary parallel-cell sources/six presets/1,440 prose anchors establish
+shared maximum top and bottom insets. Raising only the right top3 to6 shifts
+both first baselines3pt in Word; preserve the existing maximum-top policy.
+Uniform3pt margins give Word53/56/11 source rows versus native53/57/10. Unequal
+top3/6 and bottom1/3 retain that partition. Bottom18/3 gives Word52/55/13 in
+both columns versus native53/57/10. Continuation top padding and bottom capacity
+are the confirmed defect; no per-cell top correction is warranted.
+
+The first fill measurement selected only the largest PDF rectangle and omitted
+separate padding bands. Reject that measurement before production changes.
+The corrected reusable helper unions all source-colored pieces; three controls
+cover split padding, duplicate overpaint and incomplete envelope coverage. All
+Word cell envelopes are fully covered. Cell/row fillY errors15.230/18.230/39.590pt
+remain respectively; Xmax0.110pt. Painted geometry is not internal clip proof.
+
+No library/harness build or library test run: C308 frozen runtime, six CLI
+conversions/six new independent Word exports. Four viewed continuation rasters.
+Global source/Office prose and simple-math screens have no deficits; all six
+page-local screens, geometry outcomes and strict pixel gates remain failed.
+Retain rejected observer evidence. No production policy change accepted here.
+Evidence artifacts/composition-c1/cell-inset-review-evidence.json. Continue C310
+shared inset admission, bounded by existing fallbacks. C308CI39340581440 is green
+Windows/Ubuntu including broader/package checks. Version0.1.5/release deferred.
+
 ## C308 boxed math/count survives ordinary parallel-cell composition (2026-10-20)
 
 An accepted boxed fraction/NUMPAGES prefix remains source-exact inside a240pt
