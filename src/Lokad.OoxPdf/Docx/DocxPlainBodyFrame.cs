@@ -16,7 +16,7 @@ internal static class DocxPlainBodyFrame
         !document.Paragraphs.Any(p => p.KeepRules.KeepNext == true || p.KeepRules.KeepLines == true) &&
         (HasNoStaticStories(document)
             ? !layout.Pages.Any(p => p.StaticTextLines.Count != 0 || p.StaticInlineImages.Count != 0)
-            : HasIndependentStaticTextLayout(document, layout));
+            : HasIndependentStaticTextLayout(layout));
 
     internal static bool IsEligible(DocxDocument document, DocxLayout layout) =>
         HasPlainBody(document) && HasSingleLineLayout(document, layout);
@@ -24,20 +24,10 @@ internal static class DocxPlainBodyFrame
     // A measured text story wholly inside its margin does not own the body's
     // line metrics. Rich, unsupported, intrusive and unmeasured stories keep the
     // previous fallback; annotation lanes retain their scaled frame policy.
-    private static bool HasIndependentStaticTextLayout(DocxDocument document, DocxLayout layout)
+    private static bool HasIndependentStaticTextLayout(DocxLayout layout)
     {
-        if (layout.Pages.Count == 0 || layout.StaticFloatingDrawings.Count != 0 ||
-            !HasPlainStaticTextSource(
-                document.HeaderParagraphs.Concat(document.FooterParagraphs)
-                    .Concat(document.HeaderParagraphsByType.Values.SelectMany(p => p))
-                    .Concat(document.FooterParagraphsByType.Values.SelectMany(p => p)),
-                document.HeaderBodyElementsByType.Values.Concat(document.FooterBodyElementsByType.Values).SelectMany(e => e),
-                document.HeaderFloatingDrawingsByType.Values.Concat(document.FooterFloatingDrawingsByType.Values).SelectMany(d => d))) return false;
-        foreach (var settings in layout.Pages.Select(page => page.PageSettings).Distinct())
-            if (!HasPlainStaticTextSource(
-                settings.HeaderParagraphsByType.Values.Concat(settings.FooterParagraphsByType.Values).SelectMany(p => p),
-                settings.HeaderBodyElementsByType.Values.Concat(settings.FooterBodyElementsByType.Values).SelectMany(e => e),
-                settings.HeaderFloatingDrawingsByType.Values.Concat(settings.FooterFloatingDrawingsByType.Values).SelectMany(d => d))) return false;
+        if (layout.Pages.Count == 0 || layout.StaticFloatingDrawings.Count != 0) return false;
+        var validatedSources = new HashSet<(DocxPageSettings, string)>();
         for (int index = 0; index < layout.Pages.Count; index++)
         {
             var page = layout.Pages[index];
@@ -49,13 +39,27 @@ internal static class DocxPlainBodyFrame
                 headerBottom < page.Height - page.MarginTop || footerTop > page.MarginBottom ||
                 page.StaticTextLines.Any(line => line.Story?.Kind is not (DocxStoryKind.Header or DocxStoryKind.Footer) ||
                     line.SourceParagraph is not { } paragraph || !IsPlainStaticText(paragraph))) return false;
+            var settings = page.PageSettings;
+            string variant = DocxLayoutEngine.GetStaticStoryVariant(settings, index + 1);
+            if (validatedSources.Add((settings, variant)))
+            {
+                // Selection belongs to the same container rule as painting.
+                // Unused first/even templates do not own this body's metrics.
+                var header = DocxBlockTraversal.GetStaticStoryBodyElements(variant,
+                    settings.HeaderBodyElementsByType, settings.HeaderParagraphsByType);
+                var footer = DocxBlockTraversal.GetStaticStoryBodyElements(variant,
+                    settings.FooterBodyElementsByType, settings.FooterParagraphsByType);
+                var headerDrawings = settings.HeaderFloatingDrawingsByType.GetValueOrDefault(variant, []);
+                var footerDrawings = settings.FooterFloatingDrawingsByType.GetValueOrDefault(variant, []);
+                if (!HasPlainStaticTextSource(header.Concat(footer), headerDrawings.Concat(footerDrawings))) return false;
+            }
         }
         return true;
     }
 
-    private static bool HasPlainStaticTextSource(IEnumerable<DocxParagraph> paragraphs,
-        IEnumerable<DocxBodyElement> elements, IEnumerable<DocxFloatingDrawing> drawings) =>
-        !drawings.Any() && paragraphs.All(IsPlainStaticText) && elements.All(element =>
+    private static bool HasPlainStaticTextSource(IEnumerable<DocxBodyElement> elements,
+        IEnumerable<DocxFloatingDrawing> drawings) =>
+        !drawings.Any() && elements.All(element =>
             element is DocxParagraphElement paragraph && IsPlainStaticText(paragraph.Paragraph) &&
             DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph.Paragraph, element.Revisions));
 

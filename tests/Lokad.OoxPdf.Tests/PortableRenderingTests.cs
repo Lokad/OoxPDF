@@ -22,6 +22,9 @@ internal static class PortableRenderingTests
     public static void PortableRenderingPassivePageFieldsPreserveOrdinaryBodyOrigins() =>
         DocxPassiveStaticBodyTests.CheckBodyBaselines(new PinnedResolver(), compareWord: false, "minimum-passive-page-fields-office.json");
 
+    public static void PortableRenderingInactiveStaticVariantsPreserveOrdinaryBodyOrigins() =>
+        DocxPassiveStaticBodyTests.CheckBodyBaselines(new PinnedResolver(), compareWord: false, "minimum-inactive-static-office.json");
+
     public static void PortableRenderingTableGridOriginsPreserveMixedInlineContent() =>
         DocxInlineCompositionTests.CheckTableGridOrigins(new PinnedResolver(mathFont: true));
 

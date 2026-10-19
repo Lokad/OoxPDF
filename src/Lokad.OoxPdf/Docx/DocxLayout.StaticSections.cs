@@ -10,6 +10,10 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
+    internal static string GetStaticStoryVariant(DocxPageSettings settings, int pageNumber) =>
+        settings.TitlePage == true && pageNumber == 1 ? "first" :
+        settings.EvenAndOddHeaders == true && pageNumber % 2 == 0 ? "even" : "default";
+
     private static DocxSelectedStaticStory SelectStaticHeaderFooter(
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
@@ -19,22 +23,9 @@ internal sealed partial class DocxLayoutEngine
         // Office A/B (w52 title-page plus w53 even-pages probes, Word-COM rendered):
         // a selected-but-undefined first/even story renders empty on its pages; Word
         // does not fall back to the default story there.
-        if (settings.TitlePage == true && pageNumber == 1)
-        {
-            return DocxBlockTraversal.TryGetStaticStoryBodyElements("first", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? first)
-                ? new DocxSelectedStaticStory(first, "first")
-                : new DocxSelectedStaticStory([], null);
-        }
-
-        if (settings.EvenAndOddHeaders == true && pageNumber % 2 == 0)
-        {
-            return DocxBlockTraversal.TryGetStaticStoryBodyElements("even", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? even)
-                ? new DocxSelectedStaticStory(even, "even")
-                : new DocxSelectedStaticStory([], null);
-        }
-
-        return DocxBlockTraversal.TryGetStaticStoryBodyElements("default", bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? defaults)
-            ? new DocxSelectedStaticStory(defaults, "default")
+        string variant = GetStaticStoryVariant(settings, pageNumber);
+        return DocxBlockTraversal.TryGetStaticStoryBodyElements(variant, bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? selected)
+            ? new DocxSelectedStaticStory(selected, variant)
             : new DocxSelectedStaticStory([], null);
     }
 
@@ -47,22 +38,9 @@ internal sealed partial class DocxLayoutEngine
     {
         // Same no-fallback rule as text stories above (mechanism consistency; floating
         // drawings in undefined first/even stories are unprobed on their own).
-        if (settings.TitlePage == true && pageNumber == 1)
-        {
-            return drawingsByType.TryGetValue("first", out IReadOnlyList<DocxFloatingDrawing>? first)
-                ? new DocxSelectedStaticDrawings(first, "first")
-                : new DocxSelectedStaticDrawings([], null);
-        }
-
-        if (settings.EvenAndOddHeaders == true && pageNumber % 2 == 0)
-        {
-            return drawingsByType.TryGetValue("even", out IReadOnlyList<DocxFloatingDrawing>? even)
-                ? new DocxSelectedStaticDrawings(even, "even")
-                : new DocxSelectedStaticDrawings([], null);
-        }
-
-        return drawingsByType.TryGetValue("default", out IReadOnlyList<DocxFloatingDrawing>? defaults)
-            ? new DocxSelectedStaticDrawings(defaults, "default")
+        string variant = GetStaticStoryVariant(settings, pageNumber);
+        return drawingsByType.TryGetValue(variant, out IReadOnlyList<DocxFloatingDrawing>? selected)
+            ? new DocxSelectedStaticDrawings(selected, variant)
             : new DocxSelectedStaticDrawings([], null);
     }
 

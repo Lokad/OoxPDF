@@ -23,6 +23,12 @@ internal static class DocxPassiveStaticBodyTests
         CheckBodyBaselines(null, compareWord: true, "minimum-passive-page-fields-office.json", compareMarginOrigins: false);
     }
 
+    public static void DocxInactiveStaticVariantsPreserveIndependentWordBodyOrigins()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent inactive-template origins require installed Windows fonts.");
+        CheckBodyBaselines(null, compareWord: true, "minimum-inactive-static-office.json");
+    }
+
     internal static void CheckBodyBaselines(IFontResolver? resolver, bool compareWord,
         string goldFile = "minimum-passive-static-office.json", bool compareMarginOrigins = true)
     {
@@ -38,7 +44,8 @@ internal static class DocxPassiveStaticBodyTests
             var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
             var geometry = final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
             var source = Lines(input);
-            var baseline = Lines(original).Where(line => line.Text.Length != 0).ToArray();
+            var baseline = Lines(original).Where(line => line.Text.Length != 0 &&
+                !line.Text.StartsWith("Public passive ", StringComparison.Ordinal)).ToArray();
             var bodyTexts = baseline.Select(line => line.Text).ToHashSet(StringComparer.Ordinal);
             var body = source.Where(line => bodyTexts.Contains(line.Text)).ToArray();
             TestAssert.Equal(8, baseline.Length);
@@ -97,6 +104,43 @@ internal static class DocxPassiveStaticBodyTests
         }
     }
 
+    public static void DocxInactiveStaticVariantsKeepSelectedRichStoryFallbacks()
+    {
+        foreach (var (kind, variant) in new[] { ("header", "first"), ("footer", "even") })
+        {
+            string input = Case("CompositionProbes/minimum-inactive-" + variant + "-" + kind + ".docx");
+            var inactive = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
+            TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(inactive, Layout(inactive), out _),
+                "An unselected rich template does not own body metrics.");
+            var active = ReadMutation(input, archive =>
+            {
+                XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+                Update("word/document.xml", xml =>
+                {
+                    if (variant == "first") xml.Descendants(w + "sectPr").Single().Add(new XElement(w + "titlePg"));
+                    else xml.Root!.Element(w + "body")!.Elements(w + "p").ElementAt(4)
+                        .Element(w + "pPr")!.Add(new XElement(w + "pageBreakBefore"));
+                });
+                if (variant == "even") Update("word/settings.xml", xml => xml.Root!.Add(new XElement(w + "evenAndOddHeaders")));
+                void Update(string part, Action<XDocument> change)
+                {
+                    var entry = archive.GetEntry(part)!;
+                    XDocument xml;
+                    using (var stream = entry.Open()) xml = XDocument.Load(stream);
+                    change(xml);
+                    entry.Delete();
+                    using var output = archive.CreateEntry(part).Open();
+                    xml.Save(output);
+                }
+            });
+            var layout = Layout(active);
+            TestAssert.Equal(variant == "first" ? 1 : 2, layout.Pages.Count);
+            TestAssert.True(layout.Pages.Any(page => page.StaticTableRows.Count != 0), "The activated rich table actually owns a selected page story.");
+            TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(active, layout, out var fallback) && ReferenceEquals(layout, fallback),
+                "Selected rich stories retain their independently staged body-metric fallback.");
+        }
+    }
+
     private static DocxLayout Layout(DocxDocument document)
     {
         var resolver = new TestFaceFontResolver();
@@ -105,7 +149,23 @@ internal static class DocxPassiveStaticBodyTests
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, default);
     }
 
-    private static DocxDocument ReadUnsupportedFieldStory(string input, string kind)
+    private static DocxDocument ReadUnsupportedFieldStory(string input, string kind) => ReadMutation(input, archive =>
+    {
+        string part = "word/passive-body-" + kind + ".xml";
+        var entry = archive.GetEntry(part)!;
+        XDocument xml;
+        using (var stream = entry.Open()) xml = XDocument.Load(stream);
+        XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        var paragraph = xml.Root!.Element(w + "p")!;
+        var run = paragraph.Element(w + "r")!;
+        run.Remove();
+        paragraph.Add(new XElement(w + "fldSimple", new XAttribute(w + "instr", "DATE"), run));
+        entry.Delete();
+        using var output = archive.CreateEntry(part).Open();
+        xml.Save(output);
+    });
+
+    private static DocxDocument ReadMutation(string input, Action<ZipArchive> mutate)
     {
         string temporary = Path.Combine(Path.GetTempPath(), "ooxpdf-passive-" + Guid.NewGuid().ToString("N") + ".docx");
         File.Copy(input, temporary);
@@ -115,20 +175,7 @@ internal static class DocxPassiveStaticBodyTests
             // intentionally mutable, without changing the frozen source.
             File.SetAttributes(temporary, FileAttributes.Normal);
             using (var archive = ZipFile.Open(temporary, ZipArchiveMode.Update))
-            {
-                string part = "word/passive-body-" + kind + ".xml";
-                var entry = archive.GetEntry(part)!;
-                XDocument xml;
-                using (var stream = entry.Open()) xml = XDocument.Load(stream);
-                XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-                var paragraph = xml.Root!.Element(w + "p")!;
-                var run = paragraph.Element(w + "r")!;
-                run.Remove();
-                paragraph.Add(new XElement(w + "fldSimple", new XAttribute(w + "instr", "DATE"), run));
-                entry.Delete();
-                using var output = archive.CreateEntry(part).Open();
-                xml.Save(output);
-            }
+                mutate(archive);
             return DocxTests.ReadDocx(temporary, OoxPdfDocxMarkupMode.AllMarkup);
         }
         finally { File.Delete(temporary); }
