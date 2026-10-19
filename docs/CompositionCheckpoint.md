@@ -1,5 +1,20 @@
 # Composed-document reliability checkpoint
 
+## C294 simple PAGE marks do not own evaluated field formatting (2026-10-19)
+
+Two mark11/13pt controls retain every Word header/body origin exactly across
+four exports. The evaluated PAGE glyph stays12pt while cached source formatting
+is11pt; native retains11.04pt, producing.96pt size/1.06pt baseline errors. The
+existing source-code font is12pt. This confirms a field-format defect beyond
+first-span prose geometry and rejects a universal paragraph-mark enlargement.
+
+No production change yet: verify format-preserving switches before sharing the
+instruction-owner rule with simple fields. Reuse C292 runtime; zero builds/tests,
+four candidate conversions/four exports. Four absolute geometry/strict pixel
+failures remain. Evidence:artifacts/composition-c1/field-mark-metric-owner-review.
+json; fixtures80d809b1/c9c358f9. C292CI39311132187 is green on both platforms,
+including broader/package checks. Next: bounded simple-field formatting contract.
+
 ## C293 complex PAGE code metrics: bounded review (2026-10-19)
 
 Two source controls vary instruction formatting11/13pt beside cached11pt results.
