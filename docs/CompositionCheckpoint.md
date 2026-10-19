@@ -1,5 +1,43 @@
 # Composed-document reliability checkpoint
 
+## C310 shared row padding survives independent continuation (2026-10-20)
+
+Reapply the row maximum top inset and reserve its maximum bottom inset on every
+cell-owned source fragment. Validate natural source height with each cell's own
+bottom margin, because the tallest content and greatest inset may have distinct
+owners. Keep/widow validation uses admitted logical line indices; source-object
+visibility excludes physical bottom padding. Structural borders/merges/authored
+heights/changing PAGE and unknown source frames retain explicit fallbacks. Main-
+line/nested math atomic behavior is unchanged. No API, cache, quota or font rule.
+
+Four inset sources/eight presets preserve1,920 independent prose/eight math
+anchors, one boxed fraction and actual count4. All unchanged geometry gates pass:
+row/fillY0.143pt, proseY0.324pt, mathY0.361pt and boxY0.000061pt. Six page-local
+content failures close. Both boxed raw cached1/fldSimple screens remain symmetric
+between Word/native; no candidate/Office page-token or simple-math deficit.
+Four viewed Word/native rasters show complete rows53..107 on the bottom-inset
+continuation and fraction/count4 on boxed page1. All24 strict pixel failures
+remain;16neighbor PDFs and comparisons are exact prior evidence reuse.
+
+Final committed linked-worktree artifactcb4ededf,2,494inputs/17assets:21Windows,
+14Ubuntu/seven native skips, each exact method once/platform. Initial4df48139
+passed20Windows/13Ubuntu with one real portable failure and seven skips: pinned
+font wrapping puts greatest content height and margin in different cells; the
+max-content-plus-max-margin equality chose the old fallback. Correct ownership
+and rerun all21 after production changes. No test-only repair or production join.
+Two new regressions fail genuinely against C308. A repeated --test option was
+rejected before execution; its retained invocation log is not regression proof.
+One diagnostic-only frame probe, no runtime rebuild hidden in diagnostic work.
+
+Two Release runtime builds total/one final immutable artifact;24final CLI and
+10development conversions. Two new independent Word exports/six retained; eight
+native final PDFs equal the initial attempt and reuse those comparisons.17
+assets transferred with two byte-exact smokes, no root build or suite replay.
+Source and library identity stay pinned. No performance claim. Broader/package
+CI closes this coherent shared-contract milestone. Root production011fc76f;
+evidence artifacts/composition-c1/shared-cell-insets-evidence.json. Version0.1.5,
+release preparation deferred. Continue bounded structural-edge ownership review.
+
 ## C309 shared maximum row insets: independent Word review (2026-10-20)
 
 Three ordinary parallel-cell sources/six presets/1,440 prose anchors establish
