@@ -31,6 +31,7 @@ passive.add_argument('--inactive-static-probes', action='store_true')
 passive.add_argument('--inactive-note-probe', action='store_true')
 passive.add_argument('--field-code-probes', action='store_true')
 passive.add_argument('--simple-field-mark-probes', action='store_true')
+passive.add_argument('--simple-field-format-probes', action='store_true')
 parser.add_argument('--write', action='store_true', help='Publish selected composition controls; otherwise verify them.')
 args = parser.parse_args()
 
@@ -40,7 +41,7 @@ output = cases / 'CompositionProbes'
 output.mkdir(exist_ok=True)
 w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 
-if args.field_code_probes or args.simple_field_mark_probes:
+if args.field_code_probes or args.simple_field_mark_probes or args.simple_field_format_probes:
     source = next(row for row in json.loads((output / 'minimum-passive-page-fields.json').read_text())
         if row['FieldInstruction'] == 'PAGE')
     original = (root / source['Input']).read_bytes()
@@ -56,7 +57,10 @@ if args.field_code_probes or args.simple_field_mark_probes:
         field = paragraph.find(w + 'fldSimple')
         result = copy.deepcopy(field.find(w + 'r'))
         visible = ''.join(story.itertext())
-        if args.simple_field_mark_probes:
+        if args.simple_field_format_probes:
+            field.set(w + 'instr', 'PAGE \\* MERGEFORMAT')
+            field.find(w + 'r').find(w + 'rPr').find(w + 'sz').set(w + 'val', str(code_points * 2))
+        elif args.simple_field_mark_probes:
             properties = paragraph.find(w + 'pPr')
             assert properties.find(w + 'rPr') is None
             mark = E.SubElement(properties, w + 'rPr')
@@ -81,7 +85,8 @@ if args.field_code_probes or args.simple_field_mark_probes:
         assert ''.join(node.text or '' for node in story.iter(w + 't')) == visible
         entries[part] = E.tostring(story, encoding='utf-8', xml_declaration=True)
         assert entries['word/document.xml'] == body
-        name = 'minimum-page-' + ('mark-' if args.simple_field_mark_probes else 'code-') + str(code_points)
+        prefix = 'mergeformat-' if args.simple_field_format_probes else 'mark-' if args.simple_field_mark_probes else 'code-'
+        name = 'minimum-page-' + prefix + str(code_points)
         data = package_bytes(entries)
         rows.append(dict(Id=name, Input='tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/' + name + '.docx',
             Sha256=hashlib.sha256(data).hexdigest().upper(), SourceId=source['Id'], SourceSha256=source['Sha256'],
@@ -90,8 +95,12 @@ if args.field_code_probes or args.simple_field_mark_probes:
             VisibleFontPoints=11, Context='ordinary12'))
         if args.simple_field_mark_probes:
             rows[-1]['ParagraphMarkPoints'] = rows[-1].pop('CodeFontPoints')
+        elif args.simple_field_format_probes:
+            rows[-1]['CachedResultFontPoints'] = rows[-1].pop('CodeFontPoints')
+            rows[-1]['VisibleFontPoints'] = code_points
+            rows[-1]['FieldInstruction'] = field.get(w + 'instr')
         prepared.append((output / (name + '.docx'), data))
-    manifest_name = 'minimum-field-mark.json' if args.simple_field_mark_probes else 'minimum-field-code.json'
+    manifest_name = 'minimum-field-format.json' if args.simple_field_format_probes else 'minimum-field-mark.json' if args.simple_field_mark_probes else 'minimum-field-code.json'
     prepared.append((output / manifest_name, manifest_bytes(rows)))
     for path, data in prepared:
         if args.write:
