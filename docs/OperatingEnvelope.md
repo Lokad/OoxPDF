@@ -1,5 +1,41 @@
 # Measured operating envelope
 
+## C273 ordered sibling inline-box frames (2026-10-19)
+
+Supported equations now survive beside textboxes in both public DOCX presets.
+The existing ordered source view retains box run/offset/drawing order. Fragments
+measure complete child frames once; wrapping and placement reuse them across
+body, cells and static stories. The cell memo relocates cached text, images and
+box children together, including page metadata. Review rows use shared line
+ownership for pictures and boxes, replacing their blanket box exclusion.
+Cancellation is checked before publishing measured atoms after a child callback.
+Unowned/block boxes keep prior placement. No public API, quota or unsafe changes.
+
+Seven controls/14 independent Word views cover source order, two formulas with
+an image, wrapping, cells and scaled headers/footers. All64 mathematical glyphs,
+prose and pictures survive;14 content screens pass. Existing one-point math,
+box and image gates pass:math X0.243 pt/Y0.372 pt, box edges0.564 pt, image0.157 pt.
+Physical math size max0.015 pt. All frames stay on-page; four rasters reviewed.
+All14 strict whole-page failures remain. Following prose retains three measured
+residuals:wrap review-1.208 pt, cell Final+1.928 pt/review+1.471 pt. These are
+explicit residuals, not one-point passes. Earlier box-only review/static-table
+concerns and revised/nested/floating/note/richer-field combinations stay staged.
+
+One final runtime:29 Windows/23 Ubuntu checks, six native skips, once/platform.
+The first candidate retained25 passes/four failures:review box mapping, late
+cancellation and two harness assumptions. The correction preserves all2,370
+inputs; no report join across production changes. Two parent observers fail
+meaningfully. Reuse13 sibling comparisons by identical PDFs, two original Word
+views and all10 fixed-portfolio PDFs/comparisons. Twelve new Word exports occur
+once.72 older outcomes carry forward by source reachability.17 assets/four
+smokes, no root build/suite/package replay. The shared frame inspector retains
+axes, thresholds and following residuals;10 prior accepted measurements match.
+Evidence:artifacts/composition-c1/inline-sibling-owned-frames-evidence.json;
+root4f4be4ef. C272CI39260423815 is green on both platforms including package gates.
+
+Workspace:15.541 GB/849,977 files, zero scan errors. The loose5 GB target remains
+unmet; previously rejected retirement targets remain preserved without retry.
+
 ## C272 paragraph-owned textbox advance (2026-10-19)
 
 Body/cell textboxes charged an extra6 pt after their complete frame, duplicating

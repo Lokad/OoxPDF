@@ -98,10 +98,11 @@ def main():
     report = {'Scope': 'Page-clipped glyph origins, authored black frame edges and physical sizes. This does not prove visible ink or content inside PDF clips.',
         'GoldenSha256': sha(args.golden), 'OutcomesSha256': sha(outcomes_path), 'PyMuPdfVersion': pymupdf.VersionBind,
         'OriginThresholdPoints': 1., 'FontSizeThresholdPoints': .1, 'StrokeThresholdPoints': .01,
-        'FailedOutcomes': sum(bool(row['Failures']) for row in rows), 'Rows': rows}
+        'FailedOutcomes': sum(bool(row['Failures']) for row in rows),
+        'FollowingResidualOutcomes': sum(bool(row.get('FollowingResidualAxes')) for row in rows), 'Rows': rows}
     args.output.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
     for row in rows:
-        print(row['Id'], row['Mode'], {k: v for k, v in row.items() if k.startswith('Max') or k == 'Failures'})
+        print(row['Id'], row['Mode'], {k: v for k, v in row.items() if k.startswith(('Max', 'Following')) or k == 'Failures'})
     return int(report['FailedOutcomes'] != 0)
 
 if __name__ == '__main__':
