@@ -1,0 +1,50 @@
+[
+  {
+    "Id": "math-authored-row-unlinked",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-authored-row-unlinked.docx",
+    "Sha256": "EC5C01ADA12332D92567C591470AAC31AFC105021FD08E8BECB6E71AF35D0233",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/docx-omml-isolated-inline-body-fraction-left.docx",
+    "SourceSha256": "96A12C11555C1CF0C9360F0939551E77BE12180A69411CC534D56297E7B25B4F",
+    "SourceMathSha256": "7FDDC3701AC1596461816CF113BFA3A600BCBA125263239F7C865857B8B225CA",
+    "Variant": "unlinked",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedText": [
+      "Reference row."
+    ],
+    "Change": "Add the same authored text row before an unchanged implicit equation; hyperlink ownership is unlinked."
+  },
+  {
+    "Id": "math-authored-row-linked-prose",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-authored-row-linked-prose.docx",
+    "Sha256": "39202ABCE30109940D9568C54242F16F219B392E9E86E071147A9F7FB543D6D3",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/docx-omml-isolated-inline-body-fraction-left.docx",
+    "SourceSha256": "96A12C11555C1CF0C9360F0939551E77BE12180A69411CC534D56297E7B25B4F",
+    "SourceMathSha256": "7FDDC3701AC1596461816CF113BFA3A600BCBA125263239F7C865857B8B225CA",
+    "Variant": "linked-prose",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedText": [
+      "Reference row."
+    ],
+    "Change": "Add the same authored text row before an unchanged implicit equation; hyperlink ownership is linked-prose."
+  },
+  {
+    "Id": "math-authored-row-linked-math",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/math-authored-row-linked-math.docx",
+    "Sha256": "14FE186B4095CC1739500A2464B8D09A8F4BD0846CED823EF5ACEC4D54684518",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/docx-omml-isolated-inline-body-fraction-left.docx",
+    "SourceSha256": "96A12C11555C1CF0C9360F0939551E77BE12180A69411CC534D56297E7B25B4F",
+    "SourceMathSha256": "7FDDC3701AC1596461816CF113BFA3A600BCBA125263239F7C865857B8B225CA",
+    "Variant": "linked-math",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedText": [
+      "Reference row."
+    ],
+    "Change": "Add the same authored text row before an unchanged implicit equation; hyperlink ownership is linked-math."
+  }
+]
