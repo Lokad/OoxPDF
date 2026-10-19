@@ -91,7 +91,9 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/Lokad.OoxPdf.PptxInspect`: dependency-free PPTX text/glyph-run inspector.
 
 Use `--test-set <file.json>` for a JSON array of exact method names in one run.
-Keep runner TMP/TEMP in its ignored artifact directory.
+Keep runner TMP/TEMP in its ignored artifact directory. For frozen CLI checks,
+set `OOXPDF_TEST_CLI_ASSEMBLY` to that artifact's CLI. Package checks can use
+`TestPackageSmoke.ps1 -NoBuild -ExpectedLibrarySha256 <qualified hash>`.
 Unit tests can also be filtered by capability group with `--group`, for example:
 `dotnet run --project tests/Lokad.OoxPdf.Tests -- --group pptx-typography --skip-slow`.
 

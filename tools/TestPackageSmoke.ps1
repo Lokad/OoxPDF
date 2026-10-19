@@ -7,7 +7,9 @@
 
 param(
     [string] $Configuration = "Release",
-    [string] $FontPath = ""
+    [string] $FontPath = "",
+    [switch] $NoBuild,
+    [string] $ExpectedLibrarySha256 = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,7 +23,9 @@ $runId = [Guid]::NewGuid().ToString("N")
 $packDirectory = Join-Path $repoRoot "artifacts/nuget/package-smoke/$runId"
 $scratch = Join-Path $repoRoot "artifacts/package-smoke/$runId"
 New-Item -ItemType Directory -Force -Path $packDirectory, $scratch | Out-Null
-& dotnet pack $libraryProject -c $Configuration --nologo --output $packDirectory
+$packArguments = @("pack", $libraryProject, "-c", $Configuration, "--nologo", "--output", $packDirectory)
+if ($NoBuild) { $packArguments += "--no-build" }
+& dotnet @packArguments
 if ($LASTEXITCODE -ne 0) {
     throw "Library packing failed with exit code $LASTEXITCODE."
 }
@@ -45,6 +49,9 @@ try {
     finally { $libraryStream.Dispose() }
 }
 finally { $archive.Dispose() }
+if ($ExpectedLibrarySha256 -and $librarySha256 -ne $ExpectedLibrarySha256) {
+    throw "Packed library differs from the qualified artifact."
+}
 
 Copy-Item -LiteralPath (Join-Path $repoRoot "tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-01-plain-paragraph.docx") -Destination (Join-Path $scratch "input.docx")
 
@@ -88,11 +95,14 @@ if (!string.Equals(expectedLibrarySha256, loadedLibrarySha256, StringComparison.
     throw new InvalidDataException("Smoke consumer loaded a DLL different from the freshly packed library.");
 }
 Console.WriteLine("Loaded packed library SHA-256 " + loadedLibrarySha256 + ".");
+var admission = new SmokeAdmission();
 var options = new OoxPdfOptions
 {
-    FontResolver = args.Length > 3 ? new SmokeFontResolver(args[3]) : null
+    FontResolver = args.Length > 3 ? new SmokeFontResolver(args[3]) : null,
+    MemoryAdmission = admission
 };
 OoxPdfConverter.Convert(input, output, options);
+if (admission.Requests != 1 || admission.Releases != 1) { throw new InvalidOperationException("Packed admission ownership is unbalanced."); }
 byte[] header = new byte[5];
 using (FileStream stream = File.OpenRead(output))
 {
@@ -110,6 +120,14 @@ string pdf = Encoding.ASCII.GetString(File.ReadAllBytes(output));
 if (!pdf.Contains("/FontFile2", StringComparison.Ordinal) || !pdf.Contains("/ToUnicode", StringComparison.Ordinal))
 {
     throw new InvalidDataException("Smoke output must embed a TrueType font and its Unicode map.");
+}
+
+sealed class SmokeAdmission : IOoxPdfMemoryAdmission, IDisposable
+{
+    public int Requests;
+    public int Releases;
+    public IDisposable? TryAcquire(CancellationToken token) { token.ThrowIfCancellationRequested(); Requests++; return this; }
+    public void Dispose() { Releases++; }
 }
 
 sealed class SmokeFontResolver(string path) : IFontResolver
@@ -146,6 +164,9 @@ if ($pdfHeader -ne "%PDF-") {
 }
 Write-Host "Package smoke test passed through the packed library."
 [ordered]@{
+    LibraryRebuilt = -not $NoBuild
+    ExpectedLibrarySha256 = $ExpectedLibrarySha256
+    MemoryAdmissionChecked = $true
     Package = $package.FullName
     PackageVersion = $version
     PackageSha256 = (Get-FileHash -LiteralPath $package.FullName -Algorithm SHA256).Hash

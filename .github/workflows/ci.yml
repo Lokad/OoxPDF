@@ -61,7 +61,8 @@ jobs:
         run: |
           $fontArguments = @{}
           if ($IsLinux) { $fontArguments.FontPath = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf' }
-          & ./tools/TestPackageSmoke.ps1 @fontArguments
+          $fontArguments.ExpectedLibrarySha256 = (Get-FileHash src/Lokad.OoxPdf/bin/Release/net10.0/Lokad.OoxPdf.dll).Hash
+          & ./tools/TestPackageSmoke.ps1 -NoBuild @fontArguments
       - name: Text comparison adversarial checks
         run: pwsh -NoProfile -File tools/TestTextOperationComparison.ps1
       - name: Qualification fixture snapshot checks
