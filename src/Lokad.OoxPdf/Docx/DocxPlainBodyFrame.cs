@@ -12,8 +12,55 @@ internal static class DocxPlainBodyFrame
 
     internal static bool HasSingleLineLayout(DocxDocument document, DocxLayout layout) =>
         HasSingleLineParagraphs(layout) &&
-        !layout.Pages.Any(p => p.ColumnFrames.Count > 1 || p.StaticTextLines.Count != 0 || p.StaticInlineImages.Count != 0) &&
-        !document.Paragraphs.Any(p => p.KeepRules.KeepNext == true || p.KeepRules.KeepLines == true);
+        !layout.Pages.Any(p => p.ColumnFrames.Count > 1) &&
+        !document.Paragraphs.Any(p => p.KeepRules.KeepNext == true || p.KeepRules.KeepLines == true) &&
+        (HasNoStaticStories(document)
+            ? !layout.Pages.Any(p => p.StaticTextLines.Count != 0 || p.StaticInlineImages.Count != 0)
+            : HasIndependentStaticTextLayout(document, layout));
+
+    internal static bool IsEligible(DocxDocument document, DocxLayout layout) =>
+        HasPlainBody(document) && HasSingleLineLayout(document, layout);
+
+    // A measured text story wholly inside its margin does not own the body's
+    // line metrics. Rich, dynamic, intrusive and unmeasured stories keep the
+    // previous fallback; annotation lanes retain their scaled frame policy.
+    private static bool HasIndependentStaticTextLayout(DocxDocument document, DocxLayout layout)
+    {
+        if (layout.Pages.Count == 0 || layout.StaticFloatingDrawings.Count != 0 ||
+            !HasPlainStaticTextSource(
+                document.HeaderParagraphs.Concat(document.FooterParagraphs)
+                    .Concat(document.HeaderParagraphsByType.Values.SelectMany(p => p))
+                    .Concat(document.FooterParagraphsByType.Values.SelectMany(p => p)),
+                document.HeaderBodyElementsByType.Values.Concat(document.FooterBodyElementsByType.Values).SelectMany(e => e),
+                document.HeaderFloatingDrawingsByType.Values.Concat(document.FooterFloatingDrawingsByType.Values).SelectMany(d => d))) return false;
+        foreach (var settings in layout.Pages.Select(page => page.PageSettings).Distinct())
+            if (!HasPlainStaticTextSource(
+                settings.HeaderParagraphsByType.Values.Concat(settings.FooterParagraphsByType.Values).SelectMany(p => p),
+                settings.HeaderBodyElementsByType.Values.Concat(settings.FooterBodyElementsByType.Values).SelectMany(e => e),
+                settings.HeaderFloatingDrawingsByType.Values.Concat(settings.FooterFloatingDrawingsByType.Values).SelectMany(d => d))) return false;
+        for (int index = 0; index < layout.Pages.Count; index++)
+        {
+            var page = layout.Pages[index];
+            if (page.MarkupMarginReservePoints != 0d || page.StaticInlineImages.Count != 0 ||
+                page.StaticTableRows.Count != 0 || page.StaticInlineTextBoxes.Count != 0 ||
+                !layout.HeaderContentBottomByPage.TryGetValue(index, out double headerBottom) ||
+                !layout.FooterContentTopByPage.TryGetValue(index, out double footerTop) ||
+                double.IsNaN(headerBottom) || double.IsNaN(footerTop) ||
+                headerBottom < page.Height - page.MarginTop || footerTop > page.MarginBottom ||
+                page.StaticTextLines.Any(line => line.Story?.Kind is not (DocxStoryKind.Header or DocxStoryKind.Footer) ||
+                    line.SourceParagraph is not { } paragraph || !IsPlainStaticText(paragraph))) return false;
+        }
+        return true;
+    }
+
+    private static bool HasPlainStaticTextSource(IEnumerable<DocxParagraph> paragraphs,
+        IEnumerable<DocxBodyElement> elements, IEnumerable<DocxFloatingDrawing> drawings) =>
+        !drawings.Any() && paragraphs.All(IsPlainStaticText) && elements.All(element =>
+            element is DocxParagraphElement paragraph && IsPlainStaticText(paragraph.Paragraph) &&
+            DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph.Paragraph, element.Revisions));
+
+    private static bool IsPlainStaticText(DocxParagraph paragraph) =>
+        HasPlainTextContent(paragraph) && HasAutomaticLineFlow(paragraph) && paragraph.InlineReferences.Count == 0;
 
     internal static bool IsEligible(DocxDocument document) =>
         HasPlainBody(document) && HasNoStaticStories(document);

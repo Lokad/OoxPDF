@@ -8,9 +8,8 @@ internal static class DocxPlainFootnoteKerning
         adjusted = source;
         pages = new Dictionary<string, int>();
         bool ordinary = DocxPlainBodyFrame.IsOrdinaryBody(source);
-        if (!(ordinary ? DocxPlainBodyFrame.IsEligible(source) : DocxPageFootnoteNumbering.IsEligibleDocument(source)) ||
-            !(ordinary ? DocxPlainBodyFrame.HasSingleLineLayout(source, layout) :
-                DocxPlainBodyFrame.HasSingleLineParagraphs(layout))) return false;
+        if (!(ordinary ? DocxPlainBodyFrame.IsEligible(source, layout) :
+            DocxPageFootnoteNumbering.IsEligibleDocument(source) && DocxPlainBodyFrame.HasSingleLineParagraphs(layout))) return false;
         bool elevenPointBody = DocxPlainElevenPointBody.IsEligible(source, layout);
         var elevenPointParagraphs = elevenPointBody
             ? new HashSet<DocxParagraph>(source.Paragraphs, ReferenceEqualityComparer.Instance) : null;

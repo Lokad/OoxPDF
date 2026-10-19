@@ -64,6 +64,7 @@ internal static class TestCatalog
         .. FromType("docx-text", typeof(DocxPlainFootnoteKerningTests)),
         .. FromType("docx-text", typeof(DocxOrdinaryKerningTests)),
         .. FromType("docx-text", typeof(DocxMinimumBodyLineLeadingTests)),
+        .. FromType("docx-text", typeof(DocxPassiveStaticBodyTests)),
         .. FromType("docx-text", typeof(DocxMinimumBodyFlowTests)),
         .. FromType("docx-text", typeof(DocxMarkedMinimumLeadingTests)),
         .. FromType("docx-text", typeof(DocxMinimumBeforeLeadingTests)),

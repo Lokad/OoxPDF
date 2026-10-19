@@ -5,8 +5,8 @@ internal static class DocxPlainElevenPointBody
     internal static bool IsEligible(DocxDocument document, DocxLayout layout)
     {
         bool ordinary = DocxPlainBodyFrame.IsOrdinaryBody(document);
-        if (!(ordinary ? DocxPlainBodyFrame.IsEligible(document) : DocxPageFootnoteNumbering.IsEligibleDocument(document)) ||
-            !DocxPlainBodyFrame.HasSingleLineLayout(document, layout)) return false;
+        if (!(ordinary ? DocxPlainBodyFrame.IsEligible(document, layout) :
+            DocxPageFootnoteNumbering.IsEligibleDocument(document) && DocxPlainBodyFrame.HasSingleLineLayout(document, layout))) return false;
         string? family = document.Paragraphs.SelectMany(p => p.Runs).FirstOrDefault(r => r.Text.Length != 0)?.FontFamily;
         if (family is null) return false;
         foreach (var paragraph in document.Paragraphs)

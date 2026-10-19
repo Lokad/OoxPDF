@@ -8,8 +8,8 @@ internal static class DocxMinimumBodyLineLeading
     {
         adjusted = source;
         bool ordinaryBody = DocxPlainBodyFrame.IsOrdinaryBody(document);
-        if (!(ordinaryBody ? DocxPlainBodyFrame.IsEligible(document) : DocxPageFootnoteNumbering.IsEligibleDocument(document)) ||
-            !DocxPlainBodyFrame.HasSingleLineLayout(document, source) ||
+        if (!(ordinaryBody ? DocxPlainBodyFrame.IsEligible(document, source) :
+                DocxPageFootnoteNumbering.IsEligibleDocument(document) && DocxPlainBodyFrame.HasSingleLineLayout(document, source)) ||
             (!ordinaryBody && !DocxPageFootnoteNumbering.TryGetReferencePages(document, source, out _))) return false;
 
         var replacements = new Dictionary<DocxTextLineLayout, DocxTextLineLayout>(ReferenceEqualityComparer.Instance);
