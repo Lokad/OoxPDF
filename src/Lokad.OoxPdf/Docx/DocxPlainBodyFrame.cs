@@ -2,6 +2,19 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxPlainBodyFrame
 {
+    internal static bool IsOrdinaryBody(DocxDocument document) =>
+        document.RelatedStories.Count == 0 && document.Paragraphs.All(p => p.InlineReferences.Count == 0);
+
+    internal static bool HasSingleLineParagraphs(DocxLayout layout) =>
+        layout.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>()
+            .Where(l => l.SourceParagraph is not null && l.Segments.Any(s => s.Role == DocxTextSegmentRole.Text))
+            .GroupBy(l => l.SourceParagraph!, ReferenceEqualityComparer.Instance).All(g => g.Count() == 1);
+
+    internal static bool HasSingleLineLayout(DocxDocument document, DocxLayout layout) =>
+        HasSingleLineParagraphs(layout) &&
+        !layout.Pages.Any(p => p.ColumnFrames.Count > 1 || p.StaticTextLines.Count != 0 || p.StaticInlineImages.Count != 0) &&
+        !document.Paragraphs.Any(p => p.KeepRules.KeepNext == true || p.KeepRules.KeepLines == true);
+
     internal static bool IsEligible(DocxDocument document) =>
         HasPlainBody(document) && HasNoStaticStories(document);
 

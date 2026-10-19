@@ -8983,5 +8983,25 @@
     "DocxInlineCompositionMappedNoteBandBottomMatchesIndependentWord",
     "DocxInlineCompositionCompleteRevisionsKeepDistinctWordStoryBands",
     "PortableRenderingCompleteRevisionsKeepContentInkAndStoryBands"
+  ],
+  "docx-plain-body-frame": [
+    "DocxOrdinaryKerning",
+    "DocxPlainFootnoteKerning",
+    "DocxElevenPoint",
+    "DocxWrappedCalibriKerning",
+    "DocxMetGlyphAdvance",
+    "DocxMetWrappedFootnoteNumbers",
+    "DocxCompleteEndnoteKerningResolvesThresholdsWithoutRewritingOwners",
+    "DocxMinimumBodyLineLeading",
+    "DocxOrdinaryMinimum",
+    "DocxMarkedMinimumLeading",
+    "DocxContextualMinimum",
+    "DocxMinimumBeforeLeading",
+    "DocxPageFootnoteNumbers",
+    "DocxMultipleFootnoteNumbers",
+    "DocxMultipleFootnoteOwners",
+    "DocxMultipleWrappedFootnoteNumbersShareOwnedRunQualification",
+    "PortableRenderingBodyPageCountersFollowLineAdmission",
+    "PortableRenderingScaledFootnoteSharesPrintedBodyCapacity"
   ]
 }

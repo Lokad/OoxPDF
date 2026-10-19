@@ -330,7 +330,7 @@ internal static class DocxPageFootnoteNumbering
         pages = new Dictionary<string, int>();
         string? family = document.Paragraphs.SelectMany(p => p.Runs).FirstOrDefault(r => r.Text.Length != 0)?.FontFamily;
         if (!string.Equals(family, "Calibri", StringComparison.OrdinalIgnoreCase) ||
-            !IsEligibleDocument(document) || DocxPlainFootnoteKerning.HasSingleLineBody(layout) ||
+            !IsEligibleDocument(document) || DocxPlainBodyFrame.HasSingleLineParagraphs(layout) ||
             !DocxWrappedFootnoteFrame.IsEligible(document, policy, ownerScope) ||
             !TryMapReferencePages(document, layout, out var mapped, allowWrappedBody: true, calibriPolicy: policy, ownerScope: ownerScope)) return false;
         pages = mapped;

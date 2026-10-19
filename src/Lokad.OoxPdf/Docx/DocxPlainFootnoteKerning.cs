@@ -7,11 +7,10 @@ internal static class DocxPlainFootnoteKerning
     {
         adjusted = source;
         pages = new Dictionary<string, int>();
-        bool ordinary = source.RelatedStories.Count == 0 && source.Paragraphs.All(p => p.InlineReferences.Count == 0);
+        bool ordinary = DocxPlainBodyFrame.IsOrdinaryBody(source);
         if (!(ordinary ? DocxPlainBodyFrame.IsEligible(source) : DocxPageFootnoteNumbering.IsEligibleDocument(source)) ||
-            !HasSingleLineBody(layout)) return false;
-        if (ordinary && (source.Paragraphs.Any(p => p.KeepRules.KeepNext == true || p.KeepRules.KeepLines == true) ||
-            layout.Pages.Any(p => p.ColumnFrames.Count > 1 || p.StaticTextLines.Count != 0 || p.StaticInlineImages.Count != 0))) return false;
+            !(ordinary ? DocxPlainBodyFrame.HasSingleLineLayout(source, layout) :
+                DocxPlainBodyFrame.HasSingleLineParagraphs(layout))) return false;
         bool elevenPointBody = DocxPlainElevenPointBody.IsEligible(source, layout);
         var elevenPointParagraphs = elevenPointBody
             ? new HashSet<DocxParagraph>(source.Paragraphs, ReferenceEqualityComparer.Instance) : null;
@@ -86,8 +85,4 @@ internal static class DocxPlainFootnoteKerning
         return true;
     }
 
-    internal static bool HasSingleLineBody(DocxLayout layout) =>
-        layout.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>()
-            .Where(l => l.SourceParagraph is not null && l.Segments.Any(s => s.Role == DocxTextSegmentRole.Text))
-            .GroupBy(l => l.SourceParagraph!, ReferenceEqualityComparer.Instance).All(g => g.Count() == 1);
 }

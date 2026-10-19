@@ -449,13 +449,13 @@ internal sealed partial class DocxRenderer
         {
             var adjustedFonts = PrepareFontResourcesCore(adjusted, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount, fontCache);
             var adjustedLayout = CreatePlainFootnoteTextLayout(adjusted, adjustedFonts, context, geometry, cancellationToken, pageCount);
-            bool wrappedCalibri = !DocxPlainFootnoteKerning.HasSingleLineBody(first) &&
+            bool wrappedCalibri = !DocxPlainBodyFrame.HasSingleLineParagraphs(first) &&
                 DocxWrappedFootnoteFrame.IsEligible(adjusted, DocxWrappedCalibriPolicy.NormalizedThresholds, DocxFootnoteOwnerScope.AllSourceReferences);
             bool stableOwners = plainNotes
                 ? jointNotePages is not null
                     ? DocxNoteKerning.HasStableJointOwners(adjustedLayout, jointNotePages, cancellationToken)
                     : DocxNoteKerning.HasStableOwners(adjustedLayout, notePages, cancellationToken, noteKind)
-                : (DocxPlainFootnoteKerning.HasSingleLineBody(adjustedLayout) || wrappedCalibri) &&
+                : (DocxPlainBodyFrame.HasSingleLineParagraphs(adjustedLayout) || wrappedCalibri) &&
                     (originalPages.Count == 0 || DocxPageFootnoteNumbering.HasStablePages(adjusted, adjustedLayout, originalPages,
                         allowWrappedBody: wrappedCalibri, calibriPolicy: DocxWrappedCalibriPolicy.NormalizedThresholds,
                         ownerScope: DocxFootnoteOwnerScope.AllSourceReferences));
