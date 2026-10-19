@@ -1,5 +1,36 @@
 # Measured operating envelope
 
+## C272 paragraph-owned textbox advance (2026-10-19)
+
+Body/cell textboxes charged an extra6 pt after their complete frame, duplicating
+paragraph spacing. Placement and the corresponding table/paragraph admission
+estimates now reserve the frame once. Existing source spacing and independently
+qualified cell tucks remain. Following prose in12 Word views agrees within
+0.030 pt, including the header-table neighbor whose row height previously added
+6 pt Final/4.522 pt review. Two36 pt boxes plus a12 pt line now fit their84 pt
+frame. Child math/frame geometry is unchanged in12 affected views. Two mixed
+report PDFs retain their exact bytes and reuse comparisons. No public API change.
+
+One qualified runtime:16 Windows/12 Ubuntu checks, four native skips, one exact
+invocation/platform. The first prequalification build caught a missing test
+constructor argument; the repaired harness and CLI reuse the already-built
+library. A preflight audit rejected an ignored absolute manifest. Its exact bytes
+are now a tracked five-source public portfolio;17 runtime assets and2,361 common
+inputs remain identical. No test-consumed scope changed or extra suite replay.
+Both new observers fail against the parent, including the phantom second page.
+
+Fourteen measured views reuse cached Word references;10 primary content screens
+pass. All14 strict visual failures remain, two comparisons reused by PDF identity.
+Two rasters reviewed.68 earlier outcomes carry by source reachability; the two
+staged sibling-box omission views remain unqualified.17 assets/four smokes, no
+root build/suite/package replay. Evidence:artifacts/composition-c1/
+inline-box-following-flow-evidence.json; roota7b92342. C271CI39258928443 is green
+on Windows/Ubuntu including broader and package checks.
+
+Scaled body/cell box Y2.454 pt and inherited static-table X5.400/4.088 pt remain
+explicit residuals. Ordered sibling composition remains a separate bounded
+migration; richer revised/nested/floating/field combinations stay staged.
+
 ## C271 scaled static textbox frames (2026-10-19)
 
 A real body comment reproduced a184.892 pt off-page footer and four missing
