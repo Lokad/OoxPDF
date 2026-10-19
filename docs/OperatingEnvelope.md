@@ -1,5 +1,17 @@
 # Measured operating envelope
 
+## C258 complete merged spans (2026-10-19)
+
+Complete static body-table math spans retain row floors and consume measured
+expansion once; fixed/partial/dynamic frames retain fallback. Six probes/twelve
+outcomes match Word page/following-flow anchors within0.308pt. One production
+artifact:77Windows/60Ubuntu checks,17native skips; only two model methods rerun
+for arithmetic precision with14runtime assets/all2,293inputs unchanged.
+Twelve strict failures and older-inspector extraction flags remain.17assets/four
+smokes transfer qualification; no root build/suite/Office export. No throughput
+or workspace-reclamation claim. Evidence:
+artifacts/composition-c1/merged-span-admission-evidence.json.
+
 ## C259 fraction measurement qualification (2026-10-19)
 
 Authored fraction-control metrics now own rules/gaps/leading without changing

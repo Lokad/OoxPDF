@@ -1,5 +1,28 @@
 # Composed-document reliability checkpoint
 
+## C258 complete merged-span admission (2026-10-19)
+
+Static measured mathematics pays its expansion once across a complete admitted
+span. Existing row floors remain; a forward prefix pass satisfies overlapping
+owners. The admitted frame is reused through placement, and its full source is
+consumed once. Fixed rows, partial/oversized/dynamic frames, forced breaks,
+headers and note-dependent capacity retain staging. This is a bounded body-table
+contract, not general fragmented-span layout.
+Six source-pinned probes/both presets now match independent following-flow and
+page anchors within0.308pt. Side row2stays on Word'sp1; its old page flags close.
+Exact-row PDFs retain their prior bytes. The native flow test fails on C259.
+One production artifact:77Windows/60Ubuntu checks,17native skips. Initial exact77
+ran once/platform; two model checks reran after a1e-9 arithmetic floor tolerance,
+with14runtime assets/all2,293inputs unchanged and failed attempts retained.
+Twelve outcomes/fourteen paired pins; two comparisons reused by exact identities,
+12strict visual failures remain. Four fixed DOCX inputs plus a static neighbor
+retain source proof; fixed8outcomes reused.17assets/four smokes, no root build,
+suite replay or Office export. Twelve raw x-token screens from the older root
+inspector remain; frozen ActualText-inspector reconciliation is the next bounded
+qualification task. Independent glyphs/ink show x+2/y. Inherited cell-left5.376pt
+remains. Rootbfb2aa70; artifacts/composition-c1/merged-span-admission-evidence.json.
+C259CI39223543480 is green on Windows and Ubuntu.
+
 ## C259 authored fraction-control frames (2026-10-19)
 
 Filled bar/stack fractions now use their resolved authored control size for rule,
