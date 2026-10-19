@@ -53,7 +53,9 @@ def publish(target, data):
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--write', action='store_true')
-parser.add_argument('--page-counter-probe', action='store_true')
+counters = parser.add_mutually_exclusive_group()
+counters.add_argument('--page-counter-probe', action='store_true')
+counters.add_argument('--total-counter-probe', action='store_true')
 args = parser.parse_args()
 
 seed_case = by_variant['boxed-equation']
@@ -61,7 +63,7 @@ seed = (root / seed_case['Input']).read_bytes()
 assert sha(seed) == seed_case['Sha256']
 seed_infos, seed_parts = unpack(seed)
 seed_frame = E.fromstring(seed_parts['word/document.xml']).find(w + 'body').findall(w + 'p')[1]
-if args.page_counter_probe:
+if args.page_counter_probe or args.total_counter_probe:
     parts = seed_parts.copy()
     tree = E.fromstring(parts['word/document.xml'])
     paragraph = tree.find('.//' + w + 'txbxContent').find(w + 'p')
@@ -69,26 +71,28 @@ if args.page_counter_probe:
     assert len(list(paragraph.iter(m + 'oMath'))) == 1
     E.SubElement(E.SubElement(paragraph, w + 'r'), w + 't',
         {'{http://www.w3.org/XML/1998/namespace}space': 'preserve'}).text = ' '
-    field = E.SubElement(paragraph, w + 'fldSimple', {w + 'instr': 'PAGE'})
+    instruction = 'NUMPAGES' if args.total_counter_probe else 'PAGE'
+    field = E.SubElement(paragraph, w + 'fldSimple', {w + 'instr': instruction})
     E.SubElement(E.SubElement(field, w + 'r'), w + 't').text = '1'
     assert [E.tostring(child) for child in list(paragraph)[:-2]] == children
     parts['word/document.xml'] = E.tostring(tree, encoding='utf-8', xml_declaration=True)
-    name = 'inline-box-child-page-counter'
+    name = 'inline-box-child-' + ('total' if args.total_counter_probe else 'page') + '-counter'
     data = pack(seed_infos, parts)
     rows = [dict(Id=name, Input='tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/' + name + '.docx',
         Sha256=sha(data), SourceId=seed_case['Id'], SourceSha256=seed_case['Sha256'],
         SourceChildParagraphSha256=sha(b''.join(children)), HeldOut=True,
         ExpectedEquationCount=1, ExpectedRenderedEquationCount=1,
-        ExpectedText=seed_case['ExpectedText'], FieldInstruction='PAGE',
-        Change='Append a bare PAGE field; preserve every existing child item and outer frame property.')]
-    jobs = [(directory / (name + '.docx'), data), (directory / 'inline-box-page-counter.json',
+        ExpectedText=seed_case['ExpectedText'], FieldInstruction=instruction,
+        Change='Append a bare ' + instruction + ' field; preserve every existing child item and outer frame property.')]
+    manifest_name = 'inline-box-total-counter.json' if args.total_counter_probe else 'inline-box-page-counter.json'
+    jobs = [(directory / (name + '.docx'), data), (directory / manifest_name,
         (json.dumps(rows, indent=2) + '\n').replace('\n', '\r\n').encode())]
     for target, data in jobs:
         if args.write:
             publish(target, data)
         else:
             assert target.read_bytes() == data, target.name
-    print('One source-exact PAGE/math child control verified; existing inline items/frame unchanged.')
+    print('One source-exact ' + instruction + '/math child control verified; existing inline items/frame unchanged.')
     raise SystemExit(0)
 
 prepared = []

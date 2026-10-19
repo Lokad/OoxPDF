@@ -1,0 +1,21 @@
+[
+  {
+    "Id": "inline-box-child-total-counter",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-child-total-counter.docx",
+    "Sha256": "29B5587DAAA1AE70E9A00A8449047D5D0CA4A0D62FF01F2FE08026D73DA60646",
+    "SourceId": "inline-box-boxed-equation-valid",
+    "SourceSha256": "5986739F1666625F94485092240716E3C4884C9B3AEDD5FBD6B499ADBA915FF1",
+    "SourceChildParagraphSha256": "02835D7A763793F936EB049D5388D44DE6069B6758F6DD184468A78604FDC631",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "FieldInstruction": "NUMPAGES",
+    "Change": "Append a bare NUMPAGES field; preserve every existing child item and outer frame property."
+  }
+]
