@@ -1700,13 +1700,6 @@ internal sealed partial class DocxLayoutEngine
         return (placedSeparator, separatorBottom);
     }
 
-    private static DocxPlacedRelatedStoryLayout PlaceRelatedStory(DocxLayoutPage page, int pageIndex, DocxRelatedStoryLayout storyLayout, int sourceBlockIndex)
-    {
-        double storyHeight = Math.Min(Math.Max(0d, storyLayout.ContentHeight), Math.Max(0d, page.Height - page.MarginTop - page.MarginBottom));
-        double topY = page.MarginBottom + storyHeight;
-        return PlaceRelatedStoryAtTop(page, pageIndex, storyLayout, sourceBlockIndex, topY, topY + FootnoteSeparatorGapPoints);
-    }
-
     // RV06 footlong probe (Word 16.0): footnote blocks taller than the body-anchored
     // area spill off-page top because the block stacks unbounded from the margin. Clamp
     // the stories top to the body bottom edge minus the separator height; short blocks

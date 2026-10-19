@@ -100,7 +100,6 @@ static int Run(string[] args)
 
         OoxPdfConverter.Convert(inputPath, outputPath, new OoxPdfOptions
         {
-            Strict = strict,
             DocxMarkupMode = docxMarkupMode,
             DocxMarkupGeometryMode = docxMarkupGeometryMode,
             DiagnosticSink = collector.Add

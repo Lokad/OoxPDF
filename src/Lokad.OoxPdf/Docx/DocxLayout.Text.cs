@@ -143,20 +143,6 @@ internal sealed partial class DocxLayoutEngine
             defaultTabStopPoints);
     }
 
-    private static double MeasureDrawableTextSpans(
-        IReadOnlyList<DocxTextSpan> spans,
-        double fontSize,
-        IDocxTextMeasurer textMeasurer,
-        IReadOnlyList<DocxTabStop> tabStops,
-        double defaultTabStopPoints)
-    {
-        int length = spans.Sum(span => span.Text.Length);
-        int drawableLength = FindDrawableTextLength(spans);
-        return drawableLength == length
-            ? MeasureTextSpans(spans, fontSize, textMeasurer, tabStops, defaultTabStopPoints)
-            : MeasureTextSpans(SliceTextSpans(spans, 0, drawableLength), fontSize, textMeasurer, tabStops, defaultTabStopPoints);
-    }
-
     private static double MeasureDrawableTextSpansForLayout(
         IReadOnlyList<DocxTextSpan> spans,
         double fontSize,

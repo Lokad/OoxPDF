@@ -113,8 +113,8 @@ internal static class PublicApiTests
         string output1 = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         string output2 = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
-        OoxPdfConverter.Convert(input, output1, new OoxPdfOptions { Deterministic = true });
-        OoxPdfConverter.Convert(input, output2, new OoxPdfOptions { Deterministic = true });
+        OoxPdfConverter.Convert(input, output1, new OoxPdfOptions());
+        OoxPdfConverter.Convert(input, output2, new OoxPdfOptions());
 
         byte[] first = File.ReadAllBytes(output1);
         byte[] second = File.ReadAllBytes(output2);
@@ -203,10 +203,10 @@ internal static class PublicApiTests
                     """,
             });
             string output1 = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-            OoxPdfConverter.Convert(input, output1, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = resolver, Deterministic = true });
+            OoxPdfConverter.Convert(input, output1, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = resolver });
             File.WriteAllBytes(fontPath, TestFontBuilder.CreateCffKindFont("OtherFamily"));
             string output2 = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-            OoxPdfConverter.Convert(input, output2, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = resolver, Deterministic = true });
+            OoxPdfConverter.Convert(input, output2, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, FontResolver = resolver });
             TestAssert.True(
                 File.ReadAllText(output1, Encoding.Latin1).Contains("TestFont", StringComparison.Ordinal),
                 "The custom font must actually embed for the retention check to mean anything.");

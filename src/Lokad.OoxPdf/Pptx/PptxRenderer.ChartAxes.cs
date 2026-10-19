@@ -358,30 +358,6 @@ internal sealed partial class PptxRenderer
                 !IsChartAxisDeleted(axis));
     }
 
-    private static PptxSceneChartAxis? ReadSceneSecondaryRightValueAxis(PptxSceneChart? sceneChart, XElement? rightValueAxis)
-    {
-        if (sceneChart is null)
-        {
-            return null;
-        }
-
-        string? axisId = ReadChartAxisId(rightValueAxis);
-        if (!string.IsNullOrWhiteSpace(axisId))
-        {
-            PptxSceneChartAxis? matchingAxis = sceneChart.Axes.FirstOrDefault(axis =>
-                string.Equals(axis.Id, axisId, StringComparison.Ordinal) &&
-                axis.AxisKind == PptxSceneChartAxisKind.Value);
-            if (matchingAxis is not null)
-            {
-                return matchingAxis;
-            }
-        }
-
-        return sceneChart.Axes.FirstOrDefault(axis =>
-            axis.AxisKind == PptxSceneChartAxisKind.Value &&
-            axis.PositionKind == PptxSceneChartAxisPosition.Right);
-    }
-
     private static bool IsSceneOrXmlVisibleValueAxis(PptxSceneChartAxis? sceneAxis, XElement? axis)
     {
         if (sceneAxis is not null)

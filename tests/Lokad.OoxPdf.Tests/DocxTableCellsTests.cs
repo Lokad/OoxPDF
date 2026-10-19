@@ -3819,36 +3819,41 @@ internal static class DocxTableCellsTests
 
     public static void DocxTableCellTextLinesMemoSharesSplitCells()
     {
-        // W04: the feasibility and final layouts of a split static cell must hit
-        // the shared memo instead of recomputing. A zero hit count means the key
-        // partitions every lookup and the memo is dead weight.
-        DocxParagraph firstParagraph = DocxTests.CreateDocxLayoutParagraph("First", 10d, 10d);
-        DocxParagraph[] secondParagraphs = Enumerable.Range(1, 8)
+        // Observe the actual cell-layout path through one local memo. A split
+        // changes the placement height/origin, while its complete measured lines
+        // remain reusable. Compare with uncached layout at the second origin.
+        DocxParagraph[] paragraphs = Enumerable.Range(1, 8)
             .Select(index => DocxTests.CreateDocxLayoutParagraph("Line " + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
             .ToArray();
-        var first = new DocxTableRow([new DocxTableCell("First", [firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
-        var second = new DocxTableRow([new DocxTableCell("Second", secondParagraphs, null, null, null, null, [], DocxTableCellMargins.Empty)], 80d);
-        var table = new DocxTable(null, [60d], [first, second]);
-        var document = new DocxDocument(
-            100d,
-            100d,
-            10d,
-            10d,
-            10d,
-            10d,
-            DocxPageSettings.Empty,
-            [],
-            [],
-            [],
-            [new DocxTableElement(table)],
-            [],
-            [table]);
+        var cell = new DocxTableCell("Second", paragraphs, null, null, null, null, [], DocxTableCellMargins.Empty);
+        var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
+        var measurer = new DocxTests.FamilyWidthTextMeasurer();
+        var method = typeof(DocxLayoutEngine).GetMethod("LayoutTableCellTextLines",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected live cell-layout method.");
 
-        DocxLayoutEngine.DocxTableCellTextLinesMemo.ResetTotals();
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> Images, double Height)
+            Place(double y, double height, DocxLayoutEngine.DocxTableCellTextLinesMemo? cache) =>
+            ((IReadOnlyList<DocxTextLineLayout>, IReadOnlyList<DocxInlineImageLayout>, double))method.Invoke(null,
+                [cell, 10d, y, 60d, height, 0d, measurer, 36d, 1, 2, 1d, cache, 0, null, CancellationToken.None])!;
 
-        TestAssert.Equal(2, layout.Pages.Count);
-        TestAssert.True(DocxLayoutEngine.DocxTableCellTextLinesMemo.TotalHits > 0, "Split static cells must share memoized text lines.");
+        var first = Place(70d, 20d, memo);
+        var replay = Place(10d, 60d, memo);
+        var fresh = Place(10d, 60d, null);
+        TestAssert.Equal(1, memo.Hits);
+        TestAssert.Equal(1, memo.Misses);
+        TestAssert.Equal(8, first.Lines.Count);
+        TestAssert.Equal(fresh.Height, replay.Height);
+        TestAssert.Equal(fresh.Lines.Count, replay.Lines.Count);
+        for (int index = 0; index < fresh.Lines.Count; index++)
+        {
+            DocxTextLineLayout expected = fresh.Lines[index];
+            DocxTextLineLayout actual = replay.Lines[index];
+            TestAssert.Equal(expected.Text, actual.Text);
+            TestAssert.True(Math.Abs(expected.X - actual.X) < 1e-9 && Math.Abs(expected.BaselineY - actual.BaselineY) < 1e-9,
+                "Cached split-cell placement must equal fresh geometry at its new origin.");
+            TestAssert.True(expected.Segments.SequenceEqual(actual.Segments), "Cached split-cell segments must equal fresh segments.");
+        }
     }
 
     public static void DocxTableLayoutStageSplitsTallRowsAcrossPagesByDefault()

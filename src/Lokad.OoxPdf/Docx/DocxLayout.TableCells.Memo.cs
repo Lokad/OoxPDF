@@ -54,16 +54,6 @@ internal sealed partial class DocxLayoutEngine
 
         public long Misses { get; private set; }
 
-        internal static long TotalHits { get; private set; }
-
-        internal static long TotalMisses { get; private set; }
-
-        internal static void ResetTotals()
-        {
-            TotalHits = 0;
-            TotalMisses = 0;
-        }
-
         private readonly Dictionary<MemoKey, StoredLines> entries = new();
 
         public bool TryGetRelativeLines(
@@ -85,7 +75,6 @@ internal sealed partial class DocxLayoutEngine
                 out StoredLines? stored) && stored is not null)
             {
                 Hits++;
-                TotalHits++;
                 relativeLines = stored.Lines;
                 relativePlacedImages = stored.PlacedImages;
                 usedHeight = stored.UsedHeight;
@@ -93,7 +82,6 @@ internal sealed partial class DocxLayoutEngine
             }
 
             Misses++;
-            TotalMisses++;
             relativeLines = [];
             relativePlacedImages = [];
             usedHeight = 0d;

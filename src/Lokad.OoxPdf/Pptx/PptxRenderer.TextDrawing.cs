@@ -186,22 +186,6 @@ internal sealed partial class PptxRenderer
         return count;
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderPositionedTextSpans(
-        IReadOnlyList<PptxPositionedTextSpan> textSpans,
-        IReadOnlyList<TextRun> legacyTextRuns,
-        PdfGraphicsBuilder graphics)
-    {
-        if (textSpans.Count == 0 && legacyTextRuns.Count == 0)
-        {
-            return [];
-        }
-
-        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans, legacyTextRuns, new PresentationFontResolver(null), "F", CancellationToken.None);
-        DrawTextSpansWithFonts(textSpans, graphics, renderedFonts.Fonts);
-        DrawTextRunsWithFonts(legacyTextRuns, graphics, renderedFonts.Fonts);
-        return renderedFonts.Resources;
-    }
-
     private static RenderedFonts CreateRenderedFonts(
         IReadOnlyList<PptxPositionedTextSpan> textSpans,
         IReadOnlyList<TextRun> legacyTextRuns,

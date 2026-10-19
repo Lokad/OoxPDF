@@ -688,11 +688,6 @@ internal sealed partial class PptxRenderer
         return segments.Any(static segment => segment.Draw && segment.Kind == PptxTextFlowSegmentKind.Text && segment.Text.Length != 0);
     }
 
-    private static IReadOnlyList<TextRun> FlattenTextLayout(PptxTextLayoutModel layout)
-    {
-        return FlattenTextLayoutToSpans(layout, null).Select(span => span.Run).ToArray();
-    }
-
     private static IReadOnlyList<PptxPositionedTextSpan> FlattenTextLayoutToSpans(PptxTextLayoutModel layout, PresentationFontResolver? fontResolver)
     {
         PptxPositionedTextSpan[] spans = layout.Frames

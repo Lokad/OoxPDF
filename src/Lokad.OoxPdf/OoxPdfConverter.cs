@@ -28,9 +28,8 @@ namespace Lokad.OoxPdf;
 /// <item>Resolvers and font sources must be safe for concurrent use. Parallel
 /// conversions may share one resolver instance and observe byte-identical output;
 /// font-program bytes are treated as immutable once published.</item>
-/// <item>Strict affects CLI exit policy, not library refusal to emit a PDF;
-/// Deterministic is accepted for compatibility and output is deterministic by
-/// construction (see <see cref="OoxPdfOptions"/>).</item>
+/// <item>Output is deterministic by construction; callers may set an explicit
+/// fixed creation date through <see cref="OoxPdfOptions.FixedCreationDate"/>.</item>
 /// </list>
 /// </remarks>
 public static class OoxPdfConverter

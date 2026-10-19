@@ -529,11 +529,6 @@ internal sealed partial class PptxRenderer
         return clampToFrame ? Math.Clamp(value, minimum, 1d) : Math.Max(minimum, value);
     }
 
-    private static ChartPlotBoxRatios GetPlotBoxRatios(ChartFrameBox frame, ChartPlotBox plotBox)
-    {
-        return GetLayoutBoxRatios(frame, new ChartLayoutBox(plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height));
-    }
-
     private static ChartPlotBoxRatios GetLayoutBoxRatios(ChartFrameBox frame, ChartLayoutBox box)
     {
         if (frame.Width <= 0d || frame.Height <= 0d)

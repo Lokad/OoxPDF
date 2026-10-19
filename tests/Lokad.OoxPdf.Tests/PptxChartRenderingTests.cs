@@ -1015,9 +1015,9 @@ internal static class PptxChartRenderingTests
         using MemoryStream embeddedWorkbookStream = new(PptxTests.EmbeddedChartWorkbook());
         OoxPackage embeddedWorkbookPackage = OoxPackage.Open(embeddedWorkbookStream, CancellationToken.None);
         var readWorkbookData = typeof(PptxRenderer).GetMethod(
-            "ReadWorkbookData",
+            "ReadWorkbookDataCore",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected workbook reader helper.");
-        object parsedWorkbook = readWorkbookData.Invoke(null, [embeddedWorkbookPackage]) ?? throw new InvalidOperationException("Expected parsed workbook data.");
+        object parsedWorkbook = readWorkbookData.Invoke(null, [embeddedWorkbookPackage, CancellationToken.None]) ?? throw new InvalidOperationException("Expected parsed workbook data.");
         TestAssert.True((bool?)date1904Property.GetValue(parsedWorkbook) == true, "Expected parsed workbookPr/date1904 to survive workbook parsing.");
         System.Reflection.PropertyInfo sheetsProperty = workbookType.GetProperty("Sheets") ?? throw new InvalidOperationException("Expected workbook sheet records.");
         object[] parsedSheets = (((System.Collections.IEnumerable?)sheetsProperty.GetValue(parsedWorkbook)) ?? throw new InvalidOperationException("Expected parsed workbook sheet records.")).Cast<object>().ToArray();
@@ -1434,9 +1434,9 @@ internal static class PptxChartRenderingTests
         using MemoryStream embeddedWorkbookStream = new(PptxTests.EmbeddedChartWorkbook());
         OoxPackage embeddedWorkbookPackage = OoxPackage.Open(embeddedWorkbookStream, CancellationToken.None);
         var readWorkbookData = typeof(PptxRenderer).GetMethod(
-            "ReadWorkbookData",
+            "ReadWorkbookDataCore",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected workbook reader helper.");
-        object parsedWorkbook = readWorkbookData.Invoke(null, [embeddedWorkbookPackage]) ?? throw new InvalidOperationException("Expected parsed workbook data.");
+        object parsedWorkbook = readWorkbookData.Invoke(null, [embeddedWorkbookPackage, CancellationToken.None]) ?? throw new InvalidOperationException("Expected parsed workbook data.");
         var hiddenColumnSource = source with { Formula = "Sheet1!$B$2:$B$4" };
         object hiddenColumnVector = buildVector.Invoke(
             null,

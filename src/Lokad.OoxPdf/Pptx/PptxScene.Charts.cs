@@ -408,24 +408,12 @@ internal sealed partial class PptxSceneBuilder
             : (null, value);
     }
 
-    private static double? ReadChartElementDouble(XElement element, string childName)
-    {
-        (double? parsed, _) = ReadChartElementDoubleWithValue(element, childName);
-        return parsed;
-    }
-
     internal static (double? Value, string RawValue) ReadChartElementDoubleWithValue(XElement element, string childName)
     {
         string value = ReadChartElementValue(element, childName);
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
             ? (parsed, value)
             : (null, value);
-    }
-
-    private static int? ReadChartElementInt(XElement element, string childName)
-    {
-        (int? parsed, _) = ReadChartElementIntWithValue(element, childName);
-        return parsed;
     }
 
     internal static (int? Value, string RawValue) ReadChartElementIntWithValue(XElement? element, string childName)
@@ -717,24 +705,12 @@ internal sealed partial class PptxSceneBuilder
         return resolved.Width < 0d ? ReadChartLine(shapeProperties, theme, colorMap) : resolved;
     }
 
-    private static double? ReadChartAxisScalingValue(XElement axis, string elementName)
-    {
-        (double? parsed, _) = ReadChartAxisScalingValueWithValue(axis, elementName);
-        return parsed;
-    }
-
     internal static (double? Value, string RawValue) ReadChartAxisScalingValueWithValue(XElement axis, string elementName)
     {
         string value = ReadChartElementValue(axis.Element(ChartNamespace + "scaling"), elementName);
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
             ? (parsed, value)
             : (null, value);
-    }
-
-    private static double? ReadChartAxisUnitValue(XElement axis, string elementName)
-    {
-        (double? parsed, _) = ReadChartAxisUnitValueWithValue(axis, elementName);
-        return parsed;
     }
 
     internal static (double? Value, string RawValue) ReadChartAxisUnitValueWithValue(XElement axis, string elementName)

@@ -18,20 +18,6 @@ public sealed class OoxPdfOptions
     public OoxPdfDocxMarkupGeometryMode DocxMarkupGeometryMode { get; init; } = OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
 
     /// <summary>
-    /// Requests strict handling of diagnostics. The library validates options eagerly and
-    /// reports unsupported content through <see cref="DiagnosticSink"/>; the CLI maps any
-    /// warning or error diagnostic to process exit code 3 when this flag is set.
-    /// </summary>
-    public bool Strict { get; init; }
-
-    /// <summary>
-    /// Conversion output is deterministic by construction (no timestamps, random values, or
-    /// absolute paths are emitted unless <see cref="FixedCreationDate"/> is set). The flag is
-    /// accepted for compatibility and currently has no additional effect.
-    /// </summary>
-    public bool Deterministic { get; init; } = true;
-
-    /// <summary>
     /// When set, the PDF document information dictionary records this value as CreationDate and
     /// ModDate. When null (the default), no dates are emitted and output stays deterministic.
     /// </summary>

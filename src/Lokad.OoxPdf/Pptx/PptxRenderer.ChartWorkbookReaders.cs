@@ -28,11 +28,6 @@ internal sealed partial class PptxRenderer
         return ReadWorkbookDataCore(workbookPackage, cancellationToken);
     }
 
-    private static ChartWorkbookData? ReadWorkbookData(OoxPackage workbookPackage)
-    {
-        return ReadWorkbookDataCore(workbookPackage, CancellationToken.None);
-    }
-
     private static ChartWorkbookData? ReadWorkbookDataCore(OoxPackage workbookPackage, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
