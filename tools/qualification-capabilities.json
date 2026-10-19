@@ -9059,5 +9059,21 @@
     "DocxLayoutStageResolvesStaticHeaderTablePageFieldsPerPage",
     "DocxLayoutStageResolvesStaticHeaderTableNumPagesFieldFromPageCount",
     "DocxMarkupModesFilterHyperlinkAndFieldRevisionsBeforeLayout"
+  ],
+  "docx-dynamic-field-composition-neighbors": [
+    "DocxFieldTextCounterInputsRemainIndependent",
+    "DocxInlineCompositionCounterAtomsMeasureOnlyTheirOwnedInputs",
+    "DocxInlineCompositionMeasuredAtomsRebindOnlyCounters",
+    "DocxInlineCompositionSourceCursor",
+    "DocxInlineCompositionBodyPageCounters",
+    "DocxInlineCompositionCellPageCounters",
+    "DocxInlineCompositionBodyCursorSkipsUnfitContinuationColumns",
+    "DocxInlineCompositionTotalPage",
+    "DocxInlineCompositionMixedDisplayTotalPageCountersRetainSupportedMath",
+    "PortableRenderingBodyPageCountersFollowLineAdmission",
+    "PortableRenderingCellPageCountersPreserveMathAcrossDigitBoundary",
+    "PortableRenderingTotalPageMath",
+    "PortableRenderingMixedDisplayCountersPreserveTotalPageDependencies",
+    "DocxTableCellPageFieldsEvaluatePerFragmentPage"
   ]
 }
