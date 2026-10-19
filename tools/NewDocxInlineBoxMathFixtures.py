@@ -51,11 +51,23 @@ def publish(target, data):
     temporary.replace(target)
 
 
+def append_counter(paragraph, instruction):
+    children = [E.tostring(child) for child in paragraph]
+    assert len(list(paragraph.iter(m + 'oMath'))) == 1
+    E.SubElement(E.SubElement(paragraph, w + 'r'), w + 't',
+        {'{http://www.w3.org/XML/1998/namespace}space': 'preserve'}).text = ' '
+    field = E.SubElement(paragraph, w + 'fldSimple', {w + 'instr': instruction})
+    E.SubElement(E.SubElement(field, w + 'r'), w + 't').text = '1'
+    assert [E.tostring(child) for child in list(paragraph)[:-2]] == children
+    return sha(b''.join(children))
+
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--write', action='store_true')
 counters = parser.add_mutually_exclusive_group()
 counters.add_argument('--page-counter-probe', action='store_true')
 counters.add_argument('--total-counter-probe', action='store_true')
+counters.add_argument('--total-counter-container-probes', action='store_true')
 args = parser.parse_args()
 
 seed_case = by_variant['boxed-equation']
@@ -63,24 +75,50 @@ seed = (root / seed_case['Input']).read_bytes()
 assert sha(seed) == seed_case['Sha256']
 seed_infos, seed_parts = unpack(seed)
 seed_frame = E.fromstring(seed_parts['word/document.xml']).find(w + 'body').findall(w + 'p')[1]
+if args.total_counter_container_probes:
+    jobs, rows = [], []
+    for variant in ['cell', 'header', 'footer']:
+        source = by_variant[variant]
+        data = (root / source['Input']).read_bytes()
+        assert sha(data) == source['Sha256']
+        infos, parts = unpack(data)
+        part = 'word/document.xml' if variant == 'cell' else 'word/inline-box-' + variant + '.xml'
+        tree = E.fromstring(parts[part])
+        paragraph = tree.find('.//' + w + 'txbxContent').find(w + 'p')
+        child_hash = append_counter(paragraph, 'NUMPAGES')
+        parts[part] = E.tostring(tree, encoding='utf-8', xml_declaration=True)
+        data = pack(infos, parts)
+        name = 'inline-box-total-counter-' + variant
+        rows.append(dict(Id=name, Input='tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/' + name + '.docx',
+            Sha256=sha(data), SourceId=source['Id'], SourceSha256=source['Sha256'],
+            SourceChildParagraphSha256=child_hash, MathPart=part, Variant=variant, HeldOut=True,
+            ExpectedEquationCount=1, ExpectedRenderedEquationCount=1,
+            ExpectedText=source['ExpectedText'], FieldInstruction='NUMPAGES',
+            Change='Append the same bare total-count field within the independently accepted ' + variant + ' box; preserve its child items and frame.'))
+        jobs.append((directory / (name + '.docx'), data))
+    assert len({row['SourceChildParagraphSha256'] for row in rows}) == 1
+    jobs.append((directory / 'inline-box-total-counter-containers.json',
+        (json.dumps(rows, indent=2) + '\n').replace('\n', '\r\n').encode()))
+    for target, data in jobs:
+        if args.write:
+            publish(target, data)
+        else:
+            assert target.read_bytes() == data, target.name
+    print('Three source-exact NUMPAGES/math child controls verified in cell/header/footer frames.')
+    raise SystemExit(0)
+
 if args.page_counter_probe or args.total_counter_probe:
     parts = seed_parts.copy()
     tree = E.fromstring(parts['word/document.xml'])
     paragraph = tree.find('.//' + w + 'txbxContent').find(w + 'p')
-    children = [E.tostring(child) for child in paragraph]
-    assert len(list(paragraph.iter(m + 'oMath'))) == 1
-    E.SubElement(E.SubElement(paragraph, w + 'r'), w + 't',
-        {'{http://www.w3.org/XML/1998/namespace}space': 'preserve'}).text = ' '
     instruction = 'NUMPAGES' if args.total_counter_probe else 'PAGE'
-    field = E.SubElement(paragraph, w + 'fldSimple', {w + 'instr': instruction})
-    E.SubElement(E.SubElement(field, w + 'r'), w + 't').text = '1'
-    assert [E.tostring(child) for child in list(paragraph)[:-2]] == children
+    child_hash = append_counter(paragraph, instruction)
     parts['word/document.xml'] = E.tostring(tree, encoding='utf-8', xml_declaration=True)
     name = 'inline-box-child-' + ('total' if args.total_counter_probe else 'page') + '-counter'
     data = pack(seed_infos, parts)
     rows = [dict(Id=name, Input='tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/' + name + '.docx',
         Sha256=sha(data), SourceId=seed_case['Id'], SourceSha256=seed_case['Sha256'],
-        SourceChildParagraphSha256=sha(b''.join(children)), HeldOut=True,
+        SourceChildParagraphSha256=child_hash, HeldOut=True,
         ExpectedEquationCount=1, ExpectedRenderedEquationCount=1,
         ExpectedText=seed_case['ExpectedText'], FieldInstruction=instruction,
         Change='Append a bare ' + instruction + ' field; preserve every existing child item and outer frame property.')]
