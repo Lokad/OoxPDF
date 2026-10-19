@@ -1,0 +1,144 @@
+[
+  {
+    "Id": "parallel-cell-uniform-insets",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/parallel-cell-uniform-insets.docx",
+    "Sha256": "FD6E5EC4EE9555A5C7E70D3BCBAC63FC4EA353418AC2C0363455CE0C8B5B826C",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-frame-mixed-prose.docx",
+    "SourceSha256": "EF0F9C1AD288737E511846F8F68E202E22B4AEDAA1B95D336D2213AC685F7514",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "SourceRowsPerCell": 120,
+    "ExpectedText": [
+      "Before public math table.",
+      "Left source row 1.",
+      "Right source row 1.",
+      "Left source row 120.",
+      "Right source row 120.",
+      "After public math table."
+    ],
+    "Change": "Explicit cell-owned vertical insets with ordinary prose; pale source fills expose shared physical fragments without border rules.",
+    "CellInsets": {
+      "Left": {
+        "Top": 3,
+        "Bottom": 3
+      },
+      "Right": {
+        "Top": 3,
+        "Bottom": 3
+      }
+    },
+    "CellFills": {
+      "Left": "DDEBF7",
+      "Right": "E2F0D9"
+    }
+  },
+  {
+    "Id": "parallel-cell-unequal-insets",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/parallel-cell-unequal-insets.docx",
+    "Sha256": "723EA0F60418B50526518EA19960081488DFE9089535634D2D9BFED655A36223",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-frame-mixed-prose.docx",
+    "SourceSha256": "EF0F9C1AD288737E511846F8F68E202E22B4AEDAA1B95D336D2213AC685F7514",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "SourceRowsPerCell": 120,
+    "ExpectedText": [
+      "Before public math table.",
+      "Left source row 1.",
+      "Right source row 1.",
+      "Left source row 120.",
+      "Right source row 120.",
+      "After public math table."
+    ],
+    "Change": "Explicit cell-owned vertical insets with ordinary prose; pale source fills expose shared physical fragments without border rules.",
+    "CellInsets": {
+      "Left": {
+        "Top": 3,
+        "Bottom": 1
+      },
+      "Right": {
+        "Top": 6,
+        "Bottom": 3
+      }
+    },
+    "CellFills": {
+      "Left": "DDEBF7",
+      "Right": "E2F0D9"
+    }
+  },
+  {
+    "Id": "parallel-cell-bottom-insets",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/parallel-cell-bottom-insets.docx",
+    "Sha256": "777BEF8A9FDCEBABB8B09CEE7E5E3077711B40AB5730F26F48EFE3074AA79FD7",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-frame-mixed-prose.docx",
+    "SourceSha256": "EF0F9C1AD288737E511846F8F68E202E22B4AEDAA1B95D336D2213AC685F7514",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "SourceRowsPerCell": 120,
+    "ExpectedText": [
+      "Before public math table.",
+      "Left source row 1.",
+      "Right source row 1.",
+      "Left source row 120.",
+      "Right source row 120.",
+      "After public math table."
+    ],
+    "Change": "Explicit cell-owned vertical insets with ordinary prose; pale source fills expose shared physical fragments without border rules.",
+    "CellInsets": {
+      "Left": {
+        "Top": 3,
+        "Bottom": 18
+      },
+      "Right": {
+        "Top": 3,
+        "Bottom": 3
+      }
+    },
+    "CellFills": {
+      "Left": "DDEBF7",
+      "Right": "E2F0D9"
+    }
+  },
+  {
+    "Id": "parallel-cell-boxed-insets",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/parallel-cell-boxed-insets.docx",
+    "Sha256": "CF2391F55459C0B8D6BD5C85D5F3E8320E61ED3005AFC5669EED34F5A14A0396",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-frame-mixed-prose.docx",
+    "SourceSha256": "EF0F9C1AD288737E511846F8F68E202E22B4AEDAA1B95D336D2213AC685F7514",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "SourceRowsPerCell": 120,
+    "ExpectedText": [
+      "Before public math table.",
+      "Left source row 1.",
+      "Right source row 1.",
+      "Left source row 120.",
+      "Right source row 120.",
+      "After public math table.",
+      "Before inline",
+      "after equation."
+    ],
+    "Change": "Explicit cell-owned vertical insets with ordinary prose; pale source fills expose shared physical fragments without border rules.",
+    "BoxSourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/spanning-cell-total-count.docx",
+    "BoxSourceSha256": "090D8F711EC51CF4EDFA2E6D0F92A84DE63C5291997FC37A2A69C3904F97759C",
+    "SourceBoxParagraphSha256": "1A97A708A7ABD24FD2FC3D2675C6157A1B970348C249638AC27B211B7E2F31C5",
+    "FieldInstruction": "NUMPAGES",
+    "CellInsets": {
+      "Left": {
+        "Top": 3,
+        "Bottom": 3
+      },
+      "Right": {
+        "Top": 3,
+        "Bottom": 3
+      }
+    },
+    "CellFills": {
+      "Left": "DDEBF7",
+      "Right": "E2F0D9"
+    }
+  }
+]

@@ -9230,5 +9230,27 @@
   "docx-parallel-box-composition": [
     "DocxParallelCellBoxesRetainIndependentWordMathAndFinalCount",
     "PortableRenderingParallelCellBoxesKeepMathAndActualCount"
+  ],
+  "docx-shared-cell-insets": [
+    "DocxSpanningFramesRetainCompleteInkAndIndependentWordOrigins",
+    "PortableRenderingSpanningFramesKeepCompleteGlyphInk",
+    "DocxSpanningCellTotalCountersRetainWordPagesAndCompleteContent",
+    "PortableRenderingSpanningCellTotalCountersKeepCompleteSource",
+    "DocxReviewTablePrintedCapacityPreservesWordPagesAndStaticStoryCombinations",
+    "DocxReviewTableWidowBoundaryChecksEveryCell",
+    "DocxReviewTableFragmentsPreserveAllWordsWithExplicitWidowControl",
+    "DocxReviewTableSplitProjectionPreservesContinuationPitch",
+    "DocxReviewTablePaginationHonorsExplicitKeepAndWidowRules",
+    "DocxTableCellTextLinesMemoSharesSplitCells",
+    "CellMemoCounterInputs",
+    "DocxTableCellPageFieldsEvaluatePerFragmentPage",
+    "DocxInlineBoxTotalCountersKeepContentAcrossContainers",
+    "PortableRenderingInlineBoxTotalCountersKeepContentAcrossContainers",
+    "DocxParallelCellFramesRetainIndependentWordPagesAndCompleteInk",
+    "PortableRenderingParallelCellFramesKeepCompleteGlyphInk",
+    "DocxParallelCellBoxesRetainIndependentWordMathAndFinalCount",
+    "PortableRenderingParallelCellBoxesKeepMathAndActualCount",
+    "DocxParallelCellInsetsRetainWordPagesPaddingAndBoxedMath",
+    "PortableRenderingParallelCellInsetsKeepPaddingContentAndBoxedMath"
   ]
 }

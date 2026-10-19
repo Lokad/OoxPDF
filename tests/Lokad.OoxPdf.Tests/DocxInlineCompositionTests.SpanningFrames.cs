@@ -27,6 +27,12 @@ internal static partial class DocxInlineCompositionTests
         CheckSpanningFrames(null, compareWord: true, "parallel-cell-box-office.json", parallelCells: true);
     }
 
+    public static void DocxParallelCellInsetsRetainWordPagesPaddingAndBoxedMath()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent Word origins use installed Windows fonts.");
+        CheckSpanningFrames(null, compareWord: true, "parallel-cell-inset-composition-office.json", parallelCells: true);
+    }
+
     internal static void CheckSpanningFrames(IFontResolver? resolver, bool compareWord,
         string goldenFile = "spanning-frame-office.json", bool parallelCells = false)
     {
@@ -46,6 +52,19 @@ internal static partial class DocxInlineCompositionTests
             var pages = renderer.RenderBlankPages(source, diagnostics.Add, default).ToArray();
             var layout = renderer.InspectLayout(source);
             TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Continuation keeps supported child mathematics.");
+            bool checkInsets = row.TryGetProperty("WordCellFills", out var cellFills);
+            if (compareWord && checkInsets)
+                foreach (var expected in cellFills.EnumerateArray())
+                {
+                    int pageIndex = expected.GetProperty("Page").GetInt32() - 1;
+                    var cell = layout.Pages[pageIndex].TableRows.Single().Cells[expected.GetProperty("Cell").GetInt32()];
+                    var rect = expected.GetProperty("Rect");
+                    TestAssert.True(Math.Abs(cell.X - rect[0].GetDouble()) < 1d &&
+                        Math.Abs(pages[pageIndex].Height - cell.Y - cell.Height - rect[1].GetDouble()) < 1d &&
+                        Math.Abs(cell.X + cell.Width - rect[2].GetDouble()) < 1d &&
+                        Math.Abs(pages[pageIndex].Height - cell.Y - rect[3].GetDouble()) < 1d,
+                        $"{id}, page{pageIndex + 1}: physical cell envelopes retain independent Word padding geometry.");
+                }
             var anchors = row.GetProperty("WordProseAnchors").EnumerateArray().ToArray();
             var remaining = anchors.Select(anchor => anchor.GetProperty("Text").GetString()!).ToHashSet(StringComparer.Ordinal);
             for (int pageIndex = 0; pageIndex < pages.Length; pageIndex++)
@@ -89,7 +108,9 @@ internal static partial class DocxInlineCompositionTests
                         TestAssert.True(font.TryGetGlyphBounds(font.MapCodePoint(rune.Value), out var bounds), "Planning glyph ink is measurable.");
                         double bottom = show.Y + bounds.YMin * show.Size / font.UnitsPerEm;
                         double top = show.Y + bounds.YMax * show.Size / font.UnitsPerEm;
-                        TestAssert.True(bottom >= cell.Y - .001d && top <= cell.Y + cell.Height + .001d,
+                        double topInset = checkInsets ? row.GetProperty("SourceRowTopInset").GetDouble() : 0d;
+                        double bottomInset = checkInsets ? row.GetProperty("SourceRowBottomInset").GetDouble() : 0d;
+                        TestAssert.True(bottom >= cell.Y + bottomInset - .001d && top <= cell.Y + cell.Height - topInset + .001d,
                             $"{id}, page{pageIndex + 1}: {text} must keep complete glyph ink inside its painted fragment.");
                     }
                     if (!compareWord) continue;

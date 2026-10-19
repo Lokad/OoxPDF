@@ -590,41 +590,49 @@ internal sealed partial class DocxLayoutEngine
             return false;
 
             bool HasValidKeepBoundary(IReadOnlyList<DocxParagraph> paragraphs, IReadOnlyList<DocxTextLineLayout> lines,
-                double start, double bottom)
+                int first, int end)
             {
-                foreach (var group in lines.GroupBy(line => line.SourceParagraphIndex))
+                foreach (var group in lines.Select((line, index) => (Line: line, Index: index)).GroupBy(item => item.Line.SourceParagraphIndex))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (group.Key is not { } index || index < 0 || index >= paragraphs.Count) continue;
                     var rules = paragraphs[index].EffectiveProperties.KeepRules;
-                    int before = group.Count(line => line.BaselineY < start + .001d && line.BaselineY >= bottom);
-                    int after = group.Count(line => line.BaselineY < bottom);
+                    int before = group.Count(item => item.Index >= first && item.Index < end);
+                    int after = group.Count(item => item.Index >= end);
                     if (before != 0 && after != 0 && (rules.KeepNext == true || rules.KeepLines == true ||
                         (rules.WidowControl ?? (reviewFragmentScale == 1d)) && (before == 1 || after == 1))) return false;
                     if (before != 0 && after == 0 && rules.KeepNext == true &&
                         lines.Any(line => line.SourceParagraphIndex == index + 1) &&
-                        lines.Where(line => line.SourceParagraphIndex == index + 1).All(line => line.BaselineY < bottom)) return false;
+                        lines.Select((line, position) => (Line: line, Position: position))
+                            .Where(item => item.Line.SourceParagraphIndex == index + 1).All(item => item.Position >= end)) return false;
                 }
                 return true;
             }
 
-            // Natural occupied frames own cell-specific source consumption. Structural
-            // edges/insets, changing per-page inputs and incomplete source frames keep
+            // Natural occupied frames own cell-specific source consumption. Row maximum
+            // insets reserve shared capacity on every fragment. Structural edges,
+            // changing per-page inputs and incomplete source frames keep
             // their existing common-boundary policy until that ownership is qualified.
             bool TryResolveCellOwnedFragments(double firstCapacity, double pageHeight,
                 out IReadOnlyList<DocxCellOwnedRowFragment> fragments)
             {
                 fragments = [];
-                if (!HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue) || rowTopPadding != 0d ||
+                if (!HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue) ||
                     laidOutCells.Count != row.Cells.Count || row.Cells.Any(cell =>
                         !DocxMathParagraphPolicy.IsSupportedCellProperties(cell) ||
                         cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top ||
-                        cell.VerticalAlignmentValue is not (null or "top") || cell.Margins.BottomPoints is > 0d ||
+                        cell.VerticalAlignmentValue is not (null or "top") ||
                         cell.Borders.Any(border => DocxTableBorderGeometry.ResolveVisibleWidth(border) > 0d) ||
                         GetTableCellLayoutBodyElements(cell).Any(element => element is not DocxParagraphElement) ||
                         (DocxFieldText.GetDependencies(GetTableCellLayoutBodyElements(cell), cancellationToken) & DocxCounterDependencies.PageNumber) != 0))
                     return false;
-                if (Math.Abs(laidOutCells.Max(cell => cell.UsedHeight) - rowHeight) > .001d) return false;
+                double rowBottomPadding = row.Cells.Max(cell => ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, paragraphSpacingScale));
+                // Validate the measured source with each cell's own bottom margin.
+                // Shared fragment reservation may exceed that natural row end when
+                // the tallest content and the largest inset belong to different cells.
+                double naturalHeight = laidOutCells.Select((cell, index) => cell.UsedHeight + rowTopPadding +
+                    ResolveTableCellVerticalPadding(row.Cells[index].Margins.BottomPoints, paragraphSpacingScale)).Max();
+                if (Math.Abs(naturalHeight - rowHeight) > .001d) return false;
                 var bounds = new (double Top, double Bottom)[laidOutCells.Count][];
                 for (int cellIndex = 0; cellIndex < laidOutCells.Count; cellIndex++)
                 {
@@ -638,7 +646,7 @@ internal sealed partial class DocxLayoutEngine
                         var line = cell.TextLines[lineIndex];
                         if (!DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double lower, out double upper)) return false;
                         var span = (Top: rowHeight - upper, Bottom: rowHeight - lower);
-                        if (span.Top < previousBottom - .001d || span.Bottom > cell.UsedHeight + .001d) return false;
+                        if (span.Top < previousBottom - .001d || span.Bottom > cell.UsedHeight + rowTopPadding + .001d) return false;
                         bounds[cellIndex][lineIndex] = span;
                         previousBottom = span.Bottom;
                     }
@@ -660,18 +668,21 @@ internal sealed partial class DocxLayoutEngine
                         int first = nextLines[cellIndex], end = first;
                         windows[cellIndex] = new(starts[cellIndex], 0d, first, 0);
                         if (first == cell.TextLines.Count) continue;
-                        while (end < cell.TextLines.Count && bounds[cellIndex][end].Bottom - starts[cellIndex] <= capacity + .001d)
+                        while (end < cell.TextLines.Count && bounds[cellIndex][end].Bottom - starts[cellIndex] + rowBottomPadding <= capacity + .001d)
                         {
                             cancellationToken.ThrowIfCancellationRequested();
                             end++;
                         }
                         if (end == first) return false;
-                        double cut = end == cell.TextLines.Count ? cell.UsedHeight : bounds[cellIndex][end].Top;
-                        if (!HasValidKeepBoundary(cell.Paragraphs, cell.TextLines, rowHeight - starts[cellIndex], rowHeight - cut)) return false;
-                        double occupied = (end == cell.TextLines.Count ? cell.UsedHeight : bounds[cellIndex][end - 1].Bottom) - starts[cellIndex];
+                        double cut = end == cell.TextLines.Count ? cell.UsedHeight + rowTopPadding : bounds[cellIndex][end].Top - rowTopPadding;
+                        if (!HasValidKeepBoundary(cell.Paragraphs, cell.TextLines, first, end)) return false;
+                        double contentHeight = (end == cell.TextLines.Count ? cell.UsedHeight + rowTopPadding : bounds[cellIndex][end - 1].Bottom) - starts[cellIndex];
+                        double occupied = contentHeight + rowBottomPadding;
                         if (!double.IsFinite(occupied) || occupied <= 0d || occupied > capacity + .001d) return false;
                         height = Math.Max(height, occupied);
-                        windows[cellIndex] = new(starts[cellIndex], occupied, first, end - first);
+                        // Source visibility excludes padding: a taller neighbor cannot expose
+                        // the next object through the reserved bottom inset.
+                        windows[cellIndex] = new(starts[cellIndex], contentHeight, first, end - first);
                         starts[cellIndex] = cut;
                         nextLines[cellIndex] = end;
                         more |= end < cell.TextLines.Count;
@@ -734,7 +745,11 @@ internal sealed partial class DocxLayoutEngine
                                 hasLater = true;
                             }
                         }
-                        if (!HasValidKeepBoundary(paragraphs, lines, start, bottom)) return false;
+                        int first = 0, end = 0;
+                        while (first < lines.Count && lines[first].BaselineY >= start + .001d) first++;
+                        end = first;
+                        while (end < lines.Count && lines[end].BaselineY >= bottom) end++;
+                        if (!HasValidKeepBoundary(paragraphs, lines, first, end)) return false;
                     }
                     if (!hasEarlier || !hasLater) return false;
                     cuts.Add(cut);
