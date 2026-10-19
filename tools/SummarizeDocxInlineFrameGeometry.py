@@ -6,6 +6,7 @@ Numerical axes and thresholds stay explicit. Pixel/ink checks remain separate.
 import argparse
 import hashlib
 import json
+import math
 import unicodedata
 from pathlib import Path
 import pymupdf
@@ -72,6 +73,66 @@ def measure_note_rules(path):
             and item['rect'].width > 50 and 0 < item['rect'].height < 2]
 
 
+def rectangle_union(rectangles):
+    """Envelope and covered area of emitted rectangles; clipping/ink stays separate."""
+    if not rectangles:
+        return [], 0.
+    if any(len(rect) != 4 or any(not math.isfinite(value) for value in rect)
+           or rect[2] <= rect[0] or rect[3] <= rect[1] for rect in rectangles):
+        raise ValueError('Finite positive fill rectangles required')
+    envelope = [min(rect[0] for rect in rectangles), min(rect[1] for rect in rectangles),
+                max(rect[2] for rect in rectangles), max(rect[3] for rect in rectangles)]
+    edges = sorted({value for rect in rectangles for value in (rect[1], rect[3])})
+    area = 0.
+    for top, bottom in zip(edges, edges[1:]):
+        intervals = sorted((rect[0], rect[2]) for rect in rectangles if rect[1] < bottom and rect[3] > top)
+        width, left, right = 0., None, None
+        for start, end in intervals:
+            if left is None:
+                left, right = start, end
+            elif start <= right:
+                right = max(right, end)
+            else:
+                width += right - left
+                left, right = start, end
+        if left is not None:
+            width += right - left
+        area += width * (bottom - top)
+    return envelope, area / ((envelope[2] - envelope[0]) * (envelope[3] - envelope[1]))
+
+
+def measure_cell_fills(path, specifications):
+    """Source-colored cell fills can be split/overpainted into several rectangles."""
+    owners = {}
+    for item in specifications:
+        owner = {'Cell': item['Cell'], 'Side': item['Side'], 'FillHex': item['FillHex'].upper()}
+        if owner['Cell'] in owners and owners[owner['Cell']] != owner:
+            raise ValueError('Cell fill ownership differs between pages')
+        owners[owner['Cell']] = owner
+    if len({owner['FillHex'] for owner in owners.values()}) != len(owners):
+        raise ValueError('Use distinct source colors to identify cell fills independently')
+    result = []
+    with pymupdf.open(path) as pdf:
+        for page_index, page in enumerate(pdf):
+            drawings = page.get_drawings()
+            for cell in sorted(owners):
+                owner = owners[cell]
+                rgb = tuple(int(owner['FillHex'][index:index + 2], 16) for index in (0, 2, 4))
+                rectangles = []
+                for drawing in drawings:
+                    if drawing['fill'] is None or tuple(round(value * 255) for value in drawing['fill']) != rgb:
+                        continue
+                    for item in drawing['items']:
+                        if item[0] != 're':
+                            raise ValueError('Colored fill is not an independently measured rectangle')
+                        rectangles.append(list(item[1]))
+                if rectangles:
+                    rect, coverage = rectangle_union(rectangles)
+                    result.append({'Page': page_index + 1, **owner, 'Rect': rect,
+                                   'FillRectangleCount': len(rectangles), 'EnvelopeCoverage': coverage})
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--golden', type=Path, required=True)
@@ -121,6 +182,26 @@ def main():
                 result['Failures'].append('StrokeWidth')
         if any(not frame['InsidePage'] for frame in frames):
             result['Failures'].append('OffPageFrame')
+        if 'WordCellFills' in row:
+            fills = measure_cell_fills(path, row['WordCellFills'])
+            result['NativeCellFills'] = fills
+            row_frames = []
+            for page in sorted({fill['Page'] for fill in fills}):
+                rect, _ = rectangle_union([fill['Rect'] for fill in fills if fill['Page'] == page])
+                row_frames.append({'Page': page, 'Rect': rect})
+            result['NativeRowFrames'] = row_frames
+            for label, actual, expected, keys in [
+                    ('CellFill', fills, row['WordCellFills'], ('Page', 'Cell')),
+                    ('RowFrame', row_frames, row.get('WordRowFrames', []), ('Page',))]:
+                if len(actual) != len(expected) or any(any(a[key] != e[key] for key in keys) for a, e in zip(actual, expected)):
+                    result['Failures'].append(label + 'CountOrPage')
+                elif expected:
+                    for axis, indices in [('X', (0, 2)), ('Y', (1, 3))]:
+                        error = max(abs(a['Rect'][index] - e['Rect'][index])
+                                    for a, e in zip(actual, expected) for index in indices)
+                        result['Max' + label + axis + 'Error'] = error
+                        if axis in axes and error >= 1.:
+                            result['Failures'].append(label + axis)
         if 'WordSeparatorRule' in row:
             expected_rule = row['WordSeparatorRule']
             # A report may contain filled horizontal table borders on other
