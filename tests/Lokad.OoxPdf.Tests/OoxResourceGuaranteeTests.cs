@@ -1331,7 +1331,7 @@ internal static class OoxResourceGuaranteeTests
         string input = WriteHeaderImageDocx(6);
         using var source = File.OpenRead(input);
         var package = OoxPackage.Open(source, default);
-        DocxDocument document = new DocxReader().Read(package, null, default);
+        DocxDocument document = new DocxReader().Read(package, null, default, OoxPdfDocxMarkupMode.Final);
         var pages = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final,
             OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, default).ToList();
         TestAssert.Equal(6, pages.Count);
