@@ -460,10 +460,13 @@ internal sealed partial class DocxLayoutEngine
             // their baseline/membership rules share the same measured frame.
             double printedBottom = page.Height - page.MarginTop -
                 (page.Height - page.MarginTop - page.MarginBottom) * paragraphSpacingScale;
-            // The existing occupied source reserve includes the selected footer
-            // and notes. Convert it once for printed paragraph admission too.
+            // Notes retain their source-space reserve. Footer displacement
+            // already includes the static story's measured print scale, so it
+            // remains a lower bound instead of being scaled a second time.
             double occupiedReserve = Math.Max(0d, bottom - page.MarginBottom);
-            return Math.Max(bottom, printedBottom + occupiedReserve * paragraphSpacingScale) + requiredAfter;
+            double printedReserve = Math.Max(occupiedReserve * paragraphSpacingScale,
+                ResolvePagedDisplacement(footerFrameBottomDisplacementByPage));
+            return Math.Max(bottom, printedBottom + printedReserve) + requiredAfter;
         }
 
         DocxLayoutPage? GetCurrentPlainFootnoteFooterFrame()

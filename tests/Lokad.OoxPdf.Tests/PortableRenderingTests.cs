@@ -49,6 +49,9 @@ internal static class PortableRenderingTests
     public static void PortableRenderingOrdinaryStaticInlineRetainsSourceContent() =>
         DocxInlineCompositionTests.CheckInlineBoxMath(new PinnedResolver(mathFont: true), "static-inline-ordinary-office.json");
 
+    public static void PortableRenderingComposedInlineFrameReportRetainsRepeatedStaticOwners() =>
+        DocxInlineCompositionTests.CheckComposedInlineFrameReport(new PinnedResolver(mathFont: true), independentWordGeometry: false);
+
     public static void PortableRenderingPictureNoteBatchesRetainEveryImageOnce() =>
         DocxInlineCompositionTests.CheckPictureNoteBatches(new PinnedResolver(mathFont: true));
 

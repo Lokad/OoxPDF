@@ -128,8 +128,15 @@ def main():
             if any(not item['InsidePage'] for item in images):
                 result['Failures'].append('OffPageImage')
         expected_prose = row.get('WordProseAnchors', [])
+        prose_prefixes = [anchor['Text'] for anchor in expected_prose]
+        if 'WordProseAnchorGroups' in row:
+            if expected_prose:
+                raise ValueError('Use one prose anchor representation')
+            groups = row['WordProseAnchorGroups']
+            prose_prefixes = [group['Text'] for group in groups]
+            expected_prose = [{'Text': group['Text'], **anchor} for group in groups for anchor in group['Occurrences']]
         if expected_prose:
-            prose = measure_prose(path, [anchor['Text'] for anchor in expected_prose])
+            prose = measure_prose(path, prose_prefixes)
             result['NativeProse'] = prose
             if len(prose) != len(expected_prose) or any(a['Text'] != e['Text'] or a['Page'] != e['Page'] for a, e in zip(prose, expected_prose)):
                 result['Failures'].append('ProseCountOrPage')
