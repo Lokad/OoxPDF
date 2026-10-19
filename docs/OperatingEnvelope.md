@@ -1,5 +1,17 @@
 # Measured operating envelope
 
+## C259 fraction measurement qualification (2026-10-19)
+
+Authored fraction-control metrics now own rules/gaps/leading without changing
+child script sizes. One frozen Release artifact passed92Windows/67Ubuntu methods
+with25native-font skips, one exact invocation/platform; no root build/suite replay.
+Nine source-pinned inputs/eighteen outcomes use cached independent Word views;
+all math/prose baseline errors are below0.384pt. Eighteen strict visual failures,
+raw x-token extraction screens and merged-span following-flow residuals remain.
+17runtime assets/four identity smokes transfer qualification. Evidence:
+artifacts/composition-c1/fraction-control-frames-evidence.json. No throughput,
+arbitrary-document fidelity or workspace-reclamation claim follows from this.
+
 ## Related-story placement reuse, 2026-10-18
 
 Qualified source `2d587d98` (root `bcbfabb4`) reuses immutable related-story

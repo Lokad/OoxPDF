@@ -1,5 +1,26 @@
 # Composed-document reliability checkpoint
 
+## C259 authored fraction-control frames (2026-10-19)
+
+Filled bar/stack fractions now use their resolved authored control size for rule,
+gaps and leading while argument runs keep their source/script sizes. Neutral
+controls retain enclosing inheritance; unknown styles do not invent an owner.
+Nine deterministic source-pinned controls cover smaller/neutral/larger sizes,
+body/cell/merged placement and direct/character-style declarations. Both presets
+retain four independently matched8.04pt glyphs; maximum math/prose baseline error
+is0.384pt under the existing1pt/.1pt contracts. Ordinary following flow passes;
+merged flow remains up to20.322pt off and inherited cell-left5.376pt remains.
+One frozen Release artifact:92Windows/67Ubuntu checks,25native skips, one exact
+invocation/platform. The native Word-anchor regression fails on C257. Eighteen
+outcomes/eighteen paired pixel pins;18strict failures and18raw Office x-token
+screens remain recorded. All source prose/simple math is present; viewed native
+and Office ink plus mapped glyph checks supplement, rather than erase, extraction
+flags. Fixed8DOCX outcomes reuse source proof.17assets/four smokes; no root build,
+suite replay or duplicate Office exports. Initial assertion-message build failure
+is retained; no tests ran on it. Rootc55ee32a; ignored
+artifacts/composition-c1/fraction-control-frames-evidence.json. Next:C258 shared
+merged-span height/admission; preserve exact/minimum floors and partial fallback.
+
 C257 admitted merged-source consumption (2026-10-19): complete static top-aligned inline frames already admitted in the restart row/page are consumed once. Continuations retain visual source/shading/border ownership; dynamic, unmeasured, shifted, fixed-incomplete and oversized frames keep fallback. Reuses the existing finite containment predicate and consolidates page capacity in the context. Three-row, overlapping-owner and page-boundary controls now retain each original paragraph/fraction once; Word glyph pages/baselines keep1pt gates with bookmarks/run splitting. One frozen production artifact passes41Windows/31Ubuntu methods,10native skips. One initial41-method invocation/platform, then only one model rerun/platform after adding oversized-owner proof;14runtime assets/all2,278inputs unchanged and tracked joins retain provenance. Both new native/model observers fail C255 meaningfully. Original4PDFs and six untouched span-probe PDFs remain byte-identical; fixed8outputs reused by source proof. Six new outcomes/eight paired pins; native three-row/p2and portablep2reviewed. Six strict failures/two page-membership audit flags retained: Side row2remains nativep2vsWordp1; no global source/Office-word/simple-math deficit.17assets/four root smokes, no root build/suite/repeated Word exports. Root300c6d0d; artifacts/composition-c1/merged-source-consumption-evidence.json. C255CI39164253097 had3553Windows passes/two obsolete blanket-restart assertions/16skips, Ubuntu green. Tests now distinguish explicit source restart from continuation/unknown roles and preserve placement guards; missed nested/note neighbors join the capability. Failed CI logs remain, C257CI tracked after push.
 
 C256 bounded merged-span review (read-only, 2026-10-19): six source-exact controls exercise row count, minimum/exact floors, page boundary, overlapping owners and a taller fraction control on C255. Twelve outcomes/twelve Word views once,14paired pins, all12strict failures retained. Raster review confirms repeated original prose/equations in three-row, overlapping-owner and page-transition cases. Minimum/ordinary spans retain about7.17pt excess following flow; exact rows match following flow within0.02pt. Near-boundary Side row2moves to nativep2rather than Wordp1. The24pt fraction-control probe retains matching8.04pt child glyph sizes; cell-prose baseline differs10.223pt, with numerator/denominator spacing discrepancies. The initially inferred child-size mismatch was corrected against recorded glyph data before qualification; do not substitute child fonts/sizes. Cause/measurement and shared span admission remain separate C259/C258work. A distinct unqualified consumption prototype motivated C257, with no row-height/typography change. Evidence artifacts/composition-c1/merged-span-review-evidence.json.
