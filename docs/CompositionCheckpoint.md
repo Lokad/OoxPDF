@@ -1,5 +1,41 @@
 # Composed-document reliability checkpoint
 
+## C302 complete report total-count baseline (2026-10-19)
+
+One bare NUMPAGES addition to the ordinary title retains Word's three pages and
+all original geometry for12 source equations/five images/three boxes. The field
+resolves to3. Independent Word/native before/after math, frames, images and note
+separator measurements are exact; native original PDFs equal accepted C282 bytes.
+Final raw geometry passes; review keeps1.117pt mathY/1.192pt imageY/1.440pt proseY/
+1.125pt separator failures. Four viewed Final-page1/review-page3 rasters show the
+field and complete composition with clear note/footer separation. Pixel gates
+remain failed in both modes. Raw symmetric cached1 source deficits and unchanged
+rate/time extraction deficits remain classified, with all failed screens retained.
+
+No library change/build.14 runtime assets/all2,459 prior inputs unchanged; three
+public fixture/gold inputs added. Four Windows/two Ubuntu/two native skips. The
+initial3pass/1fail and intermediate1pass/1fail attempts expose a test assumption:
+pinned regular fonts paint synthetic bold twice. Select the one source field and
+its row/style, as existing list/static checks do. Three harness-only builds/two
+caller-only repair runs; strict join verifies14 assets/all2,462 inputs through all
+attempts. No production join, fail-to-skip or replay of unaffected Windows methods.
+Four conversions/two new Word exports/two references and comparisons reused;
+17 assets/two exact transfer smokes, no root build/suite/package replay.
+
+One existing allocation-probe-only build targets this qualified library. Each
+original/counted report runs in a fresh child, one cold/one warmup/three warm
+conversions, followed by independent stages. Whole/staged PDFs match qualified
+bytes. Warm allocation rises32.815-to44.525MB Final and37.093-to49.403MB review;
+coordinated snapshot adds11.667/11.746MB, initial-font diagnostics only.041MB.
+These are calling-thread volumes, not live heap; stages overlap and do not count
+layout calls. Timing samples are noisy and imply no speedup. Source review of
+retry dependencies should precede any bounded reuse or optimization claim.
+
+Harness1ef62fa1; evidence artifacts/composition-c1/compound-total-count-evidence.json.
+C300CI39324029712 is green on Windows/Ubuntu including broader/package checks.
+Push C301/C302 together; review conversion-local font/preparation ownership across
+the stable count retry next, with exact-PDF and allocation evidence required.
+
 ## C301 row-link placement shares cell/static contracts (2026-10-19)
 
 Place the unchanged linked-prose/implicit-math paragraph into a cell, header and
