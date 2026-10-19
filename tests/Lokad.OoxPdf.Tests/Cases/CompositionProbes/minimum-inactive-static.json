@@ -1,0 +1,46 @@
+[
+  {
+    "Id": "minimum-inactive-first-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-inactive-first-header.docx",
+    "Sha256": "6FF9300E55392AF54223A5F2EF77F1472154ADEECD3B2F1619DE9767412B6875",
+    "SourceId": "minimum-passive-header-ordinary12",
+    "SourceSha256": "1CA77E3D3926EFF7B1B4D352965F74EF7075B5F3F49A73B06D561E97934528B5",
+    "SourceBodySha256": "95218CDC773AD2D64A3915B7D6ACD560E80435A6C0B5527C50AAEEF287688D3A",
+    "RichSourceSha256": "CDA620C89F9481657073B5D8343B3F04FDEF81C0BA9072D1036BA8EF76323F8F",
+    "RichPart": "word/inactive-first-header.xml",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta.",
+      "Public passive header."
+    ],
+    "Context": "ordinary12",
+    "FontPoints": 12,
+    "Variant": "first",
+    "StoryKind": "header"
+  },
+  {
+    "Id": "minimum-inactive-even-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-inactive-even-footer.docx",
+    "Sha256": "0FBC6F79740B75605119D8876962375C7B822E9BADBE294028CD6F8314345E1F",
+    "SourceId": "minimum-passive-footer-ordinary11",
+    "SourceSha256": "E49095774851FEA5FF5D01570761A3ABE27DB79DB278CED38C2D9EC902B1051F",
+    "SourceBodySha256": "969AEC75CA095FA3A0929A11C588A302B4B18753046F3EAE47AC64811E2E662A",
+    "RichSourceSha256": "6BDF80C3631BB51E6925302F6BC1ABFF1137D30DAAC61C74327B0D9F69208A97",
+    "RichPart": "word/inactive-even-footer.xml",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedText": [
+      "Public minimum Top.",
+      "Public minimum AfterDelta.",
+      "Public passive footer."
+    ],
+    "Context": "ordinary11",
+    "FontPoints": 11,
+    "Variant": "even",
+    "StoryKind": "footer"
+  }
+]
