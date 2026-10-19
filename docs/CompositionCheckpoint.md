@@ -1,5 +1,61 @@
 # Composed-document reliability checkpoint
 
+## C307 admitted source windows survive parallel fragments (2026-10-20)
+
+Each natural top-aligned automatic cell now owns its consumed source offset,
+occupied height and admitted line range inside the shared physical row fragment.
+Placement carries that window into text/object filtering. A taller neighbor's
+clip cannot admit an unconsumed line. Reuse measured frames and one keep/widow
+validator for common and independent boundaries. Completed cells contribute no
+later content. Existing fragment/grid bounds and cancellation constrain the
+local plan; it is actual layout data, not memory accounting or graph tracking.
+
+Structural borders/insets, authored geometry, merges, per-page changing fields
+and incomplete source frames retain the qualified common-boundary fallback.
+Main-line/nested mathematical atomic policy is unchanged. No new API, quota,
+global counter, cache lifetime or unsafe/native library code. A separately pinned
+bordered holdout confirms unresolved5.390pt proseX/9.070pt proseY and fragment-edge
+painting; preserve its exact parent PDFs rather than widening this correction.
+
+Four ordinary sources cover aligned/shifted/mixed metrics and a short left cell
+beside a continuing right cell. Eight independent Word views pin1,720 origins;
+all source-page/origin/size gates pass, proseY max0.326905pt. Eight raw content
+screens are clean, closing the four prior page screens. Four viewed Word/native
+rasters show shifted page2 both cells at54 and mixed page3 left111/right100 with
+complete top ink. Semantic tests paint each source row exactly once, check glyph
+bounds within its clip, retain final pages and honor canceled conversions.
+
+Attempt provenance stays explicit.1e8bdb22 gives16Windows pass/one harness failure:
+the new gold lacks WordPages. A harness-only build df53e8c2 reads the already pinned
+final-paragraph page instead; only two affected native callers rerun, one passes
+and one exposes a real mixed-cell clipping defect. Initial Ubuntu gives12pass/
+five native skips.59c65809 fixes placement by carrying complete admitted windows;
+all17 exact methods rerun once per platform,17Windows/12Ubuntu/five native skips.
+Two parent regressions fail on actual clipping, without private-method ABI errors.
+No production join or failed-to-skip relabel. Final runtime pins2,480 public inputs;
+two production Release builds and one harness-only correction are retained.
+
+30 final conversions:20 prior C305 portfolio/frame PDFs, two aligned views and
+two bordered holdouts remain byte-identical. Reuse24 independent comparisons;
+only six changed/new comparisons raster anew.28/30 strict pixel outcomes still
+fail, including all eight ordinary-cell views. Prior compound token/field screens
+and geometric residuals carry by exact PDF/input identity. Six prior ordinary
+Word views are reused; four new exports cover short-cell and border holdouts.
+Two extra baseline border conversions are separate from the30 final outcomes.
+The reusable join tool selects frozen subsets for the eight fresh raw screens;
+no extra conversion or raster is used for those screens.
+
+One existing probe-only build, same four-page mixed-cell source/default Windows
+fonts, fresh child/input, one cold/one warmup/three warm conversions: Final warm
+calling-thread allocation64.952576-to65.215736MB (+0.263160MB/0.405percent). Whole/
+staged PDFs agree. This is allocation volume, not live heap; stages overlap and
+no speedup is claimed.17 transferred assets/two exact integration smokes, no root
+build/suite/corpus/package replay. Source526ae9f2; evidence
+artifacts/composition-c1/cell-source-windows-evidence.json. C305CI39335904396 is
+green Windows/Ubuntu including broader/package checks. Push C307 and continue one
+bounded parallel-cell boxed-math/count composition qualification on its runtime;
+keep border/inset ownership separate and preserve the existing roadmap.
+
 ## C306 parallel cells own independent continuation source (2026-10-20)
 
 A bounded three-source review reuses C305's immutable runtime without rebuilding
