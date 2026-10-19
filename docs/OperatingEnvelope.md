@@ -1,5 +1,30 @@
 # Measured operating envelope
 
+## C265 bounded simplification S1/S2 (2026-10-19)
+
+Removed13 verified unreferenced methods (111lines): PlaceRelatedStory,
+MeasureDrawableTextSpans, RenderPositionedTextSpans, FlattenTextLayout,
+ReadWorkbookData, ReadSceneSecondaryRightValueAxis, GetPlotBoxRatios,
+IsDarkChartPattern, ReadOptionalOoxmlBooleanElement, ReadChartElementDouble,
+ReadChartElementInt, ReadChartAxisScalingValue and ReadChartAxisUnitValue.
+Workbook tests call live ReadWorkbookDataCore with cancellation. Positioned-font
+preparation used by the text inspector remains. Global memo totals/reset are
+removed; the cache and local counters remain. Its revised observation compares
+cached and fresh cell-placement geometry using one local memo.
+
+Removed no-op public Deterministic and Strict options; migration is documented
+in docs/PublicApiChanges.md. Output remains deterministic; CLI --strict still
+publishes the same PDF and returns3 for warnings versus ordinary0.
+One frozen Release artifact:25Windows/23Ubuntu passes. Two native chart checks
+remain unqualified on Ubuntu and reproduce identical failures on unchanged C263;
+raw reports stay failed, with no harness repair or pass relabeling. All10fixed
+portfolio PDFs equal retained qualified outputs;10Office comparisons reuse exact
+PDF/reference/threshold identities. Both decks pass;8DOCXstrict failures remain.
+Content audit has zero deficit/unresolved screens.17assets/four transfer smokes,
+zero root builds/suite replays/Office exports. S3 ownership/admission and S4
+rendering-rule assessment remain active; no protection behavior changed here.
+Evidence:artifacts/composition-c1/library-simplification-evidence.json.
+
 ## C263 cell-marker floor qualification (2026-10-19)
 
 Parsed terminal marks now own minimum row struts where no separate cell provides
