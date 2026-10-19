@@ -1,5 +1,23 @@
 # Composed-document reliability checkpoint
 
+## C293 complex PAGE code metrics: bounded review (2026-10-19)
+
+Two source controls vary instruction formatting11/13pt beside cached11pt results.
+Four independent Word exports change the rendered field glyph to11.04/12.96pt
+and header origin46.44/48.36pt. Native already matches all four glyph origin/size
+gates (max headerY.14pt); all36 prose origins pass and Word's32 body origins equal
+the simple-field source exactly. The manifest's VisibleFontPoints denotes cached
+source formatting, not the font Word chooses after field evaluation.
+
+No production correction accepted. A universal field-code strut would change
+already-correct complex-field geometry. Simple PAGE1.06pt remains unresolved.
+One reused C292 frozen runtime, zero builds/tests/requalification, four candidate
+conversions/four independent exports. Four strict pixel and raw field-feature
+screens remain failed; zero source/Office prose or per-page deficits. No visible-
+ink proof inferred from extracted origins. Evidence:artifacts/composition-c1/
+field-code-metric-owner-review.json; fixtures8beef944/355942b6. Next bounded probe:
+two simple PAGE paragraph-mark controls, preserving visible result properties.
+
 ## C292 disabled templates preserve note numbering and metrics (2026-10-19)
 
 A disabled rich first header changed note labels09-12 to105-108 and disabled
