@@ -1,5 +1,31 @@
 # Composed-document reliability checkpoint
 
+## C291 inactive templates do not own selected body metrics (2026-10-19)
+
+Two source-exact ordinary controls add rich first/even templates without enabling
+them. Four independent Word views retain all nine selected prose origins exactly;
+parent minimum-line errors are5.54/6.732pt. Share the existing first/even/default
+selector across text, drawings and source qualification. Validate the variants
+selected by actual measured pages; active rich/intrusive/unmeasured fallback and
+undefined-selected-story emptiness remain unchanged. No font/count/API expansion.
+
+One committed Release freeze,2,423inputs,75 Windows/70 Ubuntu/five native skips,
+one exact invocation per platform and no harness rebuild. Two exact parent
+regressions fail as expected.36 Word prose anchors pass unchanged1pt/.1pt gates
+(maxX.025pt,Y.209pt); four raster reviews show clear selected body/margin text.
+All four strict pixel failures remain. Generic raw screens count inactive rich
+source: symmetric Word/native omissions and ignored-equation diagnostics are
+explicitly retained; zero Office prose/per-page deficits. No clean-audit claim.
+
+Ten fixed,12 default-margin and six base views carry by source reachability and
+expression-equivalent selector, without fresh PDF identity or conversion replay.
+17 transferred assets/four exact smokes, no root build/suite/package replay.
+Evidence:artifacts/composition-c1/inactive-static-body-evidence.json; source
+6ab26e90/388cc71f. C289CI39306650056 is green on Windows/Ubuntu including broader/
+package checks. New coherent batch CI follows push. Resume a bounded review of
+inactive-template ownership beside existing footnote metrics, preserving active
+story fallbacks and requiring independent Word evidence before any extension.
+
 ## C290 bounded static field metric-owner review (2026-10-19)
 
 Read-only Word16 metadata for four retained plain/field header/footer documents
