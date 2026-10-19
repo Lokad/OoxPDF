@@ -15,10 +15,17 @@ internal static partial class DocxInlineCompositionTests
         CheckSpanningFrames(null, compareWord: true);
     }
 
-    internal static void CheckSpanningFrames(IFontResolver? resolver, bool compareWord)
+    public static void DocxParallelCellFramesRetainIndependentWordPagesAndCompleteInk()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent Word origins use installed Windows fonts.");
+        CheckSpanningFrames(null, compareWord: true, "parallel-cell-office.json", parallelCells: true);
+    }
+
+    internal static void CheckSpanningFrames(IFontResolver? resolver, bool compareWord,
+        string goldenFile = "spanning-frame-office.json", bool parallelCells = false)
     {
         string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
-        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "spanning-frame-office.json")));
+        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, goldenFile)));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string id = row.GetProperty("Id").GetString()!;
@@ -39,11 +46,13 @@ internal static partial class DocxInlineCompositionTests
             {
                 var page = pages[pageIndex];
                 foreach (var show in DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
-                    .Where(show => show.Text.StartsWith("Planning row ", StringComparison.Ordinal)))
+                    .Where(show => parallelCells
+                        ? show.Text.StartsWith("Left source row ", StringComparison.Ordinal) || show.Text.StartsWith("Right source row ", StringComparison.Ordinal)
+                        : show.Text.StartsWith("Planning row ", StringComparison.Ordinal)))
                 {
                     string text = show.Text.Trim();
                     TestAssert.True(remaining.Remove(text), $"{id}: every source planning paragraph is painted exactly once: {text}.");
-                    var cell = layout.Pages[pageIndex].TableRows.Single().Cells.Single();
+                    var cell = layout.Pages[pageIndex].TableRows.Single().Cells.Single(cell => show.X >= cell.X && show.X < cell.X + cell.Width);
                     var font = show.Font.Font;
                     foreach (var rune in show.Text.EnumerateRunes())
                     {
@@ -65,7 +74,7 @@ internal static partial class DocxInlineCompositionTests
             }
             TestAssert.Equal(0, remaining.Count);
             TestAssert.True(pages.Length >= 3, "The source row really spans pages before the following explicit break.");
-            if (compareWord) TestAssert.Equal(row.GetProperty("WordPages").GetInt32(), pages.Length);
+            if (compareWord) TestAssert.Equal(row.GetProperty("WordFollowingAnchor").GetProperty("Page").GetInt32(), pages.Length);
             string painted = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
             foreach (var expected in row.GetProperty("ExpectedText").EnumerateArray()) TestAssert.Contains(expected.GetString()!, painted);
             using var canceled = new CancellationTokenSource();

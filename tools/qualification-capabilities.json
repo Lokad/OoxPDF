@@ -9208,5 +9208,23 @@
     "DocxTableCellPageFieldsEvaluatePerFragmentPage",
     "DocxInlineBoxTotalCountersKeepContentAcrossContainers",
     "PortableRenderingInlineBoxTotalCountersKeepContentAcrossContainers"
+  ],
+  "docx-cell-source-consumption": [
+    "DocxSpanningFramesRetainCompleteInkAndIndependentWordOrigins",
+    "PortableRenderingSpanningFramesKeepCompleteGlyphInk",
+    "DocxSpanningCellTotalCountersRetainWordPagesAndCompleteContent",
+    "PortableRenderingSpanningCellTotalCountersKeepCompleteSource",
+    "DocxReviewTablePrintedCapacityPreservesWordPagesAndStaticStoryCombinations",
+    "DocxReviewTableWidowBoundaryChecksEveryCell",
+    "DocxReviewTableFragmentsPreserveAllWordsWithExplicitWidowControl",
+    "DocxReviewTableSplitProjectionPreservesContinuationPitch",
+    "DocxReviewTablePaginationHonorsExplicitKeepAndWidowRules",
+    "DocxTableCellTextLinesMemoSharesSplitCells",
+    "CellMemoCounterInputs",
+    "DocxTableCellPageFieldsEvaluatePerFragmentPage",
+    "DocxInlineBoxTotalCountersKeepContentAcrossContainers",
+    "PortableRenderingInlineBoxTotalCountersKeepContentAcrossContainers",
+    "DocxParallelCellFramesRetainIndependentWordPagesAndCompleteInk",
+    "PortableRenderingParallelCellFramesKeepCompleteGlyphInk"
   ]
 }
