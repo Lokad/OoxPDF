@@ -1,5 +1,35 @@
 # Composed-document reliability checkpoint
 
+## C289 source-owned page fields preserve body metrics (2026-10-19)
+
+A PAGE header and NUMPAGES footer leave all body origins unchanged in four
+independent Word exports, but native minimum lines moved up5.54/6.732pt. Reuse
+existing dynamic-kind and source/placeholder validation inside the measured
+margin-text contract. Body plain-text admission still excludes fields. Unknown
+cached fields and rich/intrusive/unmeasured/annotation-lane stories retain
+fallback. No paragraph cloning, new font/count/threshold regime or public API.
+
+68 Windows/65 Ubuntu/three native skips, one committed frozen Release runtime/
+2,419inputs and one exact invocation per platform plus four affected harness
+callers. The harness repair strengthens neutral-body comparisons from four
+minimum lines to all eight body lines. Page-field Word checks own body origins;
+its static origin is unchanged and separately failed. Plain-margin tests retain
+full checks.14 runtime assets/inputs unchanged, no joined production runs. Parent
+native/portable observers both fail body neutrality.32 body prose origins pass
+original gates(maxX.025pt,Y.188pt). PAGE/NUMPAGES presence matches Word.
+
+Full absolute geometry still fails both PAGE header views at1.06pt high, exactly
+the parent position; footer residual.032pt passes. Cause is unverified. All four
+strict pixel gates and four raw fldSimple audit flags remain failed; no source/
+Office prose deficit. Four rasters confirm visible text/field values and clear
+body/margin frames. Ten fixed views, eight plain-margin and six plain-base views
+carry by explicit source reachability, with no conversion replay or fresh PDF
+identity claim.17 assets/four exact transfer smokes, no root build/suite replay.
+Four Office exports once. Evidence:artifacts/composition-c1/passive-page-fields-
+evidence.json; roote2bcbd6c/ce59c7e3. C288CI39304262597 green on both platforms
+including broader/package checks. Next review the retained static field metric
+owner from source/Office metadata before accepting any typography correction.
+
 ## C288 passive margin text preserves ordinary body metrics (2026-10-19)
 
 Four source-exact11/12pt ordinary bodies gain a plain header or footer entirely
