@@ -1,5 +1,40 @@
 # Composed-document reliability checkpoint
 
+## C297 PAGE no longer removes inline-box mathematics (2026-10-19)
+
+Adding PAGE to one accepted box dropped all four fraction glyphs and moved prose
+2.762pt, although two independent Word views retain exact math/frame/prose
+geometry. Reuse the existing PAGE-only dependency rule for child preparation;
+child measurement receives actual page inputs. Unplaced dependent boxes rebind
+on admission, reuse prepared math and preserve consumed frames. Child counters
+participate in existing cell memo keys; cancellation preserves original frames.
+NUMPAGES/unknown-input/nested-box preparation fallbacks remain staged.
+
+One Release runtime/2,441inputs,20 Windows/17 Ubuntu/three native skips. Initial
+18pass/2fail expose an inadequate fixed600pt A4 forcing setup; one harness-only
+repair derives capacity from the source frame/replaces its lead. Two callers
+rerun,14 runtime assets/all inputs unchanged, strict join retains every attempt.
+A comma-joined selector was refused before testing. A current content screen
+initially ran before comparison publication and produced no report; its final
+sequential run uses the completed report. No production joins or fail-to-skip.
+
+Both presets restore x+2y, report zero ignored math, and pass original glyph/
+frame/prose gates (mathX.047pt,Y.361pt; proseY.373pt). Native/portable admission
+checks bind the moved box to page10 rather than its measured page9; source
+identity, consumed-frame reuse, unknown/total-count fallback and mid-rebind
+cancellation pass. Two parent rendering observers fail for missing x+2y. Two
+viewed Word/native Final rasters show clear math/value/borders and surrounding
+prose. Two strict pixel failures/raw fldSimple flags remain; zero content deficits.
+
+Two candidate conversions/two independent Word exports;24 prior views carry by
+source proof, without current-PDF identity or conversion replay.17 assets/two
+exact transfer smokes, no root build/suite/package replay. Evidence:artifacts/
+composition-c1/inline-box-page-evidence.json; source1f2560ef/1ef16207. C295CI
+39314226094 is green on Windows/Ubuntu including broader/package checks. New
+coherent dependency milestone CI follows push. Next bounded review: one boxed
+NUMPAGES control and the existing finalized-count/retry contract before extending
+child preparation or adding a new count mechanism.
+
 ## C296 reuse existing body/cell counter composition controls (2026-10-19)
 
 Source review confirms PAGE/math and finalized NUMPAGES/math body/cell flow are
