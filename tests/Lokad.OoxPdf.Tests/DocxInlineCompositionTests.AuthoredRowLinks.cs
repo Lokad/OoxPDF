@@ -9,6 +9,12 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxAuthoredRowLinksRetainWordPlacementAcrossContainers()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent authored-row container origins use installed Windows fonts.");
+        CheckAuthoredRowLinks(null, compareWord: true, "math-authored-row-link-containers-office.json", compareUnlinkedControls: false);
+    }
+
     public static void DocxAuthoredRowLinksUseActualEquationOwnersAndObserveCancellation()
     {
         foreach (string variant in new[] { "unlinked", "linked-prose", "linked-math" })
@@ -33,10 +39,11 @@ internal static partial class DocxInlineCompositionTests
         CheckAuthoredRowLinks(null, compareWord: true);
     }
 
-    internal static void CheckAuthoredRowLinks(IFontResolver? resolver, bool compareWord)
+    internal static void CheckAuthoredRowLinks(IFontResolver? resolver, bool compareWord,
+        string goldFile = "math-authored-row-links-office.json", bool compareUnlinkedControls = true)
     {
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
-        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "math-authored-row-links-office.json")));
+        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, goldFile)));
         var unlinked = new Dictionary<string, (double X, double Y, double Size)[]>();
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
@@ -59,7 +66,7 @@ internal static partial class DocxInlineCompositionTests
             var positions = math.Select(show => (show.X, show.Y, show.Size)).ToArray();
             string variant = row.GetProperty("Variant").GetString()!;
             if (variant == "unlinked") unlinked.Add(preset, positions);
-            if (variant == "linked-prose")
+            if (variant == "linked-prose" && compareUnlinkedControls)
                 TestAssert.True(positions.SequenceEqual(unlinked[preset]), "A link confined to the preceding text row preserves every mathematical origin and size.");
             if (variant != "unlinked")
             {

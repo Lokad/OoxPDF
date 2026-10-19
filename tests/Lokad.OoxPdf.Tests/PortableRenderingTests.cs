@@ -16,6 +16,10 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingAuthoredRowLinksRetainContentAndAnnotationsAcrossContainers() =>
+        DocxInlineCompositionTests.CheckAuthoredRowLinks(new PinnedResolver(mathFont: true), compareWord: false,
+            "math-authored-row-link-containers-office.json", compareUnlinkedControls: false);
+
     public static void PortableRenderingAuthoredRowLinksKeepEquationGeometryAndAnnotations() =>
         DocxInlineCompositionTests.CheckAuthoredRowLinks(new PinnedResolver(mathFont: true), compareWord: false);
 

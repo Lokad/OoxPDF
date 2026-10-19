@@ -9076,6 +9076,10 @@
     "PortableRenderingMixedDisplayCountersPreserveTotalPageDependencies",
     "DocxTableCellPageFieldsEvaluatePerFragmentPage"
   ],
+  "docx-authored-row-link-containers": [
+    "DocxAuthoredRowLinksRetainWordPlacementAcrossContainers",
+    "PortableRenderingAuthoredRowLinksRetainContentAndAnnotationsAcrossContainers"
+  ],
   "docx-authored-row-links": [
     "DocxAuthoredRowLinks",
     "PortableRenderingAuthoredRowLinksKeepEquationGeometryAndAnnotations",

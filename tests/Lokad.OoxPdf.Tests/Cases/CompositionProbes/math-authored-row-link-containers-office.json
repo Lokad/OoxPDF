@@ -1,0 +1,419 @@
+{
+  "Provenance": "Six independent Word16 views of one source-exact authored text-link/math paragraph in cell/header/footer frames. Geometry derives only from each new Word PDF; no cross-container geometry-invariance claim.",
+  "Rows": [
+    {
+      "Id": "math-authored-row-linked-prose-cell",
+      "Mode": "final-preserve",
+      "InputSha256": "08249C739AEB5198B8AA525DA2691ABBCC4663F699B78EB91571005AE24D0E29",
+      "SourceParagraphSha256": "24BB94B123B233DA54AD2C4613F26172F74A7805C6037CC1755FD0E5FC52287A",
+      "MathPart": "word/document.xml",
+      "Container": "cell",
+      "Variant": "linked-prose",
+      "WordPdfSha256": "0D21C2757FFB54B39204C21A307D31D1741D77EC7E5FE835569A5C65301FDB58",
+      "WordExportLogSha256": "9E0C25F5C646A1B746320092BDFB3D8C53233A73371489B35A038C16BDAAA535",
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 203.92999267578125,
+          "Y": 114.260009765625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 212.57000732421875,
+          "Y": 114.260009765625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 223.25,
+          "Y": 114.260009765625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 213.41000366210938,
+          "Y": 130.0999755859375,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFrames": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Reference row.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 102.97998046875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 150.739990234375,
+          "Size": 11.039999961853027
+        }
+      ],
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ]
+    },
+    {
+      "Id": "math-authored-row-linked-prose-cell",
+      "Mode": "all-word-compatible",
+      "InputSha256": "08249C739AEB5198B8AA525DA2691ABBCC4663F699B78EB91571005AE24D0E29",
+      "SourceParagraphSha256": "24BB94B123B233DA54AD2C4613F26172F74A7805C6037CC1755FD0E5FC52287A",
+      "MathPart": "word/document.xml",
+      "Container": "cell",
+      "Variant": "linked-prose",
+      "WordPdfSha256": "A3B8B4673FB805CE2408E663133DBC03571B6E48800257314A615913EBDC0D68",
+      "WordExportLogSha256": "630D14BC84AB2C012CEB81B0FC4AD0094701902A49278B1EA29E6CC5CCD34AEF",
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 203.92999267578125,
+          "Y": 114.260009765625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 212.57000732421875,
+          "Y": 114.260009765625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 223.25,
+          "Y": 114.260009765625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 213.41000366210938,
+          "Y": 130.0999755859375,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFrames": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Reference row.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 102.97998046875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 150.739990234375,
+          "Size": 11.039999961853027
+        }
+      ],
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ]
+    },
+    {
+      "Id": "math-authored-row-linked-prose-header",
+      "Mode": "final-preserve",
+      "InputSha256": "C52956D3286568C83083E43BAF6FBF315C2BDCEB05DFB5E9613DF79166BC80FE",
+      "SourceParagraphSha256": "24BB94B123B233DA54AD2C4613F26172F74A7805C6037CC1755FD0E5FC52287A",
+      "MathPart": "word/math-row-header.xml",
+      "Container": "header",
+      "Variant": "linked-prose",
+      "WordPdfSha256": "4A5C877875FE890080B03F142954FFE561D5EBC4ED7DBEA664B35DDEC539B574",
+      "WordExportLogSha256": "1767FB4C0C7B22CE866ED669B98BB8E78B2F8385F6D689D40E2C2706024836D2",
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 285.04998779296875,
+          "Y": 30.5999755859375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 293.69000244140625,
+          "Y": 30.5999755859375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 304.25,
+          "Y": 30.5999755859375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 294.5299987792969,
+          "Y": 46.44000244140625,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFrames": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Reference row.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 19.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 102.97998046875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ]
+    },
+    {
+      "Id": "math-authored-row-linked-prose-header",
+      "Mode": "all-word-compatible",
+      "InputSha256": "C52956D3286568C83083E43BAF6FBF315C2BDCEB05DFB5E9613DF79166BC80FE",
+      "SourceParagraphSha256": "24BB94B123B233DA54AD2C4613F26172F74A7805C6037CC1755FD0E5FC52287A",
+      "MathPart": "word/math-row-header.xml",
+      "Container": "header",
+      "Variant": "linked-prose",
+      "WordPdfSha256": "14208DF50E496C1C57B7B448CFE97D6145E1F54B4CF8581DA3F6CB6B2CA52E9B",
+      "WordExportLogSha256": "CC29BDAC4D34AD1234F08919B04B6860B0DBC53C62ECEB83C5FCE61E1BF8A6ED",
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 285.04998779296875,
+          "Y": 30.5999755859375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 293.69000244140625,
+          "Y": 30.5999755859375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 304.25,
+          "Y": 30.5999755859375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 294.5299987792969,
+          "Y": 46.44000244140625,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFrames": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Reference row.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 19.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 102.97998046875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ]
+    },
+    {
+      "Id": "math-authored-row-linked-prose-footer",
+      "Mode": "final-preserve",
+      "InputSha256": "22FE14E2D01FF8AA484EAA102EA0DE71296579257C9CB6045244CF653E57672A",
+      "SourceParagraphSha256": "24BB94B123B233DA54AD2C4613F26172F74A7805C6037CC1755FD0E5FC52287A",
+      "MathPart": "word/math-row-footer.xml",
+      "Container": "footer",
+      "Variant": "linked-prose",
+      "WordPdfSha256": "7C20396679E143C643CABA79B560077BEABCD4061A766E31112E82B18F40FC1E",
+      "WordExportLogSha256": "2F4A1DF90C4C5914C4C66BEB448B1B62264BC6E932BEC9EF4C62B64C2BC99009",
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 285.04998779296875,
+          "Y": 807.0,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 293.69000244140625,
+          "Y": 807.0,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 304.25,
+          "Y": 807.0,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 294.5299987792969,
+          "Y": 822.8399658203125,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFrames": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Reference row.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 795.5759887695312,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 102.97998046875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ]
+    },
+    {
+      "Id": "math-authored-row-linked-prose-footer",
+      "Mode": "all-word-compatible",
+      "InputSha256": "22FE14E2D01FF8AA484EAA102EA0DE71296579257C9CB6045244CF653E57672A",
+      "SourceParagraphSha256": "24BB94B123B233DA54AD2C4613F26172F74A7805C6037CC1755FD0E5FC52287A",
+      "MathPart": "word/math-row-footer.xml",
+      "Container": "footer",
+      "Variant": "linked-prose",
+      "WordPdfSha256": "D1D4F6C5FF99368689D8C9656EC85ED886FBEECDBF54CFEB2890036C022B44A8",
+      "WordExportLogSha256": "C75AC9CDF1EC86928E98AB863D8FED4CA5832BB4E4E6EB4B4FEB6E360B1BF6BF",
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 285.04998779296875,
+          "Y": 807.0,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 293.69000244140625,
+          "Y": 807.0,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 304.25,
+          "Y": 807.0,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 294.5299987792969,
+          "Y": 822.8399658203125,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordFrames": [],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Reference row.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 795.5759887695312,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 102.97998046875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "GeometryAxes": [
+        "X",
+        "Y"
+      ]
+    }
+  ]
+}
