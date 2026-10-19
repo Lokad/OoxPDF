@@ -43,6 +43,9 @@ internal static class PortableRenderingTests
     public static void PortableRenderingMergedSourceRowFloorsRetainProseAndImages() =>
         DocxInlineCompositionTests.CheckMergeSourceRowFloors(new PinnedResolver(mathFont: true));
 
+    public static void PortableRenderingMergeCellMarksKeepSourceAndSlotMetrics() =>
+        DocxInlineCompositionTests.CheckMergeSourceRowFloors(new PinnedResolver(mathFont: true), "merge-cell-mark-floors-office.json");
+
     public static void PortableRenderingFractionControlsKeepChildrenAndSourceGeometry() =>
         DocxInlineCompositionTests.CheckFractionControlFrames(new PinnedResolver(mathFont: true));
 

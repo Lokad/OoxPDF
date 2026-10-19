@@ -1,0 +1,588 @@
+{
+  "Rows": [
+    {
+      "Id": "merge-no-floor-short",
+      "Mode": "final-preserve",
+      "InputSha256": "A2F9E272678F57275C9709970F98EE999005A7A6BA603F893AC9056A765830F4",
+      "ReferencePdfSha256": "348E5E1DDEBF4645DE97558A976AB3B6D0E5675676FD9002010C9E184E33F6BC",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public merged prose.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 697.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-short",
+      "Mode": "all-word-compatible",
+      "InputSha256": "A2F9E272678F57275C9709970F98EE999005A7A6BA603F893AC9056A765830F4",
+      "ReferencePdfSha256": "BE2F687BF7859FC0FA86B5B001A1D0216B13FF2F699A0254636F7202B15C3000",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public merged prose.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 697.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-wrap",
+      "Mode": "final-preserve",
+      "InputSha256": "E630B2C143F218D081E9F65801BA86F0FBFE16EDE3DEE19467BA3AF7D8E7AD54",
+      "ReferencePdfSha256": "B2BE943BD43C125519A5EB429E87BCAEC63926309876DC4CB4CD2F11BA3FC78A",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose keeps its source ordered across a shared row frame. A second sentence continues through the same merged source."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public merged prose",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 692.97998046875
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-wrap",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E630B2C143F218D081E9F65801BA86F0FBFE16EDE3DEE19467BA3AF7D8E7AD54",
+      "ReferencePdfSha256": "958A88960BCC3295DF15CFE344ADFC5D50F22612B6520D38B935E1B3139818E0",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose keeps its source ordered across a shared row frame. A second sentence continues through the same merged source."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public merged prose",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 692.97998046875
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-source-mark",
+      "Mode": "final-preserve",
+      "InputSha256": "48250ED89E4100EF19096569FF20D98F65CA72F06AAB7EF44D0173A6975B70A7",
+      "ReferencePdfSha256": "FEF3E3722F1CB2B04906D0C78BF6CBAE514C4A86BA7D3A8EABE09E4B9B105ED9",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public merged prose.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 687.3400268554688
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-source-mark",
+      "Mode": "all-word-compatible",
+      "InputSha256": "48250ED89E4100EF19096569FF20D98F65CA72F06AAB7EF44D0173A6975B70A7",
+      "ReferencePdfSha256": "3E2721B72B4B3AC3C5E6E1C1B9FFCFB8AE499ABFC99EE75B12EED110D19ABCB9",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public merged prose.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 687.3400268554688
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-source-run",
+      "Mode": "final-preserve",
+      "InputSha256": "88038C45087CB06C09D2869E6DDF4FE240A32FC8A5CA8ADFD6AF09E148CEFE52",
+      "ReferencePdfSha256": "ED1A69059D84752047D8A484A04A151C36AEA462A1694E6AFDF88ED02A5D03AC",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public merged prose.",
+          "Page": 1,
+          "Y": 730.5399780273438
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 697.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-source-run",
+      "Mode": "all-word-compatible",
+      "InputSha256": "88038C45087CB06C09D2869E6DDF4FE240A32FC8A5CA8ADFD6AF09E148CEFE52",
+      "ReferencePdfSha256": "BD65544DAF41A0ED811BCA1F98B396B51BBB787A6A5A7F57EEEEB26E14D18A62",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public merged prose.",
+          "Page": 1,
+          "Y": 730.5399780273438
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 697.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-continuation-mark",
+      "Mode": "final-preserve",
+      "InputSha256": "96878D401B93D0776CB4C577E958FEEC71214933DFE30077A711F25484148C8E",
+      "ReferencePdfSha256": "E8A16A4804F50C5BA8EDEDB139F9184A5B7997B17FF31A3A97713256894BE61E",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public merged prose.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 687.3400268554688
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-continuation-mark",
+      "Mode": "all-word-compatible",
+      "InputSha256": "96878D401B93D0776CB4C577E958FEEC71214933DFE30077A711F25484148C8E",
+      "ReferencePdfSha256": "C1A3FCA716DA84BDDE9BA25C1069F96DD4DD59A8EAF17491201E1B3F5D248F98",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public merged prose.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 687.3400268554688
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-default-size",
+      "Mode": "final-preserve",
+      "InputSha256": "79304DC8C03F21A57D9F0E11C82D783A2E1A52BB6C38F5879DD855E84B67568A",
+      "ReferencePdfSha256": "2B2EA1392635D247F0AE54533C9BC013B31D458ACD86642FF9C4DA5BA23D5D0A",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 756.8200073242188
+        },
+        {
+          "Text": "Public merged prose.",
+          "Page": 1,
+          "Y": 735.4600219726562
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 684.5800170898438
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-default-size",
+      "Mode": "all-word-compatible",
+      "InputSha256": "79304DC8C03F21A57D9F0E11C82D783A2E1A52BB6C38F5879DD855E84B67568A",
+      "ReferencePdfSha256": "BED2C2FF0D29A1A562851891411D5E672AE0EC5A785A9C4023C6F07B3F94DF29",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 756.8200073242188
+        },
+        {
+          "Text": "Public merged prose.",
+          "Page": 1,
+          "Y": 735.4600219726562
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 684.5800170898438
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-paragraphs",
+      "Mode": "final-preserve",
+      "InputSha256": "137A34D156FCF4091A49D78D1FFE6CA98E34BA3D3D667AAA6C9CCCB280BF6DA2",
+      "ReferencePdfSha256": "4FAF3F56CC265291BD9453BA8EF1422EC0FA413E4C0221E39544F1DAD831B4B2",
+      "Pages": 1,
+      "SourceProse": [
+        "Public first merged paragraph.",
+        "Public second merged paragraph."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public first merged",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Public second merged",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 697.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-paragraphs",
+      "Mode": "all-word-compatible",
+      "InputSha256": "137A34D156FCF4091A49D78D1FFE6CA98E34BA3D3D667AAA6C9CCCB280BF6DA2",
+      "ReferencePdfSha256": "55A9C22C043FB67395AC103E7C1B0CC1C4E3C7D0933C1B4A911AA1644D9CB659",
+      "Pages": 1,
+      "SourceProse": [
+        "Public first merged paragraph.",
+        "Public second merged paragraph."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public first merged",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Public second merged",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 697.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-paragraphs-mark",
+      "Mode": "final-preserve",
+      "InputSha256": "AD8802BEF35583B3B938AFBC08D356D17CDCC6567A86E3A6068590A1A512D8D3",
+      "ReferencePdfSha256": "E6C3A5C58269FBC140DDBE6FFBCC7E9DFB092B2323DCC9A8F12847728C6BACC5",
+      "Pages": 1,
+      "SourceProse": [
+        "Public first merged paragraph.",
+        "Public second merged paragraph."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public first merged",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Public second merged",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 687.3400268554688
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-paragraphs-mark",
+      "Mode": "all-word-compatible",
+      "InputSha256": "AD8802BEF35583B3B938AFBC08D356D17CDCC6567A86E3A6068590A1A512D8D3",
+      "ReferencePdfSha256": "B12038730A400FEEC027BC47404DD5B42CEB3411E0D868B2A04C9622EE5052BF",
+      "Pages": 1,
+      "SourceProse": [
+        "Public first merged paragraph.",
+        "Public second merged paragraph."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public first merged",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "Public second merged",
+          "Page": 1,
+          "Y": 718.2999877929688
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 687.3400268554688
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-marker-face",
+      "Mode": "final-preserve",
+      "InputSha256": "7A139BBDF19C331B8F0B4D75D2420EA8B57E987ED09004447A2D7BBA21492E79",
+      "ReferencePdfSha256": "490D3913EAB394F299E8D644D6964CD07EB33ABA78AC3D30118E511287879F35",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public merged prose.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 686.8599853515625
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-marker-face",
+      "Mode": "all-word-compatible",
+      "InputSha256": "7A139BBDF19C331B8F0B4D75D2420EA8B57E987ED09004447A2D7BBA21492E79",
+      "ReferencePdfSha256": "A05858B2325DC3D65DBEFA5E1F2708E33491AE521C888646B5D7A9728CD8BC11",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public merged prose.",
+          "Page": 1,
+          "Y": 738.9400024414062
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 686.8599853515625
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-source-face",
+      "Mode": "final-preserve",
+      "InputSha256": "FA10F54133793158CC255B3E06EA34A75BF74246E52C0DF91B087686B96B9DD6",
+      "ReferencePdfSha256": "F09DDEB59D8615E75384D0FF9440476BD999BC491DC1B9623CFB4E2E05161F34",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public merged prose.",
+          "Page": 1,
+          "Y": 730.2999877929688
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 697.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "merge-no-floor-source-face",
+      "Mode": "all-word-compatible",
+      "InputSha256": "FA10F54133793158CC255B3E06EA34A75BF74246E52C0DF91B087686B96B9DD6",
+      "ReferencePdfSha256": "01DA2C054E519E418BAED93B154ADE6E9F9B7D48789AC40D47ADEB4DA7EB648B",
+      "Pages": 1,
+      "SourceProse": [
+        "Public merged prose."
+      ],
+      "Images": 0,
+      "FlowAnchors": [
+        {
+          "Text": "Before public math",
+          "Page": 1,
+          "Y": 759.5999755859375
+        },
+        {
+          "Text": "Public merged prose.",
+          "Page": 1,
+          "Y": 730.2999877929688
+        },
+        {
+          "Text": "After public math",
+          "Page": 1,
+          "Y": 697.6599731445312
+        }
+      ]
+    }
+  ]
+}

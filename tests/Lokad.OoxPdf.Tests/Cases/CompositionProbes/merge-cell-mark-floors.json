@@ -1,0 +1,164 @@
+[
+  {
+    "Id": "merge-no-floor-short",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-no-floor-short.docx",
+    "Sha256": "A2F9E272678F57275C9709970F98EE999005A7A6BA603F893AC9056A765830F4",
+    "SourceSha256": "EEC55338DCE35CB642F910DDB83758181E62D7F2804C36030BA88667A820F29D",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Public merged prose",
+      "After public math table."
+    ],
+    "Variant": "short",
+    "Change": "Remove only the independent side column, retaining300pt source width; optionally author source/continuation mark, source run size, or resolved document-default size.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-row-floor-short.docx"
+  },
+  {
+    "Id": "merge-no-floor-wrap",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-no-floor-wrap.docx",
+    "Sha256": "E630B2C143F218D081E9F65801BA86F0FBFE16EDE3DEE19467BA3AF7D8E7AD54",
+    "SourceSha256": "EB09A9E7D778B3E7111DAEF22DE07FE70D89BC40B69F5D730524C232DC86BEA7",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Public merged prose",
+      "After public math table."
+    ],
+    "Variant": "wrap",
+    "Change": "Remove only the independent side column, retaining300pt source width; optionally author source/continuation mark, source run size, or resolved document-default size.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-row-floor-wrap.docx"
+  },
+  {
+    "Id": "merge-no-floor-source-mark",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-no-floor-source-mark.docx",
+    "Sha256": "48250ED89E4100EF19096569FF20D98F65CA72F06AAB7EF44D0173A6975B70A7",
+    "SourceSha256": "0DCF3EFFBEDEB102E6AEA393294F8BDED6221DA572037EFD67CAD781294C7D7B",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Public merged prose",
+      "After public math table."
+    ],
+    "Variant": "source-mark",
+    "Change": "Remove only the independent side column, retaining300pt source width; optionally author source/continuation mark, source run size, or resolved document-default size.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-row-floor-short-mark.docx"
+  },
+  {
+    "Id": "merge-no-floor-source-run",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-no-floor-source-run.docx",
+    "Sha256": "88038C45087CB06C09D2869E6DDF4FE240A32FC8A5CA8ADFD6AF09E148CEFE52",
+    "SourceSha256": "EEC55338DCE35CB642F910DDB83758181E62D7F2804C36030BA88667A820F29D",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Public merged prose",
+      "After public math table."
+    ],
+    "Variant": "source-run",
+    "Change": "Remove only the independent side column, retaining300pt source width; optionally author source/continuation mark, source run size, or resolved document-default size.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-row-floor-short.docx"
+  },
+  {
+    "Id": "merge-no-floor-continuation-mark",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-no-floor-continuation-mark.docx",
+    "Sha256": "96878D401B93D0776CB4C577E958FEEC71214933DFE30077A711F25484148C8E",
+    "SourceSha256": "EEC55338DCE35CB642F910DDB83758181E62D7F2804C36030BA88667A820F29D",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Public merged prose",
+      "After public math table."
+    ],
+    "Variant": "continuation-mark",
+    "Change": "Remove only the independent side column, retaining300pt source width; optionally author source/continuation mark, source run size, or resolved document-default size.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-row-floor-short.docx"
+  },
+  {
+    "Id": "merge-no-floor-default-size",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-no-floor-default-size.docx",
+    "Sha256": "79304DC8C03F21A57D9F0E11C82D783A2E1A52BB6C38F5879DD855E84B67568A",
+    "SourceSha256": "EEC55338DCE35CB642F910DDB83758181E62D7F2804C36030BA88667A820F29D",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Public merged prose",
+      "After public math table."
+    ],
+    "Variant": "default-size",
+    "Change": "Remove only the independent side column, retaining300pt source width; optionally author source/continuation mark, source run size, or resolved document-default size.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-row-floor-short.docx"
+  },
+  {
+    "Id": "merge-no-floor-paragraphs",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-no-floor-paragraphs.docx",
+    "Sha256": "137A34D156FCF4091A49D78D1FFE6CA98E34BA3D3D667AAA6C9CCCB280BF6DA2",
+    "SourceSha256": "8DD645B2961191E0A27640E17B1BF5460C53835E6C9D3AE415616F42163531B0",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Public first merged paragraph.",
+      "Public second merged paragraph.",
+      "After public math table."
+    ],
+    "Variant": "paragraphs",
+    "Change": "Remove only the independent side column, retaining300pt source width and both paragraphs; optional terminal paragraph-mark20.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-row-floor-paragraphs.docx"
+  },
+  {
+    "Id": "merge-no-floor-paragraphs-mark",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-no-floor-paragraphs-mark.docx",
+    "Sha256": "AD8802BEF35583B3B938AFBC08D356D17CDCC6567A86E3A6068590A1A512D8D3",
+    "SourceSha256": "E04C2D666248CCADB52EA4010C0E33CF3EE1BD9E37CE537E64590FE9A7C357D9",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Public first merged paragraph.",
+      "Public second merged paragraph.",
+      "After public math table."
+    ],
+    "Variant": "paragraphs-mark",
+    "Change": "Remove only the independent side column, retaining300pt source width and both paragraphs; optional terminal paragraph-mark20.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-row-floor-paragraphs-mark.docx"
+  },
+  {
+    "Id": "merge-no-floor-marker-face",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-no-floor-marker-face.docx",
+    "Sha256": "7A139BBDF19C331B8F0B4D75D2420EA8B57E987ED09004447A2D7BBA21492E79",
+    "SourceSha256": "48250ED89E4100EF19096569FF20D98F65CA72F06AAB7EF44D0173A6975B70A7",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Public merged prose.",
+      "After public math table."
+    ],
+    "Variant": "marker-face",
+    "Change": "Only change either the cell-terminal marker face or visible run face to Cambria Math, preserving distinct source metric ownership.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-no-floor-source-mark.docx"
+  },
+  {
+    "Id": "merge-no-floor-source-face",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-no-floor-source-face.docx",
+    "Sha256": "FA10F54133793158CC255B3E06EA34A75BF74246E52C0DF91B087686B96B9DD6",
+    "SourceSha256": "88038C45087CB06C09D2869E6DDF4FE240A32FC8A5CA8ADFD6AF09E148CEFE52",
+    "HeldOut": false,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Public merged prose.",
+      "After public math table."
+    ],
+    "Variant": "source-face",
+    "Change": "Only change either the cell-terminal marker face or visible run face to Cambria Math, preserving distinct source metric ownership.",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/merge-no-floor-source-run.docx"
+  }
+]

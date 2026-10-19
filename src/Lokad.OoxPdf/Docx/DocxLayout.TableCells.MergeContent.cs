@@ -25,6 +25,21 @@ internal sealed partial class DocxLayoutEngine
         (string.IsNullOrEmpty(cell.VerticalAlignmentValue) ||
             string.Equals(cell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase));
 
+    private static double? MeasureMergeCellMarkHeight(DocxTableCell cell, double topPadding,
+        double scale, IDocxTextMeasurer measurer)
+    {
+        var terminal = cell.Paragraphs.LastOrDefault();
+        if (terminal?.ParagraphMarkFontSize is not { } size || !double.IsFinite(size) || size <= 0d) return null;
+        // The terminal paragraph mark owns the cell's minimum row strut.
+        // Visible runs, wrapping and images retain their complete span height.
+        var metrics = terminal with { ListLabel = null };
+        if (terminal.ParagraphMarkRun is { } mark) metrics = metrics with { Runs = [mark] };
+        var spacing = ResolveParagraphSpacingProfile(null, metrics, 0d, scale);
+        double height = topPadding + ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, scale) +
+            spacing.AppliedBeforeSpacing + ResolveLineHeight(metrics, size, measurer) + spacing.ParagraphAfterSpacing;
+        return double.IsFinite(height) && height > 0d ? height : null;
+    }
+
     private sealed record MeasuredMergeSpan(DocxTableCell Cell, int FirstRow, int LastRow)
     {
         public double RequiredHeight { get; set; }

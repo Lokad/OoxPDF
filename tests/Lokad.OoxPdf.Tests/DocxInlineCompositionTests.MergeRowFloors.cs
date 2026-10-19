@@ -56,9 +56,16 @@ internal static partial class DocxInlineCompositionTests
         CheckMergeSourceRowFloors(null);
     }
 
-    internal static void CheckMergeSourceRowFloors(IFontResolver? resolver)
+    public static void DocxInlineCompositionMergeCellMarksMatchIndependentWordFloors()
     {
-        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath("merge-source-row-floors-office.json")));
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent cell-terminal marker metrics require installed Windows fonts.");
+        CheckMergeSourceRowFloors(null, "merge-cell-mark-floors-office.json");
+    }
+
+    internal static void CheckMergeSourceRowFloors(IFontResolver? resolver,
+        string goldenFile = "merge-source-row-floors-office.json")
+    {
+        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath(goldenFile)));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string id = row.GetProperty("Id").GetString()!;
@@ -88,7 +95,9 @@ internal static partial class DocxInlineCompositionTests
                 string visible = Compact(string.Concat(shows.Select(show => show.Text)));
                 foreach (var expected in row.GetProperty("SourceProse").EnumerateArray())
                     TestAssert.Equal(1, visible.Split(Compact(expected.GetString()!), StringSplitOptions.None).Length - 1);
-                foreach (string expected in new[] { "Before public math table.", "After public math table.", "Side row 1.", "Side row 2." })
+                foreach (string expected in new[] { "Before public math table.", "After public math table." }
+                    .Concat(row.GetProperty("FlowAnchors").EnumerateArray().Select(anchor => anchor.GetProperty("Text").GetString()!))
+                    .Distinct(StringComparer.Ordinal))
                     TestAssert.Equal(1, visible.Split(Compact(expected), StringSplitOptions.None).Length - 1);
                 TestAssert.Equal(row.GetProperty("Images").GetInt32(), pages.Sum(page => page.Images.Count));
                 var lines = shows.GroupBy(show => (show.Page, show.Y)).Select(group => (group.Key.Page, group.Key.Y,

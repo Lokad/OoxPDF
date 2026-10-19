@@ -651,9 +651,10 @@ internal sealed partial class DocxLayoutEngine
                         if (mergeSpans.TryGetValue(cell, out var span))
                         {
                             span.RequiredHeight = full;
-                            unexpanded = MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer,
-                                defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale,
-                                mathEquations: null, cancellationToken).Resolve(false);
+                            unexpanded = MeasureMergeCellMarkHeight(cell, rowTopPadding, paragraphSpacingScale, textMeasurer) ??
+                                MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer,
+                                    defaultTabStopPoints, rowTopPadding, pageNumber, pageCount, paragraphSpacingScale,
+                                    mathEquations: null, cancellationToken).Resolve(false);
                         }
                         else
                         {
@@ -683,8 +684,8 @@ internal sealed partial class DocxLayoutEngine
             if (sourceMeasurements.Length != 0) sourceMeasurements[rowIndex] = new(row, cellContentHeights);
             double fullHeight = ResolveTableRowHeight(row, contentHeight, paragraphSpacingScale, isLastRow, bottomMargin);
             if (unexpandedRowHeights.Length != 0)
-                // Without an independently owned floor, keep the previous
-                // unexpanded-source estimate rather than inventing a strut.
+                // Independent cells own row floors. Otherwise use the parsed
+                // terminal mark, with the prior estimate for unknown markers.
                 unexpandedRowHeights[rowIndex] = ResolveTableRowHeight(row,
                     hasIndependentRowFloor ? independentContentHeight : unexpandedContentHeight,
                     paragraphSpacingScale, isLastRow, bottomMargin);
