@@ -1,5 +1,30 @@
 # Composed-document reliability checkpoint
 
+## C299 total-counter boxes compose across cells and static stories (2026-10-19)
+
+Reuse C298's library for three source-exact NUMPAGES additions to accepted cell,
+header and footer boxes. The same child paragraph remains unchanged across
+containers. Six independent Word views preserve all24 original math origins and
+sizes exactly. All current math/frame/prose gates pass (max mathY.427pt/proseY
+.439pt), with zero ignored equations or source/Office/page content deficits.
+Six strict foreground-recall/SSIM failures/raw fldSimple flags remain explicit.
+Three viewed Final rasters show clear footer/header placement and complete ink.
+
+No production change/build or prior-suite replay. One harness-only build retains
+14 runtime assets/all2,444 prior inputs and adds five public fixture/gold files.
+Two new exact methods run once/platform:two Windows/one Ubuntu/one native skip.
+They cover both modes, each original and bookmark/split-run transformations,
+math/prose/value survival and native field origin/size gates. C298's42 Windows/
+32 Ubuntu/ten native skips carry through verified production/input identity,
+without being represented as a fresh run on this harness. No production join.
+
+Six candidate conversions/six Word exports qualify these combinations once.
+17 assets/two exact transfer smokes; no root build/suite/package replay. Source
+harness e9eccebb; evidence artifacts/composition-c1/inline-box-total-containers-
+evidence.json. C298CI39322199121 remains in progress while work continues. Next
+bounded review: whole-paragraph hyperlink exclusion from authored-row display
+promotion, with independent Word evidence before any eligibility change.
+
 ## C298 total-page dependencies preserve boxed math and plain layout (2026-10-19)
 
 One source-exact NUMPAGES probe loses all4 accepted fraction glyphs in both
