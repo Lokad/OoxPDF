@@ -236,7 +236,8 @@ internal sealed partial class DocxLayoutEngine
     private static double ResolveEndnoteStartTop(
         DocxLayoutPage page,
         IReadOnlyList<DocxPlacedRelatedStoryLayout> placedStories,
-        double printScale = 1d)
+        double printScale = 1d,
+        Func<DocxLayoutPage, double, double?>? bodyBoundaryToNoteDesign = null)
     {
         double bodyBottom = page.Items.Count == 0
             ? page.Height - page.MarginTop
@@ -244,7 +245,7 @@ internal sealed partial class DocxLayoutEngine
         double? firstBaselineInset = page.Items.OfType<DocxTextLineLayout>().Select(line => (double?)line.BaselineY).FirstOrDefault() is { } firstBaseline
             ? page.Height - page.MarginTop - firstBaseline
             : null;
-        double designBodyBottom = ResolveDesignBodyBottomForEndnoteStart(
+        double designBodyBottom = bodyBoundaryToNoteDesign?.Invoke(page, bodyBottom) ?? ResolveDesignBodyBottomForEndnoteStart(
             bodyBottom,
             page.Height - page.MarginTop,
             firstBaselineInset,

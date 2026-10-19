@@ -317,7 +317,7 @@ internal sealed partial class DocxLayoutEngine
         var keepLookaheadYielded = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
         var footnotePlacedLinesAtLastYield = new Dictionary<(DocxRelatedStoryKind Kind, string Id), int>();
         var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int), DocxStaticStoryLayoutResult?>();
-        var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int), (double Body, double Note)>();
+        var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int), (double Body, double Note, double? Physical)>();
         var plainFootnoteFooterFrames = new Dictionary<(DocxPageSettings, double, double, double, double, double, double, int), DocxLayoutPage?>();
         double? bodyFirstBaselineMemo = null;
         double bodyFirstSourceOffsetMemo = 0d;
@@ -2125,7 +2125,7 @@ internal sealed partial class DocxLayoutEngine
             double takeScale = paragraphSpacingScale;
             return (keepOutLayout - firstPinBaseline.Value * (1d - takeScale) - firstPinSourceOffset * takeScale) / takeScale;
         }
-        (double Body, double Note) ResolveFooterBounds(DocxLayoutPage templatePage, int pageNumber, int pageCount)
+        (double Body, double Note, double? Physical) ResolveFooterBounds(DocxLayoutPage templatePage, int pageNumber, int pageCount)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var key = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount);
@@ -2140,7 +2140,7 @@ internal sealed partial class DocxLayoutEngine
                 // remain in design coordinates until their common print map.
                 double noteTop = footer?.PhysicalFooterFrameTop is { } physicalTop
                     ? new DocxPrintedPageFrame(templatePage.Height, paragraphSpacingScale).UnmapY(physicalTop) : top;
-                bounds = (top, noteTop);
+                bounds = (top, noteTop, footer?.PhysicalFooterFrameTop);
                 continuationFooterTopByPage[key] = bounds;
             }
             return bounds;
@@ -2149,7 +2149,31 @@ internal sealed partial class DocxLayoutEngine
             Math.Max(templatePage.MarginBottom, ResolveFooterBounds(templatePage, pageNumber, pageCount).Body);
         double ResolveNoteFooterKeepOut(DocxLayoutPage templatePage, int pageNumber, int pageCount) =>
             Math.Max(templatePage.MarginBottom, ResolveFooterBounds(templatePage, pageNumber, pageCount).Note);
-        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys, ResolveFooterKeepOut, ResolveNoteFooterKeepOut).ToArray();
+        double? MapBodyBoundaryToNoteDesign(DocxLayoutPage targetPage, double bodyY)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (paragraphSpacingScale is not (> 0d and < 1d) || pages.Count == 0 ||
+                targetPage.ColumnFrames.Count > 1 || pages[0].ColumnFrames.Count > 1) return null;
+            var firstPage = pages[0];
+            var header = GetContinuationHeader(firstPage, 1, pages.Count);
+            if (header?.PhysicalHeaderFrameBottom is null &&
+                ResolveFooterBounds(firstPage, 1, pages.Count).Physical is null) return null;
+            if (!bodyFirstBaselineComputed)
+            {
+                bodyFirstBaselineComputed = true;
+                (bodyFirstBaselineMemo, bodyFirstSourceOffsetMemo) = DocxRenderer.ResolveBodyPrintOrigin(firstPage);
+            }
+            if (bodyFirstBaselineMemo is not { } baseline) return null;
+            // Painting restores the first source origin before mapping the
+            // displaced body. Invert that same global origin for note boxes;
+            // a later page's first baseline includes different header/text insets.
+            double displacement = Math.Max(0d, headerOverflowDisplacementByPage?.GetValueOrDefault(0) ?? 0d);
+            double offset = new DocxPrintedPageFrame(firstPage.Height, paragraphSpacingScale)
+                .BodyYOffset(baseline + displacement, bodyFirstSourceOffsetMemo);
+            double result = new DocxPrintedPageFrame(targetPage.Height, paragraphSpacingScale).UnmapY(bodyY - offset);
+            return double.IsFinite(result) ? result : null;
+        }
+        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys, ResolveFooterKeepOut, ResolveNoteFooterKeepOut, MapBodyBoundaryToNoteDesign).ToArray();
         var staticContent = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, mathEquations);
         DocxLayoutPage[] pagesWithStaticText = staticContent.Pages.ToArray();
         IReadOnlyDictionary<int, double> footerContentTopByPage = staticContent.FooterContentTopByPage;

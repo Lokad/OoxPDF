@@ -995,8 +995,8 @@ internal sealed partial class DocxRenderer
             return hasBalloonContent ? WordCompatibleTextYOffsetReferenceAnchorPoints : 0d;
         }
 
-        return (firstBaselineY.Value - pageHeight / 2d) * (1d - markupContext.WordCompatiblePrintScale) +
-            sourceBaselineOffset * markupContext.WordCompatiblePrintScale;
+        return new DocxPrintedPageFrame(pageHeight, markupContext.WordCompatiblePrintScale)
+            .BodyYOffset(firstBaselineY.Value, sourceBaselineOffset);
     }
 
     private static DocxMarkupContext WithFirstPinYOffset(DocxMarkupContext markupContext, DocxDocument document, DocxLayout layout)

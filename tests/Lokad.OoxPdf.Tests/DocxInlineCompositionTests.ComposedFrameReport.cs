@@ -35,6 +35,22 @@ internal static partial class DocxInlineCompositionTests
         CheckComposedInlineFrameReport(null, independentWordGeometry: true);
     }
 
+    public static void DocxPrintedBodyBoundaryRecoversNoteDesignCoordinates()
+    {
+        foreach (double scale in new[] { .5d, .75d, 1d })
+        foreach (double headerDisplacement in new[] { 0d, 72d })
+        {
+            var frame = new DocxPrintedPageFrame(792d, scale);
+            double offset = frame.BodyYOffset(640d + headerDisplacement, 2d);
+            foreach (double noteY in new[] { 200d, 500d, 650d })
+            {
+                double bodyY = frame.MapY(noteY) + offset;
+                TestAssert.True(Math.Abs(frame.UnmapY(bodyY - offset) - noteY) < .000001d,
+                    "A body boundary and its note share the painter's document origin, including header displacement.");
+            }
+        }
+    }
+
     internal static void CheckComposedInlineFrameReport(IFontResolver? resolver, bool independentWordGeometry)
     {
         string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "Composition"));
@@ -69,8 +85,31 @@ internal static partial class DocxInlineCompositionTests
                 var actual = lines.Single(line => line.Text.StartsWith(anchor.GetProperty("Text").GetString()!, StringComparison.Ordinal));
                 if (independentWordGeometry) TestAssert.Equal(anchor.GetProperty("Page").GetInt32(), actual.Page);
             }
+            var conclusion = lines.Single(line => line.Text.StartsWith("Review conclusion:", StringComparison.Ordinal));
+            var note = lines.Single(line => line.Text.StartsWith("All quantities", StringComparison.Ordinal));
+            TestAssert.Equal(conclusion.Page, note.Page);
+            var rule = Regex.Matches(pages[note.Page - 1].Content,
+                @"(?m)^0 g\r?\n(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re f")
+                .Cast<Match>().Select(match => (X: Number(match, "x"), Y: Number(match, "y"),
+                    Width: Number(match, "w"), Height: Number(match, "h")))
+                .Single(rect => rect.Width > 50d && rect.Height < 2d);
+            double scale = final ? 1d : DocxRenderer.ResolveWordCompatiblePrintScale(source,
+                DocxMarkupContext.FromMode(mode, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+            double conclusionInkBottom = shows.Where(item => item.Page == conclusion.Page &&
+                Math.Abs(item.Height - item.Show.Y - conclusion.Y) < .0001d)
+                .SelectMany(item => OccupiedFooterInk(item.Show, scale)).Min();
+            double noteInkTop = shows.Where(item => item.Page == note.Page &&
+                Math.Abs(item.Height - item.Show.Y - note.Y) < .0001d)
+                .SelectMany(item => OccupiedFooterInk(item.Show, scale)).Max();
+            TestAssert.True(rule.Y + rule.Height < conclusionInkBottom && rule.Y > noteInkTop,
+                "The endnote separator must occupy the clear gap between conclusion ink and note ink.");
             if (!independentWordGeometry) continue;
             TestAssert.Equal(row.GetProperty("WordPages").GetInt32(), pages.Length);
+            var expectedRule = row.GetProperty("WordSeparatorRule");
+            TestAssert.Equal(expectedRule.GetProperty("Page").GetInt32(), note.Page);
+            double ruleTop = pages[note.Page - 1].Height - rule.Y - rule.Height;
+            TestAssert.True(Math.Abs(ruleTop - expectedRule.GetProperty("Rect")[1].GetDouble()) < 1d,
+                "The separator retains its independent one-point Word position.");
             foreach (var anchor in row.GetProperty("WordProseAnchorGroups")[0].GetProperty("Occurrences").EnumerateArray())
                 TestAssert.Equal(1, boxes.Count(line => line.Page == anchor.GetProperty("Page").GetInt32() &&
                     Math.Abs(line.X - anchor.GetProperty("X").GetDouble()) < 1d && Math.Abs(line.Y - anchor.GetProperty("Y").GetDouble()) < 1d));
@@ -83,5 +122,8 @@ internal static partial class DocxInlineCompositionTests
                 .OrderBy(item => item.Page).ThenBy(item => item.Text, StringComparer.Ordinal).ToArray();
             TestAssert.True(nativeMath.SequenceEqual(wordMath), "Per-page mathematical content retains the independent Word glyph multiset.");
         }
+
+        static double Number(Match match, string group) => double.Parse(match.Groups[group].Value,
+            System.Globalization.CultureInfo.InvariantCulture);
     }
 }

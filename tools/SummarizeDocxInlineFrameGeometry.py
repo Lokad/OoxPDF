@@ -64,6 +64,14 @@ def measure_images(path):
             for index, page in enumerate(pdf) for item in page.get_image_info()]
 
 
+def measure_note_rules(path):
+    with pymupdf.open(path) as pdf:
+        return [{'Page': index + 1, 'Rect': list(item['rect'])}
+            for index, page in enumerate(pdf) for item in page.get_drawings()
+            if item['type'] == 'f' and item['fill'] == (0., 0., 0.)
+            and item['rect'].width > 50 and 0 < item['rect'].height < 2]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--golden', type=Path, required=True)
@@ -113,6 +121,16 @@ def main():
                 result['Failures'].append('StrokeWidth')
         if any(not frame['InsidePage'] for frame in frames):
             result['Failures'].append('OffPageFrame')
+        if 'WordSeparatorRule' in row:
+            rules = measure_note_rules(path)
+            expected_rule = row['WordSeparatorRule']
+            result['NativeSeparatorRules'] = rules
+            if len(rules) != 1 or rules[0]['Page'] != expected_rule['Page']:
+                result['Failures'].append('SeparatorCountOrPage')
+            else:
+                result['MaxSeparatorError'] = max(abs(a - e) for a, e in zip(rules[0]['Rect'], expected_rule['Rect']))
+                if result['MaxSeparatorError'] >= 1.:
+                    result['Failures'].append('SeparatorGeometry')
         if 'WordImages' in row:
             images = measure_images(path)
             expected_images = row['WordImages']

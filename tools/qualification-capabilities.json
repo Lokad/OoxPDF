@@ -8976,6 +8976,9 @@
     "PortableRenderingScaledFootnoteSharesPrintedBodyCapacity",
     "DocxOrdinaryStaticInlineOriginsMatchIndependentWord",
     "DocxStaticTableOriginsMatchIndependentWordContentAndGeometry",
-    "DocxInlineBoxMathPreparationObservesCancellationBetweenChildren"
+    "DocxInlineBoxMathPreparationObservesCancellationBetweenChildren",
+    "DocxPrintedBodyBoundaryRecoversNoteDesignCoordinates",
+    "DocxEndnoteStartTopRecoversDesignBodyBottom",
+    "DocxInlineCompositionOccupiedFooterKeepsNotesAtIndependentWordOrigins"
   ]
 }

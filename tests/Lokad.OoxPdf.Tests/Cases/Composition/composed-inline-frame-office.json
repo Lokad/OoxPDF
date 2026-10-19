@@ -582,6 +582,28 @@
               "Size": 11.039999961853027
             }
           ]
+        },
+        {
+          "Text": "Review conclusion:",
+          "Occurrences": [
+            {
+              "Page": 3,
+              "X": 72.02400207519531,
+              "Y": 219.5,
+              "Size": 11.039999961853027
+            }
+          ]
+        },
+        {
+          "Text": "All quantities",
+          "Occurrences": [
+            {
+              "Page": 3,
+              "X": 72.02400207519531,
+              "Y": 259.8499755859375,
+              "Size": 11.039999961853027
+            }
+          ]
         }
       ],
       "WordBodyParagraphStarts": [
@@ -700,7 +722,16 @@
         "Footer:",
         "Inline box content."
       ],
-      "ResidualPolicy": "All original numerical gates remain active in the raw report. Content/page/box-origin tests do not imply every old math/body geometry or pixel gate passes."
+      "ResidualPolicy": "All original numerical gates remain active in the raw report. Content/page/box-origin tests do not imply every old math/body geometry or pixel gate passes.",
+      "WordSeparatorRule": {
+        "Page": 3,
+        "Rect": [
+          72.02400207519531,
+          236.06005859375,
+          216.04400634765625,
+          236.780029296875
+        ]
+      }
     },
     {
       "Id": "composed-inline-frame-report",
@@ -1283,6 +1314,28 @@
               "Size": 8.35200023651123
             }
           ]
+        },
+        {
+          "Text": "Review conclusion:",
+          "Occurrences": [
+            {
+              "Page": 3,
+              "X": 54.599998474121094,
+              "Y": 261.8900146484375,
+              "Size": 8.35200023651123
+            }
+          ]
+        },
+        {
+          "Text": "All quantities",
+          "Occurrences": [
+            {
+              "Page": 3,
+              "X": 54.599998474121094,
+              "Y": 292.4599914550781,
+              "Size": 8.35200023651123
+            }
+          ]
         }
       ],
       "WordBodyParagraphStarts": [
@@ -1401,7 +1454,16 @@
         "Footer:",
         "Inline box content."
       ],
-      "ResidualPolicy": "All original numerical gates remain active in the raw report. Content/page/box-origin tests do not imply every old math/body geometry or pixel gate passes."
+      "ResidualPolicy": "All original numerical gates remain active in the raw report. Content/page/box-origin tests do not imply every old math/body geometry or pixel gate passes.",
+      "WordSeparatorRule": {
+        "Page": 3,
+        "Rect": [
+          54.599998474121094,
+          274.43798828125,
+          163.82000732421875,
+          274.989990234375
+        ]
+      }
     }
   ]
 }

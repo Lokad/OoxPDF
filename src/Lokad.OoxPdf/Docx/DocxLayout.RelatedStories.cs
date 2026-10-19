@@ -20,7 +20,8 @@ internal sealed partial class DocxLayoutEngine
         Func<DocxLayoutPage, int, int, double>? headerKeepOut = null,
         ISet<(DocxRelatedStoryKind Kind, string Id)>? alreadyPlacedStoryKeys = null,
         Func<DocxLayoutPage, int, int, double>? footerKeepOut = null,
-        Func<DocxLayoutPage, int, int, double>? ownedFootnoteFooterKeepOut = null)
+        Func<DocxLayoutPage, int, int, double>? ownedFootnoteFooterKeepOut = null,
+        Func<DocxLayoutPage, double, double?>? bodyBoundaryToNoteDesign = null)
     {
         if (pages.Count == 0)
         {
@@ -201,7 +202,7 @@ internal sealed partial class DocxLayoutEngine
                 if (sectionEndStories.Count > 0)
                 {
                     DocxRelatedStoryLayout? endnoteContinuationLayout = FindSpecialRelatedStoryLayout(groupLayouts, DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? endnoteSeparatorLayout;
-                    PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, endnoteContinuationLayout, cancellationToken, printScale, separatorMeasurer, headerKeepOut);
+                    PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, endnoteContinuationLayout, cancellationToken, printScale, separatorMeasurer, headerKeepOut, bodyBoundaryToNoteDesign);
                 }
             }
 
@@ -242,7 +243,7 @@ internal sealed partial class DocxLayoutEngine
                 var documentEndPages = outputPages.ToList();
                 DocxLayoutPage activePage = documentEndPages[^1];
                 List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
-                double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale);
+                double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale, bodyBoundaryToNoteDesign);
                 int activePageIndex = documentEndPages.Count - 1;
                 DocxRelatedStoryLayout? documentEndSeparatorLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
                 DocxRelatedStoryLayout? documentEndContinuationLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? documentEndSeparatorLayout;
@@ -482,12 +483,13 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken cancellationToken,
         double printScale,
         IDocxTextMeasurer? separatorMeasurer, 
-        Func<DocxLayoutPage, int, int, double>? headerKeepOut = null)
+        Func<DocxLayoutPage, int, int, double>? headerKeepOut = null,
+        Func<DocxLayoutPage, double, double?>? bodyBoundaryToNoteDesign = null)
     {
         int activePageIndex = sectionEndPageIndex;
         DocxLayoutPage activePage = outputPages[activePageIndex];
         List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
-        double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale);
+        double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale, bodyBoundaryToNoteDesign);
         if (endnoteSeparatorLayout is not null && sectionEndStories.Count > 0)
         {
             // RV06 endnote probes: the separator space sits exactly one body pitch below
