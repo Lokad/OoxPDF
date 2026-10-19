@@ -1,5 +1,25 @@
 # Composed-document reliability checkpoint
 
+## C311 natural row page-edge border ownership review (2026-10-20)
+
+Three source controls (aligned/shifted introductions,1pt/2pt solid edges) and six
+independent Word outcomes repeat top/bottom borders on all three physical page
+fragments. Native paints only the logical first top/final bottom, omitting four
+page-edge bands per outcome.1,440 prose anchors preserve global text; thick
+borders place Left110/Right109 on page2 rather than Word page3 in both presets.
+Xmax5.390pt remains separate from varying continuationY. All six geometry and
+strict pixel gates fail; two thick-case raw page screens remain unresolved.
+
+Four conversions/four new Word exports; two prior exact bordered outcomes and
+references reused. No library/harness build or library test run. A viewed page2
+pair confirms missing page edges and clipped upper ink in native Right53; Word
+shows complete text inside closed borders. Repeated paint alone cannot repair
+layout. Preserve the structural-edge source-window fallback and horizontal
+origin residual. Evidence artifacts/composition-c1/border-continuation-review.json.
+Continue C312 shared edge painting for natural automatic PageBoundary fragments;
+keep declared/manual policies and neighboring merge/header styles qualified.
+C310CI39342900275 continues; version0.1.5/release preparation remains deferred.
+
 ## C310 shared row padding survives independent continuation (2026-10-20)
 
 Reapply the row maximum top inset and reserve its maximum bottom inset on every
