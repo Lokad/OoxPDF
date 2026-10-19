@@ -1,5 +1,46 @@
 # Measured operating envelope
 
+## C274 intrinsic-frame row ends (2026-10-19)
+
+Shared ordered wrapping now lets a dominant picture/textbox-only row own its
+lower edge after trimming whitespace. An ordinary text row wrapped away from
+its paragraph's equation retains physical text descent beside the frame.
+Prepared mathematical rows retain their independently accepted strut. Short
+frames, exact/minimum spacing and the paragraph mark after a trailing hard break
+keep existing contracts. No public API, protection-limit or unsafe-code changes.
+
+Eleven controls/22 independent Word views retain96 math glyphs, all source prose
+and pictures. The three C273 following-prose residuals now pass the unchanged
+one-point gate. Maximum following X0.029pt/Y0.656pt, math X0.243pt/Y0.518pt,
+box edge0.709pt, image edge0.404pt and physical math size0.017pt. Four rasters
+reviewed.22 content screens pass; all22 strict whole-page failures remain.
+The earlier block-box review Y2.454pt/math2.035pt and static-cell X5.400pt
+Final/4.088pt review concerns remain separate. Broader mathematical/text strut
+unification is unverified; two attempted broader rules worsened four fixed
+portfolio review outputs and were rejected, without adding font/count regimes.
+
+One final frozen runtime:43 Windows/36 Ubuntu checks, seven native skips, once
+per platform. Focused cases cover both frame kinds, scaled text, whitespace,
+resumable wrapping, short frames, minimum/exact slots, trailing breaks,
+cancellation and mathematical neighbors. Three production candidates and one
+harness-only build are retained; the first41pass/1fail helper-field attempt
+and its one-method repair remain. No join across production changes. Two
+unchanged parent observers fail semantically (40 versus42pt and45 versus42pt).
+
+Four source-derived picture/space/12pt controls reuse their exact independently
+exported probe bytes. Eight new Word views exported once;14 prior views reused.
+All22 final comparisons reuse candidate PDF identity from the measured first
+candidate. Ten fixed-portfolio and two older mixed-child-box PDFs are identical
+to their accepted predecessors; their comparisons are reused.70 older outcomes
+carry forward by source proof.17 assets/four root smokes, no root build, suite
+or package replay. C273CI39268709136 is green on both platforms, including
+package checks. C274 CI follows the scoped push; work continues meanwhile.
+
+Evidence:artifacts/composition-c1/intrinsic-frame-struts-evidence.json;
+rootbd03b98d. No speedup or arbitrary-document fidelity claim. Last infrequent
+workspace scan C273:15.541GB/849,977files, zero errors. The loose5GB target
+remains unmet; previously rejected cleanup targets are preserved without retry.
+
 ## C273 ordered sibling inline-box frames (2026-10-19)
 
 Supported equations now survive beside textboxes in both public DOCX presets.
