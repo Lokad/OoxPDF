@@ -1,5 +1,52 @@
 # Composed-document reliability checkpoint
 
+## C282 composed report printed footer and note origins (2026-10-19)
+
+A fixed held-out report combines12 equations, five source pictures, three
+ordinary boxes, tables, numbering, navigation, repeated static stories/page
+fields and a mixed endnote. Two independently pinned Word views have three
+pages. C280’s Final retained three; review emitted two and overlapped body,
+endnote and footer. Paragraph admission scaled a measured printed footer
+reserve again. Keep that reserve as a printed lower bound alongside scaled
+source note reserves. The first candidate restores pagination but is rejected:
+its separator strikes conclusion ink. Note boundary inversion used a later page
+origin while painting used the first document body origin. Sharing that inverse
+restores clear seating without fitted offsets or new font/count regimes.
+
+Both modes now retain all13 body anchors on Word’s pages,53 mathematical glyphs,
+seven box prose/frame instances and nine pictures. Four review rasters confirm
+clear body/footer and conclusion/separator/note ink. Final geometry passes the
+original1pt/.1pt/.01pt gates; review retains bodyY1.440pt, mathY1.117pt,
+imageY1.192pt and separator1.125pt failures. The native contract checks the
+independent note-to-conclusion gap plus actual glyph-ink clearance; absolute
+Word failures stay in the separate report. Existing composed-static-cell note
+math error improves3.487→1.093pt; image3.696→1.302pt still fails. Two adjacent
+static controls retain exact PDFs. All five new/neighbor strict visual failures
+remain, with no threshold changes. Two raw content audits remain unresolved
+for inherited field tokens/kinds and rate/time extraction segmentation; simple
+math counts, expected prose and per-page glyph content are independently checked.
+
+39 Windows/28 Ubuntu/11 native skips. One accepted Release runtime is qualified;
+no joins across two production builds. A harness-only one-method correction
+separates relative seating from absolute body drift, with14 runtime assets and
+2,404 inputs unchanged.48 legacy geometry rows remain exact; duplicate prose
+groups, missing repeated occurrences and wrong note pages are rejected. The
+generator publishes DOCX/manifests atomically and preserves frozen-link bytes.
+Three parent observers fail semantically. Ten fixed portfolio PDFs match the
+accepted C274 outcomes, and ten pinned Word comparisons are reused.17 assets
+and four exact transfer smokes; no root Release build or qualification replay.
+
+Workflow exceptions are retained: an unsupported --filter argument accidentally
+selected a broad parent run and one root Debug CLI build; it receives no
+qualification credit. The exact --test-set rerun fails separator ink as expected.
+An initial comparison selected the unpinned older Office cache; its report is
+excluded and final comparisons reuse the accepted checkpoint79 pins. C283 will
+reject unknown runner arguments before executing tests. C280CI39289896706 is
+green on both platforms including broader/package checks. Safe managed code,
+bounds, cancellation, admission/lifetimes, caches, staging and atomic publication
+remain unchanged. Evidence:artifacts/composition-c1/body-note-origin-evidence.json;
+root193b0c5a/35a0e9ce. Release preparation remains deferred.
+
 ## C281 bounded composition performance baseline, 2026-10-19
 
 The existing probe is built separately against C280's exact frozen library, with
