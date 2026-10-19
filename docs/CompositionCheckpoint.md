@@ -1,5 +1,25 @@
 # Composed-document reliability checkpoint
 
+## C283 reject invalid runner arguments before discovery (2026-10-19)
+
+C282 exposed a qualification defect: an unsupported --filter silently selected
+the default suite. Missing option values also ignored intended selection and
+repeated values were silently discarded. Parse seven supported options once
+before enumerating tests; reject unknown/positional arguments, missing/blank
+values and repeats. Preserve --test/--test-set, groups, listing, slow filters and
+JSON reports. README documents supported selectors and portable rendering CI.
+
+Three focused semantic checks pass on Windows and Ubuntu. Invalid arguments
+cannot even enumerate a sentinel test source; valid probes retain exact execution,
+listing/report contents and existing conflicting-option refusal. Six old/new
+process probes reproduce old acceptance and new refusal with --list, executing
+zero tests. One harness-only build,14 runtime assets/2,404 public inputs and
+production source unchanged. Transfer only three harness assets; root catalog
+and refusal smoke execute zero tests. No library build, PDF conversion, Office
+export or rendering qualification replay. Evidence:artifacts/composition-c1/
+runner-arguments-evidence.json; root68da22b3. C282CI39297279823 Ubuntu is green,
+Windows continues; its original visual/field residuals remain explicit.
+
 ## C282 composed report printed footer and note origins (2026-10-19)
 
 A fixed held-out report combines12 equations, five source pictures, three
