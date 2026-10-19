@@ -2027,7 +2027,8 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints,
                     paragraphSpacingScale,
                     pages.Count + 1,
-                    cancellationToken);
+                    cancellationToken,
+                    mathEquations: mathEquations);
                 if (textBoxLayout is null)
                 {
                     continue;

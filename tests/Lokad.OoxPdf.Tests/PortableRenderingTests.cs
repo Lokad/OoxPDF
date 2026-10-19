@@ -22,6 +22,9 @@ internal static class PortableRenderingTests
     public static void PortableRenderingSignedTableIndentsPreserveMixedInlineContent() =>
         DocxInlineCompositionTests.CheckTableGridOrigins(new PinnedResolver(mathFont: true), "table-signed-indents-office.json");
 
+    public static void PortableRenderingInlineBoxMathKeepsSourceContentAndResources() =>
+        DocxInlineCompositionTests.CheckInlineBoxMath(new PinnedResolver(mathFont: true));
+
     public static void PortableRenderingPictureNoteBatchesRetainEveryImageOnce() =>
         DocxInlineCompositionTests.CheckPictureNoteBatches(new PinnedResolver(mathFont: true));
 

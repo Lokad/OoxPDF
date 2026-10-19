@@ -57,6 +57,46 @@ internal static class DocxMathParagraphPolicy
     public static bool IsSupportedSimpleRow(DocxTableRow row) => row.HasSupportedHeight &&
         HasSupportedTableContentRevisions(row.Revisions, DocxRevisionKind.TableRowPropertiesChange);
 
+    // Existing inline boxes own independent block frames. Prepare their direct
+    // child stories without admitting a sibling box into ordered paragraph flow.
+    // Notes/floating/nested boxes retain their existing staged placement paths.
+    public static IEnumerable<DocxParagraph> EnumerateInlineBoxPreparationCandidates(DocxDocument document, CancellationToken token)
+    {
+        var parents = DocxBlockTraversal.EnumerateBodyParagraphs(document)
+            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.HeaderBodyElementsByType,
+                document.HeaderParagraphsByType, document.HeaderParagraphs))
+            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.FooterBodyElementsByType,
+                document.FooterParagraphsByType, document.FooterParagraphs))
+            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
+            .Concat(document.BodyElements.OfType<DocxSectionBreakElement>().SelectMany(section =>
+                DocxBlockTraversal.EnumerateStaticStoryParagraphs(section.PageSettings)));
+        var seen = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
+        foreach (var parent in parents)
+        {
+            token.ThrowIfCancellationRequested();
+            foreach (var box in parent.InlineTextBoxes)
+            {
+                token.ThrowIfCancellationRequested();
+                if (box.Revisions.Count != 0) continue;
+                foreach (var element in box.BodyElements)
+                {
+                    token.ThrowIfCancellationRequested();
+                    IEnumerable<DocxParagraph> children = element switch
+                    {
+                        DocxParagraphElement paragraph => [paragraph.Paragraph],
+                        DocxTableElement table => EnumerateSupportedTableParagraphs(table.Table, token),
+                        _ => []
+                    };
+                    foreach (var child in children)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (seen.Add(child)) yield return child;
+                    }
+                }
+            }
+        }
+    }
+
     public static bool IsSupportedSimpleCell(DocxTableCell cell) =>
         IsSupportedCellProperties(cell) && cell.BodyElements.All(child => child is DocxParagraphElement);
 

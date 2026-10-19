@@ -146,13 +146,13 @@ internal sealed partial class DocxReader
         XElement run,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        DocxRevisionInfo? revision, int sourceRunIndex = -1)
+        DocxRevisionInfo? revision, int sourceRunIndex = -1, CancellationToken cancellationToken = default)
     {
         var images = new List<DocxInlineImage>();
         Dictionary<XElement, (int Offset, int Order)>? positions = null;
-        foreach (XElement inline in run.Descendants(WordprocessingDrawingNamespace + "inline"))
+        foreach (XElement inline in EnumerateRunOwnedDrawings(run, WordprocessingDrawingNamespace + "inline", cancellationToken))
         {
-            DocxInlineImage? image = ReadDrawingImage(inline, package, relationships, revision);
+            DocxInlineImage? image = ReadDrawingImage(inline, package, relationships, revision, cancellationToken);
             if (image is null)
             {
                 continue;
@@ -163,7 +163,7 @@ internal sealed partial class DocxReader
                 SourceTextOffsetInRun = position.Offset, SourceOrderInRun = position.Order });
         }
 
-        foreach (XElement shape in run.Descendants(VmlNamespace + "shape"))
+        foreach (XElement shape in EnumerateRunOwnedDrawings(run, VmlNamespace + "shape", cancellationToken))
         {
             DocxInlineImage? image = ReadVmlInlineImage(shape, package, relationships, revision);
             if (image is null)
@@ -210,16 +210,15 @@ internal sealed partial class DocxReader
         CancellationToken cancellationToken)
     {
         var textBoxes = new List<DocxInlineTextBox>();
-        foreach (XElement inline in run.Descendants(WordprocessingDrawingNamespace + "inline"))
+        foreach (XElement inline in EnumerateRunOwnedDrawings(run, WordprocessingDrawingNamespace + "inline", cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (ReadDrawingImage(inline, package, relationships, revision) is not null)
+            if (ReadDrawingImage(inline, package, relationships, revision, cancellationToken) is not null)
             {
                 continue;
             }
 
-            XElement? textBoxContent = inline
-                .Descendants(WordprocessingNamespace + "txbxContent")
+            XElement? textBoxContent = EnumerateDrawingOwnedElements(inline, WordprocessingNamespace + "txbxContent", cancellationToken)
                 .FirstOrDefault();
             if (textBoxContent is null)
             {
@@ -227,14 +226,12 @@ internal sealed partial class DocxReader
             }
 
             XElement? extent = inline.Element(WordprocessingDrawingNamespace + "extent");
-            XElement? textBoxBodyProperties = inline
-                .Descendants(WordprocessingShapeNamespace + "bodyPr")
+            XElement? textBoxBodyProperties = EnumerateDrawingOwnedElements(inline, WordprocessingShapeNamespace + "bodyPr", cancellationToken)
                 .FirstOrDefault();
             // RV05 inline-box probe (Word COM reference edge-inlinebox): stroked inline
             // textbox content starts inside the border like floating boxes. First
             // outlined a:ln wins; un-outlined shapes keep legacy insets.
-            XElement? textBoxOutline = inline
-                .Descendants(DrawingNamespace + "ln")
+            XElement? textBoxOutline = EnumerateDrawingOwnedElements(inline, DrawingNamespace + "ln", cancellationToken)
                 .FirstOrDefault(element => element.Attribute("w") is not null);
             string? textBoxStrokeWidthEmuValue = (string?)textBoxOutline?.Attribute("w");
             textBoxes.Add(new DocxInlineTextBox(
@@ -267,15 +264,15 @@ internal sealed partial class DocxReader
         XElement drawing,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        DocxRevisionInfo? revision)
+        DocxRevisionInfo? revision, CancellationToken cancellationToken = default)
     {
         XElement? extent = drawing.Element(WordprocessingDrawingNamespace + "extent");
         if (extent is null)
         {
             return null;
         }
-        OoxPart? previewPart = ResolvePart(ReadDrawingImageRelationshipId(drawing));
-        OoxPart? vectorPart = ResolvePart(ReadDrawingSvgRelationshipId(drawing));
+        OoxPart? previewPart = ResolvePart(ReadDrawingImageRelationshipId(drawing, cancellationToken));
+        OoxPart? vectorPart = ResolvePart(ReadDrawingSvgRelationshipId(drawing, cancellationToken));
         bool useVector = vectorPart?.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase) == true;
         OoxPart? imagePart = useVector ? vectorPart : previewPart;
         if (imagePart is null)
@@ -284,11 +281,11 @@ internal sealed partial class DocxReader
         }
         double width = OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(extent, "cx", "DOCX"));
         double height = OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(extent, "cy", "DOCX"));
-        XElement? sourceRectangle = drawing.Descendants(DrawingNamespace + "blip").FirstOrDefault()
+        XElement? sourceRectangle = EnumerateDrawingOwnedElements(drawing, DrawingNamespace + "blip", cancellationToken).FirstOrDefault()
             ?.Parent?.Element(DrawingNamespace + "srcRect");
         var crop = new DocxPictureCrop(ReadCropFraction("l"), ReadCropFraction("t"),
             ReadCropFraction("r"), ReadCropFraction("b"));
-        XElement? pictureTransform = drawing.Descendants(XName.Get("spPr", "http://schemas.openxmlformats.org/drawingml/2006/picture"))
+        XElement? pictureTransform = EnumerateDrawingOwnedElements(drawing, XName.Get("spPr", "http://schemas.openxmlformats.org/drawingml/2006/picture"), cancellationToken)
             .FirstOrDefault()?.Element(DrawingNamespace + "xfrm");
         XElement? pictureExtent = pictureTransform?.Element(DrawingNamespace + "ext");
         double rotation = pictureTransform?.Attribute("rot") is null ? 0d :
@@ -321,17 +318,39 @@ internal sealed partial class DocxReader
             !relationship.IsExternal && relationship.ResolvedTarget is { } target ? package.GetPart(target) : null;
     }
 
-    private static string? ReadDrawingImageRelationshipId(XElement drawing)
+    private static string? ReadDrawingImageRelationshipId(XElement drawing, CancellationToken token = default)
     {
-        return (string?)drawing
-            .Descendants(DrawingNamespace + "blip")
+        return (string?)EnumerateDrawingOwnedElements(drawing, DrawingNamespace + "blip", token)
             .FirstOrDefault()
-            ?.Attribute(RelationshipsNamespace + "embed") ?? ReadDrawingSvgRelationshipId(drawing);
+            ?.Attribute(RelationshipsNamespace + "embed") ?? ReadDrawingSvgRelationshipId(drawing, token);
     }
 
-    private static string? ReadDrawingSvgRelationshipId(XElement drawing) =>
-        (string?)drawing.Descendants(XName.Get("svgBlip", "http://schemas.microsoft.com/office/drawing/2016/SVG/main"))
+    private static string? ReadDrawingSvgRelationshipId(XElement drawing, CancellationToken token = default) =>
+        (string?)EnumerateDrawingOwnedElements(drawing, XName.Get("svgBlip", "http://schemas.microsoft.com/office/drawing/2016/SVG/main"), token)
             .FirstOrDefault()?.Attribute(RelationshipsNamespace + "embed");
+
+    // A child textbox has its own runs and drawing frames. Descendant pictures
+    // must not turn the enclosing textbox into an image or be read twice.
+    private static IEnumerable<XElement> EnumerateRunOwnedDrawings(XElement run, XName name, CancellationToken token)
+    {
+        foreach (var element in run.Descendants(name))
+        {
+            token.ThrowIfCancellationRequested();
+            if (ReferenceEquals(element.Ancestors(WordprocessingNamespace + "r").FirstOrDefault(), run))
+                yield return element;
+        }
+    }
+
+    private static IEnumerable<XElement> EnumerateDrawingOwnedElements(XElement drawing, XName name, CancellationToken token = default)
+    {
+        foreach (var element in drawing.Descendants(name))
+        {
+            token.ThrowIfCancellationRequested();
+            if (ReferenceEquals(element.Ancestors().FirstOrDefault(owner =>
+                owner.Name == WordprocessingDrawingNamespace + "inline" || owner.Name == WordprocessingDrawingNamespace + "anchor"), drawing))
+                yield return element;
+        }
+    }
 
     // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxInlineImage? ReadVmlInlineImage(

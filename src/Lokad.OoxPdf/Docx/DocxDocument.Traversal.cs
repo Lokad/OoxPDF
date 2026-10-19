@@ -48,7 +48,7 @@ internal static class DocxBlockTraversal
             .SelectMany(EnumerateInlineTextBoxParagraphs);
     }
 
-    private static IEnumerable<DocxParagraph> EnumerateInlineTextBoxParagraphs(DocxParagraph paragraph)
+    public static IEnumerable<DocxParagraph> EnumerateInlineTextBoxParagraphs(DocxParagraph paragraph)
     {
         foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
         {

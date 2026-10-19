@@ -413,8 +413,8 @@ internal sealed partial class DocxReader
             .FirstOrDefault(element =>
             element.Name.Namespace == WordprocessingDrawingNamespace &&
             element.Name.LocalName.StartsWith("wrap", StringComparison.Ordinal));
-        string? relationshipId = ReadDrawingImageRelationshipId(anchor);
-        DocxInlineImage? image = ReadDrawingImage(anchor, package, relationships, revision);
+        string? relationshipId = ReadDrawingImageRelationshipId(anchor, cancellationToken);
+        DocxInlineImage? image = ReadDrawingImage(anchor, package, relationships, revision, cancellationToken);
         XElement? textBoxBodyProperties = anchor
             .Descendants(WordprocessingShapeNamespace + "bodyPr")
             .FirstOrDefault();

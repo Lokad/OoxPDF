@@ -664,7 +664,8 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         int pageNumber,
         CancellationToken cancellationToken,
-        int sourceParagraphIndex = 0)
+        int sourceParagraphIndex = 0,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
     {
         double? extentWidth = ReadEmuPoints(textBox.ExtentCxValue);
         double? extentHeight = ReadEmuPoints(textBox.ExtentCyValue);
@@ -697,7 +698,8 @@ internal sealed partial class DocxLayoutEngine
             paragraphSpacingScale,
             pageNumber: pageNumber,
             pageCount: null,
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken,
+            mathEquations: mathEquations);
         double boxX = alignment switch
         {
             DocxTextAlignment.Center => x + Math.Max(0, width - boxWidth) / 2d,

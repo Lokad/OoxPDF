@@ -1036,7 +1036,8 @@ internal sealed partial class DocxLayoutEngine
                     paragraphSpacingScale,
                     pageNumber ?? pageIndex,
                     cancellationToken,
-                    sourceParagraphIndex: paragraphIndex);
+                    sourceParagraphIndex: paragraphIndex,
+                    mathEquations: mathEquations);
                 if (textBoxLayout is null)
                 {
                     continue;

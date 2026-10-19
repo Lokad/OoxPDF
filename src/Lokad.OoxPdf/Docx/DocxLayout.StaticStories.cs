@@ -127,6 +127,9 @@ internal sealed partial class DocxLayoutEngine
         foreach (DocxTableRowLayout row in footerLayout.TableRows)
             footerContentTop = Math.Max(footerContentTop, row.Y + row.Height);
 
+        foreach (DocxInlineTextBoxLayout box in footerLayout.InlineTextBoxes)
+            footerContentTop = Math.Max(footerContentTop, box.BoxTop);
+
         return footerContentTop;
     }
 
@@ -637,14 +640,17 @@ internal sealed partial class DocxLayoutEngine
                     paragraphSpacingScale,
                     pageNumber,
                     cancellationToken,
-                    sourceParagraphIndex: paragraphIndex);
+                    sourceParagraphIndex: paragraphIndex,
+                    mathEquations: mathEquations);
                 if (textBoxLayout is null)
                 {
                     continue;
                 }
 
                 boxes.Add(textBoxLayout with { Story = DocxStoryId.HeaderOrFooter(isHeader, story.VariantType) });
-                cursorY -= textBoxLayout.BoxHeight + InlineImageParagraphGapPoints;
+                // Paragraph spacing owns separation after a complete box frame.
+                // An extra picture gap would also inflate the footer anchor.
+                cursorY -= textBoxLayout.BoxHeight;
             }
 
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
@@ -656,8 +662,7 @@ internal sealed partial class DocxLayoutEngine
             lines.All(line => line.SingleLineHeight.HasValue || line.LineHeightSource == DocxLineHeightSource.ExactLineSpacing);
         if (!isHeader &&
             (images.Count == 0 || canAnchorInlineImages) &&
-            boxes.Count == 0 &&
-            (tableRows.Count != 0 ||
+            (tableRows.Count != 0 || boxes.Count != 0 ||
              lines.Any(line => line.SingleLineHeight.HasValue || line.LineHeightSource == DocxLineHeightSource.ExactLineSpacing)))
         {
             // Office A/B (w38 default multi-line footer at distance 36, w39 tokened
@@ -669,8 +674,9 @@ internal sealed partial class DocxLayoutEngine
             // proven above) and only translates the block. Measured natural and
             // declared frames share this owner, including affined pictures and
             // their clips. Cell frames join the same block translation, including
-            // nested geometry. Standalone images, textboxes and frames without
-            // resolved metrics retain their separate placement.
+            // nested geometry. Independent textbox frames and their children
+            // share this same trailing-cursor anchor. Standalone images and
+            // text without resolved metrics retain their separate placement.
             double footerShift = startY - (cursorY - pendingSpacingAfter);
             for (int lineIndex = 0; lineIndex < lines.Count; lineIndex++)
             {
@@ -682,6 +688,11 @@ internal sealed partial class DocxLayoutEngine
                 images[imageIndex] = image.Translate(0d, footerShift);
             }
             tableRows = ShiftTableRows(tableRows, footerShift, 0d).ToList();
+            for (int boxIndex = 0; boxIndex < boxes.Count; boxIndex++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                boxes[boxIndex] = ShiftInlineTextBox(boxes[boxIndex], footerShift, 0d);
+            }
         }
 
         return new DocxStaticStoryLayoutResult(lines.ToArray(), images.ToArray(), tableRows.ToArray(), boxes.ToArray(), cursorY, pendingSpacingAfter);

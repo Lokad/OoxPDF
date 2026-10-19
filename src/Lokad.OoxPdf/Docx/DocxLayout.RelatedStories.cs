@@ -2457,11 +2457,11 @@ internal sealed partial class DocxLayoutEngine
 
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            // Direct normal-note paragraphs share ordered measurement and retain
-            // their design-space frame until the common note emission mapping.
-            // Tables and special separator stories keep their existing path.
-            if (story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
-                paragraph.Equations.Count != 0)
+            // Normal notes and independently placed textbox stories share ordered
+            // measurement. Notes retain their common emission mapping; textbox
+            // geometry is shifted once through its existing container frame.
+            if (paragraph.Equations.Count != 0 && (story.Kind == DocxRelatedStoryKind.TextBox ||
+                story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote))
             {
                 double size = GetParagraphFontSize(paragraph);
                 double lineHeight = ResolveLineHeightProfile(paragraph, size, textMeasurer, selectMaxAcrossRuns: true).LineHeight;

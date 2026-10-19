@@ -521,7 +521,7 @@ internal sealed partial class DocxReader
                 }
 
                 AddFieldPlaceholderRun(firstRun, placeholder, fieldSourceRunIndex, revision, kind);
-                foreach (var image in ReadInlineImages(firstRun, package, relationships, revision, fieldSourceRunIndex))
+                foreach (var image in ReadInlineImages(firstRun, package, relationships, revision, fieldSourceRunIndex, cancellationToken))
                     images.Add(revision?.Kind == DocxRevisionKind.Insertion && runs.Count > fieldTextRunIndex
                         ? image with { SourceRunStyle = runs[fieldTextRunIndex] } : image);
                 AddFieldReference(
@@ -735,7 +735,7 @@ internal sealed partial class DocxReader
 
             void AddRunImages()
             {
-                var parsed = ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex);
+                var parsed = ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex, cancellationToken);
                 if (parsed.Count == 0) return;
                 if (revision?.Kind != DocxRevisionKind.Insertion) { images.AddRange(parsed); return; }
                 var style = runs.Count > firstRun ? runs[firstRun] : CreateResolvedTextRun(string.Empty,

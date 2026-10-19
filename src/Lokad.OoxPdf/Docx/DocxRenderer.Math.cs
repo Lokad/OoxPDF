@@ -19,11 +19,15 @@ internal sealed partial class DocxRenderer
         {
             token.ThrowIfCancellationRequested();
             var seen = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
-            foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(part.BodyElements))
-            foreach (DocxEquation equation in paragraph.Equations)
+            foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(part.BodyElements)
+                .SelectMany(paragraph => new[] { paragraph }.Concat(DocxBlockTraversal.EnumerateInlineTextBoxParagraphs(paragraph))))
             {
                 token.ThrowIfCancellationRequested();
-                if (painted.Contains(equation)) { seen.Add(equation); }
+                foreach (DocxEquation equation in paragraph.Equations)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (painted.Contains(equation)) { seen.Add(equation); }
+                }
             }
             if (seen.Count > 0) { paintedByPart[part.PartName] = seen.Count; }
         }
@@ -48,30 +52,35 @@ internal sealed partial class DocxRenderer
 
     private static IEnumerable<DocxEquation> EnumeratePaintedEquations(IEnumerable<DocxLayoutItem> items, CancellationToken token)
     {
-        var rows = new Stack<DocxTableRowLayout>();
-        foreach (DocxLayoutItem item in items)
+        var pending = new Stack<DocxLayoutItem>();
+        foreach (var source in items)
         {
             token.ThrowIfCancellationRequested();
-            if (item is DocxEquationLayout equation) { yield return equation.Math.Equation; }
-            else if (item is DocxTextLineLayout line)
+            pending.Push(source);
+            while (pending.TryPop(out var item))
             {
-                if (line.Math is { } math) yield return math.Equation;
-                foreach (var placement in line.InlineMath) { token.ThrowIfCancellationRequested(); yield return placement.Math.Equation; }
-            }
-            else if (item is DocxTableRowLayout row) { rows.Push(row); }
-        }
-        while (rows.TryPop(out var row))
-        {
-            token.ThrowIfCancellationRequested();
-            foreach (DocxTableCellLayout cell in row.Cells)
-            {
-                foreach (DocxTextLineLayout line in cell.TextLines)
+                token.ThrowIfCancellationRequested();
+                if (item is DocxEquationLayout equation) { yield return equation.Math.Equation; }
+                else if (item is DocxTextLineLayout line)
                 {
-                    token.ThrowIfCancellationRequested();
-                    if (line.Math is { } math) { yield return math.Equation; }
+                    if (line.Math is { } math) yield return math.Equation;
                     foreach (var placement in line.InlineMath) { token.ThrowIfCancellationRequested(); yield return placement.Math.Equation; }
                 }
-                foreach (DocxTableRowLayout nested in cell.NestedRows) { token.ThrowIfCancellationRequested(); rows.Push(nested); }
+                else if (item is DocxInlineTextBoxLayout box)
+                {
+                    foreach (var boxLine in box.TextLines) { token.ThrowIfCancellationRequested(); pending.Push(boxLine); }
+                    foreach (var boxRow in box.TableRows) { token.ThrowIfCancellationRequested(); pending.Push(boxRow); }
+                }
+                else if (item is DocxTableRowLayout row)
+                {
+                    foreach (DocxTableCellLayout cell in row.Cells)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        foreach (var cellLine in cell.TextLines) { token.ThrowIfCancellationRequested(); pending.Push(cellLine); }
+                        foreach (var nestedRow in cell.NestedRows) { token.ThrowIfCancellationRequested(); pending.Push(nestedRow); }
+                        foreach (var cellBox in cell.InlineTextBoxes) { token.ThrowIfCancellationRequested(); pending.Push(cellBox); }
+                    }
+                }
             }
         }
     }
@@ -117,7 +126,9 @@ internal sealed partial class DocxRenderer
         foreach (var owner in DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, token, includePageCountDependencies: true)
             .Select(paragraph => (Paragraph: paragraph, HasPageInputs: true, NeedsFinalCount: true))
             .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, token)
-                .Select(owner => (owner.Paragraph, owner.HasPageInputs, NeedsFinalCount: false))))
+                .Select(owner => (owner.Paragraph, owner.HasPageInputs, NeedsFinalCount: false)))
+            .Concat(DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(document, token)
+                .Select(paragraph => (Paragraph: paragraph, HasPageInputs: false, NeedsFinalCount: false))))
         {
             token.ThrowIfCancellationRequested();
             DocxParagraph paragraph = owner.Paragraph;
