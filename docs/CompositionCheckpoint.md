@@ -1,5 +1,33 @@
 # Composed-document reliability checkpoint
 
+## C322 authored margins own one grid across starting borders (2026-10-20)
+
+Remove the visible-border exclusion from existing authored flowing-margin
+ownership; no new font/width/document-shape rule or inferred border formula.
+Unset margins and signed/style/compatibility/static precedence remain. Shared
+qualification removes its X-exception flag and uses the original1pt gate for
+all unit anchors. Five new source controls equal retained Office input bytes;
+four are within the gate, thick-width24 remains explicitly outside. All seven
+external views retain every geometry axis: six pass, one fails at proseX1.416pt/
+mathX1.476pt. Seven strict pixel failures remain; five fresh raw screens clean.
+Viewed native/Word wide-margin pair shows complete fraction, prose and grid.
+
+One Release artifactc94ac1bd/2,515inputs:29Windows/18Ubuntu/11native-font skips,
+one exact invocation/platform. Three genuine parent regressions fail and pass
+current.19CLI conversions include12 fixed-portfolio PDFs byte-identical to C317;
+reuse12 comparisons and raw screens by identity (ten clean/two cached-field flags).
+No new Office exports, root build, repeated old suite or local package run.
+17assets/two exact integration smokes. Selection includes static/grid/style/
+compatibility, images, memo origins, fragments, solid/double borders and clipping.
+Retained note tables have nil borders and nested controls leave margins unset;
+source reachability avoids replaying their suites. Initial visual orchestration
+referenced an unavailable old pixel report; five completed conversions were
+resumed, never repeated. Create seven fresh comparisons, retain the failed log.
+No failed renderer test/harness repair. Productioned3824fb; evidence
+artifacts/composition-c1/authored-border-margins-evidence.json. Broader/package
+CI closes the shared-contract milestone while ordinary-note/spanning-cell
+composition proceeds. Version0.1.5/release deferral and workspace gap remain.
+
 ## C321 implicit-border offset discrimination (2026-10-20)
 
 Two prospective width-only Final Office controls produce body-relative first
