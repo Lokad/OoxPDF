@@ -9320,5 +9320,31 @@
     "DocxAuthoredIndentPresenceKeepsImplicitAndStaticGridFallbacks",
     "DocxNaturalRowFragmentsKeepIndependentWordBorderCoverage",
     "PortableRenderingNaturalRowFragmentsKeepBorderCoverage"
+  ],
+  "docx-shared-row-end-composition": [
+    "DocxTrailingRowsPreserveIndependentWordSpanningInk",
+    "PortableRenderingTrailingRowsPreserveSpanningSourceInk",
+    "DocxNaturalRowFragmentsKeepIndependentWordBorderCoverage",
+    "PortableRenderingNaturalRowFragmentsKeepBorderCoverage",
+    "DocxParallelCellFramesRetainIndependentWordPagesAndCompleteInk",
+    "PortableRenderingParallelCellFramesKeepCompleteGlyphInk",
+    "DocxParallelCellInsetsRetainWordPagesPaddingAndBoxedMath",
+    "PortableRenderingParallelCellInsetsKeepPaddingContentAndBoxedMath",
+    "DocxParallelCellBoxesRetainIndependentWordMathAndFinalCount",
+    "PortableRenderingParallelCellBoxesKeepMathAndActualCount",
+    "DocxTableSplitFragmentsFitWholeLinesOnly",
+    "DocxTableLayoutStageSplitsTallRowsAcrossPagesByDefault",
+    "DocxTableLayoutStageRepeatsHeaderRowsBeforeSplitRowContinuations",
+    "DocxTableLayoutStageClipsVerticalMergeRestartToSplitRowFragments",
+    "DocxTableLayoutStageCarriesVerticalMergeOwnerAcrossPages",
+    "DocxTableRendererDoesNotDrawRowEdgeBordersAtSplitFragmentBoundaries",
+    "DocxTableLayoutStageKeepsInlineImagesInSplitRowFragments",
+    "DocxReviewTableWidowBoundaryChecksEveryCell",
+    "DocxReviewTableFragmentsPreserveAllWordsWithExplicitWidowControl",
+    "DocxReviewTablePaginationHonorsExplicitKeepAndWidowRules",
+    "DocxTableCellPageFieldsEvaluatePerFragmentPage",
+    "DocxTableCellTextLinesMemoSharesSplitCells",
+    "CellMemoCounterInputs",
+    "DocxSharedHorizontalTableBorderHangsBelowBoundary"
   ]
 }

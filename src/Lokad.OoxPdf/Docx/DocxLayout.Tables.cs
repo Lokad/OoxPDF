@@ -412,7 +412,7 @@ internal sealed partial class DocxLayoutEngine
             if (!row.CantSplit && !nestedMath &&
                 rowHeight > remainingPageHeight &&
                 remainingPageHeight > 0.001d &&
-                CanSplitTableRowAtPageBoundary(row, frame, rowHeight, remainingPageHeight, out double splitPitch,
+                CanSplitTableRowAtPageBoundary(row, frame, rowHeight, remainingPageHeight, isTerminalSourceRow: rowIndex == table.Rows.Count - 1, out double splitPitch,
                     out IReadOnlyList<double> fragmentBoundaries, out var cellFragments))
             {
                 // Complete measured frames own explicit cuts; unknown geometry keeps
@@ -466,7 +466,7 @@ internal sealed partial class DocxLayoutEngine
             return gaps[gaps.Count / 2];
         }
 
-        bool CanSplitTableRowAtPageBoundary(DocxTableRow row, DocxTableLayoutFrame frame, double rowHeight, double firstFragmentHeight,
+        bool CanSplitTableRowAtPageBoundary(DocxTableRow row, DocxTableLayoutFrame frame, double rowHeight, double firstFragmentHeight, bool isTerminalSourceRow,
             out double splitPitch, out IReadOnlyList<double> selectedBoundaries, out IReadOnlyList<DocxCellOwnedRowFragment>? cellFragments)
         {
             splitPitch = 0d;
@@ -609,10 +609,10 @@ internal sealed partial class DocxLayoutEngine
                 return true;
             }
 
-            // Natural occupied frames own cell-specific source consumption. Row maximum
-            // insets reserve shared capacity on every fragment. Structural edges,
-            // changing per-page inputs and incomplete source frames keep
-            // their existing common-boundary policy until that ownership is qualified.
+            // Cells consume natural source frames independently. Exposed solid
+            // page edges reserve space on each continuation; a final shared edge
+            // keeps its collapsed ownership. Unknown structural geometry and
+            // changing per-page inputs retain their common-boundary fallback.
             bool TryResolveCellOwnedFragments(double firstCapacity, double pageHeight,
                 out IReadOnlyList<DocxCellOwnedRowFragment> fragments)
             {
@@ -627,13 +627,14 @@ internal sealed partial class DocxLayoutEngine
                         (DocxFieldText.GetDependencies(GetTableCellLayoutBodyElements(cell), cancellationToken) & DocxCounterDependencies.PageNumber) != 0))
                     return false;
                 var topInsets = row.Cells.Select(cell => rowTopPadding + ResolveTableCellTopBorderContentInset(cell, paragraphSpacingScale)).ToArray();
-                double BottomInset(DocxTableCell cell) => ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, paragraphSpacingScale) +
-                    DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, "bottom")) * paragraphSpacingScale;
-                double rowBottomPadding = row.Cells.Max(BottomInset);
+                double BottomInset(DocxTableCell cell, bool exposed) => ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, paragraphSpacingScale) +
+                    (exposed ? DocxTableBorderGeometry.ResolveVisibleWidth(DocxTableBorderGeometry.Find(cell.Borders, "bottom")) * paragraphSpacingScale : 0d);
+                double continuationBottomInset = row.Cells.Max(cell => BottomInset(cell, exposed: true));
+                double finalBottomInset = row.Cells.Max(cell => BottomInset(cell, exposed: isTerminalSourceRow));
                 // Validate complete natural source frames, including their solid edges.
                 // Shared fragment reservation may exceed a cell's own source end.
                 // Unmatched collapsed/compound geometry keeps the prior fallback.
-                double naturalHeight = laidOutCells.Select((cell, index) => cell.UsedHeight + topInsets[index] + BottomInset(row.Cells[index])).Max();
+                double naturalHeight = laidOutCells.Select((cell, index) => cell.UsedHeight + topInsets[index] + BottomInset(row.Cells[index], exposed: isTerminalSourceRow)).Max();
                 if (Math.Abs(naturalHeight - rowHeight) > .001d) return false;
                 var bounds = new (double Top, double Bottom)[laidOutCells.Count][];
                 for (int cellIndex = 0; cellIndex < laidOutCells.Count; cellIndex++)
@@ -661,6 +662,18 @@ internal sealed partial class DocxLayoutEngine
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (result.Count >= MaxTableRowFragments) return false;
+                    double remainingContentHeight = 0d;
+                    for (int cellIndex = 0; cellIndex < laidOutCells.Count; cellIndex++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var cell = laidOutCells[cellIndex];
+                        if (nextLines[cellIndex] < cell.TextLines.Count)
+                            remainingContentHeight = Math.Max(remainingContentHeight, cell.UsedHeight + topInsets[cellIndex] - starts[cellIndex]);
+                    }
+                    // A complete final fragment shares the following row's edge.
+                    // Earlier page fragments still own the full exposed bottom band.
+                    double rowBottomPadding = remainingContentHeight + finalBottomInset <= capacity + .001d
+                        ? finalBottomInset : continuationBottomInset;
                     double height = 0d;
                     bool more = false;
                     var windows = new DocxCellSourceWindow[laidOutCells.Count];
