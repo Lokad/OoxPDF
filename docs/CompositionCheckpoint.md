@@ -1,5 +1,34 @@
 # Composed-document reliability checkpoint
 
+## C351 fixed-portfolio checkpoint retains twelve exact PDFs (2026-10-20)
+
+One refresh from C3497f2eb473: seven sources/twelve outcomes, all full PDFs exact
+to C328/C341. Reuse12 Office comparisons and prior content screens after checking
+input/PDF/reference/text-operation identities and actual reference page counts.
+Prior raw screens retain their original observer versions; current source auditor
+not rerun, no claim of matching old/current tool hashes. Ten raw screens clean;
+two static-report cached1/field flags remain. Ten DOCX strict pixel gates fail;
+two decks pass. Separate composed-report Review geometry/extraction and off-picture
+raw Word URI discrepancies remain explicit. No new content/pagination/overlap/
+clipping change in identical fixed outputs, no arbitrary fidelity/performance claim.
+Zero library builds/unit suites/Office exports/new rasters. C34933 Windows/26 Ubuntu/
+seven skips retained, not repeated or added to a new count. Evidence
+artifacts/composition-c1/checkpoint-351-evidence.json.
+
+Infrequent scan17.614GB/974,166files/85,945directories, zero errors,41.23s. Loose5GB
+target unmet. Three fresh parent runtimes contain only27 canonical copy files/
+40,917,254logical bytes plus six metadata files. Sources verified byte-for-byte
+against retained frozen artifacts; unique ownership/provenance copied outside.
+Automatic approval review rejected recursive deletion before process creation as
+"blocked by policy". Zero files removed/bytes reclaimed. Keep these targets and
+do not retry deletion, movement, archiving or overwrite: inline-picture-links-
+parent-runtime, static-picture-links-parent-runtime, note-picture-links-parent-runtime.
+Exact paths in c351-parent-runtime-retirement-rejected.json; inventory/provenance
+retained in c351-parent-runtime-retirement-inventory.json/c351-retired-parent-provenance/.
+Earlier protected targets remain protected. C348CI39377405082 green Windows/Ubuntu
+including broader/package. C349-C351 push together; bounded semantic eligibility
+maintenance follows while CI runs. Version0.1.5/release preparation deferred.
+
 ## C350 mixed-footnote navigation holdout retains complete parent content (2026-10-20)
 
 Add only canonical picture clicks to the linked mixed-footnote report. Reuse C349
