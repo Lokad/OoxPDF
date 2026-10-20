@@ -1,5 +1,23 @@
 # Composed-document reliability checkpoint
 
+## C334 paragraph-start limit discriminates continuation admission (2026-10-20)
+
+Change only section bottom margin72-to90pt. Word Final lifts the box13pt, stopping
+at first-line picture/paragraph top696.91998, with bottom756.91998 and5pt tail
+beyond drawing cut751.91998. Review confirms top628.90198, matching the picture,
+and bottom674.13000. Parent image/text stay fixed. Both declared simple models
+fail: neither an18pt viewport-only lift nor fixed baseline placement matches.
+Retain those rejected predictions and original failed geometry gates.
+
+Inference for C335: admit an atomic frame toward its containing drawing viewport,
+capped by the measured paragraph start; clip any tail that cannot fit. No fixed
+offset/font/count branch. Validate original18pt/30pt wrapped, fitting-width,
+body/header/standalone controls and explicit-break/missing-owner/complex fallback
+from one frozen artifact before accepting. Two CLI/two Office exports, zero
+library builds/tests/new raster views; two raw screens clean and two strict gates
+failed. Source3cbafb32/goldda280623; evidence artifacts/composition-c1/
+footer-wrapped-margin-review-evidence.json. Version0.1.5/release deferred.
+
 ## C333 bounded picture/box sibling-frame discrimination (2026-10-20)
 
 Two source-preserving transformations: picture18-to30pt and table300-to440pt.
