@@ -104,7 +104,7 @@ internal static class PdfContentValidator
         {
             if (state.LuminosityGroupName is not { } name) { continue; }
             names ??= new HashSet<string>(groups.Select(group => PdfEmbeddedFont.SanitizeName(group.ResourceName)), StringComparer.Ordinal);
-            if (state.SoftMask is not null || !names.Contains(PdfEmbeddedFont.SanitizeName(name)))
+            if (!names.Contains(PdfEmbeddedFont.SanitizeName(name)))
             {
                 throw new InvalidDataException("PDF vector soft masks require a single local transparency group resource.");
             }

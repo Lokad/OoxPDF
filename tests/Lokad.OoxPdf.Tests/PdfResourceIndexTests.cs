@@ -36,21 +36,6 @@ internal static class PdfResourceIndexTests
         TestAssert.Equal(first + 1 + (second - first), graphics.ExtGStates.Count);
     }
 
-    public static void SoftMaskEpsilonSemanticsPreserved()
-    {
-        var graphics = new PdfGraphicsBuilder();
-        PdfImageXObject pixels = PdfImageXObject.Jpeg(2, 1, [1, 2, 3], 3, 8);
-        var mask = new PdfLuminositySoftMask(pixels, 0d, 0d, 10d, 10d, 0d, 0d, 0d, 0d);
-        graphics.SetLuminositySoftMask(mask, 0.5d, 1d);
-        TestAssert.Equal(1, graphics.ExtGStates.Count);
-        graphics.SetLuminositySoftMask(mask, 0.5d, 1d);
-        TestAssert.Equal(1, graphics.ExtGStates.Count);
-        graphics.SetLuminositySoftMask(mask, 0.5d + 0.0000005d, 1d);
-        TestAssert.Equal(1, graphics.ExtGStates.Count);
-        graphics.SetLuminositySoftMask(mask, 0.5d + 0.000002d, 1d);
-        TestAssert.Equal(2, graphics.ExtGStates.Count);
-    }
-
     public static void StateIndexesRollBackWithContent()
     {
         var graphics = new PdfGraphicsBuilder();

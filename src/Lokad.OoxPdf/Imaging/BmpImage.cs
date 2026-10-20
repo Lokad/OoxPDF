@@ -1,31 +1,7 @@
 namespace Lokad.OoxPdf.Imaging;
 
-internal sealed class BmpImage
+internal static class BmpImage
 {
-    private BmpImage(int width, int height, byte[] rgb, byte[]? alpha)
-    {
-        Width = width;
-        Height = height;
-        Rgb = rgb;
-        Alpha = alpha;
-    }
-
-    public int Width { get; }
-
-    public int Height { get; }
-
-    public byte[] Rgb { get; }
-
-    public byte[]? Alpha { get; }
-
-    // Q01: cooperative cancellation inside the pixel loop (see PngImage.Read).
-
-    public static BmpImage Read(byte[] bytes, CancellationToken cancellationToken = default)
-    {
-        using DecodedPixels owned = ReadOwned(bytes, cancellationToken);
-        return new BmpImage(owned.Width, owned.Height, owned.Rgb, owned.Alpha);
-    }
-
     public static DecodedPixels ReadOwned(byte[] bytes, CancellationToken cancellationToken = default)
     {
         if (bytes.Length < 54 || bytes[0] != (byte)'B' || bytes[1] != (byte)'M')

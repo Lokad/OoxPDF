@@ -19,7 +19,6 @@ internal sealed class PdfGraphicsBuilder
     // lookups replace per-call linear scans so distinct-state registration is O(1);
     // TruncateContent rebuilds them so rolled-back entries never dangle.
     private readonly Dictionary<string, int> extGStateIndex = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, List<int>> softMaskIndex = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> shadingIndex = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> patternIndex = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> shadingPatternIndex = new(StringComparer.Ordinal);
@@ -54,7 +53,7 @@ internal sealed class PdfGraphicsBuilder
         string groupName = RegisterTransparencyGroup(child, bounds);
         string stateName = "GSV" + (extGStates.Count + 1).ToString(CultureInfo.InvariantCulture);
         extGStateIndex[stateName] = extGStates.Count;
-        extGStates.Add(new PdfExtGStateResource(stateName, Math.Clamp(fillAlpha, 0d, 1d), Math.Clamp(strokeAlpha, 0d, 1d), null, groupName));
+        extGStates.Add(new PdfExtGStateResource(stateName, Math.Clamp(fillAlpha, 0d, 1d), Math.Clamp(strokeAlpha, 0d, 1d), groupName));
         builder.Append('/').Append(stateName).AppendLine(" gs");
     }
 
@@ -175,40 +174,9 @@ internal sealed class PdfGraphicsBuilder
         if (!extGStateIndex.TryGetValue(resourceName, out _))
         {
             extGStateIndex[resourceName] = extGStates.Count;
-            extGStates.Add(new PdfExtGStateResource(resourceName, fillAlpha, strokeAlpha, null));
+            extGStates.Add(new PdfExtGStateResource(resourceName, fillAlpha, strokeAlpha));
         }
 
-        builder.Append('/').Append(resourceName).AppendLine(" gs");
-    }
-
-    public void SetLuminositySoftMask(PdfLuminositySoftMask mask, double fillAlpha, double strokeAlpha)
-    {
-        fillAlpha = Math.Clamp(fillAlpha, 0d, 1d);
-        strokeAlpha = Math.Clamp(strokeAlpha, 0d, 1d);
-        string resourceName = "GSM" + (extGStates.Count + 1).ToString(CultureInfo.InvariantCulture);
-        if (softMaskIndex.TryGetValue(mask.ResourceKey, out List<int>? softMaskCandidates))
-        {
-            foreach (int softMaskCandidate in softMaskCandidates)
-            {
-                PdfExtGStateResource state = extGStates[softMaskCandidate];
-                if (Math.Abs(state.FillAlpha - fillAlpha) < 0.000001d &&
-                    Math.Abs(state.StrokeAlpha - strokeAlpha) < 0.000001d)
-                {
-                    builder.Append('/').Append(state.ResourceName).AppendLine(" gs");
-                    return;
-                }
-            }
-        }
-
-        extGStateIndex[resourceName] = extGStates.Count;
-        if (!softMaskIndex.TryGetValue(mask.ResourceKey, out List<int>? softMaskBucket))
-        {
-            softMaskBucket = [];
-            softMaskIndex[mask.ResourceKey] = softMaskBucket;
-        }
-
-        softMaskBucket.Add(extGStates.Count);
-        extGStates.Add(new PdfExtGStateResource(resourceName, fillAlpha, strokeAlpha, mask));
         builder.Append('/').Append(resourceName).AppendLine(" gs");
     }
 
@@ -679,7 +647,6 @@ internal sealed class PdfGraphicsBuilder
     private void RebuildResourceIndexes()
     {
         extGStateIndex.Clear();
-        softMaskIndex.Clear();
         shadingIndex.Clear();
         patternIndex.Clear();
         shadingPatternIndex.Clear();
@@ -701,16 +668,6 @@ internal sealed class PdfGraphicsBuilder
         {
             PdfExtGStateResource state = extGStates[i];
             extGStateIndex[state.ResourceName] = i;
-            if (state.SoftMask is not null)
-            {
-                if (!softMaskIndex.TryGetValue(state.SoftMask.ResourceKey, out List<int>? bucket))
-                {
-                    bucket = [];
-                    softMaskIndex[state.SoftMask.ResourceKey] = bucket;
-                }
-
-                bucket.Add(i);
-            }
         }
     }
     public override string ToString()

@@ -237,12 +237,6 @@ internal sealed class PdfDocumentWriter
             WriteShadingObject(writer, shading, numbers.ShadingObjects[shading.ResourceKey]);
         }
 
-        foreach (PdfLuminositySoftMask softMask in plan.SoftMasks)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            WriteLuminositySoftMaskObject(writer, softMask, numbers.SoftMaskObjects[softMask.ResourceKey], numbers.ImageObjects);
-        }
-
         foreach (PdfTilingPattern pattern in plan.Patterns)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -405,11 +399,7 @@ internal sealed class PdfDocumentWriter
                 {
                     builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(state.ResourceName));
                     builder.Append(CultureInfo.InvariantCulture, $" << /ca {FormatNumber(state.FillAlpha)} /CA {FormatNumber(state.StrokeAlpha)}");
-                    if (state.SoftMask is not null)
-                    {
-                        builder.Append(CultureInfo.InvariantCulture, $" /SMask << /S /Luminosity /G {numbers.SoftMaskObjects[state.SoftMask.ResourceKey]} 0 R >>");
-                    }
-                    else if (state.LuminosityGroupName is { } name)
+                    if (state.LuminosityGroupName is { } name)
                     {
                         maskGroups ??= groups.ToDictionary(resource => PdfEmbeddedFont.SanitizeName(resource.ResourceName), resource => resource.Group, StringComparer.Ordinal);
                         PdfTransparencyGroup group = maskGroups[PdfEmbeddedFont.SanitizeName(name)];
@@ -604,38 +594,6 @@ internal sealed class PdfDocumentWriter
         }
     }
 
-    private static void WriteLuminositySoftMaskObject(
-        PdfObjectWriter writer,
-        PdfLuminositySoftMask softMask,
-        int objectNumber,
-        IReadOnlyDictionary<string, ImageObjectNumbers> imageObjects)
-    {
-        ImageObjectNumbers image = imageObjects[softMask.Image.ResourceKey];
-        string content = BuildLuminositySoftMaskContent();
-        byte[] contentBytes = Encoding.ASCII.GetBytes(content);
-        writer.WriteObject(objectNumber, FormattableString.Invariant(
-            $"<< /Type /XObject /Subtype /Form /BBox [{FormatNumber(softMask.X)} {FormatNumber(softMask.Y)} {FormatNumber(softMask.X + softMask.Width)} {FormatNumber(softMask.Y + softMask.Height)}] /Group << /S /Transparency /CS /DeviceRGB >> /Resources << /XObject << /ImMask {image.Image} 0 R >> >> /Length {contentBytes.Length} >>\nstream\n{content}endstream\n"));
-
-        string BuildLuminositySoftMaskContent()
-        {
-            double visibleWidth = Math.Max(0.001d, 1d - softMask.CropLeft - softMask.CropRight);
-            double visibleHeight = Math.Max(0.001d, 1d - softMask.CropTop - softMask.CropBottom);
-            double scaledWidth = softMask.Width / visibleWidth;
-            double scaledHeight = softMask.Height / visibleHeight;
-            double imageX = softMask.X - softMask.CropLeft * scaledWidth;
-            double imageY = softMask.Y - softMask.CropBottom * scaledHeight;
-            var builder = new StringBuilder();
-            builder.AppendLine("q");
-            builder.Append(FormatNumber(softMask.X)).Append(' ').Append(FormatNumber(softMask.Y)).Append(' ');
-            builder.Append(FormatNumber(softMask.Width)).Append(' ').Append(FormatNumber(softMask.Height)).AppendLine(" re W n");
-            builder.Append(FormatNumber(scaledWidth)).Append(" 0 0 ").Append(FormatNumber(scaledHeight)).Append(' ');
-            builder.Append(FormatNumber(imageX)).Append(' ').Append(FormatNumber(imageY)).AppendLine(" cm");
-            builder.AppendLine("/ImMask Do");
-            builder.AppendLine("Q");
-            return builder.ToString();
-        }
-    }
-
     private static void WriteTilingPatternObject(
         PdfObjectWriter writer,
         PdfTilingPattern pattern,
@@ -783,7 +741,6 @@ internal sealed class PdfDocumentWriter
         IReadOnlyList<PdfFallbackFont> FallbackFonts,
         IReadOnlyList<PdfImageXObject> Images,
         IReadOnlyList<PdfShading> Shadings,
-        IReadOnlyList<PdfLuminositySoftMask> SoftMasks,
         IReadOnlyList<PdfTilingPattern> Patterns,
         IReadOnlyList<PdfShadingPattern> ShadingPatterns,
         IReadOnlyList<PdfTransparencyGroup> Groups);
@@ -793,7 +750,6 @@ internal sealed class PdfDocumentWriter
         IReadOnlyDictionary<string, FallbackFontObjectNumbers> FallbackFontObjects,
         IReadOnlyDictionary<string, ImageObjectNumbers> ImageObjects,
         IReadOnlyDictionary<string, int> ShadingObjects,
-        IReadOnlyDictionary<string, int> SoftMaskObjects,
         IReadOnlyDictionary<string, int> PatternObjects,
         IReadOnlyDictionary<string, int> ShadingPatternObjects,
         IReadOnlyDictionary<PdfTransparencyGroup, int> GroupObjects,
@@ -830,9 +786,7 @@ internal sealed class PdfDocumentWriter
         List<PdfImageXObject> images = DeduplicateImages(pages
             .SelectMany(p => p.Images
                 .Select(i => i.Image)
-                .Concat(p.ExtGStates.Select(s => s.SoftMask?.Image).OfType<PdfImageXObject>())
-                .Concat(p.Patterns.SelectMany(pattern => pattern.Pattern.Images.Select(image => image.Image))))
-                .Concat(groups.SelectMany(group => group.ExtGStates.Select(state => state.SoftMask?.Image).OfType<PdfImageXObject>())),
+                .Concat(p.Patterns.SelectMany(pattern => pattern.Pattern.Images.Select(image => image.Image)))),
             static image => image.ResourceKey,
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
@@ -853,14 +807,7 @@ internal sealed class PdfDocumentWriter
             .Concat(groups.SelectMany(group => group.ShadingPatterns.Select(pattern => pattern.Pattern)))
             .DistinctBy(pattern => pattern.ResourceKey, StringComparer.Ordinal)
             .ToList();
-        List<PdfLuminositySoftMask> softMasks = pages
-            .SelectMany(p => p.ExtGStates)
-            .Concat(groups.SelectMany(group => group.ExtGStates))
-            .Select(s => s.SoftMask).OfType<PdfLuminositySoftMask>()
-            .DistinctBy(s => s.ResourceKey)
-            .ToList();
-
-        return new PdfDocumentPlan(fonts, fallbackFonts, images, shadings, softMasks, patterns, shadingPatterns, groups);
+        return new PdfDocumentPlan(fonts, fallbackFonts, images, shadings, patterns, shadingPatterns, groups);
     }
 
 
@@ -908,15 +855,7 @@ internal sealed class PdfDocumentWriter
             shadingObjects[plan.Shadings[i].ResourceKey] = shadingObjectBase + i;
         }
 
-        int softMaskObjectBase = shadingObjectBase + plan.Shadings.Count;
-        var softMaskObjects = new Dictionary<string, int>(StringComparer.Ordinal);
-        for (int i = 0; i < plan.SoftMasks.Count; i++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            softMaskObjects[plan.SoftMasks[i].ResourceKey] = softMaskObjectBase + i;
-        }
-
-        int patternObjectBase = softMaskObjectBase + plan.SoftMasks.Count;
+        int patternObjectBase = shadingObjectBase + plan.Shadings.Count;
         var patternObjects = new Dictionary<string, int>(StringComparer.Ordinal);
         for (int i = 0; i < plan.Patterns.Count; i++)
         {
@@ -961,7 +900,7 @@ internal sealed class PdfDocumentWriter
             objectCount = nextAnnotationObject - 1;
         }
 
-        return new PdfDocumentNumbers(fontObjects, fallbackFontObjects, imageObjects, shadingObjects, softMaskObjects, patternObjects, shadingPatternObjects, groupObjects, annotationObjectsByPage, objectCount, infoObjectNumber);
+        return new PdfDocumentNumbers(fontObjects, fallbackFontObjects, imageObjects, shadingObjects, patternObjects, shadingPatternObjects, groupObjects, annotationObjectsByPage, objectCount, infoObjectNumber);
     }
     private readonly record struct FontObjectNumbers(int Type0, int CidFont, int Descriptor, int FontFile, int ToUnicode);
 

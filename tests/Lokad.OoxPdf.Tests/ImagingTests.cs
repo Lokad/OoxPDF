@@ -15,9 +15,9 @@ internal static class ImagingTests
         TestAssert.Throws<OperationCanceledException>(
             () => OoxImageDecoder.Decode("image/png", png, static rgb => rgb, cancelled.Token));
         TestAssert.Throws<OperationCanceledException>(
-            () => PngImage.Read(png, cancelled.Token));
+            () => PngImage.ReadOwned(png, cancelled.Token));
         TestAssert.Throws<OperationCanceledException>(
-            () => BmpImage.Read(TestFixtures.CreateRgbBmp(64, 64, new byte[64 * 64 * 3]), cancelled.Token));
+            () => BmpImage.ReadOwned(TestFixtures.CreateRgbBmp(64, 64, new byte[64 * 64 * 3]), cancelled.Token));
 
         Pdf.PdfImageXObject image = OoxImageDecoder.Decode("image/png", png, static rgb => rgb, CancellationToken.None);
         TestAssert.Equal(256, image.Width);
@@ -190,7 +190,7 @@ internal static class ImagingTests
         byte[] jpeg = Convert.FromBase64String(
             "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAIDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD+Rb4g/wDI++N/+xv8S/8Ap5vaKKK/7o/An/kyHg3/ANmq8PP/AFkcoPyHxn/5PD4r/wDZyuOv/WozQ//Z");
 
-        JpegImage image = JpegImage.Read(jpeg);
+        using DecodedPixels image = JpegImage.ReadOwned(jpeg);
 
         TestAssert.Equal(2, image.Width);
         TestAssert.Equal(1, image.Height);
@@ -207,7 +207,7 @@ internal static class ImagingTests
             [255, 0, 0, 0, 0, 255],
             [0, 1]);
 
-        PngImage image = PngImage.Read(png);
+        using DecodedPixels image = PngImage.ReadOwned(png);
 
         TestAssert.Equal(2, image.Width);
         TestAssert.Equal(1, image.Height);
@@ -223,7 +223,7 @@ internal static class ImagingTests
             [0, 0, 0, 255, 0, 0, 0, 255, 0],
             [0, 1, 2, 1]);
 
-        PngImage image = PngImage.Read(png);
+        using DecodedPixels image = PngImage.ReadOwned(png);
 
         TestAssert.True(image.Rgb.SequenceEqual(new byte[] { 0, 0, 0, 255, 0, 0, 0, 255, 0, 255, 0, 0 }), "Packed indexed PNG samples should expand to RGB pixels.");
     }
@@ -232,7 +232,7 @@ internal static class ImagingTests
     {
         byte[] png = TestFixtures.CreateGrayscalePng(3, 1, [0, 128, 255]);
 
-        PngImage image = PngImage.Read(png);
+        using DecodedPixels image = PngImage.ReadOwned(png);
 
         TestAssert.True(image.Rgb.SequenceEqual(new byte[] { 0, 0, 0, 128, 128, 128, 255, 255, 255 }), "Grayscale PNG samples should expand to RGB pixels.");
     }
@@ -256,7 +256,7 @@ internal static class ImagingTests
         ];
         byte[] png = TestFixtures.CreateInterlacedRgbaPng(4, 3, rgba);
 
-        PngImage image = PngImage.Read(png);
+        using DecodedPixels image = PngImage.ReadOwned(png);
 
         TestAssert.Equal(4, image.Width);
         TestAssert.Equal(3, image.Height);
@@ -282,7 +282,7 @@ internal static class ImagingTests
     {
         byte[] bmp = TestFixtures.CreateRgbBmp(2, 1, [255, 0, 0, 0, 0, 255]);
 
-        BmpImage image = BmpImage.Read(bmp);
+        using DecodedPixels image = BmpImage.ReadOwned(bmp);
 
         TestAssert.Equal(2, image.Width);
         TestAssert.Equal(1, image.Height);
@@ -294,7 +294,7 @@ internal static class ImagingTests
     {
         byte[] bmp = TestFixtures.CreateRgbaBmp(1, 2, [255, 0, 0, 128, 0, 0, 255, 64]);
 
-        BmpImage image = BmpImage.Read(bmp);
+        using DecodedPixels image = BmpImage.ReadOwned(bmp);
 
         TestAssert.Equal(1, image.Width);
         TestAssert.Equal(2, image.Height);
@@ -304,7 +304,7 @@ internal static class ImagingTests
     public static void RejectsPngLyingDimensions()
     {
         byte[] png = BuildPng(100000, 100000, 8, 2, 0);
-        TestAssert.Throws<InvalidDataException>(() => PngImage.Read(png));
+        TestAssert.Throws<InvalidDataException>(() => PngImage.ReadOwned(png));
     }
 
     public static void RejectsPngChunkBeyondEndOfData()
@@ -312,7 +312,7 @@ internal static class ImagingTests
         var bytes = new List<byte> { 137, 80, 78, 71, 13, 10, 26, 10 };
         WritePngChunk(bytes, "IHDR", new byte[] { 0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0 });
         WritePngChunkHeaderOnly(bytes, "IDAT", 1000000);
-        TestAssert.Throws<InvalidDataException>(() => PngImage.Read(bytes.ToArray()));
+        TestAssert.Throws<InvalidDataException>(() => PngImage.ReadOwned(bytes.ToArray()));
     }
 
     public static void RejectsJpegLyingDimensions()
@@ -327,19 +327,19 @@ internal static class ImagingTests
 
         bytes.Add(0xFF);
         bytes.Add(0xD9);
-        TestAssert.Throws<InvalidDataException>(() => JpegImage.Read(bytes.ToArray()));
+        TestAssert.Throws<InvalidDataException>(() => JpegImage.ReadOwned(bytes.ToArray()));
     }
 
     public static void RejectsBmpLyingDimensions()
     {
         byte[] bmp = BuildBmpHeader(100000, 1, 24);
-        TestAssert.Throws<InvalidDataException>(() => BmpImage.Read(bmp));
+        TestAssert.Throws<InvalidDataException>(() => BmpImage.ReadOwned(bmp));
     }
 
     public static void RejectsBmpMinimumHeight()
     {
         byte[] bmp = BuildBmpHeader(1, int.MinValue, 24);
-        TestAssert.Throws<InvalidDataException>(() => BmpImage.Read(bmp));
+        TestAssert.Throws<InvalidDataException>(() => BmpImage.ReadOwned(bmp));
     }
 
     public static void PngStoredBlocksDecodeToIdenticalPixels()
@@ -348,7 +348,7 @@ internal static class ImagingTests
         // (uncompressed) deflate rows must expand to the same pixels.
         byte[] payload = [0, 10, 20, 30, 40, 50, 60, 0, 70, 80, 90, 100, 110, 120];
         byte[] png = BuildStoredPng(2, 2, 8, 2, 0, payload);
-        PngImage image = PngImage.Read(png);
+        using DecodedPixels image = PngImage.ReadOwned(png);
         TestAssert.True(image.Rgb.SequenceEqual(new byte[] { 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120 }), "Stored-deflate rows must decode to identical pixels.");
     }
 
@@ -358,7 +358,7 @@ internal static class ImagingTests
         // (not render garbage), preserving the crop-fallback contract.
         byte[] payload = [0, 10, 20, 30, 40, 50, 60];
         byte[] png = BuildStoredPng(2, 2, 8, 2, 0, payload);
-        TestAssert.Throws<IndexOutOfRangeException>(() => PngImage.Read(png));
+        TestAssert.Throws<IndexOutOfRangeException>(() => PngImage.ReadOwned(png));
     }
 
     public static void PngTruncatedRowSpanThrowsArgumentOutOfRange()
@@ -367,14 +367,14 @@ internal static class ImagingTests
         // fail (not render garbage), preserving the crop-fallback contract.
         byte[] payload = [0, 10, 20, 30, 40, 50, 60, 0, 70, 80, 90];
         byte[] png = BuildStoredPng(2, 2, 8, 2, 0, payload);
-        TestAssert.Throws<ArgumentOutOfRangeException>(() => PngImage.Read(png));
+        TestAssert.Throws<ArgumentOutOfRangeException>(() => PngImage.ReadOwned(png));
     }
 
     public static void PngInterlacedTruncatedSpanThrowsArgumentOutOfRange()
     {
         byte[] payload = [0, 10, 20, 30];
         byte[] png = BuildStoredPng(1, 1, 8, 6, 1, payload);
-        TestAssert.Throws<ArgumentOutOfRangeException>(() => PngImage.Read(png));
+        TestAssert.Throws<ArgumentOutOfRangeException>(() => PngImage.ReadOwned(png));
     }
 
     public static void OwnedPixelsReleasePlanesOnDispose()
@@ -580,7 +580,7 @@ internal static class ImagingTests
     {
         byte[] png = BuildStoredPng(3, 2, 8, 0, 0,
             [0, 0, 128, 255, 0, 255, 128, 0], transparency: [0, 128], splitIdat: true);
-        PngImage image = PngImage.Read(png);
+        using DecodedPixels image = PngImage.ReadOwned(png);
         TestAssert.True(image.Rgb.SequenceEqual(new byte[]
             { 0, 0, 0, 128, 128, 128, 255, 255, 255, 255, 255, 255, 128, 128, 128, 0, 0, 0 }), "Gray pixels remain exact.");
         TestAssert.True(image.Alpha is not null && image.Alpha.SequenceEqual(new byte[] { 255, 0, 255, 255, 0, 255 }), "Gray tRNS remains exact.");

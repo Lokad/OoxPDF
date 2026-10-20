@@ -5,7 +5,6 @@ namespace Lokad.OoxPdf.Fonts;
 internal sealed class PresentationFontResolver
 {
     private readonly IFontResolver primary;
-    private readonly WindowsFontResolver windowsCatalog;
     private readonly IFontCatalog fontCatalog;
     // T01: program identity is an ordinal (StableId, FaceIndex) tuple. StableIds are
     // opaque resolver-scoped identities and must not be case-normalized (matching the
@@ -25,8 +24,7 @@ internal sealed class PresentationFontResolver
     public PresentationFontResolver(IFontResolver? primary)
     {
         this.primary = primary ?? new WindowsFontResolver();
-        windowsCatalog = this.primary as WindowsFontResolver ?? new WindowsFontResolver();
-        fontCatalog = this.primary as IFontCatalog ?? windowsCatalog;
+        fontCatalog = this.primary as IFontCatalog ?? new WindowsFontResolver();
     }
 
     public FontFaceResolution Resolve(FontRequest request)

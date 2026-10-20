@@ -1,3 +1,3 @@
 namespace Lokad.OoxPdf.Pdf;
 
-internal readonly record struct PdfExtGStateResource(string ResourceName, double FillAlpha, double StrokeAlpha, PdfLuminositySoftMask? SoftMask, string? LuminosityGroupName = null);
+internal readonly record struct PdfExtGStateResource(string ResourceName, double FillAlpha, double StrokeAlpha, string? LuminosityGroupName = null);

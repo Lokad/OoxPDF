@@ -43,11 +43,6 @@ internal sealed class JpegImage
 
     public byte[] Rgb { get; }
 
-    public static JpegImage Read(byte[] bytes, CancellationToken cancellationToken = default)
-    {
-        using DecodedPixels owned = ReadOwned(bytes, cancellationToken);
-        return new JpegImage(owned.Width, owned.Height, owned.Rgb);
-    }
     public static DecodedPixels ReadOwned(byte[] bytes, CancellationToken cancellationToken = default)
     {
         var decoder = new Decoder(bytes, cancellationToken);

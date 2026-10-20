@@ -349,16 +349,13 @@ internal static class PdfTransparencyGroupTests
         TestAssert.True(resident.AsSpan().SequenceEqual(output.ToArray()), "Spilled mask references and content must retain bytes.");
     }
 
-    public static void VectorSoftMasksRejectForeignOrAmbiguousBindingsBeforeOutput()
+    public static void VectorSoftMasksRejectForeignBindingsBeforeOutput()
     {
         var local = new PdfTransparencyGroup(Bounds, "0 g\n", [], [], []);
-        var image = PdfImageXObject.RgbPng(1, 1, [0, 0, 0], null);
-        var imageMask = new PdfLuminositySoftMask(image, 0, 0, 100, 100, 0, 0, 0, 0);
         foreach (PdfPage page in new[]
         {
-            new PdfPage(100, 100, "/GS1 gs\n", [], [], [new("GS1", 1, 1, null, "Foreign")], [], [], [], groups: [new("Tr1", local)]),
-            new PdfPage(100, 100, "/GS1 gs\n", [], [], [new("GS1", 1, 1, imageMask, "Tr1")], [], [], [], groups: [new("Tr1", local)]),
-            GroupPage(new PdfTransparencyGroup(Bounds, "/GS1 gs\n", [new("GS1", 1, 1, null, "Tr1")], [], []))
+            new PdfPage(100, 100, "/GS1 gs\n", [], [], [new("GS1", 1, 1, "Foreign")], [], [], [], groups: [new("Tr1", local)]),
+            GroupPage(new PdfTransparencyGroup(Bounds, "/GS1 gs\n", [new("GS1", 1, 1, "Tr1")], [], []))
         })
         {
             using var output = new MemoryStream();
@@ -630,7 +627,7 @@ internal static class PdfTransparencyGroupTests
     {
         var mask = new PdfTransparencyGroup(Bounds, string.Concat(Enumerable.Repeat("0 g\n", 40_000)), [], [], []);
         reference = new WeakReference(mask);
-        return new PdfPage(100, 100, "/GS1 gs\n0 0 100 100 re f\n", [], [], [new("GS1", 1, 1, null, "Tr1")], [], [], [], groups: [new("Tr1", mask)]);
+        return new PdfPage(100, 100, "/GS1 gs\n0 0 100 100 re f\n", [], [], [new("GS1", 1, 1, "Tr1")], [], [], [], groups: [new("Tr1", mask)]);
     }
 
     private static PdfRectangle Bounds => new(0, 0, 100, 100);

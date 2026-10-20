@@ -26,12 +26,6 @@ internal sealed class PngImage
 
     public byte[]? Alpha { get; }
 
-    public static PngImage Read(byte[] bytes, CancellationToken cancellationToken = default)
-    {
-        using DecodedPixels owned = ReadOwned(bytes, cancellationToken);
-        return new PngImage(owned.Width, owned.Height, owned.Rgb, owned.Alpha);
-    }
-
     public static DecodedPixels ReadOwned(byte[] bytes, CancellationToken cancellationToken = default)
     {
         if (bytes.Length < Signature.Length || !bytes.AsSpan(0, Signature.Length).SequenceEqual(Signature))
