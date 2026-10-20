@@ -65,11 +65,12 @@ def measure_images(path):
             for index, page in enumerate(pdf) for item in page.get_image_info()]
 
 
-def measure_uri_links(path, target=None):
+def measure_uri_links(path, targets=None):
+    targets = None if targets is None else set(targets)
     with pymupdf.open(path) as pdf:
         return [{'Page': index + 1, 'Uri': item['uri'], 'Rect': list(item['from'])}
             for index, page in enumerate(pdf) for item in page.get_links()
-            if item.get('uri') is not None and (target is None or item['uri'] == target)]
+            if item.get('uri') is not None and (targets is None or item['uri'] in targets)]
 
 
 def measure_note_rules(path):
@@ -237,7 +238,11 @@ def main():
                 result['Failures'].append('OffPageImage')
         expected_prose = row.get('WordProseAnchors', [])
         if 'WordLinks' in row:
-            links = measure_uri_links(path, row.get('TargetUri'))
+            targets = row.get('TargetUris')
+            if 'TargetUri' in row:
+                if targets is not None: raise ValueError('Use one target selection representation')
+                targets = [row['TargetUri']]
+            links = measure_uri_links(path, targets)
             result['NativeLinks'] = links
             expected_links = row['WordLinks']
             native_by_target, word_by_target = {}, {}
