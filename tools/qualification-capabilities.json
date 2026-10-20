@@ -1,4 +1,14 @@
 {
+  "docx-static-svg-frames": [
+    "DocxStaticSvgFrames",
+    "PortableRenderingStaticSvgFrames",
+    "DocxSvg",
+    "DocxPictureCrop",
+    "DocxPictureFlip",
+    "DocxPictureRotation",
+    "DocxInlineImageClipTravelsWithScaledStoryPlacement",
+    "DocxTablePictureRotationSharesTheAlignedCellContentClip"
+  ],
   "docx-static-picture-only-frames": [
     "DocxStaticPictureOnly",
     "PortableRenderingStaticPictureOnly",

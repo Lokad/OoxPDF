@@ -73,6 +73,25 @@ def measure_uri_links(path, targets=None):
             if item.get('uri') is not None and (targets is None or item['uri'] in targets)]
 
 
+def measure_colored_paths(path, colors):
+    """Authored source colors identify path bounds, not their clipped visible ink."""
+    if len(set(colors)) != len(colors) or any(len(color) != 6 or any(c not in '0123456789ABCDEF' for c in color) for color in colors):
+        raise ValueError('Use distinct six-digit uppercase source colors')
+    with pymupdf.open(path) as pdf:
+        result = []
+        for index, page in enumerate(pdf):
+            for drawing in page.get_drawings():
+                if drawing['fill'] is None:
+                    continue
+                color = ''.join(f'{round(value * 255):02X}' for value in drawing['fill'])
+                if color in colors:
+                    rect = drawing['rect']
+                    if not all(math.isfinite(value) for value in rect) or rect.width <= 0 or rect.height <= 0:
+                        raise ValueError('Source-colored path bounds must be finite and positive')
+                    result.append({'Page': index + 1, 'FillHex': color, 'Rect': list(rect), 'InsidePage': rect in page.rect})
+        return result
+
+
 def measure_note_rules(path):
     with pymupdf.open(path) as pdf:
         return [{'Page': index + 1, 'Rect': list(item['rect'])}
@@ -236,6 +255,19 @@ def main():
                     if result['MaxImage' + axis + 'Error'] >= 1.]
             if any(not item['InsidePage'] for item in images):
                 result['Failures'].append('OffPageImage')
+        if 'WordColoredPaths' in row:
+            expected_paths = row['WordColoredPaths']
+            paths = measure_colored_paths(path, sorted({item['FillHex'] for item in expected_paths}))
+            result['NativeColoredPaths'] = paths
+            if len(paths) != len(expected_paths) or any((a['Page'], a['FillHex']) != (e['Page'], e['FillHex']) for a, e in zip(paths, expected_paths)):
+                result['Failures'].append('ColoredPathCountOrSourceOrder')
+            elif expected_paths:
+                result['MaxColoredPathRectError'] = max(abs(a - e) for actual, expected in zip(paths, expected_paths)
+                    for a, e in zip(actual['Rect'], expected['Rect']))
+                if result['MaxColoredPathRectError'] >= 1.:
+                    result['Failures'].append('ColoredPathGeometry')
+            if any(not item['InsidePage'] for item in paths):
+                result['Failures'].append('OffPageColoredPath')
         expected_prose = row.get('WordProseAnchors', [])
         if 'WordLinks' in row:
             targets = row.get('TargetUris')

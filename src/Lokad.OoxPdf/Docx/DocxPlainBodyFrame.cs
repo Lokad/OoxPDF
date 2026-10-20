@@ -78,8 +78,7 @@ internal static class DocxPlainBodyFrame
 
     private static bool IsPlainStaticImage(DocxInlineImage image) =>
         image.SourceRunIndex >= 0 && image.RotationDegrees == 0d &&
-        image.Revisions.Count == 0 && image.RasterFallback is null &&
-        !image.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase) &&
+        image.Revisions.Count == 0 &&
         double.IsFinite(image.WidthPoints) && double.IsFinite(image.HeightPoints) &&
         image.WidthPoints > 0d && image.HeightPoints > 0d;
 

@@ -12,6 +12,12 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxPassiveStaticBodyTests
 {
+    public static void DocxStaticSvgFramesPreserveIndependentWordBodyBaselines()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent static SVG origins require installed Windows fonts.");
+        CheckBodyBaselines(null, compareWord: true, "minimum-static-svg-frames-office.json");
+    }
+
     public static void DocxStaticPictureOnlyFontsMeasureUnpaintedParagraphMarks()
     {
         var document = DocxTests.ReadDocx(Case("CompositionProbes/minimum-static-picture-header-large-mark.docx"), OoxPdfDocxMarkupMode.Final);
@@ -82,11 +88,11 @@ internal static class DocxPassiveStaticBodyTests
             foreach (var unsupported in new[] { intrusive, image with { Y = double.NaN }, image with { Width = double.PositiveInfinity },
                 image with { Story = null }, image with { X = -1d }, image with { Image = image.Image with { RotationDegrees = 30d } },
                 image with { Image = image.Image with { SourceRunIndex = -1 } },
-                image with { Image = image.Image with { ContentType = "image/svg+xml" } } })
+                image with { Height = 0d } })
             {
                 var changed = layout with { Pages = [page with { StaticInlineImages = [unsupported] }] };
                 TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(document, changed, out var fallback) && ReferenceEquals(changed, fallback),
-                    "Intrusive, nonfinite, unowned, rotated and vector frames retain the existing fallback.");
+                    "Intrusive, nonfinite, empty, unowned and rotated frames retain the existing fallback.");
             }
             TestAssert.True(!DocxPlainBodyFrame.IsEligible(document, layout with { FooterContentTopByPage = new Dictionary<int, double>() }),
                 "Picture-only stories still require measured container bounds.");
@@ -224,6 +230,11 @@ internal static class DocxPassiveStaticBodyTests
                     .RenderBlankPages(DocxTests.ReadDocx(path, mode), null, default).ToArray();
                 if (path == input && row.TryGetProperty("ExpectedInlineImageCount", out var count))
                     TestAssert.Equal(count.GetInt32(), pages.Sum(page => page.Images.Count));
+                if (path == input && row.TryGetProperty("ExpectedVectorPaint", out var vector) && vector.GetBoolean())
+                {
+                    TestAssert.Equal(0, pages.Sum(page => page.Images.Count));
+                    TestAssert.Contains("0 0.667 0.4 rg", pages.Single().Content);
+                }
                 if (path == input && comparePictures)
                 {
                     var page = pages.Single();
