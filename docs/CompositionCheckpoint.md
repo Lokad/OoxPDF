@@ -1,5 +1,36 @@
 # Composed-document reliability checkpoint
 
+## C339 complete cell-owned outline envelopes (2026-10-20)
+
+Complete frames inside an unmerged cell/lower drawing viewport get an outline-only
+half-stroke envelope. Child/ancestor clips remain exact; partial, merged,
+fragmented and uncertain frames keep conservative clipping. Fourteen fitted Word
+pairs pass original.01pt edge gates; four partial projections unchanged, max
+.039979pt residual. All30 original geometry outcomes pass;30 prior text streams
+exact.14 raw screens carried by input/operations/auditor/page/diagnostic/reference
+identities.32 strict visual failures retained. Viewed native/Word body frames
+show full outlines; projection/text operations do not prove arbitrary ink.
+
+One library compilation; frozen5e6480c3/2,540inputs. Initial test tuple compile
+failure fixed with tests/CLI-only builds. New assertion fails by2.842e-14pt
+roundoff; correct its1e-9pt tolerance and rebuild tests without references.
+38-method repaired join preserves14runtime assets and2,540inputs; two disjoint
+compound checks add40Windows/28Ubuntu/12native skips.41method attempts/three
+exact invocations per platform; no fresh-total/full-selection replay claim.
+Compound selector/directory preflight failures also retained, no tests in those
+attempts. Future capability includes all40 methods in one invocation.
+
+32CLI outputs/six exact comparisons reused/zero Office exports.17assets/two exact
+transfer smokes, no root build or fixed12/suite/package replay. Fixed12 source
+carry; mixed report freshly keeps expected content/Word three pages in both modes.
+Review bodyY1.440002/mathY1.117004/imageY1.192017/separator1.125pt and cached1/
+fldChar/fldSimple audit flags remain failed/unresolved. No Office-to-candidate
+prose/simple-math deficit. No layout/API/resource/native-code change.
+Productiondef3ee42; evidence artifacts/composition-c1/inline-box-envelope-
+evidence.json. C337CI39368042050 running. Next prioritize a finite remaining
+composition counterexample over more subpoint paint tuning. Version0.1.5/release
+deferred; loose5GB workspace target remains unmet.
+
 ## C338 enclosing cell/drawing clip review (2026-10-20)
 
 Eighteen retained native/Word pairs separate14 fitted views with no Word outline
