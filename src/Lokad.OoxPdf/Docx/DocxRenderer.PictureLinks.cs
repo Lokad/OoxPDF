@@ -4,7 +4,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
-    private static IEnumerable<PdfLinkAnnotation> CreateInlinePictureAnnotations(DocxLayoutPage page,
+    private static IEnumerable<PdfLinkAnnotation> CreateInlinePictureAnnotations(DocxLayoutPage page, IReadOnlyList<DocxLayoutItem> staticItems,
         IReadOnlyList<PdfImageResource> resources, IReadOnlyDictionary<string, PdfImageXObject?> imageCache,
         DocxMarkupContext context, CancellationToken token)
     {
@@ -28,7 +28,7 @@ internal sealed partial class DocxRenderer
 
         IEnumerable<(DocxInlineImageLayout Image, PdfRectangle Clip)> EnumerateImages()
         {
-            foreach (var item in page.Items)
+            foreach (var item in staticItems.Concat(page.Items))
             {
                 token.ThrowIfCancellationRequested();
                 if (item is DocxInlineImageLayout image && image.Image.ClickTarget is not null)

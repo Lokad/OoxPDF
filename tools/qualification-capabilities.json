@@ -1,4 +1,13 @@
 {
+  "docx-static-picture-links": [
+    "DocxStaticPictureLinks",
+    "PortableRenderingStaticPictureLinksRetainComposedFrames",
+    "DocxStaticStoryInlineImagesShareTheTextBaseline",
+    "DocxStaticStoryDeclaredFramesClipInlineImages",
+    "DocxInlineImageClipTravelsWithScaledStoryPlacement",
+    "DocxComposedInlineFrameReportRetainsIndependentWordPagesAndContent",
+    "PortableRenderingComposedInlineFrameReportRetainsRepeatedStaticOwners"
+  ],
   "docx-inline-picture-links": [
     "DocxInlinePictureLinks",
     "PortableRenderingInlinePictureLinksFollowVisibleFrames",

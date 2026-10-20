@@ -1287,7 +1287,7 @@ internal sealed partial class DocxRenderer
                 imageCache, ref imageIndex,
                 layoutPage.Height);
 
-            IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, pageIndex, pageNumber, layout.Pages.Count, pageImages);
+            IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, pageIndex, pageNumber, layout.Pages.Count, pageImages, staticItems);
             string content = graphics.ToString();
             // RV11: admit the emitted content bytes before yielding, so a small
             // content budget rejects before the writer encodes or stores the page.
@@ -1450,7 +1450,7 @@ internal sealed partial class DocxRenderer
         }
 
         IReadOnlyList<PdfLinkAnnotation> CreateHyperlinkAnnotations(DocxLayoutPage page, int pageIndex, int pageNumber, int pageCount,
-            IReadOnlyList<PdfImageResource> paintedImages)
+            IReadOnlyList<PdfImageResource> paintedImages, IReadOnlyList<DocxLayoutItem> staticItems)
         {
             var annotations = new List<PdfLinkAnnotation>();
             // Ordinary body paragraphs carry reference-qualified printed line boxes.
@@ -1637,7 +1637,7 @@ internal sealed partial class DocxRenderer
                 EmitLineLinkRects(previousLineLinks, previousLineTop, Math.Min(previousLineBottomFallback, previousPaintedMathBottom));
             }
 
-            annotations.AddRange(CreateInlinePictureAnnotations(page, paintedImages, imageCache, markupContext, cancellationToken));
+            annotations.AddRange(CreateInlinePictureAnnotations(page, staticItems, paintedImages, imageCache, markupContext, cancellationToken));
             annotations.AddRange(CreateNoteReferenceAnnotations(page, pageNumber, pageCount, fontResources,
                 markupContext, noteDestinations, noteSpacingParagraphs, cancellationToken));
             return annotations;
