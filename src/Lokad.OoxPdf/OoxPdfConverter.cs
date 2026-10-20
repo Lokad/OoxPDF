@@ -1,7 +1,9 @@
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
+using System.Runtime.ExceptionServices;
 
 namespace Lokad.OoxPdf;
 
@@ -116,6 +118,7 @@ public static class OoxPdfConverter
 
         OoxPdfInputKind inputKind = DetectInputKind(inputPath, options.InputKind);
         cancellationToken.ThrowIfCancellationRequested();
+        Action<OoxPdfDiagnostic>? diagnosticSink = ProtectDiagnosticSink(options.DiagnosticSink);
 
         // one explicitly scoped conversion budget per Convert call.
         // Totals are snapshotted before publication; the summary below emits before the
@@ -149,7 +152,7 @@ public static class OoxPdfConverter
                     // content past the resident window and retaining only descriptors.
                     using (FileStream output = File.Create(stagingPath))
                     {
-                        PdfDocumentWriter.WriteStaged(output, RenderPages(input, inputKind, options, cancellationToken), options.ConversionLimits ?? new OoxConversionLimits(), options.DiagnosticSink, cancellationToken, options.FixedCreationDate);
+                        PdfDocumentWriter.WriteStaged(output, RenderPages(input, inputKind, options, diagnosticSink, cancellationToken), options.ConversionLimits ?? new OoxConversionLimits(), diagnosticSink, cancellationToken, options.FixedCreationDate);
                     }
                     totals = scope.Budget.Totals;
                     pageCount = checked((int)totals.PdfPages);
@@ -157,8 +160,14 @@ public static class OoxPdfConverter
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            ReportResourceUsage(options, totals, pageCount);
+            ReportResourceUsage(options, diagnosticSink, totals, pageCount);
+            cancellationToken.ThrowIfCancellationRequested();
             File.Move(stagingPath, outputPath, overwrite: true);
+        }
+        catch (DiagnosticObserverException ex)
+        {
+            ExceptionDispatchInfo.Capture(ex.InnerException!).Throw();
+            throw;
         }
         finally
         {
@@ -213,26 +222,48 @@ public static class OoxPdfConverter
         cancellationToken.ThrowIfCancellationRequested();
 
         OoxPdfInputKind inputKind = RequireExplicitInputKind(options.InputKind);
+        Action<OoxPdfDiagnostic>? diagnosticSink = ProtectDiagnosticSink(options.DiagnosticSink);
         using IDisposable? memoryAdmission = AcquireMemoryAdmission(options, cancellationToken);
         OoxConversionTotals totals;
-        // R06.1: like the file path, the scope stays open through serialization and
-        // output chunks admit incrementally during WriteBlank; the
-        // summary still reports pre-write totals (writer-stage fields stay zero here)
-        // so a throwing observer leaves stream output untouched (R20), unlike the
-        // file path which snapshots after serialization into its staging file.
-        using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits))
+        // Stage before reporting: a failing summary observer leaves the stream empty.
+        // Serialization still admits output chunks incrementally; later failures may
+        // leave a prefix in the caller-owned output stream.
+        try
         {
-            // R06.3: produce (drain, spill, blank) first so the totals snapshot and the
-            // observer report still precede serialization, preserving the stream rules;
-            // emission follows from staging.
-            using (PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPages(RenderPages(input, inputKind, options, cancellationToken), options.ConversionLimits ?? new OoxConversionLimits(), options.DiagnosticSink, cancellationToken))
+            using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits))
             {
-                totals = scope.Budget.Totals;
-                cancellationToken.ThrowIfCancellationRequested();
-                ReportResourceUsage(options, totals, checked((int)scope.Budget.PdfPages));
-                PdfDocumentWriter.EmitStaged(output, staged, cancellationToken, options.FixedCreationDate);
+                // R06.3: produce (drain, spill, blank) first so the totals snapshot and the
+                // observer report still precede serialization, preserving the stream rules;
+                // emission follows from staging.
+                using (PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPages(RenderPages(input, inputKind, options, diagnosticSink, cancellationToken), options.ConversionLimits ?? new OoxConversionLimits(), diagnosticSink, cancellationToken))
+                {
+                    totals = scope.Budget.Totals;
+                    cancellationToken.ThrowIfCancellationRequested();
+                    ReportResourceUsage(options, diagnosticSink, totals, checked((int)scope.Budget.PdfPages));
+                    PdfDocumentWriter.EmitStaged(output, staged, cancellationToken, options.FixedCreationDate);
+                }
             }
         }
+        catch (DiagnosticObserverException ex)
+        {
+            ExceptionDispatchInfo.Capture(ex.InnerException!).Throw();
+            throw;
+        }
+    }
+
+    // Document-recovery filters must never mistake a caller failure for malformed
+    // content. Keep this marker conversion-local and restore the original exception
+    // at the public boundary, including its identity and callback stack.
+    private sealed class DiagnosticObserverException(Exception cause) : Exception(null, cause);
+
+    private static Action<OoxPdfDiagnostic>? ProtectDiagnosticSink(Action<OoxPdfDiagnostic>? sink)
+    {
+        if (sink is null) { return null; }
+        return diagnostic =>
+        {
+            try { sink(diagnostic); }
+            catch (Exception ex) { throw new DiagnosticObserverException(ex); }
+        };
     }
 
     private static IDisposable? AcquireMemoryAdmission(OoxPdfOptions options, CancellationToken cancellationToken)
@@ -253,15 +284,15 @@ public static class OoxPdfConverter
         }
     }
 
-    private static void ReportResourceUsage(OoxPdfOptions options, OoxConversionTotals totals, int pageCount)
+    private static void ReportResourceUsage(OoxPdfOptions options, Action<OoxPdfDiagnostic>? diagnosticSink, OoxConversionTotals totals, int pageCount)
     {
         if (options.ReportResourceUsage)
         {
-            options.DiagnosticSink?.Invoke(totals.ToSummaryDiagnostic(pageCount));
+            diagnosticSink?.Invoke(totals.ToSummaryDiagnostic(pageCount));
         }
     }
 
-    private static IEnumerable<PdfPage> RenderPages(Stream input, OoxPdfInputKind inputKind, OoxPdfOptions options, CancellationToken cancellationToken)
+    private static IEnumerable<PdfPage> RenderPages(Stream input, OoxPdfInputKind inputKind, OoxPdfOptions options, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPackage package = OoxPackage.Open(input, cancellationToken);
@@ -269,8 +300,8 @@ public static class OoxPdfConverter
 
         return inputKind switch
         {
-            OoxPdfInputKind.Pptx => new PptxRenderer(options.FontResolver).RenderPages(new PptxReader().Read(package, cancellationToken, options.DiagnosticSink), package, options.DiagnosticSink, cancellationToken),
-            OoxPdfInputKind.Docx => new DocxRenderer(options.FontResolver, options.DocxMarkupMode, options.DocxMarkupGeometryMode).RenderBlankPages(new DocxReader().Read(package, options.DiagnosticSink, cancellationToken, options.DocxMarkupMode), options.DiagnosticSink, cancellationToken),
+            OoxPdfInputKind.Pptx => new PptxRenderer(options.FontResolver).RenderPages(new PptxReader().Read(package, cancellationToken, diagnosticSink), package, diagnosticSink, cancellationToken),
+            OoxPdfInputKind.Docx => new DocxRenderer(options.FontResolver, options.DocxMarkupMode, options.DocxMarkupGeometryMode).RenderBlankPages(new DocxReader().Read(package, diagnosticSink, cancellationToken, options.DocxMarkupMode), diagnosticSink, cancellationToken),
             _ => throw new NotSupportedException($"Unsupported input kind '{inputKind}'.")
         };
     }
