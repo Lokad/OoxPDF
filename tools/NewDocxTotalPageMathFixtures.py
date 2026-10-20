@@ -27,6 +27,7 @@ probes.add_argument('--parallel-cell-box-inset-probe', action='store_true')
 probes.add_argument('--parallel-cell-border-probes', action='store_true')
 probes.add_argument('--parallel-cell-trailing-row-probe', action='store_true')
 probes.add_argument('--boxed-inset-trailing-row-probe', action='store_true')
+probes.add_argument('--parallel-cell-footnote-probe', action='store_true')
 args = parser.parse_args()
 sha = lambda value: hashlib.sha256(value).hexdigest().upper()
 
@@ -40,6 +41,84 @@ def publish(jobs):
             stage.replace(target)
         else:
             assert target.read_bytes() == data, target.name
+
+
+if args.parallel_cell_footnote_probe:
+    parent = json.loads((cases / 'parallel-cell-boxed-tail-probe.json').read_text())[0]
+    original = (root / parent['Input']).read_bytes()
+    assert sha(original) == parent['Sha256']
+    with ZipFile(BytesIO(original)) as archive:
+        infos = archive.infolist()
+        parts = {entry.filename: archive.read(entry.filename) for entry in infos}
+    assert 'word/footnotes.xml' not in parts
+    tree = E.fromstring(parts['word/document.xml'])
+    source_document = E.tostring(tree)
+    references = [(1, 'Left source row 54.', 'Left continuation note: public source text stays complete.'),
+                  (2, 'Right source row 111.', 'Right final-page note: public source text stays complete.')]
+    added = []
+    for note_id, label, _ in references:
+        matches = [p for p in tree.iter(w + 'p') if ''.join(t.text or '' for t in p.iter(w + 't')) == label]
+        assert len(matches) == 1
+        run = E.SubElement(matches[0], w + 'r')
+        properties = E.SubElement(run, w + 'rPr')
+        E.SubElement(properties, w + 'rFonts', {w + 'ascii': 'Calibri', w + 'hAnsi': 'Calibri'})
+        E.SubElement(properties, w + 'sz', {w + 'val': '20'})
+        E.SubElement(properties, w + 'vertAlign', {w + 'val': 'superscript'})
+        E.SubElement(run, w + 'footnoteReference', {w + 'id': str(note_id)})
+        added.append((matches[0], run))
+    parts['word/document.xml'] = E.tostring(tree, encoding='utf-8', xml_declaration=True)
+    for paragraph, run in added: paragraph.remove(run)
+    assert E.tostring(tree) == source_document
+    footnotes = E.Element(w + 'footnotes')
+    for note_id, kind in [(-1, 'separator'), (0, 'continuationSeparator')]:
+        note = E.SubElement(footnotes, w + 'footnote', {w + 'id': str(note_id), w + 'type': kind})
+        E.SubElement(E.SubElement(E.SubElement(note, w + 'p'), w + 'r'), w + kind)
+    for note_id, _, text in references:
+        note = E.SubElement(footnotes, w + 'footnote', {w + 'id': str(note_id)})
+        paragraph = E.SubElement(note, w + 'p')
+        properties = E.SubElement(paragraph, w + 'pPr')
+        E.SubElement(properties, w + 'spacing', {w + 'before': '0', w + 'after': '0', w + 'line': '240', w + 'lineRule': 'auto'})
+        for content in [None, ' ' + text]:
+            run = E.SubElement(paragraph, w + 'r')
+            properties = E.SubElement(run, w + 'rPr')
+            E.SubElement(properties, w + 'rFonts', {w + 'ascii': 'Calibri', w + 'hAnsi': 'Calibri'})
+            E.SubElement(properties, w + 'sz', {w + 'val': '18'})
+            if content is None:
+                E.SubElement(properties, w + 'vertAlign', {w + 'val': 'superscript'})
+                E.SubElement(run, w + 'footnoteRef')
+            else:
+                E.SubElement(run, w + 't', {'{http://www.w3.org/XML/1998/namespace}space': 'preserve'}).text = content
+    parts['word/footnotes.xml'] = E.tostring(footnotes, encoding='utf-8', xml_declaration=True)
+    relationships = E.fromstring(parts['word/_rels/document.xml.rels'])
+    rel = '{http://schemas.openxmlformats.org/package/2006/relationships}'
+    assert not any(item.get('Id') == 'rParallelCellFootnotes' for item in relationships)
+    E.SubElement(relationships, rel + 'Relationship', {'Id': 'rParallelCellFootnotes',
+        'Type': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes', 'Target': 'footnotes.xml'})
+    parts['word/_rels/document.xml.rels'] = E.tostring(relationships, encoding='utf-8', xml_declaration=True)
+    types = E.fromstring(parts['[Content_Types].xml'])
+    E.SubElement(types, '{http://schemas.openxmlformats.org/package/2006/content-types}Override',
+        {'PartName': '/word/footnotes.xml', 'ContentType': 'application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml'})
+    parts['[Content_Types].xml'] = E.tostring(types, encoding='utf-8', xml_declaration=True)
+    buffer = BytesIO()
+    with ZipFile(buffer, 'w') as archive:
+        for entry in infos: archive.writestr(copy.copy(entry), parts[entry.filename])
+        info = ZipInfo('word/footnotes.xml', (2026, 10, 20, 0, 0, 0))
+        info.compress_type = ZIP_DEFLATED
+        archive.writestr(info, parts['word/footnotes.xml'])
+    data = buffer.getvalue()
+    row = copy.deepcopy(parent)
+    identifier = 'parallel-cell-boxed-inset-notes'
+    row.update(Id=identifier, Input='tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/' + identifier + '.docx',
+        Sha256=sha(data), CompositionParentInput=parent['Input'], CompositionParentSha256=parent['Sha256'],
+        SourceWithoutNoteReferencesSha256=sha(source_document), ExpectedFootnoteCount=2,
+        FootnoteSourceAnchors=[dict(Id=i, SourceLabel=label, Text=text) for i, label, text in references],
+        ExpectedText=parent['ExpectedText'] + [text for _, _, text in references],
+        Change='Add two ordinary notes at independent long-cell continuation/final anchors; removing only reference runs recovers the complete accepted document XML. Boxed equation/count, margins, shading and tail remain source-exact.')
+    row.pop('UnchangedFirstRowSha256', None)
+    manifest = (json.dumps([row], indent=2) + '\n').replace('\n', '\r\n').encode()
+    publish([(cases / (identifier + '.docx'), data), (cases / 'parallel-cell-footnote-probe.json', manifest)])
+    print('Parallel boxed/inset/tail plus ordinary-note control verified; source recovered exactly without reference runs.')
+    raise SystemExit(0)
 
 
 if args.boxed_inset_trailing_row_probe:
