@@ -1,0 +1,2 @@
+# Fixture identity is byte-based: check out the exact Git bytes on every platform.
+tests/Lokad.OoxPdf.Tests/Cases/** -text

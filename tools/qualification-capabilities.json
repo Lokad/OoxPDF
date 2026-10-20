@@ -8659,7 +8659,7 @@
     "WritesJpegImageColorSpaceFromFrameMetadata",
     "WritesLinkAnnotations",
     "WritesMultipleBlankPagesWithPageSizes",
-    "WritesOpenEvenOddClippingOperators",
+    "WritesEvenOddClippingOperators",
     "WritesPct70WeaveBlockTilingPattern",
     "WritesScaledTilingPatternMatrix",
     "WritesSingleBlankPagePdfStructure",
@@ -9643,5 +9643,16 @@
     "DocxTableLayoutStageRepeatsHeaderRowsBeforeSplitRowContinuations",
     "DocxTableLayoutStageClipsVerticalMergeRestartToSplitRowFragments",
     "DocxInlineCompositionNoteTablesRetainComplexCellAndStoryFallbacks"
+  ],
+  "library-observer-outcomes": [
+    "OverflowPreservesErrorSeverity",
+    "ThrowingSummaryCallbackLeavesFileDestinationUntouched",
+    "ThrowingSummaryCallbackLeavesStreamOutputEmpty",
+    "FilePublicationFailureCleansStaging",
+    "RecoverableDiagnosticExceptionsPreserveFileAndOriginalFailure",
+    "RecoverableDiagnosticExceptionsLeaveStreamEmpty",
+    "DiagnosticCancellationPreservesCallerToken",
+    "DiagnosticCallbacksCanRunNestedConversionsWithoutAffectingRecovery",
+    "FinalSummaryCancellationPreventsPublication"
   ]
 }

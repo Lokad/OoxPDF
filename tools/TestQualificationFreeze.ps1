@@ -25,13 +25,14 @@ Invoke-Git @('config', 'user.email', 'qualification@example.invalid')
 Invoke-Git @('config', 'core.autocrlf', 'false')
 if ($IsWindows) { Invoke-Git @('config', 'core.longpaths', 'true') }
 @('bin/', 'artifacts/') | Set-Content -LiteralPath (Join-Path $repo '.gitignore')
+Copy-Item -LiteralPath (Join-Path (Split-Path $PSScriptRoot) '.gitattributes') -Destination $repo
 $inputPath = 'tests/Lokad.OoxPdf.Tests/Cases/sample.txt'
 $inputFile = Join-Path $repo $inputPath
 New-Item -ItemType Directory -Path (Split-Path $inputFile) -Force | Out-Null
-'first fixture' | Set-Content -LiteralPath $inputFile
+[IO.File]::WriteAllText($inputFile, "first fixture`n")
 $nested = Join-Path (Split-Path $inputFile) 'nested/second.txt'
 New-Item -ItemType Directory -Path (Split-Path $nested) -Force | Out-Null
-'nested fixture' | Set-Content -LiteralPath $nested
+[IO.File]::WriteAllText($nested, "nested fixture`n")
 foreach ($project in @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests')) {
     $directory = Join-Path $repo ($project + '/bin/Release/net10.0')
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
@@ -131,7 +132,11 @@ try { & $parentScript @parentArguments | Out-Null }
 catch { if (!$_.Exception.Message.Contains('unowned existing')) { throw }; $parentRejected = $true }
 if (!$parentRejected -or (Get-FileHash -LiteralPath $frozenInput).Hash -ne $frozenHash) { throw 'Frozen parent output was not rejected without writes' }
 $worktree = Join-Path $repo 'artifacts/worktree'
+Invoke-Git @('config', 'core.autocrlf', 'true')
 Invoke-Git @('worktree', 'add', '--quiet', '--detach', $worktree, 'HEAD')
+if ((Get-FileHash -LiteralPath (Join-Path $worktree $inputPath)).Hash -ne (Get-FileHash -LiteralPath $inputFile).Hash) {
+    throw 'Verbatim public fixtures changed under autocrlf checkout'
+}
 foreach ($project in @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests')) {
     $relative = $project + '/bin/Release/net10.0'
     New-Item -ItemType Directory -Path (Join-Path $worktree $relative) -Force | Out-Null
@@ -225,7 +230,7 @@ Copy-Item -LiteralPath $inputFile -Destination $damaged -Force
 'stale CLI library' | Set-Content -LiteralPath (Join-Path $repo 'src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.dll')
 Reject 'mixed' 'Release library copies differ'
 [ordered]@{
-    Checks=@('Shared unchanged fixture tree', 'Frozen runner input link', 'Linked worktree reuse', 'Dirty source rejection',
+    Checks=@('Shared unchanged fixture tree', 'Frozen runner input link', 'Linked worktree reuse', 'Verbatim autocrlf checkout', 'Dirty source rejection',
         'Changed fixture isolation', 'Cross-tree ownership isolation', 'Corrupt copy rejection',
         'Independent prior-tree corruption isolation', 'Failed staging cleanup', 'Concurrent publication cleanup',
         'Corrupt snapshot rejection', 'Mixed library rejection',
@@ -235,4 +240,4 @@ Reject 'mixed' 'Release library copies differ'
     LibraryBuilds=0;LibraryTestRuns=0;First=$first;Second=$second;Changed=$changed
     SharedInputPathLength=$changedNested.Length
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json') -Encoding utf8
-Write-Output 'Nineteen fixture-freeze/asset/parent-ownership checks passed; no library build or test-suite replay.'
+Write-Output 'Twenty fixture-freeze/asset/parent-ownership checks passed; no library build or test-suite replay.'
