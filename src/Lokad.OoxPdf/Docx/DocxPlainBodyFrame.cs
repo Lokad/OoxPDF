@@ -16,29 +16,30 @@ internal static class DocxPlainBodyFrame
         !document.Paragraphs.Any(p => p.KeepRules.KeepNext == true || p.KeepRules.KeepLines == true) &&
         (HasNoStaticStories(document)
             ? !layout.Pages.Any(p => p.StaticTextLines.Count != 0 || p.StaticInlineImages.Count != 0)
-            : HasIndependentStaticTextLayout(layout));
+            : HasIndependentStaticLayout(layout));
 
     internal static bool IsEligible(DocxDocument document, DocxLayout layout) =>
         HasPlainBody(document) && HasSingleLineLayout(document, layout);
 
-    // A measured text story wholly inside its margin does not own the body's
+    // A measured story wholly inside its margin does not own the body's
     // line metrics. Rich, unsupported, intrusive and unmeasured stories keep the
     // previous fallback; annotation lanes retain their scaled frame policy.
-    private static bool HasIndependentStaticTextLayout(DocxLayout layout)
+    private static bool HasIndependentStaticLayout(DocxLayout layout)
     {
         if (layout.Pages.Count == 0 || layout.StaticFloatingDrawings.Count != 0) return false;
         var validatedSources = new HashSet<(DocxPageSettings, string)>();
         for (int index = 0; index < layout.Pages.Count; index++)
         {
             var page = layout.Pages[index];
-            if (page.MarkupMarginReservePoints != 0d || page.StaticInlineImages.Count != 0 ||
+            if (page.MarkupMarginReservePoints != 0d ||
                 page.StaticTableRows.Count != 0 || page.StaticInlineTextBoxes.Count != 0 ||
                 !layout.HeaderContentBottomByPage.TryGetValue(index, out double headerBottom) ||
                 !layout.FooterContentTopByPage.TryGetValue(index, out double footerTop) ||
                 double.IsNaN(headerBottom) || double.IsNaN(footerTop) ||
                 headerBottom < page.Height - page.MarginTop || footerTop > page.MarginBottom ||
                 page.StaticTextLines.Any(line => line.Story?.Kind is not (DocxStoryKind.Header or DocxStoryKind.Footer) ||
-                    line.SourceParagraph is not { } paragraph || !IsPlainStaticText(paragraph))) return false;
+                    line.SourceParagraph is not { } paragraph || !IsPlainStaticContent(paragraph)) ||
+                page.StaticInlineImages.Any(image => !IsIndependentMarginImage(image, page))) return false;
             var settings = page.PageSettings;
             string variant = DocxLayoutEngine.GetStaticStoryVariant(settings, index + 1);
             if (validatedSources.Add((settings, variant)))
@@ -51,25 +52,41 @@ internal static class DocxPlainBodyFrame
                     settings.FooterBodyElementsByType, settings.FooterParagraphsByType);
                 var headerDrawings = settings.HeaderFloatingDrawingsByType.GetValueOrDefault(variant, []);
                 var footerDrawings = settings.FooterFloatingDrawingsByType.GetValueOrDefault(variant, []);
-                if (!HasPlainStaticTextSource(header.Concat(footer), headerDrawings.Concat(footerDrawings))) return false;
+                if (!HasPlainStaticSource(header.Concat(footer), headerDrawings.Concat(footerDrawings))) return false;
             }
         }
         return true;
     }
 
-    private static bool HasPlainStaticTextSource(IEnumerable<DocxBodyElement> elements,
+    private static bool HasPlainStaticSource(IEnumerable<DocxBodyElement> elements,
         IEnumerable<DocxFloatingDrawing> drawings) =>
         !drawings.Any() && elements.All(element =>
-            element is DocxParagraphElement paragraph && IsPlainStaticText(paragraph.Paragraph) &&
+            element is DocxParagraphElement paragraph && IsPlainStaticContent(paragraph.Paragraph) &&
             DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph.Paragraph, element.Revisions));
 
-    private static bool IsPlainStaticText(DocxParagraph paragraph) =>
-        HasPlainTextProperties(paragraph) && HasAutomaticLineFlow(paragraph) && paragraph.InlineReferences.Count == 0 &&
+    private static bool IsPlainStaticContent(DocxParagraph paragraph) =>
+        HasPlainTextProperties(paragraph, allowImages: true) && HasAutomaticLineFlow(paragraph) && paragraph.InlineReferences.Count == 0 &&
+        paragraph.Images.All(IsPlainStaticImage) &&
         // PAGE/NUMPAGES already receive page inputs during static measurement.
         // Reuse their source/placeholder contract; arbitrary cached fields do
         // not gain admission merely because their current result is text.
         paragraph.FieldReferences.All(field => field.Kind.IsDynamic()) &&
         DocxInlineContent.HasSourceFieldResults(paragraph.FieldReferences, paragraph.Runs);
+
+    private static bool IsPlainStaticImage(DocxInlineImage image) =>
+        image.SourceRunIndex >= 0 && image.RotationDegrees == 0d &&
+        image.Revisions.Count == 0 && image.RasterFallback is null &&
+        !image.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase) &&
+        double.IsFinite(image.WidthPoints) && double.IsFinite(image.HeightPoints) &&
+        image.WidthPoints > 0d && image.HeightPoints > 0d;
+
+    private static bool IsIndependentMarginImage(DocxInlineImageLayout image, DocxLayoutPage page) =>
+        IsPlainStaticImage(image.Image) &&
+        double.IsFinite(image.X) && double.IsFinite(image.Y) &&
+        double.IsFinite(image.Width) && double.IsFinite(image.Height) && image.Width > 0d && image.Height > 0d &&
+        image.X >= 0d && image.X + image.Width <= page.Width && image.Y >= 0d && image.Y + image.Height <= page.Height &&
+        (image.Story?.Kind == DocxStoryKind.Header && image.Y >= page.Height - page.MarginTop ||
+         image.Story?.Kind == DocxStoryKind.Footer && image.Y + image.Height <= page.MarginBottom);
 
     internal static bool IsEligible(DocxDocument document) =>
         HasPlainBody(document) && (HasNoStaticStories(document) || HasNoSelectableStaticStories(document));
@@ -131,8 +148,8 @@ internal static class DocxPlainBodyFrame
     internal static bool HasPlainTextContent(DocxParagraph p) =>
         p.FieldReferences.Count == 0 && HasPlainTextProperties(p);
 
-    private static bool HasPlainTextProperties(DocxParagraph p) =>
-        p.Images.Count == 0 && p.InlineTextBoxes.Count == 0 && p.Equations.Count == 0 &&
+    private static bool HasPlainTextProperties(DocxParagraph p, bool allowImages = false) =>
+        (allowImages || p.Images.Count == 0) && p.InlineTextBoxes.Count == 0 && p.Equations.Count == 0 &&
         p.CommentRanges.Count == 0 && DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(p, p.Revisions) &&
         p.RevisionRanges.Count == 0 && !p.HasDeletedParagraphMark && p.DeletedText.Length == 0 &&
         p.ListLabel is null && p.Hyperlinks.Count == 0 &&

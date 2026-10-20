@@ -11,6 +11,41 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxPassiveStaticBodyTests
 {
+    public static void DocxPassiveStaticPicturesPreserveIndependentWordBodyBaselines()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent body origins require installed Windows fonts.");
+        CheckBodyBaselines(null, compareWord: true, "minimum-passive-pictures-office.json");
+    }
+
+    public static void DocxPassiveStaticPicturesKeepIntrusiveUnownedAndUnmeasuredFallbacks()
+    {
+        foreach (string kind in new[] { "header", "footer" })
+        {
+            var document = DocxTests.ReadDocx(Case("CompositionProbes/minimum-passive-picture-" + kind + "-ordinary11.docx"), OoxPdfDocxMarkupMode.Final);
+            var layout = Layout(document);
+            TestAssert.True(DocxPlainBodyFrame.IsEligible(document, layout), "Measured margin pictures leave body metrics independent.");
+            var page = layout.Pages.Single();
+            var image = page.StaticInlineImages.Single();
+            var intrusive = image with { Y = kind == "header" ? page.Height - page.MarginTop - 1d : page.MarginBottom - image.Height + 1d };
+            foreach (var unsupported in new[] { intrusive, image with { Y = double.NaN }, image with { Width = double.PositiveInfinity },
+                image with { Story = null }, image with { X = -1d }, image with { Image = image.Image with { RotationDegrees = 30d } },
+                image with { Image = image.Image with { SourceRunIndex = -1 } },
+                image with { Image = image.Image with { ContentType = "image/svg+xml" } } })
+            {
+                var changed = layout with { Pages = [page with { StaticInlineImages = [unsupported] }] };
+                TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(document, changed, out var fallback) && ReferenceEquals(changed, fallback),
+                    "Intrusive, nonfinite, unowned, rotated and vector frames retain the existing fallback.");
+            }
+            TestAssert.True(!DocxPlainBodyFrame.IsEligible(document, layout with { FooterContentTopByPage = new Dictionary<int, double>() }),
+                "Picture-only stories still require measured container bounds.");
+            using var cancelled = new CancellationTokenSource();
+            cancelled.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() =>
+                new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                    .RenderBlankPages(document, null, cancelled.Token).ToArray());
+        }
+    }
+
     public static void DocxPassiveStaticTextPreservesIndependentWordBodyBaselines()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent minimum body origins require installed Windows fonts.");
@@ -131,13 +166,18 @@ internal static class DocxPassiveStaticBodyTests
                     "Body and passive story retain their independent one-point Word origins.");
             }
 
-            (int Page, double X, double Y, string Text)[] Lines(string path) =>
-                new DocxRenderer(resolver, mode, geometry).RenderBlankPages(DocxTests.ReadDocx(path, mode), null, default)
-                    .SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
+            (int Page, double X, double Y, string Text)[] Lines(string path)
+            {
+                var pages = new DocxRenderer(resolver, mode, geometry)
+                    .RenderBlankPages(DocxTests.ReadDocx(path, mode), null, default).ToArray();
+                if (path == input && row.TryGetProperty("ExpectedInlineImageCount", out var count))
+                    TestAssert.Equal(count.GetInt32(), pages.Sum(page => page.Images.Count));
+                return pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
                         .GroupBy(show => show.Y).Select(line => (index + 1, line.Min(show => show.X), page.Height - line.Key,
                             Regex.Replace(string.Concat(line.OrderBy(show => show.X).Select(show => show.Text))
                                 .Normalize(NormalizationForm.FormKC), @"\s+", " ").Trim())))
                     .ToArray();
+            }
         }
     }
 

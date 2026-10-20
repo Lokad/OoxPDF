@@ -1,0 +1,341 @@
+{
+  "Provenance": "Four independent Word16 views of source-exact ordinary body with one margin raster. All eight body origins and sizes equal the corresponding parent Word view exactly. Body 1pt gates unchanged; image placement recorded separately, not accepted by body admission.",
+  "Rows": [
+    {
+      "Id": "minimum-passive-picture-header-ordinary11",
+      "Mode": "final-preserve",
+      "InputSha256": "43A463112520918C6ED5A42ECC65A0279068AC7F8284FB4A523790617F55387D",
+      "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/ordinary-eleven-point-minimum.docx",
+      "SourceSha256": "3017D16D416135BBAB97515161A239EB9D334D98D01CD9E6B39E527E4CCD591A",
+      "WordPdfSha256": "13BBF0557F6FBD937CEB09333A185911A41491920E3930C3BCA182308722FACD",
+      "BaseWordPdfSha256": "6B4C19062374AA7B481357F1E2964FC9DB10B46B1AAB92B5972EAA29A7AD6938",
+      "WordBodyBaselineChange": 0,
+      "WordPages": 1,
+      "ExpectedInlineImageCount": 1,
+      "WordProseAnchors": [
+        {
+          "Text": "Public minimum Top. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 93.02001953125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Alpha public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 106.46002197265625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterAlpha. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 126.5,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Bravo public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 139.82000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterBravo. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 159.8599853515625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Charlie public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 173.29998779296875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Delta public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 186.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterDelta. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 206.780029296875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordImages": [
+        {
+          "Page": 1,
+          "Rect": [
+            72.0,
+            40.42999267578125,
+            90.0,
+            49.42999267578125
+          ],
+          "PageHeight": 792.0
+        }
+      ],
+      "WordMathAnchors": [],
+      "WordFrames": []
+    },
+    {
+      "Id": "minimum-passive-picture-footer-ordinary11",
+      "Mode": "final-preserve",
+      "InputSha256": "DECAB5662CE0299E0BE504BB6534007759804A2F442AC858A9592892EAD5AE42",
+      "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/ordinary-eleven-point-minimum.docx",
+      "SourceSha256": "3017D16D416135BBAB97515161A239EB9D334D98D01CD9E6B39E527E4CCD591A",
+      "WordPdfSha256": "15E160108E660F523656CAF18D82E939063D4D30ECC5F46A91F541FD5BCDFB98",
+      "BaseWordPdfSha256": "6B4C19062374AA7B481357F1E2964FC9DB10B46B1AAB92B5972EAA29A7AD6938",
+      "WordBodyBaselineChange": 0,
+      "WordPages": 1,
+      "ExpectedInlineImageCount": 1,
+      "WordProseAnchors": [
+        {
+          "Text": "Public minimum Top. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 93.02001953125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Alpha public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 106.46002197265625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterAlpha. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 126.5,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Bravo public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 139.82000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterBravo. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 159.8599853515625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Charlie public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 173.29998779296875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Delta public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 186.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterDelta. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 206.780029296875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordImages": [
+        {
+          "Page": 1,
+          "Rect": [
+            72.0,
+            747.0001220703125,
+            90.0,
+            756.0
+          ],
+          "PageHeight": 792.0
+        }
+      ],
+      "WordMathAnchors": [],
+      "WordFrames": []
+    },
+    {
+      "Id": "minimum-passive-picture-header-ordinary11",
+      "Mode": "all-word-compatible",
+      "InputSha256": "43A463112520918C6ED5A42ECC65A0279068AC7F8284FB4A523790617F55387D",
+      "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/ordinary-eleven-point-minimum.docx",
+      "SourceSha256": "3017D16D416135BBAB97515161A239EB9D334D98D01CD9E6B39E527E4CCD591A",
+      "WordPdfSha256": "B7431E2A9689AD72607D23CECCAD506E9C5B0FB44966BB9E060B9F24A2A623A6",
+      "BaseWordPdfSha256": "2006BD50784B4E023401246BB0FBD4F26EF13B24ADD9D3A8EDD395A4C65FA9D6",
+      "WordBodyBaselineChange": 0,
+      "WordPages": 1,
+      "ExpectedInlineImageCount": 1,
+      "WordProseAnchors": [
+        {
+          "Text": "Public minimum Top. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 93.02001953125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Alpha public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 106.46002197265625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterAlpha. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 126.5,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Bravo public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 139.82000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterBravo. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 159.8599853515625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Charlie public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 173.29998779296875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Delta public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 186.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterDelta. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 206.780029296875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordImages": [
+        {
+          "Page": 1,
+          "Rect": [
+            72.0,
+            40.42999267578125,
+            90.0,
+            49.42999267578125
+          ],
+          "PageHeight": 792.0
+        }
+      ],
+      "WordMathAnchors": [],
+      "WordFrames": []
+    },
+    {
+      "Id": "minimum-passive-picture-footer-ordinary11",
+      "Mode": "all-word-compatible",
+      "InputSha256": "DECAB5662CE0299E0BE504BB6534007759804A2F442AC858A9592892EAD5AE42",
+      "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/ordinary-eleven-point-minimum.docx",
+      "SourceSha256": "3017D16D416135BBAB97515161A239EB9D334D98D01CD9E6B39E527E4CCD591A",
+      "WordPdfSha256": "D3C3B8183878B99E8F992E28560B0588881B8A84B1560F14E62B390E4421A487",
+      "BaseWordPdfSha256": "2006BD50784B4E023401246BB0FBD4F26EF13B24ADD9D3A8EDD395A4C65FA9D6",
+      "WordBodyBaselineChange": 0,
+      "WordPages": 1,
+      "ExpectedInlineImageCount": 1,
+      "WordProseAnchors": [
+        {
+          "Text": "Public minimum Top. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 93.02001953125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Alpha public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 106.46002197265625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterAlpha. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 126.5,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Bravo public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 139.82000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterBravo. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 159.8599853515625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Charlie public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 173.29998779296875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Delta public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 186.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterDelta. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 206.780029296875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordImages": [
+        {
+          "Page": 1,
+          "Rect": [
+            72.0,
+            747.0001220703125,
+            90.0,
+            756.0
+          ],
+          "PageHeight": 792.0
+        }
+      ],
+      "WordMathAnchors": [],
+      "WordFrames": []
+    }
+  ]
+}

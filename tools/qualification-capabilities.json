@@ -1,4 +1,19 @@
 {
+  "docx-passive-static-pictures": [
+    "DocxPassiveStaticPictures",
+    "PortableRenderingPassiveStaticPictures",
+    "DocxPassiveStaticText",
+    "PortableRenderingPassiveStaticText",
+    "DocxPassivePageFields",
+    "PortableRenderingPassivePageFields",
+    "DocxInactiveStaticVariants",
+    "PortableRenderingInactiveStaticVariants",
+    "DocxInactiveNoteTemplates",
+    "PortableRenderingInactiveNoteTemplates",
+    "DocxStaticStoryInlineImagesShareTheTextBaseline",
+    "DocxStaticStoryDeclaredFramesClipInlineImages",
+    "DocxFooterInlineImageReservesItsVisibleHeight"
+  ],
   "docx-minimum-leading-source-policy": [
     "DocxElevenPoint",
     "DocxMinimumBodyLineLeading",
