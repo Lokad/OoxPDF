@@ -38,8 +38,7 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(before[index].Content, page.Content);
                 TestAssert.Equal(before[index].Images.Count, page.Images.Count);
                 var links = page.Annotations.Where(link => link.Uri is { } uri && targets.Contains(uri)).ToArray();
-                var expected = row.GetProperty("WordLinks").EnumerateArray().Where(link => link.GetProperty("Page").GetInt32() == index + 1 &&
-                    !link.GetProperty("Uri").GetString()!.Contains("/endnotes/", StringComparison.Ordinal)).ToArray();
+                var expected = row.GetProperty("WordLinks").EnumerateArray().Where(link => link.GetProperty("Page").GetInt32() == index + 1).ToArray();
                 TestAssert.Equal(expected.Length, links.Length);
                 foreach (var link in links)
                 {

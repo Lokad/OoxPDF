@@ -14,6 +14,20 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
+    private static (bool Mapped, FloatingTextBoxEmissionMap Map, PdfRectangle Clip) ResolvePlacedStoryPaintFrame(
+        DocxPlacedRelatedStoryLayout story, DocxMarkupContext context, double pageHeight)
+    {
+        FloatingTextBoxEmissionMap map = default;
+        bool mapped = story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
+            FloatingTextBoxEmissionMap.TryCreate(context, pageHeight, out map);
+        if (mapped)
+        {
+            var (x, y, width, height) = map.MapClipRectangle(story.X, story.TopY, story.Width, story.Height);
+            return (true, map, new PdfRectangle(x, y, width, height));
+        }
+        return (false, map, new PdfRectangle(story.X, story.TopY - story.Height, story.Width, story.Height));
+    }
+
     private static void RenderPlacedRelatedStory(
         DocxPlacedRelatedStoryLayout story,
         PdfGraphicsBuilder graphics,
@@ -32,9 +46,7 @@ internal sealed partial class DocxRenderer
         // stories lay out unscaled in design space while emission maps uniformly
         // (WC first baseline 236.62 = affine-mapped design). Other stories keep
         // the body-shift path; tables inside mapped stories stay legacy.
-        FloatingTextBoxEmissionMap storyMap = default;
-        bool mapStory = story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
-            FloatingTextBoxEmissionMap.TryCreate(markupContext, pageHeight, out storyMap);
+        var (mapStory, storyMap, clip) = ResolvePlacedStoryPaintFrame(story, markupContext, pageHeight);
         if (story.SeparatorY is { } separatorY)
         {
             graphics.SetFillRgb(0, 0, 0);
@@ -46,15 +58,7 @@ internal sealed partial class DocxRenderer
         }
 
         graphics.SaveState();
-        if (mapStory)
-        {
-            (double clipX, double clipY, double clipWidth, double clipHeight) = storyMap.MapClipRectangle(story.X, story.TopY, story.Width, story.Height);
-            graphics.ClipRectangle(clipX, clipY, clipWidth, clipHeight);
-        }
-        else
-        {
-            graphics.ClipRectangle(story.X, story.TopY - story.Height, story.Width, story.Height);
-        }
+        graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
 
         // RV06 height-model probes (Word COM reference edge-endsepheight-text): Office
         // drops non-mark separator text while drawing the rule. Skip text-bearing separator lines

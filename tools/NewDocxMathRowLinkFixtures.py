@@ -59,15 +59,15 @@ if args.compound_pictures:
                 'Target': uri, 'TargetMode': 'External'})
             added.append((properties, click, relation))
             owners.append({'Part': name, 'PictureId': properties.get('id'), 'TargetUri': uri,
-                'ExpectedNativeNavigation': name != 'word/endnotes.xml',
-                'Scope': 'Complete body/static picture' if name != 'word/endnotes.xml' else 'Staged note navigation'})
+                'ExpectedNativeNavigation': True,
+                'Scope': 'Complete inline picture; container owns physical placement and clip'})
         changed[name] = E.tostring(tree, encoding='utf-8', xml_declaration=True)
         changed[rel_name] = E.tostring(relationships, encoding='utf-8', xml_declaration=True)
         for properties, click, relation in added:
             properties.remove(click)
             relationships.remove(relation)
         assert E.tostring(tree) == before and E.tostring(relationships) == before_relationships
-    assert len(owners) == 5 and sum(item['ExpectedNativeNavigation'] for item in owners) == 4
+    assert len(owners) == 5 and all(item['ExpectedNativeNavigation'] for item in owners)
     buffer = BytesIO()
     with ZipFile(buffer, 'w') as archive:
         for entry in infos: archive.writestr(copy.copy(entry), changed[entry.filename])
@@ -85,7 +85,7 @@ if args.compound_pictures:
             with stage.open('xb') as output: output.write(generated)
             stage.replace(target)
         else: assert target.read_bytes() == generated, target.name
-    print('Compound report picture metadata verified: four supported body/static and one staged note owner.')
+    print('Compound report picture metadata verified: five complete body/static/note owners.')
     raise SystemExit(0)
 
 if args.pictures:

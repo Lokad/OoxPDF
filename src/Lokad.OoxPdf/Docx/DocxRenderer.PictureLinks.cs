@@ -4,7 +4,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
-    private static IEnumerable<PdfLinkAnnotation> CreateInlinePictureAnnotations(DocxLayoutPage page, IReadOnlyList<DocxLayoutItem> staticItems,
+    private static IEnumerable<PdfLinkAnnotation> CreateInlinePictureAnnotations(DocxLayoutPage page, int pageNumber, IReadOnlyList<DocxLayoutItem> staticItems,
         IReadOnlyList<PdfImageResource> resources, IReadOnlyDictionary<string, PdfImageXObject?> imageCache,
         DocxMarkupContext context, CancellationToken token)
     {
@@ -18,7 +18,7 @@ internal sealed partial class DocxRenderer
                 GetImageCacheKey(image.Image) is not { } key || !imageCache.TryGetValue(key, out var resource) || resource is null)
                 continue;
             var frame = new PdfRectangle(image.X, image.Y, image.Width, image.Height);
-            if (!ContainsFrame(clip, frame) || image.ClipBounds is { } own && !ContainsFrame(own, frame) ||
+            if (!ContainsFrame(pageClip, frame) || !ContainsFrame(clip, frame) || image.ClipBounds is { } own && !ContainsFrame(own, frame) ||
                 image.LineFrame is { } line && !(frame.Y >= line.Bottom - 1e-6 && frame.Y + frame.Height <= line.Bottom + line.Height + 1e-6))
                 continue;
             painted ??= new HashSet<PdfImageXObject>(resources.Select(item => item.Image), ReferenceEqualityComparer.Instance);
@@ -35,6 +35,19 @@ internal sealed partial class DocxRenderer
                     yield return (PlaceInlineImageForPaint(image, context), pageClip);
                 else if (item is DocxTableRowLayout row)
                     foreach (var child in CellImages(row, pageClip)) yield return child;
+            }
+            foreach (var story in page.PlacedRelatedStories)
+            {
+                token.ThrowIfCancellationRequested();
+                if (!story.StoryLayout.Story.IsNormalStoryType ||
+                    story.StoryLayout.Story.Kind is not (DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)) continue;
+                var (mapped, map, clip) = ResolvePlacedStoryPaintFrame(story, context, page.Height);
+                foreach (var image in story.InlineImages)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (image.Image.ClickTarget is not null)
+                        yield return (PlaceInlineImageForPaint(mapped ? map.PrecompensateNoteImage(image, pageNumber) : image, context), clip);
+                }
             }
         }
 

@@ -1637,7 +1637,7 @@ internal sealed partial class DocxRenderer
                 EmitLineLinkRects(previousLineLinks, previousLineTop, Math.Min(previousLineBottomFallback, previousPaintedMathBottom));
             }
 
-            annotations.AddRange(CreateInlinePictureAnnotations(page, staticItems, paintedImages, imageCache, markupContext, cancellationToken));
+            annotations.AddRange(CreateInlinePictureAnnotations(page, pageNumber, staticItems, paintedImages, imageCache, markupContext, cancellationToken));
             annotations.AddRange(CreateNoteReferenceAnnotations(page, pageNumber, pageCount, fontResources,
                 markupContext, noteDestinations, noteSpacingParagraphs, cancellationToken));
             return annotations;

@@ -1,4 +1,12 @@
 {
+  "docx-note-picture-links": [
+    "DocxNotePictureLinks",
+    "DocxInlineCompositionNoteImageDimensionsAndVerticalFrameMatchOffice",
+    "DocxInlineCompositionNoteImagesAndMathSurviveSourceSplitting",
+    "DocxRendererEmitsPlacedFootnoteExternalHyperlinkAnnotations",
+    "DocxRendererEmitsPlacedEndnoteExternalHyperlinkAnnotations",
+    "PortableRenderingPictureNoteBatchesRetainEveryImageOnce"
+  ],
   "docx-static-picture-links": [
     "DocxStaticPictureLinks",
     "PortableRenderingStaticPictureLinksRetainComposedFrames",

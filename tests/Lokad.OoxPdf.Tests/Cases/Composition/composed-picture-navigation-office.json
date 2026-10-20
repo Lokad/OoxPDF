@@ -835,8 +835,8 @@
       ],
       "WordLinkGeometryAdmitted": true,
       "PictureFrameOwnsClickableRegion": true,
-      "ExpectedUriCount": 8,
-      "StagedPictureNavigation": "One endnote URI instance per mode remains unqualified; complete body/static picture links are admitted."
+      "ExpectedUriCount": 9,
+      "NavigationScope": "Complete axis-aligned body/static/ordinary placed-note raster images; partial/complex/table-note/floating/box/SVG/rotation remains staged."
     },
     {
       "Id": "composed-picture-navigation-report",
@@ -1672,8 +1672,8 @@
       ],
       "WordLinkGeometryAdmitted": false,
       "PictureFrameOwnsClickableRegion": true,
-      "ExpectedUriCount": 8,
-      "StagedPictureNavigation": "One endnote URI instance per mode remains unqualified; complete body/static picture links are admitted."
+      "ExpectedUriCount": 9,
+      "NavigationScope": "Complete axis-aligned body/static/ordinary placed-note raster images; partial/complex/table-note/floating/box/SVG/rotation remains staged."
     }
   ]
 }
