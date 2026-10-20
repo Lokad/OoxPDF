@@ -1,5 +1,28 @@
 # Composed-document reliability checkpoint
 
+## C350 mixed-footnote navigation holdout retains complete parent content (2026-10-20)
+
+Add only canonical picture clicks to the linked mixed-footnote report. Reuse C349
+without a library build/suite: four CLI conversions (two linked/two same-runtime
+parents), two fresh Word exports. Both presets retain four pages,64 numbered note
+lines and two pictures. Every parent Word/native page has exact text/drawings/
+image records; native paint streams and existing semantic text/math/note links
+are exact. Two new body/footnote URI instances per mode follow visible frames
+within.000016pt. Independent current Word anchors cover all64 note lines and
+all mathematical glyphs, never candidate-derived.
+
+Original visible1pt/.1pt/.01pt geometry gates pass in both modes; Final raw Word
+URI error.844pt passes. Review raw URI46.794pt remains failed; both strict pixel
+gates fail. Two source-content audits are clean. The composed-report extraction/
+geometry residuals remain independent and unresolved. No production change or
+universal fidelity claim. Existing generator profiles verify unchanged. Initial
+parent-manifest singleton JSON preflight failed before output/conversion; fixed
+explicit array handling in a fresh manifest, no conversion/build/export repeated.
+Evidence artifacts/composition-c1/footnote-picture-links-evidence.json.
+C348CI39377405082 green Windows/Ubuntu including broader/package. C349/C350 batch
+will close the fixed-portfolio milestone; work continues during CI. Version0.1.5/
+release deferred; last17.186GB workspace remains above loose5GB cap.
+
 ## C349 placed-note picture navigation shares paint maps and clips (2026-10-20)
 
 One shared placed-story map/physical-clip calculation feeds painting and picture
