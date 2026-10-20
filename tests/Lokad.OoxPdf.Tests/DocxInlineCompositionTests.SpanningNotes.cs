@@ -14,10 +14,17 @@ internal static partial class DocxInlineCompositionTests
         CheckSpanningCellNotes(null);
     }
 
-    internal static void CheckSpanningCellNotes(IFontResolver? resolver)
+    public static void DocxSingleSpanningNoteKeepsIndependentWordSourcePages()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent single-note source pages use installed Windows fonts.");
+        CheckSpanningCellNotes(null, "parallel-cell-single-footnote-office.json", qualifySourcePages: true);
+    }
+
+    internal static void CheckSpanningCellNotes(IFontResolver? resolver,
+        string goldenFile = "parallel-cell-footnote-office.json", bool qualifySourcePages = false)
     {
         string folder = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
-        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, "parallel-cell-footnote-office.json")));
+        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, goldenFile)));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         foreach (bool transformed in new[] { false, true })
         {
@@ -48,6 +55,15 @@ internal static partial class DocxInlineCompositionTests
                     TestAssert.Equal(note.GetProperty("Page").GetInt32(), targets[0].index + 1);
                 }
             }
+            if (qualifySourcePages)
+                foreach (var anchor in row.GetProperty("WordProseAnchors").EnumerateArray())
+                {
+                    string prefix = anchor.GetProperty("Text").GetString()!;
+                    int[] owners = text.Select((value, index) => (value, index))
+                        .Where(item => item.value.Contains(prefix, StringComparison.Ordinal)).Select(item => item.index + 1).ToArray();
+                    TestAssert.Equal(1, owners.Length);
+                    TestAssert.Equal(anchor.GetProperty("Page").GetInt32(), owners[0]);
+                }
             foreach (string side in new[] { "Left", "Right" })
             {
                 var ordinals = Regex.Matches(all, side + @" source row (\d+)\.").Select(match => int.Parse(match.Groups[1].Value)).Order().ToArray();

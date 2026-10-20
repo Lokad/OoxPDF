@@ -1297,7 +1297,10 @@ internal sealed partial class DocxLayoutEngine
                 // A continuation starts after FinishPage restores the pending-note
                 // reserve. Its capacity cannot reuse this registering block's
                 // temporarily uncharged first-page frame.
-                double continuationNoteReserve = FootnoteRemainderTotal();
+                // Complete heads share their measured separator line. Continued
+                // or incomplete stories retain the conservative remainder policy.
+                double continuationNoteReserve = TryCompleteFootnoteReserve(inFlightNotes.Values, out double completeTableReserve)
+                    ? completeTableReserve : FootnoteRemainderTotal();
                 double continuationBottom = usesPrintedTableFrame
                     ? ParagraphFrameBottom(continuationNoteReserve) : FrameBottom(continuationNoteReserve);
                 double continuationTableHeight = Math.Max(1d, page.Height - page.MarginTop - continuationBottom);
