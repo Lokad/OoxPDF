@@ -1,5 +1,24 @@
 # Composed-document reliability checkpoint
 
+## C331 independent footer-table outline viewport evidence (2026-10-20)
+
+Two competing ownership predictions pinned before exports. Bottom-margin90 moves
+Word Final outline cut18pt to751.91998 with unchanged box; footer-distance54
+translates box18pt but retains body cut769.91998. A final ordinary non-math box
+discriminator reduces footer distance to18pt: Word also clips at769.91998,
+removing10.351014pt of overflow. All six Word views support the body-frame drawing
+viewport through the existing print transform. Child text uses separate clips;
+standalone/header/body controls retain their contracts. No blanket footer clipping.
+
+Six CLI/six Office exports; zero library builds/tests/new raster views. All six
+content screens clean; six strict pixel gates remain failed. Each source changes
+one section attribute; reverting it recovers exact XML, other package parts exact.
+Six outline clips/frames,16math/20prose anchors pinned. Sources29022061/920af589,
+goldbcc0562e; evidence artifacts/composition-c1/footer-viewport-review-evidence.json.
+C327CI39359227037 green Windows/Ubuntu including broader/package checks; C330CI
+39360213092 running. Next bounded physical outline viewport, preserving child
+text and existing natural-story fallback. Version0.1.5/release deferred.
+
 ## C330 complete-note admission follows authored rows (2026-10-20)
 
 Index note paragraphs by authored row once per table; refine existing measured
