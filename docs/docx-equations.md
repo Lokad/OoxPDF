@@ -168,6 +168,8 @@ headers and body containers keep their own rules. Strict visual failures remain.
 Known inline `customXml` and legacy `smartTag` metadata wrappers preserve their
 original mixed content and source ranges. Fields, revisions and hard breaks use
 the same paragraph dispatcher across direct and nested inline containers.
+Custom XML block, row and cell wrappers retain their source and inherited revision
+owners through shared cancellable traversal.
 See the
 [composition checkpoint](CompositionCheckpoint.md) for evidence and limitations.
 

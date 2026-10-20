@@ -1,5 +1,29 @@
 # Composed-document reliability checkpoint
 
+## C343 cancellable structural metadata source ownership (2026-10-20)
+
+Known customXml block/row/cell containers retain actual source/inherited revision
+owners. One scoped-child visitor replaces its forwarding overload; all five live
+callers and recursion pass cancellation, including non-yielding metadata.
+16 added/19 removed production lines. No layout/API/native/resource-accounting
+change. All six original1/.1/.01pt geometry gates and raw screens pass; expected
+content restored. Six strict pixel failures remain. Viewed native/Word row pages
+confirm restoration; no arbitrary fidelity claim. Unknown namespace fallback
+and Final/AllMarkup/Original semantics are covered.
+
+One frozen6e0e2de4/2,551inputs, all2,546old exact; one Release build.24Windows/
+18Ubuntu/six native skips, one exact invocation/platform, no repair/failure/join.
+One genuine parent ownership failure. Six CLI/zero new Office exports; reuse six
+C342 references.17assets/two exact transfer smokes, no root build/suite/package/
+portfolio replay. Prior14 fixed/mixed outcomes carry by source proof: six DOCX
+packages contain no customXml; two decks use PPTX. Prior raw/geometry/strict
+residuals remain, without a fresh PDF identity claim. C342 blank inspector/audit
+failure remains; next separate tooling repair uses pinned PDFs/reinspection.
+Production3398f532; evidence artifacts/composition-c1/structural-metadata-wrappers-
+evidence.json. C341CI39370360631 running; C339 broader/package CI green. Batch
+push with the next bounded tooling checkpoint. Version0.1.5/release deferred;
+workspace target remains unmet.
+
 ## C342 structural metadata drops complete source owners (2026-10-20)
 
 Three source-preserving customXml block/row/cell controls lose content in all six
