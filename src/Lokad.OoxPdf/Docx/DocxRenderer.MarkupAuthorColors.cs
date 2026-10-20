@@ -73,10 +73,6 @@ internal sealed partial class DocxRenderer
         IEnumerable<(string? Id, string? Author)> commentsInFileOrder)
         => BuildCommentAuthorPaletteSlotsCore(commentsInFileOrder, [], default).CommentSlots;
 
-    internal static IReadOnlyDictionary<string, int> BuildWordReviewCommentAuthorPaletteSlots(
-        DocxDocument document, IEnumerable<(string? Id, string? Author)> comments, CancellationToken token)
-        => BuildWordReviewAuthorPalette(document, comments, token).CommentSlots;
-
     internal static DocxReviewAuthorPalette BuildWordReviewAuthorPalette(
         DocxDocument document, IEnumerable<(string? Id, string? Author)> comments, CancellationToken token)
     {

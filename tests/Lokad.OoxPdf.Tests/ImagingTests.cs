@@ -47,7 +47,7 @@ internal static class ImagingTests
         // D02: unknown types throw with the exact legacy message so both renderers
         // keep byte-identical IMAGE_UNSUPPORTED_FORMAT diagnostics.
         NotSupportedException pixels = TestAssert.Throws<NotSupportedException>(
-            () => OoxImageDecoder.DecodePixels("image/gif", [71, 73, 70]));
+            () => OoxImageDecoder.DecodePixelsOwned("image/gif", [71, 73, 70]));
         TestAssert.Equal("Unsupported image content type.", pixels.Message);
         NotSupportedException image = TestAssert.Throws<NotSupportedException>(
             () => OoxImageDecoder.Decode("image/gif", [71, 73, 70], static rgb => rgb));
@@ -95,13 +95,13 @@ internal static class ImagingTests
 
         TestAssert.True(!plain.Bytes.AsSpan().SequenceEqual(inverted.Bytes), "The recolor map must transform decoded pixels.");
 
-        (int width, int height, byte[] rgb, byte[]? alpha) = OoxImageDecoder.DecodePixels(
+        using var pixels = OoxImageDecoder.DecodePixelsOwned(
             "image/x-ms-bmp", TestFixtures.CreateRgbBmp(2, 1, [255, 0, 0, 0, 0, 255]));
 
-        TestAssert.Equal(2, width);
-        TestAssert.Equal(1, height);
-        TestAssert.True(rgb.SequenceEqual(new byte[] { 255, 0, 0, 0, 0, 255 }), "BMP pixels must decode through the shared path.");
-        TestAssert.True(alpha is null, "24-bit BMP must not produce an alpha channel.");
+        TestAssert.Equal(2, pixels.Width);
+        TestAssert.Equal(1, pixels.Height);
+        TestAssert.True(pixels.Rgb.SequenceEqual(new byte[] { 255, 0, 0, 0, 0, 255 }), "BMP pixels must decode through the shared path.");
+        TestAssert.True(pixels.Alpha is null, "24-bit BMP must not produce an alpha channel.");
     }
 
     public static void JpegInfoReadsDimensions()

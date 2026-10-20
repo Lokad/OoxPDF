@@ -15,7 +15,7 @@ internal static partial class DocxCommentsTests
             if (!row.GetProperty("QualifiesRetainedOwners").GetBoolean()) continue;
             var document = ReadNonTextAuthorSource(row, OoxPdfDocxMarkupMode.AllMarkup);
             var comment = document.RelatedStories.Single(story => story.Kind == DocxRelatedStoryKind.Comment && story.Id == "0");
-            var slots = DocxRenderer.BuildWordReviewCommentAuthorPaletteSlots(document, [("0", comment.CommentMetadata!.Author)], default);
+            var slots = DocxRenderer.BuildWordReviewAuthorPalette(document, [("0", comment.CommentMetadata!.Author)], default).CommentSlots;
             TestAssert.Equal(ReadNonTextAuthorRgb(row, "FillRgb"), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "0"));
         }
     }
@@ -39,7 +39,7 @@ internal static partial class DocxCommentsTests
             var changed = source with { BodyElements = source.BodyElements.Select(element =>
                 element is DocxParagraphElement paragraph && ReferenceEquals(paragraph.Paragraph, owner)
                     ? new DocxParagraphElement(unowned) : element).ToArray() };
-            var slots = DocxRenderer.BuildWordReviewCommentAuthorPaletteSlots(changed, [("0", "Comment Reviewer")], default);
+            var slots = DocxRenderer.BuildWordReviewAuthorPalette(changed, [("0", "Comment Reviewer")], default).CommentSlots;
             TestAssert.Equal(((byte)248, (byte)220, (byte)221), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "0"));
         }
     }

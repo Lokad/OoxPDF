@@ -776,16 +776,6 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("h");
     }
 
-    private void AppendOpenRectanglePath(double x, double y, double width, double height)
-    {
-        double right = x + width;
-        double top = y + height;
-        builder.Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(top)).AppendLine(" m");
-        builder.Append(PdfDocumentWriter.FormatNumber(right)).Append(' ').Append(PdfDocumentWriter.FormatNumber(top)).AppendLine(" l");
-        builder.Append(PdfDocumentWriter.FormatNumber(right)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).AppendLine(" l");
-        builder.Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).AppendLine(" l");
-    }
-
     private void AppendPolygonPath((double X, double Y)[] points)
     {
         if (points.Length == 0)

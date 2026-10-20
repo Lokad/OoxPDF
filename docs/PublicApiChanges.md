@@ -50,3 +50,12 @@ staging window remain. `ReportResourceUsage` still emits an informational
 `pdfContentBytes`, `pdfOutputBytes`, `pdfFontBytes`, `pdfImageBytes` and
 `pageContentSpilledBytes`. Remove dependencies on retired work/retained/peak
 fields. These totals describe output and spilling, not managed-heap consumption.
+
+## Stream failures and shared resolvers
+
+Caller-owned streams remain open on failure. Cancellation, an output limit or
+an I/O failure during emission can leave an incomplete PDF prefix in the output;
+discard that output before retrying. File overloads preserve an existing
+destination atomically. This clarifies the existing behavior; it adds no buffering
+or public API removal. Built-in resolvers now synchronize their bounded request
+caches so sharing a resolver across concurrent conversions is safe.

@@ -24,7 +24,8 @@ namespace Lokad.OoxPdf;
 /// rollback of an already-replaced destination).</item>
 /// <item>Cancellation is observed cooperatively at stage boundaries and inside bounded
 /// expansion loops. A cancelled conversion throws <see cref="OperationCanceledException"/>
-/// and never produces a partial PDF.</item>
+/// and does not publish a partial file. Caller-owned output streams can retain an incomplete
+/// prefix after any failure, including cancellation; discard that output before retrying.</item>
 /// <item>Resolvers and font sources must be safe for concurrent use. Parallel
 /// conversions may share one resolver instance and observe byte-identical output;
 /// font-program bytes are treated as immutable once published.</item>

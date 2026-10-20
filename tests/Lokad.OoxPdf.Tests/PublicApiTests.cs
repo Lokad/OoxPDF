@@ -726,6 +726,57 @@ internal static class PublicApiTests
         TestAssert.True(!File.Exists(output), "Mid-work cancellation must not publish a partial PDF.");
     }
 
+    public static void ConvertStreamCancellationDuringEmissionLeavesCallerOwnedPrefix()
+    {
+        byte[] bytes = ReadMinimalDocxBytes("<w:p><w:r><w:t>stream cancellation</w:t></w:r></w:p>");
+        using var input = new MemoryStream(bytes, writable: false);
+        using var cancellation = new CancellationTokenSource();
+        using var output = new CancelOnFirstWriteStream(cancellation);
+        OperationCanceledException error = TestAssert.Throws<OperationCanceledException>(() =>
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+            {
+                InputKind = OoxPdfInputKind.Docx,
+                FontResolver = new FixedFontResolver(TestFontBuilder.CreateTestFont())
+            }, cancellation.Token));
+
+        TestAssert.Equal(cancellation.Token, error.CancellationToken);
+        AssertIncompleteCallerOutput(input, output);
+    }
+
+    public static void ConvertStreamOutputLimitDuringEmissionLeavesCallerOwnedPrefix()
+    {
+        byte[] bytes = ReadMinimalDocxBytes("<w:p><w:r><w:t>stream output limit</w:t></w:r></w:p>");
+        using var input = new MemoryStream(bytes, writable: false);
+        using var output = new MemoryStream();
+        TestAssert.Throws<OoxPdfLimitExceededException>(() =>
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+            {
+                InputKind = OoxPdfInputKind.Docx,
+                FontResolver = new FixedFontResolver(TestFontBuilder.CreateTestFont()),
+                ConversionLimits = new OoxConversionLimits { MaxOutputBytesPerConversion = 128 }
+            }));
+
+        AssertIncompleteCallerOutput(input, output);
+        TestAssert.True(output.Length <= 128, "The output limit must bound the written prefix.");
+    }
+
+    private static void AssertIncompleteCallerOutput(Stream input, MemoryStream output)
+    {
+        TestAssert.True(input.CanRead && output.CanWrite, "Failure must leave both caller streams open.");
+        string prefix = Encoding.ASCII.GetString(output.ToArray());
+        TestAssert.True(prefix.StartsWith("%PDF-", StringComparison.Ordinal), "Emission must have started before this failure.");
+        TestAssert.DoesNotContain("%%EOF", prefix);
+    }
+
+    private sealed class CancelOnFirstWriteStream(CancellationTokenSource cancellation) : MemoryStream
+    {
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            base.Write(buffer);
+            cancellation.Cancel();
+        }
+    }
+
     public static void ConcurrentConversionsSharingOneResolverStayByteIdentical()
     {
         // Q08: parallel conversions may share one resolver instance.

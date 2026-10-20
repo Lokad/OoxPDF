@@ -558,7 +558,7 @@ internal sealed partial class DocxRenderer
         // and change nothing (empty map returns the first layout untouched). Footer
         // content tops raise the body frame symmetrically (w48 multi-line footer plus
         // long body: body breaks before footer content instead of overlapping it).
-        // R06.2 repagination control: at most two full layouts per conversion (first pass
+        // R06.2 repagination control: at most two full layouts per call (first pass
         // plus one conditional displaced pass; no loop), and page/content charges apply
         // once per emitted final page in RenderParagraphs, never per pass.
         DocxLayoutEngine engine = new(geometryMode, markupContext.WordCompatiblePrintScale, markupContext.CommentMarkerLabels,

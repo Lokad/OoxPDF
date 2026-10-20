@@ -43,7 +43,7 @@ internal static partial class DocxCommentsTests
         string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "RevisionBars", "revision-bar-comment-scaled.docx"));
         var source = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
         var comments = new[] { (Id: (string?)"1", Author: (string?)"Public reviewer") };
-        var slots = DocxRenderer.BuildWordReviewCommentAuthorPaletteSlots(source, comments, default);
+        var slots = DocxRenderer.BuildWordReviewAuthorPalette(source, comments, default).CommentSlots;
         TestAssert.Equal(((byte)213, (byte)237, (byte)255), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "1"));
         var owner = DocxBlockTraversal.EnumerateBodyParagraphs(source).First(p => p.Runs.Any(r => r.Revision is not null));
         var unowned = owner with { Runs = owner.Runs.Select(r => r with { Revision = null, Revisions = [] }).ToArray() };
@@ -52,7 +52,7 @@ internal static partial class DocxCommentsTests
             BodyElements = source.BodyElements.Select(element => element is DocxParagraphElement paragraph && ReferenceEquals(paragraph.Paragraph, owner)
                 ? new DocxParagraphElement(unowned) : element).ToArray()
         };
-        slots = DocxRenderer.BuildWordReviewCommentAuthorPaletteSlots(changed, comments, default);
+        slots = DocxRenderer.BuildWordReviewAuthorPalette(changed, comments, default).CommentSlots;
         TestAssert.Equal(((byte)248, (byte)220, (byte)221), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "1"));
         TestAssert.True(unowned.Revisions.Count != 0, "Unowned paragraph metadata cannot invent a text-author slot.");
         slots = DocxRenderer.BuildCommentAuthorPaletteSlots([("1", "Reviewer"), ("2", "reviewer"), ("3", "Reviewer")]);
@@ -61,6 +61,6 @@ internal static partial class DocxCommentsTests
         TestAssert.Equal(0, slots["3"]);
         TestAssert.Equal(DocxRenderer.NormalizeRevisionAuthorBucketKey("Reviewer"), DocxRenderer.NormalizeRevisionAuthorBucketKey("reviewer"));
         using var canceled = new CancellationTokenSource(); canceled.Cancel();
-        TestAssert.Throws<OperationCanceledException>(() => DocxRenderer.BuildWordReviewCommentAuthorPaletteSlots(source, comments, canceled.Token));
+        TestAssert.Throws<OperationCanceledException>(() => DocxRenderer.BuildWordReviewAuthorPalette(source, comments, canceled.Token));
     }
 }
