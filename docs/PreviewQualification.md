@@ -61,3 +61,14 @@ reports and consumer evidence are retained under
 `preview-020-canonical-qualification.json`. The loose workspace cap remains
 unmet: C361 measured 17.759 GB; automatic review rejected its verified temporary
 file retirement before execution. No deletion was retried at protected paths.
+
+The subsequent [32-page paired review](PreviewVisualReview.md) records specific
+practical effects for every portfolio document. It found no serious clipping,
+overlap or wrong page split at page scale, while retaining all original failures.
+
+The C364 workspace check measures 17.914 GB. A verified retirement of 3,128
+superseded compiled files from 184 previously unprotected snapshots was rejected
+by automatic approval review as “blocked by policy” before execution. Zero files
+were removed. Those targets are now preserved alongside the earlier maps;
+protected compiled content alone accounts for 7.074 GB. The loose 5 GB workspace
+target remains blocked independently of the completed preview qualification.

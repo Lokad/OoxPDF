@@ -1,5 +1,38 @@
 # Composed-document reliability checkpoint
 
+## C364 — full preview paint review and verified workspace blocker (2026-10-20)
+
+Viewed every one of32candidate/Office page pairs across16portfolio outcomes.
+Recorded document-specific practical effects in docs/PreviewVisualReview.md.
+No serious clipping/overlap or wrong page split observed at page scale;14DOCX
+strict failures remain failed and2PPTX passes remain unchanged. The page-bound
+witness reports zero visible glyph boxes over1pt outside a page; this is not an
+internal-clipping/subpixel acceptance gate. Builds/conversions/Office exports0.
+
+Revalidated source/test trees, all17root runtime assets, final package/symbol
+hashes, actual Windows/Ubuntu reports, both final package consumers and candidate
+CI39404138180. Preview qualification remains complete and package unchanged.
+Detailed12requirement audit and review images/dispositions are retained in
+artifacts/composition-c1/preview-020-completion-review/.
+
+Fresh workspace17.914GB/997432files/86818directories,43.51s/zero errors. Artifacts
+17.580GB, composition-c1 group13.983GB. Inventory selects184never-rejected,
+superseded core runtimes with reachable committed source and pinned bytes:
+3128compiled paths/4.850GBlogical/2.705GBall-links-selected unique content.
+Preserves all inputs/PDFs/reports/identities/current runtime/parents/inspectors,
+worktrees/Git and previous protected targets; no recursive directory delete.
+
+Automatic approval review rejected retirement before process creation as
+"blocked by policy". Zero files removed/bytes reclaimed; all targets remain.
+New184names join prior239,423total. Never retry their delete/move/archive/overwrite
+or alternate retirement. Exact inventory/rejection map in completion-review/.
+A stricter contained/non-reparse read-only proof counts7.074GB/5561unique protected
+compiled files by file ID, before any other preserved content. Thus the5GBgoal
+requires an external protection/approval change; no compliant alternate cleanup
+can reach it. Source/runtime/package need no repair. Publication, optimization
+and broader features remain deferred. Do not mark the broader PLAN goal achieved
+while this maintenance requirement remains blocked.
+
 ## C363 — bounded cleanup and qualified 0.2.0-preview (2026-10-20)
 
 The latest user direction bounds delivery at a local preview candidate and defers
