@@ -6,7 +6,9 @@ param(
 
     [string] $RunId,
 
-    [switch] $SkipBuild
+    [switch] $SkipBuild,
+
+    [string] $CliPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -50,10 +52,12 @@ $docxMarkup = if ($manifest.PSObject.Properties.Name -contains "docxMarkup" -and
 $docxMarkupGeometry = if ($manifest.PSObject.Properties.Name -contains "docxMarkupGeometry" -and $manifest.docxMarkupGeometry -ne $null) { [string]$manifest.docxMarkupGeometry } else { $null }
 
 $cliProject = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj"
-$cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll"
+$cliDll = if ($CliPath) { (Resolve-Path -LiteralPath $CliPath).Path } else {
+    Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll"
+}
 $buildInfoDir = Join-Path $runRoot "build-info"
 New-Item -ItemType Directory -Force -Path $buildInfoDir | Out-Null
-Invoke-RepoBuild $cliProject $cliDll "CLI" (Join-Path $buildInfoDir "cli.json")
+if (!$CliPath) { Invoke-RepoBuild $cliProject $cliDll "CLI" (Join-Path $buildInfoDir "cli.json") }
 $candidateArgs = @("convert", $inputFull, $candidatePdf, "--diagnostics", $diagnostics)
 if (-not [string]::IsNullOrWhiteSpace($docxMarkup)) {
     if ($manifest.kind -ne "docx") {
