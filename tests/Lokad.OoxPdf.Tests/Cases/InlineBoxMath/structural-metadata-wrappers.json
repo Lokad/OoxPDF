@@ -1,0 +1,71 @@
+[
+  {
+    "Id": "structural-wrapper-customxml-block",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/structural-wrapper-customxml-block.docx",
+    "Sha256": "BB88C09216FE3FDE44ADFBF7F0BA6F3AE3105A7E95F0124E1735D8220383324D",
+    "SourceSha256": "AF81436D026A847A086B74D2BF3AA5950614B27D0AA4D4867E4EE8FF9CF6A732",
+    "SiblingSourceSha256": "515A53E52166ED841334643C57390BD2300053C67CB208BFA47AB565F240FE85",
+    "HeldOut": true,
+    "Variant": "block",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 2,
+    "ExpectedRenderedEquationCount": 2,
+    "ExpectedImageCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-sibling-mixed.docx",
+    "Wrapper": "customXml",
+    "Change": "Wrap only the existing block content in a metadata container. All source owners, formatting, properties and other package parts stay unchanged."
+  },
+  {
+    "Id": "structural-wrapper-customxml-row",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/structural-wrapper-customxml-row.docx",
+    "Sha256": "D4867787B64AC323B66E1D1D3D604AAF85A5B459017D51106B80BDBB8D9DE2D9",
+    "SourceSha256": "24CC3C178E5086CAFC0463AB50FA6A832F04724178820DC0E4178045A335A4FE",
+    "SiblingSourceSha256": "515A53E52166ED841334643C57390BD2300053C67CB208BFA47AB565F240FE85",
+    "HeldOut": true,
+    "Variant": "row",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-sibling-cell.docx",
+    "Wrapper": "customXml",
+    "Change": "Wrap only the existing row content in a metadata container. All source owners, formatting, properties and other package parts stay unchanged."
+  },
+  {
+    "Id": "structural-wrapper-customxml-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/structural-wrapper-customxml-cell.docx",
+    "Sha256": "56D4F3B1D471A19078DD58E19EE87329760AA0E59174D7712B136AEB512F4100",
+    "SourceSha256": "A25507F39F1D74A3A63F3511E4F2308E2A1E74F87ECD9BE931AD735435913F81",
+    "SiblingSourceSha256": "AF81436D026A847A086B74D2BF3AA5950614B27D0AA4D4867E4EE8FF9CF6A732",
+    "HeldOut": true,
+    "Variant": "cell",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedImageCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "Change": "Wrap only the existing cell content in a metadata container. All source owners, formatting, properties and other package parts stay unchanged.",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-picture-cell.docx",
+    "Wrapper": "customXml"
+  }
+]
