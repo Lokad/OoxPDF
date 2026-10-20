@@ -1,5 +1,35 @@
 # Composed-document reliability checkpoint
 
+## C344 complete empty inspection reports (2026-10-20)
+
+External PdfInspect always publishes operation lists, including empty arrays;
+consolidate duplicate serializer setup. Source auditing uses existing inspected
+reference page records and pins their log hash, preserving empty/trailing blanks.
+No PDF parser/framework or renderer/API change. Correction: Measure already
+counted blanks correctly; the C342 attribution was wrong. Stored outcomes/corrected
+history and structural-metadata-observer-correction.json preserve that evidence.
+
+One frozen tool02048a72 build, zero library builds/conversions/Office exports.
+25 source-audit checks per platform/four native inspector probes per platform
+pass. Old inspector passes existing token checks then genuinely fails the new
+empty-stream report probe. Three new valid PDF probes independently open without
+repair. Actual blank/reference helper retains1 page; trailing-blank retains2
+although its maximum text-operation page is1; cached reads exact. Cross-platform
+JSON values/newline-normalized bytes match. Initial strict byte assertion was
+wrong because native pretty JSON uses CRLF/LF; corrected without tool/library
+changes or repeated inspection. Native formatting remains unchanged.
+
+Twelve pinned candidates reinspected: PDF/page identities unchanged,30 prior JSON
+reports byte-exact, six explicit empty reports added.12 comparisons reused, all
+12 strict failures retained. Former baseline audit now publishes six genuine
+content-deficit failures; six restored outputs remain clean. Five tool assets
+transferred/three smoke reports exact; all17 C343 library runtime assets and
+source/tests unchanged. No root build or suite/package replay. Evidence artifacts/
+composition-c1/empty-inspection-reports-evidence.json. C341CI39370360631 green,
+including broader/package checks. Push coherent C343/C344 batch, then bounded
+non-text inline navigation review. Version0.1.5/release deferred/workspace target
+unmet.
+
 ## C343 cancellable structural metadata source ownership (2026-10-20)
 
 Known customXml block/row/cell containers retain actual source/inherited revision
