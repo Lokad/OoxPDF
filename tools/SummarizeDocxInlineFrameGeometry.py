@@ -240,12 +240,20 @@ def main():
             links = measure_uri_links(path, row.get('TargetUri'))
             result['NativeLinks'] = links
             expected_links = row['WordLinks']
-            if len(links) != len(expected_links) or any(a['Page'] != e['Page'] or a['Uri'] != e['Uri']
-                    for a, e in zip(links, expected_links)):
+            native_by_target, word_by_target = {}, {}
+            for collection, values in [(native_by_target, links), (word_by_target, expected_links)]:
+                for item in values:
+                    collection.setdefault((item['Page'], item['Uri']), []).append(item)
+            if {key: len(value) for key, value in native_by_target.items()} != {key: len(value) for key, value in word_by_target.items()}:
                 result['Failures'].append('WordUriCountOrTarget')
-            elif expected_links:
+            matches = [(actual, expected) for key, values in native_by_target.items()
+                if len(values) == len(word_by_target.get(key, [])) for actual, expected in zip(values, word_by_target[key])]
+            result['MatchedWordUriCount'] = len(matches)
+            result['UnmatchedWordLinks'] = [item for key, values in word_by_target.items()
+                if len(values) != len(native_by_target.get(key, [])) for item in values]
+            if matches:
                 result['MaxWordUriRectError'] = max(abs(a['Rect'][index] - e['Rect'][index])
-                    for a, e in zip(links, expected_links) for index in range(4))
+                    for a, e in matches for index in range(4))
                 # Always retain the raw Office discrepancy, even when its
                 # rectangle is explicitly unqualified for visible placement.
                 if result['MaxWordUriRectError'] >= 1.:
