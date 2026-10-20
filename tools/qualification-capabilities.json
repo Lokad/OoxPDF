@@ -521,7 +521,6 @@
     "DocxSyntheticNumberingSpaceSuffixPlacesTextAfterLabel",
     "DocxNumberingSeparatorUsesBodyRunStyle",
     "DocxSyntheticNumberingWrapsContinuationLinesWithHangingWidth",
-    "DocxWordCompatibleAllMarkupPositionsNumberingInNarrowedBodyFrame",
     "DocxStyleAndNumberingLayoutRisksEmitDiagnostics",
     "DocxSupportedNumberingLeftHangingTabsDoNotEmitIndentDiagnostic",
     "DocxSupportedNumberingFirstLineIndentDoesNotEmitIndentDiagnostic"
@@ -5006,9 +5005,7 @@
     "DocxDeferredMixedEndnote",
     "DocxContinuedMixedEndnote",
     "DocxInlineCompositionTerminalTableNotesKeepIndependentParagraphFlow",
-    "PortableRenderingTerminalTableNotesPreserveContentAndDestinations",
-    "DocxInlineCompositionEndnoteStartMatchesIndependentParagraphBoundary",
-    "PortableRenderingEndnoteStartUsesLocalParagraphSpacing"
+    "PortableRenderingTerminalTableNotesPreserveContentAndDestinations"
   ],
   "docx-page-note-math": [
     "DocxMeasuredFootnoteOwners",
@@ -8092,7 +8089,6 @@
     "PortableRenderingMergedSourceRowFloors",
     "VerticalMerge",
     "DocxTableMinimum",
-    "DocxTableRowHeight",
     "DocxUnsupportedTableCellTextDirectionEmitsDiagnostic",
     "DocxReaderTableCellPreservesFitTextToken",
     "DocxReaderTableCellPreservesTextDirectionToken"
@@ -8141,7 +8137,6 @@
     "PortableRenderingMergedSourceRowFloors",
     "VerticalMerge",
     "DocxTableMinimum",
-    "DocxTableRowHeight",
     "DocxUnsupportedTableCellTextDirectionEmitsDiagnostic",
     "DocxReaderTableCellPreservesFitTextToken",
     "DocxReaderTableCellPreservesTextDirectionToken",
@@ -8659,7 +8654,6 @@
     "WritesJpegImageColorSpaceFromFrameMetadata",
     "WritesLinkAnnotations",
     "WritesMultipleBlankPagesWithPageSizes",
-    "WritesEvenOddClippingOperators",
     "WritesPct70WeaveBlockTilingPattern",
     "WritesScaledTilingPatternMatrix",
     "WritesSingleBlankPagePdfStructure",
@@ -9654,5 +9648,9 @@
     "DiagnosticCancellationPreservesCallerToken",
     "DiagnosticCallbacksCanRunNestedConversionsWithoutAffectingRecovery",
     "FinalSummaryCancellationPreventsPublication"
+  ],
+  "docx-balloon-exhaustive": [
+    "DocxWordCompatibleMixedBalloonNormalizesExplicitParagraphSpacing",
+    "DocxWordCompatibleMixedBalloonWrapsParagraphBodiesIndependently"
   ]
 }
