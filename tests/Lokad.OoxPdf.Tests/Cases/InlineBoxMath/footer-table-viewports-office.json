@@ -96,7 +96,18 @@
           751.9199829101562
         ],
         "LowerEdgeClippedPoints": 45.97998046875
-      }
+      },
+      "MathPart": "word/inline-box-review-header.xml",
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table."
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ]
     },
     {
       "Id": "footer-table-viewport-bottom-margin",
@@ -193,7 +204,18 @@
           670.3199462890625
         ],
         "LowerEdgeClippedPoints": 34.7000732421875
-      }
+      },
+      "MathPart": "word/inline-box-review-header.xml",
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table."
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ]
     },
     {
       "Id": "footer-table-viewport-footer-distance",
@@ -290,7 +312,18 @@
           769.9199829101562
         ],
         "LowerEdgeClippedPoints": 9.97998046875
-      }
+      },
+      "MathPart": "word/inline-box-review-header.xml",
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table."
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ]
     },
     {
       "Id": "footer-table-viewport-footer-distance",
@@ -387,7 +420,18 @@
           683.8800048828125
         ],
         "LowerEdgeClippedPoints": 7.5699462890625
-      }
+      },
+      "MathPart": "word/inline-box-review-header.xml",
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "After public math table."
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ]
     },
     {
       "Id": "footer-table-viewport-ordinary-distance",
@@ -462,7 +506,19 @@
           769.9199829101562
         ],
         "LowerEdgeClippedPoints": 10.35101318359375
-      }
+      },
+      "MathPart": "word/static-inline-footer-table-box.xml",
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "Inline box content.",
+        "After public math table."
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ]
     },
     {
       "Id": "footer-table-viewport-ordinary-distance",
@@ -537,7 +593,19 @@
           683.8800048828125
         ],
         "LowerEdgeClippedPoints": 7.8499755859375
-      }
+      },
+      "MathPart": "word/static-inline-footer-table-box.xml",
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "Inline box content.",
+        "After public math table."
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ]
     }
   ]
 }

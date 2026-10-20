@@ -8910,6 +8910,8 @@
     "DocxInlineCompositionSourceViewRetainsPrefixOrderAndCancellation"
   ],
   "docx-ordinary-static-inline": [
+    "DocxFooterTableOutlineViewportMatchesIndependentWord",
+    "PortableRenderingFooterTableOutlineViewportKeepsSourceContent",
     "DocxOrdinaryStaticInlineFramesPreserveSourceAndContainerOwnership",
     "DocxOrdinaryStaticInlineOriginsMatchIndependentWord",
     "PortableRenderingOrdinaryStaticInlineRetainsSourceContent",

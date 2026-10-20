@@ -22,8 +22,12 @@ internal sealed partial class DocxLayoutEngine
                 isHeader ? page.PageSettings.FooterParagraphsByType : page.PageSettings.HeaderParagraphsByType,
                 page.PageSettings, pageNumber), width / scale, mathEquations, token);
         if (!canMap)
-            return CreateStaticStoryLayout(story, x, width, startY, isHeader, pageNumber, pageCount,
+        {
+            var layout = CreateStaticStoryLayout(story, x, width, startY, isHeader, pageNumber, pageCount,
                 textMeasurer, staticMetrics, defaultTabStopPoints, scale, unscaledLineMetrics, token, mathEquations);
+            return !isHeader && scale == 1d && IsNaturalStaticStory(story, width, mathEquations, token)
+                ? WithFooterTableOutlineViewport(layout, page.MarginBottom, token) : layout;
+        }
 
         // Lay out one source block using the existing natural metrics. Mapping
         // its complete frame keeps the first inset, pitches and footer anchor
@@ -140,7 +144,7 @@ internal sealed partial class DocxLayoutEngine
         }
         double footerTop = isHeader ? double.NegativeInfinity :
             ResolveStaticFooterContentTop(source, unscaledLineMetrics);
-        return source with
+        var mapped = source with
         {
             TextLines = source.TextLines.Select(MapLine).ToArray(),
             InlineImages = source.InlineImages.Select(MapImage).ToArray(),
@@ -152,6 +156,34 @@ internal sealed partial class DocxLayoutEngine
             PhysicalFooterFrameTop = double.IsFinite(footerTop) ? center + (footerTop - center) * scale : null,
             PhysicalHeaderFrameBottom = isHeader
                 ? center + (source.EndCursorY - source.EndPendingAfterSpacing - center) * scale : null
+        };
+        return isHeader ? mapped : WithFooterTableOutlineViewport(mapped,
+            center + (page.MarginBottom - center) * scale, token);
+    }
+
+    // Independent Word margin/distance controls retain the body's lower drawing
+    // boundary while footer content moves. Only direct natural table outlines
+    // acquire this viewport; child text and standalone boxes keep their frames.
+    private static DocxStaticStoryLayoutResult WithFooterTableOutlineViewport(
+        DocxStaticStoryLayoutResult layout, double bottom, CancellationToken token)
+    {
+        if (!double.IsFinite(bottom) || !layout.TableRows.Any(row => row.Cells.Any(cell =>
+            cell.InlineTextBoxes.Any(box => box.BoxTop - box.BoxHeight < bottom)))) return layout;
+        return layout with
+        {
+            TableRows = layout.TableRows.Select(row =>
+            {
+                token.ThrowIfCancellationRequested();
+                return row with { Cells = row.Cells.Select(cell =>
+                {
+                    token.ThrowIfCancellationRequested();
+                    return cell with { InlineTextBoxes = cell.InlineTextBoxes.Select(box =>
+                    {
+                        token.ThrowIfCancellationRequested();
+                        return box.BoxTop - box.BoxHeight < bottom ? box with { OutlineViewportBottom = bottom } : box;
+                    }).ToArray() };
+                }).ToArray() };
+            }).ToArray()
         };
     }
 

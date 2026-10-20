@@ -221,6 +221,9 @@ internal sealed record DocxInlineTextBoxLayout(
 {
     // Geometry is already placed; authored outline widths still need this scale.
     public double PrintScale { get; init; } = 1d;
+    // Physical page boundary for an outline's containing drawing viewport.
+    // Child text retains its own content-box clip.
+    public double? OutlineViewportBottom { get; init; }
     public int? SourceLineIndex { get; init; }
 }
 

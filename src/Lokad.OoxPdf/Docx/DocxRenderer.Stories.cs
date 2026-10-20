@@ -341,9 +341,17 @@ internal sealed partial class DocxRenderer
         // frames paint their outline under the text like floating boxes.
         if (TryResolveInlineTextBoxStroke(box.TextBox, box.BoxWidth, box.BoxHeight, out double inlineStrokeWidth, out byte inlineStrokeRed, out byte inlineStrokeGreen, out byte inlineStrokeBlue))
         {
+            double viewportBottom = box.OutlineViewportBottom.GetValueOrDefault(clipTop - box.BoxHeight);
+            bool hasViewport = viewportBottom > clipTop - box.BoxHeight;
+            if (hasViewport)
+            {
+                graphics.SaveState();
+                graphics.ClipRectangle(clipX, viewportBottom, box.BoxWidth, Math.Max(0d, clipTop - viewportBottom));
+            }
             graphics.SetStrokeRgb(inlineStrokeRed, inlineStrokeGreen, inlineStrokeBlue);
             graphics.SetLineWidth(inlineStrokeWidth * box.PrintScale);
             graphics.StrokeRectangle(clipX, clipTop - box.BoxHeight, box.BoxWidth, box.BoxHeight);
+            if (hasViewport) graphics.RestoreState();
         }
         IReadOnlyList<DocxLayoutItem> items = box.TextLines
             .Cast<DocxLayoutItem>()
