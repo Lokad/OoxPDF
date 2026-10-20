@@ -317,6 +317,9 @@ internal static class PortableRenderingTests
     public static void PortableRenderingFooterTableOutlineViewportKeepsSourceContent() =>
         DocxInlineCompositionTests.CheckFooterTableOutlineViewport(new PinnedResolver(mathFont: true));
 
+    public static void PortableRenderingFooterTableContinuationFramesKeepSourceContent() =>
+        DocxInlineCompositionTests.CheckFooterTableContinuationFrames(new PinnedResolver(mathFont: true));
+
     public static void PortableRenderingFirstSpanningNoteKeepsCompleteSourceAndCount() =>
         DocxInlineCompositionTests.CheckSpanningCellNotes(new PinnedResolver(mathFont: true), "parallel-cell-first-footnote-office.json");
 

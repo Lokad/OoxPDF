@@ -26,7 +26,7 @@ internal sealed partial class DocxLayoutEngine
             var layout = CreateStaticStoryLayout(story, x, width, startY, isHeader, pageNumber, pageCount,
                 textMeasurer, staticMetrics, defaultTabStopPoints, scale, unscaledLineMetrics, token, mathEquations);
             return !isHeader && scale == 1d && IsNaturalStaticStory(story, width, mathEquations, token)
-                ? WithFooterTableOutlineViewport(layout, page.MarginBottom, token) : layout;
+                ? PlaceFooterTableDrawingFrames(layout, page.MarginBottom, token) : layout;
         }
 
         // Lay out one source block using the existing natural metrics. Mapping
@@ -157,14 +157,15 @@ internal sealed partial class DocxLayoutEngine
             PhysicalHeaderFrameBottom = isHeader
                 ? center + (source.EndCursorY - source.EndPendingAfterSpacing - center) * scale : null
         };
-        return isHeader ? mapped : WithFooterTableOutlineViewport(mapped,
+        return isHeader ? mapped : PlaceFooterTableDrawingFrames(mapped,
             center + (page.MarginBottom - center) * scale, token);
     }
 
-    // Independent Word margin/distance controls retain the body's lower drawing
-    // boundary while footer content moves. Only direct natural table outlines
-    // acquire this viewport; child text and standalone boxes keep their frames.
-    private static DocxStaticStoryLayoutResult WithFooterTableOutlineViewport(
+    // A complete source frame can enter its drawing viewport without preceding
+    // its measured paragraph start. Any tail that cannot fit keeps its clip.
+    // Independent wrapped/primary-line Word controls qualify these two bounds;
+    // explicit breaks and unknown owners retain their existing placement.
+    private static DocxStaticStoryLayoutResult PlaceFooterTableDrawingFrames(
         DocxStaticStoryLayoutResult layout, double bottom, CancellationToken token)
     {
         if (!double.IsFinite(bottom) || !layout.TableRows.Any(row => row.Cells.Any(cell =>
@@ -177,10 +178,29 @@ internal sealed partial class DocxLayoutEngine
                 return row with { Cells = row.Cells.Select(cell =>
                 {
                     token.ThrowIfCancellationRequested();
+                    if (!cell.InlineTextBoxes.Any(box => box.BoxTop - box.BoxHeight < bottom)) return cell;
+                    var starts = new Dictionary<int, (DocxParagraph Paragraph, double Top)>();
+                    foreach (var line in cell.TextLines)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (line.SourceParagraphIndex is not { } index || line.SourceLineIndex != 0 ||
+                            line.SourceParagraph is not { InlineContent: { } items } paragraph ||
+                            line.InlineFrame is not { } frame || items.Any(item => item is DocxInlineBreak)) continue;
+                        double top = line.BaselineY + frame.BaselineInset;
+                        if (!starts.TryAdd(index, (paragraph, top))) starts[index] = (paragraph, double.NaN);
+                    }
                     return cell with { InlineTextBoxes = cell.InlineTextBoxes.Select(box =>
                     {
                         token.ThrowIfCancellationRequested();
-                        return box.BoxTop - box.BoxHeight < bottom ? box with { OutlineViewportBottom = bottom } : box;
+                        if (box.BoxTop - box.BoxHeight >= bottom) return box;
+                        if (box.SourceParagraphIndex is { } index && starts.TryGetValue(index, out var start) &&
+                            double.IsFinite(start.Top) && start.Top >= box.BoxTop &&
+                            start.Paragraph.InlineTextBoxes.Any(source => ReferenceEquals(source, box.TextBox)))
+                        {
+                            double admittedTop = Math.Min(start.Top, bottom + box.BoxHeight);
+                            box = ShiftInlineTextBox(box, admittedTop - box.BoxTop, 0d);
+                        }
+                        return box with { OutlineViewportBottom = bottom };
                     }).ToArray() };
                 }).ToArray() };
             }).ToArray()
