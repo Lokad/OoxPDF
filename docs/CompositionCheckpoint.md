@@ -1,5 +1,28 @@
 # Composed-document reliability checkpoint
 
+## C333 bounded picture/box sibling-frame discrimination (2026-10-20)
+
+Two source-preserving transformations: picture18-to30pt and table300-to440pt.
+Height control retains Word's baseline-relative box gap(-5.14001pt Final) and
+native box displacement7.330/5.580pt. Fitting-width controls match original gates
+(max frameY.062073/proseY.168091pt). Four source screens clean; four strict pixel
+failures remain. Retained body-cell Word control uses+2.340027pt gap, so a global
+line-advance change is not justified. Safe metrics probe records strut12.65pt,
+inset10.317871, picture-line occupied20.332129/32.332129pt and box-only60pt.
+Four read-only Word object-model opens preserve source hashes and show the same
+line rule/format/after-spacing but differing computed shape positions. Cause
+remains unverified; no fitted offset or production change accepted.
+
+Four CLI/four Office exports, zero library builds/console tests/new raster views.
+Three probe-only builds retain a nonexistent UsedHeight compile error and a
+missing constructor-provided font resolver invocation; final probe records four
+layouts using the normal resolver. Sourcec575d1bc/golde78caf56; evidence
+artifacts/composition-c1/footer-sibling-review-evidence.json. C332CI39362315323
+green Windows/Ubuntu including broader/package checks. Both wrapped Word boxes
+end at body boundary769.91998pt. Next one bottom-margin90 discriminator: viewport
+admission predicts751.91998; baseline-only placement predicts769.91998. Reject
+unproven model without expanding narrow branches. Version0.1.5/release deferred.
+
 ## C332 physical footer-table outline viewport (2026-10-20)
 
 One physical lower drawing boundary passes from placement to overflowing direct
