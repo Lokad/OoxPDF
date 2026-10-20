@@ -1,5 +1,28 @@
 # Composed-document reliability checkpoint
 
+## C325 ordinary note reserve owners separated (2026-10-20)
+
+Single-note source removes only the future Right111 marker and note2. Other parts
+are exact. Word retains245 body/first-note anchors, math and box frames in each
+preset (490anchors total), with page2Left103/Right107. Native C324 changes from
+two-noteLeft100/Right104 to singleLeft102/Right106. Future registration causes two
+extra underfilled rows/column; single-head accounting leaves one. Coarse reserve
+charges separator20.65pt including8pt after-spacing plus gap,33.946328pt/note.
+Existing TryCompleteFootnoteReserve supplies23.636328pt single/34.622656pt double,
+with semantic rejection of continued/incomplete/mismatched heads. No font/size or
+document-shape rule needed to reuse that helper. It does not solve future-owner
+admission, which stays a separate bounded question.
+
+No production build/change/test replay. C324 runtime, two conversions/two Office
+exports; two probe-only builds after correcting omitted optional reflection
+argument, logs retained. Zero new raster views. Both single-note raw/prose-page/
+strict gates remain failed, all global prose/math retained, marker/note1 page2
+and actual count4. Source8620aee9; evidence artifacts/composition-c1/
+single-note-reserve-review.json. Next C326 shared complete-head continuation
+reserve with focused one-/two-note checks and six CLI outcomes; carry unchanged
+fixed portfolio by source proof, no repeated12-output/root/package qualification.
+C324 CI39354394771 continues. Version0.1.5/release deferral/workspace gap remain.
+
 ## C324 shared continuation capacity and restored-math count confirmation (2026-10-20)
 
 Table continuations honor pending-note reserve through the same existing frame
