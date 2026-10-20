@@ -1,5 +1,56 @@
 # Composed-document reliability checkpoint
 
+## C363 — bounded cleanup and qualified 0.2.0-preview (2026-10-20)
+
+The latest user direction bounds delivery at a local preview candidate and defers
+performance optimization and feature expansion. PLAN.md preserves the roadmap
+and marks this finite checkpoint complete; no publication, tag or release created.
+
+Additional audit removes26 uncalled/test-only methods, two workbook wrapper
+records and spill-path test storage. Tests call live streaming, source range
+metadata and emission targets; obsolete pattern constructors and unused readers
+are gone. Shared fixture ZIP writers stop reserving orphan.tmp files. Canonical
+probe:two valid payloads, correct dotted/dotless suffixes, zero orphan files.
+No new rendering guard family, ownership framework or accounting mechanism.
+Accepted S1-S4/cache/validation cleanup is not reopened. Chart-color and
+five-paragraph policies remain independently unresolved, preserved/unexpanded.
+
+Code source6f750f6e is green in CI39404138180 Windows/Ubuntu. Preparatory local
+build initially failed only from five stale workbook assertions, fixed before
+freeze; its34 focused tests pass. Different compiler binaries are not conflated.
+Canonical Windows CI DLL3291600CC47004C77CDD268E86B53FA6EA68D7213D3BDC81D535CE56F09124BC:
+3712Windows passes/16skips; exact same runtime792Ubuntu passes/43skips in one835
+method invocation.17assets/2582public inputs verified. Two input differences are
+hash-verified portable-font license line endings, with no source-content changes.
+
+Nine sources/sixteen outcomes/32pages retain every accepted PDF and diagnostic
+list and all Word page counts. Reused16 Office comparisons, zero new exports:
+2PPTX strict passes/14DOCX strict failures. Fresh source/PDF screens14clean/two
+static field flags retained; actual PAGE/NUMPAGES and rate/time content agree.
+Source cached1 deficits2/1 are symmetric with Word and no Office-token deficit
+remains. Source/geometry/pixel results stay separate; no universal ink/clip proof.
+Review SVG proseY1.436035pt and raw note WordURI46.794pt still fail original gates;
+native note link follows its physical picture within.000016pt.
+
+Version package/informational0.2.0-preview, assembly/file0.2.0.0. Public migration
+and scope are consolidated; obsolete quota documentation removed. Final docs
+revisiona47aaf78 packs qualified DLL/PDB without compilation. Final.nupkg and
+.snupkg under artifacts/nuget/preview-020/; Windows/Ubuntu final package-only
+consumers verify exact DLL, metadata, font embedding and balanced admission.
+Package SHA2F2DD58B54AE60A3916E858A09DD0900747B736CDCF1235D391B5E41B1E55041;
+symbols SHAC5731E734D6D705284A9F795B3E886924F1D689ADB4B3B159F57420F7B3CD2E6.
+Four additional frozen CLI exit-policy checks pass in one invocation.
+Root17asset/twoPDF transfer exact; no root rebuild or broad-suite replay. Safe
+managed metadata IL-only/zeroPInvoke/COM; runtime package dependencies empty.
+Evidence/helper commits skip CI because qualified src/tests trees are unchanged.
+
+Evidence:preview-020-canonical-qualification.json, preview-020-final-pack.json,
+preview-020-canonical-document-identities.json, preview-020-transfer/evidence.json,
+preview-cleanup-audit/ and docs/PreviewQualification.md. Permanent input bounds,
+cancellation, coarse host admission, bounded caches/staging, cleanup, publication
+and PDF validity remain. Workspace loose5GB cap still unmet at C36117.759GB;
+blocked1376empty-file retirement reclaimed zero. All rejection maps preserved.
+
 ## C361 SVG footer composes with the complete report (2026-10-20)
 
 Replace only the C357 footer drawing/media with canonical SVG/preview at the same
