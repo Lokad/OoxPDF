@@ -1,5 +1,38 @@
 # Composed-document reliability checkpoint
 
+## C360 SVG and raster reuse natural static source frames (2026-10-20)
+
+Remove only the SVG-type/raster-fallback exclusions from the shared natural image
+predicate. Reader mark retention, font planning, measured inline placement and
+body independence now share the same frame rule. Rotation, ownership, finite
+positive extents, source/markup eligibility, decoder fallback/limits, archive/XML/
+image bounds, cancellation, bounded storage and publication remain. No API,
+unsafe/native-library code, fitted SVG offset or quota added.
+
+One Releasee0c7d475,2579 inputs/17assets:87 Windows/77 Ubuntu/ten environmental
+skips, one exact invocation/platform, no repairs/joins. Four reused Word views
+pass original geometry and content gates: bodyY.160pt versus6.732pt, colored-path
+bounds.091pt versus4.513/9.034pt. Bodies equal qualified raster parents exactly;
+vector paint retained. Four strict pixel gates still fail. Footer Word/native
+144dpi pair viewed; small import normalization residual unverified/uncompensated.
+
+Existing external geometry observer adds source-colored path bounds with the
+same1pt limit plus count/source-order/offpage failures. Five synthetic functional
+checks pass; initial harness shadowed unittest.run before any checks and was
+corrected in a fresh retained output. No library rebuild/test replay. Tool Git
+blobs match at root; line endings are not a physical-byte identity claim.
+
+17assets/two exact transfer smokes: new SVG header Final plus unchanged PNG
+composed report Review. No root build/suite, fresh export or fixed-portfolio
+reconversion. Portfolio source carry proves no glyphless image source and no
+body-correction admission, not new12-PDF identity. Evidence
+artifacts/composition-c1/static-svg-source-frames-evidence.json.
+
+C358CI39392043972 is green Windows/Ubuntu including broader/package checks. Push
+C360 and continue C361 composed SVG footer holdout with actual review scaling
+using this artifact. Version0.1.5/release deferred. Last workspace17.614GB, loose
+5GB target unmet, protected retirements untouched; refresh footprint infrequently.
+
 ## C359 SVG/raster source-frame ownership is format-independent (2026-10-20)
 
 Two source-exact margin probes replace raster drawings with existing canonical
