@@ -1,5 +1,23 @@
 # Composed-document reliability checkpoint
 
+## C342 structural metadata drops complete source owners (2026-10-20)
+
+Three source-preserving customXml block/row/cell controls lose content in all six
+native mode views. Six fresh Word exports retain exact unwrapped-parent math,
+frame, following, image and prose geometry. No builds/console tests; six CLI/six
+Word exports. Microsoft CustomXmlBlock/Row/Cell documentation supports these
+metadata owners. C343 will share scoped-child traversal, preserve inherited
+revisions/source order and thread cancellation through non-yielding metadata;
+remove the visitor's forwarding overload. No layout or arbitrary-wrapper rewrite.
+
+Baseline audit fails on missing text JSON for the blank block output. The pinned
+inspector omits empty operation reports; Measure's0 text-inspected pages is not
+actual pagination. Direct PyMuPDF confirms one native/Word page. Retain failure
+log and direct content evidence; no fabricated empty JSON or raw-screen pass.
+Separate bounded observer task recorded. Evidence artifacts/composition-c1/
+structural-metadata-wrappers-review-evidence.json. Fixtures8c0b37d1/gold748cddbc;
+production unchanged. Version0.1.5/release deferred; workspace target unmet.
+
 ## C341 inline metadata through one paragraph dispatcher (2026-10-20)
 
 Known customXml/smartTag wrappers retain original prose, equations, images and
