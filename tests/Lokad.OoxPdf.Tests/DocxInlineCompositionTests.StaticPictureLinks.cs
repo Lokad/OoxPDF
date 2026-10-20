@@ -109,7 +109,14 @@ internal static partial class DocxInlineCompositionTests
             HeaderParagraphsByType = source.HeaderParagraphsByType.ToDictionary(item => item.Key, item => Paragraphs(item.Value)),
             FooterParagraphsByType = source.FooterParagraphsByType.ToDictionary(item => item.Key, item => Paragraphs(item.Value)),
             HeaderBodyElementsByType = source.HeaderBodyElementsByType.ToDictionary(item => item.Key, item => Blocks(item.Value)),
-            FooterBodyElementsByType = source.FooterBodyElementsByType.ToDictionary(item => item.Key, item => Blocks(item.Value))
+            FooterBodyElementsByType = source.FooterBodyElementsByType.ToDictionary(item => item.Key, item => Blocks(item.Value)),
+            PageSettings = source.PageSettings with
+            {
+                HeaderParagraphsByType = source.PageSettings.HeaderParagraphsByType.ToDictionary(item => item.Key, item => Paragraphs(item.Value)),
+                FooterParagraphsByType = source.PageSettings.FooterParagraphsByType.ToDictionary(item => item.Key, item => Paragraphs(item.Value)),
+                HeaderBodyElementsByType = source.PageSettings.HeaderBodyElementsByType.ToDictionary(item => item.Key, item => Blocks(item.Value)),
+                FooterBodyElementsByType = source.PageSettings.FooterBodyElementsByType.ToDictionary(item => item.Key, item => Blocks(item.Value))
+            }
         };
     }
 }

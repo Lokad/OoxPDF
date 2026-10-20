@@ -112,7 +112,6 @@ internal sealed partial class DocxReader
 
             WarnStoryMustUnderstandOnce(parsed, part.Name, diagnosticSink, warnedParts);
             parsed.Relationships ??= package.GetRelationships(part.Name, cancellationToken)
-                .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
                 .ToDictionary(r => r.Id, StringComparer.Ordinal);
             parsed.BodyElements ??= ReadRelatedStoryBodyElements(
                 parsed.Xml.Root?.Elements() ?? [],
@@ -177,7 +176,6 @@ internal sealed partial class DocxReader
 
             WarnStoryMustUnderstandOnce(parsed, part.Name, diagnosticSink, warnedParts);
             parsed.Relationships ??= package.GetRelationships(part.Name, cancellationToken)
-                .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
                 .ToDictionary(r => r.Id, StringComparer.Ordinal);
             parsed.Drawings ??= ReadFloatingDrawings(parsed.Xml, package, parsed.Relationships, styles, numbering, markupMode, cancellationToken);
             string type = (string?)reference.Attribute(WordprocessingNamespace + "type") ?? "default";
