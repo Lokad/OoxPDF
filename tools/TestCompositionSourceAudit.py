@@ -5,9 +5,79 @@ from xml.etree import ElementTree as E
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory, gettempdir
-from AuditCompositionContent import unresolved_fields, validate_outcome_modes, resolve_reference, sha
+from AuditCompositionContent import unresolved_fields, validate_outcome_modes, resolve_reference, sha, operation_text, words
 
 W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+
+class OperationTextTests(unittest.TestCase):
+    def operation(self, text='r', x=108.226, y=73.499, advance=2.67732, **changes):
+        item = dict(PageNumber=1, ObjectNumber=4, Generation=0, Font='Eq2', FillColor='g:0',
+                    FontSize=8.04, CharacterSpacing=0, EffectiveA=1, EffectiveB=0, EffectiveC=0, EffectiveD=1,
+                    EffectiveX=x, EffectiveY=y, EmittedAdvancePoints=advance, DecodedText=text)
+        return item | changes
+
+    def test_individually_positioned_glyphs_and_split_runs_are_words(self):
+        items = [self.operation(), self.operation('a', 110.904, advance=4.47024),
+                 self.operation('t', 115.375, advance=2.23512), self.operation('e', 117.609, advance=4.47024)]
+        self.assertEqual({'rate': 1}, words(operation_text(items)))
+        self.assertEqual('rate', operation_text([self.operation('ra', advance=7.148), self.operation('te', 115.374)]))
+
+    def test_whole_words_explicit_spaces_and_punctuation_survive(self):
+        items = [self.operation('rate ', advance=20), self.operation('time', 128.226)]
+        self.assertEqual({'rate': 1, 'time': 1}, words(operation_text(items)))
+        self.assertEqual({'rate': 1, 'time': 1}, words(operation_text([
+            self.operation('rate,', advance=20), self.operation('time', 128.226)])))
+        self.assertEqual("rate's", operation_text([
+            self.operation('rate', advance=20), self.operation("'s", 128.226)]))
+
+    def test_word_gaps_columns_baselines_overlap_and_paint_order_are_boundaries(self):
+        left = self.operation('rate', advance=20)
+        for changes in [dict(x=130), dict(x=300), dict(y=74), dict(x=120), dict(x=90)]:
+            self.assertEqual({'rate': 1, 'time': 1}, words(operation_text([left, self.operation('time', **changes)])))
+        self.assertEqual('time rate', operation_text([self.operation('time', x=130), left]))
+
+    def test_resource_text_state_and_page_changes_are_boundaries(self):
+        left = self.operation()
+        for key, value in dict(PageNumber=2, ObjectNumber=5, Generation=1, Font='Other', FillColor='g:1',
+                               FontSize=9, CharacterSpacing=1, EffectiveA=2, EffectiveB=1,
+                               EffectiveC=1, EffectiveD=2).items():
+            with self.subTest(key=key):
+                self.assertEqual('r ate', operation_text([left, self.operation('ate', x=110.90332, **{key:value})]))
+
+    def test_rotated_scaled_and_reflected_effective_frames(self):
+        for a,b,c,d in [(0,1,-1,0), (2,0,0,2), (-1,0,0,1)]:
+            frame = dict(EffectiveA=a, EffectiveB=b, EffectiveC=c, EffectiveD=d)
+            left = self.operation(**frame)
+            right = self.operation('ate', x=108.226+2.67732*a, y=73.499+2.67732*b, **frame)
+            self.assertEqual('rate', operation_text([left, right]))
+
+    def test_missing_invalid_zero_and_nonfinite_metrics_stay_separate(self):
+        for key in ['FontSize','CharacterSpacing','EffectiveA','EffectiveB','EffectiveC','EffectiveD',
+                    'EffectiveX','EffectiveY','EmittedAdvancePoints']:
+            for value in [None, '1', True, float('nan'), float('inf'), -float('inf')]:
+                for side in [0,1]:
+                    items=[self.operation(), self.operation('ate', x=110.90332)]
+                    items[side][key]=value
+                    self.assertEqual('r ate', operation_text(items), (key,value,side))
+        for key in ['PageNumber','ObjectNumber','Generation','Font','FillColor']:
+            items=[self.operation(),self.operation('ate', x=110.90332)]
+            for item in items: item.pop(key)
+            self.assertEqual('r ate', operation_text(items))
+        for changes in [dict(EmittedAdvancePoints=0),dict(EmittedAdvancePoints=-1),dict(FontSize=0),
+                        dict(EffectiveA=0,EffectiveD=0)]:
+            self.assertEqual('r ate', operation_text([self.operation(**changes),self.operation('ate',x=110.90332)]))
+
+    def test_replacement_text_and_empty_assembly_continuations(self):
+        self.assertEqual('root', operation_text([self.operation('root')]))
+        self.assertEqual('r  ate', operation_text([
+            self.operation(), self.operation('', x=110.90332), self.operation('ate', x=110.90332)]))
+        self.assertEqual('r ate', operation_text([self.operation(),self.operation('ate',x=110.90332,EmittedAdvancePoints=None)]))
+
+    def test_rounding_tolerance_is_small_and_geometry_only(self):
+        left=self.operation()
+        self.assertEqual('rate', operation_text([left,self.operation('ate',x=110.90532)]))
+        self.assertEqual('r ate', operation_text([left,self.operation('ate',x=110.90732)]))
+        self.assertEqual('r ate', operation_text([left,self.operation('ate',x=110.90332,y=73.503)]))
 
 def document(content):
     return E.fromstring(f'<w:document xmlns:w="{W}"><w:body>{content}</w:body></w:document>')

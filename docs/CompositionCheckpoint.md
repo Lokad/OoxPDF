@@ -1,5 +1,18 @@
 # Composed-document reliability checkpoint
 
+## C319 composed-report math-word extraction classified (2026-10-20)
+
+Confirmed audit defect: inserting spaces between PDF text operations splits
+native single-glyph math into r/a/t/e and t/i/m/e; Word emits whole words. All
+four native/Word PDFs retain complete searchable words twice/page. Source
+footer contains two rate/time fractions, and two actually viewed retained Final
+first-page images show both intact. No renderer defect demonstrated. Preserve
+the old raw deficits, cached1/field flags and strict visual failures. Evidence
+artifacts/composition-c1/composed-math-word-classification.json pins source,
+PDFs, operations, independent word bounds and images. No builds/conversions,
+tests, Office exports or new rasterization. C318 CI39349461255 continues. Next:
+generic conservative operation joining, never a fixture/word whitelist.
+
 ## C318 boxed math/count and insets compose with trailing prose (2026-10-20)
 
 No production change is needed: accepted fraction/NUMPAGES prefix, parallel

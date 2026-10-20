@@ -7,6 +7,7 @@ import argparse
 from collections import Counter
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
 import posixpath
@@ -54,6 +55,48 @@ def normalize(value):
 
 def words(value):
     return Counter(re.findall(r"[^\W_]+(?:'[^\W_]+)*", normalize(value).casefold()))
+
+
+def operation_text(operations):
+    """Keep paint order; join only text whose measured origins are contiguous.
+
+    A text-show boundary is not a word boundary: equations commonly paint each
+    glyph separately. Missing metrics, empty replacement text and differing
+    resources/state remain boundaries. The 0.003pt tolerance covers rounding of
+    three-decimal PDF coordinates, not a font-size-dependent word-space guess.
+    """
+    state = ("PageNumber", "ObjectNumber", "Generation", "Font", "FillColor",
+             "FontSize", "CharacterSpacing", "EffectiveA", "EffectiveB", "EffectiveC", "EffectiveD")
+    metrics = ("FontSize", "CharacterSpacing", "EffectiveA", "EffectiveB", "EffectiveC", "EffectiveD",
+               "EffectiveX", "EffectiveY", "EmittedAdvancePoints")
+
+    def contiguous(left, right):
+        if left is None:
+            return False
+        before, after = left.get("DecodedText") or "", right.get("DecodedText") or ""
+        if not before or not after or before[-1].isspace() or after[0].isspace():
+            return False
+        if any(left.get(key) is None or left[key] != right.get(key) for key in state):
+            return False
+        for item in (left, right):
+            if any(not isinstance(item.get(key), (int, float)) or isinstance(item[key], bool) or
+                   not math.isfinite(item[key]) for key in metrics):
+                return False
+            if item["FontSize"] <= 0 or item["EmittedAdvancePoints"] <= 0:
+                return False
+            if item["EffectiveA"] * item["EffectiveD"] == item["EffectiveB"] * item["EffectiveC"]:
+                return False
+        expected_x = left["EffectiveX"] + left["EmittedAdvancePoints"] * left["EffectiveA"]
+        expected_y = left["EffectiveY"] + left["EmittedAdvancePoints"] * left["EffectiveB"]
+        return math.hypot(right["EffectiveX"] - expected_x, right["EffectiveY"] - expected_y) <= 0.003
+
+    chunks, previous = [], None
+    for item in operations:
+        if chunks and not contiguous(previous, item):
+            chunks.append(" ")
+        chunks.append(item.get("DecodedText") or "")
+        previous = item
+    return "".join(chunks)
 
 
 def deficits(expected, actual):
@@ -286,12 +329,12 @@ def main():
         operations_path = run / "inspect/text-operations.json"
         operations = read(operations_path)
         office, office_ops_hash = inspect_reference(reference, inspector, args.cache.resolve())
-        candidate_words = words(" ".join(item.get("DecodedText") or "" for item in operations))
-        office_words = words(" ".join(item.get("DecodedText") or "" for item in office))
+        candidate_words = words(operation_text(operations))
+        office_words = words(operation_text(office))
         page_deficits = []
         for page in sorted({item["PageNumber"] for item in office + operations if item["PageNumber"] is not None}):
-            expected_page = words(" ".join(item.get("DecodedText") or "" for item in office if item["PageNumber"] == page))
-            observed_page = words(" ".join(item.get("DecodedText") or "" for item in operations if item["PageNumber"] == page))
+            expected_page = words(operation_text(item for item in office if item["PageNumber"] == page))
+            observed_page = words(operation_text(item for item in operations if item["PageNumber"] == page))
             missing = deficits(expected_page, observed_page)
             if missing:
                 page_deficits.append({"Page": page, "Tokens": missing})
