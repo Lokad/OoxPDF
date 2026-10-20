@@ -257,7 +257,7 @@ def main():
                 elif links:
                     images = measure_images(path)
                     errors = [min((max(abs(a - e) for a, e in zip(link['Rect'], image['Rect']))
-                        for image in images if image['Page'] == link['Page']), default=math.inf) for link in links]
+                        for image in images if image['Page'] == link['Page']), default=float('inf')) for link in links]
                     result['MaxPictureUriRectError'] = max(errors)
                     if any(error > .001 for error in errors):
                         result['Failures'].append('PictureUriGeometry')
