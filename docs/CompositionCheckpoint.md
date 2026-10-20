@@ -1,5 +1,31 @@
 # Composed-document reliability checkpoint
 
+## C341 inline metadata through one paragraph dispatcher (2026-10-20)
+
+Known customXml/smartTag wrappers retain original prose, equations, images and
+boxes. Share direct/nested child dispatch and hard-break discovery; preserve
+field/link/bookmark/revision owners and cancellation.9 added/45 removed production
+lines. No new layout/API/resource/native-code rule. All eight original1/.1/.01pt
+geometry gates and raw screens pass; both mixed equations restored. Viewed
+native/Word body pages confirm visible restoration. All eight strict failures
+remain. Unknown/directional/block metadata semantics stay staged.
+
+One library compilation; frozen35aae774/2,546inputs, all2,540old exact.17Windows/
+13Ubuntu/four native skips, one exact invocation/platform, no test failure/join.
+One genuine parent omission failure. Initial compile lacks an explicit test mode;
+tests/CLI-only repair preserves the library before freezing.22CLI outputs/zero
+new Office exports: reuse eight C340 references. All12 fixed PDFs exact to C328;
+two mixed-report PDFs exact to C339;14 comparisons reused. Fixed ten clean/two
+cached1-field raw screens and two compound field-audit failures carry by complete
+PDF/input identities. Ten fixed DOCX/eight affected/two compound strict failures
+remain; two PPTX strict passes. Compound review geometry residuals unchanged.
+17assets/two exact transfer smokes, no root build/suite/package replay.
+
+Production09f255f3; evidence artifacts/composition-c1/inline-metadata-wrappers-
+evidence.json. C339CI39368987466 green including broader/package checks. Next
+bounded review: customXml block/row/cell ownership, only with independent Word
+content evidence. Version0.1.5/release deferred; workspace target remains unmet.
+
 ## C340 inline metadata wrappers omit supported content (2026-10-20)
 
 Four source-preserving customXml/smartTag controls cover mixed body content and

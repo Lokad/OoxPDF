@@ -165,6 +165,9 @@ viewports retain small top/bottom clipping differences from Word.
 Independent margin, picture-height and width controls cover both public modes.
 Explicit breaks and uncertain owners retain existing placement. Standalone boxes,
 headers and body containers keep their own rules. Strict visual failures remain.
+Known inline `customXml` and legacy `smartTag` metadata wrappers preserve their
+original mixed content and source ranges. Fields, revisions and hard breaks use
+the same paragraph dispatcher across direct and nested inline containers.
 See the
 [composition checkpoint](CompositionCheckpoint.md) for evidence and limitations.
 
