@@ -158,6 +158,8 @@ fallbacks. Strict pixel differences and dynamic-field audit flags remain.
 Supported natural footer-table boxes can enter the body drawing viewport while
 staying below their measured paragraph start. Overflow that cannot fit keeps its
 outline clip; child text follows the placed frame and retains its own content clip.
+Inline-box outlines paint before their interior clip; enclosing cell/drawing
+bounds remain. Some top/bottom stroke clipping still differs from Word.
 Independent margin, picture-height and width controls cover both public modes.
 Explicit breaks and uncertain owners retain existing placement. Standalone boxes,
 headers and body containers keep their own rules. Strict visual failures remain.

@@ -1,5 +1,26 @@
 # Composed-document reliability checkpoint
 
+## C337 independent inline-box outline and child clips (2026-10-20)
+
+Paint the outline before the box interior clip. Lower outline viewports include
+its lateral/upper stroke envelope, while enclosing cell/drawing clips remain.
+All30 original geometry gates pass;30 prior text-operation streams are exact.
+Eighteen lateral mid-edge projections match Word within.000401pt. Ten top/bottom
+pairs still differ under enclosing clips, up to.25pt; all30 strict pixel failures
+remain. Fourteen fresh content screens clean. Viewed native/Word body picture/box
+pages retain complete gross geometry and visible content. Clip projection is not
+raster ink/antialias/join proof; no arbitrary-document fidelity claim.
+
+One frozen8149be22/2,540inputs, one Release build:36Windows/25Ubuntu/11native
+skips, one exact invocation/platform, no repair/join.30CLI outputs; no new Office
+exports and no comparison reuse.17assets/two exact transfer smokes, no root build
+or suite/package replay. Fixed12 carried by C336 source proof: all five DOCX
+packages have no text boxes; decks use PPTX. No layout/API/resource/native-code
+change. Productionb3b75d63; evidence artifacts/composition-c1/inline-box-stroke-
+evidence.json. C335CI39366017499 green, including broader/package checks. Next
+review enclosing boundary ownership without removing general cell clips.
+Version0.1.5/release deferred; loose5GB workspace target remains unmet.
+
 ## C336 confirmed inline-box self-clipping review (2026-10-20)
 
 Fourteen retained Word views across body/cells/header/footer confirm a painting
