@@ -1,5 +1,32 @@
 # Composed-document reliability checkpoint
 
+## C379-C380 — user cleanup verified below the loose 5 GB cap (2026-10-20)
+
+C379 adds visible startup/phase messages and periodic counters to the throwaway
+scripts without changing the three pinned inventories or removal checks. Its full
+read-only validation passes for 173,532 paths / 79,309 physical groups in 635 seconds.
+
+The user then removes all 173,532 selected files. C380 independently verifies the
+complete audit path set, no errors and zero remaining targets; the earlier 3,128
+paths also remain absent. No agent-side rejected deletion was retried. All 423
+retired-snapshot identities, 34 canonical/root assets, 2,582 canonical inputs and both final
+packages retain their hashes. One root font-license CRLF/LF difference matches
+Git; other root inputs match exactly. Production/test Git trees are unchanged.
+The 283 MB historical archive retains its SHA256 and earlier full-entry/restore proof.
+
+Fresh workspace scan: 4,670,728,207 bytes / 4.671 GB, 820,915 files / 86,829 directories,
+zero errors, 45.78 seconds. Unique file-content lengths count once per file ID;
+allocated clusters are not measured. The loose 5 GB gate is met. No builds,
+conversions, Office exports or rendering suites repeated. Preview preparation
+and maintenance are complete; publication/performance/features remain deferred.
+
+Evidence: artifacts/workspace-footprint-C380.json and artifacts/workspace-maintenance/
+final-user-cleanup-verified-C380.json, with the exact original user audit and
+retained archive/inventories. Previous active plan, including full rejection-map
+references: artifacts/composition-c1/PLAN.before-C380.record.md. Remaining protected
+targets retain their earlier restrictions. The active plan now records completion
+instead of obsolete pending/blocker narratives and preserves the rendering roadmap.
+
 ## C374-C378 — verified lossless retention and one final cleanup handoff (2026-10-20)
 
 C375pins2,392remaining obsolete compiled paths/1.882GBuniquecontent. Three pure

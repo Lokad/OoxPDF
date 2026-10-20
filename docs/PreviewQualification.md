@@ -65,32 +65,27 @@ The subsequent [32-page paired review](PreviewVisualReview.md) records specific
 practical effects for every portfolio document. It found no serious clipping,
 overlap or wrong page split at page scale, while retaining all original failures.
 
-After automatic review rejected agent execution, the user ran the requested
-throwaway cleanup script. C365 verifies all 3,128 inventoried compiled files
-absent across 184 superseded snapshots, with no errors. Their snapshot identities,
-all 17 canonical and 17 root runtime assets, 2,582 canonical inputs and both final
-packages retain their pinned hashes. Earlier rejected retirements were not retried.
+Workspace maintenance is complete. The user-run scripts removed 3,128 earlier
+compiled files and then all 173,532 paths in the final reviewed inventories.
+C380 verifies the final audit's exact path set, zero remaining targets and no
+errors. The fresh workspace measurement is **4.671 GB** (4,670,728,207 bytes),
+820,915 files and 86,829 directories, below the loose 5 GB target. This counts
+unique file-content lengths by file ID, rather than allocated clusters.
 
-Subsequent storage maintenance shares 93,441 identical closed visual/inspector
-output paths, saving 2.490 GB of unique content without losing paths or bytes.
-Shared files remain read-only; rerenders and inspections use fresh directories.
-The latest complete scan, C370, measures 13.234 GB before the final 488 MB dump
-consolidation and its audit files. It counts unique file-content lengths by file
-ID, rather than allocated clusters; a newer whole-workspace total is not inferred.
+Historical comparisons retain all 167,077 archived entries in the verified
+283 MB `closed-qualification-evidence-20261020.tar.xz`; its SHA-256 is unchanged
+and the standard-tar restore proof remains valid. Shared closed files remain
+read-only; rerenders and inspections use fresh directories. Current preview,
+inputs, source, useful tools, private data, worktrees and Git were excluded.
 
-The loose 5 GB target remains unmet. A final consolidated user-run cleanup is
-prepared, including the pending older-runtime batch. All 173,532 remaining paths
-passed read-only hash/ownership preflight. It retains 167,077 historical comparison
-files in a fully verified 283 MB lossless archive before removing expanded copies;
-the archive's standard tar restore check also passes. No final deletion has run.
-A projected result below 5 GB still requires the actual cleanup log and measurement.
-Evidence is retained in `preview-020-completion-review/`,
-`artifacts/workspace-footprint-C370.json` and
-the C367, C369, C370 and C373 verification records under
-`artifacts/workspace-maintenance/`.
-The final handoff is `final-cleanup-ready-C377.json`; the retained archive is
-`closed-qualification-evidence-20261020.tar.xz`. Current preview, inputs, source,
-useful tools, private data, worktrees and Git remain outside the cleanup.
-The final package and all 34 canonical/root runtime asset hashes remain unchanged.
-No library build, conversion, Office export or suite replay accompanied this
-storage work. Preview publication remains deferred.
+All 423 retired-snapshot identities, 34 canonical/root runtime assets, 2,582
+canonical inputs and both final packages retain their pinned hashes. The root
+font license differs from the frozen CI copy only in CRLF/LF endings and matches
+Git; all other root inputs match exactly. Production and test Git trees are
+unchanged. No library build, conversion, Office export or suite replay accompanied
+this storage work, and no rejected agent deletion was retried.
+
+Completion evidence: `artifacts/workspace-footprint-C380.json` and
+`artifacts/workspace-maintenance/final-user-cleanup-verified-C380.json`, with the
+original user audit, inventories and archive alongside it. Infrequent footprint
+checks remain the maintenance policy. Preview publication remains deferred.
