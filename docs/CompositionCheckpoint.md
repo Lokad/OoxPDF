@@ -1,5 +1,35 @@
 # Composed-document reliability checkpoint
 
+## C349 placed-note picture navigation shares paint maps and clips (2026-10-20)
+
+One shared placed-story map/physical-clip calculation feeds painting and picture
+annotations. Existing note image precompensation and final image placement own
+all coordinates. One missing endnote URI per mode restored; all nine picture URI
+instances now present. Complete ordinary placed notes share the existing footnote/
+endnote mapping; partial/complex/table-note/floating/box/SVG/rotation/fragmented
+navigation stays staged. No fitted scale/origin, layout, public API or resource
+contract change. Source owner semantics and safe managed code remain intact.
+
+Frozen7f2eb473/2559 inputs/17assets, one Release build.33 Windows/26 Ubuntu/seven
+native skips, one exact invocation/platform, no repair/join. Focused exact-line
+clipping, missing image relationship, unsupported action and cancellation pass;
+independent note image geometry plus body/static/note text navigation retained.
+Parent C348 genuinely fails expected3/got2 on page3. Two CLI conversions reuse
+two C347 Word views; zero new Office export. Three pages/all12 source equations/
+five source pictures/three boxes and nine painted images retained. Six paint
+streams, inspected reports and raster PNGs exact to C348.17assets/two exact smoke
+PDFs transferred, zero root build/suite replay. Prior14 fixed/mixed outcomes carry
+by source proof and identical factored paint expressions, not fresh PDF identity.
+
+Final original geometry/URI gates pass; all nine clickable picture regions follow
+visible frames within.000061pt. Review raw Word URI error74.523pt and inherited
+mathY1.117/imageY1.192/proseY1.440/separator1.125pt remain failed. Both strict pixel
+gates fail; source screens carry cached1 deficits4/3 and field flags with no clean
+relabel. Evidence artifacts/composition-c1/note-picture-links-evidence.json.
+C346CI39375591335 green including broader/package; C348CI39377405082 running while
+work continues. C349 will batch with the bounded footnote holdout. Version0.1.5/
+release deferred; last17.186GB workspace above loose5GB target.
+
 ## C348 static picture links share the existing paint item set (2026-10-20)
 
 Static story relationship caches discarded external targets before inline parsing.
