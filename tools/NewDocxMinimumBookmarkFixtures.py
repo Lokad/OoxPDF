@@ -27,6 +27,7 @@ passive = parser.add_mutually_exclusive_group()
 passive.add_argument('--passive-headers', action='store_true')
 passive.add_argument('--passive-footers', action='store_true')
 passive.add_argument('--passive-picture-probes', action='store_true')
+passive.add_argument('--static-picture-frame-probes', action='store_true')
 passive.add_argument('--page-field-probes', action='store_true')
 passive.add_argument('--inactive-static-probes', action='store_true')
 passive.add_argument('--inactive-note-probe', action='store_true')
@@ -41,6 +42,44 @@ cases = root / 'tests/Lokad.OoxPdf.Tests/Cases'
 output = cases / 'CompositionProbes'
 output.mkdir(exist_ok=True)
 w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+
+if args.static_picture_frame_probes:
+    wp = '{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}'
+    a = '{http://schemas.openxmlformats.org/drawingml/2006/main}'
+    pic = '{http://schemas.openxmlformats.org/drawingml/2006/picture}'
+    parents = json.loads((output / 'minimum-passive-pictures.json').read_text())
+    rows, prepared = [], []
+    for parent in parents:
+        source = root / parent['Input']
+        original = source.read_bytes()
+        assert hashlib.sha256(original).hexdigest().upper() == parent['Sha256']
+        with ZipFile(BytesIO(original)) as archive:
+            entries = {name: archive.read(name) for name in archive.namelist()}
+        for variant in ['tall', 'large-mark']:
+            parts = entries.copy()
+            story = E.fromstring(parts[parent['Part']])
+            if variant == 'tall':
+                for extent in [story.find('.//' + wp + 'extent'), story.find('.//' + pic + 'spPr/' + a + 'xfrm/' + a + 'ext')]:
+                    extent.set('cx', str(36 * 12700)); extent.set('cy', str(18 * 12700))
+            else:
+                story.find('.//' + w + 'pPr/' + w + 'rPr/' + w + 'sz').set(w + 'val', '40')
+            parts[parent['Part']] = E.tostring(story, encoding='utf-8', xml_declaration=True)
+            assert all(parts[name] == entries[name] for name in entries if name != parent['Part'])
+            identifier = 'minimum-static-picture-' + parent['Story'] + '-' + variant
+            generated = package_bytes(parts)
+            row = dict(parent, Id=identifier, Input=(output.relative_to(root) / (identifier + '.docx')).as_posix(),
+                Sha256=hashlib.sha256(generated).hexdigest().upper(), SourceInput=parent['Input'], SourceSha256=parent['Sha256'],
+                ImageWidth=36 if variant == 'tall' else 18, ImageHeight=18 if variant == 'tall' else 9,
+                ParagraphMarkFontSize=20 if variant == 'large-mark' else 11,
+                Change='Vary only static image extents or paragraph-mark size; every other uncompressed package entry is exact.')
+            rows.append(row)
+            prepared.append((output / (identifier + '.docx'), generated))
+    prepared.append((output / 'minimum-static-picture-frames.json', manifest_bytes(rows)))
+    for target, generated in prepared:
+        if args.write: publish(target, generated)
+        else: assert target.read_bytes() == generated, target.name
+    print('Four static picture frame controls verified; body and other package entries exact.')
+    raise SystemExit(0)
 
 if args.passive_picture_probes:
     source = cases / 'ordinary-eleven-point-minimum.docx'
