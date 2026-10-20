@@ -59,11 +59,13 @@ internal static partial class DocxInlineCompositionTests
 
     public static void DocxStaticPictureLinksKeepDeclaredClipsAndCancellation()
     {
+        var raster = ReadMutation("InlineBoxMath/inline-picture-link-properties-body", OoxPdfDocxMarkupMode.Final,
+            false, false).Paragraphs.Single(paragraph => paragraph.Images.Count != 0).Images.Single();
         foreach (string fixture in new[] { "docx-static-image-header", "docx-static-image-footer", "docx-static-fixed-footer", "docx-static-mixed-fixed-footer" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", fixture + ".docx"));
-            var source = AddStaticPictureTargets(DocxTests.ReadDocx(path, mode));
+            var source = AddStaticPictureTargets(DocxTests.ReadDocx(path, mode), raster);
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final ?
                 OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var page = renderer.RenderBlankPages(source, null, default).Single();
@@ -89,14 +91,17 @@ internal static partial class DocxInlineCompositionTests
         TestAssert.True(matches, "The clickable region follows an actual physical raster draw.");
     }
 
-    private static DocxDocument AddStaticPictureTargets(DocxDocument source)
+    private static DocxDocument AddStaticPictureTargets(DocxDocument source, DocxInlineImage raster)
     {
         var cache = new Dictionary<DocxParagraph, DocxParagraph>(ReferenceEqualityComparer.Instance);
         DocxParagraph Rewrite(DocxParagraph paragraph)
         {
             if (cache.TryGetValue(paragraph, out var found)) return found;
             var images = new Dictionary<DocxInlineImage, DocxInlineImage>(ReferenceEqualityComparer.Instance);
-            foreach (var image in paragraph.Images) images.Add(image, image with { ClickTarget = "https://example.invalid/static-picture" });
+            // Fixed-story controls contain SVG. Retain their authored extents and
+            // clipping while supplying one known raster payload for this contract.
+            foreach (var image in paragraph.Images) images.Add(image, image with { ClickTarget = "https://example.invalid/static-picture",
+                ContentType = raster.ContentType, Bytes = raster.Bytes, RasterFallback = null });
             return cache[paragraph] = paragraph with { Images = paragraph.Images.Select(image => images[image]).ToArray(),
                 InlineContent = paragraph.InlineContent?.Select(item => item is DocxInlinePicture picture ? new DocxInlinePicture(images[picture.Image]) : item).ToArray() };
         }
