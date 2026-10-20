@@ -1,5 +1,41 @@
 # Composed-document reliability checkpoint
 
+## C324 shared continuation capacity and restored-math count confirmation (2026-10-20)
+
+Table continuations honor pending-note reserve through the same existing frame
+geometry as first-page admission. First prototype70e61509 produced five pages/
+omitted math:30neighbors passed, two new checks failed. Isolated diagnostic source
+copy found a deferred initial natural-frame mismatch, then a completed four-page
+retry rejected by the old total-count guard. One additional bounded confirmation
+now accepts the stable restored count; a further change keeps existing diagnostic
+fallback. The old1-to2 boundary now renders complete2pages. No row/font/size rule,
+public API, new quota/cache or native/unsafe code. Trace never enters shipped
+source/assets; failed attempt stays retained.
+
+Final composed source: Word4pages/native4, actual count4/math once, all240 long-row
+paragraphs/tails/notes present. Both note heads and forward links share marker
+pages2/3. Future notes still overreserve: native page2Left100/Right104 versus Word
+103/107 (three intact rows per column carried to page3). Both prose-page/raw-page/
+strict gates remain failed.492 prose/note/eight math anchors retain original
+1/.1/.01pt axes; math/frame geometry passes. Two viewed final pages1/2 show complete
+equation/count4 and note1. No full Word geometry qualification or cosmetic closure.
+
+One final artifact20ce060b/2,518inputs:40Windows/30Ubuntu/10native-font skips, once
+per platform; four genuine parent failures become passes. Rerun all final40 after
+production correction; no join/carry of rejected30passes.16 neighbor PDFs exact,
+16 comparisons/raw screens reused.18finalCLI conversions; two rejected and one
+diagnostic conversion retained separately.17assets/two exact root smokes, no root
+build/suite/package replay or new Office exports. Two Release library builds and
+one diagnostic-only library build. An incomplete revision argument was rejected
+before compilation; corrected full SHA/log retained. Annotation preflight expected
+four without source support; corrected to two authored forward references, both
+targets verified. Rendering docs update the bounded count contract and remove
+obsolete wording suggesting a selectable Deterministic option. Production2c9e7248;
+evidence artifacts/composition-c1/table-note-count-evidence.json. C322
+CI39351694374 is green including broader/package checks. Current CI proceeds while
+one-note/two-note source transformations separate excess reserve owners. Version
+0.1.5/release preparation deferred; workspace gap remains explicit.
+
 ## C323 ordinary notes expose stale table continuation capacity (2026-10-20)
 
 One source-exact transformation adds notes at Left54/Right111 of the accepted
