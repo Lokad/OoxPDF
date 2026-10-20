@@ -1,5 +1,23 @@
 # Composed-document reliability checkpoint
 
+## C338 enclosing cell/drawing clip review (2026-10-20)
+
+Eighteen retained native/Word pairs separate14 fitted views with no Word outline
+clip from four partial footer views with independent clips. Six fitted top edges
+still lose half their stroke under the immediate cell content clip. The bounded
+prospective rule admits the complete frame inside its own cell/lower viewport,
+then gives only its outline a half-stroke envelope. Preserve child and ancestor
+clips; uncertain/fragmented/overflowing ownership keeps its existing clip. This
+predicts closure of six fitted errors and preserves four partial-view residuals
+below.086pt. Geometry projection is not raster ink or antialiasing proof.
+
+No builds, console tests, conversions or Office exports. C339 must qualify the
+actual bounded rule against original geometry, source-content and visual gates;
+no unconditional clip removal, new qualification framework or font/count regime.
+Evidence artifacts/composition-c1/inline-box-enclosing-clip-review-evidence.json
+and inline-box-enclosing-clip-prospective.json. C337 pushed26665c37; work continues
+while CI runs. Version0.1.5/release deferred; workspace target remains unmet.
+
 ## C337 independent inline-box outline and child clips (2026-10-20)
 
 Paint the outline before the box interior clip. Lower outline viewports include
