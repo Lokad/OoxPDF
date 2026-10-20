@@ -146,8 +146,12 @@ change retains the diagnostic fallback. Independent controls cover both public
 modes, bookmarks and run splitting; visual field-font/cell-origin residuals remain.
 Spanning parallel cells can retain ordinary footnotes beside boxed mathematics,
 NUMPAGES, insets and trailing rows. Notes keep their source-marker pages and
-forward destinations. Future notes still reserve excess continuation space in
-the composed control, so its prose-page and strict visual gates remain failed.
+forward destinations. One bounded refinement assigns complete note heads to the
+existing measured source fragments; it is accepted only when reference ownership
+and fragment count remain stable. First-fragment and later one-/two-note controls
+match Word's source pages and original geometry gates in both public modes.
+Continued, incomplete, page-dependent and unmatched owners retain conservative
+fallbacks. Strict pixel differences and dynamic-field audit flags remain.
 See the
 [composition checkpoint](CompositionCheckpoint.md) for evidence and limitations.
 

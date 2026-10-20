@@ -11,13 +11,37 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxSpanningParallelCellsKeepNotesWithIndependentWordReferences()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent spanning-note page ownership uses installed Windows fonts.");
-        CheckSpanningCellNotes(null);
+        CheckSpanningCellNotes(null, qualifySourcePages: true);
     }
 
     public static void DocxSingleSpanningNoteKeepsIndependentWordSourcePages()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent single-note source pages use installed Windows fonts.");
         CheckSpanningCellNotes(null, "parallel-cell-single-footnote-office.json", qualifySourcePages: true);
+    }
+
+    public static void DocxFirstSpanningNoteKeepsIndependentWordSourcePages()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent first-fragment note pages use installed Windows fonts.");
+        CheckSpanningCellNotes(null, "parallel-cell-first-footnote-office.json", qualifySourcePages: true);
+    }
+
+    public static void DocxSpanningNoteAtChangingCutKeepsMarkerAndTargetTogether()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("The cut-position control uses installed Windows fonts.");
+        var source = ReadMutation("CompositionProbes/parallel-cell-boxed-inset-notes", OoxPdfDocxMarkupMode.Final, false, false,
+            (xml, w, _) =>
+            {
+                var run = xml.Descendants(w + "footnoteReference").Single(n => (string?)n.Attribute(w + "id") == "2").Parent!;
+                var paragraph = xml.Descendants(w + "p").Single(p => string.Concat(p.Descendants(w + "t").Select(t => t.Value)) == "Right source row 107.");
+                run.Remove(); paragraph.Add(run);
+            });
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var text = renderer.RenderBlankPages(source, null, default)
+            .Select(page => string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text))).ToArray();
+        int marker = Array.FindIndex(text, value => value.Contains("Right source row 107.", StringComparison.Ordinal));
+        int target = Array.FindIndex(text, value => value.Contains("Right final-page note:", StringComparison.Ordinal));
+        TestAssert.True(marker >= 0 && marker == target, "A capacity refinement must preserve complete source marker/target page ownership.");
     }
 
     internal static void CheckSpanningCellNotes(IFontResolver? resolver,

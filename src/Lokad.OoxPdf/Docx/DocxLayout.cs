@@ -925,11 +925,24 @@ internal sealed partial class DocxLayoutEngine
             Func<DocxLayoutPage, int, int, double>? footnoteFrameBottom =
                 CanUsePlainFootnoteStaticFrame(document, templatePage, separatorMeasurer, paragraphSpacingScale, cancellationToken)
                     ? availableFootnoteFrameBottom : null;
-            if (completeFootnoteAdmission is not null)
+            double? sourceSeparatorHeight = completeFootnoteAdmission?.SeparatorHeight;
+            if (sourceSeparatorHeight is null && continuedStories.Count == 0 && separatorLayout?.TextLines.Count == 1)
+            {
+                var reservations = new Dictionary<DocxInlineReference, double>(ReferenceEqualityComparer.Instance);
+                foreach (var row in currentItems.OfType<DocxTableRowLayout>())
+                foreach (var reservation in row.FootnoteReservations)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    reservations[reservation.Reference] = reservation.SeparatorHeight;
+                }
+                if (separatorLayout.TextLines[0].LineHeight is > 0d and var headHeight &&
+                    sharedBatch.All(story => reservations.TryGetValue(story.Location.Reference, out double height) && height == headHeight))
+                    sourceSeparatorHeight = headHeight;
+            }
+            if (sourceSeparatorHeight is double separatorReserve)
             {
                 double bottom = footnoteFrameBottom?.Invoke(templatePage, templatePageNumber, templatePageNumber) ?? templatePage.MarginBottom;
-                FitCompleteFootnoteTrailingSpacing(sharedBatch, cursorY - Math.Max(0d, pendingSpacingAfter) -
-                    completeFootnoteAdmission.SeparatorHeight - bottom);
+                FitCompleteFootnoteTrailingSpacing(sharedBatch, cursorY - Math.Max(0d, pendingSpacingAfter) - separatorReserve - bottom);
             }
             if (pageFootnoteStories.Count == 0 && templatePage.Items.Count == 0 &&
                 !TryResolveOwnedInlineFootnoteTop(templatePage, sharedBatch, paragraphSpacingScale, null, out _))
@@ -983,9 +996,9 @@ internal sealed partial class DocxLayoutEngine
                     pageNumberOverride: templatePageNumber,
                     pageCountOverride: templatePageNumber,
                     sharedContentTop: cursorY - Math.Max(0d, pendingSpacingAfter) -
-                        (completeFootnoteAdmission?.SeparatorHeight ?? 0d), footerKeepOut: footnoteFrameBottom,
+                        (sourceSeparatorHeight ?? 0d), footerKeepOut: footnoteFrameBottom,
                         availableFooterKeepOut: availableFootnoteFrameBottom,
-                        hasSourceOwnedReserve: completeFootnoteAdmission is not null, cancellationToken: cancellationToken);
+                        hasSourceOwnedReserve: sourceSeparatorHeight is not null, cancellationToken: cancellationToken);
             }
 
             var harvestedStories = new List<DocxPlacedRelatedStoryLayout>();
@@ -1304,6 +1317,12 @@ internal sealed partial class DocxLayoutEngine
                 double continuationBottom = usesPrintedTableFrame
                     ? ParagraphFrameBottom(continuationNoteReserve) : FrameBottom(continuationNoteReserve);
                 double continuationTableHeight = Math.Max(1d, page.Height - page.MarginTop - continuationBottom);
+                var noteAdmission = page.ColumnFrames.Count == 1 &&
+                    page.PageSettings.FootnoteReferenceSettings.PositionValue is null or "pageBottom"
+                    ? DocxTableNoteAdmission.TryCreate(elementIndex, inFlightNotes.Values,
+                        locationsByBlock.GetValueOrDefault(elementIndex), cancellationToken) : null;
+                double NoteFrameBottom(double reserve) => usesPrintedTableFrame
+                    ? ParagraphFrameBottom(reserve) : FrameBottom(reserve);
                 double reviewFragmentScale = usesPrintedTableFrame ? paragraphSpacingScale : 1d;
                 void MarkTableBoundaryContent()
                 {
@@ -1363,7 +1382,9 @@ internal sealed partial class DocxLayoutEngine
                 }
 
                 LayoutTable(bodyTable, CurrentTableFrameBottom(), continuationTableHeight, textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, new DocxTableCellTextLinesMemo(),
-                    reviewFragmentScale: reviewFragmentScale);
+                    reviewFragmentScale: reviewFragmentScale,
+                    resolveNoteFragments: noteAdmission is null ? null : fragments => noteAdmission.TryPlan(fragments,
+                        NoteFrameBottom, cursorY, page.Height - page.MarginTop, cancellationToken));
                 if (scaleBaselineOffsetTransitions &&
                     (completedPagesBeforeTable == pages.Count || reviewFragmentScale < 1d) && textMeasurer is not null)
                 {

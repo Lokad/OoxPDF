@@ -11,7 +11,10 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed partial class DocxLayoutEngine
 {
     private readonly record struct DocxCellSourceWindow(double Offset, double Height, int FirstLine, int LineCount);
-    private sealed record DocxCellOwnedRowFragment(double Height, IReadOnlyList<DocxCellSourceWindow> Cells);
+    private sealed record DocxCellOwnedRowFragment(double Height, IReadOnlyList<DocxCellSourceWindow> Cells)
+    {
+        public IReadOnlyList<DocxFootnoteHeadReservation> FootnoteReservations { get; init; } = [];
+    }
 
     // Return the nominal body anchor only after complete physical publication.
     // An unprojected table leaves the caller on its existing reset/fallback.
@@ -354,7 +357,8 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken cancellationToken,
         double paragraphSpacingScale,
         DocxTableCellTextLinesMemo? cellMemo = null,
-        double reviewFragmentScale = 1d)
+        double reviewFragmentScale = 1d,
+        Func<IReadOnlyList<IReadOnlyList<DocxTextLineLayout>>, DocxTableNoteFragmentPlan?>? resolveNoteFragments = null)
     {
         if (!double.IsFinite(reviewFragmentScale) || reviewFragmentScale <= 0d || reviewFragmentScale >= 1d ||
             !CanUsePrintedReviewTextTableFrame(table)) reviewFragmentScale = 1d;
@@ -576,6 +580,26 @@ internal sealed partial class DocxLayoutEngine
                         FloorTableRowFragmentHeightToPitch(firstFragmentHeight, splitPitch);
                     if (TryResolveCellOwnedFragments(firstCapacity, continuationHeight, out var owned))
                     {
+                        // One source-owner refinement can reclaim future-head
+                        // reserve. Confirm the same owners and fragment count before
+                        // publishing; otherwise retain the conservative source plan.
+                        if (!row.IsHeader && resolveNoteFragments is not null)
+                        {
+                            var plan = resolveNoteFragments(ProjectLines(owned));
+                            double headerHeight = headerRows.Sum(entry => frame.RowHeights[entry.RowIndex]);
+                            if (plan is not null && TryResolveCellOwnedFragments(plan.FirstHeight, continuationHeight,
+                                out var refined, plan.PageHeights.Select(height => Math.Max(1d, height - headerHeight)).ToArray()) &&
+                                refined.Count == owned.Count)
+                            {
+                                var confirmation = resolveNoteFragments(ProjectLines(refined));
+                                if (confirmation is not null && plan.Owners.Count == confirmation.Owners.Count &&
+                                    plan.Owners.All(pair => confirmation.Owners.TryGetValue(pair.Key, out int owner) && owner == pair.Value))
+                                    owned = refined.Select((fragment, index) => fragment with {
+                                        FootnoteReservations = plan.Owners.Where(pair => pair.Value == index)
+                                            .Select(pair => new DocxFootnoteHeadReservation(pair.Key, plan.SeparatorHeights[index])).ToArray()
+                                    }).ToArray();
+                            }
+                        }
                         cellFragments = owned;
                         splitPitch = 0d;
                         return true;
@@ -590,6 +614,24 @@ internal sealed partial class DocxLayoutEngine
             }
 
             return false;
+
+            IReadOnlyList<IReadOnlyList<DocxTextLineLayout>> ProjectLines(IReadOnlyList<DocxCellOwnedRowFragment> fragments)
+            {
+                var result = new List<IReadOnlyList<DocxTextLineLayout>>(fragments.Count);
+                foreach (var fragment in fragments)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var lines = new List<DocxTextLineLayout>();
+                    for (int cellIndex = 0; cellIndex < fragment.Cells.Count; cellIndex++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var window = fragment.Cells[cellIndex];
+                        lines.AddRange(laidOutCells[cellIndex].TextLines.Skip(window.FirstLine).Take(window.LineCount));
+                    }
+                    result.Add(lines);
+                }
+                return result;
+            }
 
             bool HasValidKeepBoundary(IReadOnlyList<DocxParagraph> paragraphs, IReadOnlyList<DocxTextLineLayout> lines,
                 int first, int end)
@@ -616,7 +658,7 @@ internal sealed partial class DocxLayoutEngine
             // keeps its collapsed ownership. Unknown structural geometry and
             // changing per-page inputs retain their common-boundary fallback.
             bool TryResolveCellOwnedFragments(double firstCapacity, double pageHeight,
-                out IReadOnlyList<DocxCellOwnedRowFragment> fragments)
+                out IReadOnlyList<DocxCellOwnedRowFragment> fragments, IReadOnlyList<double>? pageHeights = null)
             {
                 fragments = [];
                 if (!HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue) ||
@@ -707,7 +749,7 @@ internal sealed partial class DocxLayoutEngine
                     if (height <= 0d) return false;
                     result.Add(new(height, windows));
                     if (!more) break;
-                    capacity = pageHeight;
+                    capacity = pageHeights is not null && result.Count < pageHeights.Count ? pageHeights[result.Count] : pageHeight;
                 }
                 fragments = result;
                 return result.Count > 1;
@@ -1730,7 +1772,9 @@ internal sealed partial class DocxLayoutEngine
                 paragraphSpacingScale: paragraphSpacingScale,
                 cellMemo: cellMemo,
                 adjustAtLeastBodySpacing: true,
-                cellSources: cellFragments?[fragmentIndex].Cells));
+                cellSources: cellFragments?[fragmentIndex].Cells) with {
+                    FootnoteReservations = cellFragments?[fragmentIndex].FootnoteReservations ?? []
+                });
             cursorY -= fragmentHeight;
             consumedHeight += fragmentHeight;
 

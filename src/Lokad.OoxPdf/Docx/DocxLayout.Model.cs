@@ -224,6 +224,8 @@ internal sealed record DocxInlineTextBoxLayout(
     public int? SourceLineIndex { get; init; }
 }
 
+internal sealed record DocxFootnoteHeadReservation(DocxInlineReference Reference, double SeparatorHeight);
+
 internal sealed record DocxTableRowLayout(
     DocxTableLayoutContext Table,
     int RowIndex,
@@ -250,6 +252,7 @@ internal sealed record DocxTableRowLayout(
     // Set only by the complete, simple review-table projection. Positions are
     // already in printed coordinates; border widths still need this scale.
     public double ReviewBorderPrintScale { get; init; } = 1d;
+    public IReadOnlyList<DocxFootnoteHeadReservation> FootnoteReservations { get; init; } = [];
 }
 
 // Cell content measurements are retained from the existing row-height pass;
