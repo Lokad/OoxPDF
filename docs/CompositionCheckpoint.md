@@ -1,5 +1,45 @@
 # Composed-document reliability checkpoint
 
+## C352 source typography reuses validated minimum-leading frames (2026-10-20)
+
+Separate the eleven-point source typography classifier from container/layout
+eligibility already owned by minimum leading. Kerning's numbered-flow gate is
+weaker, so it retains its additional HasSingleLineLayout requirement; ordinary
+kerning reuses its completed frame check. All font/size/spacing/style/marker and
+fallback guards preserved. Tests query the live source policy. This is confirmed
+architectural duplication, not a rendering defect or measured speedup. No public
+library API, coordinate, resource, cancellation or safe-managed contract change.
+
+Frozenfc28a218/2562 inputs/17assets. One successful Release build; the initial
+compile caught a missed second kerning caller before freezing, failure retained.
+36 Windows/36 Ubuntu exact checks once/platform, no repair/join. Coverage includes
+ordinary/numbered11pt and contextual12pt source policies, inherited styles,
+markers, met thresholds and rejected kept/wrapped/column/rich/unknown frames.
+Three Review plus one default PDF are byte-exact to C349.17assets/two exact root
+transfer smokes, no root library build/suite/portfolio replay. Prior fixed12 carry
+by truth-preserving source proof, not fresh identities. Evidence
+artifacts/composition-c1/minimum-leading-source-policy-evidence.json.
+
+Three selected source versions lacked complete Word cache entries. Export/import
+explicit Word16 AllMarkup views once; preserve original public case thresholds.
+All three pixel gates fail on identical parent output: changed ratio.006107/.006556
+vs.0055 for ordinary/note11; contextual mean error.90451 vs.42 (all metric failures
+retained). Both note cases also retain DOCX_APPROXIMATED_FOOTNOTE diagnostics,
+violating their original empty-diagnostics gate. No clean relabel or warning
+policy relaxation. First evidence preflight incorrectly assumed empty diagnostics;
+inspected and retained matching parent warnings without rerunning conversions.
+
+CheckVisualCase accepts explicit CliPath, skips its CLI build, and retains actual
+CLI/library/input/case hashes before gates. Failure provenance and missing sibling
+library refusal exercised. Four candidate/four parent conversions; one extra tool
+provenance conversion. Three standalone rasterizer build checks during import;
+zero extra library build for them. Default tool behavior retained. Root AGENTS
+merge preserves the newer geometry-tool description and documents CliPath usage.
+C351CI39379915986 green Windows/Ubuntu including broader/package. C352 push follows;
+retained contextual geometry triage continues during CI. Version0.1.5/release
+preparation deferred; last workspace17.614GB over loose5GB cap. C351 rejected
+parent-runtime retirements remain protected, zero reclaimed.
+
 ## C351 fixed-portfolio checkpoint retains twelve exact PDFs (2026-10-20)
 
 One refresh from C3497f2eb473: seven sources/twelve outcomes, all full PDFs exact
