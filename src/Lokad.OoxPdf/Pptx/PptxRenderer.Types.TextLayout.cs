@@ -430,7 +430,7 @@ internal sealed partial class PptxRenderer
 
             try
             {
-                cached = resolver.ResolvePresentationTextFace(new FontRequest(familyName, bold, italic));
+                cached = resolver.Resolve(new FontRequest(familyName, bold, italic));
             }
             catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException)
             {

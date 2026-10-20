@@ -34,17 +34,10 @@ internal sealed class PresentationFontResolver
         return primary.Resolve(request);
     }
 
-    public FontFaceResolution ResolvePresentationTextFace(FontRequest request)
-    {
-        return primary is WindowsFontResolver windows
-            ? windows.ResolvePresentationTextFace(request)
-            : primary.Resolve(request);
-    }
-
     public (FontFaceResolution Resolution, OpenTypeFont Font)? ResolvePresentationOpenTypeFont(FontRequest request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        FontFaceResolution resolution = ResolvePresentationTextFace(request);
+        FontFaceResolution resolution = Resolve(request);
         OpenTypeFont? font = GetOrLoadOpenTypeFont(resolution, cancellationToken);
         return font is null ? null : (resolution, font);
     }
@@ -63,7 +56,6 @@ internal sealed class PresentationFontResolver
             return cached;
         }
 
-        // R03: font-program charge lives in FontProgramLoader.Load (shared PPTX/DOCX boundary); cache hits do not charge.
         cached = FontProgramLoader.Load(resolution, cancellationToken);
         openTypeFonts[key] = cached;
         return cached;
@@ -86,7 +78,6 @@ internal sealed class PresentationFontResolver
             return cached.Subset;
         }
 
-        // R03: subset charge lives in PdfEmbeddedFont.Create (shared PPTX/DOCX boundary); cache hits do not charge.
         PdfEmbeddedFont created = PdfEmbeddedFont.Create(font, codePoints, cancellationToken);
         if (cached is null)
         {

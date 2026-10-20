@@ -764,7 +764,7 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (mathFace is null)");
         }
 
-        FontFaceResolution resolved = resolver.ResolvePresentationTextFace(new FontRequest(mathFace.FamilyName));
+        FontFaceResolution resolved = resolver.Resolve(new FontRequest(mathFace.FamilyName));
 
         TestAssert.Equal(mathFace.Source.StableId, resolved.Source.StableId);
         TestAssert.True(resolved.HasMathTable, "Expected PPTX presentation text to preserve the requested math-table face.");

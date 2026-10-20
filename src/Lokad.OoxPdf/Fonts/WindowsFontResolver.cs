@@ -324,19 +324,23 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
     public FontFaceResolution Resolve(FontRequest request)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(request.FamilyName);
-        if (requestCache.TryGetValue(request, out FontFaceResolution? cached))
+        // Hits, publication and capacity eviction share ownership of the dictionary.
+        lock (requestCache)
         {
-            return RepopulateRequestedFamily(cached, request);
-        }
+            if (requestCache.TryGetValue(request, out FontFaceResolution? cached))
+            {
+                return RepopulateRequestedFamily(cached, request);
+            }
 
-        FontFaceResolution resolved = ResolveCore(request);
-        if (requestCache.Count >= MaxCachedResolutions)
-        {
-            requestCache.Clear();
-        }
+            FontFaceResolution resolved = ResolveCore(request);
+            if (requestCache.Count >= MaxCachedResolutions)
+            {
+                requestCache.Clear();
+            }
 
-        requestCache[request] = resolved;
-        return RepopulateRequestedFamily(resolved, request);
+            requestCache[request] = resolved;
+            return RepopulateRequestedFamily(resolved, request);
+        }
     }
 
     private static FontFaceResolution RepopulateRequestedFamily(FontFaceResolution cached, FontRequest request)
@@ -370,11 +374,6 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                 new FontStyleKey(request.Bold, request.Italic, 400, 0, false),
                 new MemoryFontProgramSource("missing:" + request.FamilyName, ReadOnlyMemory<byte>.Empty),
                 IsFallback: true);
-    }
-
-    internal FontFaceResolution ResolvePresentationTextFace(FontRequest request)
-    {
-        return Resolve(request);
     }
 
     internal IReadOnlyList<FontFaceResolution> GetDiscoveredFonts()
