@@ -1,5 +1,38 @@
 # Composed-document reliability checkpoint
 
+## C354 margin pictures preserve independent body typography (2026-10-20)
+
+Confirmed a composition defect with source-exact ordinary11pt controls: adding
+one18x9pt raster wholly inside the header/footer margin leaves all eight Word
+body origins and sizes unchanged, but the prior frozen renderer moved bodyY by
+up to6.732pt in both presets. Four independent Word16 picture views and one
+missing parent Final view were exported; existing parent Review reference reused.
+
+Extend the existing selected-story independence rule to ordinary unrotated
+raster content and measured page/margin bounds. Body source properties remain
+strict; rich, intrusive, unmeasured, unowned, revised, vector, floating and markup
+lane fallbacks remain. No new font/size/count qualification or public API change.
+The source-only numbering admission is unchanged.
+
+One frozen Release6d61e8aa,2566 inputs/17assets:53 Windows checks,48 Ubuntu/five
+installed-font skips, one exact invocation/platform, no repairs/joins. Four
+qualified conversions preserve parent body origins/sizes exactly; Word bodyY
+max.160pt, X.024pt, sizes exact. Four source-content screens clean. Picture frames
+stay exact to the previous native output. Their independent WordY errors remain
+4.430pt header/9pt footer: all four image and strict pixel gates remain failed.
+
+Transferred17assets/two exact integration smokes; no root library build or suite
+replay. Fixed portfolio qualification carries by source reachability in both
+DOCX modes and separate PPTX layout, not a fresh PDF-identity claim. Three tool
+preflight errors (paths/optional reflection argument) occurred before their work
+was published; no rebuild or repeated test qualification. Evidence
+artifacts/composition-c1/passive-static-pictures-evidence.json.
+
+C352CI39383086582 green Windows/Ubuntu including broader/package checks. Next:
+bounded static-picture baseline/footer frame review using pinned references;
+no fitted offset or threshold change. Version0.1.5/release preparation deferred.
+Last workspace17.614GB; loose5GB target unmet, rejected retirements protected.
+
 ## C353 retained minimum-leading geometry does not justify a spacing fix (2026-10-20)
 
 Read three C352 Office/candidate PDF/144dpi PNG pairs and source models, no new
