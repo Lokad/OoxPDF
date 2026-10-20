@@ -1,0 +1,155 @@
+{
+  "Scope": "Two independent Word16 margin views; simple viewport-only and fixed-baseline models both fail. Paragraph-start bound limits upward admission.",
+  "Rows": [
+    {
+      "Id": "footer-table-viewport-wrapped-margin",
+      "InputSha256": "7D45C6B122DB02F741FD9A2E74D89100F7C5DEB13FDAE9B9672AC29333CB43BC",
+      "Mode": "final-preserve",
+      "MathPart": "word/static-inline-footer-table-picture.xml",
+      "WordPdfSha256": "2C76259CC6C05F112140ADBBBEBBBC7534B22EA80C64716F5BFD327F5EBB82AF",
+      "WordPages": 1,
+      "WordMathAnchors": [],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            82.0,
+            696.9199829101562,
+            298.0,
+            756.9199829101562
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordImages": [
+        {
+          "Page": 1,
+          "Rect": [
+            219.58999633789062,
+            696.9199829101562,
+            255.58999633789062,
+            714.9199829101562
+          ],
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 102.97998046875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 81.98400115966797,
+          "Y": 715.0599975585938,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Inline box content.",
+          "Page": 1,
+          "X": 89.42400360107422,
+          "Y": 711.219970703125,
+          "Size": 11.039999961853027
+        }
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "Inline box content.",
+        "After public math table."
+      ]
+    },
+    {
+      "Id": "footer-table-viewport-wrapped-margin",
+      "InputSha256": "7D45C6B122DB02F741FD9A2E74D89100F7C5DEB13FDAE9B9672AC29333CB43BC",
+      "Mode": "all-word-compatible",
+      "MathPart": "word/static-inline-footer-table-picture.xml",
+      "WordPdfSha256": "3B485521ED2D6A37726C579F7C67662B891C6FD6A06EC275311210B33B022415",
+      "WordPages": 1,
+      "WordMathAnchors": [],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            61.8120002746582,
+            628.9019775390625,
+            224.6320037841797,
+            674.1300048828125
+          ],
+          "StrokeWidth": 0.37689998745918274,
+          "InsidePage": true
+        }
+      ],
+      "WordImages": [
+        {
+          "Page": 1,
+          "Rect": [
+            165.52999877929688,
+            628.9019775390625,
+            192.6669921875,
+            642.469970703125
+          ],
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 54.2400016784668,
+          "Y": 165.719970703125,
+          "Size": 8.303999900817871
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 54.2400016784668,
+          "Y": 181.26995849609375,
+          "Size": 8.303999900817871
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 61.75199890136719,
+          "Y": 642.3599853515625,
+          "Size": 8.303999900817871
+        },
+        {
+          "Text": "Inline box content.",
+          "Page": 1,
+          "X": 67.36799621582031,
+          "Y": 639.47998046875,
+          "Size": 8.303999900817871
+        }
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "Inline box content.",
+        "After public math table."
+      ]
+    }
+  ]
+}
