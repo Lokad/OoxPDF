@@ -5,6 +5,9 @@
     "DocxStaticStoryInlineImagesShareTheTextBaseline",
     "DocxStaticStoryDeclaredFramesClipInlineImages",
     "DocxInlineImageClipTravelsWithScaledStoryPlacement",
+    "DocxWordCompatibleAllMarkupUsesEmittedAdvanceForStaticTextBoxHyperlinkAnnotations",
+    "DocxRendererEmitsStaticFloatingTextBoxExternalHyperlinkAnnotations",
+    "DocxStaticStoryRendererEmitsInternalHyperlinkDestinations",
     "DocxComposedInlineFrameReportRetainsIndependentWordPagesAndContent",
     "PortableRenderingComposedInlineFrameReportRetainsRepeatedStaticOwners"
   ],
