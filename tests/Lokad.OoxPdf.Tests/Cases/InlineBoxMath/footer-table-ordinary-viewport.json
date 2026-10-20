@@ -1,0 +1,26 @@
+[
+  {
+    "Id": "footer-table-viewport-ordinary-distance",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/footer-table-viewport-ordinary-distance.docx",
+    "Sha256": "66205C789F5FDEEB171C19988A242B10DA8C768363E9130BFB34B94CCBF71838",
+    "SourceSha256": "ACFE4936F1964883D1EB68DD045AD950B63105A0BBB9533DD643E7FD493F41E3",
+    "HeldOut": true,
+    "Variant": "ordinary-distance",
+    "MathPart": "word/static-inline-footer-table-box.xml",
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedImageCount": 0,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "Change": "Change only one section page-margin attribute; table, paragraph, drawing, math and all other package parts remain exact.",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-inline-footer-table-box.docx",
+    "MarginAttribute": "footer",
+    "SourceTwips": 720,
+    "ChangedTwips": 360
+  }
+]
