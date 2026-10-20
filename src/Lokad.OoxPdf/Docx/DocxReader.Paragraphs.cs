@@ -255,10 +255,8 @@ internal sealed partial class DocxReader
                             Equals(run.EffectiveProperties.Fonts, firstCommentRun.EffectiveProperties.Fonts)));
             });
         DocxTextRun? retainedMark = retainCommentMark || inlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment) ||
-            paragraphMarkRevisions.Count != 0 || runs.Count == 0 && images.Count != 0
-            ? CreateResolvedTextRun(retainCommentMark ? " " : string.Empty, paragraphMarkRun,
-                CreateRunStyleResolution(paragraphMarkRunProperties, paragraphStyleId, null, styles, tableCellStyle?.Run),
-                false, -1, 0, inheritedRevision, MergeRevisionLists(inheritedRevision, paragraphMarkRevisions))
+            paragraphMarkRevisions.Count != 0
+            ? CreateParagraphMark(retainCommentMark ? " " : string.Empty)
             : null;
         if (retainCommentMark && retainedMark is { } commentMark &&
             (commentMark.Bold || commentMark.Italic || commentMark.Underline || commentMark.CharacterSpacingPoints != 0d))
@@ -299,7 +297,7 @@ internal sealed partial class DocxReader
             };
         }
 
-        return new DocxParagraph(
+        var result = new DocxParagraph(
             runs,
             images,
             authoredParagraphStyleId,
@@ -343,6 +341,16 @@ internal sealed partial class DocxReader
             ParagraphMarkFontSize = paragraphMarkRun.FontSize ?? DocxDefaults.UnstyledRunFontSizePoints,
             ParagraphMarkRun = retainedMark
         };
+
+        // Retain measurement-only marks through the same source rule used by
+        // font planning and static placement. Mixed equation/object owners keep
+        // their established mark and font-resource contract.
+        return result.ParagraphMarkRun is null && DocxPlainBodyFrame.IsPlainPictureOnlyParagraph(result)
+            ? result with { ParagraphMarkRun = CreateParagraphMark(string.Empty) } : result;
+
+        DocxTextRun CreateParagraphMark(string text) => CreateResolvedTextRun(text, paragraphMarkRun,
+            CreateRunStyleResolution(paragraphMarkRunProperties, paragraphStyleId, null, styles, tableCellStyle?.Run),
+            false, -1, 0, inheritedRevision, MergeRevisionLists(inheritedRevision, paragraphMarkRevisions));
 
         void EnsureInlineContent()
         {
