@@ -1,0 +1,543 @@
+{
+  "Scope": "Independent Word16 footer-table outline viewport; preserve separate child text clips and source geometry. Not whole-document fidelity proof.",
+  "Rows": [
+    {
+      "Id": "footer-table-viewport-bottom-margin",
+      "InputSha256": "5893EB1D4D447D03A76223C023437457B1E84A5B44FDCE6C748F2DF01D5E6A8A",
+      "Mode": "final-preserve",
+      "WordPdfSha256": "2519D9CF3EEABE89BEF529FA2E633CCC58D1BFAA3641AE8D47861FA613E6EF5C",
+      "WordPages": 1,
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 153.6199951171875,
+          "Y": 748.416015625,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 158.5399932861328,
+          "Y": 748.416015625,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 164.4199981689453,
+          "Y": 748.416015625,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 158.66000366210938,
+          "Y": 760.416015625,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            82.0,
+            737.8999633789062,
+            298.0,
+            797.8999633789062
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 102.97998046875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 89.42400360107422,
+          "Y": 754.89599609375,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordOutlineClip": {
+        "SourceRect": [
+          82.0,
+          737.8999633789062,
+          298.0,
+          797.8999633789062
+        ],
+        "StrokeWidth": 0.5,
+        "ActiveClipRects": [
+          [
+            72.0,
+            737.8800048828125,
+            372.0,
+            751.9199829101562
+          ]
+        ],
+        "IntersectedCenterlineBounds": [
+          82.0,
+          737.8999633789062,
+          298.0,
+          751.9199829101562
+        ],
+        "LowerEdgeClippedPoints": 45.97998046875
+      }
+    },
+    {
+      "Id": "footer-table-viewport-bottom-margin",
+      "InputSha256": "5893EB1D4D447D03A76223C023437457B1E84A5B44FDCE6C748F2DF01D5E6A8A",
+      "Mode": "all-word-compatible",
+      "WordPdfSha256": "C3A66E0C15A189A19BC76E6B112FD3DDE29672E1DEB5E9ED9038700524B0026B",
+      "WordPages": 1,
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 115.7300033569336,
+          "Y": 667.510009765625,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 119.44999694824219,
+          "Y": 667.510009765625,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 123.86000061035156,
+          "Y": 667.510009765625,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 119.54000091552734,
+          "Y": 676.5399780273438,
+          "Size": 6.047999858856201
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            61.8120002746582,
+            659.7919921875,
+            224.6320037841797,
+            705.02001953125
+          ],
+          "StrokeWidth": 0.37689998745918274,
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 54.2400016784668,
+          "Y": 165.719970703125,
+          "Size": 8.303999900817871
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 54.2400016784668,
+          "Y": 181.26995849609375,
+          "Size": 8.303999900817871
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 67.36799621582031,
+          "Y": 672.3800048828125,
+          "Size": 8.303999900817871
+        }
+      ],
+      "WordOutlineClip": {
+        "SourceRect": [
+          61.8120002746582,
+          659.7919921875,
+          224.6320037841797,
+          705.02001953125
+        ],
+        "StrokeWidth": 0.37689998745918274,
+        "ActiveClipRects": [
+          [
+            54.2400016784668,
+            659.760009765625,
+            473.7599792480469,
+            670.3199462890625
+          ]
+        ],
+        "IntersectedCenterlineBounds": [
+          61.8120002746582,
+          659.7919921875,
+          224.6320037841797,
+          670.3199462890625
+        ],
+        "LowerEdgeClippedPoints": 34.7000732421875
+      }
+    },
+    {
+      "Id": "footer-table-viewport-footer-distance",
+      "InputSha256": "A93541EDBE0D1DBD3C47FAD86968343D72B6137EA5602EE40A29A5E2B4BF047A",
+      "Mode": "final-preserve",
+      "WordPdfSha256": "227F2C0B6292C4CFFDCE68A9AA6E81DBBAA809E53A8374B1DB96CFE1AAC4CB36",
+      "WordPages": 1,
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 153.6199951171875,
+          "Y": 730.4199829101562,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 158.5399932861328,
+          "Y": 730.4199829101562,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 164.4199981689453,
+          "Y": 730.4199829101562,
+          "Size": 8.039999961853027
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 158.66000366210938,
+          "Y": 742.416015625,
+          "Size": 8.039999961853027
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            82.0,
+            719.8999633789062,
+            298.0,
+            779.8999633789062
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 102.97998046875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 89.42400360107422,
+          "Y": 736.8999633789062,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordOutlineClip": {
+        "SourceRect": [
+          82.0,
+          719.8999633789062,
+          298.0,
+          779.8999633789062
+        ],
+        "StrokeWidth": 0.5,
+        "ActiveClipRects": [
+          [
+            72.0,
+            719.8800048828125,
+            372.0,
+            769.9199829101562
+          ]
+        ],
+        "IntersectedCenterlineBounds": [
+          82.0,
+          719.8999633789062,
+          298.0,
+          769.9199829101562
+        ],
+        "LowerEdgeClippedPoints": 9.97998046875
+      }
+    },
+    {
+      "Id": "footer-table-viewport-footer-distance",
+      "InputSha256": "A93541EDBE0D1DBD3C47FAD86968343D72B6137EA5602EE40A29A5E2B4BF047A",
+      "Mode": "all-word-compatible",
+      "WordPdfSha256": "3F7582996A3E7D3D524A4074E1DE1B16E87F424407BF09E96A5DACA21C012F30",
+      "WordPages": 1,
+      "WordMathAnchors": [
+        {
+          "Text": "x",
+          "Page": 1,
+          "X": 115.7300033569336,
+          "Y": 653.949951171875,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "+",
+          "Page": 1,
+          "X": 119.44999694824219,
+          "Y": 653.949951171875,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "2",
+          "Page": 1,
+          "X": 123.86000061035156,
+          "Y": 653.949951171875,
+          "Size": 6.047999858856201
+        },
+        {
+          "Text": "y",
+          "Page": 1,
+          "X": 119.54000091552734,
+          "Y": 662.97998046875,
+          "Size": 6.047999858856201
+        }
+      ],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            61.8120002746582,
+            646.2219848632812,
+            224.6320037841797,
+            691.449951171875
+          ],
+          "StrokeWidth": 0.37689998745918274,
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 54.2400016784668,
+          "Y": 165.719970703125,
+          "Size": 8.303999900817871
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 54.2400016784668,
+          "Y": 181.26995849609375,
+          "Size": 8.303999900817871
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 67.36799621582031,
+          "Y": 658.8199462890625,
+          "Size": 8.303999900817871
+        }
+      ],
+      "WordOutlineClip": {
+        "SourceRect": [
+          61.8120002746582,
+          646.2219848632812,
+          224.6320037841797,
+          691.449951171875
+        ],
+        "StrokeWidth": 0.37689998745918274,
+        "ActiveClipRects": [
+          [
+            54.2400016784668,
+            646.199951171875,
+            473.7599792480469,
+            683.8800048828125
+          ]
+        ],
+        "IntersectedCenterlineBounds": [
+          61.8120002746582,
+          646.2219848632812,
+          224.6320037841797,
+          683.8800048828125
+        ],
+        "LowerEdgeClippedPoints": 7.5699462890625
+      }
+    },
+    {
+      "Id": "footer-table-viewport-ordinary-distance",
+      "InputSha256": "66205C789F5FDEEB171C19988A242B10DA8C768363E9130BFB34B94CCBF71838",
+      "Mode": "final-preserve",
+      "WordPdfSha256": "CEFA25AC37383DEEE0DD101DD5DC2C19DA1F52E8BFFCA71DC89D17DC3D7B26DF",
+      "WordPages": 1,
+      "WordMathAnchors": [],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            82.0,
+            720.27099609375,
+            298.0,
+            780.27099609375
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 102.97998046875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 298.010009765625,
+          "Y": 780.3359985351562,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Inline box content.",
+          "Page": 1,
+          "X": 89.42400360107422,
+          "Y": 734.5,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordOutlineClip": {
+        "SourceRect": [
+          82.0,
+          720.27099609375,
+          298.0,
+          780.27099609375
+        ],
+        "StrokeWidth": 0.5,
+        "ActiveClipRects": [
+          [
+            72.0,
+            720.239990234375,
+            372.0,
+            769.9199829101562
+          ]
+        ],
+        "IntersectedCenterlineBounds": [
+          82.0,
+          720.27099609375,
+          298.0,
+          769.9199829101562
+        ],
+        "LowerEdgeClippedPoints": 10.35101318359375
+      }
+    },
+    {
+      "Id": "footer-table-viewport-ordinary-distance",
+      "InputSha256": "66205C789F5FDEEB171C19988A242B10DA8C768363E9130BFB34B94CCBF71838",
+      "Mode": "all-word-compatible",
+      "WordPdfSha256": "BF121DDC66582FCAE05B7F29BBC01C59E2BB7E36598720D1C4F1163C5BBA0D18",
+      "WordPages": 1,
+      "WordMathAnchors": [],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            61.8120002746582,
+            646.501953125,
+            224.6320037841797,
+            691.72998046875
+          ],
+          "StrokeWidth": 0.37689998745918274,
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 54.2400016784668,
+          "Y": 165.719970703125,
+          "Size": 8.303999900817871
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 54.2400016784668,
+          "Y": 181.26995849609375,
+          "Size": 8.303999900817871
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 224.5,
+          "Y": 691.5599975585938,
+          "Size": 8.303999900817871
+        },
+        {
+          "Text": "Inline box content.",
+          "Page": 1,
+          "X": 67.36799621582031,
+          "Y": 657.02001953125,
+          "Size": 8.303999900817871
+        }
+      ],
+      "WordOutlineClip": {
+        "SourceRect": [
+          61.8120002746582,
+          646.501953125,
+          224.6320037841797,
+          691.72998046875
+        ],
+        "StrokeWidth": 0.37689998745918274,
+        "ActiveClipRects": [
+          [
+            54.2400016784668,
+            646.4400024414062,
+            473.7599792480469,
+            683.8800048828125
+          ]
+        ],
+        "IntersectedCenterlineBounds": [
+          61.8120002746582,
+          646.501953125,
+          224.6320037841797,
+          683.8800048828125
+        ],
+        "LowerEdgeClippedPoints": 7.8499755859375
+      }
+    }
+  ]
+}
