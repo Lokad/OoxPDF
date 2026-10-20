@@ -1,0 +1,305 @@
+{
+  "Scope": "Four independent Word16 picture-height/table-width probes; retain source geometry and unresolved wrapped placement.",
+  "Rows": [
+    {
+      "Id": "footer-cell-sibling-picture-height",
+      "InputSha256": "16D84295EAA32BF96259274BC045F4E7ABB8BCA37AAC865D0521D4CBDEC3BF61",
+      "Mode": "final-preserve",
+      "MathPart": "word/static-inline-footer-table-picture.xml",
+      "WordPdfSha256": "40B9BBC49EBB1CF1953F583E526629BD7ED41CE81CC4062A4316DF2C1B156239",
+      "WordPages": 1,
+      "WordMathAnchors": [],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            82.0,
+            709.9199829101562,
+            298.0,
+            769.9199829101562
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordImages": [
+        {
+          "Page": 1,
+          "Rect": [
+            219.58999633789062,
+            684.9199829101562,
+            255.58999633789062,
+            714.9199829101562
+          ],
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 102.97998046875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 81.98400115966797,
+          "Y": 715.0599975585938,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Inline box content.",
+          "Page": 1,
+          "X": 89.42400360107422,
+          "Y": 724.1799926757812,
+          "Size": 11.039999961853027
+        }
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "Inline box content.",
+        "After public math table."
+      ]
+    },
+    {
+      "Id": "footer-cell-sibling-picture-height",
+      "InputSha256": "16D84295EAA32BF96259274BC045F4E7ABB8BCA37AAC865D0521D4CBDEC3BF61",
+      "Mode": "all-word-compatible",
+      "MathPart": "word/static-inline-footer-table-picture.xml",
+      "WordPdfSha256": "EEA28E6C1144B58F83408D0FAC53FEED60C66620ABFCBCCB4FD902A00BA25DC4",
+      "WordPages": 1,
+      "WordMathAnchors": [],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            61.8120002746582,
+            638.7019653320312,
+            224.6320037841797,
+            683.9299926757812
+          ],
+          "StrokeWidth": 0.37689998745918274,
+          "InsidePage": true
+        }
+      ],
+      "WordImages": [
+        {
+          "Page": 1,
+          "Rect": [
+            165.52999877929688,
+            619.85595703125,
+            192.6669921875,
+            642.469970703125
+          ],
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 54.2400016784668,
+          "Y": 165.719970703125,
+          "Size": 8.303999900817871
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 54.2400016784668,
+          "Y": 181.26995849609375,
+          "Size": 8.303999900817871
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 61.75199890136719,
+          "Y": 642.3599853515625,
+          "Size": 8.303999900817871
+        },
+        {
+          "Text": "Inline box content.",
+          "Page": 1,
+          "X": 67.36799621582031,
+          "Y": 649.25,
+          "Size": 8.303999900817871
+        }
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "Inline box content.",
+        "After public math table."
+      ]
+    },
+    {
+      "Id": "footer-cell-sibling-grid-wide",
+      "InputSha256": "230F74F634D7003072470FA03009CA3516FFBAAD94E9C40D62B91BBFDE744C8A",
+      "Mode": "final-preserve",
+      "MathPart": "word/static-inline-footer-table-picture.xml",
+      "WordPdfSha256": "E9ABE2BB6D8F01D99A3284FCAC805F4CE4E8A5051AA64A7080AC6B99690AD09C",
+      "WordPages": 1,
+      "WordMathAnchors": [],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            255.60000610351562,
+            714.9199829101562,
+            471.6000061035156,
+            774.9199829101562
+          ],
+          "StrokeWidth": 0.5,
+          "InsidePage": true
+        }
+      ],
+      "WordImages": [
+        {
+          "Page": 1,
+          "Rect": [
+            219.58999633789062,
+            756.9199829101562,
+            255.58999633789062,
+            774.9199829101562
+          ],
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 102.97998046875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 81.98400115966797,
+          "Y": 775.0559692382812,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Inline box content.",
+          "Page": 1,
+          "X": 263.0899963378906,
+          "Y": 729.219970703125,
+          "Size": 11.039999961853027
+        }
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "Inline box content.",
+        "After public math table."
+      ]
+    },
+    {
+      "Id": "footer-cell-sibling-grid-wide",
+      "InputSha256": "230F74F634D7003072470FA03009CA3516FFBAAD94E9C40D62B91BBFDE744C8A",
+      "Mode": "all-word-compatible",
+      "MathPart": "word/static-inline-footer-table-picture.xml",
+      "WordPdfSha256": "DE18EFC033DE0CD1216FADAD55266D28ECB6780FECEBCD38D59E69C8EA1BCCCD",
+      "WordPages": 1,
+      "WordMathAnchors": [],
+      "WordFrames": [
+        {
+          "Page": 1,
+          "Rect": [
+            192.6699981689453,
+            642.4619750976562,
+            355.489990234375,
+            687.6900024414062
+          ],
+          "StrokeWidth": 0.37689998745918274,
+          "InsidePage": true
+        }
+      ],
+      "WordImages": [
+        {
+          "Page": 1,
+          "Rect": [
+            165.52999877929688,
+            674.1220092773438,
+            192.6669921875,
+            687.6900024414062
+          ],
+          "InsidePage": true
+        }
+      ],
+      "WordProseAnchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 54.2400016784668,
+          "Y": 165.719970703125,
+          "Size": 8.303999900817871
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 54.2400016784668,
+          "Y": 181.26995849609375,
+          "Size": 8.303999900817871
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 61.75199890136719,
+          "Y": 687.5799560546875,
+          "Size": 8.303999900817871
+        },
+        {
+          "Text": "Inline box content.",
+          "Page": 1,
+          "X": 198.19000244140625,
+          "Y": 653.0399780273438,
+          "Size": 8.303999900817871
+        }
+      ],
+      "ProseGeometryAxes": [
+        "X",
+        "Y"
+      ],
+      "ExpectedText": [
+        "Before public math table.",
+        "Before inline",
+        "after equation.",
+        "Inline box content.",
+        "After public math table."
+      ]
+    }
+  ]
+}
