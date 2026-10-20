@@ -18,9 +18,75 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--write', action='store_true')
 parser.add_argument('--containers', action='store_true')
 parser.add_argument('--pictures', action='store_true', help='Picture navigation encodings; authored math controls stay unchanged.')
+parser.add_argument('--compound-pictures', action='store_true', help='Add only canonical click metadata to the held-out composed report.')
 args = parser.parse_args()
-if args.pictures and args.containers:
+if sum((args.pictures, args.containers, args.compound_pictures)) > 1:
     parser.error('Select one probe profile')
+
+if args.compound_pictures:
+    directory = cases / 'Composition'
+    parent = json.loads((directory / 'composed-inline-frame-report.json').read_text())[0]
+    original = (root / parent['Input']).read_bytes()
+    assert sha(original) == parent['Sha256']
+    with ZipFile(BytesIO(original)) as archive:
+        infos = archive.infolist()
+        parts = {entry.filename: archive.read(entry.filename) for entry in infos}
+    changed, owners = parts.copy(), []
+    a = '{http://schemas.openxmlformats.org/drawingml/2006/main}'
+    wp = '{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}'
+    pic = '{http://schemas.openxmlformats.org/drawingml/2006/picture}'
+    rel = '{http://schemas.openxmlformats.org/package/2006/relationships}'
+    office_rel = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
+    for name in sorted(parts):
+        if not name.startswith('word/') or not name.endswith('.xml'): continue
+        tree = E.fromstring(parts[name])
+        pictures = [item for item in tree.iter(wp + 'inline') if item.find('.//' + pic + 'pic') is not None]
+        if not pictures: continue
+        before = E.tostring(tree)
+        rel_name = str(Path(name).parent / '_rels' / (Path(name).name + '.rels')).replace('\\', '/')
+        relationships = E.fromstring(parts[rel_name])
+        before_relationships = E.tostring(relationships)
+        added = []
+        for index, picture in enumerate(pictures):
+            properties = picture.find(wp + 'docPr')
+            assert properties is not None and properties.find(a + 'hlinkClick') is None
+            relation_id = 'rIdPublicCompoundPicture' + str(index + 1)
+            assert all(item.get('Id') != relation_id for item in relationships)
+            uri = 'https://example.invalid/composed-picture/' + Path(name).stem + '/' + properties.get('id')
+            click = E.SubElement(properties, a + 'hlinkClick', {office_rel + 'id': relation_id})
+            relation = E.SubElement(relationships, rel + 'Relationship', {'Id': relation_id,
+                'Type': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink',
+                'Target': uri, 'TargetMode': 'External'})
+            added.append((properties, click, relation))
+            owners.append({'Part': name, 'PictureId': properties.get('id'), 'TargetUri': uri,
+                'ExpectedNativeNavigation': name == 'word/document.xml',
+                'Scope': 'Complete body picture' if name == 'word/document.xml' else 'Staged note/static story navigation'})
+        changed[name] = E.tostring(tree, encoding='utf-8', xml_declaration=True)
+        changed[rel_name] = E.tostring(relationships, encoding='utf-8', xml_declaration=True)
+        for properties, click, relation in added:
+            properties.remove(click)
+            relationships.remove(relation)
+        assert E.tostring(tree) == before and E.tostring(relationships) == before_relationships
+    assert len(owners) == 5 and sum(item['ExpectedNativeNavigation'] for item in owners) == 2
+    buffer = BytesIO()
+    with ZipFile(buffer, 'w') as archive:
+        for entry in infos: archive.writestr(copy.copy(entry), changed[entry.filename])
+    generated = buffer.getvalue()
+    identifier = 'composed-picture-navigation-report'
+    row = copy.deepcopy(parent)
+    row.update(Id=identifier, Input='tests/Lokad.OoxPdf.Tests/Cases/Composition/' + identifier + '.docx',
+        Sha256=sha(generated), SourceInput=parent['Input'], SourceSha256=parent['Sha256'], PictureLinkOwners=owners,
+        Change='Add only five canonical picture click targets/relationships; preserve all visible source content and geometry.')
+    jobs = [(directory / (identifier + '.docx'), generated),
+        (directory / (identifier + '.json'), (json.dumps([row], indent=2) + '\n').replace('\n', '\r\n').encode())]
+    for target, generated in jobs:
+        if args.write:
+            stage = target.with_suffix(target.suffix + '.staging')
+            with stage.open('xb') as output: output.write(generated)
+            stage.replace(target)
+        else: assert target.read_bytes() == generated, target.name
+    print('Compound report picture metadata verified: two supported body and three staged note/static owners.')
+    raise SystemExit(0)
 
 if args.pictures:
     directory = cases / 'InlineBoxMath'

@@ -1,0 +1,91 @@
+[
+  {
+    "Id": "composed-picture-navigation-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/composed-picture-navigation-report.docx",
+    "Sha256": "B957D7E223E0C04B7BB1F5151DDB8A9676A5180090FB9C082207D11A0DFC792C",
+    "HeldOut": true,
+    "ExpectedEquationCount": 12,
+    "ExpectedInlineImageCount": 5,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "See calculation",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative.",
+      "Calculation:",
+      "Footer:",
+      "Inline box content."
+    ],
+    "Features": [
+      "image/math/comment/link/bookmark in one paragraph",
+      "math/endnote reference in a table cell",
+      "numbering",
+      "header equation",
+      "footer",
+      "continuous endnote",
+      "wrapped prose",
+      "cached field results beside math/image/comment and inside an internal hyperlink",
+      "two supported fractions and a bookmark inside the endnote",
+      "source PNG also embedded beside the endnote fractions",
+      "simple/packed PAGE fields beside cached fields/math/images, inside an internal hyperlink and in a math/note table cell",
+      "existing header/footer prose and equation preserved in simple cells; mixed footer fractions/image/PAGE/NUMPAGES",
+      "ordered equations/picture/box in body and ordinary ordered frames alongside existing static tables/page fields"
+    ],
+    "InlineFrameSources": [
+      {
+        "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-sibling-mixed.docx",
+        "Sha256": "AF81436D026A847A086B74D2BF3AA5950614B27D0AA4D4867E4EE8FF9CF6A732",
+        "DestinationPart": "word/document.xml"
+      },
+      {
+        "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-inline-ordinary-header-box.docx",
+        "Sha256": "80A41D9E948541DFB341CF9AC874F9EA01564FE2D21A326715BBBB68FB11AEE5",
+        "DestinationPart": "word/header1.xml"
+      },
+      {
+        "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-inline-ordinary-footer-picture.docx",
+        "Sha256": "A32D2957369E2A8F726105C85C77455F4BC92091E2A3E924DE67B365F8C00C1B",
+        "DestinationPart": "word/footer1.xml"
+      }
+    ],
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/Composition/composed-inline-frame-report.docx",
+    "SourceSha256": "24982F90C9E3AD52FEA6ED01EE0BABB819E6C0F6FF00EBC28F72F41404129C32",
+    "PictureLinkOwners": [
+      {
+        "Part": "word/document.xml",
+        "PictureId": "1",
+        "TargetUri": "https://example.invalid/composed-picture/document/1",
+        "ExpectedNativeNavigation": true,
+        "Scope": "Complete body picture"
+      },
+      {
+        "Part": "word/document.xml",
+        "PictureId": "55005",
+        "TargetUri": "https://example.invalid/composed-picture/document/55005",
+        "ExpectedNativeNavigation": true,
+        "Scope": "Complete body picture"
+      },
+      {
+        "Part": "word/endnotes.xml",
+        "PictureId": "55004",
+        "TargetUri": "https://example.invalid/composed-picture/endnotes/55004",
+        "ExpectedNativeNavigation": false,
+        "Scope": "Staged note/static story navigation"
+      },
+      {
+        "Part": "word/footer1.xml",
+        "PictureId": "1",
+        "TargetUri": "https://example.invalid/composed-picture/footer1/1",
+        "ExpectedNativeNavigation": false,
+        "Scope": "Staged note/static story navigation"
+      },
+      {
+        "Part": "word/footer1.xml",
+        "PictureId": "55008",
+        "TargetUri": "https://example.invalid/composed-picture/footer1/55008",
+        "ExpectedNativeNavigation": false,
+        "Scope": "Staged note/static story navigation"
+      }
+    ],
+    "Change": "Add only five canonical picture click targets/relationships; preserve all visible source content and geometry."
+  }
+]
