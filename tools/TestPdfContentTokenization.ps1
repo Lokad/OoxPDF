@@ -127,4 +127,52 @@ else { Write-Host 'PASS: default/gray/RGB/CMYK fill, nested save/restore and lit
 if ($failures.Count -ne 0) {
     throw ("Content tokenization checks failed: " + ($failures -join "; "))
 }
+
+# Valid small PDFs distinguish a complete empty report from a missing report.
+# They also cover a page without /Contents and a trailing blank page.
+foreach ($probe in @(
+    @{Name='empty-stream';Pages=1;HasContents=$true;Text='';TextCount=0},
+    @{Name='no-content';Pages=1;HasContents=$false;Text='';TextCount=0},
+    @{Name='trailing-blank';Pages=2;HasContents=$true;Text='BT /F1 12 Tf (Visible) Tj ET';TextCount=1}
+)) {
+    $bodies = [Collections.Generic.List[string]]::new()
+    $bodies.Add('<< /Type /Catalog /Pages 2 0 R >>')
+    $kids = @(for ($index=0; $index -lt $probe.Pages; $index++) { (4 + 2*$index).ToString() + ' 0 R' }) -join ' '
+    $bodies.Add('<< /Type /Pages /Kids [' + $kids + '] /Count ' + $probe.Pages + ' >>')
+    $bodies.Add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>')
+    for ($index=0; $index -lt $probe.Pages; $index++) {
+        $contents = if ($probe.HasContents) { ' /Contents ' + (5 + 2*$index) + ' 0 R' } else { '' }
+        $bodies.Add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Resources << /Font << /F1 3 0 R >> >>' + $contents + ' >>')
+        $stream = if ($index -eq 0) { $probe.Text } else { '' }
+        $bodies.Add('<< /Length ' + $stream.Length + " >>`nstream`n" + $stream + "`nendstream")
+    }
+    $pdfBuilder = [Text.StringBuilder]::new("%PDF-1.7`n")
+    $offsets = [Collections.Generic.List[int]]::new()
+    for ($index=0; $index -lt $bodies.Count; $index++) {
+        $offsets.Add($pdfBuilder.Length)
+        [void]$pdfBuilder.Append(($index+1).ToString() + " 0 obj`n" + $bodies[$index] + "`nendobj`n")
+    }
+    $xrefOffset = $pdfBuilder.Length
+    [void]$pdfBuilder.Append('xref' + "`n0 " + ($bodies.Count+1) + "`n0000000000 65535 f `n")
+    foreach ($offset in $offsets) { [void]$pdfBuilder.Append($offset.ToString('0000000000') + " 00000 n `n") }
+    [void]$pdfBuilder.Append('trailer' + "`n<< /Size " + ($bodies.Count+1) + " /Root 1 0 R >>`nstartxref`n" + $xrefOffset + "`n%%EOF`n")
+    $probePdf = Join-Path $scratch ($probe.Name + '.pdf')
+    [IO.File]::WriteAllText($probePdf, $pdfBuilder.ToString(), [Text.Encoding]::ASCII)
+    $probeDirectory = Join-Path $scratch $probe.Name
+    if ($InspectorPath) { dotnet $InspectorPath $probePdf $probeDirectory *> ($probeDirectory+'.log') }
+    else { & (Join-Path $repoRoot 'tools/InspectPdf.ps1') -InputPdf $probePdf -OutputDirectory $probeDirectory *> ($probeDirectory+'.log') }
+    if ($LASTEXITCODE -ne 0) { throw ('Empty-page inspection failed: ' + $probe.Name) }
+    $textReport = Join-Path $probeDirectory 'text-operations.json'
+    $graphicsReport = Join-Path $probeDirectory 'graphics-operations.json'
+    if (!(Test-Path -LiteralPath $textReport) -or !(Test-Path -LiteralPath $graphicsReport)) {
+        throw ('Incomplete operation reports: ' + $probe.Name)
+    }
+    if (@(Get-Content -LiteralPath $textReport -Raw | ConvertFrom-Json).Count -ne $probe.TextCount -or
+        @(Get-Content -LiteralPath $graphicsReport -Raw | ConvertFrom-Json).Count -ne 0) {
+        throw ('Incorrect empty-page operations: ' + $probe.Name)
+    }
+    $pageCount = @(Get-Content -LiteralPath ($probeDirectory+'.log') | Where-Object { $_ -match '^\d+ \d+ obj: page$' }).Count
+    if ($pageCount -ne $probe.Pages) { throw ('Incorrect inspected pages: ' + $probe.Name) }
+    Write-Host ('PASS: ' + $probe.Name + ' complete reports/' + $pageCount + ' pages')
+}
 Write-Host "Content tokenization checks passed."

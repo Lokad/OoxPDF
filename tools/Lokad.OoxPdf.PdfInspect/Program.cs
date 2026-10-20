@@ -122,37 +122,21 @@ foreach (PdfObject item in objects)
     }
 }
 
-if (outputDirectory is not null && textOperations.Count != 0)
-{
-    string textOperationsPath = Path.Combine(outputDirectory, "text-operations.json");
-    var jsonOptions = new JsonSerializerOptions
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-    };
-    File.WriteAllText(textOperationsPath, JsonSerializer.Serialize(textOperations, jsonOptions), Encoding.UTF8);
-}
-
-if (outputDirectory is not null && graphicsOperations.Count != 0)
-{
-    string graphicsOperationsPath = Path.Combine(outputDirectory, "graphics-operations.json");
-    var jsonOptions = new JsonSerializerOptions
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-    };
-    File.WriteAllText(graphicsOperationsPath, JsonSerializer.Serialize(graphicsOperations, jsonOptions), Encoding.UTF8);
-}
-
 if (outputDirectory is not null)
 {
-    string fontResourcesPath = Path.Combine(outputDirectory, "font-resources.json");
     var jsonOptions = new JsonSerializerOptions
     {
         WriteIndented = true,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
-    File.WriteAllText(fontResourcesPath, JsonSerializer.Serialize(fontResources, jsonOptions), Encoding.UTF8);
+    // Empty streams still publish complete inspection reports. Consumers must
+    // distinguish zero operations from a failed or incomplete inspection.
+    File.WriteAllText(Path.Combine(outputDirectory, "text-operations.json"),
+        JsonSerializer.Serialize(textOperations, jsonOptions), Encoding.UTF8);
+    File.WriteAllText(Path.Combine(outputDirectory, "graphics-operations.json"),
+        JsonSerializer.Serialize(graphicsOperations, jsonOptions), Encoding.UTF8);
+    File.WriteAllText(Path.Combine(outputDirectory, "font-resources.json"),
+        JsonSerializer.Serialize(fontResources, jsonOptions), Encoding.UTF8);
 }
 
 // tool peaks are recorded separately from converter peaks.

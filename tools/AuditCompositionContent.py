@@ -239,7 +239,13 @@ def inspect_reference(pdf, inspector, cache):
     identity = read(pin)
     if identity != {"PdfSha256": pdf_hash, "InspectorSha256": inspector_hash, "OperationsSha256": sha(operations)}:
         raise ValueError("Reference text cache identity differs: " + str(folder))
-    return read(operations), sha(operations)
+    # Page objects include empty and trailing blank pages. Text-operation page
+    # numbers cannot establish the size of an empty reference document.
+    log = folder / "inspect.log"
+    pages = len(re.findall(r"^\d+ \d+ obj: page$", log.read_text(encoding="utf-8-sig"), re.MULTILINE))
+    if pages < 1:
+        raise ValueError("No inspected reference pages: " + str(folder))
+    return read(operations), sha(operations), pages, sha(log)
 
 
 def validate_outcome_modes(cases, outcomes, comparisons):
@@ -328,7 +334,7 @@ def main():
             raise ValueError("Comparison PDF identities differ")
         operations_path = run / "inspect/text-operations.json"
         operations = read(operations_path)
-        office, office_ops_hash = inspect_reference(reference, inspector, args.cache.resolve())
+        office, office_ops_hash, pages, office_log_hash = inspect_reference(reference, inspector, args.cache.resolve())
         candidate_words = words(operation_text(operations))
         office_words = words(operation_text(office))
         page_deficits = []
@@ -338,7 +344,6 @@ def main():
             missing = deficits(expected_page, observed_page)
             if missing:
                 page_deficits.append({"Page": page, "Tokens": missing})
-        pages = max(item["PageNumber"] for item in office if item["PageNumber"] is not None)
         prose, expressions, parts, unresolved = source_content(source, mode, pages)
         math_stream = re.sub(r"\s+", "", normalize("".join(item.get("DecodedText") or "" for item in operations
                                                            if item["Font"].startswith("Eq"))))
@@ -347,6 +352,7 @@ def main():
                      "CandidatePdfSha256": sha(pdf), "ReferencePdfSha256": sha(reference),
                      "ReferenceSourceDirectory": str(reference.parent),
                      "CandidateOperationsSha256": sha(operations_path), "ReferenceOperationsSha256": office_ops_hash,
+                     "ReferenceInspectionLogSha256": office_log_hash,
                      "ReferencePages": pages, "CandidatePages": outcome["InspectedPages"],
                      "SourceProseTokens": sum(prose.values()), "SourceParts": parts,
                      "SourceTokensMissingOffice": deficits(prose, office_words),

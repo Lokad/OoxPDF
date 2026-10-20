@@ -1,11 +1,12 @@
 """Adversarial controls for cached-result source auditing; no rendering/builds."""
 import sys
+import json
 sys.dont_write_bytecode = True
 from xml.etree import ElementTree as E
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory, gettempdir
-from AuditCompositionContent import unresolved_fields, validate_outcome_modes, resolve_reference, sha, operation_text, words
+from AuditCompositionContent import inspect_reference, unresolved_fields, validate_outcome_modes, resolve_reference, sha, operation_text, words
 
 W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 
@@ -201,6 +202,32 @@ class CachedFieldAuditTests(unittest.TestCase):
     def test_nested_dynamic_result_stays_unresolved(self):
         content = '<w:fldSimple w:instr=" REF Target ">'+complex_field(instruction='PAGE')+'</w:fldSimple>'
         self.assertTrue(unresolved_fields(document('<w:p>'+content+'</w:p>')))
+
+class ReferenceInspectionTests(unittest.TestCase):
+    def test_empty_reference_reports_keep_actual_blank_pages(self):
+        for page_count in [1, 2]:
+            with TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                pdf, inspector = root / "reference.pdf", root / "inspector.dll"
+                pdf.write_bytes(b"pinned reference")
+                inspector.write_bytes(b"pinned inspector")
+                cache = root / "cache"
+                folder = cache / (sha(pdf) + "-" + sha(inspector)[:12])
+                folder.mkdir(parents=True)
+                operations = folder / "text-operations.json"
+                operations.write_text("[]", encoding="utf-8")
+                (folder / "identity.json").write_text(json.dumps({"PdfSha256": sha(pdf),
+                    "InspectorSha256": sha(inspector), "OperationsSha256": sha(operations)}), encoding="utf-8")
+                log = folder / "inspect.log"
+                log.write_text("2 0 obj: pages\n" + "".join(f"{3 + index} 0 obj: page\n" for index in range(page_count)), encoding="utf-8")
+                observed, operations_hash, pages, log_hash = inspect_reference(pdf, inspector, cache)
+                self.assertEqual([], observed)
+                self.assertEqual(sha(operations), operations_hash)
+                self.assertEqual(page_count, pages)
+                self.assertEqual(sha(log), log_hash)
+                log.write_text("2 0 obj: pages\n", encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    inspect_reference(pdf, inspector, cache)
 
 if __name__ == '__main__':
     unittest.main()
