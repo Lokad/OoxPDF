@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingStaticPictureOnlyFramesRetainBodyAndResources() =>
+        DocxPassiveStaticBodyTests.CheckBodyBaselines(new PinnedResolver(), compareWord: false, "minimum-static-picture-frames-office.json");
+
     public static void PortableRenderingPassiveStaticPicturesPreserveOrdinaryBodyOrigins() =>
         DocxPassiveStaticBodyTests.CheckBodyBaselines(new PinnedResolver(), compareWord: false, "minimum-passive-pictures-office.json");
 

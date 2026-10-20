@@ -250,7 +250,8 @@ internal sealed partial class DocxLayoutEngine
         }
         else
         {
-            if ((!allowStaticFallback || paragraph.Images.Count != 0) && paragraph.InlineTextBoxes.Count == 0 ||
+            if ((!allowStaticFallback || paragraph.Images.Count != 0 && !DocxPlainBodyFrame.IsPlainPictureOnlyParagraph(paragraph)) &&
+                paragraph.InlineTextBoxes.Count == 0 ||
                 !DocxInlineContent.HasSupportedSourceOwner(paragraph, hasActualFieldInputs, token) ||
                 !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
                 paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right)) return false;

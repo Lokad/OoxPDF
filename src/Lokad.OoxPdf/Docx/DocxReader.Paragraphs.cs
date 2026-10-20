@@ -255,7 +255,7 @@ internal sealed partial class DocxReader
                             Equals(run.EffectiveProperties.Fonts, firstCommentRun.EffectiveProperties.Fonts)));
             });
         DocxTextRun? retainedMark = retainCommentMark || inlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment) ||
-            paragraphMarkRevisions.Count != 0
+            paragraphMarkRevisions.Count != 0 || runs.Count == 0 && images.Count != 0
             ? CreateResolvedTextRun(retainCommentMark ? " " : string.Empty, paragraphMarkRun,
                 CreateRunStyleResolution(paragraphMarkRunProperties, paragraphStyleId, null, styles, tableCellStyle?.Run),
                 false, -1, 0, inheritedRevision, MergeRevisionLists(inheritedRevision, paragraphMarkRevisions))

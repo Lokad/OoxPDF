@@ -2468,7 +2468,10 @@ internal sealed partial class DocxLayoutEngine
             // Normal notes and independently placed textbox stories share ordered
             // measurement. Notes retain their common emission mapping; textbox
             // geometry is shifted once through its existing container frame.
-            bool ordinaryBoxParagraph = story.Kind == DocxRelatedStoryKind.TextBox && paragraph.Equations.Count == 0;
+            // Ordinary textbox pictures retain their existing image fallback;
+            // static containers admit picture-only ordered frames separately.
+            bool ordinaryBoxParagraph = story.Kind == DocxRelatedStoryKind.TextBox &&
+                paragraph.Equations.Count == 0 && paragraph.Images.Count == 0;
             if (ordinaryBoxParagraph || paragraph.Equations.Count != 0 && (story.Kind == DocxRelatedStoryKind.TextBox ||
                 story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote))
             {

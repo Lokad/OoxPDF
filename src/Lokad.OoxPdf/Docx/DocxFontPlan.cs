@@ -119,7 +119,10 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
             yield return run;
         }
 
-        if (includeReviewSources && paragraph.ParagraphMarkRun is { } markRun)
+        // Glyphless picture rows still measure their paragraph-mark strut.
+        // Its font participates in layout even when it paints no glyphs.
+        if ((includeReviewSources || DocxPlainBodyFrame.IsPlainPictureOnlyParagraph(paragraph)) &&
+            paragraph.ParagraphMarkRun is { } markRun)
         {
             yield return markRun;
         }

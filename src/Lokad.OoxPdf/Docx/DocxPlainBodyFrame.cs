@@ -73,6 +73,9 @@ internal static class DocxPlainBodyFrame
         paragraph.FieldReferences.All(field => field.Kind.IsDynamic()) &&
         DocxInlineContent.HasSourceFieldResults(paragraph.FieldReferences, paragraph.Runs);
 
+    internal static bool IsPlainPictureOnlyParagraph(DocxParagraph paragraph) =>
+        paragraph.Images.Count != 0 && paragraph.Runs.Count == 0 && IsPlainStaticContent(paragraph);
+
     private static bool IsPlainStaticImage(DocxInlineImage image) =>
         image.SourceRunIndex >= 0 && image.RotationDegrees == 0d &&
         image.Revisions.Count == 0 && image.RasterFallback is null &&

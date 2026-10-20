@@ -347,14 +347,20 @@ internal sealed partial class DocxLayoutEngine
                 paragraphIndex++;
                 continue;
             }
-            if (paragraph.Equations.Count != 0 || paragraph.ListLabel is not null || paragraph.InlineTextBoxes.Count != 0)
+            bool pictureOnly = DocxPlainBodyFrame.IsPlainPictureOnlyParagraph(paragraph);
+            if (paragraph.Equations.Count != 0 || paragraph.ListLabel is not null && paragraph.Images.Count == 0 ||
+                paragraph.InlineTextBoxes.Count != 0 || pictureOnly && unscaledLineMetrics is not null)
             {
                 double size = GetParagraphFontSize(paragraph);
                 var profile = ResolveLineHeightProfile(paragraph, size, textMeasurer);
-                double sourceHeight = unscaledLineMetrics?.MeasureSingleLineHeight(paragraph.Runs.FirstOrDefault(), size)
+                var metricRun = paragraph.Runs.FirstOrDefault() ?? (pictureOnly ? paragraph.ParagraphMarkRun : null);
+                double sourceHeight = unscaledLineMetrics?.MeasureSingleLineHeight(metricRun, size)
                     ?? profile.SingleLineHeight ?? profile.LineHeight;
                 double factor = ResolveAutoLineSpacingFactor(paragraph, out _);
-                double sourceInset = DocxLineMetrics.ResolveBodyBaselineOffset(size, sourceHeight * factor, false,
+                // Without glyphs, the paragraph-mark strut owns the whole line
+                // above the picture baseline. The shared fragment frame takes
+                // the larger of that strut and each picture's occupied height.
+                double sourceInset = pictureOnly ? sourceHeight * factor : DocxLineMetrics.ResolveBodyBaselineOffset(size, sourceHeight * factor, false,
                     DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, size, unscaledLineMetrics));
                 double firstInset = GetParagraphFirstLineTextStartOffset(paragraph, size, textMeasurer, paragraphSpacingScale, defaultTabStopPoints);
                 double nextInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);

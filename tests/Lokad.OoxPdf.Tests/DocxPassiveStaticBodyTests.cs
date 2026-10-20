@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -11,6 +12,57 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxPassiveStaticBodyTests
 {
+    public static void DocxStaticPictureOnlyFontsMeasureUnpaintedParagraphMarks()
+    {
+        var document = DocxTests.ReadDocx(Case("CompositionProbes/minimum-static-picture-header-large-mark.docx"), OoxPdfDocxMarkupMode.Final);
+        var paragraph = document.HeaderParagraphs.Single();
+        var mark = TestAssert.NotNull(paragraph.ParagraphMarkRun);
+        var resolver = new TestFaceFontResolver();
+        var plan = DocxFontPlan.Create(document, resolver, default);
+        TestAssert.True(plan.Runs.Any(run => ReferenceEquals(run.Run, mark)),
+            "A glyphless picture paragraph's mark owns a resolved measurement font in Final mode.");
+        var measurer = new DocxFontPlanTextMeasurer(plan, null, default, resolver);
+        TestAssert.Equal(measurer.MeasureSingleLineHeight(document.Paragraphs[0].Runs[0], 20d),
+            measurer.MeasureSingleLineHeight(mark, 20d));
+        var parent = DocxTests.ReadDocx(Case("CompositionProbes/minimum-passive-picture-header-ordinary11.docx"), OoxPdfDocxMarkupMode.Final);
+        var renderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        TestAssert.Equal(renderer.RenderBlankPages(parent, null, default).Single().Fonts.Count,
+            renderer.RenderBlankPages(document, null, default).Single().Fonts.Count);
+    }
+
+    public static void DocxStaticPictureOnlyFramesMatchIndependentWord()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent static picture origins require installed Windows fonts.");
+        CheckBodyBaselines(null, compareWord: true, "minimum-static-picture-frames-office.json", comparePictures: true);
+    }
+
+    public static void DocxStaticPictureOnlyFramesKeepDeclaredAndMixedTextFallbacks()
+    {
+        XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        foreach (string kind in new[] { "header", "footer" })
+        foreach (bool declared in new[] { true, false })
+        {
+            var document = ReadMutation(Case("CompositionProbes/minimum-passive-picture-" + kind + "-ordinary11.docx"), archive =>
+            {
+                var entry = archive.GetEntry("word/passive-minimum-picture-" + kind + ".xml")!;
+                XDocument xml;
+                using (var stream = entry.Open()) xml = XDocument.Load(stream);
+                var paragraph = xml.Root!.Element(w + "p")!;
+                if (declared)
+                    paragraph.Element(w + "pPr")!.Element(w + "spacing")!.SetAttributeValue(w + "lineRule", "exact");
+                else
+                    paragraph.Add(new XElement(w + "r", new XElement(w + "t", "Public picture text.")));
+                entry.Delete();
+                using var output = archive.CreateEntry("word/passive-minimum-picture-" + kind + ".xml").Open();
+                xml.Save(output);
+            });
+            var page = Layout(document).Pages.Single();
+            TestAssert.Equal(1, page.StaticInlineImages.Count);
+            TestAssert.True(page.StaticTextLines.All(line => line.InlineFrame is null),
+                "Declared spacing and mixed static text retain their established placement path.");
+        }
+    }
+
     public static void DocxPassiveStaticPicturesPreserveIndependentWordBodyBaselines()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent body origins require installed Windows fonts.");
@@ -129,7 +181,7 @@ internal static class DocxPassiveStaticBodyTests
     }
 
     internal static void CheckBodyBaselines(IFontResolver? resolver, bool compareWord,
-        string goldFile = "minimum-passive-static-office.json")
+        string goldFile = "minimum-passive-static-office.json", bool comparePictures = false)
     {
         using var gold = JsonDocument.Parse(File.ReadAllText(Case("CompositionProbes/" + goldFile)));
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
@@ -172,6 +224,20 @@ internal static class DocxPassiveStaticBodyTests
                     .RenderBlankPages(DocxTests.ReadDocx(path, mode), null, default).ToArray();
                 if (path == input && row.TryGetProperty("ExpectedInlineImageCount", out var count))
                     TestAssert.Equal(count.GetInt32(), pages.Sum(page => page.Images.Count));
+                if (path == input && comparePictures)
+                {
+                    var page = pages.Single();
+                    var frame = Regex.Match(page.Content,
+                        @"(?<width>[-\d.]+) 0 0 (?<height>[-\d.]+) (?<x>[-\d.]+) (?<y>[-\d.]+) cm\s*/Im1 Do");
+                    TestAssert.True(frame.Success, "The measured static raster must actually paint.");
+                    double Value(string name) => double.Parse(frame.Groups[name].Value, CultureInfo.InvariantCulture);
+                    double[] rect = [Value("x"), page.Height - Value("y") - Value("height"),
+                        Value("x") + Value("width"), page.Height - Value("y")];
+                    var expected = row.GetProperty("WordImages").EnumerateArray().Single().GetProperty("Rect").EnumerateArray()
+                        .Select(value => value.GetDouble()).ToArray();
+                    TestAssert.True(rect.Zip(expected).All(pair => Math.Abs(pair.First - pair.Second) < 1d),
+                        "Picture-only header/footer frames retain independent one-point Word edges.");
+                }
                 return pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
                         .GroupBy(show => show.Y).Select(line => (index + 1, line.Min(show => show.X), page.Height - line.Key,
                             Regex.Replace(string.Concat(line.OrderBy(show => show.X).Select(show => show.Text))

@@ -1,4 +1,14 @@
 {
+  "docx-static-picture-only-frames": [
+    "DocxStaticPictureOnly",
+    "PortableRenderingStaticPictureOnly",
+    "DocxOrdinaryPictureBoxesKeepCancellationAndPurePictureFallback",
+    "DocxOrdinaryPictureBoxesRetainOrderedOwnersAndReuseChildren",
+    "PortableRenderingOrdinaryPicturesAndBoxesRetainSourceContent",
+    "DocxFontPlanTextMeasurerUsesResolvedFontFace",
+    "DocxFontPlanResolvesEastAsianAndComplexScriptThemeTypefaces",
+    "DocxFontPlanIncludesNumberingMarkerTypeface"
+  ],
   "docx-passive-static-pictures": [
     "DocxPassiveStaticPictures",
     "PortableRenderingPassiveStaticPictures",
