@@ -1,0 +1,26 @@
+[
+  {
+    "Id": "footer-table-viewport-wrapped-margin",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/footer-table-viewport-wrapped-margin.docx",
+    "Sha256": "7D45C6B122DB02F741FD9A2E74D89100F7C5DEB13FDAE9B9672AC29333CB43BC",
+    "SourceSha256": "E17C6FFEF7EBC1F46B1A13488FAF01AFB830C47FFBF163865E503DD8FB24B32A",
+    "HeldOut": true,
+    "Variant": "wrapped-margin",
+    "MathPart": "word/static-inline-footer-table-picture.xml",
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedImageCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "Change": "Change only one section page-margin attribute; table, paragraph, drawing, math and all other package parts remain exact.",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-inline-footer-table-picture.docx",
+    "MarginAttribute": "bottom",
+    "SourceTwips": 1440,
+    "ChangedTwips": 1800
+  }
+]

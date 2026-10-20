@@ -14,10 +14,13 @@ w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 sha = lambda data: hashlib.sha256(data).hexdigest().upper()
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--write', action='store_true')
-parser.add_argument('--ordinary-box-probe', action='store_true')
+probes = parser.add_mutually_exclusive_group()
+probes.add_argument('--ordinary-box-probe', action='store_true')
+probes.add_argument('--wrapped-box-probe', action='store_true')
 args = parser.parse_args()
-manifest = 'static-inline-footer-tables.json' if args.ordinary_box_probe else 'static-table-origins.json'
-source_id = 'static-inline-footer-table-box' if args.ordinary_box_probe else 'static-table-origin-footer-wide'
+manifest = 'static-inline-footer-tables.json' if args.ordinary_box_probe or args.wrapped_box_probe else 'static-table-origins.json'
+source_id = ('static-inline-footer-table-picture' if args.wrapped_box_probe else
+             'static-inline-footer-table-box' if args.ordinary_box_probe else 'static-table-origin-footer-wide')
 parent = next(row for row in json.loads((cases / manifest).read_text()) if row['Id'] == source_id)
 original = (root / parent['Input']).read_bytes()
 assert sha(original) == parent['Sha256']
@@ -25,8 +28,9 @@ with ZipFile(BytesIO(original)) as archive:
     infos = archive.infolist()
     parts = {entry.filename: archive.read(entry.filename) for entry in infos}
 rows, jobs = [], []
-variations = [('ordinary-distance', 'footer', '720', '360')] if args.ordinary_box_probe else [
-    ('bottom-margin', 'bottom', '1440', '1800'), ('footer-distance', 'footer', '720', '1080')]
+variations = ([('wrapped-margin', 'bottom', '1440', '1800')] if args.wrapped_box_probe else
+              [('ordinary-distance', 'footer', '720', '360')] if args.ordinary_box_probe else [
+                  ('bottom-margin', 'bottom', '1440', '1800'), ('footer-distance', 'footer', '720', '1080')])
 for variant, attribute, before, after in variations:
     document = E.fromstring(parts['word/document.xml'])
     margin = document.find(w + 'body/' + w + 'sectPr/' + w + 'pgMar')
@@ -49,7 +53,8 @@ for variant, attribute, before, after in variations:
                Change='Change only one section page-margin attribute; table, paragraph, drawing, math and all other package parts remain exact.')
     rows.append(row)
     jobs.append((cases / (identifier + '.docx'), data))
-output_manifest = 'footer-table-ordinary-viewport.json' if args.ordinary_box_probe else 'footer-table-viewports.json'
+output_manifest = ('footer-table-wrapped-viewport.json' if args.wrapped_box_probe else
+                   'footer-table-ordinary-viewport.json' if args.ordinary_box_probe else 'footer-table-viewports.json')
 jobs.append((cases / output_manifest,
              (json.dumps(rows, indent=2) + '\n').replace('\n', '\r\n').encode()))
 for target, data in jobs:
