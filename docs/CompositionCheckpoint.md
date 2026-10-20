@@ -1,5 +1,21 @@
 # Composed-document reliability checkpoint
 
+## C328 fixed portfolio closes the table/note batch (2026-10-20)
+
+One refresh from qualified4e3874c0: seven sources/12 outcomes, all PDFs exact to
+C317. Reuse12 Office comparisons and12 C320 raw screens after checking input,
+PDF, inspector/text-operation, source-auditor and reference identity. Ten raw
+screens clean; two static-report cached1/field flags remain. Ten DOCX strict
+pixel gates fail and two PPTX gates pass. No new content, pagination, overlap or
+clipping change within these identical PDFs; no arbitrary-document fidelity or
+performance claim. C32739Windows/26Ubuntu/13native skips retained, not replayed
+or added to a new total. Zero builds/tests/exports/new rasters. Evidence
+artifacts/composition-c1/checkpoint-328-evidence.json. C327CI39359227037 running;
+continue a prospective cross-row note ownership discriminator while CI runs.
+Infrequent scan17.186GB/949,088files/84,492dirs, zero errors,24.7s; loose5GB target
+unmet and protected rejected retirements remain untouched. Version0.1.5/release
+preparation deferred.
+
 ## C327 bounded source-fragment note admission (2026-10-20)
 
 Existing measured cell windows receive one complete-head capacity refinement;
