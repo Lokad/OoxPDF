@@ -12,6 +12,10 @@ param(
 
     [switch] $CacheOnlyReference,
 
+    [string] $CliPath,
+
+    [switch] $SkipBuild,
+
     [string[]] $CasePattern = @(),
 
     [string[]] $Tag = @(),
@@ -260,11 +264,22 @@ if ($cases.Count -eq 0) {
 }
 
 Write-Host ("Visual family: {0} ({1} cases)" -f $Family, $cases.Count)
-# Build once per family invocation; cases reuse the binaries via -SkipBuild with
-# explicit run binding, so concurrent invocations cannot observe a half-built DLL.
-& (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Project (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj") -OutputDll (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll") -Description "CLI"
+# Bind every case to the same CLI. A supplied frozen CLI never builds the library;
+# independent validation tools can still be built once unless -SkipBuild is set.
+if (!$CliPath) {
+    $CliPath = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll"
+    if (!$SkipBuild) {
+        & (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Project (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj") -OutputDll $CliPath -Description "CLI"
+    }
+}
+$CliPath = (Resolve-Path -LiteralPath $CliPath).Path
+$libraryPath = Join-Path (Split-Path $CliPath) 'Lokad.OoxPdf.dll'
+$cliHash = (Get-FileHash -LiteralPath $CliPath).Hash
+$libraryHash = (Get-FileHash -LiteralPath $libraryPath).Hash
+if (!$SkipBuild) {
 & (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Project (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj") -OutputDll (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/net10.0/Lokad.OoxPdf.VisualDiff.dll") -Description "VisualDiff"
 & (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Project (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj") -OutputDll (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll") -Description "PDFium rasterizer"
+}
 $rows = @()
 foreach ($case in $cases) {
     $manifest = Join-Path $case.FullName "case.json"
@@ -282,6 +297,7 @@ foreach ($case in $cases) {
             Case = $manifest
             RunId = $caseRunId
             SkipBuild = $true
+            CliPath = $CliPath
         }
         if ($CacheOnlyReference) {
             $caseArgs.CacheOnlyReference = $true
@@ -297,11 +313,18 @@ foreach ($case in $cases) {
 
     $rows += New-ReportRow $case $passed $errorMessage $caseRunRoot
 }
+if ((Get-FileHash -LiteralPath $CliPath).Hash -ne $cliHash -or
+    (Get-FileHash -LiteralPath $libraryPath).Hash -ne $libraryHash) {
+    throw 'The family CLI or library changed during validation'
+}
 
 New-Item -ItemType Directory -Force -Path $reportRoot | Out-Null
 $runId = "{0}-p{1}-{2}" -f (Get-Date -Format "yyyyMMdd-HHmmss-fff"), $PID, ([System.Guid]::NewGuid().ToString("N").Substring(0, 8))
 $report = [pscustomobject]@{
     family = $Family
+    cliPath = $CliPath
+    cliSha256 = $cliHash
+    librarySha256 = $libraryHash
     generatedAt = (Get-Date).ToString("o")
     caseCount = $rows.Count
     passedCount = @($rows | Where-Object { $_.passed -eq $true }).Count

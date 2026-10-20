@@ -56,6 +56,12 @@ jobs:
         run: pwsh -NoProfile -File tools/RunDocxAffectedTests.ps1 -RunnerPath tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/pptx-picture-effects -Capability pptx-picture-blur
       - name: Visual manifest gate
         run: pwsh -NoProfile -File tools/ValidateVisualCases.ps1
+      - name: Qualification capability catalog gate
+        run: |
+          $capabilities = Get-Content tools/qualification-capabilities.json -Raw | ConvertFrom-Json -AsHashtable
+          & ./tools/RunDocxAffectedTests.ps1 -RunnerPath tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/capability-catalog -Capability @($capabilities.Keys) -ListOnly
+      - name: Frozen visual family binding checks
+        run: pwsh -NoProfile -File tools/TestVisualFamilyBinding.ps1
       - name: Text content gate
         if: runner.os == 'Windows'
         run: pwsh -NoProfile -File tools/CheckPdfTextContent.ps1

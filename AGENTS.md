@@ -43,7 +43,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/SummarizeDocxTableCellGeometry.ps1`: supplement raw graphics gates with source-backed table-cell clip mapping and unresolved counts.
 - `tools/SummarizeDocxInlineFrameGeometry.py`: compare pinned math/prose origins, picture rectangles and textbox frames; retain per-axis residuals and Office thresholds (PyMuPDF validation only).
 - `tools/CheckVisualCase.ps1`: run a public visual case; `-CliPath <qualified.dll> -SkipBuild` reuses a frozen CLI without building.
-- `tools/CheckVisualFamily.ps1`: run or list a public visual capability family.
+- `tools/CheckVisualFamily.ps1`: run or list a public visual capability family; accepts the same frozen `-CliPath` and `-SkipBuild` binding.
 - `tools/CompareVisualReports.ps1`: compare two visual family reports for regressions.
 - `tools/ValidateVisualCases.ps1`: validate public visual case/family naming, coverage, and manifest integrity.
 - `tools/NewDocxMarkupReferenceRequest.ps1`: create public/private-safe DOCX markup reference request bundles and import templates.
