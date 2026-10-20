@@ -154,6 +154,12 @@ later one-/two-note and cross-row controls
 match Word's source pages and original geometry gates in both public modes.
 Continued, incomplete, page-dependent and unmatched owners retain conservative
 fallbacks. Strict pixel differences and dynamic-field audit flags remain.
+
+Supported natural footer-table box outlines use the body drawing viewport while
+child text retains its own content clip. Independent margin/distance controls
+cover both public modes, math and ordinary content. Standalone boxes, headers
+and body containers retain their own placement rules. A picture-and-box footer
+cell still has a separate sibling-box displacement; strict visual failures remain.
 See the
 [composition checkpoint](CompositionCheckpoint.md) for evidence and limitations.
 

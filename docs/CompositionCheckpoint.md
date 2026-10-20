@@ -1,5 +1,34 @@
 # Composed-document reliability checkpoint
 
+## C332 physical footer-table outline viewport (2026-10-20)
+
+One physical lower drawing boundary passes from placement to overflowing direct
+natural footer-table outlines. Child text retains its own clip; reuse existing
+natural-story eligibility and complex fallbacks. No blanket footer clip, fitted
+offset, font/count regime or public API change. Six new controls pass original
+1/.1/.01pt geometry/content gates; lower-edge error<.086pt. Viewed native/Word
+Final margin90 pair preserves complete fraction/parent text below truncated
+outline. Eighteen of20 geometry outcomes pass; inherited footer picture/box
+displacement7.330/5.580pt and child prose7.238/5.711pt remain failed. Two C330
+parent conversions confirm exact source frames/text operations. All20 strict
+pixel gates remain failed; do not relabel the inherited geometry residual.
+
+One Release library build/one harness-only repair, final3169da1a/2,533inputs.
+33Windows unique checks/35method attempts;23Ubuntu/10native skips, one selection.
+Initial31pass/2fail: bookmark mutation incorrectly required math in ordinary
+source. Retain original report; reuse14 exact runtime assets/all inputs/31 passes
+and run two corrected Windows checks. Both fail genuinely on C330 parent.20 CLI
+outputs/10 comparisons reused, zero new Office exports; eight inspected text
+streams exact, six full source audits clean.17assets/two exact transfer smokes;
+no root build or fixed12/suite/package repeat. Fixed source proof: no DOCX footer
+boxes in five sources, decks use PPTX. A wrong cache path failed preflight before
+comparison; an older standalone golden omitted frame rectangles, so a corrected
+wrapper measures only the same pinned Word PDF. Failed logs preserved, no replay.
+Productionf7cb3e74; evidence artifacts/composition-c1/footer-outline-viewport-
+evidence.json. C330CI39360213092 green Windows/Ubuntu including broader/package
+checks. Next shared picture/box sibling baseline, without footer-specific offsets.
+Version0.1.5/release deferred/workspace gap remain.
+
 ## C331 independent footer-table outline viewport evidence (2026-10-20)
 
 Two competing ownership predictions pinned before exports. Bottom-margin90 moves
