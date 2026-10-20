@@ -1,5 +1,21 @@
 # Composed-document reliability checkpoint
 
+## C329 independent authored-row note discriminator (2026-10-20)
+
+Move reference1 to Left20 and reference2 into the ordinary trailing row. Only
+document.xml changes from the within-row control; the note story and all other
+package parts are exact. Removing reference runs recovers accepted no-note XML.
+Prospective model pinned before exports. C327 runtime gives early marker page1
+but note1 page2 in both presets; independent Word keeps both page1, late note2
+page3. Four pages/global content/math remain; source-page and strict gates fail.
+Word492 prose/note/eight math anchors pinned without threshold changes.
+
+Two CLI/two Office exports, zero library builds/tests/new raster views. Table-wide
+all-reference eligibility forces fallback for each authored row. Next select
+heads by row, preserving unfinished earlier-head reserves and stable owner/count
+confirmation. Sourcecd5b89f8/gold2939e8c3; evidence artifacts/composition-c1/
+cross-row-note-review-evidence.json. Version0.1.5/release deferred.
+
 ## C328 fixed portfolio closes the table/note batch (2026-10-20)
 
 One refresh from qualified4e3874c0: seven sources/12 outcomes, all PDFs exact to
