@@ -26,6 +26,12 @@ internal static partial class DocxInlineCompositionTests
         CheckSpanningCellNotes(null, "parallel-cell-first-footnote-office.json", qualifySourcePages: true);
     }
 
+    public static void DocxCrossRowSpanningNotesKeepIndependentWordOwners()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent cross-row note pages use installed Windows fonts.");
+        CheckSpanningCellNotes(null, "parallel-cell-cross-row-footnote-office.json", qualifySourcePages: true);
+    }
+
     public static void DocxSpanningNoteAtChangingCutKeepsMarkerAndTargetTogether()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("The cut-position control uses installed Windows fonts.");

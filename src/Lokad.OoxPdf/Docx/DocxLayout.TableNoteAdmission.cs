@@ -13,6 +13,8 @@ internal sealed partial class DocxLayoutEngine
         private readonly InFlightRelatedStory[] notes;
         private readonly Dictionary<DocxParagraph, Dictionary<int, List<InFlightRelatedStory>>> bySource =
             new(ReferenceEqualityComparer.Instance);
+        private readonly Dictionary<DocxTableRow, int> rowIndices = new(ReferenceEqualityComparer.Instance);
+        private readonly Dictionary<DocxParagraph, int> sourceRows = new(ReferenceEqualityComparer.Instance);
 
         private DocxTableNoteAdmission(InFlightRelatedStory[] notes, CancellationToken token)
         {
@@ -29,7 +31,7 @@ internal sealed partial class DocxLayoutEngine
             }
         }
 
-        internal static DocxTableNoteAdmission? TryCreate(int sourceBlock,
+        internal static DocxTableNoteAdmission? TryCreate(int sourceBlock, DocxTable table,
             IEnumerable<InFlightRelatedStory> pending, IReadOnlyList<DocxInlineReferenceLocation>? locations,
             CancellationToken token)
         {
@@ -51,14 +53,39 @@ internal sealed partial class DocxLayoutEngine
                     (DocxFieldText.GetDependencies(note.StoryLayout.Story.BodyElements, token) & DocxCounterDependencies.PageNumber) != 0)
                     return null;
             }
-            return new(notes, token);
+            var admission = new DocxTableNoteAdmission(notes, token);
+            for (int index = 0; index < table.Rows.Count; index++)
+            {
+                token.ThrowIfCancellationRequested();
+                var row = table.Rows[index];
+                if (!admission.rowIndices.TryAdd(row, index)) return null;
+                foreach (var cell in row.Cells)
+                foreach (var paragraph in GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell)))
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (admission.bySource.ContainsKey(paragraph) && !admission.sourceRows.TryAdd(paragraph, index))
+                        return null;
+                }
+            }
+            return admission.sourceRows.Count == admission.bySource.Count ? admission : null;
         }
 
-        internal DocxTableNoteFragmentPlan? TryPlan(IReadOnlyList<IReadOnlyList<DocxTextLineLayout>> fragments,
+        internal DocxTableNoteFragmentPlan? TryPlan(DocxTableRow row, IReadOnlyList<IReadOnlyList<DocxTextLineLayout>> fragments,
             Func<double, double> frameBottom, double firstTop, double pageTop, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
-            if (!TryCompleteFootnoteReserve(notes, out _)) return null;
+            if (!rowIndices.TryGetValue(row, out int rowIndex)) return null;
+            var rowNotes = new List<InFlightRelatedStory>();
+            foreach (var note in notes)
+            {
+                token.ThrowIfCancellationRequested();
+                int sourceRow = sourceRows[note.Location.SourceParagraph];
+                // An unfinished earlier head can still own this page. Future
+                // authored rows supply their own admission when reached.
+                if (sourceRow < rowIndex && note.RemainingLineCount > 0) return null;
+                if (sourceRow == rowIndex) rowNotes.Add(note);
+            }
+            if (!TryCompleteFootnoteReserve(rowNotes, out _)) return null;
             var owners = new Dictionary<DocxInlineReference, int>(ReferenceEqualityComparer.Instance);
             var grouped = Enumerable.Range(0, fragments.Count).Select(_ => new List<InFlightRelatedStory>()).ToArray();
             for (int index = 0; index < fragments.Count; index++)
@@ -84,7 +111,7 @@ internal sealed partial class DocxLayoutEngine
                     }
                 }
             }
-            if (owners.Count != notes.Length) return null;
+            if (owners.Count != rowNotes.Count) return null;
             var heights = new double[fragments.Count];
             var separatorHeights = new double[fragments.Count];
             double firstHeight = 0d;

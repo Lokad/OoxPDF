@@ -311,6 +311,9 @@ internal static class PortableRenderingTests
     public static void PortableRenderingRunDefaultOwnersKeepVisibleSizesAndStories() =>
         DocxInlineCompositionTests.CheckRunDefaultOwnerRendering(new PinnedResolver());
 
+    public static void PortableRenderingCrossRowSpanningNotesKeepCompleteOwners() =>
+        DocxInlineCompositionTests.CheckSpanningCellNotes(new PinnedResolver(mathFont: true), "parallel-cell-cross-row-footnote-office.json");
+
     public static void PortableRenderingFirstSpanningNoteKeepsCompleteSourceAndCount() =>
         DocxInlineCompositionTests.CheckSpanningCellNotes(new PinnedResolver(mathFont: true), "parallel-cell-first-footnote-office.json");
 

@@ -358,7 +358,7 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         DocxTableCellTextLinesMemo? cellMemo = null,
         double reviewFragmentScale = 1d,
-        Func<IReadOnlyList<IReadOnlyList<DocxTextLineLayout>>, DocxTableNoteFragmentPlan?>? resolveNoteFragments = null)
+        Func<DocxTableRow, IReadOnlyList<IReadOnlyList<DocxTextLineLayout>>, DocxTableNoteFragmentPlan?>? resolveNoteFragments = null)
     {
         if (!double.IsFinite(reviewFragmentScale) || reviewFragmentScale <= 0d || reviewFragmentScale >= 1d ||
             !CanUsePrintedReviewTextTableFrame(table)) reviewFragmentScale = 1d;
@@ -585,13 +585,13 @@ internal sealed partial class DocxLayoutEngine
                         // publishing; otherwise retain the conservative source plan.
                         if (!row.IsHeader && resolveNoteFragments is not null)
                         {
-                            var plan = resolveNoteFragments(ProjectLines(owned));
+                            var plan = resolveNoteFragments(row, ProjectLines(owned));
                             double headerHeight = headerRows.Sum(entry => frame.RowHeights[entry.RowIndex]);
                             if (plan is not null && TryResolveCellOwnedFragments(plan.FirstHeight, continuationHeight,
                                 out var refined, plan.PageHeights.Select(height => Math.Max(1d, height - headerHeight)).ToArray()) &&
                                 refined.Count == owned.Count)
                             {
-                                var confirmation = resolveNoteFragments(ProjectLines(refined));
+                                var confirmation = resolveNoteFragments(row, ProjectLines(refined));
                                 if (confirmation is not null && plan.Owners.Count == confirmation.Owners.Count &&
                                     plan.Owners.All(pair => confirmation.Owners.TryGetValue(pair.Key, out int owner) && owner == pair.Value))
                                     owned = refined.Select((fragment, index) => fragment with {

@@ -1319,7 +1319,7 @@ internal sealed partial class DocxLayoutEngine
                 double continuationTableHeight = Math.Max(1d, page.Height - page.MarginTop - continuationBottom);
                 var noteAdmission = page.ColumnFrames.Count == 1 &&
                     page.PageSettings.FootnoteReferenceSettings.PositionValue is null or "pageBottom"
-                    ? DocxTableNoteAdmission.TryCreate(elementIndex, inFlightNotes.Values,
+                    ? DocxTableNoteAdmission.TryCreate(elementIndex, bodyTable, inFlightNotes.Values,
                         locationsByBlock.GetValueOrDefault(elementIndex), cancellationToken) : null;
                 double NoteFrameBottom(double reserve) => usesPrintedTableFrame
                     ? ParagraphFrameBottom(reserve) : FrameBottom(reserve);
@@ -1383,7 +1383,7 @@ internal sealed partial class DocxLayoutEngine
 
                 LayoutTable(bodyTable, CurrentTableFrameBottom(), continuationTableHeight, textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, new DocxTableCellTextLinesMemo(),
                     reviewFragmentScale: reviewFragmentScale,
-                    resolveNoteFragments: noteAdmission is null ? null : fragments => noteAdmission.TryPlan(fragments,
+                    resolveNoteFragments: noteAdmission is null ? null : (row, fragments) => noteAdmission.TryPlan(row, fragments,
                         NoteFrameBottom, cursorY, page.Height - page.MarginTop, cancellationToken));
                 if (scaleBaselineOffsetTransitions &&
                     (completedPagesBeforeTable == pages.Count || reviewFragmentScale < 1d) && textMeasurer is not null)

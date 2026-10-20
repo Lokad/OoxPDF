@@ -9462,6 +9462,8 @@
     "DocxTableCellTextLinesMemoSharesSplitCells"
   ],
   "docx-note-source-fragment-admission": [
+    "DocxCrossRowSpanningNotesKeepIndependentWordOwners",
+    "PortableRenderingCrossRowSpanningNotesKeepCompleteOwners",
     "DocxSpanningFramesRetainCompleteInkAndIndependentWordOrigins",
     "PortableRenderingSpanningFramesKeepCompleteGlyphInk",
     "DocxParallelCellFramesRetainIndependentWordPagesAndCompleteInk",
