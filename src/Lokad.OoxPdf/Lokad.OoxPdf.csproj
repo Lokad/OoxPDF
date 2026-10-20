@@ -3,16 +3,17 @@
     <TargetFramework>net10.0</TargetFramework>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <PackageId>Lokad.OoxPdf</PackageId>
-    <Version>0.1.5</Version>
-    <AssemblyVersion>0.1.5</AssemblyVersion>
-    <FileVersion>0.1.5</FileVersion>
+    <Version>0.2.0-preview</Version>
+    <AssemblyVersion>0.2.0.0</AssemblyVersion>
+    <FileVersion>0.2.0.0</FileVersion>
+    <InformationalVersion>0.2.0-preview</InformationalVersion>
     <Authors>Lokad</Authors>
     <Company>Lokad</Company>
     <Description>Dependency-free OOXML to PDF renderer for PPTX and DOCX corporate documents.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <PackageIcon>icon.png</PackageIcon>
-    <PackageReleaseNotes>0.1.5 fixes subset-font text and forward-only output streams, improves DOCX performance and rendering fidelity, corrects PPTX table and chart colors, and hardens document intake and output handling.</PackageReleaseNotes>
+    <PackageReleaseNotes>0.2.0-preview improves composed DOCX content, shared placement and picture handling, and simplifies conversion resource control. Breaking API removals and caller migration: docs/PublicApiChanges.md. Supported scope, approximations and preview qualification: docs/PreviewRelease.md. Publication is deferred.</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/Lokad/OoxPDF</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Lokad/OoxPDF.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -28,6 +29,8 @@
     <None Include="..\..\LICENSE.txt" Pack="true" PackagePath="\" Visible="false" />
     <None Include="..\..\README.md" Pack="true" PackagePath="\" Visible="false" />
     <None Include="..\..\CHANGELOG.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="..\..\docs\PublicApiChanges.md" Pack="true" PackagePath="docs/" Visible="false" />
+    <None Include="..\..\docs\PreviewRelease.md" Pack="true" PackagePath="docs/" Visible="false" />
     <None Include="..\..\icon.png" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
   <ItemGroup>

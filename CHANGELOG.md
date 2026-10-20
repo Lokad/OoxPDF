@@ -1,6 +1,25 @@
 # Changelog
 
-## Unreleased
+## 0.2.0-preview — candidate in preparation, not published
+
+- Restores supported DOCX content in ordinary combinations: bookmarks and
+  multiple equations, pictures, table cells, headers/footers and qualified notes.
+  Shared source frames carry layout geometry into painting and navigation.
+- Corrects static-story placement, table origins, inline box ownership and
+  raster/SVG picture frames using independent Office comparisons. Existing visual
+  thresholds remain unchanged; approximate layout and cosmetic failures remain.
+- Simplifies shared bounded font-cache ownership and removes duplicated PDF
+  validation work, dead helpers, obsolete pattern constructors and test-only
+  forwarding APIs. Essential PDF structural validation remains.
+- Removes ineffective `Deterministic`, library `Strict` and cumulative work or
+  nonrefunding memory quotas. Uses cooperative cancellation and optional coarse
+  host memory admission; preserves input/output bounds, bounded page staging,
+  deterministic cleanup and atomic file publication.
+- Breaking API changes require recompilation. See [migration guidance](docs/PublicApiChanges.md)
+  and [supported, approximate and unsupported preview scope](docs/PreviewRelease.md).
+  Performance optimization and broader feature expansion are deferred.
+
+## Earlier development history
 
 - Added bottom-reserve 14pt probe as slope held-out evidence (Q07 increment): category ticks bumped 9pt to 14pt by byte-surgical fixture edit (Office reference renders clean); Office plot box matches the rule prediction within 0.01pt at the new size (193.68 vs 193.69), confirming the 7.0+1.813fs slope and ruling out a retune (overlay residual sits inside documented tolerance). Direct PNG review shows complete correct content (SSIM 0.948, recall 0.991, diagnostics empty) with the same box-shift gap class. Manifests: 118 locked / 210 approximate / 0 needs-review (336 cases).
 

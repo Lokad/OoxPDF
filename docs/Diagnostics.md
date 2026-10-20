@@ -133,142 +133,48 @@ Exit codes:
 - `2`: invalid arguments.
 - `3`: conversion succeeded, but `--strict` saw at least one warning or error diagnostic.
 
-## Resource Budgets and Host Admission
+## Output bounds and host admission
 
-Per-conversion cumulative budgets (`OoxPdfOptions.ConversionLimits`) bound
-covered work so many individually legal expansions cannot jointly exhaust a
-shared process. Defaults are generous multiples of the per-site caps:
+`OoxPdfOptions.ConversionLimits` bounds output, not cumulative work or total
+managed memory. The current defaults are:
 
-- `MaxChartRangeCellsPerConversion` (default 2,000,000): total chart workbook
-  range cells expanded, including blank cells materialized during union expansion,
-  plus chart dense slots materialized from cached/literal vectors (R04).
-- `MaxTableFragmentsPerConversion` (default 20,000): total DOCX table row
-  fragments constructed.
-- `MaxXmlNodesPerConversion` (default 40,000,000): total XML elements plus
-  attributes parsed across every part; cached parses do not recharge (R04).
-- `MaxWorkbookCellsPerConversion` (default 1,000,000): total chart workbook
-  cells read across every embedded workbook; cached models do not recharge (R04).
-- `MaxSceneNodesPerConversion` (default 2,000,000): total PPTX scene nodes
-  built across slides, masters, and layouts, including nested group children (R04).
-- `MaxNestedPackageBytesPerConversion` (default 512 MiB): total retained bytes
-  across nested (embedded workbook) packages, each already capped individually (R04).
-- `MaxWorkbookModelsPerConversion` (default 100): total retained chart workbook
-  models; cached models do not recharge (R04).
-- `MaxPagesPerConversion` (default 10,000): total PDF pages serialized (R06).
-- `MaxPdfContentBytesPerConversion` (default 1 GiB): total encoded page and isolated SVG
-  group content bytes, charged once at production admission (R06, RV07-E6).
-- `MaxOutputBytesPerConversion` (default 2 GiB): total PDF output bytes admitted before each write
-  while the conversion scope is still open; a zero budget writes nothing (R06.1).
-- `MaxPdfFontBytesPerConversion` (default 256 MiB): total embedded font program
-  plus ToUnicode bytes serialized, complementing the font-work count (R06).
-- `MaxPdfImageBytesPerConversion` (default 512 MiB): total encoded image and
-  soft-mask bytes serialized, complementing the image-decode count (R06).
-- `MaxRetainedImageBytesPerConversion` (default 512 MiB): total encoded image
-  plus soft-mask bytes of newly created image resources at the owning producer
-  (R06.2). Cache hits create nothing and do not recharge; pruned resources stay
-  charged. Intentionally separate from the serialized image cap.
-- `MaxRetainedFontBytesPerConversion` (default 256 MiB): total subset (or whole
-  fallback) font program bytes at subset construction (R06.2). Identical-merge
-  fast paths build nothing and do not recharge. Intentionally separate from the
-  serialized font cap.
-- `MaxResidentPageContentBytesPerConversion` (default 64 MiB): page and isolated SVG group content
-  bytes retained in one shared window during staged emission (R06.3, RV07-E6). Past the window, content spills
-  to a delete-on-close temp file and is re-read in order, so output stays
-  byte-identical while stageable payload retention follows the window. Spilled volume
-  is reported as `pageContentSpilledBytes`; escalation notifies once per conversion
-  with informational `PDF_PAGE_CONTENT_SPILLED`.
-- `MaxImagesDecodedPerConversion` (default 500): total content images decoded,
-  including PPTX crop/recolor variants and effect rasters, through the shared
-  decoder boundary (R03). Each image is still individually pixel-capped; cache
-  hits do not recharge.
-- `MaxFontWorkPerConversion` (default 5,000): total font program loads and
-  subset builds through the shared loader/subsetter boundary, covering DOCX and
-  PPTX (R03). Ordinary conversions resolve dozens; thousands indicate reference
-  churn. Cache hits do not recharge.
-- `MaxLiveImageBytesPerConversion` (default 512 MiB): peak image-decode
-  reservation using per-format working-set estimates held across
-  decode/transform/compress by decoded-pixel ownership (R02; R01 reserves
-  before component-plane allocation; JPEG passthrough holds none).
-  PNG streams inflated scanlines into the final pixel planes and reserves the
-  exact IDAT staging length, two maximum-width scanlines, and RGB/alpha planes.
-  The estimate excludes the caller's input bytes and runtime object overhead.
-  Configured limits apply to this estimate; admission can change for images near
-  a limit because compressed IDAT is included and full-image inflate storage is removed.
+| Limit | Default |
+|---|---|
+| `MaxPagesPerConversion` | 10,000 pages |
+| `MaxPdfContentBytesPerConversion` | 1 GiB encoded page/group content |
+| `MaxOutputBytesPerConversion` | 2 GiB serialized PDF |
+| `MaxPdfFontBytesPerConversion` | 256 MiB serialized font/ToUnicode data |
+| `MaxPdfImageBytesPerConversion` | 512 MiB serialized images/masks |
+| `MaxResidentPageContentBytesPerConversion` | 64 MiB resident page/group payload |
 
-Crossing any budget throws `OoxPdfLimitExceededException` before further
-expansion: no partial PDF is published (file output stays atomic) and the
-failure escapes per-node recovery, so it always aborts the conversion.
-Limit exceptions escape tolerant loader/diagnostic catch filters.
+Archive, XML, image, font and individual expansion bounds apply independently.
+Cancellation is cooperative. The retired cumulative work and nonrefunding
+retained-byte limits are listed in [caller migration](PublicApiChanges.md).
 
-With `OoxPdfOptions.ReportResourceUsage`, each successful conversion emits one
-informational `CONVERSION_RESOURCE_SUMMARY` diagnostic reporting cumulative
-counters plus the peak live reservation
-(`pages`, `chartRangeCells`, `tableFragments`, `imagesDecoded`, `fontWork`,
-`xmlNodes`, `workbookCells`, `peakLiveImageBytes`, `pdfPages`, `pdfContentBytes`,
-`pdfOutputBytes`, `retainedImageBytes`, `retainedFontBytes`, `pdfFontBytes`, and
-`pdfImageBytes`). Scene nodes, nested package bytes, and workbook models charge
-without summary fields. Informational diagnostics
-never affect CLI `--strict` exit codes.
+The optional `MemoryAdmission` host adapter acquires one coarse lease before
+conversion construction. It covers retained storage and construction peaks;
+refusal throws `OoxPdfLimitExceededException` before input reads or PDF writes.
+Ownership is released on success, failure and cancellation, before file
+publication. Caller-owned streams/resolvers and shared bounded caches remain
+outside that lease. Size shared host capacity from measured representative
+workloads and concurrency headroom; this is not comprehensive heap accounting.
 
-Diagnostic phases and conversion outcomes (R19/R20): the summary is phase-specific
-telemetry, not a commit notification. File conversions report once, after
-serialization into the staging file and before the atomic move, so every field
-carries post-write values; stream conversions report once, after rendering but
-before serialization, so page/content/retained fields carry render-stage values
-while writer-stage fields stay zero even when the emitted PDF contains those bytes.
-No committed-notification diagnostic exists: normal return without throwing is the
-commitment signal (file: atomically published; stream: fully written).
-Observer rules: a throwing summary callback fails the conversion. On the file path
-the failure surfaces before the atomic move, so a pre-existing destination stays
-untouched and only owned staging is removed. On the stream path the report precedes
-serialization, so the destination keeps whatever prefix (possibly nothing) was
-written before the throw and the caller retains ownership. Outcome guarantees:
-success returns committed output; writer/destination failure propagates the
-underlying exception with an allowed stream prefix kept and file staging cleaned;
-cancellation and quota failures abort before further expansion with nothing
-published; observer failure behaves like a pre-commit abort per path above;
-file publication failure (atomic move) propagates with staging cleaned and the
-destination untouched.
+Page/group content beyond the resident window spills into a delete-on-close
+file. Informational `PDF_PAGE_CONTENT_SPILLED` is emitted once on escalation.
+With `ReportResourceUsage`, `CONVERSION_RESOURCE_SUMMARY` reports `pages`,
+`pdfPages`, `pdfContentBytes`, `pdfOutputBytes`, `pdfFontBytes`, `pdfImageBytes`
+and `pageContentSpilledBytes`. These are output/spill totals, not live-memory
+measurements. Informational diagnostics do not affect CLI `--strict` exit codes.
 
-Scope limits (R19): `peakLiveImageBytes` is a reservation peak, not total live
-or process memory. It covers per-format working-set estimates held across
-decode/transform/compress (R02) but omits pixels retained outside any live
-operation scope, compressed PDF resources, fonts, XML DOMs, pages, and writer
-work. Retained image/font production carries admission caps plus summary fields (R06.2),
-as do serialized font/image bytes. Output/content byte counts exclude runtime
-representation overhead (UTF-16 strings, builder capacity, DOMs); asynchronous
-loaders escape calling-thread allocation counters. Do not size
-hosts from `peakLiveImageBytes` plus image headroom alone.
+The summary is emitted before serialization for stream output and after staging
+but before atomic publication for file output. Writer-stage totals are zero in
+the stream summary. A throwing observer aborts conversion. Supplied streams stay
+caller-owned; write failures may leave a prefix. File conversion preserves the
+previous destination on rendering, observer, cancellation, limit or publication
+failure and cleans its owned staging. Normal return signals successful output;
+there is no separate committed-notification diagnostic.
 
-Domain map (R06.2/V01) — every charged domain against its admission bound, or its
-named residual:
-
-- Chart range cells, dense slots, table fragments, XML nodes, workbook cells and
-  models, nested package bytes, scene nodes: aggregate cumulative caps (R04).
-- Images: decode counts at the shared decoder boundary (R03); live working set as
-  a reservation peak (R02); retained encoded bytes at the owning producer with
-  no recharge on cache hits and no refunds (R06.2); serialized bytes at the
-  writer (R06).
-- Fonts: load/subset counts at the shared loader boundary (R03); retained programs
-  at subset construction with identical-merge fast paths exempt (R06.2);
-  serialized bytes plus ToUnicode maps at the writer (R06).
-- Pages, content, output: per-page admission during rendering (R06.2),
-  serialization totals (R06), pre-write output admission at every write (R06.1).
-- Vector, shading, and annotation writer data: no byte quota (residual; writer
-  validation still applies).
-- XML/text payload heaps, font subset/compress scratch, writer scratch: counts
-  bound work, not heap bytes (residual; V01 measures).
-- DOCX repagination passes: fragment/table budgets bound the inputs, but the
-  passes themselves have no separate control (residual).
-
-Host admission: measure conversion-only live/process peaks across
-page/image/font/chart breadth with `ReportResourceUsage`, separate discovery,
-transient allocation, retained ownership, and output buffering, and size
-admission from total peaks plus host baseline/concurrency headroom. Set tighter
-`ConversionLimits` for shared processes and tune them against measured
-corpora; `ConvertAsync` offloading to `Task.Run` is not admission control.
-
-### Measured operating baselines
+### Historical operating baselines (not preview qualification)
 
 Windows 10.0.26200 x64, .NET 10.0.12, workstation GC, Release, default WindowsFontResolver (464 discovered faces), file output mode, default 64 MiB resident window, measured with AllocProbe volume counters plus per-conversion heap, private, and working-set peak sampling (`--isolate`, `--concurrency`):
 

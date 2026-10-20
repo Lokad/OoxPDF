@@ -1,7 +1,8 @@
-# Public API changes before the next release
+# Migrating to 0.2.0-preview
 
-Version remains 0.1.5 during implementation; release preparation is deferred.
-These intentional source/binary API changes require recompiling callers.
+These intentional changes from 0.1.5 require recompiling callers. Package and
+informational version are `0.2.0-preview`; assembly/file version is `0.2.0.0`.
+See [preview scope and qualification](PreviewRelease.md). Publication is deferred.
 
 - Removed `OoxPdfOptions.Deterministic`. It never changed conversion behavior.
   Remove the initializer; stable inputs/options still produce deterministic PDF

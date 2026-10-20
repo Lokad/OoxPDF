@@ -1,6 +1,8 @@
 # Lokad.OoxPdf
 
-Pre-release API changes and caller migration notes: [PublicApiChanges](docs/PublicApiChanges.md).
+Preparing **0.2.0-preview**; publication is deferred. Read the
+[preview scope and limitations](docs/PreviewRelease.md) and
+[caller migration notes](docs/PublicApiChanges.md).
 
 `Lokad.OoxPdf` is a dependency-free .NET OOXML-to-PDF renderer for `.pptx` and `.docx` files. The library reads Office Open XML packages directly, builds static PDF pages, and does not call Microsoft Office, PDFium, PowerShell, external executables, or third-party packages at runtime.
 

@@ -40,6 +40,9 @@ Write-Host ("Smoking package {0}." -f $package.Name)
 
 $archive = [IO.Compression.ZipFile]::OpenRead($package.FullName)
 try {
+    foreach ($required in @('docs/PublicApiChanges.md', 'docs/PreviewRelease.md')) {
+        if ($null -eq $archive.GetEntry($required)) { throw "Packed caller documentation is missing: $required" }
+    }
     $libraryEntry = $archive.GetEntry("lib/net10.0/Lokad.OoxPdf.dll")
     if ($null -eq $libraryEntry) { throw "Packed library DLL is missing." }
     $libraryStream = $libraryEntry.Open()
@@ -83,12 +86,24 @@ Set-Content -LiteralPath (Join-Path $scratch "smoke.csproj") -Encoding UTF8 -Val
 $program = @'
 using System.Text;
 using System.Security.Cryptography;
+using System.Reflection;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Fonts;
 
 string input = args[0];
 string output = args[1];
 string expectedLibrarySha256 = args[2];
+string packageVersion = args[3];
+Assembly library = typeof(OoxPdfConverter).Assembly;
+string informationalVersion = library.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion;
+string fileVersion = library.GetCustomAttribute<AssemblyFileVersionAttribute>()!.Version;
+Version numericVersion = new Version(Version.Parse(packageVersion.Split('-')[0]).Major,
+    Version.Parse(packageVersion.Split('-')[0]).Minor, Version.Parse(packageVersion.Split('-')[0]).Build, 0);
+if (library.GetName().Version != numericVersion || fileVersion != numericVersion.ToString() ||
+    informationalVersion.Split('+')[0] != packageVersion)
+{
+    throw new InvalidDataException("Package, assembly, file and informational versions disagree.");
+}
 string loadedLibrarySha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(typeof(OoxPdfConverter).Assembly.Location)));
 if (!string.Equals(expectedLibrarySha256, loadedLibrarySha256, StringComparison.Ordinal))
 {
@@ -98,7 +113,7 @@ Console.WriteLine("Loaded packed library SHA-256 " + loadedLibrarySha256 + ".");
 var admission = new SmokeAdmission();
 var options = new OoxPdfOptions
 {
-    FontResolver = args.Length > 3 ? new SmokeFontResolver(args[3]) : null,
+    FontResolver = args.Length > 4 ? new SmokeFontResolver(args[4]) : null,
     MemoryAdmission = admission
 };
 OoxPdfConverter.Convert(input, output, options);
@@ -146,7 +161,7 @@ Set-Content -LiteralPath (Join-Path $scratch "Program.cs") -Encoding UTF8 -Value
 
 $input = Join-Path $scratch "input.docx"
 $output = Join-Path $scratch "output.pdf"
-$smokeArguments = @($input, $output, $librarySha256)
+$smokeArguments = @($input, $output, $librarySha256, $version)
 if (-not [string]::IsNullOrWhiteSpace($FontPath)) { $smokeArguments += $FontPath }
 $smokeProject = Join-Path $scratch "smoke.csproj"
 & dotnet restore $smokeProject --packages (Join-Path $scratch "packages") --configfile (Join-Path $scratch "NuGet.config") --nologo
@@ -167,6 +182,8 @@ Write-Host "Package smoke test passed through the packed library."
     LibraryRebuilt = -not $NoBuild
     ExpectedLibrarySha256 = $ExpectedLibrarySha256
     MemoryAdmissionChecked = $true
+    VersionMetadataChecked = $true
+    CallerDocumentationChecked = $true
     Package = $package.FullName
     PackageVersion = $version
     PackageSha256 = (Get-FileHash -LiteralPath $package.FullName -Algorithm SHA256).Hash
