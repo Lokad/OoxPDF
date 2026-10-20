@@ -1,5 +1,38 @@
 # Composed-document reliability checkpoint
 
+## C346 canonical raster picture links share physical paint frames (2026-10-20)
+
+Canonical external wp:docPr/a:hlinkClick metadata now survives reading and emits
+URI annotations for complete axis-aligned raster pictures in ordinary body/cells.
+Shared body/cell paint placement and existing cell clips own the rectangles;
+already painted cached resources prove emission without another decode. Four
+missing URIs restored; two outer w:hyperlink controls retain none. No public API,
+layout, text/math-link policy, bounds/cache/admission/publication or native change.
+Partial/clipped, fragmented/merged/unknown, static/floating/box/SVG/rotated and
+action/hover navigation remains staged. Safe managed code remains mandatory.
+
+Frozen a3fa6bf9,2556 public inputs/17assets, one Release build.16 Windows/13 Ubuntu/
+three native skips in one exact invocation/platform; no repair/join. Cancellation,
+missing relationships/actions/hover/rotation, failed decode and exact-row clipping
+pass. Parent genuinely fails expected1/got0 URI; no missing-member failure.
+Six CLI outputs reuse six pinned Word views; six original1pt/.1pt/.01pt geometry
+and raw-content screens pass. All six strict pixel failures remain. Six paint
+streams/image records and18 inspected reports match baseline; four fresh raster
+PNGs exact/two whole-PDF identities reuse comparisons. All four URI rectangles
+match visible pictures within.001pt. Final Word raw bound error.129944pt; review
+raw errors52.963989/60.740967pt remain failed/unqualified, cause unverified.
+
+The existing geometry tool now records optional URI and picture-frame checks,
+always retaining raw Word mismatches even when their geometry is unqualified.
+An initial local math-glyph/module name collision required one observer-only line
+repair; failed logs retained, no production/test rebuild or conversion repeated.
+17assets/two exact root transfer smokes; no root build/suite/portfolio replay.
+Prior14 fixed/mixed outcomes carry by explicit source proof: six DOCX packages
+lack canonical picture click metadata, two decks use unchanged PPTX. This is not
+a fresh PDF identity claim. Evidence artifacts/composition-c1/inline-picture-links-evidence.json.
+C344CI39372562056 green including broader/package; C345/C346 batch push follows.
+Version0.1.5/release deferred; last workspace17.186GB above loose5GB target.
+
 ## C345 canonical picture hyperlinks omit URI annotations (2026-10-20)
 
 Canonical wp:docPr/a:hlinkClick metadata produces one Word URI in four body/cell
