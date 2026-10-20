@@ -30,6 +30,7 @@ probes.add_argument('--boxed-inset-trailing-row-probe', action='store_true')
 probes.add_argument('--parallel-cell-footnote-probe', action='store_true')
 probes.add_argument('--parallel-cell-single-footnote-probe', action='store_true')
 probes.add_argument('--parallel-cell-first-footnote-probe', action='store_true')
+probes.add_argument('--parallel-cell-cross-row-footnote-probe', action='store_true')
 args = parser.parse_args()
 sha = lambda value: hashlib.sha256(value).hexdigest().upper()
 
@@ -45,7 +46,8 @@ def publish(jobs):
             assert target.read_bytes() == data, target.name
 
 
-if args.parallel_cell_footnote_probe or args.parallel_cell_single_footnote_probe or args.parallel_cell_first_footnote_probe:
+if (args.parallel_cell_footnote_probe or args.parallel_cell_single_footnote_probe or
+        args.parallel_cell_first_footnote_probe or args.parallel_cell_cross_row_footnote_probe):
     parent = json.loads((cases / 'parallel-cell-boxed-tail-probe.json').read_text())[0]
     original = (root / parent['Input']).read_bytes()
     assert sha(original) == parent['Sha256']
@@ -59,6 +61,9 @@ if args.parallel_cell_footnote_probe or args.parallel_cell_single_footnote_probe
                   (2, 'Right source row 111.', 'Right final-page note: public source text stays complete.')]
     if args.parallel_cell_single_footnote_probe or args.parallel_cell_first_footnote_probe: references = references[:1]
     if args.parallel_cell_first_footnote_probe: references[0] = (1, 'Left source row 20.', references[0][2])
+    if args.parallel_cell_cross_row_footnote_probe:
+        references = [(1, 'Left source row 20.', references[0][2]),
+                      (2, 'Right terminal control.', references[1][2])]
     added = []
     for note_id, label, _ in references:
         matches = [p for p in tree.iter(w + 'p') if ''.join(t.text or '' for t in p.iter(w + 't')) == label]
@@ -111,18 +116,21 @@ if args.parallel_cell_footnote_probe or args.parallel_cell_single_footnote_probe
         archive.writestr(info, parts['word/footnotes.xml'])
     data = buffer.getvalue()
     row = copy.deepcopy(parent)
-    identifier = ('parallel-cell-boxed-inset-first-note' if args.parallel_cell_first_footnote_probe else
+    identifier = ('parallel-cell-boxed-inset-cross-row-notes' if args.parallel_cell_cross_row_footnote_probe else
+        'parallel-cell-boxed-inset-first-note' if args.parallel_cell_first_footnote_probe else
         'parallel-cell-boxed-inset-single-note' if args.parallel_cell_single_footnote_probe else 'parallel-cell-boxed-inset-notes')
     row.update(Id=identifier, Input='tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/' + identifier + '.docx',
         Sha256=sha(data), CompositionParentInput=parent['Input'], CompositionParentSha256=parent['Sha256'],
         SourceWithoutNoteReferencesSha256=sha(source_document), ExpectedFootnoteCount=len(references),
         FootnoteSourceAnchors=[dict(Id=i, SourceLabel=label, Text=text) for i, label, text in references],
         ExpectedText=parent['ExpectedText'] + [text for _, _, text in references],
-        Change=('Move the single-note reference to source row20 on the first physical fragment; note story and every other source owner remain unchanged.' if args.parallel_cell_first_footnote_probe else
+        Change=('Keep the early note in the spanning row and put a second ordinary reference in the trailing authored row. Removing reference runs recovers identical source XML; notes are the same ordinary stories as the within-row control.' if args.parallel_cell_cross_row_footnote_probe else
+            'Move the single-note reference to source row20 on the first physical fragment; note story and every other source owner remain unchanged.' if args.parallel_cell_first_footnote_probe else
             'Add one ordinary continuation note; compare the source-exact two-note sibling to isolate future-note reservation. Removing only reference runs recovers the complete accepted document XML. Boxed equation/count, margins, shading and tail remain source-exact.' if args.parallel_cell_single_footnote_probe else 'Add two ordinary notes at independent long-cell continuation/final anchors; removing only reference runs recovers the complete accepted document XML. Boxed equation/count, margins, shading and tail remain source-exact.'))
     row.pop('UnchangedFirstRowSha256', None)
     manifest = (json.dumps([row], indent=2) + '\n').replace('\n', '\r\n').encode()
-    manifest_name = ('parallel-cell-first-footnote-probe.json' if args.parallel_cell_first_footnote_probe else
+    manifest_name = ('parallel-cell-cross-row-footnote-probe.json' if args.parallel_cell_cross_row_footnote_probe else
+        'parallel-cell-first-footnote-probe.json' if args.parallel_cell_first_footnote_probe else
         'parallel-cell-single-footnote-probe.json' if args.parallel_cell_single_footnote_probe else 'parallel-cell-footnote-probe.json')
     publish([(cases / (identifier + '.docx'), data), (cases / manifest_name, manifest)])
     print('Parallel boxed/inset/tail plus ordinary-note control verified; source recovered exactly without reference runs.')
