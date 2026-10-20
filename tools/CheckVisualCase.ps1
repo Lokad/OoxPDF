@@ -58,6 +58,13 @@ $cliDll = if ($CliPath) { (Resolve-Path -LiteralPath $CliPath).Path } else {
 $buildInfoDir = Join-Path $runRoot "build-info"
 New-Item -ItemType Directory -Force -Path $buildInfoDir | Out-Null
 if (!$CliPath) { Invoke-RepoBuild $cliProject $cliDll "CLI" (Join-Path $buildInfoDir "cli.json") }
+else {
+    $explicitLibrary = Join-Path (Split-Path -Parent $cliDll) 'Lokad.OoxPdf.dll'
+    [ordered]@{CliDll=$cliDll;CliSha256=(Get-FileHash -LiteralPath $cliDll).Hash;
+        LibraryDll=$explicitLibrary;LibrarySha256=(Get-FileHash -LiteralPath $explicitLibrary).Hash;
+        InputSha256=(Get-FileHash -LiteralPath $inputFull).Hash;CaseSha256=(Get-FileHash -LiteralPath $caseFull).Hash;
+        BuildRequested=$false} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $buildInfoDir 'explicit-cli.json') -Encoding utf8
+}
 $candidateArgs = @("convert", $inputFull, $candidatePdf, "--diagnostics", $diagnostics)
 if (-not [string]::IsNullOrWhiteSpace($docxMarkup)) {
     if ($manifest.kind -ne "docx") {
