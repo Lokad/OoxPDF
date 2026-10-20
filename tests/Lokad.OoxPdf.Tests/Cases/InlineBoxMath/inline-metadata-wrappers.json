@@ -1,0 +1,94 @@
+[
+  {
+    "Id": "inline-wrapper-customxml-body-mixed",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-wrapper-customxml-body-mixed.docx",
+    "Sha256": "7C1C72915F0C1CE9E46CF413F0B801CE8C1484359AA7A665F43A966A9D7B656E",
+    "SourceSha256": "AF81436D026A847A086B74D2BF3AA5950614B27D0AA4D4867E4EE8FF9CF6A732",
+    "SiblingSourceSha256": "515A53E52166ED841334643C57390BD2300053C67CB208BFA47AB565F240FE85",
+    "HeldOut": true,
+    "Variant": "body-mixed",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 2,
+    "ExpectedRenderedEquationCount": 2,
+    "ExpectedImageCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-sibling-mixed.docx",
+    "Wrapper": "customXml",
+    "Change": "Wrap only the existing paragraph inline children in a metadata container. All source owners, formatting, properties and other package parts stay unchanged."
+  },
+  {
+    "Id": "inline-wrapper-smarttag-body-mixed",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-wrapper-smarttag-body-mixed.docx",
+    "Sha256": "0DAE58EA567449B4F077F095C251305FA3BF639E91487E9601DF946C12441F03",
+    "SourceSha256": "AF81436D026A847A086B74D2BF3AA5950614B27D0AA4D4867E4EE8FF9CF6A732",
+    "SiblingSourceSha256": "515A53E52166ED841334643C57390BD2300053C67CB208BFA47AB565F240FE85",
+    "HeldOut": true,
+    "Variant": "body-mixed",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 2,
+    "ExpectedRenderedEquationCount": 2,
+    "ExpectedImageCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-sibling-mixed.docx",
+    "Wrapper": "smartTag",
+    "Change": "Wrap only the existing paragraph inline children in a metadata container. All source owners, formatting, properties and other package parts stay unchanged."
+  },
+  {
+    "Id": "inline-wrapper-customxml-cell-ordinary",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-wrapper-customxml-cell-ordinary.docx",
+    "Sha256": "57420A3D66213F0F0ED62A2808D55B5B80A65CBC1AA291D7464742FFC295C98C",
+    "SourceSha256": "A25507F39F1D74A3A63F3511E4F2308E2A1E74F87ECD9BE931AD735435913F81",
+    "SiblingSourceSha256": "AF81436D026A847A086B74D2BF3AA5950614B27D0AA4D4867E4EE8FF9CF6A732",
+    "HeldOut": true,
+    "Variant": "cell-ordinary",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedImageCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "Change": "Wrap only the existing paragraph inline children in a metadata container. All source owners, formatting, properties and other package parts stay unchanged.",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-picture-cell.docx",
+    "Wrapper": "customXml"
+  },
+  {
+    "Id": "inline-wrapper-smarttag-cell-ordinary",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-wrapper-smarttag-cell-ordinary.docx",
+    "Sha256": "9B7617DE29C0DE8C0A9CCE7B53F02BE6579C8B3BD7055CA1A17C69DB17451094",
+    "SourceSha256": "A25507F39F1D74A3A63F3511E4F2308E2A1E74F87ECD9BE931AD735435913F81",
+    "SiblingSourceSha256": "AF81436D026A847A086B74D2BF3AA5950614B27D0AA4D4867E4EE8FF9CF6A732",
+    "HeldOut": true,
+    "Variant": "cell-ordinary",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 0,
+    "ExpectedRenderedEquationCount": 0,
+    "ExpectedImageCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "Inline box content.",
+      "After public math table."
+    ],
+    "Change": "Wrap only the existing paragraph inline children in a metadata container. All source owners, formatting, properties and other package parts stay unchanged.",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/inline-box-picture-cell.docx",
+    "Wrapper": "smartTag"
+  }
+]
