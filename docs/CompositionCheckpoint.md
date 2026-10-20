@@ -1,5 +1,41 @@
 # Composed-document reliability checkpoint
 
+## C348 static picture links share the existing paint item set (2026-10-20)
+
+Static story relationship caches discarded external targets before inline parsing.
+Keep the full map as body/notes already do; image loading still requires an
+internal resolved part. Feed the already placed static item set into the shared
+complete axis-aligned raster annotation path. Six repeated-footer URI instances
+restored per mode; eight body/static links match visible frames within.000061pt.
+No new coordinate model, geometry/eligibility rule, public API or native/resource
+change. One endnote URI per mode remains missing; complex/floating/box/SVG/
+rotation/fragmented navigation stays staged.
+
+Frozen0020600b/2559 inputs/17assets.27 Windows/22 Ubuntu/five native skips.
+Initial prototype21/24 passed, exposing the missing relationship ownership.
+Corrected production26/27 passed; only the declared-clip method was repaired twice.
+Its first setup missed section-setting aliases; subsequent controls also required
+pinned metrics and explicit raster bytes because the fixed stories contain SVG.
+Final checks preserve authored extents/clips and verify actual raster emission.
+Strict joins preserve failures and verify14 unchanged runtime assets/2559 inputs:
+29 Windows attempts/three invocations and28 Ubuntu/two,27 distinct methods each.
+The earlier24-method production attempt stays separate. Two library builds/two
+tests-only builds in total. Parent C346 genuinely fails expected4/got2 page1 URIs.
+
+Four CLI conversions across initial/final, zero Office exports/two C347 Word views.
+Both retain three pages, exact paint streams/text/drawings/image records and six
+raster PNGs. Content screens carry by source/text-operation/page/diagnostic/auditor/
+inspector/reference identity; cached1 deficits4/3 and field flags remain unresolved.
+Original strict pixel and raw Word review URI failures stay failed (max60.932pt);
+review math1.117/image1.192/prose1.440/separator1.125pt unchanged.17asset transfer/
+two exact smoke PDFs, zero root build/suite replay. Prior14 fixed/mixed outcomes
+carry by source proof: no canonical picture clicks or static external/empty
+relationships in six DOCX packages; two PPTX renderers unchanged. No fresh whole-
+PDF identity claim. Evidence artifacts/composition-c1/static-picture-links-evidence.json.
+C346CI39375591335 green Windows/Ubuntu including broader/package. Batch C347/C348
+push follows; work continues during CI. Version0.1.5/release deferred; last workspace
+17.186GB remains over loose5GB cap.
+
 ## C347 compound picture navigation survives ordinary combinations (2026-10-20)
 
 Add only five canonical click targets/relationships to the held-out composed
