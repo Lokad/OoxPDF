@@ -1,5 +1,24 @@
 # Composed-document reliability checkpoint
 
+## C315 ordinary trailing row reintroduces clipped continuation (2026-10-20)
+
+Append one ordinary two-cell row after the accepted spanning row; its complete
+source-row XML is byte-identical. All240 Word source anchors remain identical in
+both presets. Native135/240 anchors move, maxY9.069946pt, while X remains within
+0.024pt. A viewed continuation pair confirms upper first-line ink clipped by the
+page edge. Both geometry/strict pixel outcomes fail. All source/tail text remains
+globally extractable and both raw token screens are clean; extraction is not ink
+proof. Word bands distinguish exposed page ends from the final shared boundary.
+
+One source/two frozen CLI conversions/two new independent Word exports/two raster
+views. No library/harness build or library test run. Retain C314 qualification
+separately (24Windows/14Ubuntu/ten skips), with no rerun/combined claim. Natural
+source-height consistency and terminal/shared border ownership are the candidate
+cause; qualify that ownership before removing the fallback. Evidence artifacts/
+composition-c1/trailing-row-composition-review.json. Continue C316 bounded shared
+end admission, preserving margins, unsupported compound/merge/PAGE/manual paths
+and existing gates. C314CI39345667504 continues; version0.1.5/release deferred.
+
 ## C314 authored zero indentation shares flowing anchor ownership (2026-10-20)
 
 Authored-indent presence joins the existing flowing starting-anchor condition,
