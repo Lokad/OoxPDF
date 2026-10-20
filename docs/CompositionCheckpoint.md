@@ -1,5 +1,34 @@
 # Composed-document reliability checkpoint
 
+## C353 retained minimum-leading geometry does not justify a spacing fix (2026-10-20)
+
+Read three C352 Office/candidate PDF/144dpi PNG pairs and source models, no new
+build/conversion/Office export/raster/layout inspection.32 exact normalized text
+lines/1173 non-whitespace glyphs match. Max glyph originsX.265701/Y.187988pt;
+font sizes/colors exact, no page/text-structure change. Contextual body adjacent
+pitch differs at most.029968pt and shows no accumulating spacing error. All
+three controls already have contextual spacing enabled for all eight body
+paragraphs; their11/12pt/note variation does not isolate that flag's effect.
+
+Dominant horizontal dark-ink band envelopes differ at most1pt,144dpi=.5pt/pixel;
+shared font-box union plus1pt regions touch no edge. This excludes separate
+marker/rule bands and does not prove per-glyph outlines or every PDF clip. The
+existing contextual reference/candidate page1 pair was viewed; body and notes
+remain visible with matching structure. Original pixel thresholds and both
+DOCX_APPROXIMATED_FOOTNOTE warning gates remain failed. Pixel cause unverified;
+classify practical residual as small typography/paint difference in these inputs,
+not a demonstrated contextual spacing defect. No fitted shift, font/size branch,
+warning suppression or threshold change. Evidence
+artifacts/composition-c1/contextual-minimum-review-evidence.json.
+
+Next bounded composition probe: a small measured raster wholly inside a header/
+footer margin should not change ordinary body minimum-leading typography. Current
+static-independence policy excludes all images, an architectural concern until
+an independent Word/candidate control confirms it. Reuse qualifiedfc28a218 before
+any implementation. C352 pushed62269daf; prior C351CI39379915986 green including
+broader/package. Version0.1.5/release deferred; last17.614GB workspace over5GB,
+protected retirement rejections retained.
+
 ## C352 source typography reuses validated minimum-leading frames (2026-10-20)
 
 Separate the eleven-point source typography classifier from container/layout
