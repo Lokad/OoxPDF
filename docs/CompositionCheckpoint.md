@@ -1,5 +1,28 @@
 # Composed-document reliability checkpoint
 
+## C330 complete-note admission follows authored rows (2026-10-20)
+
+Index note paragraphs by authored row once per table; refine existing measured
+windows using only that row's complete heads. Unfinished earlier heads and
+unknown/duplicate owners retain conservative fallback. Source-reference owners,
+fragment counts, measured separator placement and cancellation remain intact.
+Early note1 page1/trailing-row note2 page3 now match both Word views. Eight note
+outcomes pass original1/.1/.01pt gates:1,964 prose/note/32 math anchors, max
+proseY.323975/mathY.360947pt. Source/count4/math/forward targets complete. Viewed
+native/Word Final page1 pair confirms first fragments and early note. Eight
+strict pixel failures and dynamic-field source audit flags remain unresolved.
+
+One frozen Release7afddebc/2,527inputs:41Windows/27Ubuntu/14native skips, once per
+platform; both new native/portable parent regressions fail. Eight conversions,
+six earlier PDFs exact/Office comparisons reused; zero new Word exports. C329
+adds two baseline CLI/two independent exports.17assets/two exact transfer smokes;
+no root build or suite/package/fixed12 replay. C328 fixed12 carried by source
+reachability: fixed DOCX tables precede notes, static report has none, decks use
+PPTX. Production063b6ffd; evidence artifacts/composition-c1/
+authored-row-note-admission-evidence.json. C327CI39359227037 still running with
+Ubuntu green. Next bounded footer-table viewport evidence; no general footer
+clip accepted. Version0.1.5/release deferral/workspace gap remain.
+
 ## C329 independent authored-row note discriminator (2026-10-20)
 
 Move reference1 to Left20 and reference2 into the ordinary trailing row. Only
