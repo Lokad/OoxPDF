@@ -11,10 +11,6 @@ internal static partial class DocxMathLayout
     // retaining the same metric box. Unknown properties remain rejected above.
     private static bool IsEmptyMatrixCell(DocxMathRow cell, CancellationToken token) => IsEmptyArgument(cell, token);
 
-    internal static bool IsEmptyMatrix(DocxEquation equation, CancellationToken token) =>
-        GetMatrix(equation, token) is { } matrix &&
-        matrix.Rows.All(row => row.Cells.All(cell => IsEmptyMatrixCell(cell, token)));
-
     private static DocxMathMatrix? GetMatrix(DocxEquation equation, CancellationToken token) =>
         GetSupportedMatrix(GetSingleSupportedChild(equation), token);
 

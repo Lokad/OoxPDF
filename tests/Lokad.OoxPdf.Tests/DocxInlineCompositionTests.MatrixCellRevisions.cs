@@ -26,7 +26,7 @@ internal static partial class DocxInlineCompositionTests
                 DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasPageInputs: true).Any(item => ReferenceEquals(item, equation)),
                 "Literal cell revisions keep the actual unrevised metric owner across supported paragraph containers.");
             if (mode == OoxPdfDocxMarkupMode.Final)
-                TestAssert.True(!equation.HasRunRevisions && DocxMathLayout.IsEmptyMatrix(equation, default),
+                TestAssert.True(!equation.HasRunRevisions && (DocxMathLayout.GetStandaloneControl(equation, default) is DocxMathMatrix && DocxMathLayout.TryGetRuns(equation, default, out var finalRuns) && finalRuns.Count == 0),
                     "Final removes revised literal ink while retaining actual matrix slots.");
             else
                 TestAssert.True(equation.HasRunRevisions && DocxInlineContent.TryGetEquationRevisionOwners(equation, default, out var owners) &&

@@ -97,9 +97,6 @@ internal static class DocxMathParagraphPolicy
         }
     }
 
-    public static bool IsSupportedSimpleCell(DocxTableCell cell) =>
-        IsSupportedCellProperties(cell) && cell.BodyElements.All(child => child is DocxParagraphElement);
-
     public static bool IsSupportedCellProperties(DocxTableCell cell) =>
         !cell.HasVerticalMerge && HasSupportedCellContentProperties(cell);
 

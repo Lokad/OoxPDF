@@ -27,7 +27,7 @@ internal static partial class DocxInlineCompositionTests
             var owner = cell.Revisions.Single();
             TestAssert.Equal(kind == "ins" ? DocxRevisionKind.TableCellInsertion : DocxRevisionKind.TableCellDeletion, owner.Kind);
             TestAssert.True(owner.PropertyChangeFamily is null && owner.Kind.IsCellStructureRevision() &&
-                DocxMathParagraphPolicy.IsSupportedSimpleCell(cell) &&
+                (DocxMathParagraphPolicy.IsSupportedCellProperties(cell) && cell.BodyElements.All(child => child is DocxParagraphElement)) &&
                 cell.Paragraphs.Sum(paragraph => paragraph.Equations.Count) == 4 &&
                 cell.Paragraphs.All(paragraph => !paragraph.Revisions.Contains(owner) &&
                     paragraph.Runs.All(run => !run.Revisions.Contains(owner)) &&

@@ -22,7 +22,7 @@ internal static partial class DocxInlineCompositionTests
                 DocxMathParagraphPolicy.EnumeratePreparationCandidates(source, default).Single(p => p.Equations.Count != 0)),
                 "A neighboring table must not replace the actual direct paragraph owner.");
             if (placement != "plain")
-                TestAssert.True(!DocxMathParagraphPolicy.IsSupportedSimpleCell(source.Tables[0].Rows[0].Cells[0]),
+                TestAssert.True(!(DocxMathParagraphPolicy.IsSupportedCellProperties(source.Tables[0].Rows[0].Cells[0]) && source.Tables[0].Rows[0].Cells[0].BodyElements.All(child => child is DocxParagraphElement)),
                     "Preparing direct paragraphs does not relax whole-cell fitting/placement eligibility.");
             var math = paragraph.Equations.ToDictionary(equation => equation,
                 equation => new DocxPreparedMathParagraph(equation, new(18d, 20d, 8d, []), 28d, 36d));
@@ -80,7 +80,7 @@ internal static partial class DocxInlineCompositionTests
                 .Where(paragraph => paragraph.Equations.Count != 0).ToArray();
             TestAssert.Equal(variant == "merge-restart" ? 2 : 0, candidates.Sum(paragraph => paragraph.Equations.Count));
             if (variant == "merge-restart")
-                TestAssert.True(!DocxMathParagraphPolicy.IsSupportedSimpleCell(source.Tables[0].Rows[0].Cells[0]),
+                TestAssert.True(!(DocxMathParagraphPolicy.IsSupportedCellProperties(source.Tables[0].Rows[0].Cells[0]) && source.Tables[0].Rows[0].Cells[0].BodyElements.All(child => child is DocxParagraphElement)),
                     "Preparing the explicit owning source retains whole-cell placement guards.");
         }
         using var cancelled = new CancellationTokenSource();

@@ -23,7 +23,7 @@ internal static partial class DocxInlineCompositionTests
             var row = table.Rows.Single();
             var cell = row.Cells.Single();
             TestAssert.True(DocxMathParagraphPolicy.IsSupportedSimpleRow(row) &&
-                DocxMathParagraphPolicy.IsSupportedSimpleCell(cell) &&
+                (DocxMathParagraphPolicy.IsSupportedCellProperties(cell) && cell.BodyElements.All(child => child is DocxParagraphElement)) &&
                 cell.Paragraphs.Sum(paragraph => paragraph.Equations.Count) == 4 &&
                 cell.Paragraphs.All(paragraph => paragraph.Equations.All(equation =>
                     DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasPageInputs: true)

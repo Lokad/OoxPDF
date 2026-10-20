@@ -36,7 +36,7 @@ internal static partial class DocxInlineCompositionTests
             DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph),
             "An empty grid retains its actual control owner while remaining neutral without revised literal ink.");
         using var canceled = new CancellationTokenSource(); canceled.Cancel();
-        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.IsEmptyMatrix(equation, canceled.Token));
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetRuns(equation, canceled.Token, out _));
     }
 
     internal static void CheckEmptyMatrixFrames(IFontResolver? resolver)
