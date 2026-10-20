@@ -28,6 +28,7 @@ passive.add_argument('--passive-headers', action='store_true')
 passive.add_argument('--passive-footers', action='store_true')
 passive.add_argument('--passive-picture-probes', action='store_true')
 passive.add_argument('--static-picture-frame-probes', action='store_true')
+passive.add_argument('--composed-static-picture-probe', action='store_true')
 passive.add_argument('--page-field-probes', action='store_true')
 passive.add_argument('--inactive-static-probes', action='store_true')
 passive.add_argument('--inactive-note-probe', action='store_true')
@@ -42,6 +43,55 @@ cases = root / 'tests/Lokad.OoxPdf.Tests/Cases'
 output = cases / 'CompositionProbes'
 output.mkdir(exist_ok=True)
 w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+
+if args.composed_static_picture_probe:
+    source_row = next(row for row in json.loads((cases / 'Composition/portfolio.json').read_text()) if row['Id'] == 'report')
+    source = root / source_row['Input']
+    original = source.read_bytes()
+    assert hashlib.sha256(original).hexdigest().upper() == source_row['Sha256']
+    with ZipFile(BytesIO(original)) as archive:
+        entries = {name: archive.read(name) for name in archive.namelist()}
+    donor = output / 'minimum-passive-picture-footer-ordinary11.docx'
+    with ZipFile(donor) as archive:
+        paragraph = E.fromstring(archive.read('word/passive-minimum-picture-footer.xml')).find(w + 'p')
+        payload = archive.read('word/media/passive-minimum-picture.png')
+    a = '{http://schemas.openxmlformats.org/drawingml/2006/main}'
+    r = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
+    rel = '{http://schemas.openxmlformats.org/package/2006/relationships}'
+    ct = '{http://schemas.openxmlformats.org/package/2006/content-types}'
+    paragraph.find('.//' + a + 'blip').set(r + 'embed', 'rIdComposedStaticPicture')
+    parts = entries.copy()
+    footer = E.fromstring(parts['word/footer1.xml'])
+    before = E.tostring(footer)
+    footer.insert(0, paragraph)
+    reverted = copy.deepcopy(footer); reverted.remove(reverted[0])
+    assert E.tostring(reverted) == before
+    parts['word/footer1.xml'] = E.tostring(footer, encoding='utf-8', xml_declaration=True)
+    relationship_part = 'word/_rels/footer1.xml.rels'
+    relationships = E.fromstring(parts[relationship_part]) if relationship_part in parts else E.Element(rel + 'Relationships')
+    assert all(item.get('Id') != 'rIdComposedStaticPicture' for item in relationships)
+    E.SubElement(relationships, rel + 'Relationship', {'Id': 'rIdComposedStaticPicture',
+        'Type': r[1:-1] + '/image', 'Target': 'media/composed-static-picture.png'})
+    parts[relationship_part] = E.tostring(relationships, encoding='utf-8', xml_declaration=True)
+    parts['word/media/composed-static-picture.png'] = payload
+    types = E.fromstring(parts['[Content_Types].xml'])
+    if not any(item.get('Extension') == 'png' for item in types):
+        E.SubElement(types, ct + 'Default', {'Extension': 'png', 'ContentType': 'image/png'})
+        parts['[Content_Types].xml'] = E.tostring(types, encoding='utf-8', xml_declaration=True)
+    changed = {'word/footer1.xml', relationship_part, '[Content_Types].xml'}
+    assert all(parts[name] == data for name, data in entries.items() if name not in changed)
+    identifier = 'composed-static-picture-report'
+    generated = package_bytes(parts)
+    row = dict(source_row, Id=identifier, Input=(output.relative_to(root) / (identifier + '.docx')).as_posix(),
+        Sha256=hashlib.sha256(generated).hexdigest().upper(), SourceInput=source_row['Input'], SourceSha256=source_row['Sha256'],
+        BodyXmlSha256=hashlib.sha256(parts['word/document.xml']).hexdigest().upper(), HeldOut=True,
+        ExpectedInlineImageCount=source_row['ExpectedInlineImageCount'] + 1, Part='word/footer1.xml',
+        Change='Prepend one18x9pt picture-only footer paragraph; reverse to the exact parent story and preserve body, styles, notes and review annotations.')
+    for target, data in [(output / (identifier + '.docx'), generated), (output / 'composed-static-picture-report.json', manifest_bytes([row]))]:
+        if args.write: publish(target, data)
+        else: assert target.read_bytes() == data, target.name
+    print('Composed footer-picture holdout verified; parent body and retained story children exact.')
+    raise SystemExit(0)
 
 if args.static_picture_frame_probes:
     wp = '{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}'
