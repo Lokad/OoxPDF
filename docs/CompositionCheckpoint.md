@@ -1,5 +1,34 @@
 # Composed-document reliability checkpoint
 
+## C316 exposed page ends and final shared borders own their space (2026-10-20)
+
+Natural admission receives terminal source-row ownership. Repeated page fragments
+reserve exposed solid bottom bands; the final fragment preserves the following
+row's collapsed shared edge and maximum cell margins. Test whether the complete
+remaining source fits its final inset. Keep source-frame consistency, existing
+fragment/grid bounds/cancellation and compound/merge/PAGE/manual/authored-height
+fallbacks. No public API, cache, quota, accounting framework or unsafe/native code.
+
+Adding the ordinary row now leaves all240 original native prose anchors exactly
+identical in each preset, matching the independent Word metamorphic invariant.
+All484 source/tail anchors pass unchanged XY/size gates: Xmax0.024002pt/Y0.363953pt,
+from9.069946pt. Both raw screens are clean. Four viewed native/Word pages2/3 show
+complete Left54/Right53 and final Left111/Right110, both tail controls and shared
+border clear of glyphs. Both strict pixel failures remain.20neighbor PDFs and
+comparisons are exact latest-source reuse. A preliminary dictionary overwrote two
+latest border keys with C307 outputs and printed18/20; corrected provenance pins
+20/20, while comparison reuse already matched all20 PDFs/Office/thresholds.
+
+One committed final artifact40214652/2,505inputs/17assets;25exact Windows checks,
+20Ubuntu/five native skips, each method once/platform. Two genuine parent clipping
+failures. One Release build, no harness repair/join;22final CLI conversions, no
+extra development conversions or Word exports. Reuse two independent references.
+17assets/two matching transfer smokes, no root build/suite replay. Production
+432ada6e; evidence artifacts/composition-c1/shared-row-end-evidence.json. No speed
+claim. C314CI39345667504 is green Windows/Ubuntu including broader/package checks.
+Continue finite fixed-portfolio qualification from this same artifact. Version
+0.1.5/release preparation remains deferred; workspace5GB gap stays explicit.
+
 ## C315 ordinary trailing row reintroduces clipped continuation (2026-10-20)
 
 Append one ordinary two-cell row after the accepted spanning row; its complete
