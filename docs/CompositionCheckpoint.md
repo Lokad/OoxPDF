@@ -1,5 +1,25 @@
 # Composed-document reliability checkpoint
 
+## C317 finite complete-document portfolio refresh (2026-10-20)
+
+Seven sources/12outcomes: ten fixed plus two composed-static-report presets;
+five Final/preserved, five AllMarkup/Word-compatible and two presentations.
+Every PDF equals its prior qualified bytes. Reuse12 Office comparisons and raw
+screens through source/PDF/reference/inspector identity. No new expected-prose
+omission, ignored equation or pagination/overlap/clipping change in this portfolio.
+Ten raw screens remain clean; static report screens retain symmetric cached1,
+rate/time extraction deficits and field flags. Ten DOCX pixel outcomes remain
+failed and two PPTX outcomes pass. Preserve typography/geometry and cosmetics;
+unchanged output does not close old residuals or establish arbitrary fidelity.
+
+12conversions from C316 artifact40214652; no library/harness build, new tests,
+Office exports, raster views, root build or local package repeat. Retain C316
+25Windows/20Ubuntu/five skips separately, not a fresh enlarged total. Cold wall
+times include startup; no allocation/speed claim. Evidence artifacts/composition-
+c1/checkpoint-317-evidence.json. CI39347761584 continues while work proceeds.
+Continue bounded boxed-math/count plus trailing-row composition. Version0.1.5,
+release preparation deferred; workspace16.858GB/5GB gap stays explicit.
+
 ## C316 exposed page ends and final shared borders own their space (2026-10-20)
 
 Natural admission receives terminal source-row ownership. Repeated page fragments
