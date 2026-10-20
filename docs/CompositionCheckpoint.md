@@ -9452,3 +9452,25 @@ two PPTX strict passes and fourteen DOCX strict failures remain. Both final-pack
 consumers and seventeen-asset/two-smoke transfer pass. Publication stays deferred.
 Current identities, CI status and residuals: [PreviewQualification.md](PreviewQualification.md)
 and ignored artifacts/review-second-20261020/qualification.json.
+
+
+## Third bounded review - 2026-10-20
+
+Source 04667ad3 closes the early-failure CLI diagnostics alias overwrite and includes
+root build settings in qualification reuse. Cached markup/inspectors accept matching
+frozen runtimes; DOCX inspection joins the frozen artifact and solution. Two verified
+test-only math helpers are deleted; current capability prose replaces stale exclusions.
+The original exhaustive balloon assertions remain slow/milestone coverage; focused
+checks reduce routine test work without a renderer or threshold change.
+
+One frozen runtime: Windows 3,732 pass/1 inherited balloon failure/3 skip; Ubuntu 822
+pass/0 fail/49 skip. All 41 affected checks pass within the Windows run. Both new CLI
+regressions fail against the preceding CLI; its separate diagnostics control passes.
+Tool/inspection checks pass on both platforms. Sixteen portfolio outcomes retain exact
+PDF/diagnostic/semantic identities; 2 PPTX strict passes/14 DOCX strict failures remain.
+Both final-package consumers and 24-asset/two-PDF transfer pass. CI 39468596965 is green
+on Windows/Ubuntu after adding the inspector to the solution. No root rebuild or
+broad replay. The 5.044 GB scan is near the loose cap with zero errors; historical
+artifacts remain. Publication deferred. Current identities and residuals:
+[PreviewQualification.md](PreviewQualification.md), ignored
+artifacts/review-third-20261020/qualification.json. Earlier failed attempts stay retained.
