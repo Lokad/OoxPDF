@@ -230,11 +230,6 @@ internal sealed partial class PptxSceneBuilder
             : 1;
     }
 
-    internal static PptxSceneTextInsets ReadTableCellTextInsets(XElement cell)
-    {
-        return ReadTableCellTextInsetInfo(cell).Insets;
-    }
-
     private static (PptxSceneTextInsets Insets, PptxSceneTableCellTextInsetSources Sources, PptxSceneTextInsetValues Values) ReadTableCellTextInsetInfo(XElement cell)
     {
         XElement? textBody = cell.Element(DrawingNamespace + "txBody");
@@ -297,11 +292,6 @@ internal sealed partial class PptxSceneBuilder
             ? long.Parse(attribute.Value, CultureInfo.InvariantCulture)
             : defaultEmu;
         return OoxUnits.EmuToPoints(emu);
-    }
-
-    internal static PptxSceneTableCellVerticalAnchor ReadTableCellVerticalAnchor(XElement cell)
-    {
-        return ReadTableCellVerticalAnchorInfo(cell).Anchor;
     }
 
     private static (PptxSceneTableCellVerticalAnchor Anchor, string? Value, PptxSceneTableCellVerticalAnchorSource Source) ReadTableCellVerticalAnchorInfo(XElement cell)

@@ -248,14 +248,6 @@ internal sealed partial class PptxRenderer
         string TableLastColumnName,
         int? TableLastColumnId);
 
-    internal readonly record struct ChartWorkbookNumericValue(
-        ChartWorkbookRangeCell Cell,
-        double Value);
-
-    internal readonly record struct ChartWorkbookTextValue(
-        ChartWorkbookRangeCell Cell,
-        string Text);
-
     // R16: internal so the render-context workbook cache carries the model type; members stay as-is.
     internal sealed partial class ChartWorkbookData
     {
@@ -368,29 +360,6 @@ internal sealed partial class PptxRenderer
 
         public ChartWorkbookCalculationProperties Calculation => calculation;
 
-        public ChartWorkbookNumericValue[] ReadNumericRange(string? formula)
-        {
-            // the previous Where+Select parsed every value twice. Single pass:
-            // TryParse is deterministic on identical input, so results are unchanged.
-            var values = new List<ChartWorkbookNumericValue>();
-            foreach (ChartWorkbookRangeCell cell in ReadRangeCells(formula))
-            {
-                if (double.TryParse(cell.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
-                {
-                    values.Add(new ChartWorkbookNumericValue(cell, value));
-                }
-            }
-
-            return values.ToArray();
-        }
-
-        public ChartWorkbookTextValue[] ReadTextRange(string? formula)
-        {
-            return ReadRangeCells(formula)
-                .Where(cell => !string.IsNullOrWhiteSpace(cell.Text))
-                .Select(cell => new ChartWorkbookTextValue(cell, cell.Text))
-                .ToArray();
-        }
 
         // numeric/category/title/label paths expand the same ranges repeatedly
         // within one chart frame. Memoize expansions per frame (keyed by the raw formula;

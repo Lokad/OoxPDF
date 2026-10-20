@@ -820,7 +820,6 @@ internal static class OoxmlTests
     {
         TestAssert.Equal(72d, OoxUnits.EmuToPoints(914400));
         TestAssert.Equal(12d, OoxUnits.TwipsToPoints(240));
-        TestAssert.Equal(9d, OoxUnits.HalfPointsToPoints(18));
     }
 
     // RV02: complex-script detection buckets text by unimplemented behavior.

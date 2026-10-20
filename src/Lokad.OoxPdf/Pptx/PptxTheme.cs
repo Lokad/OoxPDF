@@ -157,11 +157,6 @@ internal sealed class PptxTheme
             (!string.Equals(mappedColor, schemeColor, StringComparison.Ordinal) && Colors.TryGetValue(schemeColor, out color));
     }
 
-    public string? ResolveTypeface(string? typeface)
-    {
-        return ResolveTypefaceWithSource(typeface).Typeface;
-    }
-
     public PptxThemeTypefaceResolution ResolveTypefaceWithSource(string? typeface)
     {
         return typeface switch

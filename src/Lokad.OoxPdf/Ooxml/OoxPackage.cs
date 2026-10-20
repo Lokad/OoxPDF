@@ -528,13 +528,6 @@ internal sealed class OoxPackage
         return document;
     }
 
-    public static IReadOnlyList<OoxRelationship> ParseRelationships(Stream stream, string sourcePartName, CancellationToken cancellationToken)
-    {
-
-        XDocument document = SafeXml.Load(stream, cancellationToken);
-        return [.. ParseRelationshipDocument(document, sourcePartName, cancellationToken).Values];
-    }
-
     private static Dictionary<string, OoxRelationship> ParseRelationshipDocument(XDocument document, string sourcePartName, CancellationToken cancellationToken)
     {
         var relationships = new Dictionary<string, OoxRelationship>(StringComparer.Ordinal);

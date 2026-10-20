@@ -254,12 +254,6 @@ internal sealed partial class PptxRenderer
         graphics.FillCurrentPath();
     }
 
-    private static void FillTriangle(PdfGraphicsBuilder graphics, double tipX, double tipY, double baseX, double baseY, double nx, double ny, double halfWidth)
-    {
-        AppendTriangle(graphics, tipX, tipY, baseX, baseY, nx, ny, halfWidth);
-        graphics.FillCurrentPath();
-    }
-
     private static void AppendTriangle(PdfGraphicsBuilder graphics, double tipX, double tipY, double baseX, double baseY, double nx, double ny, double halfWidth)
     {
         graphics.MoveTo(tipX, tipY);

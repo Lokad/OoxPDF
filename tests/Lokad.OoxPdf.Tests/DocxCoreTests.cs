@@ -246,8 +246,8 @@ internal static class DocxCoreTests
         DocxTextEmissionPlan decimalPlan = DocxTextEmissionPlanner.CreateForListLabel(decimalRun, decimalLabel);
         DocxTextEmissionPlan bulletPlan = DocxTextEmissionPlanner.CreateForListLabel(bulletRun, bulletLabel);
 
-        TestAssert.Equal(0.048d, DocxTextEmissionPlanner.TextStateCharacterSpacingForListLabel(decimalLabel, 12d));
-        TestAssert.Equal(0d, DocxTextEmissionPlanner.TextStateCharacterSpacingForListLabel(bulletLabel, 12d));
+        TestAssert.Equal(0.048d, DocxTextEmissionPlanner.TextStateCharacterSpacingTargetForListLabel(decimalLabel, 12d).CharacterSpacing);
+        TestAssert.Equal(0d, DocxTextEmissionPlanner.TextStateCharacterSpacingTargetForListLabel(bulletLabel, 12d).CharacterSpacing);
         TestAssert.Equal(0.048d, decimalTarget.CharacterSpacing);
         TestAssert.Equal(DocxTextStateCharacterSpacingSource.ListLabel, decimalTarget.Source);
         TestAssert.Equal(0d, bulletTarget.CharacterSpacing);
@@ -335,24 +335,11 @@ internal static class DocxCoreTests
             glyphGapCount: 3,
             currentEmittedAdvance: 24d,
             targetEmittedAdvance: 24.18d);
-        double tc = DocxTextEmissionPlanner.TextStateCharacterSpacingForAdvanceTarget(
-            glyphGapCount: 3,
-            currentEmittedAdvance: 24d,
-            targetEmittedAdvance: 24.18d);
-        DocxTextEmissionPlan emittedPlan = DocxTextEmissionPlanner.CreateForAdvanceTarget(
-            run,
-            11d,
-            glyphGapCount: 3,
-            currentEmittedAdvance: 24d,
-            targetEmittedAdvance: 24.18d,
-            compensatePdfCharacterSpacing: false);
-        DocxTextEmissionPlan compensatedPlan = DocxTextEmissionPlanner.CreateForAdvanceTarget(
-            run,
-            11d,
-            glyphGapCount: 3,
-            currentEmittedAdvance: 24d,
-            targetEmittedAdvance: 24.18d,
-            compensatePdfCharacterSpacing: true);
+        double tc = target.CharacterSpacing;
+        DocxTextEmissionPlan emittedPlan = DocxTextEmissionPlanner.Create(
+            run, 11d, target.CharacterSpacing, compensatePdfCharacterSpacing: false, target.Source);
+        DocxTextEmissionPlan compensatedPlan = DocxTextEmissionPlanner.Create(
+            run, 11d, target.CharacterSpacing, compensatePdfCharacterSpacing: true, target.Source);
 
         TestAssert.Equal(3, target.GlyphGapCount);
         TestAssert.Equal(24d, target.CurrentEmittedAdvance);
@@ -366,7 +353,7 @@ internal static class DocxCoreTests
         TestAssert.True(Math.Abs(compensatedPlan.PdfCharacterSpacing - 0.06d) < 0.0001d, "Compensated plans should carry the same derived Tc.");
         TestAssert.Equal(DocxTextStateCharacterSpacingSource.AdvanceTarget, compensatedPlan.PdfCharacterSpacingSource);
         TestAssert.True(Math.Abs(compensatedPlan.PositioningCharacterSpacing - 0.06d) < 0.0001d, "Compensated plans should subtract derived Tc from positioning spacing.");
-        TestAssert.Equal(0d, DocxTextEmissionPlanner.TextStateCharacterSpacingForAdvanceTarget(0, 24d, 24.18d));
+        TestAssert.Equal(0d, DocxTextEmissionPlanner.CreateAdvanceTarget(0, 24d, 24.18d).CharacterSpacing);
     }
 
     public static void DocxTextEmissionPlannerSplitsDashPunctuationIntoOperationParts()

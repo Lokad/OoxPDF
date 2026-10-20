@@ -123,22 +123,6 @@ internal static class PdfWriterTests
         TestAssert.Contains("10 20 30 40 re W* n", pdf);
     }
 
-    public static void WritesOpenEvenOddClippingOperators()
-    {
-        var graphics = new PdfGraphicsBuilder();
-        graphics.ClipOpenRectangleEvenOdd(10, 20, 30, 40);
-
-        string pdf = WritePdfText(new[] { new PdfPage(200, 200, graphics.ToString()) });
-
-        TestAssert.Contains("10 60 m", pdf);
-        TestAssert.Contains("40 60 l", pdf);
-        TestAssert.Contains("40 20 l", pdf);
-        TestAssert.Contains("10 20 l", pdf);
-        TestAssert.Contains("W* n", pdf);
-        TestAssert.DoesNotContain(" h", pdf);
-        TestAssert.DoesNotContain(" re W* n", pdf);
-    }
-
     public static void WritesEvenOddFillOperators()
     {
         var graphics = new PdfGraphicsBuilder();
@@ -244,7 +228,7 @@ internal static class PdfWriterTests
     public static void WritesTilingPatternResources()
     {
         var graphics = new PdfGraphicsBuilder();
-        var pattern = PdfTilingPattern.DiagonalLines(4d, up: true, 1d, 47, 133, 106);
+        var pattern = new PdfTilingPattern(4d, 4d, "0 0 m 4 4 l S\n");
         graphics.FillRectangleWithTilingPattern(10, 20, 30, 40, pattern);
         var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings, graphics.Patterns);
 
@@ -262,7 +246,8 @@ internal static class PdfWriterTests
     public static void WritesScaledTilingPatternMatrix()
     {
         var graphics = new PdfGraphicsBuilder();
-        var pattern = PdfTilingPattern.OfficeScaledDiagonalLines(up: true, 1d, 47, 133, 106);
+        var pattern = new PdfTilingPattern(16d, 16d, 16d, 16d,
+            new PdfPatternMatrix(0.375d, 0d, 0d, 0.375d, 0d, 0d), 2, "0 0 m 16 16 l S\n");
         graphics.FillRectangleWithTilingPattern(10, 20, 30, 40, pattern);
         var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings, graphics.Patterns);
 
@@ -700,7 +685,7 @@ internal static class PdfWriterTests
         graphics.DrawImage("Im1", 0, 0, 10, 10);
         graphics.PaintAxialShading(0, 0, 10, 0, 255, 0, 0, 0, 0, 255);
         graphics.PaintRadialShading([new(0d, 255, 0, 0), new(1d, 0, 0, 255)], 3, reflect: true);
-        var pattern = PdfTilingPattern.DiagonalLines(4d, up: true, 1d, 0, 0, 0);
+        var pattern = new PdfTilingPattern(4d, 4d, "0 0 m 4 4 l S\n");
         graphics.FillRectangleWithTilingPattern(0, 0, 10, 10, pattern);
         var page = new PdfPage(
             200,
@@ -858,7 +843,7 @@ internal static class PdfWriterTests
         graphics.DrawGlyphText("F1", 12, 20, 30, 0, 0, 0, "0041", false, 0d, 0, 0, 0, 0, 0d);
         graphics.DrawImage("Im1", 0, 0, 10, 10);
         graphics.PaintAxialShading(0, 0, 10, 0, 255, 0, 0, 0, 0, 255);
-        var pattern = PdfTilingPattern.DiagonalLines(4d, up: true, 1d, 0, 0, 0);
+        var pattern = new PdfTilingPattern(4d, 4d, "0 0 m 4 4 l S\n");
         graphics.FillRectangleWithTilingPattern(0, 0, 10, 10, pattern);
         var first = new PdfPage(
             200,
@@ -1010,7 +995,7 @@ internal static class PdfWriterTests
         graphics.SetAlpha(0.5d, 0.5d);
         graphics.PaintAxialShading(0, 0, 100, 100, 255, 0, 0, 0, 0, 255);
         graphics.PaintRadialShading([new(0d, 255, 0, 0), new(1d, 0, 0, 255)]);
-        var pattern = PdfTilingPattern.DiagonalLines(4d, up: true, 1d, 47, 133, 106);
+        var pattern = new PdfTilingPattern(4d, 4d, "0 0 m 4 4 l S\n");
         graphics.FillRectangleWithTilingPattern(1, 2, 3, 4, pattern);
         TestAssert.Equal(2, graphics.Shadings.Count);
 

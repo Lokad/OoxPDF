@@ -520,11 +520,8 @@ internal sealed partial class PptxRenderer
         }
         return Math.Min(Math.Max(edge, plotMin), plotMin + plotSize - size);
     }
-    // Anchor-circle gap for manual pie labels: this fraction of the pie radius.
-    private static double ComputePieManualLabelCircleGap(double radius)
-    {
-        return radius * PptxChartMetricRules.PieManualLabelCircleGapRadiusFactor;
-    }
+
+
     // Content-tight manual box height: line pitch times lines plus the total pad.
     private static double ComputePieManualLabelBoxHeight(double fontSize, int lineCount)
     {

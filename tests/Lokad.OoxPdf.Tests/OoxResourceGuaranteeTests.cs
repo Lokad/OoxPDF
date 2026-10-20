@@ -264,7 +264,9 @@ internal static class OoxResourceGuaranteeTests
             var writer = new PdfObjectWriter(ampleCounting, CancellationToken.None);
             writer.WriteHeader();
             writer.WriteObject(1, "<< /Type /Catalog >>\n");
-            writer.WriteContentStreamObject(2, content);
+            writer.WriteContentStreamHeader(2, content.Length);
+            writer.WriteContentStreamBytes(content);
+            writer.WriteContentStreamTrailer();
             writer.WriteStreamObject(3, "/Filter /FlateDecode", payload);
             writer.WriteAscii("trailer\n");
             TestAssert.Equal(ampleCounting.TotalWritten, scope.Budget.PdfOutputBytes);
@@ -277,7 +279,9 @@ internal static class OoxResourceGuaranteeTests
             var writer = new PdfObjectWriter(plain, CancellationToken.None);
             writer.WriteHeader();
             writer.WriteObject(1, "<< /Type /Catalog >>\n");
-            writer.WriteContentStreamObject(2, content);
+            writer.WriteContentStreamHeader(2, content.Length);
+            writer.WriteContentStreamBytes(content);
+            writer.WriteContentStreamTrailer();
             writer.WriteStreamObject(3, "/Filter /FlateDecode", payload);
             writer.WriteAscii("trailer\n");
             TestAssert.True(plain.ToArray().SequenceEqual(admitted), "Admission must not alter emitted bytes.");
@@ -299,7 +303,9 @@ internal static class OoxResourceGuaranteeTests
 
         Attempt(writer => writer.WriteHeader());
         Attempt(writer => writer.WriteObject(1, "<< /Type /Catalog >>\n"));
-        Attempt(writer => writer.WriteContentStreamObject(2, content));
+        Attempt(writer => writer.WriteContentStreamHeader(2, content.Length));
+        Attempt(writer => writer.WriteContentStreamBytes(content));
+        Attempt(writer => writer.WriteContentStreamTrailer());
         Attempt(writer => writer.WriteStreamObject(3, "/Filter /FlateDecode", payload));
         Attempt(writer => writer.WriteAscii("trailer\n"));
 
@@ -732,14 +738,22 @@ internal static class OoxResourceGuaranteeTests
         // store escalates to a temp file preserving order, accounts spilled bytes,
         // and deletes the temp on dispose.
         using var staging = new PdfPageContentStaging(10, diagnosticSink: null);
-        staging.AddPage(new byte[] { 1, 2, 3 }, CancellationToken.None);
+        staging.BeginPage(CancellationToken.None);
+        staging.AppendPageBytes(new byte[] { 1, 2, 3 }, 0, 3, CancellationToken.None);
+        staging.EndPage(CancellationToken.None);
         TestAssert.Equal(false, staging.IsFileBacked);
-        staging.AddPage(new byte[] { 4, 5, 6, 7, 8, 9, 10, 11 }, CancellationToken.None);
+        staging.BeginPage(CancellationToken.None);
+        staging.AppendPageBytes(new byte[] { 4, 5, 6, 7, 8, 9, 10, 11 }, 0, 8, CancellationToken.None);
+        staging.EndPage(CancellationToken.None);
         TestAssert.Equal(true, staging.IsFileBacked);
-        string? path = staging.SpillPathForTests;
+        string? path = (typeof(PdfPageContentStaging).GetField("spillFile", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(staging) as FileStream)?.Name;
         TestAssert.True(path is not null, "Escalation must create a temp file.");
-        TestAssert.True(staging.GetPageBytes(0, CancellationToken.None).SequenceEqual(new byte[] { 1, 2, 3 }), "First page must round-trip.");
-        TestAssert.True(staging.GetPageBytes(1, CancellationToken.None).SequenceEqual(new byte[] { 4, 5, 6, 7, 8, 9, 10, 11 }), "Second page must round-trip.");
+        byte[] firstPage = new byte[3];
+        TestAssert.Equal(firstPage.Length, staging.ReadPageBytes(0, firstPage, 0, 0, firstPage.Length, CancellationToken.None));
+        TestAssert.True(firstPage.SequenceEqual(new byte[] { 1, 2, 3 }), "First page must round-trip.");
+        byte[] secondPage = new byte[8];
+        TestAssert.Equal(secondPage.Length, staging.ReadPageBytes(1, secondPage, 0, 0, secondPage.Length, CancellationToken.None));
+        TestAssert.True(secondPage.SequenceEqual(new byte[] { 4, 5, 6, 7, 8, 9, 10, 11 }), "Second page must round-trip.");
         TestAssert.Equal(2, staging.Count);
         TestAssert.Equal(11L, staging.SpilledBytes);
         staging.Dispose();
@@ -818,7 +832,9 @@ internal static class OoxResourceGuaranteeTests
         foreach (long window in new[] { 10L, 100000L })
         {
             using var whole = new PdfPageContentStaging(window, diagnosticSink: null);
-            whole.AddPage(payload, CancellationToken.None);
+            whole.BeginPage(CancellationToken.None);
+            whole.AppendPageBytes(payload, 0, payload.Length, CancellationToken.None);
+            whole.EndPage(CancellationToken.None);
             using var chunked = new PdfPageContentStaging(window, diagnosticSink: null);
             chunked.BeginPage(CancellationToken.None);
             chunked.AppendPageBytes(payload, 0, 0, CancellationToken.None);
@@ -845,7 +861,11 @@ internal static class OoxResourceGuaranteeTests
             chunked.EndPage(CancellationToken.None);
             whole.BeginPage(CancellationToken.None);
             whole.EndPage(CancellationToken.None);
-            TestAssert.True(whole.GetPageBytes(0, CancellationToken.None).SequenceEqual(chunked.GetPageBytes(0, CancellationToken.None)), "Chunked production must match whole-page bytes.");
+            byte[] wholeBytes = new byte[payload.Length];
+            byte[] chunkedBytes = new byte[payload.Length];
+            TestAssert.Equal(payload.Length, whole.ReadPageBytes(0, wholeBytes, 0, 0, payload.Length, CancellationToken.None));
+            TestAssert.Equal(payload.Length, chunked.ReadPageBytes(0, chunkedBytes, 0, 0, payload.Length, CancellationToken.None));
+            TestAssert.True(payload.SequenceEqual(wholeBytes) && payload.SequenceEqual(chunkedBytes), "Both production paths must match the source bytes.");
             TestAssert.Equal(0, chunked.GetPageLength(1, CancellationToken.None));
             TestAssert.Equal(whole.Count, chunked.Count);
         }
@@ -856,13 +876,21 @@ internal static class OoxResourceGuaranteeTests
     public static void WindowBoundariesStayMemoryOrSpill()
     {
         using var fitting = new PdfPageContentStaging(10, diagnosticSink: null);
-        fitting.AddPage(new byte[10], CancellationToken.None);
+        fitting.BeginPage(CancellationToken.None);
+        fitting.AppendPageBytes(new byte[10], 0, 10, CancellationToken.None);
+        fitting.EndPage(CancellationToken.None);
         TestAssert.Equal(false, fitting.IsFileBacked);
-        TestAssert.True(fitting.GetPageBytes(0, CancellationToken.None).SequenceEqual(new byte[10]), "Fitting page must round-trip.");
+        byte[] fittingBytes = new byte[10];
+        TestAssert.Equal(10, fitting.ReadPageBytes(0, fittingBytes, 0, 0, 10, CancellationToken.None));
+        TestAssert.True(fittingBytes.SequenceEqual(new byte[10]), "Page must round-trip.");
         using var overflowing = new PdfPageContentStaging(10, diagnosticSink: null);
-        overflowing.AddPage(new byte[11], CancellationToken.None);
+        overflowing.BeginPage(CancellationToken.None);
+        overflowing.AppendPageBytes(new byte[11], 0, 11, CancellationToken.None);
+        overflowing.EndPage(CancellationToken.None);
         TestAssert.Equal(true, overflowing.IsFileBacked);
-        TestAssert.True(overflowing.GetPageBytes(0, CancellationToken.None).SequenceEqual(new byte[11]), "Spilled page must round-trip.");
+        byte[] overflowingBytes = new byte[11];
+        TestAssert.Equal(11, overflowing.ReadPageBytes(0, overflowingBytes, 0, 0, 11, CancellationToken.None));
+        TestAssert.True(overflowingBytes.SequenceEqual(new byte[11]), "Page must round-trip.");
     }
 
     // RV11-P1: unpaired production or reads during an open page fail loudly
@@ -885,10 +913,13 @@ internal static class OoxResourceGuaranteeTests
     {
         static void ThrowingSink(OoxPdfDiagnostic diagnostic) => throw new InvalidOperationException("observer boom");
         using var staging = new PdfPageContentStaging(10, ThrowingSink);
-        staging.AddPage(new byte[] { 1, 2, 3 }, CancellationToken.None);
-        InvalidOperationException thrown = TestAssert.Throws<InvalidOperationException>(() => staging.AddPage(new byte[100], CancellationToken.None));
+        staging.BeginPage(CancellationToken.None);
+        staging.AppendPageBytes(new byte[] { 1, 2, 3 }, 0, 3, CancellationToken.None);
+        staging.EndPage(CancellationToken.None);
+        staging.BeginPage(CancellationToken.None);
+        InvalidOperationException thrown = TestAssert.Throws<InvalidOperationException>(() => staging.AppendPageBytes(new byte[100], 0, 100, CancellationToken.None));
         TestAssert.Equal("observer boom", thrown.Message);
-        string? path = staging.SpillPathForTests;
+        string? path = (typeof(PdfPageContentStaging).GetField("spillFile", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(staging) as FileStream)?.Name;
         TestAssert.True(path is not null, "Escalation must have created a temp file.");
         staging.Dispose();
         TestAssert.True(!File.Exists(path), "Spill temp must be deleted on dispose.");
@@ -919,7 +950,9 @@ internal static class OoxResourceGuaranteeTests
         }
 
         staging.EndPage(CancellationToken.None);
-        TestAssert.True(expected.SequenceEqual(staging.GetPageBytes(0, CancellationToken.None)), "Chunked encoding must match whole-string encoding.");
+        byte[] observed = new byte[expected.Length];
+        TestAssert.Equal(expected.Length, staging.ReadPageBytes(0, observed, 0, 0, observed.Length, CancellationToken.None));
+        TestAssert.True(expected.SequenceEqual(observed), "Chunked encoding must match whole-string encoding.");
     }
 
     private static void InvokeBeginPage(PdfPageContentStaging staging)

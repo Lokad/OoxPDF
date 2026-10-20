@@ -738,17 +738,6 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
-    private static IEnumerable<DocxTextLineLayout> EnumeratePageTextLines(DocxLayoutPage page)
-    {
-        foreach (DocxLayoutItem item in page.Items)
-        {
-            foreach (DocxTextLineLayout line in EnumerateTextLines(item))
-            {
-                yield return line;
-            }
-        }
-    }
-
     private static IEnumerable<DocxTextLineLayout> EnumerateTextLines(DocxLayoutItem item)
     {
         switch (item)

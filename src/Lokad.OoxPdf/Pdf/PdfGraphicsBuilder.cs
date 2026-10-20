@@ -163,15 +163,6 @@ internal sealed class PdfGraphicsBuilder
         stateDepth--;
     }
 
-    public void RestoreToStateDepth(int targetDepth)
-    {
-        targetDepth = Math.Max(0, targetDepth);
-        while (stateDepth > targetDepth)
-        {
-            RestoreState();
-        }
-    }
-
     public void SetAlpha(double fillAlpha, double strokeAlpha)
     {
         fillAlpha = Math.Clamp(fillAlpha, 0d, 1d);
@@ -313,12 +304,6 @@ internal sealed class PdfGraphicsBuilder
         builder.Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).Append(' ').Append(PdfDocumentWriter.FormatNumber(width)).Append(' ').Append(PdfDocumentWriter.FormatNumber(height)).AppendLine(" re B*");
     }
 
-    public void FillRoundedRectangle(double x, double y, double width, double height, double radius)
-    {
-        AppendRoundedRectanglePath(x, y, width, height, radius);
-        builder.AppendLine("f");
-    }
-
     public void FillStrokeRoundedRectangleEvenOdd(double x, double y, double width, double height, double radius)
     {
         AppendRoundedRectanglePath(x, y, width, height, radius, explicitClosingLine: true);
@@ -345,12 +330,6 @@ internal sealed class PdfGraphicsBuilder
     public void ClipRectangleEvenOdd(double x, double y, double width, double height)
     {
         builder.Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).Append(' ').Append(PdfDocumentWriter.FormatNumber(width)).Append(' ').Append(PdfDocumentWriter.FormatNumber(height)).AppendLine(" re W* n");
-    }
-
-    public void ClipOpenRectangleEvenOdd(double x, double y, double width, double height)
-    {
-        AppendOpenRectanglePath(x, y, width, height);
-        builder.AppendLine("W* n");
     }
 
     public void ClipEllipse(double x, double y, double width, double height)

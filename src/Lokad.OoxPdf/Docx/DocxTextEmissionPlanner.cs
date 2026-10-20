@@ -182,11 +182,6 @@ internal static class DocxTextEmissionPlanner
             NominalAdvanceFontSize = advances.UseLogicalSizeForPdfAdvances ? layoutFontSize : null };
     }
 
-    public static double TextStateCharacterSpacingForListLabel(DocxListLabel label, double layoutFontSize)
-    {
-        return TextStateCharacterSpacingTargetForListLabel(label, layoutFontSize).CharacterSpacing;
-    }
-
     public static DocxTextEmissionPlan CreateForListLabel(DocxTextRun style, DocxListLabel label)
     {
         double fontSize = style.EffectiveProperties.FontSize;
@@ -207,14 +202,6 @@ internal static class DocxTextEmissionPlanner
         return new(characterSpacing, DocxTextStateCharacterSpacingSource.ListLabel);
     }
 
-    public static double TextStateCharacterSpacingForAdvanceTarget(
-        int glyphGapCount,
-        double currentEmittedAdvance,
-        double targetEmittedAdvance)
-    {
-        return CreateAdvanceTarget(glyphGapCount, currentEmittedAdvance, targetEmittedAdvance).CharacterSpacing;
-    }
-
     public static DocxTextStateAdvanceTarget CreateAdvanceTarget(
         int glyphGapCount,
         double currentEmittedAdvance,
@@ -229,26 +216,6 @@ internal static class DocxTextEmissionPlanner
             targetEmittedAdvance,
             characterSpacing,
             DocxTextStateCharacterSpacingSource.AdvanceTarget);
-    }
-
-    public static DocxTextEmissionPlan CreateForAdvanceTarget(
-        DocxTextRun style,
-        double layoutFontSize,
-        int glyphGapCount,
-        double currentEmittedAdvance,
-        double targetEmittedAdvance,
-        bool compensatePdfCharacterSpacing)
-    {
-        DocxTextStateAdvanceTarget target = CreateAdvanceTarget(
-            glyphGapCount,
-            currentEmittedAdvance,
-            targetEmittedAdvance);
-        return Create(
-            style,
-            layoutFontSize,
-            target.CharacterSpacing,
-            compensatePdfCharacterSpacing,
-            target.Source);
     }
 
     public static DocxTextEmissionCharacterProfile ClassifyText(string text)

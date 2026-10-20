@@ -322,10 +322,12 @@ internal static class PptxChartAxesTests
         Type unitsType = renderer.GetNestedType("ChartAxisUnits", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart units.");
         object extents = Activator.CreateInstance(extentsType, [0d, max]) ?? throw new InvalidOperationException("Expected chart extents instance.");
         object units = Activator.CreateInstance(unitsType, [major, minor]) ?? throw new InvalidOperationException("Expected chart units instance.");
-        System.Reflection.MethodInfo method = renderer.GetMethod("GetChartMinorGridlineValues", flags) ?? throw new InvalidOperationException("Expected shared minor interval resolver.");
+        Type policyType = renderer.GetNestedType("ChartAxisTickPolicy", System.Reflection.BindingFlags.NonPublic)!;
+        object policy = Enum.Parse(policyType, "ZeroAlignedWithEndpoints");
+        System.Reflection.MethodInfo method = renderer.GetMethod("GetChartMinorGridlineValuesCore", flags) ?? throw new InvalidOperationException("Expected shared minor interval resolver.");
         try
         {
-            return (IReadOnlyList<double>)(method.Invoke(null, [extents, units, crossing, targetCount, hasMajorElement]) ?? throw new InvalidOperationException("Expected minor levels."));
+            return (IReadOnlyList<double>)(method.Invoke(null, [extents, units, crossing, targetCount, hasMajorElement, policy]) ?? throw new InvalidOperationException("Expected minor levels."));
         }
         catch (System.Reflection.TargetInvocationException exception) when (exception.InnerException is { } inner)
         {

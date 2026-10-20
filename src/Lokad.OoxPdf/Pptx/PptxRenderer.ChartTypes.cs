@@ -327,25 +327,6 @@ internal sealed partial class PptxRenderer
             return values;
         }
 
-        public bool HasAnyText()
-        {
-            IReadOnlyList<ChartIndexedTextPoint> points = Points ?? [];
-            int pointCount = ResolveDensePointCount(PointCount, points);
-            if (pointCount <= 0)
-            {
-                return false;
-            }
-
-            foreach (ChartIndexedTextPoint point in points)
-            {
-                if (point.Index >= 0 && point.Index < pointCount && point.HasText)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
 
         public bool HasAnyDenseSlot()
         {

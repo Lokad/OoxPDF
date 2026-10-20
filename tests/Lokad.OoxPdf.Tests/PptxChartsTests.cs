@@ -3686,18 +3686,6 @@ var tail = rendererType.GetMethod(
         TestAssert.True(Math.Abs(tallPlot - 0.40694d) < 0.00001d, "360H labeled pies should use the tall radius ratio (Office 0.40694). Got " + tallPlot);
     }
 
-    public static void PptxSyntheticPieManualCircleGapKeepsOfficeCalibration()
-    {
-        var method = typeof(PptxRenderer).GetMethod(
-            "ComputePieManualLabelCircleGap",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-        TestAssert.True(method is not null, "Expected pie manual circle-gap helper to remain inspectable by the Office evidence guard.");
-
-        double landscape = (double)method!.Invoke(null, [146.5d])!;
-        double small = (double)method.Invoke(null, [120.25d])!;
-        TestAssert.True(Math.Abs(landscape - 8.292d) < 0.01d, "Landscape manual labels should anchor 8.29pt past the rim (joint ladder fit). Got " + landscape);
-        TestAssert.True(Math.Abs(small - 6.806d) < 0.01d, "Small-plot manual labels should anchor 6.81pt past the rim (joint ladder fit). Got " + small);
-    }
 
     public static void PptxSyntheticPieManualBoxHeightKeepsOfficeCalibration()
     {

@@ -64,16 +64,6 @@ internal sealed class PdfPageContentStaging : IDisposable
 
     public bool IsFileBacked => spillFile is not null;
 
-    internal string? SpillPathForTests { get; private set; }
-
-    public void AddPage(byte[] contentBytes, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(contentBytes);
-        BeginPage(cancellationToken);
-        AppendPageBytes(contentBytes, 0, contentBytes.Length, cancellationToken);
-        EndPage(cancellationToken);
-    }
-
     // RV11-P1: chunked page production. A page is opened, fed arbitrary-sized
     // chunks, then closed; closing commits it to the current backing mode and
     // makes it visible to reads. Calls must pair exactly: appending or closing
@@ -278,25 +268,6 @@ internal sealed class PdfPageContentStaging : IDisposable
         return copied;
     }
 
-    public byte[] GetPageBytes(int pageIndex, CancellationToken cancellationToken)
-    {
-        int length = GetPageLength(pageIndex, cancellationToken);
-        byte[] bytes = new byte[length];
-        int offset = 0;
-        while (offset < length)
-        {
-            int read = ReadPageBytes(pageIndex, bytes, offset, offset, length - offset, cancellationToken);
-            if (read == 0)
-            {
-                throw new InvalidDataException("Page content spill store ended unexpectedly.");
-            }
-
-            offset += read;
-        }
-
-        return bytes;
-    }
-
     private int ReadRecordLength(FileStream file, int pageIndex, CancellationToken cancellationToken = default)
     {
         file.Seek(fileOffsets[pageIndex], SeekOrigin.Begin);
@@ -310,7 +281,6 @@ internal sealed class PdfPageContentStaging : IDisposable
         string path = Path.Combine(Path.GetTempPath(), "OoxPdfPages-" + Guid.NewGuid().ToString("N") + ".tmp");
         FileStream file = new(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.SequentialScan | FileOptions.DeleteOnClose);
         spillFile = file;
-        SpillPathForTests = path;
         foreach (MemoryPage buffered in memory)
         {
             cancellationToken.ThrowIfCancellationRequested();

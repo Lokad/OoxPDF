@@ -92,12 +92,6 @@ internal sealed partial class PptxRenderer
         public static double OfficeHighlightContinuationCharacterSpacing(double fontSize) =>
             fontSize * OfficeHighlightContinuationCharacterSpacingEm;
 
-        public static double OfficeAutofitNumberedDenseCharacterSpacing(double fontSize) =>
-            fontSize * OfficeAutofitNumberedDenseCharacterSpacingEm;
-
-        public static double OfficeAutofitNumberedDefaultCharacterSpacing(double fontSize) =>
-            fontSize * OfficeAutofitNumberedDefaultCharacterSpacingEm;
-
         public static double StrikeY(PdfEmbeddedFont embedded, double baselineY, double fontSize)
         {
             return baselineY + fontSize * OfficeStrikePositionFontScale;

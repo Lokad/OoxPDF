@@ -294,29 +294,6 @@ internal sealed partial class DocxRenderer
         return false;
     }
 
-    private static bool TryResolveSourceRunStartAnchorX(
-        DocxTextLineLayout line,
-        int? sourceRunIndex,
-        out double anchorX)
-    {
-        anchorX = 0d;
-        if (sourceRunIndex is not { } runIndex)
-        {
-            return false;
-        }
-
-        DocxTextSegmentLayout[] segments = line.Segments
-            .Where(segment => segment.SourceTextRunIndex == runIndex)
-            .ToArray();
-        if (segments.Length == 0)
-        {
-            return false;
-        }
-
-        anchorX = segments.Min(segment => segment.X);
-        return true;
-    }
-
     private static bool TryResolvePreviousSourceRunEndAnchorX(
         DocxTextLineLayout line,
         int? sourceRunIndex,

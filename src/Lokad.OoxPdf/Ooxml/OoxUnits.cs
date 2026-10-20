@@ -16,8 +16,5 @@ internal static class OoxUnits
         return twips / TwipsPerPoint;
     }
 
-    public static double HalfPointsToPoints(int halfPoints)
-    {
-        return halfPoints / 2d;
-    }
+
 }

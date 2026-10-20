@@ -121,11 +121,6 @@ internal sealed partial class PptxRenderer
         return GetChartMinorGridlineValuesCore(extents, units, crossingValue, autoTickTargetCount, hasMajorGridlineElement, tickPolicy);
     }
 
-    private static IReadOnlyList<double> GetChartMinorGridlineValues(ChartValueExtents extents, ChartAxisUnits units, double? crossingValue, double autoTickTargetCount, bool hasMajorGridlineElement)
-    {
-        return GetChartMinorGridlineValuesCore(extents, units, crossingValue, autoTickTargetCount, hasMajorGridlineElement, ChartAxisTickPolicy.ZeroAlignedWithEndpoints);
-    }
-
     private static IReadOnlyList<double> GetChartMinorGridlineValuesCore(ChartValueExtents extents, ChartAxisUnits units, double? crossingValue, double autoTickTargetCount, bool hasMajorGridlineElement, ChartAxisTickPolicy tickPolicy)
     {
         // Office minor intervals subdivide the selected major interval into five

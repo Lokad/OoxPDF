@@ -40,7 +40,6 @@ internal static class PptxChartDensifyTests
         Array points = Array.CreateInstance(pointType, 1);
         points.SetValue(textPoint, 0);
         object vector = BuildVector(vectorType, points, null);
-        TestAssert.True(InvokeBool(vectorType, vector, "HasAnyText"), "A text point must report text.");
         TestAssert.True(InvokeBool(vectorType, vector, "HasAnyDenseSlot"), "A text vector must report dense slots.");
     }
 

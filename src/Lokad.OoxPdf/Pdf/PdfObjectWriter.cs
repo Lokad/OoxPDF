@@ -45,17 +45,6 @@ internal sealed class PdfObjectWriter
         WriteAscii("endobj\n");
     }
 
-    // page content streams are written from a single ASCII encoding of the
-    // content. The byte count comes from the encoded span, so no second whole-page
-    // string interpolation plus re-encoding is needed merely to measure the length.
-    // Output bytes match the previous WriteObject encoding exactly.
-    public void WriteContentStreamObject(int objectNumber, ReadOnlySpan<byte> contentBytes)
-    {
-        WriteContentStreamHeader(objectNumber, contentBytes.Length);
-        WriteContentStreamBytes(contentBytes);
-        WriteContentStreamTrailer();
-    }
-
     // RV11-P1: chunked content-stream emission. The header carries the known
     // total length; callers stream the payload in bounded chunks, so spilled
     // pages are never fully resident during emission.
