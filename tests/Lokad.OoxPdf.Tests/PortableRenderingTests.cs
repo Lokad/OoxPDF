@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingInlineMetadataWrappersRetainParentFrames() =>
+        DocxInlineCompositionTests.CheckInlineMetadataParentFrames(new PinnedResolver(mathFont: true));
+
     public static void PortableRenderingBoxedMathCountAndInsetsKeepTrailingRows() =>
         DocxInlineCompositionTests.CheckSpanningFrames(new PinnedResolver(mathFont: true), compareWord: false,
             "parallel-cell-boxed-tail-office.json", parallelCells: true);

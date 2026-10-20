@@ -630,7 +630,7 @@ internal sealed partial class DocxReader
 
     private static bool IsVisibleRunContainer(XElement element, OoxPdfDocxMarkupMode markupMode)
     {
-        return element.Name == WordprocessingNamespace + "fldSimple" ||
+        return IsInlineMetadataContainer(element) || element.Name == WordprocessingNamespace + "fldSimple" ||
             element.Name == WordprocessingNamespace + "hyperlink" ||
             element.Name == WordprocessingNamespace + "sdt" ||
             element.Name == WordprocessingNamespace + "sdtContent" ||

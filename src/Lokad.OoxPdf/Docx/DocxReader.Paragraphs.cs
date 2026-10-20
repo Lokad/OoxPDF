@@ -75,53 +75,12 @@ internal sealed partial class DocxReader
         int sourceRunIndex = 0;
         foreach (XElement child in paragraph.Elements())
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (child.Name == WordprocessingNamespace + "r")
-            {
-                AddParagraphRun(child, ref pageInstructionSeen, inheritedRevision);
-            }
-            else if (child.Name == MathNamespace + "oMath" || child.Name == MathNamespace + "oMathPara")
-            {
-                AddEquation(child, inheritedRevision);
-            }
-            else if (child.Name == WordprocessingNamespace + "fldSimple")
-            {
-                AddSimpleField(child, inheritedRevision);
-            }
-            else if (IsRevisionContainer(child))
-            {
-                AddRevisionRunContainer(child, inheritedRevision);
-            }
-            else if (child.Name == WordprocessingNamespace + "hyperlink")
-            {
-                AddHyperlinkContainer(child, inheritedRevision, AddInlineContainerChild, GetInlineItemCount, ref sourceRunIndex, runs, hyperlinkSpans, relationships);
-            }
-            else if (child.Name == WordprocessingNamespace + "sdt")
-            {
-                AddContentControl(child, inheritedRevision);
-            }
-            else if (child.Name == WordprocessingNamespace + "bookmarkStart")
-            {
-                AddBookmarkAnchor(child, bookmarkAnchors, sourceRunIndex, runs, inlineItems?.Count);
-            }
-            else if (child.Name == WordprocessingNamespace + "commentRangeStart")
-            {
-                EnsureInlineContent();
-                AddCommentRangeStart(child, openCommentRanges, sourceRunIndex, runs, inlineItems!.Count);
-            }
-            else if (child.Name == WordprocessingNamespace + "commentRangeEnd")
-            {
-                EnsureInlineContent();
-                AddCommentRangeEnd(child, openCommentRanges, commentRanges, sourceRunIndex, runs, inlineItems!.Count);
-            }
-            else if (IsRevisionMarkerElement(child))
-            {
-                AddRevisionMarker(child, paragraphRevisions, openRevisionRanges, revisionRanges, sourceRunIndex, runs);
-            }
+            AddInlineContainerChild(child, inheritedRevision);
         }
 
         void AddInlineContainerChild(XElement child, DocxRevisionInfo? revision)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (child.Name == WordprocessingNamespace + "r")
             {
                 AddParagraphRun(child, ref pageInstructionSeen, revision);
@@ -150,7 +109,7 @@ internal sealed partial class DocxReader
             {
                 AddContentControl(child, revision);
             }
-            else if (child.Name == WordprocessingNamespace + "sdtContent")
+            else if (child.Name == WordprocessingNamespace + "sdtContent" || IsInlineMetadataContainer(child))
             {
                 AddVisibleRunContainer(child, revision);
             }
@@ -1710,6 +1669,11 @@ internal sealed partial class DocxReader
     }
 
     private static bool IsXmlWhitespace(char value) => value is ' ' or '\t' or '\r' or '\n';
+
+    // These inline annotations add metadata, not formatting or a new source
+    // owner. Do not flatten unknown or directional containers through this path.
+    private static bool IsInlineMetadataContainer(XElement element) =>
+        element.Name == WordprocessingNamespace + "customXml" || element.Name == WordprocessingNamespace + "smartTag";
 
     private static string? ReadParagraphStyleId(XElement? paragraphProperties)
     {

@@ -1,4 +1,19 @@
 {
+  "docx-inline-metadata-wrappers": [
+    "DocxInlineMetadataWrappers",
+    "PortableRenderingInlineMetadataWrappersRetainParentFrames",
+    "DocxComplexFieldWithCachedResultInsideInlineContentControlDoesNotEmitUnsupportedDiagnostic",
+    "DocxComplexFieldSpanningInlineContentControlUsesCachedResult",
+    "DocxReaderPreservesInlineReferencesInsideRunContainers",
+    "DocxReaderSplitsNestedVisibleInlineContainerPageBreaks",
+    "DocxReaderSplitsMoveToFinalViewPageBreaks",
+    "DocxReaderPromotesInlineRunColumnBreakInsideParagraph",
+    "DocxBlockContentControlsRetainFormattingRevisions",
+    "DocxInlineSiblingFrameOriginsMatchIndependentWord",
+    "DocxInlineCompositionMixedMathBookmarksRetainOrderedSourceTargets",
+    "DocxComposedInlineFrameReportRetainsIndependentWordPagesAndContent",
+    "PortableRenderingComposedInlineFrameReportRetainsRepeatedStaticOwners"
+  ],
   "docx-bookmark-ownership": [
     "DocxReaderPreservesBookmarkAnchors",
     "DocxBookmarkViewport",
