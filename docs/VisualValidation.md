@@ -139,22 +139,18 @@ per input and cannot be combined with concurrency.
 
 ## Cached DOCX Markup References
 
-Cached markup comparisons build the CLI and visual diff tool through
-`tools/EnsureDotnetBuild.ps1`, which delegates dependency and imported-property
-tracking to MSBuild and serializes shared builds. A failed build stops the
-comparison. Each run records `cli-build-info.json` and, when raster comparison
-is enabled, `visual-diff-build-info.json` with the selected output hash.
-Run `pwsh tools/TestCachedMarkupBuild.ps1` to check property-driven refresh,
-incremental output stability, provenance and rejection of an existing DLL
-after a failed build. These checks require .NET and no Office installation.
+`RunDocxMarkupReferenceGate.ps1` and `CompareCachedDocxMarkupReference.ps1` accept
+`-CliPath <frozen-cli.dll> -DocxInspectorPath <matching-inspector.dll> -SkipBuild`.
+Supply both OOXML runtimes together; their library hashes must match. The shared
+qualification artifact includes the Release DOCX inspector. `-PdfInspectorPath`
+selects an independent prebuilt PDF inspector. Explicit paths avoid root builds;
+`-SkipBuild` also reuses the other existing validation tools. Runtime hashes are
+recorded and unexpected changes refuse qualification.
 
-`InspectPdf.ps1` and `InspectPptxText.ps1` use the same shared MSBuild gate.
-When an output directory is provided, PDF inspection records
-`pdf-inspect-build-info.json`; PPTX inspection records
-`pptx-inspect-build-info.json`. These identify the selected inspector DLL and
-build inputs. Run `pwsh tools/TestInspectorBuild.ps1` to verify both production
-build calls against changed parent properties, unchanged output, provenance
-and failed-build rejection.
+The three inspector wrappers accept `-InspectorPath` and `-SkipBuild`; DOCX/PPTX
+inspection also accepts `-ExpectedLibrarySha256`. Default development invocations
+still use the shared MSBuild gate. `TestFrozenMarkupBinding.ps1` checks explicit
+binding, identity and refusal without a real build or Office export.
 
 DOCX markup parity work uses cache-only reference comparisons so autonomous runs do not launch Word or COM. Generate a reference request for the public DOCX markup cases:
 

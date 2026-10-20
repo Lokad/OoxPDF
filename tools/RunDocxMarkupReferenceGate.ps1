@@ -19,7 +19,11 @@ param(
 
     [switch] $FailOnDeltas,
 
-    [switch] $ContinueOnFailure
+    [switch] $ContinueOnFailure,
+    [string] $CliPath,
+    [string] $DocxInspectorPath,
+    [string] $PdfInspectorPath,
+    [switch] $SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -340,6 +344,10 @@ foreach ($caseInfo in $cases) {
         Case = $caseInfo.Path
         OutputDirectory = $caseOutput
         Dpi = $Dpi
+        CliPath = $CliPath
+        DocxInspectorPath = $DocxInspectorPath
+        PdfInspectorPath = $PdfInspectorPath
+        SkipBuild = [bool]$SkipBuild
     }
     if ($caseInfo.PSObject.Properties.Name -contains "DocxMarkupOverride") {
         $arguments.DocxMarkup = [string]$caseInfo.DocxMarkupOverride

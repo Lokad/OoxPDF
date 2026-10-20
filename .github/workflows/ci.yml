@@ -47,7 +47,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           New-Item -ItemType Directory -Force artifacts/ci-tests | Out-Null
-          foreach ($group in @('api', 'ooxml', 'pdf', 'imaging', 'fonts', 'rendering-portable')) {
+          foreach ($group in @('api', 'cli', 'ooxml', 'pdf', 'imaging', 'fonts', 'rendering-portable')) {
             dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -- --group $group --skip-slow --report "artifacts/ci-tests/$group.json"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
@@ -61,7 +61,10 @@ jobs:
           $capabilities = Get-Content tools/qualification-capabilities.json -Raw | ConvertFrom-Json -AsHashtable
           & ./tools/RunDocxAffectedTests.ps1 -RunnerPath tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/capability-catalog -Capability @($capabilities.Keys) -ListOnly
       - name: Frozen visual family binding checks
-        run: pwsh -NoProfile -File tools/TestVisualFamilyBinding.ps1
+        run: |
+          pwsh -NoProfile -File tools/TestVisualFamilyBinding.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh -NoProfile -File tools/TestFrozenMarkupBinding.ps1
       - name: Text content gate
         if: runner.os == 'Windows'
         run: pwsh -NoProfile -File tools/CheckPdfTextContent.ps1

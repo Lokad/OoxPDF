@@ -7,17 +7,29 @@ param(
 
     [int[]] $Slide,
 
-    [switch] $IncludeText
+    [switch] $IncludeText,
+    [string] $InspectorPath,
+    [switch] $SkipBuild,
+    [string] $ExpectedLibrarySha256
 )
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repoRoot "tools/Lokad.OoxPdf.PptxInspect/Lokad.OoxPdf.PptxInspect.csproj"
-$dll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PptxInspect/bin/Debug/net10.0/Lokad.OoxPdf.PptxInspect.dll"
+$dll = if ($InspectorPath) { (Resolve-Path $InspectorPath).Path } else { Join-Path $repoRoot "tools/Lokad.OoxPdf.PptxInspect/bin/Debug/net10.0/Lokad.OoxPdf.PptxInspect.dll" }
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 $buildRecordPath = Join-Path $OutputDirectory 'pptx-inspect-build-info.json'
-& (Join-Path $repoRoot 'tools/EnsureDotnetBuild.ps1') -Project $project -OutputDll $dll -Description 'PPTX text inspect' -RecordPath $buildRecordPath
+if (!$InspectorPath -and !$SkipBuild) {
+    & (Join-Path $repoRoot 'tools/EnsureDotnetBuild.ps1') -Project $project -OutputDll $dll -Description 'PPTX text inspect' -RecordPath $buildRecordPath
+}
+$libraryPath = Join-Path (Split-Path $dll) 'Lokad.OoxPdf.dll'
+$inspectorHash = (Get-FileHash $dll).Hash
+$libraryHash = (Get-FileHash $libraryPath).Hash
+if ($ExpectedLibrarySha256 -and $ExpectedLibrarySha256 -ne $libraryHash) { throw 'PPTX inspector library differs from the qualified converter' }
+if ($InspectorPath -or $SkipBuild) {
+    @{OutputDll=$dll;OutputSha256=$inspectorHash;LibrarySha256=$libraryHash;BuildRequested=$false} | ConvertTo-Json | Set-Content $buildRecordPath
+}
 
 $arguments = @(
     (Resolve-Path -LiteralPath $InputPptx).Path,
@@ -35,3 +47,4 @@ dotnet $dll @arguments
 if ($LASTEXITCODE -ne 0) {
     throw "PPTX text inspect failed with exit code $LASTEXITCODE."
 }
+if ((Get-FileHash $dll).Hash -ne $inspectorHash -or (Get-FileHash $libraryPath).Hash -ne $libraryHash) { throw 'PPTX inspection runtime changed during execution' }

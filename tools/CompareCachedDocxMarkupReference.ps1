@@ -64,7 +64,11 @@ param(
 
     [switch] $FailOnDeltas,
 
-    [switch] $ValidateOnly
+    [switch] $ValidateOnly,
+    [string] $CliPath,
+    [string] $DocxInspectorPath,
+    [string] $PdfInspectorPath,
+    [switch] $SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -85,6 +89,10 @@ function Invoke-DotnetBuildIfStale {
         [string] $RecordPath
     )
 
+    if ($SkipBuild) {
+        if (!(Test-Path -LiteralPath $OutputDll)) { throw "$Description DLL is missing and -SkipBuild was requested: $OutputDll" }
+        return
+    }
     # MSBuild tracks referenced projects and imported props/targets. Comparing
     # all source timestamps against the CLI DLL misses build-property changes
     # and cannot identify updates to its deployed library independently.
@@ -3413,8 +3421,19 @@ if ($ValidateOnly) {
 }
 
 $cliProject = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj"
-$cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll"
-Invoke-DotnetBuildIfStale -Project $cliProject -OutputDll $cliDll -Description "CLI" -RecordPath (Join-Path $runRoot 'cli-build-info.json')
+$cliDll = if ($CliPath) { (Resolve-Path $CliPath).Path } else { Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll" }
+if ([bool]$CliPath -ne [bool]$DocxInspectorPath) { throw 'Supply the qualified CLI and matching DOCX inspector together' }
+if (!$CliPath) { Invoke-DotnetBuildIfStale -Project $cliProject -OutputDll $cliDll -Description "CLI" -RecordPath (Join-Path $runRoot 'cli-build-info.json') }
+$cliHash = (Get-FileHash $cliDll).Hash
+$cliLibrary = Join-Path (Split-Path $cliDll) 'Lokad.OoxPdf.dll'
+$cliLibraryHash = (Get-FileHash $cliLibrary).Hash
+if ($DocxInspectorPath -and (Get-FileHash (Join-Path (Split-Path (Resolve-Path $DocxInspectorPath).Path) 'Lokad.OoxPdf.dll')).Hash -ne $cliLibraryHash) {
+    throw 'DOCX inspector library differs from the qualified converter'
+}
+if ($CliPath -or $SkipBuild) {
+    @{OutputDll=$cliDll;OutputSha256=$cliHash;LibrarySha256=$cliLibraryHash;BuildRequested=$false} |
+        ConvertTo-Json | Set-Content (Join-Path $runRoot 'cli-build-info.json')
+}
 
 $candidatePdf = Join-Path $candidateDir "output.pdf"
 $diagnostics = Join-Path $candidateDir "diagnostics.json"
@@ -3423,29 +3442,29 @@ if ($LASTEXITCODE -ne 0) {
     throw "Candidate conversion failed with exit code $LASTEXITCODE."
 }
 
-& (Join-Path $PSScriptRoot "InspectDocx.ps1") -InputDocx $inputFull -OutputDirectory $candidateDocxInspect -DocxMarkup $resolvedDocxMarkup -DocxMarkupGeometry $resolvedDocxMarkupGeometry | Out-Null
+& (Join-Path $PSScriptRoot "InspectDocx.ps1") -InputDocx $inputFull -OutputDirectory $candidateDocxInspect -DocxMarkup $resolvedDocxMarkup -DocxMarkupGeometry $resolvedDocxMarkupGeometry -InspectorPath $DocxInspectorPath -SkipBuild:$SkipBuild -ExpectedLibrarySha256 $cliLibraryHash | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw "DOCX inspection failed with exit code $LASTEXITCODE."
 }
 
-& (Join-Path $PSScriptRoot "InspectPdf.ps1") -InputPdf $referencePdfPath -OutputDirectory $referencePdfInspect | Out-Null
+& (Join-Path $PSScriptRoot "InspectPdf.ps1") -InputPdf $referencePdfPath -OutputDirectory $referencePdfInspect -InspectorPath $PdfInspectorPath -SkipBuild:$SkipBuild | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw "Reference PDF inspection failed with exit code $LASTEXITCODE."
 }
 
-& (Join-Path $PSScriptRoot "InspectPdf.ps1") -InputPdf $candidatePdf -OutputDirectory $candidatePdfInspect | Out-Null
+& (Join-Path $PSScriptRoot "InspectPdf.ps1") -InputPdf $candidatePdf -OutputDirectory $candidatePdfInspect -InspectorPath $PdfInspectorPath -SkipBuild:$SkipBuild | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw "Candidate PDF inspection failed with exit code $LASTEXITCODE."
 }
 
 $visualMetrics = @()
 if (-not $SkipRasterDiff) {
-    & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $referencePdfPath -OutputDirectory $referenceRasterDir -Dpi $Dpi | Out-Null
+    & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $referencePdfPath -OutputDirectory $referenceRasterDir -Dpi $Dpi -SkipBuild:$SkipBuild | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "Reference PDF rasterization failed with exit code $LASTEXITCODE."
     }
 
-    & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $candidatePdf -OutputDirectory $candidateRasterDir -Dpi $Dpi | Out-Null
+    & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $candidatePdf -OutputDirectory $candidateRasterDir -Dpi $Dpi -SkipBuild:$SkipBuild | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "Candidate PDF rasterization failed with exit code $LASTEXITCODE."
     }
@@ -3934,6 +3953,10 @@ $summary = [ordered]@{
     RegionDeltas = $regionDeltaSummary
 }
 Write-JsonFile (Join-Path $runRoot "summary.json") $summary
+
+if ((Get-FileHash $cliDll).Hash -ne $cliHash -or (Get-FileHash $cliLibrary).Hash -ne $cliLibraryHash) {
+    throw 'Cached markup conversion runtime changed during qualification'
+}
 
 if ($FailOnDeltas) {
     if ($gateSummary.FailureCount -ne 0) {

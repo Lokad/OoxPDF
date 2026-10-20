@@ -49,7 +49,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/NewDocxMarkupReferenceRequest.ps1`: create public/private-safe DOCX markup reference request bundles and import templates.
 - `tools/ImportDocxMarkupReferenceCache.ps1`: import trusted DOCX markup Office reference PDFs into the ignored reference cache.
 - `tools/RunDocxMarkupReferenceGate.ps1`: audit or run cached Office-reference gates for DOCX markup visual cases.
-- `tools/CompareCachedDocxMarkupReference.ps1`: compare DOCX markup candidate PDFs against cached Office references.
+- `tools/CompareCachedDocxMarkupReference.ps1`: compare DOCX markup candidate PDFs against cached Office references; use CliPath/DocxInspectorPath/SkipBuild for frozen qualification.
 - `tools/CheckPrivateCase.ps1`: run a private, ignored visual case.
 - `tools/SummarizePrivateCase.ps1`: summarize ignored private-case metrics without document content.
 - `tools/InventoryPptxSlides.ps1`: produce private-safe PPTX slide feature counts.
@@ -67,7 +67,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/NewSyntheticFixtures.ps1`: regenerate synthetic fixtures.
 - `tools/NewVisualCase.ps1`: scaffold a visual case.
 - `tools/CheckPrivateDocxMarkup.ps1`: candidate-only DOCX markup check for private cases (no Office/COM).
-- `tools/InspectDocx.ps1`: dump DOCX layout/mode inspection JSON (helper for markup triage).
+- `tools/InspectDocx.ps1`: dump DOCX layout/mode inspection JSON; accepts InspectorPath/SkipBuild and an expected library hash.
 - `tools/ComparePdfTextLineStarts.ps1`: compare PDF text line starts (helper used by CheckVisualCase).
 - `tools/RenderCachedReference.ps1`: render cached Office reference PDFs (helper for cache-only gates).
 - `tools/CompareDocxLayoutPdfFlow.ps1`: compare a DOCX layout snapshot against PDF text flow for one run directory.
