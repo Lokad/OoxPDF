@@ -14,10 +14,10 @@ internal static partial class DocxInlineCompositionTests
         CheckInlineMetadataParentFrames(null);
     }
 
-    internal static void CheckInlineMetadataParentFrames(IFontResolver? resolver)
+    internal static void CheckMetadataParentFrames(IFontResolver? resolver, string manifestFile)
     {
         string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "InlineBoxMath"));
-        using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "inline-metadata-wrappers.json")));
+        using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, manifestFile)));
         foreach (var item in manifest.RootElement.EnumerateArray())
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
@@ -36,6 +36,11 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(before[index].Fonts.Count, after[index].Fonts.Count);
             }
         }
+    }
+
+    internal static void CheckInlineMetadataParentFrames(IFontResolver? resolver)
+    {
+        CheckMetadataParentFrames(resolver, "inline-metadata-wrappers.json");
         foreach (string part in new[] { "header", "footer" })
         {
             var mode = OoxPdfDocxMarkupMode.Final;

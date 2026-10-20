@@ -53,7 +53,7 @@ internal sealed partial class DocxReader
         documentSettings = ResolveSingleSectionNoteReferenceSettings(document, documentSettings);
         IReadOnlyDictionary<XElement, DocxNoteReferenceSection> noteSections = ResolveSectionNoteReferenceSettings(document, authoredSettings, documentSettings);
         IEnumerable<XElement> bodyChildren = document.Descendants(WordprocessingNamespace + "body").Elements();
-        foreach (DocxRevisionScopedElement scopedElement in EnumerateRevisionScopedChildren(bodyChildren, markupMode, WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"))
+        foreach (DocxRevisionScopedElement scopedElement in EnumerateRevisionScopedChildren(bodyChildren, markupMode, cancellationToken, [WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"]))
         {
             cancellationToken.ThrowIfCancellationRequested();
             XElement element = scopedElement.Element;

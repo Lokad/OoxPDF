@@ -115,7 +115,7 @@ internal sealed partial class DocxReader
         bool retainBalloonParagraphMark = false)
     {
         var bodyElements = new List<DocxBodyElement>();
-        foreach (DocxRevisionScopedElement scopedElement in EnumerateRevisionScopedChildren(elements, markupMode, WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"))
+        foreach (DocxRevisionScopedElement scopedElement in EnumerateRevisionScopedChildren(elements, markupMode, cancellationToken, [WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"]))
         {
             cancellationToken.ThrowIfCancellationRequested();
             XElement element = scopedElement.Element;

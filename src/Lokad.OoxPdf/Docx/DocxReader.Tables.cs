@@ -60,7 +60,7 @@ internal sealed partial class DocxReader
             .ToArray() ?? [];
         bool hasExplicitGrid = columns.Count != 0;
         var rows = new List<DocxTableRow>();
-        DocxRevisionScopedElement[] rowElements = EnumerateRevisionScopedChildren(table.Elements(), markupMode, WordprocessingNamespace + "tr")
+        DocxRevisionScopedElement[] rowElements = EnumerateRevisionScopedChildren(table.Elements(), markupMode, cancellationToken, [WordprocessingNamespace + "tr"])
             .Where(row => IsIncludedTableRow(row.Element, markupMode, cancellationToken)).ToArray();
         for (int rowIndex = 0; rowIndex < rowElements.Length; rowIndex++)
         {
@@ -73,7 +73,7 @@ internal sealed partial class DocxReader
             DocxTableCellMargins rowExceptionMargins = ReadTablePropertyExceptionCellMargins(row);
             DocxTableCellMargins rowInheritedMargins = rowExceptionMargins.Merge(tableCellMargins.Merge(tableStyle.Cell.Margins));
             var cells = new List<DocxTableCell>();
-            DocxRevisionScopedElement[] cellElements = EnumerateRevisionScopedChildren(row.Elements(), markupMode, WordprocessingNamespace + "tc").ToArray();
+            DocxRevisionScopedElement[] cellElements = EnumerateRevisionScopedChildren(row.Elements(), markupMode, cancellationToken, [WordprocessingNamespace + "tc"]).ToArray();
             for (int cellIndex = 0; cellIndex < cellElements.Length; cellIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -326,7 +326,7 @@ internal sealed partial class DocxReader
         DocxRevisionInfo? inheritedRevision)
     {
         var elements = new List<DocxBodyElement>();
-        foreach (DocxRevisionScopedElement scopedChild in EnumerateRevisionScopedChildren(cell.Elements(), markupMode, WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"))
+        foreach (DocxRevisionScopedElement scopedChild in EnumerateRevisionScopedChildren(cell.Elements(), markupMode, cancellationToken, [WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"]))
         {
             cancellationToken.ThrowIfCancellationRequested();
             XElement child = scopedChild.Element;

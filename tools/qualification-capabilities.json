@@ -1,4 +1,10 @@
 {
+  "docx-structural-metadata-wrappers": [
+    "DocxStructuralMetadataWrappers",
+    "PortableRenderingStructuralMetadataWrappersRetainParentFrames",
+    "DocxMarkupModesFilterTableCellAndNestedTableRevisions",
+    "DocxAllMarkupRendererPlacesRelatedStoryTableRevisionBalloons"
+  ],
   "docx-inline-metadata-wrappers": [
     "DocxInlineMetadataWrappers",
     "PortableRenderingInlineMetadataWrappersRetainParentFrames",

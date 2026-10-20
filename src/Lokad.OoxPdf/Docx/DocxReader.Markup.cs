@@ -44,19 +44,14 @@ internal sealed partial class DocxReader
     private static IEnumerable<DocxRevisionScopedElement> EnumerateRevisionScopedChildren(
         IEnumerable<XElement> elements,
         OoxPdfDocxMarkupMode markupMode,
-        params XName[] includedNames)
+        CancellationToken cancellationToken,
+        XName[] includedNames,
+        DocxRevisionInfo? inheritedRevision = null)
     {
-        return EnumerateRevisionScopedChildren(elements, markupMode, inheritedRevision: null, includedNames);
-    }
-
-    private static IEnumerable<DocxRevisionScopedElement> EnumerateRevisionScopedChildren(
-        IEnumerable<XElement> elements,
-        OoxPdfDocxMarkupMode markupMode,
-        DocxRevisionInfo? inheritedRevision,
-        params XName[] includedNames)
-    {
+        cancellationToken.ThrowIfCancellationRequested();
         foreach (XElement element in elements)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (includedNames.Contains(element.Name))
             {
                 yield return new DocxRevisionScopedElement(element, inheritedRevision);
@@ -67,7 +62,7 @@ internal sealed partial class DocxReader
             {
                 foreach (XElement content in element.Elements(WordprocessingNamespace + "sdtContent"))
                 {
-                    foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(content.Elements(), markupMode, inheritedRevision, includedNames))
+                    foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(content.Elements(), markupMode, cancellationToken, includedNames, inheritedRevision))
                     {
                         yield return child;
                     }
@@ -76,9 +71,11 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            if (element.Name == WordprocessingNamespace + "sdtContent")
+            // Structured/custom XML metadata preserves the current revision and
+            // actual block, row or cell source owner.
+            if (element.Name == WordprocessingNamespace + "sdtContent" || element.Name == WordprocessingNamespace + "customXml")
             {
-                foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(element.Elements(), markupMode, inheritedRevision, includedNames))
+                foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(element.Elements(), markupMode, cancellationToken, includedNames, inheritedRevision))
                 {
                     yield return child;
                 }
@@ -92,7 +89,7 @@ internal sealed partial class DocxReader
             }
 
             DocxRevisionInfo? revision = CreateRevisionInfo(element) ?? inheritedRevision;
-            foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(element.Elements(), markupMode, revision, includedNames))
+            foreach (DocxRevisionScopedElement child in EnumerateRevisionScopedChildren(element.Elements(), markupMode, cancellationToken, includedNames, revision))
             {
                 yield return child;
             }
