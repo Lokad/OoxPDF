@@ -1,5 +1,34 @@
 # Composed-document reliability checkpoint
 
+## C361 SVG footer composes with the complete report (2026-10-20)
+
+Replace only the C357 footer drawing/media with canonical SVG/preview at the same
+extent. Existing SVG/raster probe generation remains byte-exact. C360 artifact
+reused:two CLI/two Word16 views, no build/suite. Both engines preserve two pages,
+all3399 Final/3456 Review parent glyph characters/origins/sizes/colors, original
+drawing records, body-image rectangles/pixels and both navigation annotations.
+Two repeated footer raster instances become four vector paths. Native frame
+reuse error below.001pt; Word path bounds within.091pt Final/.084pt actual scaled
+Review. Final original geometry/two content screens pass. Review retains parent
+proseY1.436pt and both strict pixel gates fail; no compensation/threshold change.
+Evidence artifacts/composition-c1/composed-static-svg-evidence.json.
+
+Infrequent workspace scan:17,759,366,975 unique file-content bytes,991,011 files/
+86,519 directories,27.42s,zero errors,768 links skipped; hardlinks already charged
+once. Loose5GB target remains unmet. Cleanup preflight proved1376 zero-byte.tmp
+reservations in eight fresh passed-run temporary folders, no nested directories,
+links or inputs. Automatic approval review rejected process creation as blocked
+by policy;zero removed. These eight targets are protected in
+c361-passed-temporary-retirement-rejected.json; no retry/move/archive/overwrite.
+
+Live shared-writer probe demonstrates the leak:two valid ZIP outputs also leave
+two unused reservations. C362 changes only their path allocation in the two
+existing package writers, preserving extension semantics. Test-only compilation
+against the unchanged qualified library, both overloads/readback and small DOCX/
+PPTX checks;621 other direct output-path sites stay deferred. No new temp framework
+or renderer rewrite. C360CI39395020238 green Windows/Ubuntu including broader/
+package checks. Version0.1.5/release deferred.
+
 ## C360 SVG and raster reuse natural static source frames (2026-10-20)
 
 Remove only the SVG-type/raster-fallback exclusions from the shared natural image
