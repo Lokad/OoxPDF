@@ -1,5 +1,29 @@
 # Composed-document reliability checkpoint
 
+## C359 SVG/raster source-frame ownership is format-independent (2026-10-20)
+
+Two source-exact margin probes replace raster drawings with existing canonical
+SVG/PNG-preview payloads at the same18x9pt extent. All body/style entries remain
+exact. Four CLI/four independent Word16 views reuse C358; no build or suite.
+Both PDFs paint source-colored vector paths, with zero raster resources.
+
+Word preserves all eight body origins/sizes exactly against raster parents.
+Current native bodyY error6.732pt and path errors4.513/9.034pt confirm that the
+format/fallback exclusions affect both body metrics and picture placement.
+Reusing the qualified equal-size raster frame predicts source-colored SVG bounds
+within.091pt in all four views, with no fitted SVG correction. Small import
+normalization differences remain unverified and receive no compensation. Bounds
+are path geometry, not proof of clipped visible ink. Evidence
+artifacts/composition-c1/static-svg-frame-review-evidence.json.
+
+C360 removes only format/fallback exclusions from the shared natural image rule;
+rotation, ownership, finite positive dimensions, semantic source restrictions,
+archive/XML/image bounds, cancellation and decoder fallback stay. Extend the
+existing external geometry observer to source-colored paths with the same1pt
+limit and focused missing/offpage/boundary checks. Qualify one artifact with SVG,
+PNG, mixed-math, crop/flip/rotation and cancellation neighbors. Reuse Word refs.
+C358CI39392043972 still in progress at its last spaced check; keep working.
+
 ## C358 reader marks use the shared qualified source class (2026-10-20)
 
 C356CI39390191212 caught broad reader retention on glyphless mixed equation/image
