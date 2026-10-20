@@ -9433,3 +9433,22 @@ The guarded command successfully built/froze the linked worktree from a main
 checkout caller. An initial compile error stopped before freezing; a comparison
 helper was restored to its font-plan owner before the accepted build. No root
 build or suite replay. Evidence: review-author-evidence.json.
+
+
+## Second bounded review — 2026-10-20
+
+Source 0db17b37 fixes caller diagnostic exceptions being swallowed by PPTX recovery
+and final-summary cancellation publishing a file. Deletes the unused image-backed
+luminosity-mask path and decoder wrappers; live PNG alpha/vector groups remain.
+Verbatim fixture checkout, repaired capability selection and frozen visual-family
+binding close the qualification gaps. Current guides shed superseded journals;
+prior text remains in Git history. No rendering guard or visual threshold changes.
+
+One frozen artifact: Windows 3,722 pass/1 inherited balloon failure/11 skip;
+Ubuntu 799 pass/0 fail/44 skip. All 136 affected checks pass within the Windows run;
+four new regressions fail against the preceding DLL. Twenty snapshot and seven
+family checks pass per platform. All 16 portfolio PDFs/diagnostics retain identity;
+two PPTX strict passes and fourteen DOCX strict failures remain. Both final-package
+consumers and seventeen-asset/two-smoke transfer pass. Publication stays deferred.
+Current identities, CI status and residuals: [PreviewQualification.md](PreviewQualification.md)
+and ignored artifacts/review-second-20261020/qualification.json.
