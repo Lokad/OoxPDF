@@ -1117,8 +1117,7 @@ internal static class PptxChartRenderingTests
         TestAssert.True((int?)firstParsedTextCell.GetType().GetProperty("SharedStringRunCount")?.GetValue(firstParsedTextCell) == 2, "Expected shared-string rich-text run count to survive workbook parsing.");
         TestAssert.True((bool?)firstParsedTextCell.GetType().GetProperty("SharedStringHasRichText")?.GetValue(firstParsedTextCell) == true, "Expected shared-string rich-text presence to survive workbook parsing.");
         TestAssert.True((bool?)firstParsedTextCell.GetType().GetProperty("SharedStringPreserveSpace")?.GetValue(firstParsedTextCell) == true, "Expected shared-string xml:space metadata to survive workbook parsing.");
-        object lastParsedTextValue = parsedTextValues.GetValue(2) ?? throw new InvalidOperationException("Expected inline-string typed text value.");
-        object lastParsedTextCell = textCellProperty.GetValue(lastParsedTextValue) ?? throw new InvalidOperationException("Expected inline-string range cell.");
+        object lastParsedTextCell = parsedTextCells.GetValue(2) ?? throw new InvalidOperationException("Expected inline-string range cell.");
         TestAssert.Equal("InlineString", lastParsedTextCell.GetType().GetProperty("ValueKind")?.GetValue(lastParsedTextCell)?.ToString() ?? string.Empty);
         TestAssert.True((bool?)lastParsedTextCell.GetType().GetProperty("HasValueElement")?.GetValue(lastParsedTextCell) == false, "Expected inline string cells to remain distinguishable from cached <v> cells.");
         Array parsedStructuredCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTable[Amount]"]) ?? throw new InvalidOperationException("Expected parsed structured-reference range cells."));
@@ -1247,11 +1246,11 @@ internal static class PptxChartRenderingTests
         TestAssert.True((int?)firstParsedLocalDefinedNameCell.GetType().GetProperty("DefinedNameLocalSheetId")?.GetValue(firstParsedLocalDefinedNameCell) == 0, "Expected sheet-local defined-name source scope to survive range resolution.");
         Array parsedBareLocalDefinedNameCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SheetLocalValues"]) ?? throw new InvalidOperationException("Expected bare sheet-local defined-name lookup to return an empty range."));
         TestAssert.True(parsedBareLocalDefinedNameCells.Length == 0, "Expected bare sheet-local names to remain unresolved without an explicit sheet scope.");
-        Array parsedUnionDefinedNameValues = (Array)(readNumericRange.Invoke(parsedWorkbook, ["SalesUnionValues"]) ?? throw new InvalidOperationException("Expected typed multi-area defined-name numeric values."));
+        Array parsedUnionDefinedNameValues = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesUnionValues"]) ?? throw new InvalidOperationException("Expected multi-area defined-name range cells."));
         TestAssert.True(parsedUnionDefinedNameValues.Length == 2, "Expected multi-area defined-name formula to hydrate both workbook areas.");
-        object secondParsedUnionDefinedNameValue = parsedUnionDefinedNameValues.GetValue(1) ?? throw new InvalidOperationException("Expected second typed multi-area defined-name numeric value.");
-        TestAssert.Equal(1.4d, (double?)numericValueProperty.GetValue(secondParsedUnionDefinedNameValue) ?? 0d);
-        object secondParsedUnionDefinedNameCell = numericCellProperty.GetValue(secondParsedUnionDefinedNameValue) ?? throw new InvalidOperationException("Expected typed multi-area defined-name range cell.");
+        object secondParsedUnionDefinedNameValue = parsedUnionDefinedNameValues.GetValue(1) ?? throw new InvalidOperationException("Expected second multi-area defined-name cell.");
+        object secondParsedUnionDefinedNameCell = secondParsedUnionDefinedNameValue;
+        TestAssert.Equal("1.4", (string?)secondParsedUnionDefinedNameCell.GetType().GetProperty("Text")!.GetValue(secondParsedUnionDefinedNameCell) ?? string.Empty);
         TestAssert.Equal("DefinedName", secondParsedUnionDefinedNameCell.GetType().GetProperty("SourceKind")?.GetValue(secondParsedUnionDefinedNameCell)?.ToString() ?? string.Empty);
         TestAssert.Equal("SalesUnionValues", (string?)secondParsedUnionDefinedNameCell.GetType().GetProperty("DefinedName")?.GetValue(secondParsedUnionDefinedNameCell) ?? string.Empty);
         TestAssert.True((int?)secondParsedUnionDefinedNameCell.GetType().GetProperty("RangeAreaIndex")?.GetValue(secondParsedUnionDefinedNameCell) == 1, "Expected multi-area defined-name cell to preserve its range-area index.");
