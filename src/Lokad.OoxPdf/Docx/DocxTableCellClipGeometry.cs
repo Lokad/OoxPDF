@@ -1,7 +1,31 @@
+using Lokad.OoxPdf.Pdf;
+
 namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxTableCellClipGeometry
 {
+    // A complete inline frame may paint its stroke around the cell's content
+    // boundary. Children still use the unchanged content clip. A partial drawing
+    // viewport or a frame outside the cell retains the conservative clip.
+    internal static DocxTableCellClipSnapshot ResolveInlineOutline(
+        DocxTableCellClipSnapshot contentClip, PdfRectangle frame, double strokeWidth, double? viewportBottom)
+    {
+        const double roundoff = .000001d;
+        double right = frame.X + frame.Width, top = frame.Y + frame.Height;
+        if (!(strokeWidth > 0d) || !double.IsFinite(strokeWidth) ||
+            !(frame.Width > 0d) || !(frame.Height > 0d) ||
+            !double.IsFinite(frame.X) || !double.IsFinite(frame.Y) || !double.IsFinite(right) || !double.IsFinite(top) ||
+            !double.IsFinite(contentClip.X) || !double.IsFinite(contentClip.Y) ||
+            !double.IsFinite(contentClip.Width) || !double.IsFinite(contentClip.Height) ||
+            !(frame.X >= contentClip.X - roundoff && frame.Y >= contentClip.Y - roundoff &&
+              right <= contentClip.X + contentClip.Width + roundoff && top <= contentClip.Y + contentClip.Height + roundoff) ||
+            viewportBottom is { } bottom && !(bottom <= frame.Y + roundoff))
+            return contentClip;
+
+        return contentClip with { X = contentClip.X - strokeWidth / 2d, Y = contentClip.Y - strokeWidth / 2d,
+            Width = contentClip.Width + strokeWidth, Height = contentClip.Height + strokeWidth };
+    }
+
     // Numbering can use a cell only through its complete measured, painted line
     // frame. Missing measurements, merged ownership and clipped lines keep the
     // existing fallback; typography callers do not acquire this broader scope.

@@ -120,9 +120,21 @@ internal sealed partial class DocxRenderer
                     RenderInlineImage(placedImage, graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex, fontResources, markupContext);
                 }
 
+                // Only complete, unmerged cells can give an admitted outline its
+                // own envelope. Each box restores the exact child content clip;
+                // ancestor, fragmented and merged-cell clips remain in force.
+                bool separateBoxClip = cellLayout.InlineTextBoxes.Count != 0 && row.FragmentCount == 1 &&
+                    cellLayout.VisualOwnership == DocxTableCellVisualOwnership.OwnCell && !cellLayout.Cell.HasVerticalMerge;
+                if (separateBoxClip) graphics.RestoreState();
                 foreach (DocxInlineTextBoxLayout textBox in cellLayout.InlineTextBoxes)
                 {
-                    RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex);
+                    RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex,
+                        separateBoxClip ? clip : null);
+                }
+                if (separateBoxClip)
+                {
+                    graphics.SaveState();
+                    graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
                 }
 
                 for (int nestedRowIndex = 0; nestedRowIndex < cellLayout.NestedRows.Count; nestedRowIndex++)

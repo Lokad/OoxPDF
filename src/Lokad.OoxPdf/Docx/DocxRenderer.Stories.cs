@@ -322,7 +322,8 @@ internal sealed partial class DocxRenderer
         int pageCount,
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
-        ref int imageIndex)
+        ref int imageIndex,
+        DocxTableCellClipSnapshot? cellClip = null)
     {
         if (box.TextLines.Count == 0 &&
             box.InlineImages.Count == 0 &&
@@ -341,6 +342,13 @@ internal sealed partial class DocxRenderer
         if (TryResolveInlineTextBoxStroke(box.TextBox, box.BoxWidth, box.BoxHeight, out double inlineStrokeWidth, out byte inlineStrokeRed, out byte inlineStrokeGreen, out byte inlineStrokeBlue))
         {
             double strokeWidth = inlineStrokeWidth * box.PrintScale;
+            if (cellClip is not null)
+            {
+                graphics.SaveState();
+                var outlineClip = DocxTableCellClipGeometry.ResolveInlineOutline(cellClip,
+                    new PdfRectangle(clipX, clipTop - box.BoxHeight, box.BoxWidth, box.BoxHeight), strokeWidth, box.OutlineViewportBottom);
+                graphics.ClipRectangle(outlineClip.X, outlineClip.Y, outlineClip.Width, outlineClip.Height);
+            }
             double viewportBottom = box.OutlineViewportBottom.GetValueOrDefault(clipTop - box.BoxHeight);
             bool hasViewport = viewportBottom > clipTop - box.BoxHeight;
             if (hasViewport)
@@ -355,7 +363,9 @@ internal sealed partial class DocxRenderer
             graphics.SetLineWidth(strokeWidth);
             graphics.StrokeRectangle(clipX, clipTop - box.BoxHeight, box.BoxWidth, box.BoxHeight);
             if (hasViewport) graphics.RestoreState();
+            if (cellClip is not null) graphics.RestoreState();
         }
+        if (cellClip is not null) graphics.ClipRectangle(cellClip.X, cellClip.Y, cellClip.Width, cellClip.Height);
         // The containing drawing viewport owns the outline. Only children
         // acquire this interior clip; clipping before stroking halves the border.
         graphics.ClipRectangle(clipX, clipTop - box.BoxHeight, box.BoxWidth, box.BoxHeight);
