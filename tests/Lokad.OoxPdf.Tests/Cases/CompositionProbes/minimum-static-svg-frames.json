@@ -1,0 +1,90 @@
+[
+  {
+    "Id": "minimum-passive-svg-header-ordinary11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-passive-svg-header-ordinary11.docx",
+    "Sha256": "C1A7F29682F4662EAF475263D0EE5A40C50424556A8915A5FBB5DC94C0DBE2DF",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-passive-picture-header-ordinary11.docx",
+    "SourceSha256": "43A463112520918C6ED5A42ECC65A0279068AC7F8284FB4A523790617F55387D",
+    "BodyCanonicalSha256": "904F277C26227AE95A558483D543726BFDE7D48E782E2D3CF3FF4572D94C50C1",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Public minimum Top. AV To WA.",
+      "Alpha public body before note  and after note. AV To WA.",
+      "Public minimum AfterAlpha. AV To WA.",
+      "Bravo public body before note  and after note. AV To WA.",
+      "Public minimum AfterBravo. AV To WA.",
+      "Charlie public body before note  and after note. AV To WA.",
+      "Delta public body before note  and after note. AV To WA.",
+      "Public minimum AfterDelta. AV To WA."
+    ],
+    "Story": "header",
+    "Part": "word/passive-minimum-picture-header.xml",
+    "ImageWidth": 18,
+    "ImageHeight": 9,
+    "StoryDistance": 36,
+    "Change": "Replace only static drawing/media with canonical SVG plus PNG preview at the same18x9pt extent; body/style entries exact.",
+    "SvgViewBox": [
+      0,
+      0,
+      120,
+      60
+    ],
+    "SvgWitnessColor": [
+      0,
+      170,
+      102
+    ],
+    "SvgWitnessRect": [
+      10,
+      8,
+      100,
+      44
+    ]
+  },
+  {
+    "Id": "minimum-passive-svg-footer-ordinary11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-passive-svg-footer-ordinary11.docx",
+    "Sha256": "A586BA24E0FD17CCD5C3448776C22D607D2177AE4BD89ED66D9F0CECC0708EED",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-passive-picture-footer-ordinary11.docx",
+    "SourceSha256": "DECAB5662CE0299E0BE504BB6534007759804A2F442AC858A9592892EAD5AE42",
+    "BodyCanonicalSha256": "904F277C26227AE95A558483D543726BFDE7D48E782E2D3CF3FF4572D94C50C1",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Public minimum Top. AV To WA.",
+      "Alpha public body before note  and after note. AV To WA.",
+      "Public minimum AfterAlpha. AV To WA.",
+      "Bravo public body before note  and after note. AV To WA.",
+      "Public minimum AfterBravo. AV To WA.",
+      "Charlie public body before note  and after note. AV To WA.",
+      "Delta public body before note  and after note. AV To WA.",
+      "Public minimum AfterDelta. AV To WA."
+    ],
+    "Story": "footer",
+    "Part": "word/passive-minimum-picture-footer.xml",
+    "ImageWidth": 18,
+    "ImageHeight": 9,
+    "StoryDistance": 36,
+    "Change": "Replace only static drawing/media with canonical SVG plus PNG preview at the same18x9pt extent; body/style entries exact.",
+    "SvgViewBox": [
+      0,
+      0,
+      120,
+      60
+    ],
+    "SvgWitnessColor": [
+      0,
+      170,
+      102
+    ],
+    "SvgWitnessRect": [
+      10,
+      8,
+      100,
+      44
+    ]
+  }
+]

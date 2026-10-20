@@ -29,6 +29,7 @@ passive.add_argument('--passive-footers', action='store_true')
 passive.add_argument('--passive-picture-probes', action='store_true')
 passive.add_argument('--static-picture-frame-probes', action='store_true')
 passive.add_argument('--composed-static-picture-probe', action='store_true')
+passive.add_argument('--static-svg-frame-probes', action='store_true')
 passive.add_argument('--page-field-probes', action='store_true')
 passive.add_argument('--inactive-static-probes', action='store_true')
 passive.add_argument('--inactive-note-probe', action='store_true')
@@ -43,6 +44,58 @@ cases = root / 'tests/Lokad.OoxPdf.Tests/Cases'
 output = cases / 'CompositionProbes'
 output.mkdir(exist_ok=True)
 w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+
+if args.static_svg_frame_probes:
+    a = '{http://schemas.openxmlformats.org/drawingml/2006/main}'
+    wp = '{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}'
+    pic = '{http://schemas.openxmlformats.org/drawingml/2006/picture}'
+    r = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
+    asvg = '{http://schemas.microsoft.com/office/drawing/2016/SVG/main}'
+    rel = '{http://schemas.openxmlformats.org/package/2006/relationships}'
+    ct = '{http://schemas.openxmlformats.org/package/2006/content-types}'
+    with ZipFile(cases / 'docx-svg-header.docx') as archive:
+        drawing = E.fromstring(archive.read('word/header1.xml')).find('.//' + w + 'drawing')
+        vector = archive.read('word/media/vector.svg')
+        preview = archive.read('word/media/preview.png')
+    drawing.find('.//' + a + 'blip').set(r + 'embed', 'rIdPassiveMinimumPicture')
+    drawing.find('.//' + asvg + 'svgBlip').set(r + 'embed', 'rIdPassiveMinimumSvg')
+    drawing.find('.//' + wp + 'docPr').set('id', '40002')
+    for extent in [drawing.find('.//' + wp + 'extent'), drawing.find('.//' + pic + 'spPr/' + a + 'xfrm/' + a + 'ext')]:
+        extent.set('cx', str(18 * 12700)); extent.set('cy', str(9 * 12700))
+    rows, prepared = [], []
+    for parent in json.loads((output / 'minimum-passive-pictures.json').read_text()):
+        source = root / parent['Input']; original = source.read_bytes()
+        assert hashlib.sha256(original).hexdigest().upper() == parent['Sha256']
+        with ZipFile(BytesIO(original)) as archive:
+            entries = {name: archive.read(name) for name in archive.namelist()}
+        parts = entries.copy(); story = E.fromstring(parts[parent['Part']])
+        run = story.find(w + 'p/' + w + 'r'); run.remove(run.find(w + 'drawing')); run.append(copy.deepcopy(drawing))
+        parts[parent['Part']] = E.tostring(story, encoding='utf-8', xml_declaration=True)
+        relationship_part = 'word/_rels/' + parent['Part'].split('/')[-1] + '.rels'
+        relationships = E.fromstring(parts[relationship_part])
+        E.SubElement(relationships, rel + 'Relationship', {'Id': 'rIdPassiveMinimumSvg',
+            'Type': r[1:-1] + '/image', 'Target': 'media/passive-minimum-picture.svg'})
+        parts[relationship_part] = E.tostring(relationships, encoding='utf-8', xml_declaration=True)
+        parts['word/media/passive-minimum-picture.png'] = preview
+        parts['word/media/passive-minimum-picture.svg'] = vector
+        types = E.fromstring(parts['[Content_Types].xml'])
+        assert not any(item.get('Extension') == 'svg' for item in types)
+        E.SubElement(types, ct + 'Default', {'Extension': 'svg', 'ContentType': 'image/svg+xml'})
+        parts['[Content_Types].xml'] = E.tostring(types, encoding='utf-8', xml_declaration=True)
+        changed = {parent['Part'], relationship_part, 'word/media/passive-minimum-picture.png', '[Content_Types].xml'}
+        assert all(parts[name] == data for name, data in entries.items() if name not in changed)
+        identifier = 'minimum-passive-svg-' + parent['Story'] + '-ordinary11'; generated = package_bytes(parts)
+        rows.append(dict(parent, Id=identifier, Input=(output.relative_to(root) / (identifier + '.docx')).as_posix(),
+            Sha256=hashlib.sha256(generated).hexdigest().upper(), SourceInput=parent['Input'], SourceSha256=parent['Sha256'],
+            SvgViewBox=[0, 0, 120, 60], SvgWitnessColor=[0, 170, 102], SvgWitnessRect=[10, 8, 100, 44],
+            Change='Replace only static drawing/media with canonical SVG plus PNG preview at the same18x9pt extent; body/style entries exact.'))
+        prepared.append((output / (identifier + '.docx'), generated))
+    prepared.append((output / 'minimum-static-svg-frames.json', manifest_bytes(rows)))
+    for target, data in prepared:
+        if args.write: publish(target, data)
+        else: assert target.read_bytes() == data, target.name
+    print('Two canonical SVG/preview frame probes verified; body and style entries exact.')
+    raise SystemExit(0)
 
 if args.composed_static_picture_probe:
     source_row = next(row for row in json.loads((cases / 'Composition/portfolio.json').read_text()) if row['Id'] == 'report')
