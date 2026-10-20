@@ -28,7 +28,7 @@ $artifacts=[IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $commonDirector
 if (!$output.StartsWith($artifacts+[IO.Path]::DirectorySeparatorChar,$comparison)) { throw 'Publish qualification outputs under the shared artifacts directory' }
 $logs=$output+'.build'
 if ((Test-Path -LiteralPath $output) -or (Test-Path -LiteralPath $logs)) { throw 'Use fresh artifact and build-log directories' }
-$projects=@('tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj','src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj')
+$projects=@('tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj','src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj','tools/Lokad.OoxPdf.DocxInspect/Lokad.OoxPdf.DocxInspect.csproj')
 $freeze=Join-Path $source 'tools/FreezeQualificationArtifact.ps1'
 foreach ($path in @($projects | ForEach-Object { Join-Path $source $_ }) + @($freeze)) {
     if (!(Test-Path -LiteralPath $path -PathType Leaf)) { throw ('Qualification input is missing: '+$path) }

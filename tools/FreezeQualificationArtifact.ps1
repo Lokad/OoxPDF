@@ -16,7 +16,7 @@ $status = @(git -C $repo status --porcelain --untracked-files=normal)
 if ($LASTEXITCODE -ne 0 -or $status.Count) { throw 'Commit source and public inputs before freezing' }
 # A test-only rebuild can update the library while leaving the CLI copy stale.
 # Reject mixed runtime copies before creating an immutable snapshot.
-$libraryCopies = @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests') |
+$libraryCopies = @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests', 'tools/Lokad.OoxPdf.DocxInspect') |
     ForEach-Object { (Get-FileHash -LiteralPath (Join-Path $repo ($_ + '/bin/Release/net10.0/Lokad.OoxPdf.dll'))).Hash }
 if (@($libraryCopies | Sort-Object -Unique).Count -ne 1) {
     throw 'Release library copies differ; refresh the dependent outputs before freezing'
@@ -90,7 +90,7 @@ $assets = [ordered]@{}
 $assetCopies = @{}
 $sharedAssetFiles = 0
 $sharedAssetBytes = 0L
-foreach ($project in @('src/Lokad.OoxPdf','src/Lokad.OoxPdf.Cli','tests/Lokad.OoxPdf.Tests')) {
+foreach ($project in @('src/Lokad.OoxPdf','src/Lokad.OoxPdf.Cli','tests/Lokad.OoxPdf.Tests','tools/Lokad.OoxPdf.DocxInspect')) {
     $relative = $project + '/bin/Release/net10.0'
     $source = Join-Path $repo $relative
     if (!(Test-Path -LiteralPath $source)) { throw ('Missing Release output: ' + $project) }

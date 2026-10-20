@@ -99,6 +99,10 @@ $finalPin.Inputs[$inputName]=(Get-FileHash -LiteralPath (Join-Path $repo ('artif
 $finalPin.Assets[$deps]='E'*64;Write-Json $finalPinPath $finalPin
 Reject 'changed-runtime' 'Frozen runtime assets differ'
 $finalPin.Assets[$deps]=(Get-FileHash -LiteralPath (Join-Path $repo ('artifacts/after/'+$deps))).Hash
+Write-Text (Join-Path $repo 'Directory.Build.props') '<Project><PropertyGroup><CheckForOverflowUnderflow>true</CheckForOverflowUnderflow></PropertyGroup></Project>'
+$null=Invoke-Git @('add','Directory.Build.props');$null=Invoke-Git @('commit','--quiet','-m','production build-setting change')
+$finalPin.Revision=[string](Invoke-Git @('rev-parse','HEAD'));Write-Json $finalPinPath $finalPin
+Reject 'changed-build-setting' 'Production source changed'
 Write-Text (Join-Path $repo 'src/source.txt') 'changed production'
 $null=Invoke-Git @('add','src/source.txt');$null=Invoke-Git @('commit','--quiet','-m','production change')
 $finalPin.Revision=[string](Invoke-Git @('rev-parse','HEAD'));Write-Json $finalPinPath $finalPin

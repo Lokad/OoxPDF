@@ -25,6 +25,7 @@ Invoke-Git @('config', 'user.email', 'qualification@example.invalid')
 Invoke-Git @('config', 'core.autocrlf', 'false')
 if ($IsWindows) { Invoke-Git @('config', 'core.longpaths', 'true') }
 @('bin/', 'artifacts/') | Set-Content -LiteralPath (Join-Path $repo '.gitignore')
+'<Project />' | Set-Content -LiteralPath (Join-Path $repo 'Directory.Build.props')
 Copy-Item -LiteralPath (Join-Path (Split-Path $PSScriptRoot) '.gitattributes') -Destination $repo
 $inputPath = 'tests/Lokad.OoxPdf.Tests/Cases/sample.txt'
 $inputFile = Join-Path $repo $inputPath
@@ -33,7 +34,7 @@ New-Item -ItemType Directory -Path (Split-Path $inputFile) -Force | Out-Null
 $nested = Join-Path (Split-Path $inputFile) 'nested/second.txt'
 New-Item -ItemType Directory -Path (Split-Path $nested) -Force | Out-Null
 [IO.File]::WriteAllText($nested, "nested fixture`n")
-foreach ($project in @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests')) {
+foreach ($project in @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests', 'tools/Lokad.OoxPdf.DocxInspect')) {
     $directory = Join-Path $repo ($project + '/bin/Release/net10.0')
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
     'same fake library; no executable code' | Set-Content -LiteralPath (Join-Path $directory 'Lokad.OoxPdf.dll')
@@ -108,6 +109,34 @@ if ((Get-FileHash -LiteralPath $firstLibrary).Hash -ne $libraryHash -or
     throw 'Transferred outputs alias frozen assets or each other'
 }
 [IO.File]::WriteAllBytes((Join-Path $repo $cliLibraryRelative), $libraryBytes)
+function Reject-Transfer([string] $Name) {
+    $destination = Join-Path $OutputDirectory $Name
+    $rejected = $false
+    try {
+        & $transferScript -ArtifactDirectory (Join-Path $repo 'artifacts/first') -QualificationEvidence $qualification `
+            -SmokeManifest $smoke -OutputDirectory $destination | Out-Null
+    }
+    catch {
+        if (!$_.Exception.Message.Contains('build-setting transfer identity differs')) { throw }
+        $rejected = $true
+    }
+    if (!$rejected -or (Test-Path -LiteralPath $destination) -or
+        (Get-FileHash -LiteralPath (Join-Path $repo $libraryRelative)).Hash -ne $libraryHash) {
+        throw 'Build-setting refusal must precede transfer writes'
+    }
+}
+'<Project><PropertyGroup><CheckForOverflowUnderflow>true</CheckForOverflowUnderflow></PropertyGroup></Project>' |
+    Set-Content -LiteralPath (Join-Path $repo 'Directory.Build.props')
+Reject-Transfer 'dirty-build-setting'
+Invoke-Git @('add', 'Directory.Build.props')
+Invoke-Git @('commit', '--quiet', '-m', 'Changed production build setting')
+Reject-Transfer 'committed-build-setting'
+'<Project />' | Set-Content -LiteralPath (Join-Path $repo 'Directory.Build.props')
+Invoke-Git @('add', 'Directory.Build.props')
+Invoke-Git @('commit', '--quiet', '-m', 'Restore production build setting')
+'<Project />' | Set-Content -LiteralPath (Join-Path $repo 'Directory.Build.targets')
+Reject-Transfer 'new-root-targets'
+Remove-Item -LiteralPath (Join-Path $repo 'Directory.Build.targets')
 if ($first.ReusedInputSnapshot -or !$second.ReusedInputSnapshot -or
     $first.InputSnapshot -ne $second.InputSnapshot -or $first.InputTree -ne $second.InputTree) { throw 'Unchanged input reuse failed' }
 $link = Get-Item -LiteralPath (Join-Path $repo ('artifacts/second/' + (Split-Path $inputPath)))
@@ -137,7 +166,7 @@ Invoke-Git @('worktree', 'add', '--quiet', '--detach', $worktree, 'HEAD')
 if ((Get-FileHash -LiteralPath (Join-Path $worktree $inputPath)).Hash -ne (Get-FileHash -LiteralPath $inputFile).Hash) {
     throw 'Verbatim public fixtures changed under autocrlf checkout'
 }
-foreach ($project in @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests')) {
+foreach ($project in @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests', 'tools/Lokad.OoxPdf.DocxInspect')) {
     $relative = $project + '/bin/Release/net10.0'
     New-Item -ItemType Directory -Path (Join-Path $worktree $relative) -Force | Out-Null
     foreach ($asset in Get-ChildItem -LiteralPath (Join-Path $repo $relative) -File) {
@@ -236,8 +265,8 @@ Reject 'mixed' 'Release library copies differ'
         'Corrupt snapshot rejection', 'Mixed library rejection',
         'Owned parent input isolation', 'Owned parent reuse', 'Frozen parent destination rejection',
         'Duplicate asset sharing', 'Separate frozen output isolation', 'Writable build isolation',
-        'Independent transfer copies')
+        'Independent transfer copies', 'Dirty root build-setting refusal', 'Committed root build-setting refusal', 'New root targets refusal')
     LibraryBuilds=0;LibraryTestRuns=0;First=$first;Second=$second;Changed=$changed
     SharedInputPathLength=$changedNested.Length
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json') -Encoding utf8
-Write-Output 'Twenty fixture-freeze/asset/parent-ownership checks passed; no library build or test-suite replay.'
+Write-Output 'Twenty-three fixture-freeze/asset/parent-ownership checks passed; no library build or test-suite replay.'

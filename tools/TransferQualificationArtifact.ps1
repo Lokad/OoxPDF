@@ -13,11 +13,13 @@ $pin = Get-Content (Join-Path $artifact 'identity.json') -Raw | ConvertFrom-Json
 $qualification = Get-Content -LiteralPath $QualificationEvidence -Raw | ConvertFrom-Json
 if ($qualification.LibrarySha256 -ne $pin.LibrarySha256 -or
     $qualification.TestAssemblySha256 -ne $pin.TestAssemblySha256) { throw 'Qualification identities differ' }
-$source = @(git -C $repo ls-tree -r $pin.Revision -- src tests)
+# Root imports can change compiled behavior without changing a source/project file.
+$buildInputs = @('src', 'tests', ':(top,glob)*.props', ':(top,glob)*.targets',
+    'Directory.Build.rsp', 'global.json', 'NuGet.Config', 'nuget.config', '.gitattributes')
+$changes = @(git -C $repo diff --name-only $pin.Revision HEAD -- @buildInputs)
 if ($LASTEXITCODE -ne 0) { throw 'Frozen source revision is unavailable' }
-$current = @(git -C $repo ls-tree -r HEAD -- src tests)
-if ($LASTEXITCODE -ne 0 -or @(Compare-Object $source $current).Count -or
-    @(git -C $repo status --porcelain --untracked-files=normal -- src tests).Count) { throw 'Source/input transfer identity differs' }
+if ($changes.Count -or
+    @(git -C $repo status --porcelain --untracked-files=normal -- @buildInputs).Count) { throw 'Source/input/build-setting transfer identity differs' }
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'A fresh transfer evidence directory is required' }
 $jobs = @(Get-Content -LiteralPath $SmokeManifest -Raw | ConvertFrom-Json)
 if (!$jobs.Count) { throw 'Select a small nonempty integration smoke set' }

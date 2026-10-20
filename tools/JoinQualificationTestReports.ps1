@@ -47,7 +47,8 @@ foreach ($artifact in $pins.Keys) {
         $pin.TestAssemblySha256 -ne $pin.Assets['tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll']) {
         throw 'Frozen assembly metadata differs from asset identities'
     }
-    $sourceChanges=@(& git -C $repo diff --name-only $first.Revision $pin.Revision -- src)
+    $sourceChanges=@(& git -C $repo diff --name-only $first.Revision $pin.Revision -- src `
+        ':(top,glob)*.props' ':(top,glob)*.targets' Directory.Build.rsp global.json NuGet.Config nuget.config .gitattributes)
     if ($LASTEXITCODE -ne 0) { throw 'Frozen source revisions are unavailable' }
     if ($sourceChanges.Count) { throw 'Production source changed; qualify the changed runtime separately' }
     if ($pin.Assets.Count -ne $first.Assets.Count -or

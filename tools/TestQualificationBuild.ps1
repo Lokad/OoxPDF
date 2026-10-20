@@ -16,12 +16,12 @@ git -C $repo config user.name 'Qualification test'
 git -C $repo config user.email 'qualification@example.invalid'
 'artifacts/' | Set-Content -LiteralPath (Join-Path $repo '.gitignore')
 'Committed source marker' | Set-Content -LiteralPath (Join-Path $repo 'marker.txt')
-foreach ($relative in @('tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj','src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj')) {
+foreach ($relative in @('tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj','src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj','tools/Lokad.OoxPdf.DocxInspect/Lokad.OoxPdf.DocxInspect.csproj')) {
     $project=Join-Path $repo $relative
     New-Item -ItemType Directory -Path (Split-Path $project) -Force | Out-Null
     '<Project />' | Set-Content -LiteralPath $project
 }
-New-Item -ItemType Directory -Path (Join-Path $repo 'tools') | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $repo 'tools') -Force | Out-Null
 @'
 param($OutputDirectory)
 New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
@@ -104,7 +104,7 @@ try {
     try { & $BuildScript -WorktreeDirectory $worktree -Revision $revision -OutputDirectory $destination | Out-Null }
     finally { Pop-Location }
     $builds=@($global:ooxPdfBuildGuardCalls | Select-Object -Skip $before)
-    if ($builds.Count -ne 2) { throw 'Expected test/CLI builds once each' }
+    if ($builds.Count -ne 3) { throw 'Expected test/CLI/DOCX inspector builds once each' }
     foreach ($arguments in $builds) {
         if ($arguments[0] -ne 'build' -or ![IO.Path]::IsPathFullyQualified($arguments[1]) -or
             !$arguments[1].StartsWith($worktree+[IO.Path]::DirectorySeparatorChar) -or
