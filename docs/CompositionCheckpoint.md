@@ -1,5 +1,30 @@
 # Composed-document reliability checkpoint
 
+## C347 compound picture navigation survives ordinary combinations (2026-10-20)
+
+Add only five canonical click targets/relationships to the held-out composed
+report. XML reversal verifies all visible source content unchanged. Reuse C346:
+two CLI/two fresh Word views, zero builds/console tests. Both retain three pages,
+12 equations/five source pictures/three boxes and nine painted image instances.
+All parent text/drawings/image records and native paint streams match; two
+existing prose URI rectangles exact. Both body picture links follow visible frames
+within.000031pt. Seven note/repeated-footer URI instances per mode remain missing;
+C348 targets six static instances through already placed paint items, no new
+coordinate model. Notes/complex/partial/SVG/rotation/floating remain staged.
+
+Two strict pixel failures and review bodyY1.440/mathY1.117/imageY1.192/separator
+1.125pt remain. Raw matched Word URI errors Final.799/review49.108pt retained.
+Both source screens keep cached1 deficits4/3 and fldChar/fldSimple flags, with no
+Office-token/simple-math deficit. URI observer matches page/target and records
+unmatched owners even when totals differ; optional target sets separate picture
+and prose checks. Existing six controls keep exactly two raw review failures.
+Initial read-only preflight omitted two pre-existing prose URI rectangles from
+its count assumption; corrected explicit target selection, no output/conversion
+repeated. No renderer/API change or fidelity claim. Evidence
+artifacts/composition-c1/compound-picture-navigation-evidence.json.
+C345/C346 pushed bf68c3ae, CI39375591335 running while work continues.
+Version0.1.5/release deferred; last17.186GB workspace above loose5GB target.
+
 ## C346 canonical raster picture links share physical paint frames (2026-10-20)
 
 Canonical external wp:docPr/a:hlinkClick metadata now survives reading and emits
