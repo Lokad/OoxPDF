@@ -26,6 +26,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 passive = parser.add_mutually_exclusive_group()
 passive.add_argument('--passive-headers', action='store_true')
 passive.add_argument('--passive-footers', action='store_true')
+passive.add_argument('--passive-picture-probes', action='store_true')
 passive.add_argument('--page-field-probes', action='store_true')
 passive.add_argument('--inactive-static-probes', action='store_true')
 passive.add_argument('--inactive-note-probe', action='store_true')
@@ -40,6 +41,99 @@ cases = root / 'tests/Lokad.OoxPdf.Tests/Cases'
 output = cases / 'CompositionProbes'
 output.mkdir(exist_ok=True)
 w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+
+if args.passive_picture_probes:
+    source = cases / 'ordinary-eleven-point-minimum.docx'
+    original = source.read_bytes()
+    with ZipFile(BytesIO(original)) as archive:
+        infos = archive.infolist()
+        entries = {item.filename: archive.read(item.filename) for item in infos}
+    a = '{http://schemas.openxmlformats.org/drawingml/2006/main}'
+    wp = '{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}'
+    pic = '{http://schemas.openxmlformats.org/drawingml/2006/picture}'
+    r = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
+    rel = '{http://schemas.openxmlformats.org/package/2006/relationships}'
+    ct = '{http://schemas.openxmlformats.org/package/2006/content-types}'
+    donor = cases / 'InlineBoxMath/inline-box-picture-body.docx'
+    with ZipFile(donor) as archive:
+        drawing_source = E.fromstring(archive.read('word/document.xml'))
+        inline = copy.deepcopy(next(node for node in drawing_source.iter(wp + 'inline') if node.find('.//' + pic + 'pic') is not None))
+        relation_id = inline.find('.//' + a + 'blip').get(r + 'embed')
+        relation = next(item for item in E.fromstring(archive.read('word/_rels/document.xml.rels')) if item.get('Id') == relation_id)
+        image_part = relation.get('Target')
+        image_part = image_part.lstrip('/') if image_part.startswith('/') else 'word/' + image_part
+        payload = archive.read(image_part)
+    width, height = 18, 9
+    for extent in [inline.find(wp + 'extent'), inline.find('.//' + pic + 'spPr/' + a + 'xfrm/' + a + 'ext')]:
+        extent.set('cx', str(width * 12700)); extent.set('cy', str(height * 12700))
+    inline.find('.//' + a + 'blip').set(r + 'embed', 'rIdPassiveMinimumPicture')
+    inline.find(wp + 'docPr').set('id', '40001')
+    inline.find(wp + 'docPr').set('name', 'Public passive raster')
+    rows, prepared = [], []
+    for kind in ['header', 'footer']:
+        parts = entries.copy()
+        document = E.fromstring(parts['word/document.xml'])
+        body = document.find(w + 'body')
+        before = b''.join(E.tostring(child) for child in body if child.tag != w + 'sectPr')
+        section = body.find(w + 'sectPr')
+        assert section.find(w + kind + 'Reference') is None
+        section.insert(0, E.Element(w + kind + 'Reference', {w + 'type': 'default', r + 'id': 'rIdPassiveMinimumStory'}))
+        section.find(w + 'pgMar').set(w + kind, '720')
+        assert b''.join(E.tostring(child) for child in body if child.tag != w + 'sectPr') == before
+        parts['word/document.xml'] = E.tostring(document, encoding='utf-8', xml_declaration=True)
+        part = 'word/passive-minimum-picture-' + kind + '.xml'
+        relationships = E.fromstring(parts['word/_rels/document.xml.rels'])
+        assert all(item.get('Id') != 'rIdPassiveMinimumStory' for item in relationships)
+        E.SubElement(relationships, rel + 'Relationship', {'Id': 'rIdPassiveMinimumStory',
+            'Type': r[1:-1] + '/' + kind, 'Target': part.split('/')[-1]})
+        parts['word/_rels/document.xml.rels'] = E.tostring(relationships, encoding='utf-8', xml_declaration=True)
+        types = E.fromstring(parts['[Content_Types].xml'])
+        E.SubElement(types, ct + 'Override', {'PartName': '/' + part,
+            'ContentType': 'application/vnd.openxmlformats-officedocument.wordprocessingml.' + kind + '+xml'})
+        if not any(item.get('Extension') == 'png' for item in types):
+            E.SubElement(types, ct + 'Default', {'Extension': 'png', 'ContentType': 'image/png'})
+        parts['[Content_Types].xml'] = E.tostring(types, encoding='utf-8', xml_declaration=True)
+        story = E.Element(w + ('hdr' if kind == 'header' else 'ftr'))
+        paragraph = E.SubElement(story, w + 'p')
+        properties = E.SubElement(paragraph, w + 'pPr')
+        E.SubElement(properties, w + 'spacing', {w + 'before': '0', w + 'after': '0', w + 'line': '240', w + 'lineRule': 'auto'})
+        mark = E.SubElement(properties, w + 'rPr')
+        E.SubElement(mark, w + 'sz', {w + 'val': '22'})
+        run = E.SubElement(paragraph, w + 'r')
+        E.SubElement(run, w + 'drawing').append(copy.deepcopy(inline))
+        parts[part] = E.tostring(story, encoding='utf-8', xml_declaration=True)
+        links = E.Element(rel + 'Relationships')
+        E.SubElement(links, rel + 'Relationship', {'Id': 'rIdPassiveMinimumPicture',
+            'Type': r[1:-1] + '/image', 'Target': 'media/passive-minimum-picture.png'})
+        parts['word/_rels/' + part.split('/')[-1] + '.rels'] = E.tostring(links, encoding='utf-8', xml_declaration=True)
+        parts['word/media/passive-minimum-picture.png'] = payload
+        buffer = BytesIO()
+        with ZipFile(buffer, 'w') as archive:
+            for info in infos: archive.writestr(copy.copy(info), parts[info.filename])
+            for name in sorted(set(parts) - set(entries)):
+                from zipfile import ZipInfo, ZIP_DEFLATED
+                info = ZipInfo(name, (2026, 1, 1, 0, 0, 0)); info.compress_type = ZIP_DEFLATED; info.create_system = 0
+                archive.writestr(info, parts[name])
+        generated = buffer.getvalue()
+        identifier = 'minimum-passive-picture-' + kind + '-ordinary11'
+        rows.append(dict(Id=identifier, Input=(output.relative_to(root) / (identifier + '.docx')).as_posix(),
+            Sha256=hashlib.sha256(generated).hexdigest().upper(), SourceInput=source.relative_to(root).as_posix(),
+            SourceSha256=hashlib.sha256(original).hexdigest().upper(), BodyCanonicalSha256=hashlib.sha256(before).hexdigest().upper(),
+            HeldOut=True, ExpectedEquationCount=0, ExpectedInlineImageCount=1,
+            ExpectedText=[''.join(t.text or '' for t in p.iter(w + 't')) for p in body.findall(w + 'p')],
+            Story=kind, Part=part, ImageWidth=width, ImageHeight=height, StoryDistance=36,
+            Change='Add one small raster in an automatic static paragraph; preserve every body source paragraph.'))
+        prepared.append((output / (identifier + '.docx'), generated))
+    prepared.append((output / 'minimum-passive-pictures.json', (json.dumps(rows, indent=2) + '\n').replace('\n', '\r\n').encode()))
+    for target, generated in prepared:
+        if args.write:
+            staging = target.with_suffix(target.suffix + '.staging')
+            with staging.open('xb') as stream: stream.write(generated)
+            staging.replace(target)
+        else:
+            assert target.read_bytes() == generated, target.name
+    print('Two passive static-picture controls verified; body paragraphs exact.')
+    raise SystemExit(0)
 
 if args.field_code_probes or args.simple_field_mark_probes or args.simple_field_format_probes:
     source = next(row for row in json.loads((output / 'minimum-passive-page-fields.json').read_text())

@@ -1,0 +1,56 @@
+[
+  {
+    "Id": "minimum-passive-picture-header-ordinary11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-passive-picture-header-ordinary11.docx",
+    "Sha256": "43A463112520918C6ED5A42ECC65A0279068AC7F8284FB4A523790617F55387D",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/ordinary-eleven-point-minimum.docx",
+    "SourceSha256": "3017D16D416135BBAB97515161A239EB9D334D98D01CD9E6B39E527E4CCD591A",
+    "BodyCanonicalSha256": "904F277C26227AE95A558483D543726BFDE7D48E782E2D3CF3FF4572D94C50C1",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Public minimum Top. AV To WA.",
+      "Alpha public body before note  and after note. AV To WA.",
+      "Public minimum AfterAlpha. AV To WA.",
+      "Bravo public body before note  and after note. AV To WA.",
+      "Public minimum AfterBravo. AV To WA.",
+      "Charlie public body before note  and after note. AV To WA.",
+      "Delta public body before note  and after note. AV To WA.",
+      "Public minimum AfterDelta. AV To WA."
+    ],
+    "Story": "header",
+    "Part": "word/passive-minimum-picture-header.xml",
+    "ImageWidth": 18,
+    "ImageHeight": 9,
+    "StoryDistance": 36,
+    "Change": "Add one small raster in an automatic static paragraph; preserve every body source paragraph."
+  },
+  {
+    "Id": "minimum-passive-picture-footer-ordinary11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-passive-picture-footer-ordinary11.docx",
+    "Sha256": "DECAB5662CE0299E0BE504BB6534007759804A2F442AC858A9592892EAD5AE42",
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/ordinary-eleven-point-minimum.docx",
+    "SourceSha256": "3017D16D416135BBAB97515161A239EB9D334D98D01CD9E6B39E527E4CCD591A",
+    "BodyCanonicalSha256": "904F277C26227AE95A558483D543726BFDE7D48E782E2D3CF3FF4572D94C50C1",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedInlineImageCount": 1,
+    "ExpectedText": [
+      "Public minimum Top. AV To WA.",
+      "Alpha public body before note  and after note. AV To WA.",
+      "Public minimum AfterAlpha. AV To WA.",
+      "Bravo public body before note  and after note. AV To WA.",
+      "Public minimum AfterBravo. AV To WA.",
+      "Charlie public body before note  and after note. AV To WA.",
+      "Delta public body before note  and after note. AV To WA.",
+      "Public minimum AfterDelta. AV To WA."
+    ],
+    "Story": "footer",
+    "Part": "word/passive-minimum-picture-footer.xml",
+    "ImageWidth": 18,
+    "ImageHeight": 9,
+    "StoryDistance": 36,
+    "Change": "Add one small raster in an automatic static paragraph; preserve every body source paragraph."
+  }
+]
