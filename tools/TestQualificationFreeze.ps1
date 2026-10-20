@@ -195,7 +195,15 @@ function Set-Content {
         if ($LiteralPath -match '[.]staging-[0-9a-f]+[\\/]identity[.]json$') {
             $staged = Split-Path $LiteralPath
             $winner = $staged.Substring(0, $staged.LastIndexOf('.staging-', [StringComparison]::Ordinal))
-            Microsoft.PowerShell.Management\Copy-Item -LiteralPath $staged -Destination $winner -Recurse
+            # Write independent bytes before applying protection. Recursive
+            # Copy-Item can create an unwritable destination on WSL/NTFS when
+            # the synthetic winner's source is already read-only.
+            foreach ($file in Get-ChildItem -LiteralPath $staged -File -Recurse) {
+                $target = Join-Path $winner ([IO.Path]::GetRelativePath($staged, $file.FullName))
+                New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
+                [IO.File]::WriteAllBytes($target, [IO.File]::ReadAllBytes($file.FullName))
+                (Get-Item -LiteralPath $target).IsReadOnly = $file.IsReadOnly
+            }
         }
     }
 }

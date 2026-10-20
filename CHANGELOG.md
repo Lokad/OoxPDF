@@ -11,6 +11,9 @@
 - Simplifies shared bounded font-cache ownership and removes duplicated PDF
   validation work, dead helpers, obsolete pattern constructors and test-only
   forwarding APIs. Essential PDF structural validation remains.
+- Fixes concurrent requests to both built-in font resolvers while retaining
+  bounded caching. Clarifies that failed caller-stream conversions can leave an
+  incomplete prefix; atomic file publication remains unchanged.
 - Removes ineffective `Deterministic`, library `Strict` and cumulative work or
   nonrefunding memory quotas. Uses cooperative cancellation and optional coarse
   host memory admission; preserves input/output bounds, bounded page staging,

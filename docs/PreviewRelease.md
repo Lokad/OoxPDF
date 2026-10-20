@@ -36,14 +36,22 @@ cosmetic residuals. Manifest validity counts do not measure Office fidelity.
 Unknown content or severe geometry failures must be resolved or explicitly
 excluded from supported scope before accepting the candidate.
 
-The frozen runtime is qualified from source commit `6f750f6e`: 3,712 Windows
-tests passed (16 skips), and the exact same runtime passed 792 Ubuntu tests
-(43 skips). Both platforms consume the same packed DLL. The nine-document,
-sixteen-outcome portfolio retains all accepted PDF bytes and matching Office
-page counts. Its two PPTX outcomes pass the strict pixel gate; all fourteen DOCX
-outcomes retain their existing strict visual failures. No thresholds changed.
-[Candidate CI](https://github.com/Lokad/OoxPDF/actions/runs/39404138180) also
-passed the independent Windows/Ubuntu build and package checks.
+The review follow-up freezes source `01827c40`. All 48 affected checks pass
+within one Windows broad invocation: 3,719 pass, 11 skip, and one inherited
+balloon-wrapping assertion fails identically against the previous qualified DLL
+on the same machine. The assertion and rendering policy remain unchanged. The
+exact frozen runtime passes 796 Ubuntu checks with 43 environmental skips.
+Windows and Ubuntu package consumers use the same packed DLL. Independent
+platform build/package checks are recorded in
+[candidate CI](https://github.com/Lokad/OoxPDF/actions/runs/39452164339).
+
+All sixteen portfolio PDFs and diagnostic lists remain byte-identical to the
+accepted baseline, with matching Office page counts. Two PPTX strict pixel gates
+pass; fourteen DOCX strict gates remain failed. No thresholds changed. Shared
+resolver request caches now synchronize hits, publication and bounded eviction.
+Stream-failure documentation explicitly requires discarding incomplete output;
+file publication remains atomic. No additional public API was removed by this
+follow-up.
 
 The source, runtime, package and report identities are retained in the local
 candidate record. Preparatory builds with different compiler outputs are kept
@@ -53,6 +61,12 @@ symbols reuse the qualified library and PDB. No performance speedup is claimed.
 Broader features and optimization are deferred.
 
 ## Remaining document differences
+
+- The local balloon-wrap assertion observes a 12.61pt single-row body where its
+  Office-derived expectation requires a second row. The old and new DLLs agree.
+  Previous CI skipped this check because Aptos was absent. Its underlying cause
+  remains unresolved; no new font/document-shape guard or relaxed assertion was
+  introduced. Review balloons remain approximate.
 
 - Strict DOCX failures include typography and geometry differences; they are
   not all classified as cosmetic. The composed SVG report's Review prose
