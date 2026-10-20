@@ -1,5 +1,24 @@
 # Composed-document reliability checkpoint
 
+## C340 inline metadata wrappers omit supported content (2026-10-20)
+
+Four source-preserving customXml/smartTag controls cover mixed body content and
+ordinary picture/box cells. All eight native mode views lose prose, picture and
+box; mixed views also lose both equations. Eight independent Word exports keep
+all expected content, one image per view and eight math glyphs per mixed view.
+Fresh Word math/frame/following/image/prose geometry exactly equals retained
+unwrapped references. Viewed native/Word body pages visibly confirm omission.
+Only metadata wrappers change; removing each recovers source XML. Other package
+parts stay unchanged. Baseline raw/strict failures remain failed.
+
+No library builds or console tests; eight CLI/eight Word exports. Microsoft
+CustomXmlRun/RunTrackChangeType schema documentation supports these inline owners.
+C341 will share direct/nested paragraph dispatch and known metadata traversal,
+with source/revision/field/link/bookmark order, cancellation and hard breaks
+preserved. No arbitrary wrapper flattening or layout rewrite. Evidence artifacts/
+composition-c1/inline-metadata-wrappers-review-evidence.json. Fixtures71d1e213,
+gold180c3e51; production unchanged. Version0.1.5/release deferred.
+
 ## C339 complete cell-owned outline envelopes (2026-10-20)
 
 Complete frames inside an unmerged cell/lower drawing viewport get an outline-only
