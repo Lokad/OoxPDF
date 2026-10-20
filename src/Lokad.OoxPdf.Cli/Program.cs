@@ -77,6 +77,13 @@ static int Run(string[] args)
 
     try
     {
+        // Validate before input detection: its failure handler can also write diagnostics.
+        if (diagnosticsPath is not null && (AreSamePath(diagnosticsPath, inputPath) || AreSamePath(diagnosticsPath, outputPath)))
+        {
+            Console.Error.WriteLine("Diagnostics output path must be different from input and output paths.");
+            return 2;
+        }
+
         OoxPdfInputKind inputKind = OoxPdfConverter.DetectInputKind(inputPath);
         if (docxMarkupSpecified && inputKind != OoxPdfInputKind.Docx)
         {
@@ -89,12 +96,6 @@ static int Run(string[] args)
         {
             Console.Error.WriteLine("--docx-markup-geometry can only be used with DOCX input.");
             PrintUsage();
-            return 2;
-        }
-
-        if (diagnosticsPath is not null && (AreSamePath(diagnosticsPath, inputPath) || AreSamePath(diagnosticsPath, outputPath)))
-        {
-            Console.Error.WriteLine("Diagnostics output path must be different from input and output paths.");
             return 2;
         }
 

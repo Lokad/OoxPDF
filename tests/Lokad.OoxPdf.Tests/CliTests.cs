@@ -159,6 +159,60 @@ internal static class CliTests
         TestAssert.True(File.Exists(diagnostics), "Malformed numeric input should still write diagnostics JSON.");
     }
 
+    public static void CliRejectsEarlyFailureDiagnosticsAliasingInput()
+        => AssertEarlyFailureDiagnosticAlias(outputAlias: false);
+
+    public static void CliRejectsEarlyFailureDiagnosticsAliasingOutput()
+        => AssertEarlyFailureDiagnosticAlias(outputAlias: true);
+
+    private static void AssertEarlyFailureDiagnosticAlias(bool outputAlias)
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "ooxpdf-cli-alias-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            // Detection failure, malformed package and missing input must all reject
+            // the alias before either success or failure diagnostics can be written.
+            foreach (string name in new[] { "unsupported.txt", "malformed.docx", "missing.docx" })
+            {
+                string input = Path.Combine(directory, name);
+                string output = Path.Combine(directory, "output.pdf");
+                bool exists = name != "missing.docx";
+                if (exists) { File.WriteAllText(input, "original input"); }
+                File.WriteAllText(output, "original destination");
+                string diagnostics = outputAlias ? output : Path.Combine(directory, ".", name);
+                CliResult result = RunCli("convert", input, output, "--diagnostics", diagnostics);
+                TestAssert.Equal(2, result.ExitCode);
+                TestAssert.Contains("Diagnostics output path must be different", result.Error);
+                TestAssert.Equal("original destination", File.ReadAllText(output));
+                TestAssert.Equal(exists, File.Exists(input));
+                if (exists) { TestAssert.Equal("original input", File.ReadAllText(input)); }
+                TestAssert.Equal(0, Directory.GetFiles(directory, "*.tmp-*").Length);
+            }
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
+
+    public static void CliWritesSeparateDiagnosticsForUnsupportedInputWithoutChangingFiles()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "ooxpdf-cli-failure-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string input = Path.Combine(directory, "unsupported.txt");
+            string output = Path.Combine(directory, "output.pdf");
+            string diagnostics = Path.Combine(directory, "diagnostics.json");
+            File.WriteAllText(input, "original input");
+            File.WriteAllText(output, "original destination");
+            CliResult result = RunCli("convert", input, output, "--diagnostics", diagnostics);
+            TestAssert.Equal(1, result.ExitCode);
+            TestAssert.Equal("original input", File.ReadAllText(input));
+            TestAssert.Equal("original destination", File.ReadAllText(output));
+            TestAssert.Contains("OOXML_CONVERSION_FAILED", File.ReadAllText(diagnostics));
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
+
     private static string WriteMalformedNumericDocx()
     {
         return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
