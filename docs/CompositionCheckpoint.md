@@ -1,5 +1,40 @@
 # Composed-document reliability checkpoint
 
+## C314 authored zero indentation shares flowing anchor ownership (2026-10-20)
+
+Authored-indent presence joins the existing flowing starting-anchor condition,
+so zero no longer falls through the implicit starting-border exclusion. Preserve
+nullable source information, style/compatibility precedence and header/footer
+grid ownership. No parser/model flag, public API, cache or quota. Generator
+verification is now the default; --write stages atomic replacements instead of
+writing through frozen input links. All14 legacy controls remain byte-identical.
+
+Two new mathematical sources/four independent Word exports plus six retained
+solid-edge views pass text/math gates: proseX0.024002pt/Y0.513977pt, mathX0.035995pt/
+Y0.370956pt. Ten raw content screens are clean; close all six5.390pt explicit-zero
+prose-X failures. Ten strict pixel failures remain. Three viewed images show
+ordinary/wide mathematical anchors at the body origin and complete Left54/Right53
+continuation ink on Word's shared grid.14neighbor PDFs and comparisons are exact
+reuse. Keep implicit-border5.736pt and other row/revision/footer concerns separate;
+there is no blanket border shift or general arbitrary-document fidelity claim.
+
+One final committed artifact60a3195b/2,502inputs/17assets;24exact Windows checks,
+14Ubuntu/ten native skips, each exact method once/platform. Four genuine parent
+regressions (native/portable anchor, source presence and solid-edge X). One Release
+build, no harness repair/join.24final/four baseline conversions, four new Word
+exports/six prior views reused; no old corpus or root suite replay.17assets/two
+matching transfer smokes, no root build. Production1df26d9c; evidence artifacts/
+composition-c1/authored-zero-table-origins-evidence.json. C312CI39344256222 is green
+Windows/Ubuntu including broader/package checks. Continue bounded trailing-row
+composition review. Version0.1.5; release preparation remains deferred.
+
+C314 infrequent workspace scan:16,858,118,261bytes/930,993files/83,788directories,
+zero errors,24.87s. Retired52generated files/300,677bytes in six newly completed
+passing-test scratch directories; retain reports, references, inputs and qualified
+artifacts. No protected rejected retirement was retried. The loose5GB target is
+unmet. Evidence artifacts/workspace-footprint-C314.json and artifacts/composition-
+c1/recent-passed-scratch-retirement.json; do not overstate the small reclamation.
+
 ## C313 authored zero and implicit table origins remain distinct (2026-10-20)
 
 Read-only source review verifies30 tracked source hashes/60 retained independent
