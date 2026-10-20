@@ -1,5 +1,27 @@
 # Composed-document reliability checkpoint
 
+## C336 confirmed inline-box self-clipping review (2026-10-20)
+
+Fourteen retained Word views across body/cells/header/footer confirm a painting
+defect: the candidate acquires its own content-box clip before stroking, halving
+lateral coverage(.5-to.25pt Final;.377-to.1885pt review). Matching Word views
+retain full lateral stroke; fitted top/bottom edges are full too. Partial footer
+views retain distinct outer viewport clipping. All selected clips are rectangular;
+mid-edge envelope projection is not antialiasing/join/visible-ink proof. Next
+separate outline paint from child clipping, preserving outer container bounds;
+lower viewport bounds must include the stroke envelope laterally/topward.
+No cell-clip rewrite, new framework or threshold weakening.
+
+Zero builds/tests/conversions/Office exports. Fixed source inventory finds no
+text boxes in any of five DOCX packages; decks use PPTX, so carry fixed12 by source
+proof. Retired420 empty files/eight fresh passed-test scratch directories after
+exact path/hash/proof/link/tracked/protected checks. Initial local preflight
+mistook archive RestoreRoot context for a target and stopped without mutation;
+schema reviewed, every actual rejected target preserved. No physical-byte
+reclamation claim; loose5GB target remains unmet. Evidence artifacts/composition-c1/
+inline-box-stroke-review-evidence.json. C335CI39366017499 running; continue work.
+Version0.1.5/release deferred.
+
 ## C335 paragraph-bounded footer-table drawing-frame admission (2026-10-20)
 
 An overflowing direct natural footer-table box can enter its physical drawing
