@@ -690,6 +690,7 @@ internal sealed record DocxRunFonts(
 
 internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, string ContentType, byte[] Bytes, string? PartName)
 {
+    public string? ClickTarget { get; init; }
     // Owning w:r properties for review decoration; an image-only run has no text.
     public DocxTextRun? SourceRunStyle { get; init; }
     public DocxPictureCrop Crop { get; init; }

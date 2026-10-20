@@ -6,6 +6,20 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
+    private static DocxInlineImageLayout PlaceInlineImageForPaint(DocxInlineImageLayout image, DocxMarkupContext context)
+    {
+        double x = ResolveTextEmissionXOffset(context);
+        double y = image.StaticStoryUsesPhysicalY ? 0d : ResolveTextEmissionBaselineOffset(context);
+        return x == 0d && y == 0d ? image : image.Translate(x, -y);
+    }
+
+    private static DocxInlineImageLayout PlaceCellImageForPaint(DocxInlineImageLayout image,
+        double xOffset, double yOffset, DocxTableCellClipSnapshot clip)
+    {
+        var placed = xOffset == 0d && yOffset == 0d ? image : image.Translate(xOffset, -yOffset);
+        return placed with { LineFrame = new DocxPictureLineFrame(clip.Y, clip.Height) };
+    }
+
     private static void RenderImage(DocxInlineImage image, double x, double y, double width, double height,
         PdfGraphicsBuilder graphics, List<PdfImageResource> pageImages, Action<OoxPdfDiagnostic>? diagnosticSink,
         int pageIndex, CancellationToken cancellationToken, Dictionary<string, PdfImageXObject?> imageCache, ref int imageIndex,

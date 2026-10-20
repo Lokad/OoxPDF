@@ -112,11 +112,9 @@ internal sealed partial class DocxRenderer
 
                 foreach (DocxInlineImageLayout image in cellLayout.InlineImages)
                 {
-                    DocxInlineImageLayout placedImage = geometryXOffset == 0d && geometryYOffset == 0d
-                        ? image : image.Translate(geometryXOffset, -geometryYOffset);
                     // Pictures share the cell clip used by text, including aligned
                     // and repeated paragraphs.
-                    placedImage = placedImage with { LineFrame = new DocxPictureLineFrame(clip.Y, clip.Height) };
+                    DocxInlineImageLayout placedImage = PlaceCellImageForPaint(image, geometryXOffset, geometryYOffset, clip);
                     RenderInlineImage(placedImage, graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex, fontResources, markupContext);
                 }
 

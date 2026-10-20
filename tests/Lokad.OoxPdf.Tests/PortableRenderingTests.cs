@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingInlinePictureLinksFollowVisibleFrames() =>
+        DocxInlineCompositionTests.CheckInlinePictureLinks(new PinnedResolver(), compareWord: false);
+
     public static void PortableRenderingStructuralMetadataWrappersRetainParentFrames() =>
         DocxInlineCompositionTests.CheckMetadataParentFrames(new PinnedResolver(mathFont: true), "structural-metadata-wrappers.json");
 

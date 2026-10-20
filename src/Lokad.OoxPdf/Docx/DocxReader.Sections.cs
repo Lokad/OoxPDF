@@ -301,6 +301,14 @@ internal sealed partial class DocxReader
         XElement? pictureTransform = EnumerateDrawingOwnedElements(drawing, XName.Get("spPr", "http://schemas.openxmlformats.org/drawingml/2006/picture"), cancellationToken)
             .FirstOrDefault()?.Element(DrawingNamespace + "xfrm");
         XElement? pictureExtent = pictureTransform?.Element(DrawingNamespace + "ext");
+        XElement? click = drawing.Element(WordprocessingDrawingNamespace + "docPr")?.Element(DrawingNamespace + "hlinkClick");
+        string? clickTarget = null;
+        if (string.IsNullOrEmpty((string?)click?.Attribute("action")) &&
+            (string?)click?.Attribute(RelationshipsNamespace + "id") is { } clickId &&
+            relationships.TryGetValue(clickId, out var clickRelationship) && clickRelationship.IsExternal &&
+            clickRelationship.Type.EndsWith("/hyperlink", StringComparison.Ordinal) &&
+            Uri.TryCreate(clickRelationship.Target, UriKind.Absolute, out _))
+            clickTarget = clickRelationship.Target;
         double rotation = pictureTransform?.Attribute("rot") is null ? 0d :
             OoxXml.ReadOptionalDouble(pictureTransform, "rot", double.NaN) / 60000d;
         return Create(imagePart) with
@@ -311,7 +319,7 @@ internal sealed partial class DocxReader
 
         DocxInlineImage Create(OoxPart part) => new(width, height, part.ContentType, part.Bytes, part.Name)
         {
-            Revisions = RevisionList(revision), Crop = crop,
+            Revisions = RevisionList(revision), Crop = crop, ClickTarget = clickTarget,
             FlipHorizontal = OoxXml.ParseOptionalBool(pictureTransform, "flipH"),
             FlipVertical = OoxXml.ParseOptionalBool(pictureTransform, "flipV"),
             RotationDegrees = double.IsFinite(rotation) ? rotation % 360d : rotation,

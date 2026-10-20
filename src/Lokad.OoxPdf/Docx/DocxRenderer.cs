@@ -1287,7 +1287,7 @@ internal sealed partial class DocxRenderer
                 imageCache, ref imageIndex,
                 layoutPage.Height);
 
-            IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, pageIndex, pageNumber, layout.Pages.Count);
+            IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, pageIndex, pageNumber, layout.Pages.Count, pageImages);
             string content = graphics.ToString();
             // RV11: admit the emitted content bytes before yielding, so a small
             // content budget rejects before the writer encodes or stores the page.
@@ -1449,7 +1449,8 @@ internal sealed partial class DocxRenderer
             }
         }
 
-        IReadOnlyList<PdfLinkAnnotation> CreateHyperlinkAnnotations(DocxLayoutPage page, int pageIndex, int pageNumber, int pageCount)
+        IReadOnlyList<PdfLinkAnnotation> CreateHyperlinkAnnotations(DocxLayoutPage page, int pageIndex, int pageNumber, int pageCount,
+            IReadOnlyList<PdfImageResource> paintedImages)
         {
             var annotations = new List<PdfLinkAnnotation>();
             // Ordinary body paragraphs carry reference-qualified printed line boxes.
@@ -1636,6 +1637,7 @@ internal sealed partial class DocxRenderer
                 EmitLineLinkRects(previousLineLinks, previousLineTop, Math.Min(previousLineBottomFallback, previousPaintedMathBottom));
             }
 
+            annotations.AddRange(CreateInlinePictureAnnotations(page, paintedImages, imageCache, markupContext, cancellationToken));
             annotations.AddRange(CreateNoteReferenceAnnotations(page, pageNumber, pageCount, fontResources,
                 markupContext, noteDestinations, noteSpacingParagraphs, cancellationToken));
             return annotations;
@@ -1769,9 +1771,7 @@ internal sealed partial class DocxRenderer
                 PaintMath(equation.Math, equation.X, equation.BaselineY, equation.Scale, graphics, markupContext, cancellationToken);
                 break;
             case DocxInlineImageLayout image:
-                double imageXOffset = ResolveTextEmissionXOffset(markupContext);
-                double imageYOffset = image.StaticStoryUsesPhysicalY ? 0d : ResolveTextEmissionBaselineOffset(markupContext);
-                RenderInlineImage(imageXOffset == 0d && imageYOffset == 0d ? image : image.Translate(imageXOffset, -imageYOffset), graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex, fontResources, markupContext);
+                RenderInlineImage(PlaceInlineImageForPaint(image, markupContext), graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex, fontResources, markupContext);
                 break;
             case DocxTableRowLayout row:
                 RenderTableRow(row, IsAdjacentTableRow(previousRow, row) ? previousRow : null, IsAdjacentTableRow(row, nextRow) ? nextRow : null, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex);

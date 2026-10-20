@@ -1,4 +1,20 @@
 {
+  "docx-inline-picture-links": [
+    "DocxInlinePictureLinks",
+    "PortableRenderingInlinePictureLinksFollowVisibleFrames",
+    "DocxOrdinaryPictureBoxesRetainOrderedOwnersAndReuseChildren",
+    "DocxOrdinaryPictureBoxesKeepCancellationAndPurePictureFallback",
+    "DocxOrdinaryPictureBoxesMatchIndependentWordOrigins",
+    "PortableRenderingOrdinaryPicturesAndBoxesRetainSourceContent",
+    "DocxPictureFlipRetainsMetadataAndPreviewOwnership",
+    "DocxPictureRotationFitsTheSourceFrameAndPreservesFlowExtent",
+    "DocxTablePictureRotationSharesTheAlignedCellContentClip",
+    "DocxInlineCompositionOrderedPictureTranslationKeepsClipsAndFallbacks",
+    "DocxOrdinaryStaticInlineOriginsMatchIndependentWord",
+    "PortableRenderingOrdinaryStaticInlineRetainsSourceContent",
+    "DocxBodyHyperlinkUsesExactLineBoxAcrossFontsAndPrintScale",
+    "DocxInlineCompositionMixedMathBookmarksRetainOrderedSourceTargets"
+  ],
   "docx-structural-metadata-wrappers": [
     "DocxStructuralMetadataWrappers",
     "PortableRenderingStructuralMetadataWrappersRetainParentFrames",

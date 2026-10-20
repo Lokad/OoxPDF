@@ -786,14 +786,17 @@ internal sealed partial class DocxRenderer
             (byte)Math.Round(source.Blue * sourceWeight + target.Blue * clampedTargetWeight));
     }
 
+    private static string? GetImageCacheKey(DocxInlineImage image) =>
+        image.PartName is { } partName ? partName + "\u001f" + image.ContentType : null;
+
     private static PdfImageXObject? CreateImage(DocxInlineImage image, Dictionary<string, PdfImageXObject?> imageCache, Action<OoxPdfDiagnostic>? diagnosticSink, int pageIndex, CancellationToken cancellationToken)
     {
         // RV17: per-conversion image reuse mirroring the PPTX image cache.
-        // DOCX renders images untransformed, so part plus content type is the
-        // complete decode key; draw-time extents never reach the decoder.
+        // Part plus content type is the complete decode key; draw-time transforms
+        // and extents never reach the decoder.
         // Nameless (synthetic) images skip the cache. Failures cache too, so a
         // corrupt repeated image diagnoses once instead of decoding per page.
-        string? cacheKey = image.PartName is { } partName ? partName + "\u001f" + image.ContentType : null;
+        string? cacheKey = GetImageCacheKey(image);
         if (cacheKey is not null && imageCache.TryGetValue(cacheKey, out PdfImageXObject? cached))
         {
             return cached;
@@ -805,7 +808,6 @@ internal sealed partial class DocxRenderer
         try
         {
             imageResource = OoxImageDecoder.Decode(image.ContentType, image.Bytes, static rgb => rgb, cancellationToken);
-            // R06.2: admit retained bytes at creation (DOCX retains per page); cache hits create nothing.
         }
         catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
         {
