@@ -43,7 +43,8 @@ internal static class TestFixtures
     public static string WriteTempPackage(string extension, IReadOnlyDictionary<string, string> entries)
     {
         using MemoryStream stream = CreateZipPackage(entries);
-        string path = Path.ChangeExtension(Path.GetTempFileName(), extension);
+        string path = Path.Combine(Path.GetTempPath(),
+            Path.ChangeExtension(Guid.NewGuid().ToString("N"), extension));
         File.WriteAllBytes(path, stream.ToArray());
         return path;
     }
@@ -51,7 +52,8 @@ internal static class TestFixtures
     public static string WriteTempPackage(string extension, IReadOnlyDictionary<string, byte[]> entries)
     {
         using MemoryStream stream = CreateZipPackage(entries);
-        string path = Path.ChangeExtension(Path.GetTempFileName(), extension);
+        string path = Path.Combine(Path.GetTempPath(),
+            Path.ChangeExtension(Guid.NewGuid().ToString("N"), extension));
         File.WriteAllBytes(path, stream.ToArray());
         return path;
     }
