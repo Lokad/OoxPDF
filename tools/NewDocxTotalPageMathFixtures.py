@@ -26,6 +26,7 @@ probes.add_argument('--parallel-cell-bottom-inset-probe', action='store_true')
 probes.add_argument('--parallel-cell-box-inset-probe', action='store_true')
 probes.add_argument('--parallel-cell-border-probes', action='store_true')
 probes.add_argument('--parallel-cell-trailing-row-probe', action='store_true')
+probes.add_argument('--boxed-inset-trailing-row-probe', action='store_true')
 args = parser.parse_args()
 sha = lambda value: hashlib.sha256(value).hexdigest().upper()
 
@@ -39,6 +40,46 @@ def publish(jobs):
             stage.replace(target)
         else:
             assert target.read_bytes() == data, target.name
+
+
+if args.boxed_inset_trailing_row_probe:
+    parent = json.loads((cases / 'parallel-cell-box-inset-probe.json').read_text())[0]
+    original = (root / parent['Input']).read_bytes()
+    assert sha(original) == parent['Sha256']
+    with ZipFile(BytesIO(original)) as archive:
+        infos = archive.infolist()
+        parts = {entry.filename: archive.read(entry.filename) for entry in infos}
+    tree = E.fromstring(parts['word/document.xml'])
+    table = next(tree.iter(w + 'tbl'))
+    source_row = table.find(w + 'tr')
+    source_row_bytes = E.tostring(source_row)
+    tail = copy.deepcopy(source_row)
+    for side, cell in zip(('Left', 'Right'), tail.findall(w + 'tc')):
+        ordinary = copy.deepcopy(cell.findall(w + 'p')[-1])
+        assert not any(node.tag.endswith(('oMath', 'oMathPara', 'drawing', 'pict', 'fldSimple', 'instrText')) for node in ordinary.iter())
+        for child in list(cell):
+            if child.tag != w + 'tcPr': cell.remove(child)
+        ordinary.find('.//' + w + 't').text = side + ' terminal control.'
+        cell.append(ordinary)
+    table.append(tail)
+    assert E.tostring(source_row) == source_row_bytes
+    parts['word/document.xml'] = E.tostring(tree, encoding='utf-8', xml_declaration=True)
+    buffer = BytesIO()
+    with ZipFile(buffer, 'w') as archive:
+        for entry in infos: archive.writestr(copy.copy(entry), parts[entry.filename])
+    data = buffer.getvalue()
+    row = copy.deepcopy(parent)
+    identifier = 'parallel-cell-boxed-inset-tail'
+    row.update(Id=identifier, Input='tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/' + identifier + '.docx',
+        Sha256=sha(data), CompositionParentInput=parent['Input'], CompositionParentSha256=parent['Sha256'],
+        UnchangedFirstRowSha256=sha(source_row_bytes), LongRowSourceRowsByCell=dict(Left=120, Right=120),
+        ExpectedText=parent['ExpectedText']+['Left terminal control.','Right terminal control.'],
+        Change='Append one ordinary row to accepted shaded/inset parallel prose with boxed math and NUMPAGES; the complete first-row XML is unchanged.')
+    row.pop('SourceRowsPerCell', None)
+    manifest = (json.dumps([row], indent=2) + '\n').replace('\n', '\r\n').encode()
+    publish([(cases / (identifier + '.docx'), data), (cases / 'parallel-cell-boxed-tail-probe.json', manifest)])
+    print('Boxed math/count/inset trailing-row control verified; source first row unchanged.')
+    raise SystemExit(0)
 
 
 parallel_group = next((group for enabled, group in [
