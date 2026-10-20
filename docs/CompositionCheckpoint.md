@@ -1,5 +1,31 @@
 # Composed-document reliability checkpoint
 
+## C326 semantic complete-note reserve reused by table continuations (2026-10-20)
+
+Reuse existing TryCompleteFootnoteReserve for complete heads: one measured
+separator line instead of repeated content/latent spacing. Continued, incomplete
+and mismatched heads keep coarse fallback. No font/size/document-shape condition,
+API/option/counter/quota or replacement framework. Single-note controls now match
+all Word source pages and490 prose/note/eight math anchors at original1/.1/.01pt
+gates (proseY0.323975pt/mathY0.360947pt/proseX0.070007pt). Viewed native/Word Final
+page2 pairs show complete Left50..103/Right54..107 and seated note1. Four pages,
+actual count4/math once remain. Two-note underfill improves three-to-one row per
+column; nativeLeft102/Right106 versus Word103/107. Its prose-page/raw-page failures,
+field flags and all six strict pixel failures remain. No future-owner closure.
+
+One Release artifact5f096edb/2,521inputs:29Windows/19Ubuntu/10native skips, once per
+platform; one genuine native parent failure, portable parent control passes.
+Six conversions; two no-note parent PDFs/comparisons exact/reused. Fixed12 source
+proof retained without a new PDF identity claim: each fixed DOCX table precedes
+its only footnote block; static report has none and decks use PPTX.17assets/two
+exact transfer smokes, no fixed12/root/package/broad-suite replay. Initial wrappers
+ran before freeze completed and failed path preflight; no tests/conversions ran,
+logs retained. Production90e79522; evidence artifacts/composition-c1/
+table-complete-note-head-evidence.json. C324CI39354394771 green on both platforms
+including broader/package checks. Next a bounded early-note discriminator and
+stable source-owner refinement, using existing measured windows/fallbacks rather
+than a renderer rewrite. Version0.1.5/release deferral/workspace gap remain.
+
 ## C325 ordinary note reserve owners separated (2026-10-20)
 
 Single-note source removes only the future Right111 marker and note2. Other parts
