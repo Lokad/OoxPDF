@@ -13,7 +13,7 @@ internal static class DocxMinimumBodyLineLeading
             (!ordinaryBody && !DocxPageFootnoteNumbering.TryGetReferencePages(document, source, out _))) return false;
 
         var replacements = new Dictionary<DocxTextLineLayout, DocxTextLineLayout>(ReferenceEqualityComparer.Instance);
-        double bodyFontSize = DocxPlainElevenPointBody.IsEligible(document, source) ? 11d : 12d;
+        double bodyFontSize = DocxPlainElevenPointBody.HasQualifiedTypography(document) ? 11d : 12d;
         bool? ordinaryExpansionQualified = null;
         bool contextualBody = document.Paragraphs.Any(p => p.Spacing.ContextualSpacing == true);
         bool? contextualExpansionQualified = null;

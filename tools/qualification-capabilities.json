@@ -1,4 +1,15 @@
 {
+  "docx-minimum-leading-source-policy": [
+    "DocxElevenPoint",
+    "DocxMinimumBodyLineLeading",
+    "DocxContextualMinimum",
+    "DocxMarkedMinimumLeading",
+    "DocxMinimumBodyFlow",
+    "DocxMinimumBeforeLeading",
+    "DocxMetGlyphAdvance",
+    "DocxPlainFootnoteKerning",
+    "DocxOrdinaryKerning"
+  ],
   "docx-note-picture-links": [
     "DocxNotePictureLinks",
     "DocxInlineCompositionNoteImageDimensionsAndVerticalFrameMatchOffice",

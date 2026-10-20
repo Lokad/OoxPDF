@@ -10,7 +10,10 @@ internal static class DocxPlainFootnoteKerning
         bool ordinary = DocxPlainBodyFrame.IsOrdinaryBody(source);
         if (!(ordinary ? DocxPlainBodyFrame.IsEligible(source, layout) :
             DocxPageFootnoteNumbering.IsEligibleDocument(source) && DocxPlainBodyFrame.HasSingleLineParagraphs(layout))) return false;
-        bool elevenPointBody = DocxPlainElevenPointBody.IsEligible(source, layout);
+        // Ordinary flow already passed the complete frame contract. Numbered
+        // flow's initial gate is weaker and must retain the extra layout checks.
+        bool elevenPointBody = (ordinary || DocxPlainBodyFrame.HasSingleLineLayout(source, layout)) &&
+            DocxPlainElevenPointBody.HasQualifiedTypography(source);
         var elevenPointParagraphs = elevenPointBody
             ? new HashSet<DocxParagraph>(source.Paragraphs, ReferenceEqualityComparer.Instance) : null;
         var baselineRuns = source.Paragraphs.SelectMany(p => p.Runs)

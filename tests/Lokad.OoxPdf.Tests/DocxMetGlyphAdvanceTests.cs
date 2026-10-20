@@ -80,7 +80,7 @@ internal static class DocxMetGlyphAdvanceTests
                     rp.Add(new XElement(Word + "kern", new XAttribute(Word + "val", "22")));
                 }
             });
-            TestAssert.True(DocxPlainElevenPointBody.IsEligible(source, DocxNominalGlyphAdvanceTests.Layout(source)), "The excluded met face remains inside the accepted 11pt source frame.");
+            TestAssert.True(DocxPlainElevenPointBody.HasQualifiedTypography(source), "The excluded met face retains accepted 11pt source typography.");
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var word = renderer.InspectTextEmission(source);
             TestAssert.True(word.Lines.SelectMany(l => l.Segments).Any(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal < 0),
@@ -97,7 +97,7 @@ internal static class DocxMetGlyphAdvanceTests
             foreach (var rp in properties) rp.Add(new XElement(Word + "kern", new XAttribute(Word + "val", "22")));
             properties[0].Element(Word + "kern")!.SetAttributeValue(Word + "val", "20");
         });
-        TestAssert.True(DocxPlainElevenPointBody.IsEligible(mixed, DocxNominalGlyphAdvanceTests.Layout(mixed)), "The mixed positive thresholds retain the accepted complete source frame.");
+        TestAssert.True(DocxPlainElevenPointBody.HasQualifiedTypography(mixed), "Mixed positive thresholds retain accepted source typography.");
         var mixedRenderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         TestAssert.True(mixedRenderer.InspectTextEmission(mixed).Lines.SelectMany(l => l.Segments).Any(s => s.AdvanceProfile.NominalAdvanceAdjustmentTotal < 0),
             "Mixed thresholds resolve per source run without changing the complete-note admission policy.");
