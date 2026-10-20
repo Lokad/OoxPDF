@@ -35,9 +35,10 @@ revisions/source order and thread cancellation through non-yielding metadata;
 remove the visitor's forwarding overload. No layout or arbitrary-wrapper rewrite.
 
 Baseline audit fails on missing text JSON for the blank block output. The pinned
-inspector omits empty operation reports; Measure's0 text-inspected pages is not
-actual pagination. Direct PyMuPDF confirms one native/Word page. Retain failure
-log and direct content evidence; no fabricated empty JSON or raw-screen pass.
+inspector omits empty operation reports. The initial note wrongly attributed zero
+pages to Measure: all six stored outcomes already report one page, matching direct
+PyMuPDF inspection. Correction structural-metadata-observer-correction.json retains
+that evidence. Preserve the failed audit; no fabricated JSON or raw-screen pass.
 Separate bounded observer task recorded. Evidence artifacts/composition-c1/
 structural-metadata-wrappers-review-evidence.json. Fixtures8c0b37d1/gold748cddbc;
 production unchanged. Version0.1.5/release deferred; workspace target unmet.
