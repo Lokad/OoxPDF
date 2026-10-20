@@ -1,5 +1,29 @@
 # Composed-document reliability checkpoint
 
+## C358 reader marks use the shared qualified source class (2026-10-20)
+
+C356CI39390191212 caught broad reader retention on glyphless mixed equation/image
+owners. Windows3710 passed/two failed/16 skips; Ubuntu portable234 passed/one
+failed at the existing source-ownership assertion. Visible corruption remains
+unverified. Reuse IsPlainPictureOnlyParagraph after resolved source construction,
+matching font planning/static placement; share exact mark construction through a
+local factory. Old mixed-math, comment and revision contracts stay intact. No
+assertion relaxation, new fitted guard, public API or resource-protection change.
+
+One Releasee8a00070,2575 inputs/17assets:67 Windows/58 Ubuntu/nine environmental
+skips, one exact invocation/platform. Four exact neighboring picture-first,
+display-image Office, portable and cancellation methods join the capability.
+Original failing ownership assertions now pass.17assets transferred/two PDFs exact
+to C356 large-mark header Final and C357 composed footer Review. No new export,
+qualification conversion, root build, suite replay or qualification join. Broader
+and package CI follows the new push; retain the failed run. Evidence
+artifacts/composition-c1/picture-mark-source-ownership-evidence.json.
+
+C356/C357 numeric/visual residuals remain unchanged; carrying their qualification
+is not a fresh14-PDF identity claim. Continue C359 raster/vector frame review using
+this artifact while CI runs. Version0.1.5/release deferred; last workspace17.614GB,
+loose5GB target unmet and rejected retirement targets protected.
+
 ## C357 composed footer-picture holdout preserves document frames (2026-10-20)
 
 Prepend one18x9pt picture-only paragraph to the public report footer. Source body,
