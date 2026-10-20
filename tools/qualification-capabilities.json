@@ -8910,6 +8910,8 @@
     "DocxInlineCompositionSourceViewRetainsPrefixOrderAndCancellation"
   ],
   "docx-ordinary-static-inline": [
+    "DocxComposedInlineFrameReportRetainsIndependentWordPagesAndContent",
+    "PortableRenderingComposedInlineFrameReportRetainsRepeatedStaticOwners",
     "DocxInlineBoxOutlineEnvelopeAdmitsCompleteFrames",
     "DocxInlineBoxOutlineEnvelopeKeepsPartialAndInvalidFallbacks",
     "DocxFooterTableContinuationFramesMatchIndependentWord",
