@@ -65,6 +65,13 @@ def measure_images(path):
             for index, page in enumerate(pdf) for item in page.get_image_info()]
 
 
+def measure_uri_links(path, target=None):
+    with pymupdf.open(path) as pdf:
+        return [{'Page': index + 1, 'Uri': item['uri'], 'Rect': list(item['from'])}
+            for index, page in enumerate(pdf) for item in page.get_links()
+            if item.get('uri') is not None and (target is None or item['uri'] == target)]
+
+
 def measure_note_rules(path):
     with pymupdf.open(path) as pdf:
         return [{'Page': index + 1, 'Rect': list(item['rect'])}
@@ -229,6 +236,31 @@ def main():
             if any(not item['InsidePage'] for item in images):
                 result['Failures'].append('OffPageImage')
         expected_prose = row.get('WordProseAnchors', [])
+        if 'WordLinks' in row:
+            links = measure_uri_links(path, row.get('TargetUri'))
+            result['NativeLinks'] = links
+            expected_links = row['WordLinks']
+            if len(links) != len(expected_links) or any(a['Page'] != e['Page'] or a['Uri'] != e['Uri']
+                    for a, e in zip(links, expected_links)):
+                result['Failures'].append('WordUriCountOrTarget')
+            elif expected_links:
+                result['MaxWordUriRectError'] = max(abs(a['Rect'][index] - e['Rect'][index])
+                    for a, e in zip(links, expected_links) for index in range(4))
+                # Always retain the raw Office discrepancy, even when its
+                # rectangle is explicitly unqualified for visible placement.
+                if result['MaxWordUriRectError'] >= 1.:
+                    result['Failures'].append('WordUriGeometry')
+            result['WordLinkGeometryAdmitted'] = row.get('WordLinkGeometryAdmitted', True)
+            if row.get('PictureFrameOwnsClickableRegion'):
+                if len(links) != row['ExpectedUriCount']:
+                    result['Failures'].append('PictureUriCount')
+                elif links:
+                    images = measure_images(path)
+                    errors = [min((max(abs(a - e) for a, e in zip(link['Rect'], image['Rect']))
+                        for image in images if image['Page'] == link['Page']), default=math.inf) for link in links]
+                    result['MaxPictureUriRectError'] = max(errors)
+                    if any(error > .001 for error in errors):
+                        result['Failures'].append('PictureUriGeometry')
         prose_prefixes = [anchor['Text'] for anchor in expected_prose]
         if 'WordProseAnchorGroups' in row:
             if expected_prose:
