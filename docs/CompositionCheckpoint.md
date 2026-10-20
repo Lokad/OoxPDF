@@ -1,5 +1,42 @@
 # Composed-document reliability checkpoint
 
+## C356 picture-only static paragraphs share measured frames (2026-10-20)
+
+The C355 prospective rule now uses existing ordered inline measurement and the
+shared footer trailing-frame anchor. A single semantic predicate admits natural
+glyphless raster paragraphs. The reader retains their resolved paragraph marks;
+font planning supplies the unpainted mark's real metrics. Mixed text/images,
+list/image, declared-spacing, revised/vector/rotated and related textbox picture
+fallbacks remain; no fitted offset, font/size/count rule or public API change.
+
+One final qualified Release82e487a5,2572 inputs/17assets:63 Windows checks,
+56 Ubuntu/seven environmental skips, one exact invocation/platform, no joins.
+Twelve retained Word views pass the original1pt geometry gates: max pictureY
+.0041pt, bodyY.160pt, all body frames exact to the qualified parent. Previously
+picture errors reached18pt. Twelve source-content screens clean. All twelve
+strict pixel gates remain failed. One large-mark header Word/native144dpi pair
+viewed; no arbitrary-document ink/clipping or typography-fidelity claim.
+
+Two failed production attempts remain recorded: the first missed mark-font
+resolution and broadened mixed-image admission; the second retained that fallback
+but exposed the reader's discarded marks. Three Release builds total; the final
+artifact alone is qualified/transferred. Prior attempts ran24 feature conversions
+plus12 fixed outcomes; final qualification ran12 feature conversions. The12 fixed
+PDFs equal C351, and all ten DOCX source/views contain no affected glyphless
+picture paragraphs (PPTX separate), so no final portfolio reconversion. No failed
+production revision was published to root.
+
+An ignored combined-manifest audit was refused before publication. Existing join
+commands select two tracked public manifests;12 comparisons reuse exact PDFs and
+thresholds without replay.17assets/two exact transfer smokes, no root library
+build or suite. Evidence artifacts/composition-c1/static-picture-only-frames-evidence.json.
+C354CI39387419292 green Windows/Ubuntu including broader/package checks. New push
+will supply the next CI milestone; keep working during it. Version0.1.5/release
+deferred; last workspace17.614GB,5GB target unmet, rejected retirements protected.
+
+Next C357 is a bounded composed-document holdout with a picture-only margin
+paragraph and actual review lane, using this artifact before any source change.
+
 ## C355 prospective static-picture frame rule confirmed (2026-10-20)
 
 Four new controlled sources independently vary picture height9-to18pt or
