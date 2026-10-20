@@ -64,10 +64,10 @@ internal static partial class DocxInlineCompositionTests
         {
             string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", fixture + ".docx"));
             var source = AddStaticPictureTargets(DocxTests.ReadDocx(path, mode));
-            var renderer = new DocxRenderer(new MapFontResolver([], "Courier"), mode, mode == OoxPdfDocxMarkupMode.Final ?
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final ?
                 OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var page = renderer.RenderBlankPages(source, null, default).Single();
-            TestAssert.True(page.Images.Count > 0, "A clipped picture is still decoded and emitted; navigation must respect its clip.");
+            TestAssert.True(page.Images.Count > 0, $"{fixture}/{mode}: a clipped picture is still decoded and emitted; navigation must respect its clip.");
             var links = page.Annotations.Where(link => link.Uri == "https://example.invalid/static-picture").ToArray();
             TestAssert.Equal(fixture.Contains("fixed", StringComparison.Ordinal) ? 0 : 1, links.Length);
             foreach (var link in links) CheckPictureLinkDraw(page, link);
