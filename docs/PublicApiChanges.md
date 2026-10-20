@@ -59,3 +59,11 @@ discard that output before retrying. File overloads preserve an existing
 destination atomically. This clarifies the existing behavior; it adds no buffering
 or public API removal. Built-in resolvers now synchronize their bounded request
 caches so sharing a resolver across concurrent conversions is safe.
+
+Diagnostic-observer failures now preserve the original exception identity, type
+and callback stack even when its type also denotes recoverable malformed PPTX
+content. They fail conversion before file publication; they are never translated
+into a successful conversion with a node-failure warning. A callback that cancels
+the token during the final resource summary also prevents file publication.
+Callbacks remain synchronous and may invoke nested conversions. These are contract
+repairs; they add no public API or buffering layer.

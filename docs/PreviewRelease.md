@@ -45,6 +45,14 @@ Windows and Ubuntu package consumers use the same packed DLL. Independent
 platform build/package checks are recorded in
 [candidate CI](https://github.com/Lokad/OoxPDF/actions/runs/39452164339).
 
+The second review also repairs diagnostic-observer propagation and cancellation
+from the final resource-summary callback. Caller failures keep their original
+exception identity, type and stack; PPTX malformed-content recovery no longer
+swallows them. The unused image-backed luminosity-mask subsystem and test-only
+decoder wrappers are removed; live PNG alpha masks and vector luminosity groups
+remain. Frozen visual family binding and byte-stable fixture checkout support the
+one-artifact workflow. These repairs add no public API removal.
+
 All sixteen portfolio PDFs and diagnostic lists remain byte-identical to the
 accepted baseline, with matching Office page counts. Two PPTX strict pixel gates
 pass; fourteen DOCX strict gates remain failed. No thresholds changed. Shared

@@ -14,6 +14,10 @@
 - Fixes concurrent requests to both built-in font resolvers while retaining
   bounded caching. Clarifies that failed caller-stream conversions can leave an
   incomplete prefix; atomic file publication remains unchanged.
+- Propagates original diagnostic-observer exceptions through PPTX content
+  recovery and observes final-summary cancellation before file publication.
+  Removes the unused image-backed luminosity-mask path and decoder wrappers;
+  live PNG alpha masks and SVG vector luminosity groups remain supported.
 - Removes ineffective `Deterministic`, library `Strict` and cumulative work or
   nonrefunding memory quotas. Uses cooperative cancellation and optional coarse
   host memory admission; preserves input/output bounds, bounded page staging,

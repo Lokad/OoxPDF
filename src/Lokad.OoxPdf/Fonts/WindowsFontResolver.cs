@@ -7,13 +7,11 @@ namespace Lokad.OoxPdf.Fonts;
 /// </summary>
 /// <remarks>
 /// Retention contract: the snapshot retains one lazy <see cref="FileFontProgramSource"/>
-/// per discovered file (shared by all its faces), and each source retains its full
-/// program bytes after first use (files are capped individually; see
-/// FileFontProgramSource). R13 ownership: the process-static snapshot owns the
-/// sources, resolver instances share them, and conversions only borrow the arrays;
-/// discovery spans (R13) bound the initial read. Aggregate retention is capped by
-/// MaxSnapshotRetainedBytes with LRU eviction, so repeated conversions re-read from
-/// local disk only after eviction. Hosts that rotate font directories or must
+/// per discovered file (shared by all its faces). The synchronized, bounded
+/// FontProgramCache owns loaded program arrays; sources identify entries and
+/// conversions borrow immutable bytes. Individual file bounds apply before loading;
+/// LRU eviction bounds cached bytes, so later requests can re-read evicted programs.
+/// Hosts that rotate font directories or must
 /// release memory call <see cref="InvalidateDiscoveryCaches"/>; existing resolver
 /// instances keep their snapshot.
 /// </remarks>
