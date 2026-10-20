@@ -52,6 +52,12 @@ decoder wrappers are removed; live PNG alpha masks and vector luminosity groups
 remain. Frozen visual family binding and byte-stable fixture checkout support the
 one-artifact workflow. These repairs add no public API removal.
 
+The third bounded review also protects CLI input/output from aliased failure
+diagnostics, checks tracked root build settings during artifact reuse and binds
+cached markup conversion/inspection to matching frozen runtimes. Exhaustive
+balloon rendering sweeps remain available as slow checks beside focused fast
+coverage. Two test-only math helpers are removed; rendering policies are unchanged.
+
 All sixteen portfolio PDFs and diagnostic lists remain byte-identical to the
 accepted baseline, with matching Office page counts. Two PPTX strict pixel gates
 pass; fourteen DOCX strict gates remain failed. No thresholds changed. Shared

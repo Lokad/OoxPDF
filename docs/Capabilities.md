@@ -41,8 +41,8 @@ Supported:
 Partial or approximated:
 
 - Plain ASCII distributed PowerPoint paragraphs retain nominal text advances, including active kerning, in horizontal single-column, unrotated/unflipped non-table frames with explicit noAutofit and wrap=none, no bullets, tabs or manual breaks. Other scripts, wrapping, autofit, column, rotation, table and bullet paths retain their existing distribution approximation.
-- PowerPoint automatic numbering supports the existing Arabic, alphabetic and Roman period/right-parenthesis forms and Arabic paired parentheses outside tables, with valid levels/starts and default or overridden bullet font/size. Equal effective format/start settings continue a level; changed settings and plain paragraphs reset it, and a parent advances deeper levels to a new sequence. Empty numbered paragraphs update settings without emitting or advancing a label; run-free plain paragraphs clear the qualified sequence. Alphabetic labels follow OfficeÃ¢â‚¬â„¢s repeated-letter cycle (a..z, aa..zz, up to thirty repeated letters before cycling). Qualified numbering keeps paragraph pitch at the body font size when labels are larger. Bounded labels follow the first body runÃ¢â‚¬â„¢s font, preserve authored size and use nominal advances including trailing character spacing for first-fragment clearance in left horizontal single-column, unrotated/unflipped non-table frames without tabs or normal autofit, with nonpositive hanging indents and a label that fits. Font/size overrides additionally require room for the first drawable body fragment. Continuation lines retain the authored margin. For admitted wrapping with explicit noAutofit, printable ASCII text runs, no fields/manual breaks and room for the first body fragment, word fitting uses the authored line edge instead of the general bullet overrun allowance. Excluded frames, insufficient space, unsupported formats/starts, character bullets and table numbering retain their existing font/kerning/placement fallback; wrapping, manual-break baselines and broader font metrics remain approximate.
-- Text boxes support paragraphs, runs, font size, color, bold, italic, underline, and left, center, or right alignment, with simple Latin greedy wrapping. For plain left-aligned, non-bullet shape paragraphs in unrotated horizontal single-column no-wrap/noAutofit frames, explicit or inherited zero kerning disables pair adjustments in both measurement and glyph emission. Omitted kerning uses OfficeÃ¢â‚¬â„¢s 12pt default; positive explicit thresholds retain their authored boundary and scaling. Excluded explicit-zero frames retain their kerning approximation. Independent Calibri controls retain partial glyph/raster differences. Emergency splitting of unbroken first-token text in horizontal two/three-column frames uses the column edge. Single/four-plus columns and rotated/no-wrap paths retain their prior approximations; general font metrics, column balancing and autofit remain partial.
+- PowerPoint automatic numbering supports the existing Arabic, alphabetic and Roman period/right-parenthesis forms and Arabic paired parentheses outside tables, with valid levels/starts and default or overridden bullet font/size. Equal effective format/start settings continue a level; changed settings and plain paragraphs reset it, and a parent advances deeper levels to a new sequence. Empty numbered paragraphs update settings without emitting or advancing a label; run-free plain paragraphs clear the qualified sequence. Alphabetic labels follow Office's repeated-letter cycle (a..z, aa..zz, up to thirty repeated letters before cycling). Qualified numbering keeps paragraph pitch at the body font size when labels are larger. Bounded labels follow the first body runÃ¢â‚¬â„¢s font, preserve authored size and use nominal advances including trailing character spacing for first-fragment clearance in left horizontal single-column, unrotated/unflipped non-table frames without tabs or normal autofit, with nonpositive hanging indents and a label that fits. Font/size overrides additionally require room for the first drawable body fragment. Continuation lines retain the authored margin. For admitted wrapping with explicit noAutofit, printable ASCII text runs, no fields/manual breaks and room for the first body fragment, word fitting uses the authored line edge instead of the general bullet overrun allowance. Excluded frames, insufficient space, unsupported formats/starts, character bullets and table numbering retain their existing font/kerning/placement fallback; wrapping, manual-break baselines and broader font metrics remain approximate.
+- Text boxes support paragraphs, runs, font size, color, bold, italic, underline, and left, center, or right alignment, with simple Latin greedy wrapping. For plain left-aligned, non-bullet shape paragraphs in unrotated horizontal single-column no-wrap/noAutofit frames, explicit or inherited zero kerning disables pair adjustments in both measurement and glyph emission. Omitted kerning uses Office's 12pt default; positive explicit thresholds retain their authored boundary and scaling. Excluded explicit-zero frames retain their kerning approximation. Independent Calibri controls retain partial glyph/raster differences. Emergency splitting of unbroken first-token text in horizontal two/three-column frames uses the column edge. Single/four-plus columns and rotated/no-wrap paths retain their prior approximations; general font metrics, column balancing and autofit remain partial.
 - Untitled, legendless single line-chart plots with a visible left value axis and bottom category axis share measured cartesian label reserves and use the source font's selected line box for top clearance. Authored manual coordinates, composed/extra-axis, hidden/top-category and too-small frames retain their prior layout fallback. Empty manual metadata retains automatic measurement. Left/bottom margins remain partial; points, blank handling, series styles and text state retain their existing rules.
 - Single line plots carrying independently verified modern gallery styles 102/118/126 inherit 1pt major/minor gridline roles from the mapped text color through the shared linear-light tint. Authored strokes, visibility and style-part roles take precedence; legacy/composed/other-kind output retains its fallback. Major strokes and supported linear minor strokes share property inheritance and width-dependent dash normalization, preserving authored width/color/alpha/decorations. Invalid negative partial widths and unsupported log-scale minor geometry retain their prior fallback. Seventy-two inherited comparisons improve both raster metrics after shared source-bound/empty-layout fixes; broader axis/gallery coverage and existing dash mapping remain approximate.
 - Bold/italic use a hybrid: the resolver prefers a real font face on exact non-fallback matches; otherwise bold is synthesized with a stroked second pass and italic with an oblique shear (hybrid policy: a real face wins on exact non-fallback matches, otherwise bold is stroked and italic is sheared).
@@ -69,47 +69,19 @@ page transition. Following prose moves to the next page when its line no longer
 fits; it cannot use an earlier page's item count to bypass the bottom margin.
 Independent plain-table and large-equation controls restore Word's page counts.
 
-Standalone display equations in resolved body-table rows reuse prepared math
-boxes through cell measurement, placement, clipping and keep estimation. Word
-controls cover literals, fractions, scripts, adjacent cells and surrounding prose;
-all 18 initial outlines match, with â‰¤ 0.10 pt X / 0.34 pt Y residuals. Declared exact
-and minimum frames add 13 Word controls and 40 matching math outlines, within
-0.05 pt X / 0.18 pt Y. Small exact frames retain their authored clipping; zero
-exact height uses the natural content frame for both math and plain cells.
-Visual gates remain explicit needs-review. Unknown, negative or unresolved heights,
-unsupported merge owners, nested cell content, fit text, vertical text and revisions keep
-fallback. One fitting inline equation in plain cell prose reuses the body source-
-boundary wrapper and complete box; following prose can wrap. Six Word controls
-improve, with 22/22 matching outlines and residuals below 0.064 pt X / 0.352 pt Y.
-Unfit boxes and multiple cell equations retain the whole fallback. A sole inline
-equation in its own plain body/cell paragraph follows Word's centered display
-layout and full-size fraction children while retaining its source inline flag.
-Eight Word controls improve with 30/30 matching outlines, within 0.155 pt X /
-0.340 pt Y; existing visual thresholds remain explicit.
-Math-bearing rows remain atomic; oversized-row and wider pagination are unqualified.
-Vertical-merge restart cells retain supported equations through their original
-source owner. Bounded fraction controls preserve all glyphs and one-point math
-geometry relative to cell prose. Absolute cell margins and following-paragraph
-spacing remain approximate; continuation ownership and placement guards remain.
-Standalone equations in plain direct header/footer paragraphs share prepared
-boxes, static height/body-frame ownership and footer block translation. Eight
-Word controls improve with 28/28 matching outlines and residuals within 0.155 pt X /
-0.430 pt Y. Complete and partial equation warnings retain the source part; repeated
-story references share original identity. Mixed-inline/multiple/table/rich static
-owners and richer scaled/overflow story layout remain staged.
-Complete natural text/math static stories share source-scale layout and one print
-mapping under markup. Footer prose remains visible, while header overflow moves
-body text once. Six scaled Word controls improve and eight unscaled/flow controls
-stay byte-identical; prose/math residuals are below 0.23/0.20 pt. Declared, field,
-image/table/rich, unresolved and table-first/multicolumn owners retain existing paths.
-
-
-
-Mathematical runs select the minus glyph for an authored ASCII hyphen across
-supported math styles; normal-text runs retain their hyphens. Bounded two-row
-piecewise cases reuse matrix/delimiter layout with condition text and supported
-fraction/script cells. Independent Word controls retain explicit fence, baseline
-and raster residuals; wider nesting and stories remain staged.
+Supported mathematics uses shared ordered-inline measurement and placement.
+Fitting multiple formulas, prose and inline pictures coexist in qualified body
+paragraphs, simple cells and direct headers/footers; bookmarks and unchanged-format
+run splitting preserve source content. Standalone display rows reuse prepared boxes,
+row measurements and clips for resolved automatic/minimum/exact heights. A sole
+inline formula retains its source flag while using qualified display geometry.
+Vertical-merge restart owners retain supported content; continuation/unknown owners,
+unfit objects, arbitrary fragmentation and richer unsupported structures keep their
+explicit fallbacks. Static-story height, body reservation and footer translation
+share qualified source frames. These remain approximate placements, with unchanged
+Office thresholds and recorded geometry residuals. See [native equations](docx-equations.md)
+for the current revision, empty-argument, container and fallback constraints; see
+[preview qualification](PreviewQualification.md) for measured outcomes.
 
 Body inline picture paragraphs use their occupied image height and the existing
 collapsed paragraph spacing. The keep-with-next estimate uses the same advance;

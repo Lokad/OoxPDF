@@ -18,6 +18,10 @@
   recovery and observes final-summary cancellation before file publication.
   Removes the unused image-backed luminosity-mask path and decoder wrappers;
   live PNG alpha masks and SVG vector luminosity groups remain supported.
+- Rejects CLI diagnostics paths that alias input or output before early failures
+  can overwrite either file. Qualification reuse now checks root build settings;
+  cached markup conversion/inspection can bind to the same frozen library.
+  Focused fast checks retain exhaustive balloon sweeps as explicit slow coverage.
 - Removes ineffective `Deterministic`, library `Strict` and cumulative work or
   nonrefunding memory quotas. Uses cooperative cancellation and optional coarse
   host memory admission; preserves input/output bounds, bounded page staging,
