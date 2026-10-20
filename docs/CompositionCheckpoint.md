@@ -1,5 +1,27 @@
 # Composed-document reliability checkpoint
 
+## C323 ordinary notes expose stale table continuation capacity (2026-10-20)
+
+One source-exact transformation adds notes at Left54/Right111 of the accepted
+boxed math/count/inset/tail source; removing reference runs recovers the entire
+parent document XML. Four pages/all prose/math/both notes remain globally, but
+both presets move note1 to page3 although its marker is on page2. Word seats
+note1 on page2. Two viewed Final page2 rasters confirm native separator only,
+Left50..105/Right54..109 versus Word Left50..103/Right54..107 plus complete note.
+Source paragraph/run identity and RelatedStoryPageIndex match page2 correctly.
+Continuation cuts reuse initial PageContentHeight after FinishPage raises note
+reserve; bounded capacity correction is next, not an index or fitted-row change.
+
+No production build/change or test replay. Two conversions/two Office exports
+with C322 DLL; source revision1db9b78b, root0d320ef6. Diagnostic-only probe initial
+build had three incorrect API assumptions, corrected on a second probe build;
+logs retained. Raw/page/strict failures remain. Literal ExpectedText also flags
+Right final-page because the inspector separates operations around its hyphen;
+PyMuPDF/global word screens retain the phrase/words. Keep this observer flag
+separate from the confirmed page-association defect. Evidence artifacts/
+composition-c1/spanning-note-composition-review.json. C322 CI39351694374 continues.
+Version0.1.5/release deferral and workspace gap stay explicit.
+
 ## C322 authored margins own one grid across starting borders (2026-10-20)
 
 Remove the visible-border exclusion from existing authored flowing-margin
