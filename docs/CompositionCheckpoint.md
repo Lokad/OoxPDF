@@ -1,5 +1,30 @@
 # Composed-document reliability checkpoint
 
+## C318 boxed math/count and insets compose with trailing prose (2026-10-20)
+
+No production change is needed: accepted fraction/NUMPAGES prefix, parallel
+prose,3pt insets and an ordinary trailing row coexist. The full first-row source
+XML is unchanged. Word's240 source anchors, math/frame/field remain exact; native
+prints actual count4 and math once.484 prose/eight math anchors pass unchanged
+thresholds: proseY0.323975pt/mathY0.360947pt/fillY0.143005pt. Four viewed native/Word
+first/final pages show complete box, continuations and both terminal controls.
+Retain both strict pixel and cached1/fldSimple screens. An assumed exact shading
+coverage failed during gold preflight: Word leaves about0.006pt at the row seam,
+coverage0.99997086698. Preserve that observation; do not invent a coverage gate.
+
+One harness-only build/artifactcfdd6baa/2,508inputs;14 production assets and all
+2,505old inputs match C316. Ten exact Windows/five Ubuntu/five native skips run
+once/platform for eight existing helper callers plus two additions. Qualification
+uses physicalXY cell ownership and per-column row envelopes. Prior C31625/20/five
+skips retain unaffected source proof separately, with no enlarged/joined total;
+strict join requires identical input sets. Two conversions/two new independent
+Word exports,17assets/two exact transfer smokes. No library/root build, repeated
+old suite or performance claim. Harness9a5f57b2, production432ada6e; evidence
+artifacts/composition-c1/boxed-tail-evidence.json. C316CI39347761584 is green on
+Windows/Ubuntu including broader/package checks. Continue bounded classification
+of composed-report math-word extraction. Version0.1.5/release preparation deferred;
+workspace16.858GB/5GB gap remains explicit.
+
 ## C317 finite complete-document portfolio refresh (2026-10-20)
 
 Seven sources/12outcomes: ten fixed plus two composed-static-report presets;
