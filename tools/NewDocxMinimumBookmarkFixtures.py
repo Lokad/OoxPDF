@@ -30,6 +30,7 @@ passive.add_argument('--passive-picture-probes', action='store_true')
 passive.add_argument('--static-picture-frame-probes', action='store_true')
 passive.add_argument('--composed-static-picture-probe', action='store_true')
 passive.add_argument('--static-svg-frame-probes', action='store_true')
+passive.add_argument('--composed-static-svg-probe', action='store_true')
 passive.add_argument('--page-field-probes', action='store_true')
 passive.add_argument('--inactive-static-probes', action='store_true')
 passive.add_argument('--inactive-note-probe', action='store_true')
@@ -45,7 +46,7 @@ output = cases / 'CompositionProbes'
 output.mkdir(exist_ok=True)
 w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 
-if args.static_svg_frame_probes:
+if args.static_svg_frame_probes or args.composed_static_svg_probe:
     a = '{http://schemas.openxmlformats.org/drawingml/2006/main}'
     wp = '{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}'
     pic = '{http://schemas.openxmlformats.org/drawingml/2006/picture}'
@@ -63,38 +64,51 @@ if args.static_svg_frame_probes:
     for extent in [drawing.find('.//' + wp + 'extent'), drawing.find('.//' + pic + 'spPr/' + a + 'xfrm/' + a + 'ext')]:
         extent.set('cx', str(18 * 12700)); extent.set('cy', str(9 * 12700))
     rows, prepared = [], []
-    for parent in json.loads((output / 'minimum-passive-pictures.json').read_text()):
+    parents = [dict(row, Story='footer', ImageWidth=18, ImageHeight=9, StoryDistance=36)
+        for row in json.loads((output / 'composed-static-picture-report.json').read_text())] if args.composed_static_svg_probe else \
+        json.loads((output / 'minimum-passive-pictures.json').read_text())
+    for parent in parents:
         source = root / parent['Input']; original = source.read_bytes()
         assert hashlib.sha256(original).hexdigest().upper() == parent['Sha256']
         with ZipFile(BytesIO(original)) as archive:
             entries = {name: archive.read(name) for name in archive.namelist()}
         parts = entries.copy(); story = E.fromstring(parts[parent['Part']])
-        run = story.find(w + 'p/' + w + 'r'); run.remove(run.find(w + 'drawing')); run.append(copy.deepcopy(drawing))
+        run = story.find(w + 'p/' + w + 'r')
+        original_drawing = run.find(w + 'drawing')
+        preview_id = original_drawing.find('.//' + a + 'blip').get(r + 'embed')
+        replacement = copy.deepcopy(drawing); replacement.find('.//' + a + 'blip').set(r + 'embed', preview_id)
+        run.remove(original_drawing); run.append(replacement)
         parts[parent['Part']] = E.tostring(story, encoding='utf-8', xml_declaration=True)
         relationship_part = 'word/_rels/' + parent['Part'].split('/')[-1] + '.rels'
         relationships = E.fromstring(parts[relationship_part])
+        preview_part = 'word/' + next(item.get('Target') for item in relationships if item.get('Id') == preview_id)
+        svg_part = 'word/media/composed-static-picture.svg' if args.composed_static_svg_probe else 'word/media/passive-minimum-picture.svg'
+        assert all(item.get('Id') != 'rIdPassiveMinimumSvg' for item in relationships)
         E.SubElement(relationships, rel + 'Relationship', {'Id': 'rIdPassiveMinimumSvg',
-            'Type': r[1:-1] + '/image', 'Target': 'media/passive-minimum-picture.svg'})
+            'Type': r[1:-1] + '/image', 'Target': svg_part.removeprefix('word/')})
         parts[relationship_part] = E.tostring(relationships, encoding='utf-8', xml_declaration=True)
-        parts['word/media/passive-minimum-picture.png'] = preview
-        parts['word/media/passive-minimum-picture.svg'] = vector
+        assert preview_part in parts
+        parts[preview_part] = preview
+        parts[svg_part] = vector
         types = E.fromstring(parts['[Content_Types].xml'])
         assert not any(item.get('Extension') == 'svg' for item in types)
         E.SubElement(types, ct + 'Default', {'Extension': 'svg', 'ContentType': 'image/svg+xml'})
         parts['[Content_Types].xml'] = E.tostring(types, encoding='utf-8', xml_declaration=True)
-        changed = {parent['Part'], relationship_part, 'word/media/passive-minimum-picture.png', '[Content_Types].xml'}
+        changed = {parent['Part'], relationship_part, preview_part, '[Content_Types].xml'}
         assert all(parts[name] == data for name, data in entries.items() if name not in changed)
-        identifier = 'minimum-passive-svg-' + parent['Story'] + '-ordinary11'; generated = package_bytes(parts)
+        identifier = 'composed-static-svg-report' if args.composed_static_svg_probe else 'minimum-passive-svg-' + parent['Story'] + '-ordinary11'
+        generated = package_bytes(parts)
         rows.append(dict(parent, Id=identifier, Input=(output.relative_to(root) / (identifier + '.docx')).as_posix(),
             Sha256=hashlib.sha256(generated).hexdigest().upper(), SourceInput=parent['Input'], SourceSha256=parent['Sha256'],
             SvgViewBox=[0, 0, 120, 60], SvgWitnessColor=[0, 170, 102], SvgWitnessRect=[10, 8, 100, 44],
             Change='Replace only static drawing/media with canonical SVG plus PNG preview at the same18x9pt extent; body/style entries exact.'))
         prepared.append((output / (identifier + '.docx'), generated))
-    prepared.append((output / 'minimum-static-svg-frames.json', manifest_bytes(rows)))
+    manifest_name = 'composed-static-svg-report.json' if args.composed_static_svg_probe else 'minimum-static-svg-frames.json'
+    prepared.append((output / manifest_name, manifest_bytes(rows)))
     for target, data in prepared:
         if args.write: publish(target, data)
         else: assert target.read_bytes() == data, target.name
-    print('Two canonical SVG/preview frame probes verified; body and style entries exact.')
+    print(f'{len(rows)} canonical SVG/preview frame probes verified; body and style entries exact.')
     raise SystemExit(0)
 
 if args.composed_static_picture_probe:

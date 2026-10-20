@@ -1,0 +1,54 @@
+[
+  {
+    "Id": "composed-static-svg-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/composed-static-svg-report.docx",
+    "Sha256": "A8614B801CD381C69220D7F1158D4BE563CB2765D3663FA960EDD94F34615CFD",
+    "HeldOut": true,
+    "ExpectedEquationCount": 6,
+    "ExpectedInlineImageCount": 2,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "Inventory availability",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "Features": [
+      "tables",
+      "numbering",
+      "image",
+      "equations",
+      "bookmark",
+      "link",
+      "header",
+      "footer",
+      "footnote",
+      "comment"
+    ],
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/composed-static-picture-report.docx",
+    "SourceSha256": "F3ED6D23D2C656A8F13441C0BF49FECE2AAC2C6F0B1597655AA24AEBFE21B569",
+    "BodyXmlSha256": "838132F457B465A5F185DF64A8E6D1B98A254AC5EAA5F1429AF25976680E2D57",
+    "Part": "word/footer1.xml",
+    "Change": "Replace only static drawing/media with canonical SVG plus PNG preview at the same18x9pt extent; body/style entries exact.",
+    "Story": "footer",
+    "ImageWidth": 18,
+    "ImageHeight": 9,
+    "StoryDistance": 36,
+    "SvgViewBox": [
+      0,
+      0,
+      120,
+      60
+    ],
+    "SvgWitnessColor": [
+      0,
+      170,
+      102
+    ],
+    "SvgWitnessRect": [
+      10,
+      8,
+      100,
+      44
+    ]
+  }
+]
