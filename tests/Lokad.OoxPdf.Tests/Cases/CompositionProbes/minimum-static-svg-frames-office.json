@@ -1,0 +1,357 @@
+{
+  "Provenance": "Four independent Word16 vector views with canonical SVG/PNG preview. All eight body origins/sizes equal source-equivalent raster parents exactly. Source-colored path bounds are independent Office witnesses, not inferred exact outer SVG viewport or clipping proof. Original1pt geometry limits retained; native import normalization residual remains unverified.",
+  "Rows": [
+    {
+      "Id": "minimum-passive-svg-header-ordinary11",
+      "Mode": "final-preserve",
+      "InputSha256": "C1A7F29682F4662EAF475263D0EE5A40C50424556A8915A5FBB5DC94C0DBE2DF",
+      "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-passive-picture-header-ordinary11.docx",
+      "SourceSha256": "43A463112520918C6ED5A42ECC65A0279068AC7F8284FB4A523790617F55387D",
+      "WordPdfSha256": "9C5C8866FD1286DA3C0A50664D10663BA4E64374612CACC8458AFCD57D356376",
+      "WordPages": 1,
+      "WordProseAnchors": [
+        {
+          "Text": "Public minimum Top. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 93.02001953125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Alpha public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 106.46002197265625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterAlpha. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 126.5,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Bravo public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 139.82000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterBravo. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 159.8599853515625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Charlie public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 173.29998779296875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Delta public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 186.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterDelta. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 206.780029296875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordMathAnchors": [],
+      "WordFrames": [],
+      "WordColoredPaths": [
+        {
+          "Page": 1,
+          "FillHex": "00AA66",
+          "Rect": [
+            73.5905990600586,
+            41.71318054199219,
+            88.44450378417969,
+            48.195831298828125
+          ],
+          "InsidePage": true
+        }
+      ],
+      "ExpectedVectorPaint": true,
+      "SourceStoryKind": "header",
+      "ExpectedFramePoints": [
+        18,
+        9
+      ]
+    },
+    {
+      "Id": "minimum-passive-svg-header-ordinary11",
+      "Mode": "all-word-compatible",
+      "InputSha256": "C1A7F29682F4662EAF475263D0EE5A40C50424556A8915A5FBB5DC94C0DBE2DF",
+      "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-passive-picture-header-ordinary11.docx",
+      "SourceSha256": "43A463112520918C6ED5A42ECC65A0279068AC7F8284FB4A523790617F55387D",
+      "WordPdfSha256": "A5073D486842C6996606F7CDA78242C8344A3D772A725923E9E52131FD89A026",
+      "WordPages": 1,
+      "WordProseAnchors": [
+        {
+          "Text": "Public minimum Top. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 93.02001953125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Alpha public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 106.46002197265625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterAlpha. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 126.5,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Bravo public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 139.82000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterBravo. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 159.8599853515625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Charlie public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 173.29998779296875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Delta public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 186.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterDelta. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 206.780029296875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordMathAnchors": [],
+      "WordFrames": [],
+      "WordColoredPaths": [
+        {
+          "Page": 1,
+          "FillHex": "00AA66",
+          "Rect": [
+            73.5905990600586,
+            41.71318054199219,
+            88.44450378417969,
+            48.195831298828125
+          ],
+          "InsidePage": true
+        }
+      ],
+      "ExpectedVectorPaint": true,
+      "SourceStoryKind": "header",
+      "ExpectedFramePoints": [
+        18,
+        9
+      ]
+    },
+    {
+      "Id": "minimum-passive-svg-footer-ordinary11",
+      "Mode": "final-preserve",
+      "InputSha256": "A586BA24E0FD17CCD5C3448776C22D607D2177AE4BD89ED66D9F0CECC0708EED",
+      "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-passive-picture-footer-ordinary11.docx",
+      "SourceSha256": "DECAB5662CE0299E0BE504BB6534007759804A2F442AC858A9592892EAD5AE42",
+      "WordPdfSha256": "C656703AC6C62280CF686ADDE10A673F5C26E7C337CB67F93E31086CB1C0184B",
+      "WordPages": 1,
+      "WordProseAnchors": [
+        {
+          "Text": "Public minimum Top. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 93.02001953125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Alpha public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 106.46002197265625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterAlpha. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 126.5,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Bravo public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 139.82000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterBravo. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 159.8599853515625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Charlie public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 173.29998779296875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Delta public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 186.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterDelta. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 206.780029296875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordMathAnchors": [],
+      "WordFrames": [],
+      "WordColoredPaths": [
+        {
+          "Page": 1,
+          "FillHex": "00AA66",
+          "Rect": [
+            73.5905990600586,
+            748.283203125,
+            88.44450378417969,
+            754.765869140625
+          ],
+          "InsidePage": true
+        }
+      ],
+      "ExpectedVectorPaint": true,
+      "SourceStoryKind": "footer",
+      "ExpectedFramePoints": [
+        18,
+        9
+      ]
+    },
+    {
+      "Id": "minimum-passive-svg-footer-ordinary11",
+      "Mode": "all-word-compatible",
+      "InputSha256": "A586BA24E0FD17CCD5C3448776C22D607D2177AE4BD89ED66D9F0CECC0708EED",
+      "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/minimum-passive-picture-footer-ordinary11.docx",
+      "SourceSha256": "DECAB5662CE0299E0BE504BB6534007759804A2F442AC858A9592892EAD5AE42",
+      "WordPdfSha256": "7221FEE66EA5918B63AC5873D2B4E15C889461976A330359BED43927080F66FC",
+      "WordPages": 1,
+      "WordProseAnchors": [
+        {
+          "Text": "Public minimum Top. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 93.02001953125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Alpha public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 106.46002197265625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterAlpha. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 126.5,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Bravo public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 139.82000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterBravo. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 159.8599853515625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Charlie public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 173.29998779296875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Delta public body before note and after note. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 186.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public minimum AfterDelta. AV To WA.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 206.780029296875,
+          "Size": 11.039999961853027
+        }
+      ],
+      "WordMathAnchors": [],
+      "WordFrames": [],
+      "WordColoredPaths": [
+        {
+          "Page": 1,
+          "FillHex": "00AA66",
+          "Rect": [
+            73.5905990600586,
+            748.283203125,
+            88.44450378417969,
+            754.765869140625
+          ],
+          "InsidePage": true
+        }
+      ],
+      "ExpectedVectorPaint": true,
+      "SourceStoryKind": "footer",
+      "ExpectedFramePoints": [
+        18,
+        9
+      ]
+    }
+  ]
+}
