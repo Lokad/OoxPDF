@@ -1,5 +1,31 @@
 # Composed-document reliability checkpoint
 
+## C327 bounded source-fragment note admission (2026-10-20)
+
+Existing measured cell windows receive one complete-head capacity refinement;
+publish only after stable source-reference owners and fragment count. Measured
+separator reservations follow row-fragment ownership into physical placement.
+Continued/incomplete/page-dependent/unmatched owners retain conservative fallback;
+no new font/size/document-shape condition, option, quota or rendering framework.
+Early note1 now sits on its marker page1; later two-note page2 ends at Word's
+Left103/Right107. Six note-bearing outcomes pass all original1/.1/.01pt gates:
+1,472 prose/note and24 math anchors; max proseX.070007/Y.323975pt and
+mathX.046005/Y.360947pt. Four pages/count4/math once and reference targets remain.
+Four viewed native/Word images cover first-note page1 and two-note page2. All
+eight strict pixel failures and dynamic-field source flags remain explicit.
+
+Final frozen4e3874c0/2,524inputs:39Windows/26Ubuntu/13native skips, once per final
+platform; three genuine parent failures and one portable parent control pass.
+Initial14462103 retains38pass/1portable failure; diagnostic source windows were
+correct but placement recharged the separator. Two Release builds/one probe-only
+build; eight initial/eight final CLI conversions, all final comparisons reused
+by PDF identity. Early-note baseline adds two CLI/two Word exports. No joined
+qualification total.17assets/two exact transfer smokes; no root build or local
+broad/package replay. Fixed12 source proof retained pending the coherent refresh.
+Productiond1a8df91; evidence artifacts/composition-c1/
+table-note-source-fragments-evidence.json. C326CI39356467596 green both platforms
+including broader/package checks. Version0.1.5/release deferral/workspace gap stay.
+
 ## C326 semantic complete-note reserve reused by table continuations (2026-10-20)
 
 Reuse existing TryCompleteFootnoteReserve for complete heads: one measured
