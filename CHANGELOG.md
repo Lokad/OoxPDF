@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0-preview — candidate in preparation, not published
+## 0.2.0-preview — candidate prepared, not published
 
 - Restores supported DOCX content in ordinary combinations: bookmarks and
   multiple equations, pictures, table cells, headers/footers and qualified notes.

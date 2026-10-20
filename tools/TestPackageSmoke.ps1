@@ -1,4 +1,4 @@
-# Package smoke test (T08): packs the library as shipped, then converts a
+# Package smoke test (T08): packs the library, or reuses -PackagePath, then converts a
 # document through the packed package only: no project references, no tools,
 # no Office/COM, and no reference cache. Each run has its own package feed,
 # restore cache, and consumer directory so older packages cannot satisfy the test.
@@ -9,11 +9,16 @@ param(
     [string] $Configuration = "Release",
     [string] $FontPath = "",
     [switch] $NoBuild,
+    [string] $PackagePath = "",
     [string] $ExpectedLibrarySha256 = ""
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
+if ($PackagePath) {
+    $PackagePath = (Resolve-Path -LiteralPath $PackagePath).Path
+    if (-not $ExpectedLibrarySha256) { throw 'Reusing a package requires the qualified library hash.' }
+}
 if (-not [string]::IsNullOrWhiteSpace($FontPath)) {
     $FontPath = (Resolve-Path -LiteralPath $FontPath).Path
 }
@@ -23,11 +28,16 @@ $runId = [Guid]::NewGuid().ToString("N")
 $packDirectory = Join-Path $repoRoot "artifacts/nuget/package-smoke/$runId"
 $scratch = Join-Path $repoRoot "artifacts/package-smoke/$runId"
 New-Item -ItemType Directory -Force -Path $packDirectory, $scratch | Out-Null
-$packArguments = @("pack", $libraryProject, "-c", $Configuration, "--nologo", "--output", $packDirectory)
-if ($NoBuild) { $packArguments += "--no-build" }
-& dotnet @packArguments
-if ($LASTEXITCODE -ne 0) {
-    throw "Library packing failed with exit code $LASTEXITCODE."
+if ($PackagePath) {
+    Copy-Item -LiteralPath $PackagePath -Destination $packDirectory
+}
+else {
+    $packArguments = @("pack", $libraryProject, "-c", $Configuration, "--nologo", "--output", $packDirectory)
+    if ($NoBuild) { $packArguments += "--no-build" }
+    & dotnet @packArguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "Library packing failed with exit code $LASTEXITCODE."
+    }
 }
 
 $packages = @(Get-ChildItem -LiteralPath $packDirectory -Filter "Lokad.OoxPdf.*.nupkg")
@@ -179,7 +189,8 @@ if ($pdfHeader -ne "%PDF-") {
 }
 Write-Host "Package smoke test passed through the packed library."
 [ordered]@{
-    LibraryRebuilt = -not $NoBuild
+    LibraryRebuilt = -not $NoBuild -and -not $PackagePath
+    ReusedPackage = [bool]$PackagePath
     ExpectedLibrarySha256 = $ExpectedLibrarySha256
     MemoryAdmissionChecked = $true
     VersionMetadataChecked = $true

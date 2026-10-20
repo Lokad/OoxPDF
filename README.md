@@ -1,6 +1,6 @@
 # Lokad.OoxPdf
 
-Preparing **0.2.0-preview**; publication is deferred. Read the
+The **0.2.0-preview** candidate is prepared; publication is deferred. Read the
 [preview scope and limitations](docs/PreviewRelease.md) and
 [caller migration notes](docs/PublicApiChanges.md).
 

@@ -95,6 +95,8 @@ Use `--test-set <file.json>` for a JSON array of exact method names in one run.
 Keep runner TMP/TEMP in its ignored artifact directory. For frozen CLI checks,
 set `OOXPDF_TEST_CLI_ASSEMBLY` to that artifact's CLI. Package checks can use
 `TestPackageSmoke.ps1 -NoBuild -ExpectedLibrarySha256 <qualified hash>`.
+Use `-PackagePath <nupkg>` with that hash to consume the same package on another
+platform without rebuilding or repacking the library.
 Unit tests can also be filtered by capability group with `--group`, for example:
 `dotnet run --project tests/Lokad.OoxPdf.Tests -- --group pptx-typography --skip-slow`.
 
