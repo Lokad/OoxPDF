@@ -25,6 +25,7 @@ probes.add_argument('--parallel-cell-inset-probes', action='store_true')
 probes.add_argument('--parallel-cell-bottom-inset-probe', action='store_true')
 probes.add_argument('--parallel-cell-box-inset-probe', action='store_true')
 probes.add_argument('--parallel-cell-border-probes', action='store_true')
+probes.add_argument('--parallel-cell-trailing-row-probe', action='store_true')
 args = parser.parse_args()
 sha = lambda value: hashlib.sha256(value).hexdigest().upper()
 
@@ -49,6 +50,7 @@ parallel_group = next((group for enabled, group in [
     (args.parallel_cell_bottom_inset_probe, ('parallel-cell-bottom-inset-probe.json', ('bottom-insets',))),
     (args.parallel_cell_box_inset_probe, ('parallel-cell-box-inset-probe.json', ('boxed-insets',))),
     (args.parallel_cell_border_probes, ('parallel-cell-border-probes.json', ('bordered-aligned', 'bordered-thick'))),
+    (args.parallel_cell_trailing_row_probe, ('parallel-cell-trailing-row-probe.json', ('bordered-tail',))),
 ] if enabled), None)
 if parallel_group:
     parent = next(row for row in json.loads((cases / 'spanning-frame-probes.json').read_text())
@@ -66,7 +68,7 @@ if parallel_group:
         'bottom-insets': dict(Left=(3, 18), Right=(3, 3)),
         'boxed-insets': dict(Left=(3, 3), Right=(3, 3)),
     }
-    source_borders = {'bordered': (8, True), 'bordered-aligned': (8, False), 'bordered-thick': (16, True)}
+    source_borders = {'bordered': (8, True), 'bordered-aligned': (8, False), 'bordered-thick': (16, True), 'bordered-tail': (8, True)}
     for variant in variants:
         parts = dict(original_parts)
         tree = E.fromstring(parts['word/document.xml'])
@@ -123,6 +125,18 @@ if parallel_group:
                 cell.insert(list(cell).index(prefix), box_paragraph)
                 cell.remove(prefix)
             row_node.append(cell)
+        if variant == 'bordered-tail':
+            composition_parent = cases / 'parallel-cell-bordered.docx'
+            with ZipFile(composition_parent) as archive:
+                parent_row = next(E.fromstring(archive.read('word/document.xml')).iter(w + 'tr'))
+            assert E.tostring(row_node) == E.tostring(parent_row), 'The complete accepted source row must remain unchanged'
+            source_row_sha = sha(E.tostring(row_node))
+            tail = copy.deepcopy(row_node)
+            for side, cell in zip(('Left', 'Right'), tail.findall(w + 'tc')):
+                paragraphs = cell.findall(w + 'p')
+                for paragraph in paragraphs[1:]: cell.remove(paragraph)
+                paragraphs[0].find('.//' + w + 't').text = side + ' terminal control.'
+            table.append(tail)
         parts['word/document.xml'] = E.tostring(tree, encoding='utf-8', xml_declaration=True)
         buffer = BytesIO()
         with ZipFile(buffer, 'w') as archive:
@@ -135,6 +149,11 @@ if parallel_group:
             ExpectedText=['Before public math table.','Left source row 1.','Right source row 1.',
                 'Left source row ' + ('20.' if variant == 'short-left' else '120.'),'Right source row 120.','After public math table.'],
             Change='Parallel ordinary cells: aligned source metrics, different introduction spacing, or different line metrics. No candidate-derived geometry.'))
+        if variant == 'bordered-tail':
+            rows[-1].update(CompositionParentInput=str(composition_parent.relative_to(root)).replace('\\', '/'),
+                CompositionParentSha256=sha(composition_parent.read_bytes()),UnchangedFirstRowSha256=source_row_sha,
+                ExpectedText=rows[-1]['ExpectedText']+['Left terminal control.','Right terminal control.'],
+                Change='Append one ordinary row while preserving the complete accepted spanning row byte-for-byte as XML; no candidate-derived geometry.')
         if variant == 'short-left':
             del rows[-1]['SourceRowsPerCell']
             rows[-1]['SourceRowsByCell'] = dict(Left=20, Right=120)
