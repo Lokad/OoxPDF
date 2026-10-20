@@ -33,6 +33,12 @@ internal static partial class DocxInlineCompositionTests
         CheckSpanningFrames(null, compareWord: true, "parallel-cell-inset-composition-office.json", parallelCells: true);
     }
 
+    public static void DocxBoxedMathCountAndInsetsKeepIndependentWordTrailingRows()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent Word origins use installed Windows fonts.");
+        CheckSpanningFrames(null, compareWord: true, "parallel-cell-boxed-tail-office.json", parallelCells: true);
+    }
+
     internal static void CheckSpanningFrames(IFontResolver? resolver, bool compareWord,
         string goldenFile = "spanning-frame-office.json", bool parallelCells = false)
     {
@@ -57,16 +63,20 @@ internal static partial class DocxInlineCompositionTests
                 foreach (var expected in cellFills.EnumerateArray())
                 {
                     int pageIndex = expected.GetProperty("Page").GetInt32() - 1;
-                    var cell = layout.Pages[pageIndex].TableRows.Single().Cells[expected.GetProperty("Cell").GetInt32()];
+                    var cells = layout.Pages[pageIndex].TableRows.SelectMany(row => row.Cells)
+                        .Where(cell => cell.CellIndex == expected.GetProperty("Cell").GetInt32()).ToArray();
+                    TestAssert.True(cells.Length != 0, "The source column has a physical painted envelope.");
                     var rect = expected.GetProperty("Rect");
-                    TestAssert.True(Math.Abs(cell.X - rect[0].GetDouble()) < 1d &&
-                        Math.Abs(pages[pageIndex].Height - cell.Y - cell.Height - rect[1].GetDouble()) < 1d &&
-                        Math.Abs(cell.X + cell.Width - rect[2].GetDouble()) < 1d &&
-                        Math.Abs(pages[pageIndex].Height - cell.Y - rect[3].GetDouble()) < 1d,
+                    TestAssert.True(Math.Abs(cells.Min(cell => cell.X) - rect[0].GetDouble()) < 1d &&
+                        Math.Abs(pages[pageIndex].Height - cells.Max(cell => cell.Y + cell.Height) - rect[1].GetDouble()) < 1d &&
+                        Math.Abs(cells.Max(cell => cell.X + cell.Width) - rect[2].GetDouble()) < 1d &&
+                        Math.Abs(pages[pageIndex].Height - cells.Min(cell => cell.Y) - rect[3].GetDouble()) < 1d,
                         $"{id}, page{pageIndex + 1}: physical cell envelopes retain independent Word padding geometry.");
                 }
-            var anchors = row.GetProperty("WordProseAnchors").EnumerateArray().ToArray();
-            var remaining = anchors.Select(anchor => anchor.GetProperty("Text").GetString()!).ToHashSet(StringComparer.Ordinal);
+            var anchors = row.GetProperty("WordProseAnchors").EnumerateArray().ToList();
+            if (row.TryGetProperty("WordTailAnchors", out var tail)) anchors.AddRange(tail.EnumerateArray());
+            var sourceLabels = anchors.Select(anchor => anchor.GetProperty("Text").GetString()!).ToHashSet(StringComparer.Ordinal);
+            var remaining = new HashSet<string>(sourceLabels, StringComparer.Ordinal);
             for (int pageIndex = 0; pageIndex < pages.Length; pageIndex++)
             {
                 var page = pages[pageIndex];
@@ -94,13 +104,14 @@ internal static partial class DocxInlineCompositionTests
                             CheckOrigin(math[index].X, page.Height - math[index].Y, math[index].Size, expectedMath[index]);
                 }
                 foreach (var show in shows
-                    .Where(show => parallelCells
+                    .Where(show => sourceLabels.Contains(show.Text.Trim()) || (parallelCells
                         ? show.Text.StartsWith("Left source row ", StringComparison.Ordinal) || show.Text.StartsWith("Right source row ", StringComparison.Ordinal)
-                        : show.Text.StartsWith("Planning row ", StringComparison.Ordinal)))
+                        : show.Text.StartsWith("Planning row ", StringComparison.Ordinal))))
                 {
                     string text = show.Text.Trim();
                     TestAssert.True(remaining.Remove(text), $"{id}: every source planning paragraph is painted exactly once: {text}.");
-                    var cell = layout.Pages[pageIndex].TableRows.Single().Cells.Single(cell => show.X >= cell.X && show.X < cell.X + cell.Width);
+                    var cell = layout.Pages[pageIndex].TableRows.SelectMany(row => row.Cells).Single(cell =>
+                        show.X >= cell.X && show.X < cell.X + cell.Width && show.Y >= cell.Y - .001d && show.Y <= cell.Y + cell.Height + .001d);
                     var font = show.Font.Font;
                     foreach (var rune in show.Text.EnumerateRunes())
                     {

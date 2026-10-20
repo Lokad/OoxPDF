@@ -9346,5 +9346,17 @@
     "DocxTableCellTextLinesMemoSharesSplitCells",
     "CellMemoCounterInputs",
     "DocxSharedHorizontalTableBorderHangsBelowBoundary"
+  ],
+  "docx-spanning-composition-envelopes": [
+    "DocxSpanningFramesRetainCompleteInkAndIndependentWordOrigins",
+    "PortableRenderingSpanningFramesKeepCompleteGlyphInk",
+    "DocxParallelCellFramesRetainIndependentWordPagesAndCompleteInk",
+    "PortableRenderingParallelCellFramesKeepCompleteGlyphInk",
+    "DocxParallelCellBoxesRetainIndependentWordMathAndFinalCount",
+    "PortableRenderingParallelCellBoxesKeepMathAndActualCount",
+    "DocxParallelCellInsetsRetainWordPagesPaddingAndBoxedMath",
+    "PortableRenderingParallelCellInsetsKeepPaddingContentAndBoxedMath",
+    "DocxBoxedMathCountAndInsetsKeepIndependentWordTrailingRows",
+    "PortableRenderingBoxedMathCountAndInsetsKeepTrailingRows"
   ]
 }
