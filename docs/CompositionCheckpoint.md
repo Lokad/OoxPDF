@@ -1,5 +1,30 @@
 # Composed-document reliability checkpoint
 
+## C367 — consolidate closed visual evidence without losing paths (2026-10-20)
+
+Completed one exact workspace-only batch:2,990 SHA256-identical groups retain
+12,026 existing paths;9,036 single-owner duplicate files now share storage,
+reducing unique file content by1,085,475,264bytes. Independent verification checks
+all paths, group hashes, physical file IDs/link counts and read-only protection.
+A small prior probe proves atomic replacement preserves both paths/bytes and
+refuses accidental in-place writes through either shared name. Closed evidence
+is immutable: re-render into fresh directories; copy into a new writable file
+before editing. No shared writable output or production ownership mechanism.
+
+Current run names, preview/frozen/source/input/worktree/temporary trees and all
+earlier rejected targets are excluded;3,883 policy path prefixes were reviewed.
+No source/library/package change, build, conversion, Office export or suite replay.
+Evidence: artifacts/workspace-maintenance/closed-evidence-dedup-inventory-C367.json,
+closed-evidence-dedup-result-C367.json and closed-evidence-dedup-verified-C367.json.
+
+C366's proposed user-run retirement remains pending:239older snapshots/4,063exact
+compiled files,4.369GB unique content. The complete read-only preflight passed;
+no agent retry of prior rejected deletion. Use the absolute script path from
+another repository. Do not deduct this estimate before the user-run log and
+fresh state confirm it. Last complete workspace scan remains C36515.212GB;
+measure combined state once after user completion. Loose5GB target remains unmet.
+Preview publication/performance/broader features remain deferred.
+
 ## C365 — verify the user-run pinned runtime retirement (2026-10-20)
 
 The user requested a throwaway PowerShell script and executed it successfully.
