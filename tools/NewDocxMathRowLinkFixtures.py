@@ -17,7 +17,87 @@ m = '{http://schemas.openxmlformats.org/officeDocument/2006/math}'
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--write', action='store_true')
 parser.add_argument('--containers', action='store_true')
+parser.add_argument('--pictures', action='store_true', help='Picture navigation encodings; authored math controls stay unchanged.')
 args = parser.parse_args()
+if args.pictures and args.containers:
+    parser.error('Select one probe profile')
+
+if args.pictures:
+    directory = cases / 'InlineBoxMath'
+    parents = json.loads((directory / 'inline-box-ordinary-pictures.json').read_text())
+    a = '{http://schemas.openxmlformats.org/drawingml/2006/main}'
+    wp = '{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}'
+    pic = '{http://schemas.openxmlformats.org/drawingml/2006/picture}'
+    rel = '{http://schemas.openxmlformats.org/package/2006/relationships}'
+    office_rel = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
+    uri = 'https://example.invalid/public-picture'
+    rows, jobs = [], []
+    for variant, parent_id in [('wrapper-body', 'inline-box-picture-body'),
+                               ('properties-body', 'inline-box-picture-body'),
+                               ('properties-cell', 'inline-box-picture-cell')]:
+        parent = next(item for item in parents if item['Id'] == parent_id)
+        original = (root / parent['Input']).read_bytes()
+        assert sha(original) == parent['Sha256']
+        with ZipFile(BytesIO(original)) as archive:
+            infos = archive.infolist()
+            parts = {entry.filename: archive.read(entry.filename) for entry in infos}
+        tree = E.fromstring(parts['word/document.xml'])
+        before = E.tostring(tree)
+        run = next(node for node in tree.iter(w + 'r') if node.find('.//' + pic + 'pic') is not None)
+        owner = next(node for node in tree.iter() if run in list(node))
+        position = list(owner).index(run)
+        relation_id = 'rIdPublicPictureNavigation'
+        if variant.startswith('wrapper'):
+            owner.remove(run)
+            wrapper = E.Element(w + 'hyperlink', {office_rel + 'id': relation_id})
+            wrapper.append(run)
+            owner.insert(position, wrapper)
+        else:
+            properties = run.find('.//' + wp + 'docPr')
+            assert properties is not None and properties.find(a + 'hlinkClick') is None
+            click = E.SubElement(properties, a + 'hlinkClick', {office_rel + 'id': relation_id})
+        changed = E.tostring(tree, encoding='utf-8', xml_declaration=True)
+        if variant.startswith('wrapper'):
+            owner.remove(wrapper)
+            owner.insert(position, run)
+        else:
+            properties.remove(click)
+        assert E.tostring(tree) == before
+        relationships = E.fromstring(parts['word/_rels/document.xml.rels'])
+        original_relationships = E.tostring(relationships)
+        assert all(item.get('Id') != relation_id for item in relationships)
+        added = E.SubElement(relationships, rel + 'Relationship', {'Id': relation_id,
+            'Type': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink',
+            'Target': uri, 'TargetMode': 'External'})
+        changed_relationships = E.tostring(relationships, encoding='utf-8', xml_declaration=True)
+        relationships.remove(added)
+        assert E.tostring(relationships) == original_relationships
+        buffer = BytesIO()
+        with ZipFile(buffer, 'w') as archive:
+            for entry in infos:
+                payload = changed if entry.filename == 'word/document.xml' else (
+                    changed_relationships if entry.filename == 'word/_rels/document.xml.rels' else parts[entry.filename])
+                archive.writestr(copy.copy(entry), payload)
+        generated = buffer.getvalue()
+        identifier = 'inline-picture-link-' + variant
+        row = copy.deepcopy(parent)
+        row.update(Id=identifier, Input='tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/' + identifier + '.docx',
+                   Sha256=sha(generated), SourceInput=parent['Input'], SourceSha256=parent['Sha256'],
+                   Variant=variant, TargetUri=uri, HeldOut=True,
+                   Change='Add only the picture hyperlink metadata/relationship; retain visible source content and geometry.')
+        rows.append(row)
+        jobs.append((directory / (identifier + '.docx'), generated))
+    jobs.append((directory / 'inline-picture-links.json', (json.dumps(rows, indent=2) + '\n').replace('\n', '\r\n').encode()))
+    for target, generated in jobs:
+        if args.write:
+            stage = target.with_suffix(target.suffix + '.staging')
+            with stage.open('xb') as output:
+                output.write(generated)
+            stage.replace(target)
+        else:
+            assert target.read_bytes() == generated, target.name
+    print('Three source-preserving picture navigation controls verified.')
+    raise SystemExit(0)
 data = source.read_bytes()
 assert sha(data) == '96A12C11555C1CF0C9360F0939551E77BE12180A69411CC534D56297E7B25B4F'
 with ZipFile(BytesIO(data)) as archive:
