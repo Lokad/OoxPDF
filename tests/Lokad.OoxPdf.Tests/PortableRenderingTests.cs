@@ -23,6 +23,9 @@ internal static class PortableRenderingTests
     public static void PortableRenderingTrailingRowsPreserveSpanningSourceInk() =>
         DocxInlineCompositionTests.CheckNaturalFragmentBorders(new PinnedResolver(mathFont: true), goldenFile: "parallel-cell-trailing-row-office.json");
 
+    public static void PortableRenderingAuthoredTableMarginsKeepBorderedGridAndMath() =>
+        DocxInlineCompositionTests.CheckTableGridOrigins(new PinnedResolver(mathFont: true), "table-implicit-border-origins-office.json");
+
     public static void PortableRenderingAuthoredZeroTableIndentsKeepOneGridAndMath() =>
         DocxInlineCompositionTests.CheckTableGridOrigins(new PinnedResolver(mathFont: true), "table-zero-indents-office.json");
 

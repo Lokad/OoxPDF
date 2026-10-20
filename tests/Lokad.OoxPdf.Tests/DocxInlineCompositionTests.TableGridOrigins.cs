@@ -13,9 +13,15 @@ internal static partial class DocxInlineCompositionTests
         CheckTableGridOrigins(null, "table-zero-indents-office.json");
     }
 
-    public static void DocxAuthoredIndentPresenceKeepsImplicitAndStaticGridFallbacks()
+    public static void DocxAuthoredTableMarginsKeepIndependentBorderedWordOrigins()
     {
-        foreach (double margin in new[] { 0d, 10d })
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent bordered-margin origins use installed Windows fonts.");
+        CheckTableGridOrigins(null, "table-implicit-border-origins-office.json");
+    }
+
+    public static void DocxAuthoredTableMarginPresenceKeepsUnsetAndStaticGridFallbacks()
+    {
+        foreach (double? margin in new double?[] { null, 0d, 10d })
         foreach (string width in new[] { "4", "16" })
         {
             var paragraph = DocxTests.CreateDocxLayoutParagraph("Public cell", 11d, 16d);
@@ -31,9 +37,9 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(Math.Abs(stationary.X - page.MarginLeft) < .001d,
                     "Static containers preserve their grid anchor with absent or authored zero indentation.");
                 TestAssert.Equal(flowing.Width, stationary.Width);
-                if (authored)
+                if (authored || margin is not null)
                     TestAssert.True(Math.Abs(flowing.TextLines.Single().X - page.MarginLeft) < .001d,
-                        "Authored zero indentation anchors flowing first text, including a visible starting border.");
+                        "Authored indentation or margins own flowing first text, including a visible starting border.");
                 else
                     TestAssert.Equal(stationary.X, flowing.X);
             }
@@ -131,15 +137,13 @@ internal static partial class DocxInlineCompositionTests
                     anchors.Add((text, first.Show.X, first.Show.Y));
                     TestAssert.Equal(anchor.GetProperty("Page").GetInt32(), actual.Page);
                     if (resolver is not null) continue;
-                    // The visible starting-border case remains a recorded X residual.
-                    if (row.GetProperty("StartingTextOriginAdmitted").GetBoolean() || text != "Before inline")
-                        TestAssert.True(Math.Abs(first.Show.X - anchor.GetProperty("X").GetDouble()) < 1d,
-                            id + ": first text and surrounding flow retain independent one-point Word X geometry.");
+                    TestAssert.True(Math.Abs(first.Show.X - anchor.GetProperty("X").GetDouble()) < 1d,
+                        id + ": first text and surrounding flow retain independent one-point Word X geometry.");
                     TestAssert.True(Math.Abs(first.Height - first.Show.Y - anchor.GetProperty("Y").GetDouble()) < 1d &&
                         Math.Abs(first.Show.Size - anchor.GetProperty("Size").GetDouble()) < .1d,
                         id + ": the grid-origin change preserves independent Word baseline/size geometry.");
                 }
-                if (resolver is not null && row.GetProperty("StartingTextOriginAdmitted").GetBoolean())
+                if (resolver is not null)
                 {
                     double expectedDelta = row.TryGetProperty("LogicalFirstCellOffsetPoints", out var logicalOffset)
                         ? logicalOffset.GetDouble() : row.GetProperty("Anchors")[1].GetProperty("X").GetDouble() -

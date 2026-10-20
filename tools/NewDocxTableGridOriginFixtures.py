@@ -10,12 +10,16 @@ from xml.etree import ElementTree as E
 
 root = Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--authored-zero-probes', action='store_true')
+mode = parser.add_mutually_exclusive_group()
+mode.add_argument('--authored-zero-probes', action='store_true')
+mode.add_argument('--implicit-border-probes', action='store_true')
 parser.add_argument('--write', action='store_true')
 args = parser.parse_args()
 manifest = root / ('tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/' +
-    ('table-zero-indents.json' if args.authored_zero_probes else 'table-grid-origins.json'))
-source = root / 'tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx'
+    ('table-implicit-border-origins.json' if args.implicit_border_probes else
+     'table-zero-indents.json' if args.authored_zero_probes else 'table-grid-origins.json'))
+source = root / ('tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-bordered.docx' if args.implicit_border_probes
+    else 'tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/unmerged-math-cell-control.docx')
 w = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 rel = '{http://schemas.openxmlformats.org/package/2006/relationships}'
 ct = '{http://schemas.openxmlformats.org/package/2006/content-types}'
@@ -35,7 +39,17 @@ def set_margins(owner, value):
 
 
 prepared = []
-if args.authored_zero_probes:
+if args.implicit_border_probes:
+    cases = []
+    for variant in ['margin0', 'margin200', 'cell200', 'width8', 'width24']:
+        identifier = 'table-start-border-' + variant
+        cases.append(dict(Id=identifier, Input='tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/' + identifier + '.docx',
+            Source=str(source.relative_to(root)).replace('\\', '/'), SourceSha256=sha(source_bytes), HeldOut=True,
+            ExpectedEquationCount=1, ExpectedRenderedEquationCount=1,
+            ExpectedText=['Before public math table.', 'Before inline', 'after equation.', 'After public math table.'],
+            Variant='implicit-' + variant,
+            Change='Authored table/cell margins with absent indentation and solid borders. Thick-border Word offset remains unresolved.'))
+elif args.authored_zero_probes:
     cases = []
     for variant, margin in [('zero-bordered', 108), ('zero-bordered-wide', 200)]:
         identifier = 'table-origin-' + variant
@@ -55,6 +69,13 @@ for case in cases:
     properties = table.find(w + 'tblPr')
     margins = properties.find(w + 'tblCellMar')
     variant = case['Variant']
+    if variant.startswith('implicit-width'):
+        for edge in properties.find(w + 'tblBorders'):
+            edge.set(w + 'sz', variant.removeprefix('implicit-width'))
+    if variant.startswith('implicit-margin'):
+        set_margins(margins, int(variant.removeprefix('implicit-margin')))
+    if variant == 'implicit-cell200':
+        set_margins(E.SubElement(table.find(w + 'tr').find(w + 'tc').find(w + 'tcPr'), w + 'tcMar'), 200)
     if variant in ['direct-zero', 'direct-wide', 'style-108-direct-zero']:
         set_margins(margins, 0 if 'zero' in variant else 200)
     if variant == 'cell-wide':
@@ -107,13 +128,13 @@ for case in cases:
             info.compress_type = ZIP_DEFLATED
             archive.writestr(info, parts[name])
     data = buffer.getvalue()
-    if args.authored_zero_probes:
+    if args.authored_zero_probes or args.implicit_border_probes:
         case['Sha256'] = sha(data)
     else:
         assert sha(data) == case['Sha256'], case['Id']
     prepared.append((root / case['Input'], data))
 
-if args.authored_zero_probes:
+if args.authored_zero_probes or args.implicit_border_probes:
     prepared.append((manifest, (json.dumps(cases, indent=2) + '\n').replace('\n', '\r\n').encode()))
 # Default verification never writes through frozen input links. Explicit publication
 # replaces directory entries after all source/output bytes have been constructed.

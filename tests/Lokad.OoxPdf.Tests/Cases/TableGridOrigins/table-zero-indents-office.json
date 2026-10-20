@@ -6,7 +6,6 @@
       "InputSha256": "8844FBFF2DCE87AAD91E8F404793CB74ACBCC48C8A1EF5A62BB5C608E02026B0",
       "Mode": "final-preserve",
       "ReferencePdfSha256": "C9E1B5349F0E0EC07A607304FA6DF50EF88629841365CB5D6268C58D101331A2",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",
@@ -47,7 +46,6 @@
       "InputSha256": "8844FBFF2DCE87AAD91E8F404793CB74ACBCC48C8A1EF5A62BB5C608E02026B0",
       "Mode": "all-word-compatible",
       "ReferencePdfSha256": "75EFC368E93BE218CD83FC3E5A064A7FA3E9D84DC3F2D2575CC6BEFB121D2534",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",
@@ -88,7 +86,6 @@
       "InputSha256": "6ACBDA5A171562A51860E288E0536AF78903B57DD26ACE6D74F61C80A8A8F341",
       "Mode": "final-preserve",
       "ReferencePdfSha256": "A6889602482FC4A7F7E6F7D70F813465EE25D206F3423F96F91A319B90E0067B",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",
@@ -129,7 +126,6 @@
       "InputSha256": "6ACBDA5A171562A51860E288E0536AF78903B57DD26ACE6D74F61C80A8A8F341",
       "Mode": "all-word-compatible",
       "ReferencePdfSha256": "2983312D81F5262E82BDAF3E3F41E35F9936475112C159E4D07D9839BF0BF922",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",

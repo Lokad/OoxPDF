@@ -1,0 +1,92 @@
+[
+  {
+    "Id": "table-start-border-margin0",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-start-border-margin0.docx",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-bordered.docx",
+    "SourceSha256": "E8EBB66769ED892122B0FD0E409F3248984A6AD3839D4E8010D2DD9D78C6EFEB",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "implicit-margin0",
+    "Change": "Authored table/cell margins with absent indentation and solid borders. Thick-border Word offset remains unresolved.",
+    "Sha256": "074473E479D8A731E16EA8CE20B0477BC3B8A36243F02D7851E64A5091DE9798"
+  },
+  {
+    "Id": "table-start-border-margin200",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-start-border-margin200.docx",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-bordered.docx",
+    "SourceSha256": "E8EBB66769ED892122B0FD0E409F3248984A6AD3839D4E8010D2DD9D78C6EFEB",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "implicit-margin200",
+    "Change": "Authored table/cell margins with absent indentation and solid borders. Thick-border Word offset remains unresolved.",
+    "Sha256": "E5B21C34EBC965B88F860E0E19A28A1FA2A0B41F0F0BD980A20A0D8F73DF2A28"
+  },
+  {
+    "Id": "table-start-border-cell200",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-start-border-cell200.docx",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-bordered.docx",
+    "SourceSha256": "E8EBB66769ED892122B0FD0E409F3248984A6AD3839D4E8010D2DD9D78C6EFEB",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "implicit-cell200",
+    "Change": "Authored table/cell margins with absent indentation and solid borders. Thick-border Word offset remains unresolved.",
+    "Sha256": "64A6842F6C487861B93FC73DE062A6136E8C64FBA5D04A9EF79BA201980DC031"
+  },
+  {
+    "Id": "table-start-border-width8",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-start-border-width8.docx",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-bordered.docx",
+    "SourceSha256": "E8EBB66769ED892122B0FD0E409F3248984A6AD3839D4E8010D2DD9D78C6EFEB",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "implicit-width8",
+    "Change": "Authored table/cell margins with absent indentation and solid borders. Thick-border Word offset remains unresolved.",
+    "Sha256": "78DC5B6B8D82FE92287C1C3F3482F5DF43825F3CAB65B51433509A692B23E3EE"
+  },
+  {
+    "Id": "table-start-border-width24",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-start-border-width24.docx",
+    "Source": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/table-origin-bordered.docx",
+    "SourceSha256": "E8EBB66769ED892122B0FD0E409F3248984A6AD3839D4E8010D2DD9D78C6EFEB",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedRenderedEquationCount": 1,
+    "ExpectedText": [
+      "Before public math table.",
+      "Before inline",
+      "after equation.",
+      "After public math table."
+    ],
+    "Variant": "implicit-width24",
+    "Change": "Authored table/cell margins with absent indentation and solid borders. Thick-border Word offset remains unresolved.",
+    "Sha256": "16E70BED55EECC4132445CDA66EABFA588E22AF1389F99C58C70EAECAF2DF81B"
+  }
+]

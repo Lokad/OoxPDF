@@ -1,0 +1,132 @@
+{
+  "Scope": "Four independent retained Word Final controls for authored margins with visible solid borders. Source and reference hashes exact; no new Office export. Nominal shared first-text anchor has residual Word offset within original1pt. Thick-width24 remains independently measured outside this gate; not claimed as qualified.",
+  "TolerancePoints": 1,
+  "Rows": [
+    {
+      "Id": "table-start-border-margin0",
+      "InputSha256": "074473E479D8A731E16EA8CE20B0477BC3B8A36243F02D7851E64A5091DE9798",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "08C19D54F9FF2A0EB65716A8DF7EE3AE657EA074B5D84DDF585A633207481C1F",
+      "LogicalFirstCellOffsetPoints": 0,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 71.66400146484375,
+          "Y": 106.219970703125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 153.3800048828125,
+          "Size": 11.039999961853027
+        }
+      ]
+    },
+    {
+      "Id": "table-start-border-margin200",
+      "InputSha256": "E5B21C34EBC965B88F860E0E19A28A1FA2A0B41F0F0BD980A20A0D8F73DF2A28",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "E3928F6BE19DEB05566CF1A8CF93464D0725F49ACE40505CC967AC4F29A9BA87",
+      "LogicalFirstCellOffsetPoints": 0,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 71.66400146484375,
+          "Y": 106.219970703125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 153.3800048828125,
+          "Size": 11.039999961853027
+        }
+      ]
+    },
+    {
+      "Id": "table-start-border-cell200",
+      "InputSha256": "64A6842F6C487861B93FC73DE062A6136E8C64FBA5D04A9EF79BA201980DC031",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "AE58882F6CE1105A92B3FC39AEC4972AB7C5FA6461CEE5D25E1F6A5CBF78249D",
+      "LogicalFirstCellOffsetPoints": 0,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 71.66400146484375,
+          "Y": 106.219970703125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 153.3800048828125,
+          "Size": 11.039999961853027
+        }
+      ]
+    },
+    {
+      "Id": "table-start-border-width8",
+      "InputSha256": "78DC5B6B8D82FE92287C1C3F3482F5DF43825F3CAB65B51433509A692B23E3EE",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "A686A985D854043497996B2F92A87070999DDE6BD21029EC726C6BA03494246F",
+      "LogicalFirstCellOffsetPoints": 0,
+      "Anchors": [
+        {
+          "Text": "Before public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.32000732421875,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Before inline",
+          "Page": 1,
+          "X": 71.66400146484375,
+          "Y": 106.70001220703125,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "After public math table.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 154.82000732421875,
+          "Size": 11.039999961853027
+        }
+      ]
+    }
+  ],
+  "Unresolved": [
+    {
+      "Id": "table-start-border-width24",
+      "Reason": "Implicit Word first-text offset-1.44pt; no border-dependent formula accepted. External geometry report retains its failed1pt gate."
+    }
+  ]
+}

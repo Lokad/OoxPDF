@@ -5,7 +5,6 @@
       "Id": "table-signed-indent-plain",
       "InputSha256": "BE559A53C3B5E13E4322DBE8528FEC9C25A253C20FA992204D7EEA4AAEA86426",
       "Mode": "final-preserve",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",
@@ -38,7 +37,6 @@
       "Id": "table-signed-indent-plain",
       "InputSha256": "BE559A53C3B5E13E4322DBE8528FEC9C25A253C20FA992204D7EEA4AAEA86426",
       "Mode": "all-word-compatible",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",
@@ -71,7 +69,6 @@
       "Id": "table-signed-indent-bordered",
       "InputSha256": "A15F747BE65EC4AE9E63D28F2721CC78F8F971F46C4EDEDF964A951E93BEB7C2",
       "Mode": "final-preserve",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",
@@ -104,7 +101,6 @@
       "Id": "table-signed-indent-bordered",
       "InputSha256": "A15F747BE65EC4AE9E63D28F2721CC78F8F971F46C4EDEDF964A951E93BEB7C2",
       "Mode": "all-word-compatible",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",
@@ -137,7 +133,6 @@
       "Id": "table-signed-indent-style",
       "InputSha256": "EEA7C4EB22628943DD6081F7E6E7667B802AAD4F0086DFBB7445953800026F9E",
       "Mode": "final-preserve",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",
@@ -170,7 +165,6 @@
       "Id": "table-signed-indent-style",
       "InputSha256": "EEA7C4EB22628943DD6081F7E6E7667B802AAD4F0086DFBB7445953800026F9E",
       "Mode": "all-word-compatible",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",
@@ -203,7 +197,6 @@
       "Id": "table-signed-indent-legacy",
       "InputSha256": "D1DC21779E3FCEAC69991022B82E17AAC06521BDD8E0D7889DC7554B525EAC48",
       "Mode": "final-preserve",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",
@@ -236,7 +229,6 @@
       "Id": "table-signed-indent-legacy",
       "InputSha256": "D1DC21779E3FCEAC69991022B82E17AAC06521BDD8E0D7889DC7554B525EAC48",
       "Mode": "all-word-compatible",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",
@@ -269,7 +261,6 @@
       "Id": "table-signed-indent-small",
       "InputSha256": "D65D51ACFABA406B180E7DD7402DEFCE75D366670E5CE2E7D124DF46E26BB6CC",
       "Mode": "final-preserve",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",
@@ -302,7 +293,6 @@
       "Id": "table-signed-indent-small",
       "InputSha256": "D65D51ACFABA406B180E7DD7402DEFCE75D366670E5CE2E7D124DF46E26BB6CC",
       "Mode": "all-word-compatible",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",
@@ -335,7 +325,6 @@
       "Id": "table-signed-indent-auto",
       "InputSha256": "C9B774EF0A43F6D7A8523F99F4E5BB22008DE5537DD4960083B4D713A54B8CD7",
       "Mode": "final-preserve",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",
@@ -368,7 +357,6 @@
       "Id": "table-signed-indent-auto",
       "InputSha256": "C9B774EF0A43F6D7A8523F99F4E5BB22008DE5537DD4960083B4D713A54B8CD7",
       "Mode": "all-word-compatible",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",
@@ -401,7 +389,6 @@
       "Id": "table-signed-indent-percent",
       "InputSha256": "879C4599337F1CFDE818ECB14670FA2F4B04A071CCCB499BDA1B3CEAB8B17EA9",
       "Mode": "final-preserve",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",
@@ -434,7 +421,6 @@
       "Id": "table-signed-indent-percent",
       "InputSha256": "879C4599337F1CFDE818ECB14670FA2F4B04A071CCCB499BDA1B3CEAB8B17EA9",
       "Mode": "all-word-compatible",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table.",

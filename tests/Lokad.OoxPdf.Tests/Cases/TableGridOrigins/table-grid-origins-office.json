@@ -1,5 +1,5 @@
 {
-  "Scope": "Independent source-pinned Word16 first-text and body-flow anchors; visible starting-border residual remains excluded from the1pt correction contract. Both public presets.",
+  "Scope": "Independent source-pinned Word16 first-text and body-flow anchors, including solid starting borders. All anchors retain the one-point gate; smaller implicit Word offsets remain approximate. Both public presets.",
   "TolerancePoints": 1,
   "Rows": [
     {
@@ -7,7 +7,6 @@
       "InputSha256": "8B0A1DE5398010276A44DC31B7DC2FEDF53D8C79815786D4723EDB48A6626694",
       "Mode": "final-preserve",
       "ReferencePdfSha256": "4D243B0E01C386A463CA1D5933A4E322D45DBD57515CF8862770C3A64D71256A",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -37,7 +36,6 @@
       "InputSha256": "8B0A1DE5398010276A44DC31B7DC2FEDF53D8C79815786D4723EDB48A6626694",
       "Mode": "all-word-compatible",
       "ReferencePdfSha256": "F6F1EA2AD97D558810410C90512ABABE14239E495EF3E38E7E6DDE57E312B2CF",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -67,7 +65,6 @@
       "InputSha256": "D96CF39698C421C049B7D30FE57E12F9E56380DF91D5C85D019604EE7D95B83F",
       "Mode": "final-preserve",
       "ReferencePdfSha256": "A42A6FB0A6FF4AFBAC2A20BCDB0A8EA7736F10D569AB8128D0E723152C556032",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -97,7 +94,6 @@
       "InputSha256": "D96CF39698C421C049B7D30FE57E12F9E56380DF91D5C85D019604EE7D95B83F",
       "Mode": "all-word-compatible",
       "ReferencePdfSha256": "D58D300F4CE78993FF70D81D98D6167BA495C276E01AEE8A30DAB58CFE50A19F",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -127,7 +123,6 @@
       "InputSha256": "2565E3FA9649150CB2F0BBEF94A613C4B068EF0D32F80E7B1C0EF3430CD06184",
       "Mode": "final-preserve",
       "ReferencePdfSha256": "8B33649B8CE77F2875155E9212855AE833A034E5FD888AEE9B970D36F16E1512",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -157,7 +152,6 @@
       "InputSha256": "2565E3FA9649150CB2F0BBEF94A613C4B068EF0D32F80E7B1C0EF3430CD06184",
       "Mode": "all-word-compatible",
       "ReferencePdfSha256": "E8FFF7E232E26172A5E3D0355021160989162F99DC0987C8D0EAE0FFB499EF5F",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -187,7 +181,6 @@
       "InputSha256": "88A5A92D856AECC1F3CBBCA7B347F75BCDB92C56F7B1B3AEBD7A072D584C54B1",
       "Mode": "final-preserve",
       "ReferencePdfSha256": "3FF29BFF881E2A902A4C58D409F6781281F9FB5990E5FCAAF1BBD2454A917B2A",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -217,7 +210,6 @@
       "InputSha256": "88A5A92D856AECC1F3CBBCA7B347F75BCDB92C56F7B1B3AEBD7A072D584C54B1",
       "Mode": "all-word-compatible",
       "ReferencePdfSha256": "6F36504C79FD54079181E8E6EA3CF70039485C83F483A5B7E1DE5DF704004986",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -247,7 +239,6 @@
       "InputSha256": "7663AB4BE58F96AB2EB476D209591E2F4C8AF079BA0433E87F769180AC45E3BD",
       "Mode": "final-preserve",
       "ReferencePdfSha256": "0BD084C46CEE0F683571A8CE14717A8344429E3C74AE5FA102C23CFE48C7D2DC",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -277,7 +268,6 @@
       "InputSha256": "7663AB4BE58F96AB2EB476D209591E2F4C8AF079BA0433E87F769180AC45E3BD",
       "Mode": "all-word-compatible",
       "ReferencePdfSha256": "CF053A8B2AD68F97E922CDFBD6CCE745116B54D12D0A65B844B75AB8B22D2684",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -307,7 +297,6 @@
       "InputSha256": "60B0A5AC98EFE620B52D00F00110F16230186FF9CAC24685FD40B963A6A5E9F6",
       "Mode": "final-preserve",
       "ReferencePdfSha256": "84C5FA9FF8331DF656DEFD12B9577B9419E802BEFA8D3540AEE935D78A2FCD00",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -337,7 +326,6 @@
       "InputSha256": "60B0A5AC98EFE620B52D00F00110F16230186FF9CAC24685FD40B963A6A5E9F6",
       "Mode": "all-word-compatible",
       "ReferencePdfSha256": "E984D28CC99A5083ED8557737A254EBA7524EC44328E129DADF27A5297F5496A",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -367,7 +355,6 @@
       "InputSha256": "64395C625F2B542FE949E704BD099FE57EC21B70EDC7DD269A57BA9F528EDA42",
       "Mode": "final-preserve",
       "ReferencePdfSha256": "197D79773E9FBFEE92D8F1254BEB8CE25EEBA647542AEE124BBABAA6F405F26D",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -397,7 +384,6 @@
       "InputSha256": "64395C625F2B542FE949E704BD099FE57EC21B70EDC7DD269A57BA9F528EDA42",
       "Mode": "all-word-compatible",
       "ReferencePdfSha256": "F552BE0FE799E400A899E2F28EDCD4813B0B9F4C51819501EC644389D3714679",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -427,7 +413,6 @@
       "InputSha256": "AE51771699720FFF17D640CF708952E9746EF6747B7DF57DA87E0E2C318FAD1A",
       "Mode": "final-preserve",
       "ReferencePdfSha256": "88163890AFC3F21D698A1E5DDF315A931BC3579432481070B6804211C22D2EE1",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -457,7 +442,6 @@
       "InputSha256": "AE51771699720FFF17D640CF708952E9746EF6747B7DF57DA87E0E2C318FAD1A",
       "Mode": "all-word-compatible",
       "ReferencePdfSha256": "A025821FD96541B575D9B143C9AC7629457DB90EAF6C006FEE916CD5FF95EE29",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -487,7 +471,6 @@
       "InputSha256": "3421B24FCC4D2B28A12EF3A5E72344CA62FD94E28238695E188D93480D5CDFFB",
       "Mode": "final-preserve",
       "ReferencePdfSha256": "0CE13359F97EA297C0D23DC67FA0A5F58B29851E3EBF375A6F1D0A9297A932AF",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -517,7 +500,6 @@
       "InputSha256": "3421B24FCC4D2B28A12EF3A5E72344CA62FD94E28238695E188D93480D5CDFFB",
       "Mode": "all-word-compatible",
       "ReferencePdfSha256": "83768595E50B3BC1A1F942F24E718396615F37290D2CDBAE2DF91C660D5DC974",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -547,7 +529,6 @@
       "InputSha256": "E8EBB66769ED892122B0FD0E409F3248984A6AD3839D4E8010D2DD9D78C6EFEB",
       "Mode": "final-preserve",
       "ReferencePdfSha256": "C58A4F1737F8473AC8CB9C40332EFF6B483A5F9C50E719C68C0044640AF8569D",
-      "StartingTextOriginAdmitted": false,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -570,14 +551,14 @@
           "Y": 153.3800048828125,
           "Size": 11.039999961853027
         }
-      ]
+      ],
+      "LogicalFirstCellOffsetPoints": 0
     },
     {
       "Id": "table-origin-bordered",
       "InputSha256": "E8EBB66769ED892122B0FD0E409F3248984A6AD3839D4E8010D2DD9D78C6EFEB",
       "Mode": "all-word-compatible",
       "ReferencePdfSha256": "E9548B0FF75355772E0C195E30B4085211A42C90B4D481D9395F99D4118EDD36",
-      "StartingTextOriginAdmitted": false,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -600,14 +581,14 @@
           "Y": 153.3800048828125,
           "Size": 11.039999961853027
         }
-      ]
+      ],
+      "LogicalFirstCellOffsetPoints": 0
     },
     {
       "Id": "table-origin-top-border",
       "InputSha256": "5AB459FAE09FEF57FD291EB35F09FD29B9DB1E4B3A605F7CEB057DEB19D45BA2",
       "Mode": "final-preserve",
       "ReferencePdfSha256": "BC6881F00B5B488258D22948FB99FB526DA563B7CEF5BD3048D64FF44A3411FC",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -637,7 +618,6 @@
       "InputSha256": "5AB459FAE09FEF57FD291EB35F09FD29B9DB1E4B3A605F7CEB057DEB19D45BA2",
       "Mode": "all-word-compatible",
       "ReferencePdfSha256": "0EC5998EC0ABECF6F5477D46C36A6C44A6779A4E1D0D013BE79A50EBEB427BB3",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -667,7 +647,6 @@
       "InputSha256": "A7B8958973A8C3D3C4650088738A8DB9848D62A3F19ADD01CA48974E0014702E",
       "Mode": "final-preserve",
       "ReferencePdfSha256": "2DB2C1C6E70C362E16E92CE3B99CD84A71E400D5B01369602302F5416091E93B",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -697,7 +676,6 @@
       "InputSha256": "A7B8958973A8C3D3C4650088738A8DB9848D62A3F19ADD01CA48974E0014702E",
       "Mode": "all-word-compatible",
       "ReferencePdfSha256": "D08F3F94504E44D8B6C3DA64FF00EFC147A70C40B7E7B55B6DEB592E6C2F02B7",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -727,7 +705,6 @@
       "InputSha256": "93CAFB02DFA9086A41241ECEBC752C6CD7730C7FE63DB3E48F23F9F98BC71FA7",
       "Mode": "final-preserve",
       "ReferencePdfSha256": "F71385B1E033ABCA2EE1C193CC0896A180FA708BA23387E0C97A5B87682E3971",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -757,7 +734,6 @@
       "InputSha256": "93CAFB02DFA9086A41241ECEBC752C6CD7730C7FE63DB3E48F23F9F98BC71FA7",
       "Mode": "all-word-compatible",
       "ReferencePdfSha256": "34360EA3DAD2A2B46B244E5F46DE8AAC19D9F57F775F8106216FBE7A8C139171",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -787,7 +763,6 @@
       "InputSha256": "6D47949121C8B350A4AF37124D49B307A176D59A7621B61442BC82E422C9712C",
       "Mode": "final-preserve",
       "ReferencePdfSha256": "C1B1B80EEFE8A7F87E4A6012F0C58031D839E5070F8174D328A48784187815B0",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
@@ -817,7 +792,6 @@
       "InputSha256": "6D47949121C8B350A4AF37124D49B307A176D59A7621B61442BC82E422C9712C",
       "Mode": "all-word-compatible",
       "ReferencePdfSha256": "874BAE91D843A1DAC9F58FFD3F1624A5894200CE607B57BD22AD2EF5D36F88DC",
-      "StartingTextOriginAdmitted": true,
       "Anchors": [
         {
           "Text": "Before public math table. ",
