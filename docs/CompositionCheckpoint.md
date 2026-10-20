@@ -1,5 +1,31 @@
 # Composed-document reliability checkpoint
 
+## C357 composed footer-picture holdout preserves document frames (2026-10-20)
+
+Prepend one18x9pt picture-only paragraph to the public report footer. Source body,
+styles, notes, header math and review annotations remain byte-exact; removing the
+new paragraph restores the old story. Two CLI/two fresh Word16 views reuse C356,
+no library build or suite. Both engines retain two pages and all3399 Final/3456
+Review glyph characters/pages/origins/sizes/colors, old drawing records and image
+frames exactly relative to their own parents. Native parent is C351 carried by
+source reachability, not a fresh final-runtime conversion or whole-PDF identity.
+
+Word actually scales the review picture to.758889 of design width. Four repeated
+footer frames agree within.0581pt; two source-content screens clean. Final whole
+geometry gates pass. Review retains its parent proseY1.436pt failure; math and
+image gates pass. Both strict pixel gates remain failed. No production change,
+font-program/pixel identity or blanket ink/clipping claim. Evidence
+artifacts/composition-c1/composed-static-picture-evidence.json.
+
+C356CI39390191212 subsequently failed on both platforms: picture-first table
+checks require the previous unpainted mark owner for glyphless equations/images.
+The reader's broad glyphless-image retention changes that metadata despite
+font/layout eligibility being picture-only. This is confirmed overbroad source
+scope, not demonstrated visible corruption. C358 reuses the same qualified
+semantic predicate during reader retention and adds these neighboring Office/
+portable/cancellation checks to the capability selection. Keep the failed CI and
+qualification provenance. Raster/vector source-frame review is deferred to C359.
+
 ## C356 picture-only static paragraphs share measured frames (2026-10-20)
 
 The C355 prospective rule now uses existing ordered inline measurement and the
