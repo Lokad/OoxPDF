@@ -336,23 +336,29 @@ internal sealed partial class DocxRenderer
         double clipX = box.BoxX + ResolveTextEmissionXOffset(markupContext);
         double clipTop = box.BoxTop - (box.StaticStoryUsesPhysicalY ? 0d : ResolveTextEmissionBaselineOffset(markupContext));
         graphics.SaveState();
-        graphics.ClipRectangle(clipX, clipTop - box.BoxHeight, box.BoxWidth, box.BoxHeight);
         // RV05 inline-box probe (Word COM reference edge-inlinebox): stroked inline
         // frames paint their outline under the text like floating boxes.
         if (TryResolveInlineTextBoxStroke(box.TextBox, box.BoxWidth, box.BoxHeight, out double inlineStrokeWidth, out byte inlineStrokeRed, out byte inlineStrokeGreen, out byte inlineStrokeBlue))
         {
+            double strokeWidth = inlineStrokeWidth * box.PrintScale;
             double viewportBottom = box.OutlineViewportBottom.GetValueOrDefault(clipTop - box.BoxHeight);
             bool hasViewport = viewportBottom > clipTop - box.BoxHeight;
             if (hasViewport)
             {
                 graphics.SaveState();
-                graphics.ClipRectangle(clipX, viewportBottom, box.BoxWidth, Math.Max(0d, clipTop - viewportBottom));
+                // This viewport supplies a lower bound; the outline's own
+                // envelope must not acquire a new lateral or upper content clip.
+                graphics.ClipRectangle(clipX - strokeWidth / 2d, viewportBottom,
+                    box.BoxWidth + strokeWidth, Math.Max(0d, clipTop + strokeWidth / 2d - viewportBottom));
             }
             graphics.SetStrokeRgb(inlineStrokeRed, inlineStrokeGreen, inlineStrokeBlue);
-            graphics.SetLineWidth(inlineStrokeWidth * box.PrintScale);
+            graphics.SetLineWidth(strokeWidth);
             graphics.StrokeRectangle(clipX, clipTop - box.BoxHeight, box.BoxWidth, box.BoxHeight);
             if (hasViewport) graphics.RestoreState();
         }
+        // The containing drawing viewport owns the outline. Only children
+        // acquire this interior clip; clipping before stroking halves the border.
+        graphics.ClipRectangle(clipX, clipTop - box.BoxHeight, box.BoxWidth, box.BoxHeight);
         IReadOnlyList<DocxLayoutItem> items = box.TextLines
             .Cast<DocxLayoutItem>()
             .Concat(box.InlineImages)
