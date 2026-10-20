@@ -155,11 +155,12 @@ match Word's source pages and original geometry gates in both public modes.
 Continued, incomplete, page-dependent and unmatched owners retain conservative
 fallbacks. Strict pixel differences and dynamic-field audit flags remain.
 
-Supported natural footer-table box outlines use the body drawing viewport while
-child text retains its own content clip. Independent margin/distance controls
-cover both public modes, math and ordinary content. Standalone boxes, headers
-and body containers retain their own placement rules. A picture-and-box footer
-cell still has a separate sibling-box displacement; strict visual failures remain.
+Supported natural footer-table boxes can enter the body drawing viewport while
+staying below their measured paragraph start. Overflow that cannot fit keeps its
+outline clip; child text follows the placed frame and retains its own content clip.
+Independent margin, picture-height and width controls cover both public modes.
+Explicit breaks and uncertain owners retain existing placement. Standalone boxes,
+headers and body containers keep their own rules. Strict visual failures remain.
 See the
 [composition checkpoint](CompositionCheckpoint.md) for evidence and limitations.
 

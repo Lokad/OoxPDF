@@ -1,5 +1,30 @@
 # Composed-document reliability checkpoint
 
+## C335 paragraph-bounded footer-table drawing-frame admission (2026-10-20)
+
+An overflowing direct natural footer-table box can enter its physical drawing
+viewport, capped by the measured owning paragraph start. Reuse shared translation
+for children; clip a tail that cannot fit. Authored breaks, unknown/ambiguous
+owners and complex sources retain placement. No fitted offset, font/count regime,
+API change or replacement framework. All26 outcomes pass original1/.1/.01pt
+geometry gates. Original/tall frame errors7.330/5.580pt become<=.04004pt; margin
+cap error<=.055054pt, child prose<=.171021pt. Ten source screens clean. Four viewed
+native/Word Final pages confirm admission/clipping and Office's parent/child
+overlap; no overlap-free or strict-fidelity claim. All26 strict pixel gates fail.
+
+One library compilation, final707b6342/2,540inputs:36Windows/25Ubuntu/11native
+skips, once per platform. One native parent geometry failure; portable content and
+authored-break controls pass. Initial build compiled the library then rejected a
+missing test constructor argument. Fix harness, build tests/CLI without project
+references, verify library copies, freeze once; no library recompile, failed test
+run or joined total.26 CLI/20 exact prior PDFs/comparisons reused; zero new Word
+exports.17assets/two exact transfer smokes; no root build or fixed12/suite/package
+replay. Fixed source proof retained: DOCX footers have no boxes, decks use PPTX.
+Productionad1e97ff; evidence artifacts/composition-c1/footer-frame-admission-
+evidence.json. C332CI39362315323 green both platforms including broader/package
+checks. Next bounded outline/content clip review using retained references.
+Version0.1.5/release deferred/workspace gap remain.
+
 ## C334 paragraph-start limit discriminates continuation admission (2026-10-20)
 
 Change only section bottom margin72-to90pt. Word Final lifts the box13pt, stopping
