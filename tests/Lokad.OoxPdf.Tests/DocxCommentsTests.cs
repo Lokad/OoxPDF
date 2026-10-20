@@ -6248,7 +6248,7 @@ internal static partial class DocxCommentsTests
         }
         TestAssert.True(Math.Abs(balloon.Height - (12.61d + firstHeight + firstPitch * size + (tailRows.Length - 1) * size + thirdPitch * size + thirdHeight + fourthPitch * size + fourthHeight)) < 0.02d,
             "Height includes the paragraph transition and all later rows.");
-        if (wrappedFourth && (!hasFourth || !(wrappedFirst || wrappedSecond || wrappedThird))) { continue; }
+        if (wrappedFourth && (!hasFourth || !(wrappedFirst || wrappedSecond || wrappedThird))) { return; }
         if (hasFourth && !supplementary && !zeroFirst && prefixDescender == -50 && prefixGap == 0 && length == 32 && firstMarkFace == "AnchorFace")
         {
             if (wrappedThird)
