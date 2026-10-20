@@ -55,35 +55,35 @@
         "PictureId": "1",
         "TargetUri": "https://example.invalid/composed-picture/document/1",
         "ExpectedNativeNavigation": true,
-        "Scope": "Complete body picture"
+        "Scope": "Complete body/static picture"
       },
       {
         "Part": "word/document.xml",
         "PictureId": "55005",
         "TargetUri": "https://example.invalid/composed-picture/document/55005",
         "ExpectedNativeNavigation": true,
-        "Scope": "Complete body picture"
+        "Scope": "Complete body/static picture"
       },
       {
         "Part": "word/endnotes.xml",
         "PictureId": "55004",
         "TargetUri": "https://example.invalid/composed-picture/endnotes/55004",
         "ExpectedNativeNavigation": false,
-        "Scope": "Staged note/static story navigation"
+        "Scope": "Staged note navigation"
       },
       {
         "Part": "word/footer1.xml",
         "PictureId": "1",
         "TargetUri": "https://example.invalid/composed-picture/footer1/1",
-        "ExpectedNativeNavigation": false,
-        "Scope": "Staged note/static story navigation"
+        "ExpectedNativeNavigation": true,
+        "Scope": "Complete body/static picture"
       },
       {
         "Part": "word/footer1.xml",
         "PictureId": "55008",
         "TargetUri": "https://example.invalid/composed-picture/footer1/55008",
-        "ExpectedNativeNavigation": false,
-        "Scope": "Staged note/static story navigation"
+        "ExpectedNativeNavigation": true,
+        "Scope": "Complete body/static picture"
       }
     ],
     "Change": "Add only five canonical picture click targets/relationships; preserve all visible source content and geometry."
