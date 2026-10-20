@@ -19,18 +19,28 @@ parser.add_argument('--write', action='store_true')
 parser.add_argument('--containers', action='store_true')
 parser.add_argument('--pictures', action='store_true', help='Picture navigation encodings; authored math controls stay unchanged.')
 parser.add_argument('--compound-pictures', action='store_true', help='Add only canonical click metadata to the held-out composed report.')
+parser.add_argument('--footnote-pictures', action='store_true', help='Add canonical clicks to the existing mixed-footnote holdout.')
 args = parser.parse_args()
-if sum((args.pictures, args.containers, args.compound_pictures)) > 1:
+if sum((args.pictures, args.containers, args.compound_pictures, args.footnote_pictures)) > 1:
     parser.error('Select one probe profile')
 
-if args.compound_pictures:
-    directory = cases / 'Composition'
-    parent = json.loads((directory / 'composed-inline-frame-report.json').read_text())[0]
+if args.compound_pictures or args.footnote_pictures:
+    directory = cases / ('CompositionProbes' if args.footnote_pictures else 'Composition')
+    if args.footnote_pictures:
+        golden = json.loads((directory / 'linked-mixed-note-office.json').read_text(encoding='utf-8-sig'))
+        parent = dict(Id='linked-mixed-note-report', Input='tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/linked-mixed-note-report.docx',
+            Sha256=golden['InputSha256'], HeldOut=True, ExpectedInlineImageCount=golden['ImagePlacements'],
+            ExpectedText=['Public continuation note line 01:', 'Public continuation note line 64:', 'Second public continuation note.'])
+    else:
+        parent = json.loads((directory / 'composed-inline-frame-report.json').read_text())[0]
     original = (root / parent['Input']).read_bytes()
     assert sha(original) == parent['Sha256']
     with ZipFile(BytesIO(original)) as archive:
         infos = archive.infolist()
         parts = {entry.filename: archive.read(entry.filename) for entry in infos}
+    if args.footnote_pictures:
+        parent['ExpectedEquationCount'] = sum(sum(1 for _ in E.fromstring(payload).iter(m + 'oMath'))
+            for name, payload in parts.items() if name.startswith('word/') and name.endswith('.xml'))
     changed, owners = parts.copy(), []
     a = '{http://schemas.openxmlformats.org/drawingml/2006/main}'
     wp = '{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}'
@@ -52,7 +62,7 @@ if args.compound_pictures:
             assert properties is not None and properties.find(a + 'hlinkClick') is None
             relation_id = 'rIdPublicCompoundPicture' + str(index + 1)
             assert all(item.get('Id') != relation_id for item in relationships)
-            uri = 'https://example.invalid/composed-picture/' + Path(name).stem + '/' + properties.get('id')
+            uri = 'https://example.invalid/' + ('footnote-picture/' if args.footnote_pictures else 'composed-picture/') + Path(name).stem + '/' + properties.get('id')
             click = E.SubElement(properties, a + 'hlinkClick', {office_rel + 'id': relation_id})
             relation = E.SubElement(relationships, rel + 'Relationship', {'Id': relation_id,
                 'Type': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink',
@@ -67,25 +77,27 @@ if args.compound_pictures:
             properties.remove(click)
             relationships.remove(relation)
         assert E.tostring(tree) == before and E.tostring(relationships) == before_relationships
-    assert len(owners) == 5 and all(item['ExpectedNativeNavigation'] for item in owners)
+    assert len(owners) == (2 if args.footnote_pictures else 5) and all(item['ExpectedNativeNavigation'] for item in owners)
     buffer = BytesIO()
     with ZipFile(buffer, 'w') as archive:
         for entry in infos: archive.writestr(copy.copy(entry), changed[entry.filename])
     generated = buffer.getvalue()
-    identifier = 'composed-picture-navigation-report'
+    identifier = 'linked-footnote-picture-report' if args.footnote_pictures else 'composed-picture-navigation-report'
     row = copy.deepcopy(parent)
-    row.update(Id=identifier, Input='tests/Lokad.OoxPdf.Tests/Cases/Composition/' + identifier + '.docx',
+    row.update(Id=identifier, Input=(directory.relative_to(root) / (identifier + '.docx')).as_posix(),
         Sha256=sha(generated), SourceInput=parent['Input'], SourceSha256=parent['Sha256'], PictureLinkOwners=owners,
-        Change='Add only five canonical picture click targets/relationships; preserve all visible source content and geometry.')
+        Change=('Add only canonical picture click targets/relationships; preserve all visible source content and geometry.' if args.footnote_pictures else
+            'Add only five canonical picture click targets/relationships; preserve all visible source content and geometry.'))
     jobs = [(directory / (identifier + '.docx'), generated),
-        (directory / (identifier + '.json'), (json.dumps([row], indent=2) + '\n').replace('\n', '\r\n').encode())]
+        (directory / ('footnote-picture-links.json' if args.footnote_pictures else identifier + '.json'),
+            (json.dumps([row], indent=2) + '\n').replace('\n', '\r\n').encode())]
     for target, generated in jobs:
         if args.write:
             stage = target.with_suffix(target.suffix + '.staging')
             with stage.open('xb') as output: output.write(generated)
             stage.replace(target)
         else: assert target.read_bytes() == generated, target.name
-    print('Compound report picture metadata verified: five complete body/static/note owners.')
+    print(str(len(owners)) + ' complete report picture owners verified; visible source content unchanged.')
     raise SystemExit(0)
 
 if args.pictures:

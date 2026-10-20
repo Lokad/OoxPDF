@@ -1,0 +1,34 @@
+[
+  {
+    "Id": "linked-footnote-picture-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/linked-footnote-picture-report.docx",
+    "Sha256": "410C0F3BCCA7854CABDFBC5B355A041311267CE3AB5F923FB3984B518FCD0FB9",
+    "HeldOut": true,
+    "ExpectedInlineImageCount": 2,
+    "ExpectedText": [
+      "Public continuation note line 01:",
+      "Public continuation note line 64:",
+      "Second public continuation note."
+    ],
+    "ExpectedEquationCount": 7,
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/linked-mixed-note-report.docx",
+    "SourceSha256": "B468F52D59AC7CCF3052AFF70871B3A68EC4C5B7B63951B3013344CB32F71AA4",
+    "PictureLinkOwners": [
+      {
+        "Part": "word/document.xml",
+        "PictureId": "1",
+        "TargetUri": "https://example.invalid/footnote-picture/document/1",
+        "ExpectedNativeNavigation": true,
+        "Scope": "Complete inline picture; container owns physical placement and clip"
+      },
+      {
+        "Part": "word/footnotes.xml",
+        "PictureId": "501",
+        "TargetUri": "https://example.invalid/footnote-picture/footnotes/501",
+        "ExpectedNativeNavigation": true,
+        "Scope": "Complete inline picture; container owns physical placement and clip"
+      }
+    ],
+    "Change": "Add only canonical picture click targets/relationships; preserve all visible source content and geometry."
+  }
+]
