@@ -393,13 +393,13 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    public static void DocxInlineCompositionTotalPageRetryRetainsUnstableCountFallback()
+    public static void DocxInlineCompositionTotalPageRetryConfirmsRestoredMathCount()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("The native control uses installed Arial metrics.");
-        CheckUnstableTotalPageMath(null);
+        CheckRestoredTotalPageMath(null);
     }
 
-    internal static void CheckUnstableTotalPageMath(Lokad.OoxPdf.Fonts.IFontResolver? resolver)
+    internal static void CheckRestoredTotalPageMath(Lokad.OoxPdf.Fonts.IFontResolver? resolver)
     {
         var renderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         DocxDocument Boundary(string instruction)
@@ -419,11 +419,11 @@ internal static partial class DocxInlineCompositionTests
         var diagnostics = new List<OoxPdfDiagnostic>();
         var source = Boundary("NUMPAGES");
         var pages = renderer.RenderBlankPages(source, diagnostics.Add, default).ToArray();
-        TestAssert.Equal(1, pages.Length);
-        TestAssert.True(diagnostics.Any(item => item.Id == "DOCX_UNSUPPORTED_EQUATION"),
-            "A changed total cannot publish math measured with a stale count or start an unbounded fixed-point loop.");
-        TestAssert.True(pages[0].Fonts.All(resource => !resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
-            "Rejected retry subsets must not leak into the original fallback.");
+        TestAssert.Equal(2, pages.Length);
+        TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"),
+            "Restoring supported math may change the total; one confirmation preserves it with the actual count.");
+        TestAssert.True(pages.SelectMany(page => page.Fonts).Any(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
+            "A stable confirmed count publishes the completed math resources instead of the initial omission.");
         using var canceled = new CancellationTokenSource();
         canceled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => renderer.RenderBlankPages(source, null, canceled.Token).ToArray());

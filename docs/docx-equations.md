@@ -139,11 +139,16 @@ controls preserve the original visual thresholds; significant typography and
 annotation-height residuals remain.
 
 Simple and complex NUMPAGES fields can accompany supported equations in body
-paragraphs and simple cells when one bounded retry preserves the finalized page
-count. The retry recomputes note-dependent layout and preserves canonical source
-fields. If restoring the equations changes the total, the original diagnostic
-fallback remains. Independent two-page controls cover both public modes, bookmarks
-and run splitting; visual field-font/cell-origin residuals remain. See the
+paragraphs and cells. A retry restores count-dependent mathematics and recomputes
+note-dependent layout while preserving canonical source fields. If that content
+changes pagination, one additional pass confirms the new count. A further count
+change retains the diagnostic fallback. Independent controls cover both public
+modes, bookmarks and run splitting; visual field-font/cell-origin residuals remain.
+Spanning parallel cells can retain ordinary footnotes beside boxed mathematics,
+NUMPAGES, insets and trailing rows. Notes keep their source-marker pages and
+forward destinations. Future notes still reserve excess continuation space in
+the composed control, so its prose-page and strict visual gates remain failed.
+See the
 [composition checkpoint](CompositionCheckpoint.md) for evidence and limitations.
 
 The earlier body qualifications below retain their scope and residuals.

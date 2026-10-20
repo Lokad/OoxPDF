@@ -430,28 +430,33 @@ internal sealed partial class DocxLayoutEngine
             currentPageFootnoteReserveHeight = FootnoteRemainderTotal();
         }
 
-        double CurrentFrameBottom()
+        double CurrentFrameBottom() => FrameBottom(currentPageFootnoteReserveHeight);
+
+        double FrameBottom(double noteReserve)
         {
             if (GetCurrentPlainFootnoteFooterFrame() is { } footerFrame)
             {
                 // Footnote content is seated above this selected footer edge;
                 // its body reserve occupies the same frame, rather than overlapping it.
-                return ResolveFooterKeepOut(footerFrame, pages.Count + 1, pages.Count + 1) + currentPageFootnoteReserveHeight;
+                return ResolveFooterKeepOut(footerFrame, pages.Count + 1, pages.Count + 1) + noteReserve;
             }
             // Office A/B (w48 multi-line footer plus long body, Word-COM rendered): body
             // breaks before footer content instead of overlapping it, so an overflowing
             // footer top raises the body frame just like a footnote reserve does; the
             // higher of the two keep-out zones binds.
-            return page.MarginBottom + Math.Max(currentPageFootnoteReserveHeight, ResolvePagedDisplacement(footerFrameBottomDisplacementByPage));
+            return page.MarginBottom + Math.Max(noteReserve, ResolvePagedDisplacement(footerFrameBottomDisplacementByPage));
         }
 
-        double CurrentParagraphFrameBottom(double finalAfterSpacing = 0d)
+        double CurrentParagraphFrameBottom(double finalAfterSpacing = 0d) =>
+            ParagraphFrameBottom(currentPageFootnoteReserveHeight, finalAfterSpacing);
+
+        double ParagraphFrameBottom(double noteReserve, double finalAfterSpacing = 0d)
         {
-            double bottom = CurrentFrameBottom();
+            double bottom = FrameBottom(noteReserve);
             // A complete note can surrender its final trailing space, but the
             // body's final line must still clear its own paragraph boundary.
             // This is an admission charge; the next paragraph consumes it once.
-            double requiredAfter = completeFootnoteAdmission is not null && currentPageFootnoteReserveHeight > 0d
+            double requiredAfter = completeFootnoteAdmission is not null && noteReserve > 0d
                 ? Math.Max(0d, finalAfterSpacing) : 0d;
             if (!UsesPrintedBodyFrame()) return bottom + requiredAfter;
             // Paragraph advances already occupy printed points below the source
@@ -1289,6 +1294,13 @@ internal sealed partial class DocxLayoutEngine
                 bool usesPrintedTableFrame = scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1 &&
                     CanUsePrintedReviewTextTableFrame(bodyTable);
                 double CurrentTableFrameBottom() => usesPrintedTableFrame ? CurrentParagraphFrameBottom() : CurrentFrameBottom();
+                // A continuation starts after FinishPage restores the pending-note
+                // reserve. Its capacity cannot reuse this registering block's
+                // temporarily uncharged first-page frame.
+                double continuationNoteReserve = FootnoteRemainderTotal();
+                double continuationBottom = usesPrintedTableFrame
+                    ? ParagraphFrameBottom(continuationNoteReserve) : FrameBottom(continuationNoteReserve);
+                double continuationTableHeight = Math.Max(1d, page.Height - page.MarginTop - continuationBottom);
                 double reviewFragmentScale = usesPrintedTableFrame ? paragraphSpacingScale : 1d;
                 void MarkTableBoundaryContent()
                 {
@@ -1347,7 +1359,7 @@ internal sealed partial class DocxLayoutEngine
                     return frame;
                 }
 
-                LayoutTable(bodyTable, CurrentTableFrameBottom(), textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, new DocxTableCellTextLinesMemo(),
+                LayoutTable(bodyTable, CurrentTableFrameBottom(), continuationTableHeight, textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, new DocxTableCellTextLinesMemo(),
                     reviewFragmentScale: reviewFragmentScale);
                 if (scaleBaselineOffsetTransitions &&
                     (completedPagesBeforeTable == pages.Count || reviewFragmentScale < 1d) && textMeasurer is not null)

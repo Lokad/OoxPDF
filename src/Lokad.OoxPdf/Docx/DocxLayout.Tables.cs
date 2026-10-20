@@ -341,6 +341,7 @@ internal sealed partial class DocxLayoutEngine
     private static void LayoutTable(
         DocxTable table,
         double marginBottom,
+        double continuationContentHeight,
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         Func<int> getPageNumber,
@@ -390,7 +391,7 @@ internal sealed partial class DocxLayoutEngine
                     }
                 }
 
-                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, explicitBreakBoundaries, "CellPageBreak", finishPage, paragraphSpacingScale, 0d, cellMemo);
+                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, explicitBreakBoundaries, "CellPageBreak", finishPage, paragraphSpacingScale, 0d, continuationContentHeight, cellMemo);
                 markBoundaryContent();
                 continue;
             }
@@ -417,7 +418,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 // Complete measured frames own explicit cuts; unknown geometry keeps
                 // the qualified median-pitch capacity and fragmentation fallback.
-                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, fragmentBoundaries, "PageBoundary", finishPage, paragraphSpacingScale, splitPitch, cellMemo, cellFragments);
+                AddSplitTableRowLayout(table, row, rowIndex, headerRows, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, fragmentBoundaries, "PageBoundary", finishPage, paragraphSpacingScale, splitPitch, continuationContentHeight, cellMemo, cellFragments);
                 markBoundaryContent();
                 continue;
             }
@@ -568,8 +569,9 @@ internal sealed partial class DocxLayoutEngine
                 selectedBoundaries = [flooredFirstFragmentHeight];
                 if (hasContentOnBothSides)
                 {
-                    double continuationHeight = row.IsHeader ? frame.PageContentHeight :
-                        Math.Max(1d, frame.PageContentHeight - headerRows.Sum(entry => frame.RowHeights[entry.RowIndex]));
+                    double pageCapacity = Math.Min(frame.PageContentHeight, continuationContentHeight);
+                    double continuationHeight = row.IsHeader ? pageCapacity :
+                        Math.Max(1d, pageCapacity - headerRows.Sum(entry => frame.RowHeights[entry.RowIndex]));
                     double firstCapacity = flooredFirstFragmentHeight + firstFragmentHeight -
                         FloorTableRowFragmentHeightToPitch(firstFragmentHeight, splitPitch);
                     if (TryResolveCellOwnedFragments(firstCapacity, continuationHeight, out var owned))
@@ -1682,6 +1684,7 @@ internal sealed partial class DocxLayoutEngine
         Action finishPage,
         double paragraphSpacingScale,
         double splitPitch,
+        double continuationPageHeight,
         DocxTableCellTextLinesMemo? cellMemo = null,
         IReadOnlyList<DocxCellOwnedRowFragment>? cellFragments = null)
     {
@@ -1693,9 +1696,10 @@ internal sealed partial class DocxLayoutEngine
             return headerRows.Sum(entry => entry.RowIndex >= 0 && entry.RowIndex < initialRowHeights.Count ? initialRowHeights[entry.RowIndex] : 0d);
         }
 
+        double pageCapacity = Math.Min(initialFrame.PageContentHeight, continuationPageHeight);
         double continuationContentHeight = row.IsHeader
-            ? initialFrame.PageContentHeight
-            : Math.Max(1d, initialFrame.PageContentHeight - SumRepeatedTableHeaderRowsHeight());
+            ? pageCapacity
+            : Math.Max(1d, pageCapacity - SumRepeatedTableHeaderRowsHeight());
         IReadOnlyList<double> fragmentHeights = cellFragments is null
             ? ComputeTableRowFragmentHeights(rowHeight, fragmentBoundariesFromRowTop, continuationContentHeight, splitPitch)
             : cellFragments.Select(fragment => fragment.Height).ToArray();

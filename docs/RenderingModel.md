@@ -60,7 +60,7 @@ single-home lanes:
 
 The PDF writer emits a static PDF with deterministic object ordering, stable resource names, subsetted embedded TrueType/CID fonts, ToUnicode maps, path drawing, text drawing, and JPEG/PNG image XObjects. PNG alpha is represented with a soft mask when needed.
 
-When deterministic conversion is requested, the output avoids unstable metadata and resource naming so the same input package produces byte-identical output in tests.
+Generated PDFs avoid volatile metadata and use stable resource names. Tests check repeated conversion bytes with the same inputs and font configuration.
 
 ## Diagnostics
 

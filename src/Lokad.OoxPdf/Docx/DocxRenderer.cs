@@ -399,9 +399,22 @@ internal sealed partial class DocxRenderer
                 (messages is null || messages.Count == 0) ? first.FontResources : null;
             // Recompute note-dependent purposes too: accepting a stable count
             // must not leave numbering or kerning derived from the omitted math.
+            int expectedPageCount = first.Layout.Pages.Count;
             var retry = PrepareNoteAdjustedLayout(document, resolver, context, geometry, retryMessages is null ? null : retryMessages.Add,
-                cancellationToken, fontCache, first.Layout.Pages.Count, reusableFonts);
-            if (retry.Layout.Pages.Count == first.Layout.Pages.Count)
+                cancellationToken, fontCache, expectedPageCount, reusableFonts);
+            if (retry.Layout.Pages.Count != expectedPageCount)
+            {
+                // Restored deferred content can change pagination. Confirm that
+                // new count once before rejecting complete math in favor of the
+                // initial fallback. A further change retains the existing fallback;
+                // this is a bounded confirmation, not an open-ended fixed point.
+                cancellationToken.ThrowIfCancellationRequested();
+                expectedPageCount = retry.Layout.Pages.Count;
+                retryMessages = diagnostics is null ? null : [];
+                retry = PrepareNoteAdjustedLayout(document, resolver, context, geometry,
+                    retryMessages is null ? null : retryMessages.Add, cancellationToken, fontCache, expectedPageCount);
+            }
+            if (retry.Layout.Pages.Count == expectedPageCount)
             {
                 var painted = new HashSet<DocxEquation>(EnumeratePaintedEquations(retry.Layout, cancellationToken), ReferenceEqualityComparer.Instance);
                 if (first.FontResources.DeferredPageCountEquations.All(painted.Contains))

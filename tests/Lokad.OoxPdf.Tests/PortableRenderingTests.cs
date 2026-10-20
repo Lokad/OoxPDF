@@ -311,6 +311,9 @@ internal static class PortableRenderingTests
     public static void PortableRenderingRunDefaultOwnersKeepVisibleSizesAndStories() =>
         DocxInlineCompositionTests.CheckRunDefaultOwnerRendering(new PinnedResolver());
 
+    public static void PortableRenderingSpanningParallelCellsKeepCompleteNoteOwners() =>
+        DocxInlineCompositionTests.CheckSpanningCellNotes(new PinnedResolver(mathFont: true));
+
     public static void PortableRenderingNoteTableCompositionKeepsContentAndDestinations() =>
         DocxInlineCompositionTests.CheckNoteTableComposition(new PinnedResolver());
 
@@ -686,8 +689,8 @@ internal static class PortableRenderingTests
     public static void PortableRenderingTotalPageMathUsesFinalizedCountAndPreservesSource() =>
         DocxInlineCompositionTests.CheckTotalPageMath(new PinnedResolver());
 
-    public static void PortableRenderingTotalPageMathRetainsUnstableCountFallback() =>
-        DocxInlineCompositionTests.CheckUnstableTotalPageMath(new PinnedResolver());
+    public static void PortableRenderingTotalPageMathConfirmsRestoredMathCount() =>
+        DocxInlineCompositionTests.CheckRestoredTotalPageMath(new PinnedResolver());
 
     public static void PortableRenderingTotalPageMathRecomputesNormalNotePlacement()
     {
