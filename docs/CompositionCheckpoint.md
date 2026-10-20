@@ -1,5 +1,40 @@
 # Composed-document reliability checkpoint
 
+## C374-C378 — verified lossless retention and one final cleanup handoff (2026-10-20)
+
+C375pins2,392remaining obsolete compiled paths/1.882GBuniquecontent. Three pure
+compiled archives contain969entries, all matching retained snapshot identities
+and reachable Git source. The mixed archive with two DOCX inputs/portable font
+is kept. Automatic approval review rejects deletion of two pure ZIP backups as
+"blocked by policy" before execution;zero removed, both remain protected. No
+retry or alternate retirement. C368prototype/earlier rejections remain protected.
+
+C376retains167,077closed comparison files/73,636whole physical groups as standard
+PAX tar.xz:2,296,263,888unique expanded bytes become282,832,884archive bytes.
+Every regular/hard-link entry is verified against its original SHA256 and path;
+only fully owned groups qualify. Inputs/source/scripts/patches/current summaries,
+current preview, useful tools, private data, worktrees and Git are excluded.
+No expanded files removed. C378restores a stored file and its hard-link alias
+with standard tar into a fresh directory; both match original hashes.
+ArchiveSHA256:5B3C5D4C1C62718CD6C9093897B744A3BE393E698FF12B94444EB61CD0CAD00F.
+
+C377consolidates the still-pending C366batch, remaining compiled outputs and
+expanded archived comparisons into one user-run script. All173,532remaining
+paths pass full read-only SHA256/ownership preflight, including no outside aliases
+for any read-only group. All34root/canonical runtime assets and both packages
+match qualification. Script syntax passes; -WhatIf/-ValidateOnly are available,
+already absent paths are skipped and no directories are deleted recursively.
+A partial error records removed paths/restores surviving group protection.
+No agent deletion of this batch. Projected size below5GB is not an achieved gate;
+verify actual user log/absence/preview and measure once afterward.
+
+Handoff: artifacts/workspace-maintenance/FinishOoxPdfWorkspaceCleanup.ps1,
+final-cleanup-config-C377.json and final-cleanup-ready-C377.json. The script has
+an absolute invocation and includes the older batch, reducing manual round trips.
+Lossless historical archive and inventories stay under workspace-maintenance/.
+No library build, conversion, Office export or suite replay. Source/preview
+qualification remains complete, publication/performance/features deferred.
+
 ## C369-C373 — retained inspection storage and remaining cleanup (2026-10-20)
 
 Four closed-output sharing batches now reclaim2,490,353,293unique file-content

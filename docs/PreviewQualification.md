@@ -78,12 +78,19 @@ The latest complete scan, C370, measures 13.234 GB before the final 488 MB dump
 consolidation and its audit files. It counts unique file-content lengths by file
 ID, rather than allocated clusters; a newer whole-workspace total is not inferred.
 
-The loose 5 GB target remains unmet. The earlier protected-content floor is
-superseded by the user's completed batch; a second user-run compiled retirement
-is pending. Evidence is retained in `preview-020-completion-review/`,
+The loose 5 GB target remains unmet. A final consolidated user-run cleanup is
+prepared, including the pending older-runtime batch. All 173,532 remaining paths
+passed read-only hash/ownership preflight. It retains 167,077 historical comparison
+files in a fully verified 283 MB lossless archive before removing expanded copies;
+the archive's standard tar restore check also passes. No final deletion has run.
+A projected result below 5 GB still requires the actual cleanup log and measurement.
+Evidence is retained in `preview-020-completion-review/`,
 `artifacts/workspace-footprint-C370.json` and
 the C367, C369, C370 and C373 verification records under
 `artifacts/workspace-maintenance/`.
+The final handoff is `final-cleanup-ready-C377.json`; the retained archive is
+`closed-qualification-evidence-20261020.tar.xz`. Current preview, inputs, source,
+useful tools, private data, worktrees and Git remain outside the cleanup.
 The final package and all 34 canonical/root runtime asset hashes remain unchanged.
 No library build, conversion, Office export or suite replay accompanied this
 storage work. Preview publication remains deferred.
