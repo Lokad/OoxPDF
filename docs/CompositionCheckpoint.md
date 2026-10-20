@@ -1,5 +1,25 @@
 # Composed-document reliability checkpoint
 
+## C345 canonical picture hyperlinks omit URI annotations (2026-10-20)
+
+Canonical wp:docPr/a:hlinkClick metadata produces one Word URI in four body/cell
+views; native emits none. Two outer w:hyperlink picture controls emit none in
+both renderers. All six Word picture/prose/frame/following geometries exactly
+match unlinked parents; expected visible native content remains. Six CLI/six
+Word exports, no builds/console tests. SDK DocProperties documents canonical
+click metadata. Final Word URI bounds align to visible images within.14pt.
+Both review Word URI rectangles are entirely off-picture; cause unverified.
+Preserve raw annotation discrepancies separately from visible geometry.
+
+C346's bounded contract follows the actual complete axis-aligned raster picture
+frame in ordinary body/cells, reusing paint placement/cell clips and already
+rendered resources. Retain review raw URI failures; no complete annotation parity
+claim. Existing text/math policy and partial/unknown/fragmented/floating/static/
+box/SVG/rotation/action fallbacks stay explicit. No layout/framework/quota rewrite.
+Evidence artifacts/composition-c1/inline-picture-links-review-evidence.json.
+C344CI39372562056 green including broader/package checks. Version0.1.5/release
+preparation deferred; workspace target unmet.
+
 ## C344 complete empty inspection reports (2026-10-20)
 
 External PdfInspect always publishes operation lists, including empty arrays;
