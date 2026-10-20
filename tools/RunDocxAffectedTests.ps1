@@ -73,9 +73,14 @@ if (!$AllDocx -and @($filters | Where-Object { $_ -in @('Docx', 'Balloon', '') }
 }
 $selected = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 foreach ($filter in $filters) {
-    $matches = @($catalog | Where-Object { $_.Name.Contains($filter, [StringComparison]::OrdinalIgnoreCase) })
-    if (!$matches.Count) { throw ('Empty capability selector: ' + $filter) }
-    foreach ($test in $matches) { $null = $selected.Add($test.Name) }
+    $found = $false
+    foreach ($test in $catalog) {
+        if ($test.Name.Contains($filter, [StringComparison]::OrdinalIgnoreCase)) {
+            $found = $true
+            $null = $selected.Add($test.Name)
+        }
+    }
+    if (!$found) { throw ('Empty capability selector: ' + $filter) }
 }
 $selectionPath = Join-Path $output 'selected-methods.json'
 ConvertTo-Json -InputObject @($selected | Sort-Object) | Set-Content -LiteralPath $selectionPath -Encoding utf8

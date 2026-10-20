@@ -36,14 +36,13 @@ cosmetic residuals. Manifest validity counts do not measure Office fidelity.
 Unknown content or severe geometry failures must be resolved or explicitly
 excluded from supported scope before accepting the candidate.
 
-The review follow-up freezes source `01827c40`. All 48 affected checks pass
-within one Windows broad invocation: 3,719 pass, 11 skip, and one inherited
-balloon-wrapping assertion fails identically against the previous qualified DLL
-on the same machine. The assertion and rendering policy remain unchanged. The
-exact frozen runtime passes 796 Ubuntu checks with 43 environmental skips.
-Windows and Ubuntu package consumers use the same packed DLL. Independent
-platform build/package checks are recorded in
-[candidate CI](https://github.com/Lokad/OoxPDF/actions/runs/39452164339).
+Exact source/runtime identities, Windows and Ubuntu results, package consumers
+and CI provenance are recorded in the
+[current qualification record](https://github.com/Lokad/OoxPDF/blob/master/docs/PreviewQualification.md).
+The broad local suite retains an inherited balloon-wrapping assertion failure
+that also occurs with the preceding qualified DLL on the same machine. The
+assertion and rendering policy remain unchanged. Local failed checks and
+platform skips are reported separately from green CI.
 
 The second review also repairs diagnostic-observer propagation and cancellation
 from the final resource-summary callback. Caller failures keep their original
