@@ -174,17 +174,9 @@ previous destination on rendering, observer, cancellation, limit or publication
 failure and cleans its owned staging. Normal return signals successful output;
 there is no separate committed-notification diagnostic.
 
-### Historical operating baselines (not preview qualification)
-
-Windows 10.0.26200 x64, .NET 10.0.12, workstation GC, Release, default WindowsFontResolver (464 discovered faces), file output mode, default 64 MiB resident window, measured with AllocProbe volume counters plus per-conversion heap, private, and working-set peak sampling (`--isolate`, `--concurrency`):
-
-- Cold first conversion is startup-dominated and input-independent at measured sizes: about 550 to 600 MB calling-thread volume, 130 to 190 MB heap peak, 215 to 285 MB private peak (JIT plus font discovery plus static caches).
-- Warm steady-state conversions peak at 1 to 3 MB heap on corpus decks and 12 to 22 MB heap on 400 to 1600 forced-break pages, with linear calling-thread volume (about 47 KB per text page, about 12 KB per unique gradient shading).
-- Warm process floors vary rep to rep (roughly 60 to 215 MB private, 90 to 250 MB working set in these runs): size host headroom from baseline ranges plus cold first-conversion allowance, not from conversion peaks alone.
-- Parallel conversions of one document agree byte-for-byte in-process and across processes; heap peaks stack sublinearly (1x, 1.3x, 2.1x at concurrency 1, 2, 4 on 1600 pages), while walls show no speedup at 2 and about 1.8x slowdown at 4 on short conversions. Sharing one process saves about 2.5x process memory over independent processes at these sizes.
-- DOCX layout pagination guards the page budget without consuming it: a tiny budget trips while paginating instead of after full layout retention (`ThrowIfLayoutPagesExceedBudget`).
-
-Not yet measured: Linux peaks, buffer and forward-only output modes, image, font, and chart breadth peaks, spill-to-temp pressure under tiny windows, cancellation and failure cleanup peaks, resolver eviction and reload, repetitions beyond two runs.
+Historical performance measurements and their workload limits are documented in
+[the operating envelope](OperatingEnvelope.md). They do not establish current
+preview capacity or a comprehensive memory ceiling.
 
 ## Code Conventions
 

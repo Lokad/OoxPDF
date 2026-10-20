@@ -152,26 +152,63 @@ if ($changed.ReusedInputSnapshot -or $changed.InputTree -eq $first.InputTree -or
     (Get-Content -LiteralPath (Join-Path $first.InputSnapshot $inputPath) -Raw) -notmatch 'first fixture') { throw 'Changed input isolation failed' }
 $firstNested = Join-Path $first.InputSnapshot 'tests/Lokad.OoxPdf.Tests/Cases/nested/second.txt'
 $changedNested = Join-Path $changed.InputSnapshot 'tests/Lokad.OoxPdf.Tests/Cases/nested/second.txt'
-if ($changed.SharedInputFiles -ne 1 -or (Get-Item $changedNested).LinkType -ne 'HardLink') { throw 'Unchanged file sharing failed' }
-# Deliberate corruption proves actual shared ownership, not just equal bytes.
-$nestedBytes = [IO.File]::ReadAllBytes($firstNested)
+if ($changed.SharedInputFiles -ne 0) { throw 'Different input trees must own their copies' }
 (Get-Item $changedNested).IsReadOnly = $false
-[IO.File]::WriteAllText($changedNested, 'corrupt alias')
-if ((Get-Content $firstNested -Raw) -ne 'corrupt alias') { throw 'Fixture aliases are not shared' }
+[IO.File]::WriteAllText($changedNested, 'corrupt independent copy')
+if ((Get-Content $firstNested -Raw) -notmatch 'nested fixture' -or
+    !(Get-Item $firstNested).IsReadOnly) { throw 'Different input trees share mutable ownership' }
 (Get-Item $changedNested).IsReadOnly = $true
-Reject 'corrupt-alias' 'Shared public input differs'
-# A different input tree must not propagate a corrupted prior alias.
+Reject 'corrupt-copy' 'Shared public input differs'
+# A newer tree uses the verified checkout, not a corrupted older snapshot.
 (Get-Item $inputFile).IsReadOnly = $false
 'new tree fixture' | Set-Content -LiteralPath $inputFile
 Invoke-Git @('add', $inputPath)
 Invoke-Git @('commit', '--quiet', '-m', 'Third fixture tree')
-Reject 'corrupt-prior' 'Prior shared input differs'
-(Get-Item $changedNested).IsReadOnly = $false
-[IO.File]::WriteAllBytes($changedNested, $nestedBytes)
-(Get-Item $changedNested).IsReadOnly = $true
 $repaired = Freeze 'repaired'
-if ($repaired.SharedInputFiles -ne 1) { throw 'Restored shared input was not reused' }
-$damaged = Join-Path $repaired.InputSnapshot $inputPath
+if ((Get-FileHash -LiteralPath (Join-Path $repaired.InputSnapshot 'tests/Lokad.OoxPdf.Tests/Cases/nested/second.txt')).Hash -ne
+    (Get-FileHash -LiteralPath $nested).Hash) { throw 'New snapshot propagated old corruption' }
+
+# Fail after one independent copy has become read-only. Only this call's staging
+# may disappear; published input bytes and protection must survive.
+'failure fixture' | Set-Content -LiteralPath $inputFile
+Invoke-Git @('add', $inputPath)
+Invoke-Git @('commit', '--quiet', '-m', 'Failure fixture tree')
+$script:copiedInputs = 0
+function Copy-Item {
+    param([string] $LiteralPath, [string] $Destination)
+    Microsoft.PowerShell.Management\Copy-Item -LiteralPath $LiteralPath -Destination $Destination
+    if ($Destination -match '[.]staging-' -and ++$script:copiedInputs -eq 2) { throw 'Injected input copy failure' }
+}
+try { Reject 'copy-failure' 'Injected input copy failure' }
+finally { Remove-Item Function:\Copy-Item }
+$inputSnapshots = Join-Path $repo 'artifacts/qualification-inputs'
+if (@(Get-ChildItem -LiteralPath $inputSnapshots -Directory -Filter '*.staging-*').Count) { throw 'Failed copy left input staging' }
+if ((Get-FileHash -LiteralPath $firstNested).Hash -ne (Get-FileHash -LiteralPath $nested).Hash -or
+    !(Get-Item $firstNested).IsReadOnly) { throw 'Failure cleanup changed published input ownership' }
+
+# Publish a complete competing copy just before Directory.Move. Cleanup must
+# remove the losing staging directory and preserve the winner's read-only files.
+function Set-Content {
+    param([Parameter(ValueFromPipeline=$true)] $Value, [string] $LiteralPath, [string] $Encoding)
+    process {
+        Microsoft.PowerShell.Management\Set-Content -LiteralPath $LiteralPath -Value $Value -Encoding $Encoding
+        if ($LiteralPath -match '[.]staging-[0-9a-f]+[\\/]identity[.]json$') {
+            $staged = Split-Path $LiteralPath
+            $winner = $staged.Substring(0, $staged.LastIndexOf('.staging-', [StringComparison]::Ordinal))
+            Microsoft.PowerShell.Management\Copy-Item -LiteralPath $staged -Destination $winner -Recurse
+        }
+    }
+}
+try { $raced = Freeze 'race' }
+finally { Remove-Item Function:\Set-Content }
+if (@(Get-ChildItem -LiteralPath $inputSnapshots -Directory -Filter '*.staging-*').Count) { throw 'Losing publication left input staging' }
+foreach ($entry in $raced.Inputs.psobject.Properties) {
+    $published = Join-Path $raced.InputSnapshot $entry.Name
+    if ((Get-FileHash -LiteralPath $published).Hash -ne $entry.Value -or !(Get-Item $published).IsReadOnly) {
+        throw 'Publication race changed its winning input'
+    }
+}
+$damaged = Join-Path $raced.InputSnapshot $inputPath
 (Get-Item -LiteralPath $damaged).IsReadOnly = $false
 'corrupted shared copy' | Set-Content -LiteralPath $damaged
 Reject 'corrupt' 'Shared public input differs'
@@ -181,12 +218,13 @@ Copy-Item -LiteralPath $inputFile -Destination $damaged -Force
 Reject 'mixed' 'Release library copies differ'
 [ordered]@{
     Checks=@('Shared unchanged fixture tree', 'Frozen runner input link', 'Linked worktree reuse', 'Dirty source rejection',
-        'Changed fixture isolation', 'Cross-tree immutable file sharing', 'Corrupt alias rejection',
-        'Corrupt prior-tree rejection', 'Corrupt snapshot rejection', 'Mixed library rejection',
+        'Changed fixture isolation', 'Cross-tree ownership isolation', 'Corrupt copy rejection',
+        'Independent prior-tree corruption isolation', 'Failed staging cleanup', 'Concurrent publication cleanup',
+        'Corrupt snapshot rejection', 'Mixed library rejection',
         'Owned parent input isolation', 'Owned parent reuse', 'Frozen parent destination rejection',
         'Duplicate asset sharing', 'Separate frozen output isolation', 'Writable build isolation',
         'Independent transfer copies')
     LibraryBuilds=0;LibraryTestRuns=0;First=$first;Second=$second;Changed=$changed
     SharedInputPathLength=$changedNested.Length
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json') -Encoding utf8
-Write-Output 'Seventeen fixture-freeze/asset/parent-ownership checks passed; no library build or test-suite replay.'
+Write-Output 'Nineteen fixture-freeze/asset/parent-ownership checks passed; no library build or test-suite replay.'

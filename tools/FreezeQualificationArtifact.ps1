@@ -38,35 +38,39 @@ if ($LASTEXITCODE -ne 0 -or !$inputs.Count) { throw 'Public inputs are unavailab
 # Subsequent freezes still hash every input; reuse never trusts a directory name.
 $reusedInputs = Test-Path -LiteralPath $snapshot
 if (!$reusedInputs) {
-    # Seed only from a published immutable snapshot. A writable checkout must
-    # never share file ownership with a frozen input, even if its hash matches.
-    $prior = Get-ChildItem -LiteralPath (Split-Path $snapshot) -Directory -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -match '^(?:[0-9a-f]{40}|[0-9a-f]{64})$' -and $_.FullName -ne $snapshot } |
-        Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
-    $priorPin = if ($prior) { Get-Content (Join-Path $prior.FullName 'identity.json') -Raw | ConvertFrom-Json -AsHashtable }
-    if ($prior -and $priorPin.Tree -ne $prior.Name) { throw 'Prior shared input identity differs' }
-    $sharedInputFiles = 0
-    $staging = $snapshot + '.staging-' + [Guid]::NewGuid().ToString('N')
+    # One independently owned copy per input tree; frozen runtimes reuse its
+    # directory link. Clearing a read-only cross-tree hard link during failure
+    # cleanup would also change a published input's protection.
+    $staging = [IO.Path]::GetFullPath($snapshot + '.staging-' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $staging -Force | Out-Null
-    foreach ($name in $inputs.Keys) {
-        $target = Join-Path $staging $name
-        New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
-        if ($prior -and $priorPin.Inputs[$name] -eq $inputs[$name]) {
-            $shared = Join-Path $prior.FullName $name
-            if ((Get-FileHash -LiteralPath $shared).Hash -ne $inputs[$name]) { throw 'Prior shared input differs' }
-            if (!(Get-Item -LiteralPath $shared).IsReadOnly) { throw 'Prior shared input is writable' }
-            New-FrozenHardLink -Path $target -Target $shared
-            $sharedInputFiles++
+    try {
+        foreach ($name in $inputs.Keys) {
+            $target = Join-Path $staging $name
+            New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
+            Copy-Item -LiteralPath (Join-Path $repo $name) -Destination $target
+            if ((Get-FileHash -LiteralPath $target).Hash -ne $inputs[$name]) { throw 'Public input changed during snapshot' }
+            (Get-Item -LiteralPath $target).IsReadOnly = $true
         }
-        else { Copy-Item -LiteralPath (Join-Path $repo $name) -Destination $target }
-        if ((Get-FileHash -LiteralPath $target).Hash -ne $inputs[$name]) { throw 'Public input changed during snapshot' }
-        (Get-Item -LiteralPath $target).IsReadOnly = $true
+        [ordered]@{Tree=$inputTree;Inputs=$inputs;SharedInputFiles=0} | ConvertTo-Json -Depth 5 |
+            Set-Content -LiteralPath (Join-Path $staging 'identity.json') -Encoding utf8
+        # Directory.Move cannot nest staging inside a concurrent winner. Verify
+        # the winner's complete identity below, just as for ordinary reuse.
+        try { [IO.Directory]::Move($staging, $snapshot) }
+        catch { if (!(Test-Path -LiteralPath $snapshot)) { throw } }
     }
-    [ordered]@{Tree=$inputTree;Inputs=$inputs;SharedInputFiles=$sharedInputFiles} | ConvertTo-Json -Depth 5 |
-        Set-Content -LiteralPath (Join-Path $staging 'identity.json') -Encoding utf8
-    # Directory.Move cannot accidentally nest staging inside a concurrent snapshot.
-    try { [IO.Directory]::Move($staging, $snapshot) }
-    catch { if (!(Test-Path -LiteralPath $snapshot)) { throw } }
+    finally {
+        if (Test-Path -LiteralPath $staging) {
+            $parent = [IO.Path]::GetFullPath((Split-Path $snapshot)) + [IO.Path]::DirectorySeparatorChar
+            if (!$staging.StartsWith($parent, [StringComparison]::OrdinalIgnoreCase) -or
+                !(Split-Path $staging -Leaf).StartsWith($inputTree + '.staging-', [StringComparison]::Ordinal)) {
+                throw 'Refusing cleanup outside the owned input staging directory'
+            }
+            # These new copies have no aliases in a checkout or prior snapshot.
+            Get-ChildItem -LiteralPath $staging -File -Recurse -Force |
+                ForEach-Object { $_.IsReadOnly = $false }
+            Remove-Item -LiteralPath $staging -Recurse -Force
+        }
+    }
 }
 $inputIdentity = Join-Path $snapshot 'identity.json'
 $inputPin = Get-Content -LiteralPath $inputIdentity -Raw | ConvertFrom-Json -AsHashtable
