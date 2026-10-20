@@ -148,7 +148,9 @@ Spanning parallel cells can retain ordinary footnotes beside boxed mathematics,
 NUMPAGES, insets and trailing rows. Notes keep their source-marker pages and
 forward destinations. One bounded refinement assigns complete note heads to the
 existing measured source fragments; it is accepted only when reference ownership
-and fragment count remain stable. First-fragment and later one-/two-note controls
+and fragment count remain stable. Complete heads are selected by authored row;
+unfinished heads from earlier rows keep the conservative reserve. First-fragment,
+later one-/two-note and cross-row controls
 match Word's source pages and original geometry gates in both public modes.
 Continued, incomplete, page-dependent and unmatched owners retain conservative
 fallbacks. Strict pixel differences and dynamic-field audit flags remain.
