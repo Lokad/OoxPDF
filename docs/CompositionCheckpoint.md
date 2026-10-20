@@ -1,5 +1,31 @@
 # Composed-document reliability checkpoint
 
+## C365 — verify the user-run pinned runtime retirement (2026-10-20)
+
+The user requested a throwaway PowerShell script and executed it successfully.
+Its log matches the exact reviewed inventory:3,128 compiled paths removed from
+184 superseded runtimes, zero failures; all targets independently verified absent.
+No recursive directory removal. Agent did not retry earlier rejected actions.
+
+All184snapshot identities,17canonical/17root runtime assets,2,582canonical public
+inputs and final.nupkg/.snupkg retain their pinned SHA256 hashes. Preview source,
+rendering thresholds and package bytes remain unchanged. No build/conversion/
+Office export or suite replay; the qualified candidate remains unpublished.
+
+Infrequent fresh measurement:15,211,832,587unique file-content bytes/994,322files/
+86,818directories,zero errors,16.44s; down2,702,613,697bytes from C364. Counts use
+file lengths with hard-link IDs, not allocated disk clusters. Loose5GB cap remains
+unmet. The former7.074GB protected-content floor and all-targets-present blocker
+are superseded by the user-run batch; earlier rejection maps stay as history,
+and other rejected retirements were not retried. PLAN.md resumes bounded remaining
+workspace assessment; publication/performance/broader features remain deferred.
+
+Evidence: artifacts/workspace-footprint-C365.json and artifacts/composition-c1/
+preview-020-completion-review/post-user-retirement-C365.json, alongside the exact
+inventory and user-run log. Read-only bulk categorization has zero traversal errors;
+4.369GB remain in earlier protected frozen compiled content. No additional deletion
+or retained-evidence migration is claimed.
+
 ## C364 — full preview paint review and verified workspace blocker (2026-10-20)
 
 Viewed every one of32candidate/Office page pairs across16portfolio outcomes.
