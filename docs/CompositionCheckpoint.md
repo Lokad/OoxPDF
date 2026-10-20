@@ -1,5 +1,26 @@
 # Composed-document reliability checkpoint
 
+## C355 prospective static-picture frame rule confirmed (2026-10-20)
+
+Four new controlled sources independently vary picture height9-to18pt or
+paragraph-mark11-to20pt in the C354 header/footer. Every other uncompressed
+package entry remains exact; generator verifies both new and C354 profiles.
+Eight CLI outcomes reuse C354, eight fresh Word16 views; no library build or
+suite. All new Word body origins/sizes remain exact to the C354 parents.
+
+Twelve retained views predict picture frames from the larger of picture height
+and paragraph-mark single-line height, with existing header-start/footer-end
+anchors: maximum prospective error.0041pt. The larger mark shifts the header
+without moving its image size, while footer image bottoms stay at distance36pt.
+Current native errors grow to15.410pt header/18pt footer. These measurements
+precede implementation; no pixel/ink pass, fitted offset or font/size guard.
+Evidence: artifacts/composition-c1/static-picture-frame-review-evidence.json.
+
+Next C356 reuses ordered measurement for picture-only automatic paragraphs and
+the shared footer occupied-frame anchor. Mixed-text, declared-spacing and related
+textbox picture behavior retain their existing fallbacks. Prior C354 CI39387419292
+still in progress at the last spaced check; continue independent work meanwhile.
+
 ## C354 margin pictures preserve independent body typography (2026-10-20)
 
 Confirmed a composition defect with source-exact ordinary11pt controls: adding
