@@ -1,5 +1,25 @@
 # Composed-document reliability checkpoint
 
+## C320 generic audit operation boundaries corrected (2026-10-20)
+
+Adjacent operations join only with identical resource/text state, finite measured
+advance and contiguous effective origins within0.003pt (serialized-coordinate
+rounding). Paint order remains; spaces, pages, baselines, resources, transforms
+and missing/empty/invalid measurements preserve boundaries. No font/word whitelist.
+24 focused audit controls pass once on Windows and Ubuntu, including split runs,
+whole words, columns, transformed frames and empty replacement continuations.
+
+Reuse12 C317 PDFs and independent Office comparisons. Ten fixed screens stay
+clean; two static-report screens change only false global/page rate/time deficits.
+Both retain cached1/field flags; all ten DOCX strict failures and original raw
+reports remain. No build/conversion/Office export/raster or runtime-suite repeat.
+Initial orchestration incorrectly assumed CompareCompositionPortfolio exits1
+for reported visual failures; corrected the assertion and reused its completed
+ten-row result. No comparison/test was repeated. Toolsf55452d7; evidence
+artifacts/composition-c1/audit-word-boundaries-evidence.json. Continue bounded
+implicit-table-origin review; no speculative renderer change. Version0.1.5 and
+release deferral remain; workspace16.858GB/5GB gap stays explicit.
+
 ## C319 composed-report math-word extraction classified (2026-10-20)
 
 Confirmed audit defect: inserting spaces between PDF text operations splits
