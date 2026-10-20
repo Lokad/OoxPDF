@@ -71,9 +71,19 @@ absent across 184 superseded snapshots, with no errors. Their snapshot identitie
 all 17 canonical and 17 root runtime assets, 2,582 canonical inputs and both final
 packages retain their pinned hashes. Earlier rejected retirements were not retried.
 
-The fresh workspace check measures 15.212 GB, down 2.703 GB from C364's 17.914 GB.
-It counts unique file-content lengths by file ID, rather than allocated clusters.
-The loose 5 GB target remains unmet, but the old 7.074 GB protected-content floor
-is superseded by the user's completed batch. Evidence is retained in
-`preview-020-completion-review/post-user-retirement-C365.json` and
-`artifacts/workspace-footprint-C365.json`. Preview publication remains deferred.
+Subsequent storage maintenance shares 93,441 identical closed visual/inspector
+output paths, saving 2.490 GB of unique content without losing paths or bytes.
+Shared files remain read-only; rerenders and inspections use fresh directories.
+The latest complete scan, C370, measures 13.234 GB before the final 488 MB dump
+consolidation and its audit files. It counts unique file-content lengths by file
+ID, rather than allocated clusters; a newer whole-workspace total is not inferred.
+
+The loose 5 GB target remains unmet. The earlier protected-content floor is
+superseded by the user's completed batch; a second user-run compiled retirement
+is pending. Evidence is retained in `preview-020-completion-review/`,
+`artifacts/workspace-footprint-C370.json` and
+the C367, C369, C370 and C373 verification records under
+`artifacts/workspace-maintenance/`.
+The final package and all 34 canonical/root runtime asset hashes remain unchanged.
+No library build, conversion, Office export or suite replay accompanied this
+storage work. Preview publication remains deferred.

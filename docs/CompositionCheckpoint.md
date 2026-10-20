@@ -1,5 +1,39 @@
 # Composed-document reliability checkpoint
 
+## C369-C373 — retained inspection storage and remaining cleanup (2026-10-20)
+
+Four closed-output sharing batches now reclaim2,490,353,293unique file-content
+bytes across93,441duplicate aliases, preserving every original path and byte.
+C369adds180,801,753bytes/3,275duplicates/4,236paths; C370adds736,303,647bytes/
+4,451duplicates/5,835paths from completed runs named"current" predating the
+qualified checkpoint. Production source remains the qualified tree0d6c114e.
+All final package and34canonical/root runtime asset hashes remain unchanged.
+
+C373adds487,772,629bytes/76,679duplicates/83,031paths of PDF-inspector object
+dictionaries and decoded streams. A retained PDF reproduces20old dumps exactly
+using the existing inspector. Atomic same-volume link rename preserves existing
+read-only sources without relaxing their protection; bounded fanout128, no staged
+aliases left. Fresh filesystem/SHA256 checks validate every group's source owner,
+all paths, link counts and read-only flags. Earlier per-batch verifiers accept
+later immutable aliases outside their scope while keeping path/byte/owner checks;
+all three earlier batches reverify. No library build, conversion, Office export
+or suite replay; pixel/geometry failures and thresholds remain unchanged.
+
+Last full workspace check C370:13,234,488,811bytes/994,378files/86,819directories,
+zero errors/18.61s, before C373payload reduction and audit output. Counts use unique
+file lengths, not allocated clusters; no newer total inferred. Loose5GB remains
+unmet. C366user-run retirement is still pending,4,063older compiled paths/4.369GB;
+absolute script path corrected for invocation from another repository.
+
+C371read-only audit finds2,389remaining compiled candidates/1.603GBpotential,
+excluding current/frozen/worktree/trace/inspector dependencies; no tracked source,
+tool,test or CI directory callers. Obsolescence/protection still need review.
+C368's226prototype binaries remain after automatic approval review rejected the
+retirement before process creation as"blocked by policy";zero files/bytes removed,
+all targets present, no retry. Inventories/results/verification/rejection evidence
+remain under artifacts/workspace-maintenance/. No additional user-run request is
+made while C366is pending. Preview publication/performance/features stay deferred.
+
 ## C367 — consolidate closed visual evidence without losing paths (2026-10-20)
 
 Completed one exact workspace-only batch:2,990 SHA256-identical groups retain
