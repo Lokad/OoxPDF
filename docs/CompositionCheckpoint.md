@@ -1,5 +1,20 @@
 # Composed-document reliability checkpoint
 
+## C321 implicit-border offset discrimination (2026-10-20)
+
+Two prospective width-only Final Office controls produce body-relative first
+textX-0.600/-0.960pt, rejecting an exact zero, half-border or96dpi-grid law. No
+border formula accepted. Five applicable retained margin/cell/width controls
+predict improvedX (up to10pt) if the existing authored-margin anchor also owns
+visible borders. This removes an exclusion; it does not explain or fit Word's
+remaining border-dependent offset (up to1.44pt). Unset margins/style/compatibility/
+static geometry keep their existing semantics. Next qualify that bounded
+consolidation with one artifact; retain thick-border and strict visual failures.
+Evidence artifacts/composition-c1/implicit-border-discrimination-review.json;
+two exports, no builds/conversions/tests. C318 CI39349461255 is green on both
+platforms including broader/package checks. C320 repair pushed; continue work
+while CI runs. Version0.1.5/release deferral and workspace gap remain explicit.
+
 ## C320 generic audit operation boundaries corrected (2026-10-20)
 
 Adjacent operations join only with identical resource/text state, finite measured
