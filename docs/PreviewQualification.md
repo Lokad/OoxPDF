@@ -1,91 +1,83 @@
 # 0.2.0-preview qualification — 2026-10-20
 
-The local preview candidate is prepared; publication, tagging and release
-creation remain deferred. [Scope and limitations](PreviewRelease.md) and
-[caller migration](PublicApiChanges.md) accompany the package.
+The bounded review follow-up is complete and the local preview is prepared.
+Publication, tagging and release creation remain deferred. See
+[scope and limitations](PreviewRelease.md) and [caller migration](PublicApiChanges.md).
 
-The canonical runtime comes from committed source `6f750f6e` and
-[green Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/39404138180).
-Its library SHA-256 is
-`3291600CC47004C77CDD268E86B53FA6EA68D7213D3BDC81D535CE56F09124BC`.
-Preparatory local and Ubuntu compiler outputs have different hashes and are
-kept separate from this runtime's qualification.
+One committed Release runtime is frozen from `01827c405b39c2337710c4e80ca1db49cb61436f`.
+Library SHA-256:
+`125016495C861D422F66A3E713E88DF6568C9A2CFBE793BBCDE21E76FC13D3BB`.
+Test assembly SHA-256:
+`AE585C6721E019458817D5BE0963AD95EE36F22C5322D6D96BE11416AC43779D`.
+Both [Windows and Ubuntu CI jobs](https://github.com/Lokad/OoxPDF/actions/runs/39452164339)
+passed their independent builds and checks. CI compiler outputs are not conflated
+with this locally frozen runtime.
 
 | Gate | Result |
 |---|---|
-| Windows broad console suite | 3,712 passed, 0 failed, 16 skipped in CI |
-| Focused CLI exit policy | Four additional exact checks pass, including strict warning exit 3; frozen CLI, no build |
-| Same frozen runtime on Ubuntu | 792 passed, 0 failed, 43 skipped; one exact 835-method invocation |
-| Final package consumers | Windows and Ubuntu load the same packed DLL; version metadata, font embedding and admission ownership pass |
-| Representative documents | Nine sources, sixteen outcomes, 32 pages; every PDF and diagnostic list matches its accepted parent and every Office page count matches |
-| Independent Office pixel gates | Two PPTX passes; fourteen DOCX failures retained, without threshold changes |
-| Content screening | Fourteen clean; two static-report field flags retained and independently classified as cached-field uncertainty |
-| Root transfer | All 17 runtime assets verified; two integration PDFs match; no root rebuild or broad-suite replay |
-| Safe managed contract | Explicit unsafe prohibition; IL-only DLL, zero P/Invoke methods or imported COM types; no runtime package dependencies |
+| Affected capability | All 48 pass, selected specifically for the changed font, stream, image, text and comment paths; extracted from the one broad Windows invocation |
+| Windows broad console run | 3,719 pass, **1 fail**, 11 skip; inherited balloon-wrap failure described below, not relabeled as a pass |
+| Same frozen runtime on Ubuntu | 796 pass, 0 fail, 43 environmental skips; one exact 839-method invocation, no library rebuild |
+| Resolver regression controls | Both new concurrency tests fail against the previous qualified DLL with dictionary-state corruption and pass against the new DLL |
+| Qualification input lifecycle | Nineteen checks on Windows and nineteen on Ubuntu; interrupted copying, publication race, immutable-input ownership and corruption rejection |
+| Final package consumers | Windows and Ubuntu consume the same final package; qualified DLL identity, version metadata, font embedding and admission ownership pass |
+| Representative documents | Nine sources, sixteen outcomes, 32 pages; every PDF and diagnostic list equals the accepted baseline, with matching Office page counts |
+| Independent visual comparisons | Sixteen comparisons carried by PDF identity; two PPTX strict passes and fourteen DOCX strict failures retained; no new Office exports, rasters or relaxed thresholds |
+| Root transfer | All 17 assets verified; two integration PDFs match; no root build or suite replay |
+| Safe managed contract | AllowUnsafeBlocks=false, IL-only DLL, zero P/Invoke or imported COM types, no runtime package dependencies |
 
-Final artifacts are under ignored `artifacts/nuget/preview-020/`:
+The Windows balloon assertion observes a 12.61pt single-row body where its
+Office-derived expectation requires a second row. A separate invocation with the
+previous qualified DLL fails identically on this machine. Previous CI skipped it
+because Aptos was absent. Its cause remains unresolved. The assertion, font guards
+and rendering policy are unchanged; balloons remain approximate. The broad local
+run therefore has a retained failure, even though all affected checks and CI pass.
+
+## Changes and compatibility
+
+Both built-in resolvers synchronize their existing bounded request dictionaries;
+cache hits, publication and capacity eviction share one critical section. Logical
+dictionary corruption is reproduced; font-program byte corruption is not shown.
+Stream documentation and regressions now distinguish incomplete caller-owned
+output from atomic file publication. Failed stream output must be discarded.
+
+Six unused/test-only production methods, one record and one obsolete arithmetic
+test were removed. Useful tests now call live image, comment-palette and font
+resolution implementations. Useful inspectors remain. Staging now uses independent
+copies per changed input tree and cleans only its invocation-owned directory;
+frozen runs still share one immutable input snapshot per tree. Cross-tree alias
+bookkeeping and stale accounting comments were removed. The operating envelope
+retains measured workload facts and links to history instead of rendering journals.
+No additional public API was removed in this follow-up; earlier breaking changes
+remain covered by migration guidance.
+
+## Local artifacts and residuals
+
+Final packages are in `artifacts/nuget/preview-020-review-20261020/`:
 
 - `Lokad.OoxPdf.0.2.0-preview.nupkg`, SHA-256
-  `2F2DD58B54AE60A3916E858A09DD0900747B736CDCF1235D391B5E41B1E55041`.
+  `4E09172DC1ABB42C1A9EA64C341CAFADFF5638AA325748112FF3FB7BC4E7CFB0`.
 - `Lokad.OoxPdf.0.2.0-preview.snupkg`, SHA-256
-  `C5731E734D6D705284A9F795B3E886924F1D689ADB4B3B159F57420F7B3CD2E6`.
+  `69145F1EDC3752E81AEE8EC207377A897D0C6DD2971B54760EBBCE31190B1937`.
 
-Final packaging refreshes documentation from `a47aaf78` without compiling the
-library or PDB. Both match the canonical CI artifact. Package and informational
-version are `0.2.0-preview`; assembly/file version is `0.2.0.0`. The final package
-was consumed on both platforms after packing. Evidence/helper-only commits skip
-CI to avoid replaying unchanged rendering qualification; library/test Git trees
-and all transferred runtime assets still match the qualified source.
+Packaging refreshes caller documents from `bb148f8b` without compiling the tested
+library/PDB. Package and informational version remain `0.2.0-preview`;
+assembly/file version remains `0.2.0.0`. All four bundled caller documents and
+both final-package consumers are verified. The earlier `6f750f6e` runtime/package
+qualification remains historical under `artifacts/composition-c1/preview-020-*`.
 
-The follow-up audit removes 26 unused or test-only production methods, two
-workbook wrapper records and spill-path test storage. Tests now exercise live
-streaming, range metadata, text targets and pattern resources. Two shared
-fixture writers no longer reserve orphan temporary files: both canonical payload
-probes pass with zero orphan `.tmp` files. Existing S1–S4 API/quota/cache cleanup
-remains accepted. Useful inspectors, bounded caches, coarse host admission,
-cancellation, input bounds, deterministic cleanup, publication guarantees and
-PDF structural validation remain.
+Fourteen DOCX strict visual failures include geometry and typography differences,
+not just cosmetic differences. SVG Review prose Y remains 1.436pt against the
+original 1pt gate; raw linked-footnote Word URI difference remains 46.794pt although
+native picture/link bounds agree within .000016pt. Two raw cached-field screens
+retain their independent classification. Chart-color, five-paragraph balloon and
+font/document-shape regimes have no new independently verified general replacement;
+none was expanded. No supported-scope content or pagination regression is identified
+by the fixed portfolio. This is not an arbitrary-document ink/clipping guarantee.
 
-Retained limitations include the SVG report's Review prose Y error of 1.436
-points, the linked-footnote Review raw Word annotation mismatch of 46.794
-points, and constrained chart-color/balloon/layout rules. The native note link
-matches its physical picture within 0.000016 points. Static-report cached `1`
-tokens differ from both printed outputs; actual Word/candidate counters agree,
-with no Office-to-candidate token deficit. Raw failures remain failures.
-No arbitrary-document ink/clipping guarantee or performance improvement is
-claimed. Feature expansion and optimization are deferred.
-
-Detailed identities, source/deletion inventories, raw residuals, platform
-reports and consumer evidence are retained under
-`artifacts/composition-c1/preview-020-*`, notably
-`preview-020-canonical-qualification.json`. Workspace cleanup is separate from
-the completed rendering/package qualification; no suites were replayed for it.
-
-The subsequent [32-page paired review](PreviewVisualReview.md) records specific
-practical effects for every portfolio document. It found no serious clipping,
-overlap or wrong page split at page scale, while retaining all original failures.
-
-Workspace maintenance is complete. The user-run scripts removed 3,128 earlier
-compiled files and then all 173,532 paths in the final reviewed inventories.
-C380 verifies the final audit's exact path set, zero remaining targets and no
-errors. The fresh workspace measurement is **4.671 GB** (4,670,728,207 bytes),
-820,915 files and 86,829 directories, below the loose 5 GB target. This counts
-unique file-content lengths by file ID, rather than allocated clusters.
-
-Historical comparisons retain all 167,077 archived entries in the verified
-283 MB `closed-qualification-evidence-20261020.tar.xz`; its SHA-256 is unchanged
-and the standard-tar restore proof remains valid. Shared closed files remain
-read-only; rerenders and inspections use fresh directories. Current preview,
-inputs, source, useful tools, private data, worktrees and Git were excluded.
-
-All 423 retired-snapshot identities, 34 canonical/root runtime assets, 2,582
-canonical inputs and both final packages retain their pinned hashes. The root
-font license differs from the frozen CI copy only in CRLF/LF endings and matches
-Git; all other root inputs match exactly. Production and test Git trees are
-unchanged. No library build, conversion, Office export or suite replay accompanied
-this storage work, and no rejected agent deletion was retried.
-
-Completion evidence: `artifacts/workspace-footprint-C380.json` and
-`artifacts/workspace-maintenance/final-user-cleanup-verified-C380.json`, with the
-original user audit, inventories and archive alongside it. Infrequent footprint
-checks remain the maintenance policy. Preview publication remains deferred.
+Full identities, deletions, reports, expected parent failures and failed harness
+attempts are in `artifacts/review-follow-up-20261020/qualification.json`. The latest
+workspace scan reports **4.852 GB** with zero errors, before the small final package
+and transfer refresh. No historical artifacts were removed in this batch. Continue
+infrequent checks against the loose 5 GB cap. Performance optimization and broader
+feature expansion remain deferred.

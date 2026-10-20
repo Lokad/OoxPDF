@@ -1,5 +1,28 @@
 # Composed-document reliability checkpoint
 
+
+## 2026-10-20 bounded review follow-up
+
+Source01827c40 fixes shared resolver request-dictionary corruption and removes six
+unused/test-only methods, one record and one obsolete arithmetic test. Caller
+stream failure contracts now preserve the existing incomplete-prefix behavior;
+atomic files remain unchanged. Qualification input staging owns its copies and
+cleans interrupted/racing publication: nineteen checks per platform. Stale
+operating journals now link to retained history.
+
+One frozen Release DLL: all48 affected checks pass inside Windows3719pass/1fail/
+11skip; the local balloon-wrap assertion fails identically against the prior DLL
+(12.61pt versus second-row expectation). Cause unresolved, policy/assertion kept.
+Exact same runtime Ubuntu796pass/0fail/43skip in one839-method invocation. All16
+portfolio PDFs/diagnostics are exact parents, carrying original Office gates;
+2PPTX strict passes/14DOCX failures remain. Final same-package consumers pass on
+both platforms;17 assets/two root smokes match without rebuilding. CI39452164339
+is green both platforms. Tool-only WSL/NTFS race-harness correction bb148f8b does
+not change library/test identities. Last footprint4.852GB; no historical purge.
+Publication/optimization/broader expansion deferred. Full evidence and deletions:
+artifacts/review-follow-up-20261020/qualification.json; current readable summary:
+[PreviewQualification.md](PreviewQualification.md).
+
 ## C379-C380 — user cleanup verified below the loose 5 GB cap (2026-10-20)
 
 C379 adds visible startup/phase messages and periodic counters to the throwaway
