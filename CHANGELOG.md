@@ -34,6 +34,10 @@
   Office worker arguments preserve spaces; qualification reports retain declared
   platform skips and reject unexpected skips. Removes the internal WriteBlank
   forwarding wrapper; tests and allocation tooling call the staged writer directly.
+- Protects input/PDF publication through directory junction and symbolic-link
+  ancestors. Raster tools refuse existing PNG output so stale pages cannot hide
+  missing PDF pages. Removes remaining kerning scan fuel in favor of cancellation;
+  font storage and input bounds remain.
 - Removes ineffective `Deterministic`, library `Strict` and cumulative work or
   nonrefunding memory quotas. Uses cooperative cancellation and optional coarse
   host memory admission; preserves input/output bounds, bounded page staging,

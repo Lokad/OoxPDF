@@ -19,6 +19,8 @@ Removed cumulative work quotas from `OoxConversionLimits`:
 `MaxWorkbookModelsPerConversion`, `MaxImagesDecodedPerConversion` and
 `MaxFontWorkPerConversion`. Use the conversion cancellation token to stop work.
 Individual archive/XML/image/font bounds remain.
+The internal kerning scan-work ceiling is also removed. Repetitive tables use
+cooperative cancellation; pair, coverage and class expansion limits still apply.
 
 Removed `MaxRetainedImageBytesPerConversion`, `MaxRetainedFontBytesPerConversion`
 and `MaxLiveImageBytesPerConversion`. The first two counted production without
@@ -76,3 +78,7 @@ Provably distinct case-only names in the same directory remain allowed. Two
 uncreated case-only outputs or differently spelled case-only parent paths refuse
 conservatively; choose names that differ beyond case. This is a path-protection
 repair with no public signature change. File-extension matching remains case-insensitive.
+Directory-link ancestors are resolved before separation checks, including junctions
+and symbolic-link targets with linked parents. Unresolvable/cyclic links refuse
+conservatively. Final output file links remain replaceable as separate entries.
+These checks do not provide protection against concurrent external directory changes.

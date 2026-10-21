@@ -53,9 +53,9 @@ live PNG alpha masks and vector luminosity groups remain.
 
 File conversion captures absolute input/output paths before host callbacks, so
 working-directory changes cannot redirect input lookup or final publication.
-File-path guards use existing directory entries to protect case aliases on either
-platform. Provably distinct names remain allowed; unresolved case-only paths
-refuse conservatively. Raster validation preserves
+File-path guards resolve directory-link ancestors and use existing entries to
+protect case aliases on either platform. Provably distinct names remain allowed;
+unresolved links or case-only paths refuse conservatively. Raster validation preserves
 spaced process arguments and its external timeout; transfer checks include the
 frozen DOCX inspector's source and parent build settings. These are contract and
 tool repairs, with no additional public API removal or rendering rule.
@@ -69,6 +69,10 @@ Office worker arguments preserve spaces and logs through success/failure/timeout
 Affected qualification declares expected platform skips and retains all outcomes;
 unexpected skips still reject its gate. CI retains all
 frozen runtime assets. These repairs add no public API removal or rendering rule.
+Raster wrappers and the direct rasterizer refuse destinations containing PNGs;
+use a fresh output directory rather than reusing a visual run ID. Existing files
+are preserved. Kerning scans use cancellation rather than work-only fuel while
+retaining pair/coverage/class expansion bounds.
 
 All sixteen portfolio PDFs and diagnostic lists remain byte-identical to the
 accepted baseline, with matching Office page counts. Two PPTX strict pixel gates
