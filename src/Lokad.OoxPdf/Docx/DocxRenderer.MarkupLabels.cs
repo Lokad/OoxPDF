@@ -126,9 +126,7 @@ internal sealed partial class DocxRenderer
         out double firstLineWidth,
         out double continuationWidth)
     {
-        double bodyFirstLineX = WordCompatibleAllMarkupBalloonTextInsetXPoints +
-            titleWidth +
-            WordCompatibleAllMarkupBalloonBodyFirstLineXOffsetPoints;
+        double bodyFirstLineX = WordCompatibleAllMarkupBalloonTextInsetXPoints + titleWidth;
         double rightEdge = balloonWidth - 0.5d;
         firstLineWidth = Math.Max(0d, rightEdge - bodyFirstLineX - WordCompatibleAllMarkupBalloonBodyFirstLineTrailingPadPoints);
         continuationWidth = Math.Max(0d, balloonWidth - 2d * WordCompatibleAllMarkupBalloonContinuationWrapInsetDesignPoints * printScale);
@@ -188,41 +186,25 @@ internal sealed partial class DocxRenderer
         byte blue,
         PdfFallbackFontResource? fallback = null)
     {
-        DrawBalloonText(graphics, resource, text, x, baselineY, fontSize, red, green, blue, positioningCharacterSpacing: 0d, fallback);
-    }
-
-    private static void DrawBalloonText(
-        PdfGraphicsBuilder graphics,
-        DocxRunFontResource? resource,
-        string text,
-        double x,
-        double baselineY,
-        double fontSize,
-        byte red,
-        byte green,
-        byte blue,
-        double positioningCharacterSpacing,
-        PdfFallbackFontResource? fallback = null)
-    {
         if (resource is null)
         {
             // RV06 (RV01 residual): balloon text without any embeddable face renders
             // with the diagnosed standard-14 fallback instead of vanishing.
             if (fallback is not null && text.Length != 0)
             {
-                DrawFallbackRunGlyphText(graphics, fallback, text, x, baselineY, new RgbColor(red, green, blue), fontSize, positioningCharacterSpacing);
+                DrawFallbackRunGlyphText(graphics, fallback, text, x, baselineY, new RgbColor(red, green, blue), fontSize, 0d);
             }
 
             return;
         }
         // Office balloon text carries no tracking: the shared encoder applies pair
         // kerning like the body path and yields plain glyph shows when the face has
-        // no kerns for the line. Forcing applies only while an explicit spacing is set.
+        // no kerns for the line.
         string? positioningArray = resource.Embedded.EncodeGlyphPositioningArray(
             text,
-            positioningCharacterSpacing,
+            0d,
             fontSize,
-            forcePositioningArray: Math.Abs(positioningCharacterSpacing) > 0.001d,
+            forcePositioningArray: false,
             kerningEnabled: true);
         if (positioningArray is not null)
         {

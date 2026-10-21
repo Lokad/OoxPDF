@@ -44,25 +44,6 @@ internal sealed partial class DocxRenderer
     internal const string DefaultDocumentTypefaceRequest = DocxFontFallbackRules.DefaultDocumentTypefaceRequest;
 
     private const double WordCompatibleAllMarkupMaxBodyTextFontSizePoints = 11.625d;
-    // Office A/B (W5-K1 dense ref: Word kern tightens 23pt over the body; per-gap tracking is
-    // removed, kerning carries advances). Kept as named zero hooks, not deleted, so any future
-    // Office-measured per-class tracking has somewhere to land.
-    private const double WordCompatibleAllMarkupBodyPositioningCharacterSpacingPoints = 0d;
-    private const double WordCompatibleAllMarkupHeadingPositioningCharacterSpacingPoints = 0d;
-    private const double WordCompatibleAllMarkupPunctuationPositioningCharacterSpacingPoints = 0d;
-    private const double WordCompatibleAllMarkupInsertionPositioningCharacterSpacingPoints = 0d;
-    private const double WordCompatibleAllMarkupDeletionPositioningCharacterSpacingPoints = 0d;
-    private const double WordCompatibleAllMarkupShortWordPositioningCharacterSpacingPoints = 0d;
-    // RV06 asymptote probes: Office advances already match ours per op (spill-matrix,
-    // style-split boundary, revision runs), so the June-era -3pt progressive body
-    // X-offset only added error (comment runs sat 2.6pt left) and stays zeroed.
-    private const double WordCompatibleAllMarkupBodyXOffsetAsymptotePoints = 0d;
-    private const double WordCompatibleAllMarkupBodyXOffsetDecayPoints = 55.0d;
-    // RV06 revpos-small probe (10pt WC): Office chains insertion/deletion runs
-    // exactly (all within 0.1), so the June-era +2.707/+2.140 X offsets only added
-    // error and stay zeroed.
-    private const double WordCompatibleAllMarkupDeletionXOffsetPoints = 0d;
-    private const double WordCompatibleAllMarkupInsertionXOffsetPoints = 0d;
     // Balloon title lands on the anchor row minus ~0.5 (Office: dense/c14/mirrored/threaded refs).
     // = doc-adaptive baseline shift + title rule (top inset 11.15 - height 20.48 + first baseline 11.27 + 0.5).
     private const double WordCompatibleAllMarkupBalloonAnchorRowInsetPoints = 2.44d;
@@ -81,14 +62,6 @@ internal sealed partial class DocxRenderer
     // The prior 233pt value fitted our own candidate widths, never an Office measurement.
     private const double WordCompatibleAllMarkupBalloonBodyWidthPoints = 230.2d;
     private const double WordCompatibleAllMarkupBalloonLaneBackgroundBalloonInsetPoints = 22.56d;
-    // Office A/B (28 balloons across the unresolved/long/all/dense/landscape/mirrored/
-    // original references, Word-COM rendered): balloon titles carry no character
-    // spacing (cs=0 on every sampled title op) and body first lines start where the
-    // drawn title ends (gap -0.10..+0.01). The June-era 0.03357pt title tracking and
-    // 2.541pt body offset fitted narrow Aptos titles and are retired now that titles
-    // set Segoe UI Bold (natural widths already match Office within 0.2pt).
-    private const double WordCompatibleAllMarkupBalloonTitlePositioningCharacterSpacingPoints = 0d;
-    private const double WordCompatibleAllMarkupBalloonBodyFirstLineXOffsetPoints = 0d;
     // Office A/B (unresolved b2 wrap failure plus all/original marginal first rows,
     // Word-COM rendered): balloon body rows stop 1.02..4.01pt before the body rect
     // edge, so the first line keeps a ~2.5pt trailing pad past the 0.5pt wrap edge.
@@ -100,14 +73,6 @@ internal sealed partial class DocxRenderer
     // excluded. Office text insets measure 4.42..4.44 design points; using 4.42
     // on each side gives 221.36pt and keeps the 41-character Courier guard out.
     private const double WordCompatibleAllMarkupBalloonContinuationWrapInsetDesignPoints = 4.42d;
-    // Office A/B (all continuation rows across the unresolved/long/all/dense/
-    // landscape/mirrored/original references, Word-COM rendered): continuation
-    // lines carry no character spacing (cs=0; the -0.1..-0.76 adjustments are pair
-    // kerning, which the shared positioning encoder applies like the body path)
-    // and trailing spaces start where the drawn line ends (+/-0.1, never pulled
-    // back). Both June-era constants are retired.
-    private const double WordCompatibleAllMarkupBalloonContinuationPositioningCharacterSpacingPoints = 0d;
-    private const double WordCompatibleAllMarkupBalloonContinuationTerminalSpaceXOffsetPoints = 0d;
     private const double WordCompatibleAllMarkupBalloonFirstBaselineOffsetPoints = 11.27d;
     private const double WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints = WordCompatibleAllMarkupBalloonHeightPoints - WordCompatibleAllMarkupBalloonFirstBaselineOffsetPoints;
     // Office A/B (tbxrev one-line plus dense two-line balloon rects, Word-COM rendered): reply-less balloon bodies fit the rendered text rows, so the top inset is the first-baseline inset above and 3.4pt pads the last baseline.

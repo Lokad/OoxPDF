@@ -1547,8 +1547,7 @@ internal sealed partial class DocxRenderer
             fontSize,
             titleRgb,
             titleRgb,
-            titleRgb,
-            WordCompatibleAllMarkupBalloonTitlePositioningCharacterSpacingPoints);
+            titleRgb);
         if (string.IsNullOrWhiteSpace(body))
         {
             return;
@@ -1556,7 +1555,7 @@ internal sealed partial class DocxRenderer
 
         double titleWidth = labelResource.Embedded.MeasureTextPoints(title, fontSize);
         ComputeWordCompatibleBalloonWrapWidths(titleWidth, placement.Width, wordCompatiblePrintScale, out double firstLineWidth, out double continuationWidth);
-        double bodyFirstLineX = textX + titleWidth + WordCompatibleAllMarkupBalloonBodyFirstLineXOffsetPoints;
+        double bodyFirstLineX = textX + titleWidth;
         if (ResolveWordCompatibleFittingMixedTerminalRows(placement.WordCompatibleFittingMixedTerminal, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } mixedFourthRows)
         {
             RenderWordCompatibleFittingMixedTerminalRows(mixedFourthRows, placement, graphics, bodyFirstLineX, textX,
@@ -1656,13 +1655,12 @@ internal sealed partial class DocxRenderer
                 fontSize,
                 placement.BodyRgb.Red,
                 placement.BodyRgb.Green,
-                placement.BodyRgb.Blue,
-                WordCompatibleAllMarkupBalloonContinuationPositioningCharacterSpacingPoints);
+                placement.BodyRgb.Blue);
             DrawBalloonText(
                 graphics,
                 lineIndex == lines.Length - 1 ? terminalResource : bodyResource,
                 " ",
-                textX + bodyResource.Embedded.MeasureTextPoints(lines[lineIndex], fontSize) + WordCompatibleAllMarkupBalloonContinuationTerminalSpaceXOffsetPoints,
+                textX + bodyResource.Embedded.MeasureTextPoints(lines[lineIndex], fontSize),
                 continuationBaselineY,
                 fontSize,
                 placement.BodyRgb.Red,

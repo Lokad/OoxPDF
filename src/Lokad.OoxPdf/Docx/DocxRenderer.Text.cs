@@ -264,32 +264,26 @@ internal sealed partial class DocxRenderer
             {
                 int currentPartSourceTextOffset = partSourceTextOffset;
                 partSourceTextOffset += part.Text.Length;
-                DocxTextRun emissionStyleRun = ResolveWordCompatibleAllMarkupEmissionStyleRun(
-                    segment.StyleRun,
-                    segment.Role,
-                    part.Text,
-                    fontSize,
-                    useWordCompatibleTextProfile);
-                DocxEffectiveRunProperties emissionEffective = emissionStyleRun.EffectiveProperties;
+                DocxEffectiveRunProperties emissionEffective = segment.StyleRun.EffectiveProperties;
                 RgbColor textColor = ResolveTextEmissionColor(
-                    emissionStyleRun,
+                    segment.StyleRun,
                     useWordCompatibleTextProfile,
                     ReadColor(emissionEffective.ColorHex), segment.Role);
-                string emittedText = ResolveStaticFieldPlaceholders(emissionStyleRun, part.Text, pageNumber, pageCount);
-                double emittedWidth = ResolveSubstitutedFieldEmissionWidth(part.Text, emittedText, emissionStyleRun, fontSize, fontResources.TextMeasurer, part.Width);
+                string emittedText = ResolveStaticFieldPlaceholders(segment.StyleRun, part.Text, pageNumber, pageCount);
+                double emittedWidth = ResolveSubstitutedFieldEmissionWidth(part.Text, emittedText, segment.StyleRun, fontSize, fontResources.TextMeasurer, part.Width);
                 AddEmissionSegmentWithFontFallback(emissionSegments, new DocxTextEmissionSegment(
                     emittedText,
-                    emissionStyleRun,
+                    segment.StyleRun,
                     resource,
                     textColor,
-                    part.X + xOffset + substitutedFieldXAdjustment + ResolveWordCompatibleAllMarkupBodyXOffset(segment, part, emissionStyleRun, fontSize, line.X, useWordCompatibleTextProfile),
+                    part.X + xOffset + substitutedFieldXAdjustment,
                     baselineY,
                     emittedWidth,
                     fontSize,
                     segment.PdfCharacterSpacing,
                     segment.PdfCharacterSpacingSource,
                     segment.CompensatePdfCharacterSpacing,
-                    resource is not null && ShouldApplySyntheticBold(emissionStyleRun, resource),
+                    resource is not null && ShouldApplySyntheticBold(segment.StyleRun, resource),
                     resource is not null && emissionEffective.Italic && !resource.Resolution.Italic,
                     IsTerminalLineSpace: false,
                     segment.SourceTextRunIndex,
@@ -443,59 +437,6 @@ internal sealed partial class DocxRenderer
             WordCompatibleAllMarkupReviewStrokeRgb.Blue);
     }
 
-    private static DocxTextRun ResolveWordCompatibleAllMarkupEmissionStyleRun(
-        DocxTextRun styleRun,
-        DocxTextSegmentRole role,
-        string text,
-        double fontSize,
-        bool useWordCompatibleTextProfile)
-    {
-        if (!ShouldApplyWordCompatibleAllMarkupBodyPositioningSpacing(role, text, useWordCompatibleTextProfile))
-        {
-            return styleRun;
-        }
-
-        return styleRun with
-        {
-            CharacterSpacingPoints = styleRun.CharacterSpacingPoints +
-                ResolveWordCompatibleAllMarkupBodyPositioningCharacterSpacing(styleRun, text, fontSize)
-        };
-    }
-
-    private static double ResolveWordCompatibleAllMarkupBodyPositioningCharacterSpacing(
-        DocxTextRun styleRun,
-        string text,
-        double fontSize)
-    {
-        int runeCount = text.EnumerateRunes().Count();
-        if (runeCount <= 8)
-        {
-            return WordCompatibleAllMarkupShortWordPositioningCharacterSpacingPoints;
-        }
-
-        if (HasInsertionLikeRevisionKind(styleRun))
-        {
-            return WordCompatibleAllMarkupInsertionPositioningCharacterSpacingPoints;
-        }
-
-        if (HasDeletionLikeRevisionKind(styleRun))
-        {
-            return WordCompatibleAllMarkupDeletionPositioningCharacterSpacingPoints;
-        }
-
-        if (fontSize >= WordCompatibleAllMarkupMaxBodyTextFontSizePoints - 0.001d)
-        {
-            return WordCompatibleAllMarkupHeadingPositioningCharacterSpacingPoints;
-        }
-
-        if (text.Any(char.IsPunctuation))
-        {
-            return WordCompatibleAllMarkupPunctuationPositioningCharacterSpacingPoints;
-        }
-
-        return WordCompatibleAllMarkupBodyPositioningCharacterSpacingPoints;
-    }
-
     private static bool HasRevisionKind(DocxTextRun styleRun, DocxRevisionKind kind)
     {
         return IsRevisionKind(styleRun.Revision, kind) ||
@@ -523,51 +464,6 @@ internal sealed partial class DocxRenderer
     {
         return revision is not null &&
             revision.Kind == kind;
-    }
-
-    private static bool ShouldApplyWordCompatibleAllMarkupBodyPositioningSpacing(
-        DocxTextSegmentRole role,
-        string text,
-        bool useWordCompatibleTextProfile)
-    {
-        return useWordCompatibleTextProfile &&
-            role == DocxTextSegmentRole.Text &&
-            text.EnumerateRunes().Take(2).Count() > 1 &&
-            text.Any(character => !char.IsWhiteSpace(character));
-    }
-
-    private static double ResolveWordCompatibleAllMarkupBodyXOffset(
-        DocxTextSegmentLayout sourceSegment,
-        DocxTextEmissionPart part,
-        DocxTextRun emissionStyleRun,
-        double fontSize,
-        double lineX,
-        bool useWordCompatibleTextProfile)
-    {
-        if (!ShouldApplyWordCompatibleAllMarkupBodyPositioningSpacing(sourceSegment.Role, part.Text, useWordCompatibleTextProfile) ||
-            fontSize >= WordCompatibleAllMarkupMaxBodyTextFontSizePoints - 0.001d)
-        {
-            return 0d;
-        }
-
-        double lineRelativeX = Math.Max(0d, part.X - lineX);
-        if (lineRelativeX < 0.001d)
-        {
-            return 0d;
-        }
-
-        if (HasDeletionLikeRevisionKind(emissionStyleRun))
-        {
-            return WordCompatibleAllMarkupDeletionXOffsetPoints;
-        }
-
-        if (HasInsertionLikeRevisionKind(emissionStyleRun))
-        {
-            return WordCompatibleAllMarkupInsertionXOffsetPoints;
-        }
-
-        return WordCompatibleAllMarkupBodyXOffsetAsymptotePoints *
-            (1d - Math.Exp(-lineRelativeX / WordCompatibleAllMarkupBodyXOffsetDecayPoints));
     }
 
     private static double ResolveTextEmissionSegmentFontSize(
@@ -625,7 +521,6 @@ internal sealed partial class DocxRenderer
             fontResources,
             fontScale,
             xOffset,
-            useWordCompatibleTextProfile,
             cancellationToken);
         return IncludeInlineObjectEnd(emittedEndX ?? terminalSegment.X + terminalSegment.Width + xOffset);
 
@@ -639,7 +534,6 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources,
         double fontScale,
         double xOffset,
-        bool useWordCompatibleTextProfile,
         CancellationToken cancellationToken)
     {
         double emittedEndX = double.NegativeInfinity;
@@ -661,27 +555,15 @@ internal sealed partial class DocxRenderer
             double fontSize = ResolveTextEmissionSegmentFontSize(segment, line, fontScale);
             foreach (DocxTextEmissionPart part in DocxTextEmissionPlanner.SplitOfficeTextOperationParts(segment, fontSize, fontResources.TextMeasurer))
             {
-                DocxTextRun emissionStyleRun = ResolveWordCompatibleAllMarkupEmissionStyleRun(
-                    segment.StyleRun,
-                    segment.Role,
-                    part.Text,
-                    fontSize,
-                    useWordCompatibleTextProfile);
                 DocxTextEmissionPlan plan = DocxTextEmissionPlanner.CreateForEmissionSegment(
-                    emissionStyleRun,
+                    segment.StyleRun,
                     fontSize,
                     segment.PdfCharacterSpacing,
                     segment.PdfCharacterSpacingSource,
                     segment.CompensatePdfCharacterSpacing,
                     isTerminalLineSpace: false,
                     fontScale);
-                double partX = part.X + xOffset + ResolveWordCompatibleAllMarkupBodyXOffset(
-                    segment,
-                    part,
-                    emissionStyleRun,
-                    fontSize,
-                    line.X,
-                    useWordCompatibleTextProfile);
+                double partX = part.X + xOffset;
                 // RV01: fallback runs have no advance profile; measured part width stands in.
                 double partAdvance = resource is not null
                     ? DocxTextEmissionPlanner.MeasureAdvanceProfile(part.Text, resource.Embedded, part.Width, plan).PlannedEmittedAdvance
