@@ -18,6 +18,7 @@ internal sealed partial class OpenTypeFont
         int subtableOffset = kern.Offset + 4;
         for (int table = 0; table < tableCount && subtableOffset + 6 <= kern.Offset + kern.Length; table++)
         {
+            pairs.CheckCancellation();
             ushort length = U16(bytes, subtableOffset + 2);
             ushort coverage = U16(bytes, subtableOffset + 4);
             int format = coverage >> 8;
@@ -29,11 +30,15 @@ internal sealed partial class OpenTypeFont
                 int pairEnd = Math.Min(subtableOffset + length, kern.Offset + kern.Length);
                 int nonzero = 0;
                 for (int i = 0, candidate = pairOffset; i < pairCount && candidate + 6 <= pairEnd; i++, candidate += 6)
+                {
+                    if ((i & 1023) == 0) pairs.CheckCancellation();
                     if (I16(bytes, candidate + 4) != 0) nonzero++;
+                }
                 pairs.Register(nonzero, writer =>
                 {
                     for (int i = 0, cursor = pairOffset; i < pairCount && cursor + 6 <= pairEnd; i++, cursor += 6)
                     {
+                        if ((i & 1023) == 0) pairs.CheckCancellation();
                         short value = I16(bytes, cursor + 4);
                         if (value != 0) writer.Add(((uint)U16(bytes, cursor) << 16) | U16(bytes, cursor + 2), value);
                     }
@@ -49,7 +54,7 @@ internal sealed partial class OpenTypeFont
         }
     }
 
-    private static void ReadGposPairAdjustments(byte[] bytes, Dictionary<string, TableRecord> tables, KerningPairBuilder pairs, ref long workRemaining)
+    private static void ReadGposPairAdjustments(byte[] bytes, Dictionary<string, TableRecord> tables, KerningPairBuilder pairs)
     {
         if (!tables.TryGetValue("GPOS", out TableRecord gpos) || gpos.Length < 10)
         {
@@ -72,6 +77,7 @@ internal sealed partial class OpenTypeFont
         ushort lookupCount = U16(bytes, lookupList);
         for (int i = 0; i < lookupCount && lookupList + 2 + i * 2 + 2 <= tableEnd; i++)
         {
+            pairs.CheckCancellation();
             if (!kernLookupIndices.Contains((ushort)i))
             {
                 continue;
@@ -87,8 +93,9 @@ internal sealed partial class OpenTypeFont
             ushort subtableCount = U16(bytes, lookup + 4);
             for (int j = 0; j < subtableCount && lookup + 6 + j * 2 + 2 <= tableEnd; j++)
             {
+                pairs.CheckCancellation();
                 int subtable = lookup + U16(bytes, lookup + 6 + j * 2);
-                ReadGposPairAdjustmentLookupSubtable(bytes, subtable, lookupType, tableEnd, pairs, ref workRemaining);
+                ReadGposPairAdjustmentLookupSubtable(bytes, subtable, lookupType, tableEnd, pairs);
             }
         }
     }
@@ -118,11 +125,6 @@ internal sealed partial class OpenTypeFont
     internal const int MaxCoverageGlyphs = 131_072;
     internal const int MaxClassGlyphs = 131_072;
 
-    // Bounds pure scan work with no allocation footprint: class-def linear scans per
-    // coverage glyph plus zero-advance candidate iterations. Real faces stay orders of
-    // magnitude below this; hostile cross products exhaust it in milliseconds.
-    internal const long MaxKerningWorkSteps = 67_108_864;
-
     private sealed class KerningPairBuilder(CancellationToken token)
     {
         private readonly List<Action<KerningPairWriter>> batches = new();
@@ -146,15 +148,6 @@ internal sealed partial class OpenTypeFont
             var writer = new KerningPairWriter(sourceCount, token);
             foreach (var write in batches) { CheckCancellation(); write(writer); }
             return writer.Complete();
-        }
-    }
-
-    private static void ConsumeKerningWork(ref long workRemaining, long steps)
-    {
-        workRemaining -= steps;
-        if (workRemaining < 0)
-        {
-            throw new InvalidDataException("Font kerning tables exceed the maximum supported lookup work.");
         }
     }
 
@@ -260,12 +253,11 @@ internal sealed partial class OpenTypeFont
         int subtable,
         ushort lookupType,
         int tableEnd,
-        KerningPairBuilder pairs,
-        ref long workRemaining)
+        KerningPairBuilder pairs)
     {
         if (lookupType == 2)
         {
-            ReadGposPairAdjustmentSubtable(bytes, subtable, tableEnd, pairs, ref workRemaining);
+            ReadGposPairAdjustmentSubtable(bytes, subtable, tableEnd, pairs);
             return;
         }
 
@@ -287,10 +279,10 @@ internal sealed partial class OpenTypeFont
             return;
         }
 
-        ReadGposPairAdjustmentSubtable(bytes, extensionSubtable, tableEnd, pairs, ref workRemaining);
+        ReadGposPairAdjustmentSubtable(bytes, extensionSubtable, tableEnd, pairs);
     }
 
-    private static void ReadGposPairAdjustmentSubtable(byte[] bytes, int subtable, int tableEnd, KerningPairBuilder pairs, ref long workRemaining)
+    private static void ReadGposPairAdjustmentSubtable(byte[] bytes, int subtable, int tableEnd, KerningPairBuilder pairs)
     {
         if (subtable + 10 > tableEnd)
         {
@@ -325,16 +317,16 @@ internal sealed partial class OpenTypeFont
                 int nonzero = 0;
                 for (int j = 0, candidate = pairValue; j < pairValueCount && candidate + stride <= tableEnd; j++, candidate += stride)
                 {
-                    ConsumeKerningWork(ref workRemaining, 1);
+                    if ((j & 1023) == 0) pairs.CheckCancellation();
                     if (ReadXAdvance(bytes, candidate + 2, valueFormat1) != 0) nonzero++;
                 }
                 ushort leftGlyph = coverageGlyphs[i];
                 int candidates = Math.Min(pairValueCount, Math.Max(0, (tableEnd - pairValue) / stride));
-                if (nonzero != 0) ConsumeKerningWork(ref workRemaining, candidates);
                 pairs.Register(nonzero, writer =>
                 {
                     for (int j = 0, cursor = pairValue; j < candidates; j++, cursor += stride)
                     {
+                        if ((j & 1023) == 0) pairs.CheckCancellation();
                         short advance = ReadXAdvance(bytes, cursor + 2, valueFormat1);
                         if (advance != 0) writer.Add(((uint)leftGlyph << 16) | U16(bytes, cursor), advance);
                     }
@@ -359,8 +351,7 @@ internal sealed partial class OpenTypeFont
             var rowBatches = new List<(ushort[] Glyphs, short Advance)>?[class1Count];
             var rowPairCounts = new long[class1Count];
             int leftLimit = coverageGlyphs.Length;
-            long contributions = CountClassPairs(ref workRemaining);
-            ConsumeKerningWork(ref workRemaining, contributions);
+            long contributions = CountClassPairs();
             pairs.Register(contributions, writer =>
             {
                 for (int leftIndex = 0; leftIndex < leftLimit; leftIndex++)
@@ -374,13 +365,13 @@ internal sealed partial class OpenTypeFont
                 }
             });
 
-            long CountClassPairs(ref long remaining)
+            long CountClassPairs()
             {
                 long count = 0;
                 for (int index = 0; index < coverageGlyphs.Length; index++)
                 {
                     pairs.CheckCancellation();
-                    ushort leftClass = ReadGlyphClass(bytes, classDef1, tableEnd, coverageGlyphs[index], ref remaining);
+                    ushort leftClass = ReadGlyphClass(bytes, classDef1, tableEnd, coverageGlyphs[index], pairs);
                     leftClasses[index] = leftClass;
                     if (leftClass >= class1Count) continue;
                     if (rowBatches[leftClass] is null)
@@ -393,7 +384,7 @@ internal sealed partial class OpenTypeFont
                         long rowCount = 0;
                         foreach (var right in rightGlyphsByClass)
                         {
-                            ConsumeKerningWork(ref remaining, 1);
+                            pairs.CheckCancellation();
                             if (right.Key == 0 || right.Key >= class2Count) continue;
                             if (!TryGetClassRecord(leftClass, right.Key, out int record))
                             {
@@ -511,7 +502,7 @@ internal sealed partial class OpenTypeFont
         return true;
     }
 
-    private static ushort ReadGlyphClass(byte[] bytes, int offset, int tableEnd, ushort glyphId, ref long workRemaining)
+    private static ushort ReadGlyphClass(byte[] bytes, int offset, int tableEnd, ushort glyphId, KerningPairBuilder pairs)
     {
         if (offset + 4 > tableEnd)
         {
@@ -545,7 +536,7 @@ internal sealed partial class OpenTypeFont
 
         for (int i = 0; i < rangeCount; i++)
         {
-            ConsumeKerningWork(ref workRemaining, 1);
+            if ((i & 1023) == 0) pairs.CheckCancellation();
             int range = offset + 4 + i * 6;
             ushort start = U16(bytes, range);
             ushort end = U16(bytes, range + 2);

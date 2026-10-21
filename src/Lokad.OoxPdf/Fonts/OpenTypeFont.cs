@@ -1126,8 +1126,7 @@ internal sealed partial class OpenTypeFont
         var pairs = new KerningPairBuilder(cancellationToken);
         ReadLegacyKerningPairs(bytes, tables, pairs);
         cancellationToken.ThrowIfCancellationRequested();
-        long workRemaining = MaxKerningWorkSteps;
-        ReadGposPairAdjustments(bytes, tables, pairs, ref workRemaining);
+        ReadGposPairAdjustments(bytes, tables, pairs);
         cancellationToken.ThrowIfCancellationRequested();
         return pairs.Build();
     }

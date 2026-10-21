@@ -6540,6 +6540,27 @@
     "PortableRenderingOperatorMatrixSpecification",
     "PdfActualText"
   ],
+  "font-kerning-scan": [
+    "ClassKerningZeroAdvanceScanCompletesWithoutWorkQuota",
+    "ClassKerningZeroAdvanceScanObservesCancellation",
+    "ClassKerningStorageRefusalStillUsesFontFallback",
+    "ClassKerningBelowCapLoads",
+    "ClassKerningBeyondPairCapThrows",
+    "ClassKerningDuplicateSourcePairsStillConsumeThePairLimit",
+    "ClassKerningLaterSubtableRetainsLastWinsValues",
+    "ClassKerningOutOfRangeMatrixRetainsValidPrefix",
+    "ClassKerningTruncatedLaterRowPreservesValidPrefix",
+    "ClassKerningSharedReadsRetainSignedLastWinsAndOwnedSource",
+    "CoverageExpansionBeyondCapThrows",
+    "SyntheticGposPairAdjustmentIsRead",
+    "SyntheticUnlinkedKernFeatureIsIgnored",
+    "SyntheticExtensionKernLookupIsRead",
+    "SyntheticRejectedScriptKernIsIgnored",
+    "SyntheticNonKernFeatureIsIgnored",
+    "SyntheticKerningAdjustsMeasuredAdvance",
+    "OpenTypeFontLoadObservesCancelledToken",
+    "FontProgramLoaderPropagatesParseCancellation"
+  ],
   "font-kerning-storage": [
     "Kerning",
     "Gpos",
