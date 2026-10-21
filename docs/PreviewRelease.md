@@ -47,9 +47,11 @@ platform skips are reported separately from green CI.
 Maintenance repairs preserve diagnostic-observer exception identity/type/stack and
 observe final-summary cancellation before publication. CLI diagnostics validate
 literal path separation and publish atomically, so existing hard/symbolic links
-cannot overwrite source or old destination files. The unused luminosity-mask path,
-decoder wrappers and isolated test-only math/PPTX snapshot helpers are removed;
-live PNG alpha masks and vector luminosity groups remain.
+cannot overwrite source or old destination files. Unused luminosity-mask/decoder paths, inactive overloads, inert PPTX emission
+and legend state, and unread argument plumbing are removed. Tests target live
+implementations; useful inspectors, PNG alpha masks, vector luminosity groups
+and independently validated rendering rules remain. No additional public API
+is removed by this cleanup.
 
 File conversion captures absolute input/output paths before host callbacks, so
 working-directory changes cannot redirect input lookup or final publication.

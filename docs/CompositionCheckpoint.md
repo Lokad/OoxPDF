@@ -20,8 +20,8 @@ footnote annotation mismatch and two field/extraction flags remain explicit in
 [current qualification](PreviewQualification.md). Correct PDF structure and
 manifest validity are separate from Office fidelity.
 
-The ninth maintenance batch removes retired zero-valued corrections and verified
-inactive helpers, retargeting useful tests/probes to live implementations. It does
+Maintenance removes retired corrections, inert state and verified inactive
+helpers, retargeting useful tests/probes to live implementations. It does
 not generalize chart-color, five-paragraph balloon or font/size/document-shape
 rules. Future rendering corrections require a supported-scope counterexample,
 source-owned measurement/placement/painting contracts and independent Office
