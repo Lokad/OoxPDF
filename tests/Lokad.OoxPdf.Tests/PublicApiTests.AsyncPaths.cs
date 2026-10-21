@@ -93,7 +93,7 @@ internal static partial class PublicApiTests
 
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
-        Task cancelled = OoxPdfConverter.ConvertAsync(null!, null!, invalidOptions, cancellation.Token);
+        Task cancelled = OoxPdfConverter.ConvertAsync(inputPath: null!, outputPath: null!, invalidOptions, cancellation.Token);
         TestAssert.Throws<OperationCanceledException>(() => cancelled.GetAwaiter().GetResult());
         TestAssert.True(cancelled.IsCanceled, "Pre-cancellation must win over invalid paths/options without a synchronous throw.");
     }
