@@ -131,11 +131,6 @@ internal sealed partial class PptxSceneBuilder
             : null;
     }
 
-    private static PptxSceneChartTextStyleOverride ReadChartTextRunStyle(XElement? runProperties, PptxTheme theme)
-    {
-        return ReadChartTextRunStyle(runProperties, theme, PptxColorMap.Default);
-    }
-
     private static PptxSceneChartTextStyleOverride ReadChartTextRunStyle(XElement? runProperties, PptxTheme theme, PptxColorMap colorMap)
     {
         if (runProperties is null)

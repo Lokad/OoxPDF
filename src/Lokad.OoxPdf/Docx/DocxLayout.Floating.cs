@@ -960,13 +960,9 @@ internal sealed partial class DocxLayoutEngine
             : null;
     }
 
-    // RV15: source-block bounds index built once per stable page list. The
-    // single pass reproduces FindSourceBlockBounds exactly (first/last page,
-    // min/max column, topmost top and bottommost bottom across all matching
-    // items); lookups are O(1) instead of O(pages x items) per drawing.
-    // The index is built from the pages handed to each placement call, so
-    // repagination/displacement can never reuse page-sensitive geometry.
-    // FindSourceBlockBounds stays as the independently pinned reference.
+    // Index source-block geometry once per stable page list: first/last page,
+    // min/max column and full vertical extent. Rebuild after placement changes
+    // so pagination/displacement cannot reuse page-sensitive geometry.
     private static IReadOnlyDictionary<int, DocxLayoutSourceBlockBounds> BuildSourceBlockIndex(
         IReadOnlyList<DocxLayoutPage> pages,
         CancellationToken cancellationToken)
@@ -1012,43 +1008,6 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return index;
-    }
-
-    private static DocxLayoutSourceBlockBounds? FindSourceBlockBounds(IReadOnlyList<DocxLayoutPage> pages, int sourceBlockIndex)
-    {
-        int? firstPageIndex = null;
-        int? lastPageIndex = null;
-        int? firstColumnIndex = null;
-        int? lastColumnIndex = null;
-        double verticalTop = double.NegativeInfinity;
-        double verticalBottom = double.PositiveInfinity;
-        for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
-        {
-            DocxLayoutPage page = pages[pageIndex];
-            foreach (DocxLayoutItem item in pages[pageIndex].Items)
-            {
-                if (GetSourceBlockIndex(item) != sourceBlockIndex)
-                {
-                    continue;
-                }
-
-                firstPageIndex ??= pageIndex;
-                lastPageIndex = pageIndex;
-                if (ResolveItemColumnIndex(page, item) is { } columnIndex)
-                {
-                    firstColumnIndex = firstColumnIndex is null ? columnIndex : Math.Min(firstColumnIndex.Value, columnIndex);
-                    lastColumnIndex = lastColumnIndex is null ? columnIndex : Math.Max(lastColumnIndex.Value, columnIndex);
-                }
-
-                (double y, double height) = GetVerticalBounds(item);
-                verticalTop = Math.Max(verticalTop, y + height);
-                verticalBottom = Math.Min(verticalBottom, y);
-            }
-        }
-
-        return firstPageIndex is null || lastPageIndex is null
-            ? null
-            : new DocxLayoutSourceBlockBounds(firstPageIndex.Value, lastPageIndex.Value, firstColumnIndex, lastColumnIndex, verticalTop, verticalBottom);
     }
 
     private static int? GetSourceBlockIndex(DocxLayoutItem item)

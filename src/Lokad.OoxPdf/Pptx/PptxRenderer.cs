@@ -238,11 +238,6 @@ internal sealed partial class PptxRenderer
             ?.Element(PresentationNamespace + "ph") is not null;
     }
 
-    private static TextAlignment ReadAlignment(XElement paragraph, XElement? defaultParagraphProperties)
-    {
-        return ParseAlignment(ReadAlignmentValue(paragraph, defaultParagraphProperties));
-    }
-
     private static string? ReadAlignmentValue(XElement paragraph, XElement? defaultParagraphProperties)
     {
         return (string?)(paragraph.Element(DrawingNamespace + "pPr")?.Attribute("algn") ??

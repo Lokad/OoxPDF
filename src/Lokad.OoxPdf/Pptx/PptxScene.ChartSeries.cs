@@ -72,11 +72,6 @@ internal sealed partial class PptxSceneBuilder
         return series;
     }
 
-    private static PptxSceneFillStyle ReadChartSeriesFill(XElement series, PptxTheme theme)
-    {
-        return ReadChartSeriesFill(series, theme, PptxColorMap.Default);
-    }
-
     private static PptxSceneFillStyle ReadChartSeriesFill(XElement series, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? shapeProperties = series.Element(ChartNamespace + "spPr");
@@ -85,29 +80,14 @@ internal sealed partial class PptxSceneBuilder
             : default;
     }
 
-    private static PptxSceneLineStyle ReadChartSeriesLine(XElement series, PptxTheme theme)
-    {
-        return ReadChartSeriesLine(series, theme, PptxColorMap.Default);
-    }
-
     private static PptxSceneLineStyle ReadChartSeriesLine(XElement series, PptxTheme theme, PptxColorMap colorMap)
     {
         return ReadChartLine(series.Element(ChartNamespace + "spPr"), theme, colorMap);
     }
 
-    private static PptxScenePatternFill ReadChartSeriesPatternFill(XElement series, PptxTheme theme)
-    {
-        return ReadChartSeriesPatternFill(series, theme, PptxColorMap.Default);
-    }
-
     private static PptxScenePatternFill ReadChartSeriesPatternFill(XElement series, PptxTheme theme, PptxColorMap colorMap)
     {
         return ReadChartPatternFill(series.Element(ChartNamespace + "spPr"), theme, colorMap);
-    }
-
-    private static PptxScenePatternFill ReadChartPatternFill(XElement? shapeProperties, PptxTheme theme)
-    {
-        return ReadChartPatternFill(shapeProperties, theme, PptxColorMap.Default);
     }
 
     private static PptxScenePatternFill ReadChartPatternFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
@@ -132,11 +112,6 @@ internal sealed partial class PptxSceneBuilder
             Foreground: foreground,
             Background: background,
             Alpha: 1d);
-    }
-
-    private static PptxSceneChartMarker ReadChartMarker(XElement series, PptxTheme theme, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, int seriesIndex)
-    {
-        return ReadChartMarker(series, theme, PptxColorMap.Default, plotKind, chartMarkersEnabled, seriesIndex);
     }
 
     private static PptxSceneChartMarker ReadChartMarker(XElement series, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, int seriesIndex)
@@ -166,11 +141,6 @@ internal sealed partial class PptxSceneBuilder
     private static string ReadDefaultChartMarkerSymbol(PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, int seriesIndex)
     {
         return PptxChartMarkerMetricRules.ResolveDefaultSymbol(plotKind, chartMarkersEnabled, seriesIndex);
-    }
-
-    private static IReadOnlyList<PptxSceneChartPointStyle> ReadChartPointStyles(XElement series, PptxTheme theme)
-    {
-        return ReadChartPointStyles(series, theme, PptxColorMap.Default);
     }
 
     private static IReadOnlyList<PptxSceneChartPointStyle> ReadChartPointStyles(XElement series, PptxTheme theme, PptxColorMap colorMap)
@@ -220,11 +190,6 @@ internal sealed partial class PptxSceneBuilder
         return rejected;
     }
 
-    private static PptxSceneFillStyle ReadChartPointFill(XElement? shapeProperties, PptxTheme theme)
-    {
-        return ReadChartPointFill(shapeProperties, theme, PptxColorMap.Default);
-    }
-
     private static PptxSceneFillStyle ReadChartPointFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
     {
         return PptxColorResolver.TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double alpha)
@@ -232,19 +197,9 @@ internal sealed partial class PptxSceneBuilder
             : default;
     }
 
-    private static PptxScenePatternFill ReadChartPointPatternFill(XElement? shapeProperties, PptxTheme theme)
-    {
-        return ReadChartPointPatternFill(shapeProperties, theme, PptxColorMap.Default);
-    }
-
     private static PptxScenePatternFill ReadChartPointPatternFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
     {
         return ReadChartPatternFill(shapeProperties, theme, colorMap);
-    }
-
-    private static PptxSceneLineStyle ReadChartLine(XElement? shapeProperties, PptxTheme theme)
-    {
-        return ReadChartLine(shapeProperties, theme, PptxColorMap.Default);
     }
 
     private static PptxSceneLineStyle ReadChartLine(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, double? inheritedWidth = null)

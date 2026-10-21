@@ -597,16 +597,9 @@ internal sealed partial class PptxRenderer
         return max;
     }
 
-    private static IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> DensifyChartPointSeries(IEnumerable<ChartIndexedNumberVector> series)
-    {
-        return series
-            .Select(vector => vector.DensePoints())
-            .ToArray();
-    }
-
     // RV20: compact value-only densification for geometry/extent consumers.
-    // Same per-series slot values as DensifyChartPointSeries at one nullable
-    // double per slot; provenance consumers keep DensifyChartPointSeries.
+    // Geometry retains one nullable double per slot; provenance consumers
+    // use the sparse source index below.
     private static IReadOnlyList<IReadOnlyList<double?>> DensifyChartValueSeries(IEnumerable<ChartIndexedNumberVector> series)
     {
         return series
@@ -615,7 +608,7 @@ internal sealed partial class PptxRenderer
     }
 
     // RV20: last-wins dense-slot provenance index over the sparse source,
-    // mirroring DensePoints placement (same resolution, range and validity),
+    // sharing compact-value resolution, range and validity,
     // so provenance consumers avoid materializing the dense array.
     private static Dictionary<int, ChartIndexedNumberPoint> BuildDensePointIndex(ChartIndexedNumberVector vector)
     {
@@ -908,17 +901,6 @@ internal sealed partial class PptxRenderer
         int? pointCount,
         string? formatCode,
         PptxSceneChartDataSource source,
-        ChartWorkbookData? workbook)
-    {
-        return BuildChartIndexedNumberVector(compactValues, scenePoints, pointCount, formatCode, source, workbook, plotVisibleOnly: true);
-    }
-
-    private static ChartIndexedNumberVector BuildChartIndexedNumberVector(
-        IReadOnlyList<double> compactValues,
-        IReadOnlyList<PptxSceneChartNumberPoint> scenePoints,
-        int? pointCount,
-        string? formatCode,
-        PptxSceneChartDataSource source,
         ChartWorkbookData? workbook,
         bool plotVisibleOnly)
     {
@@ -942,17 +924,6 @@ internal sealed partial class PptxRenderer
             point.Text,
             point.HasValueElement,
             default);
-    }
-
-    private static ChartIndexedTextVector BuildChartIndexedTextVector(
-        IReadOnlyList<string> compactValues,
-        IReadOnlyList<PptxSceneChartStringPoint> scenePoints,
-        int? pointCount,
-        IReadOnlyList<IReadOnlyList<PptxSceneChartStringPoint>> categoryLevels,
-        PptxSceneChartDataSource source,
-        ChartWorkbookData? workbook)
-    {
-        return BuildChartIndexedTextVector(compactValues, scenePoints, pointCount, categoryLevels, source, workbook, plotVisibleOnly: true);
     }
 
     private static ChartIndexedTextVector BuildChartIndexedTextVector(

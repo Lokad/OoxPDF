@@ -1959,11 +1959,6 @@ internal sealed partial class DocxLayoutEngine
         };
     }
 
-    private static IReadOnlyList<double> ComputeTableRowFragmentHeights(double rowHeight, double firstFragmentHeight, double pageContentHeight)
-    {
-        return ComputeTableRowFragmentHeights(rowHeight, [firstFragmentHeight], pageContentHeight);
-    }
-
     internal const int MaxTableRowFragments = 1000;
 
     // RV06 pagination probe (edge-page-auto, Word 16.0): split fragments pack whole

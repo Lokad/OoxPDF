@@ -392,14 +392,6 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForShape(
         XElement shape,
-        PptxRenderContext context,
-        bool includePlaceholders)
-    {
-        return ReadTextSpansForShape(shape, context.Document, context.Theme, context.SlideColorMap, context.SlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver, context.CancellationToken);
-    }
-
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForShape(
-        XElement shape,
         PptxDocument document,
         PptxTheme theme,
         PptxColorMap colorMap,

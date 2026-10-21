@@ -75,23 +75,6 @@ internal sealed partial class PptxSceneBuilder
         return false;
     }
 
-    private static bool TryReadThemeLineReference(XElement? lineReference, PptxTheme theme, out PptxSceneLineStyle line)
-    {
-        return TryReadThemeLineReference(
-            new PptxFormatSchemeReference(
-                lineReference,
-                PptxFormatSchemeResolver.ReadIndex(lineReference),
-                null),
-            theme,
-            PptxColorMap.Default,
-            out line);
-    }
-
-    private static bool TryReadThemeLineReference(PptxFormatSchemeReference lineReference, PptxTheme theme, out PptxSceneLineStyle line)
-    {
-        return TryReadThemeLineReference(lineReference, theme, PptxColorMap.Default, out line);
-    }
-
     private static bool TryReadThemeLineReference(PptxFormatSchemeReference lineReference, PptxTheme theme, PptxColorMap colorMap, out PptxSceneLineStyle line)
     {
         XElement? lineStyle = lineReference.Style;

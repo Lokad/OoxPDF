@@ -525,11 +525,11 @@ static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSh
         (_, object initialPlanMetrics) = MeasureStep(() => DocxFontPlan.Create(detailDocument, planResolver,
             CancellationToken.None, context.CommentMarkerLabels is not null),
             "standalone initial font-plan construction; source/context and resolver construction excluded");
-        var fontMethod = typeof(DocxRenderer).GetMethod("PrepareFontResources", BindingFlags.Static | BindingFlags.NonPublic)
+        var fontMethod = typeof(DocxRenderer).GetMethod("PrepareFontResourcesCore", BindingFlags.Static | BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("DOCX font preparation method is unavailable.");
-        var prepareFonts = fontMethod.CreateDelegate<Func<DocxDocument, IFontResolver, Action<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>?, CancellationToken, bool, DocxFontResources>>();
+        var prepareFonts = fontMethod.CreateDelegate<Func<DocxDocument, IFontResolver, Action<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>?, CancellationToken, bool, int?, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>, DocxFontResources>>();
         (DocxFontResources preparedFonts, object initialFontMetrics) = MeasureStep(() => prepareFonts(detailDocument, detailResolver, null,
-            CancellationToken.None, context.CommentMarkerLabels is not null),
+            CancellationToken.None, context.CommentMarkerLabels is not null, null, new()),
             "standalone initial font-resource preparation; parsed source/context, resolver construction and delegate setup excluded");
         var parsedFaceMetrics = new List<object>();
         foreach (OpenTypeFont font in preparedFonts.Resources.Select(resource => resource.Font.Font).Distinct())

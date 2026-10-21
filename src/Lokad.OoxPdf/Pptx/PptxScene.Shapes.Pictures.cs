@@ -195,11 +195,6 @@ internal sealed partial class PptxSceneBuilder
         return PptxSceneImageRecolor.None;
     }
 
-    private static bool TryReadImageRecolorColor(XElement colorElement, PptxTheme theme, out RgbColor color)
-    {
-        return TryReadImageRecolorColor(colorElement, theme, PptxColorMap.Default, out color);
-    }
-
     private static bool TryReadImageRecolorColor(XElement colorElement, PptxTheme theme, PptxColorMap colorMap, out RgbColor color)
     {
         if (colorElement.Name == DrawingNamespace + "prstClr")

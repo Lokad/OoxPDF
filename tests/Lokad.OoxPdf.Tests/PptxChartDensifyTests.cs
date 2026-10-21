@@ -551,7 +551,7 @@ internal static class PptxChartDensifyTests
 
     private static int InvokeDensifiedMaxCount(Array series)
     {
-        MethodInfo densify = typeof(PptxRenderer).GetMethod("DensifyChartPointSeries", BindingFlags.NonPublic | BindingFlags.Static)
+        MethodInfo densify = typeof(PptxRenderer).GetMethod("DensifyChartValueSeries", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Expected densify helper.");
         try
         {
@@ -574,7 +574,7 @@ internal static class PptxChartDensifyTests
     {
         try
         {
-            return ((System.Collections.IList)vectorType.GetMethod("DensePoints")!.Invoke(vector, null)!).Count;
+            return ((System.Collections.IList)vectorType.GetMethod("DenseValues")!.Invoke(vector, null)!).Count;
         }
         catch (TargetInvocationException ex)
         {
@@ -669,28 +669,19 @@ internal static class PptxChartDensifyTests
         TestAssert.Equal("", label);
     }
 
-    // RV20: the compact dense value view must agree with DensePoints slot by
-    // slot (holes, null values, duplicate last-wins, negative indexes and
-    // declared counts) while allocating a fraction per slot.
-    public static void DenseNumberValueViewAgreesWithDensePoints()
+    // Explicit sparse-slot expectations cover holes, null values, last-wins
+    // duplicates, negative indexes and the declared slot count.
+    public static void DenseNumberValueViewPreservesSparseSlots()
     {
         Type vectorType = NumberVectorType();
-        Type pointType = NumberPointType();
-        object vector = BuildNumberVector(vectorType, pointType,
+        object vector = BuildNumberVector(vectorType, NumberPointType(),
             [(0, 5d), (2, null), (5, 7d), (5, 9d), (-1, 1d)], 8);
         double?[] values = InvokeDenseValues(vectorType, vector);
-        System.Collections.IList dense = InvokeDensePointList(vectorType, vector);
-        TestAssert.Equal(8, values.Length);
-        TestAssert.Equal(dense.Count, values.Length);
         double?[] expected = [5d, null, null, null, null, 9d, null, null];
+        TestAssert.Equal(expected.Length, values.Length);
         for (int i = 0; i < values.Length; i++)
         {
-            TestAssert.True(expected[i] == values[i], string.Format("Slot {0} must hold {1}.", i, expected[i]));
-            object? slot = dense[i];
-            double? denseValue = slot is null
-                ? null
-                : (double?)pointType.GetProperty("Value")!.GetValue(slot);
-            TestAssert.True(denseValue == values[i], string.Format("Slot {0} must match the dense point value.", i));
+            TestAssert.True(expected[i] == values[i], $"Slot {i} must hold {expected[i]}.");
         }
     }
 
@@ -713,32 +704,22 @@ internal static class PptxChartDensifyTests
         TestAssert.True(sparseAllocated <= 32L * 4000, string.Format("Sparse compact dense values must stay compact, allocated {0} bytes.", sparseAllocated));
     }
 
-    // RV20: the indexed provenance lookup must return exactly what the dense
-    // slot holds (last-wins duplicates, holes for null/negative/out-of-range).
-    public static void DenseNumberPointLookupMatchesDenseSlots()
+    public static void DenseNumberPointIndexPreservesSparseProvenance()
     {
         Type vectorType = NumberVectorType();
-        Type pointType = NumberPointType();
-        object vector = BuildNumberVector(vectorType, pointType,
+        object vector = BuildNumberVector(vectorType, NumberPointType(),
             [(0, 5d), (2, null), (5, 7d), (5, 9d), (-1, 1d)], 8);
-        System.Collections.IList dense = InvokeDensePointList(vectorType, vector);
-        for (int i = 0; i < dense.Count; i++)
+        MethodInfo build = typeof(PptxRenderer).GetMethod("BuildDensePointIndex", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected rendering provenance index.");
+        var index = (System.Collections.IDictionary)build.Invoke(null, [vector])!;
+        var source = ((System.Collections.IEnumerable)vectorType.GetProperty("Points")!.GetValue(vector)!).Cast<object>().ToArray();
+        TestAssert.Equal(2, index.Count);
+        TestAssert.True(source[0].Equals(index[0]), "First source point must retain complete provenance.");
+        TestAssert.True(source[3].Equals(index[5]), "Last valid duplicate must retain complete provenance.");
+        foreach (int absent in new[] { -1, 1, 2, 3, 4, 6, 7, 8 })
         {
-            object? slot = dense[i];
-            object? found = InvokeGetDensePoint(vectorType, vector, i);
-            TestAssert.True((slot is null) == (found is null), string.Format("Slot {0} presence must match.", i));
-            if (slot is not null)
-            {
-                int slotIndex = (int)pointType.GetProperty("Index")!.GetValue(slot)!;
-                int foundIndex = (int)pointType.GetProperty("Index")!.GetValue(found)!;
-                double? slotValue = (double?)pointType.GetProperty("Value")!.GetValue(slot);
-                double? foundValue = (double?)pointType.GetProperty("Value")!.GetValue(found);
-                TestAssert.True(slotIndex == foundIndex && slotValue == foundValue, string.Format("Slot {0} provenance must match.", i));
-            }
+            TestAssert.True(!index.Contains(absent), $"Slot {absent} must be absent.");
         }
-
-        TestAssert.True(InvokeGetDensePoint(vectorType, vector, -1) is null, "Negative indexes must miss.");
-        TestAssert.True(InvokeGetDensePoint(vectorType, vector, 8) is null, "Out-of-range indexes must miss.");
     }
 
     private static double?[] InvokeDenseValues(Type vectorType, object vector)
@@ -748,32 +729,6 @@ internal static class PptxChartDensifyTests
             MethodInfo dense = vectorType.GetMethod("DenseValues")
                 ?? throw new InvalidOperationException("Expected dense value view.");
             return (double?[])dense.Invoke(vector, null)!;
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-    }
-
-    private static object? InvokeGetDensePoint(Type vectorType, object vector, int index)
-    {
-        try
-        {
-            MethodInfo lookup = vectorType.GetMethod("GetDensePoint")
-                ?? throw new InvalidOperationException("Expected dense point lookup.");
-            return lookup.Invoke(vector, [index]);
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-    }
-
-    private static System.Collections.IList InvokeDensePointList(Type vectorType, object vector)
-    {
-        try
-        {
-            return (System.Collections.IList)vectorType.GetMethod("DensePoints")!.Invoke(vector, null)!;
         }
         catch (TargetInvocationException ex)
         {

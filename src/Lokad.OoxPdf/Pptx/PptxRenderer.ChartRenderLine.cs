@@ -1255,20 +1255,6 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static ChartSeriesStroke ChartSeriesStrokeColor(int seriesIndex, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, double defaultWidth)
-    {
-        return seriesIndex < seriesStrokes.Count && seriesStrokes[seriesIndex] is { } stroke
-            ? stroke
-            : new ChartSeriesStroke(ChartPalette(seriesIndex), 1d, defaultWidth);
-    }
-
-    private static ChartSeriesStroke ChartSeriesStrokeColor(PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, int seriesIndex, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, double defaultWidth)
-    {
-        return seriesIndex < seriesStrokes.Count && seriesStrokes[seriesIndex] is { } stroke
-            ? stroke
-            : new ChartSeriesStroke(ChartPalette(chartPalette, theme, seriesIndex), 1d, defaultWidth);
-    }
-
     private static ChartSeriesStroke ChartSeriesStrokeColor(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, int seriesIndex, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, double defaultWidth)
     {
         return seriesIndex < seriesStrokes.Count && seriesStrokes[seriesIndex] is { } stroke

@@ -339,11 +339,6 @@ internal sealed partial class PptxRenderer
                 line.EndX > right + PptxTextMetricRules.TextStateTolerance);
     }
 
-    private static bool TextLayoutOverflowsHorizontally(PptxTextFrameLayout layout, PptxTextFlowBox box)
-    {
-        return TextLayoutOverflowsHorizontally(layout, box, PptxTextMetricRules.TextStateTolerance);
-    }
-
     private static bool TextLayoutOverflowsHorizontally(PptxTextFrameLayout layout, PptxTextFlowBox box, double tolerance)
     {
         double right = box.TextX + box.TextWidth;

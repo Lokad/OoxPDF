@@ -1319,11 +1319,11 @@ internal static class PptxChartRenderingTests
             HasCachedPoints: true);
         System.Reflection.MethodInfo buildVector = typeof(PptxRenderer)
             .GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            .Single(method => method.Name == "BuildChartIndexedNumberVector" && method.GetParameters().Length == 6);
+            .Single(method => method.Name == "BuildChartIndexedNumberVector" && method.GetParameters().Length == 7);
 
         object vector = buildVector.Invoke(
             null,
-            [new[] { 99d }, Array.Empty<PptxSceneChartNumberPoint>(), 1, "General", source, workbook]) ?? throw new InvalidOperationException("Expected indexed chart vector.");
+            [new[] { 99d }, Array.Empty<PptxSceneChartNumberPoint>(), 1, "General", source, workbook, true]) ?? throw new InvalidOperationException("Expected indexed chart vector.");
 
         object[] activePoints = (((System.Collections.IEnumerable?)vector.GetType().GetProperty("Points")?.GetValue(vector)) ?? throw new InvalidOperationException("Expected active chart points.")).Cast<object>().ToArray();
         object[] workbookPoints = (((System.Collections.IEnumerable?)vector.GetType().GetProperty("WorkbookPoints")?.GetValue(vector)) ?? throw new InvalidOperationException("Expected workbook sidecar points.")).Cast<object>().ToArray();
@@ -1452,7 +1452,7 @@ internal static class PptxChartRenderingTests
             HasCachedPoints: true);
         System.Reflection.MethodInfo buildTextVector = typeof(PptxRenderer)
             .GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            .Single(method => method.Name == "BuildChartIndexedTextVector" && method.GetParameters().Length == 6);
+            .Single(method => method.Name == "BuildChartIndexedTextVector" && method.GetParameters().Length == 7);
         object textVector = buildTextVector.Invoke(
             null,
             [
@@ -1461,7 +1461,8 @@ internal static class PptxChartRenderingTests
                 3,
                 new List<IReadOnlyList<PptxSceneChartStringPoint>>(),
                 labelSource,
-                parsedWorkbook
+                parsedWorkbook,
+                true
             ]) ?? throw new InvalidOperationException("Expected indexed chart text vector.");
         object[] visibleLabelWorkbookPoints = (((System.Collections.IEnumerable?)textVector.GetType().GetMethod("WorkbookPointsForPlotVisibility")?.Invoke(textVector, [true])) ?? throw new InvalidOperationException("Expected visibility-filtered text workbook points.")).Cast<object>().ToArray();
         TestAssert.True(visibleLabelWorkbookPoints.Length == 2, "Expected plot-visible-only projection to exclude the hidden worksheet row while preserving visible label points.");
@@ -1476,7 +1477,8 @@ internal static class PptxChartRenderingTests
                 null,
                 new List<IReadOnlyList<PptxSceneChartStringPoint>>(),
                 noCacheLabelSource,
-                parsedWorkbook
+                parsedWorkbook,
+                true
             ]) ?? throw new InvalidOperationException("Expected formula-only indexed chart text vector.");
         object[] noCacheTextActivePoints = (((System.Collections.IEnumerable?)noCacheTextVector.GetType().GetProperty("Points")?.GetValue(noCacheTextVector)) ?? throw new InvalidOperationException("Expected formula-only active text points.")).Cast<object>().ToArray();
         object[] noCacheTextWorkbookPoints = (((System.Collections.IEnumerable?)noCacheTextVector.GetType().GetProperty("WorkbookPoints")?.GetValue(noCacheTextVector)) ?? throw new InvalidOperationException("Expected formula-only text workbook sidecar points.")).Cast<object>().ToArray();

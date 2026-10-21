@@ -104,11 +104,6 @@ internal sealed partial class PptxRenderer
             : ChooseChartAxisMajorUnit(range, autoTickTargetCount);
     }
 
-    private static IReadOnlyList<double> GetChartGridlineValues(ChartValueExtents extents, ChartAxisUnits units, bool major, double? crossingValue, double autoTickTargetCount, bool hasMajorGridlineElement)
-    {
-        return GetChartGridlineValuesCore(extents, units, major, crossingValue, autoTickTargetCount, hasMajorGridlineElement, ChartAxisTickPolicy.ZeroAlignedWithEndpoints);
-    }
-
     private static IReadOnlyList<double> GetChartGridlineValuesCore(ChartValueExtents extents, ChartAxisUnits units, bool major, double? crossingValue, double autoTickTargetCount, bool hasMajorGridlineElement, ChartAxisTickPolicy tickPolicy)
     {
         if (major)

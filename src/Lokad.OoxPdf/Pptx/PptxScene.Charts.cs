@@ -233,22 +233,12 @@ internal sealed partial class PptxSceneBuilder
                 isDefined: true);
     }
 
-    private static PptxSceneChartLeaderLines ReadChartLeaderLines(XElement labels, PptxTheme theme)
-    {
-        return ReadChartLeaderLines(labels, theme, PptxColorMap.Default);
-    }
-
     private static PptxSceneChartLeaderLines ReadChartLeaderLines(XElement labels, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? leaderLines = labels.Element(ChartNamespace + "leaderLines");
         return leaderLines is null
             ? default
             : new PptxSceneChartLeaderLines(true, ReadChartLine(leaderLines.Element(ChartNamespace + "spPr"), theme, colorMap));
-    }
-
-    private static IReadOnlyList<PptxSceneChartDataLabelOverride> ReadChartDataLabelOverrides(XElement labels, PptxTheme theme)
-    {
-        return ReadChartDataLabelOverrides(labels, theme, PptxColorMap.Default);
     }
 
     private static IReadOnlyList<PptxSceneChartDataLabelOverride> ReadChartDataLabelOverrides(XElement labels, PptxTheme theme, PptxColorMap colorMap)

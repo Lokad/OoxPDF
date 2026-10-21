@@ -286,14 +286,6 @@ internal sealed partial class PptxSceneBuilder
         return (defaultValue, PptxSceneTableCellTextInsetSource.Default, null);
     }
 
-    private static double ReadInset(XElement? element, string attributeName, long defaultEmu)
-    {
-        long emu = element?.Attribute(attributeName) is { } attribute
-            ? long.Parse(attribute.Value, CultureInfo.InvariantCulture)
-            : defaultEmu;
-        return OoxUnits.EmuToPoints(emu);
-    }
-
     private static (PptxSceneTableCellVerticalAnchor Anchor, string? Value, PptxSceneTableCellVerticalAnchorSource Source) ReadTableCellVerticalAnchorInfo(XElement cell)
     {
         string? anchor = ReadTableCellVerticalAnchorValue(cell);

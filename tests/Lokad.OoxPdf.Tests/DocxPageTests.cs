@@ -1541,30 +1541,43 @@ internal static class DocxPageTests
         TestAssert.Equal(afterBuild, counter.Visits);
     }
 
-    // RV15: the per-layout source-block index must agree with the linear scan
-    // slot by slot, including missing blocks.
-    public static void FloatingSourceBlockIndexAgreesWithLinearScan()
+    // Source fixture: 120pt pages, 10pt margins and 12pt paragraph pitch;
+    // the one-cell table occupies 13.2pt. Pin full item bounds across the break.
+    public static void FloatingSourceBlockIndexKeepsSourceGeometry()
     {
-        DocxLayout layout = CreateFloatingSourceBlockDocumentLayout();
-        IReadOnlyList<DocxLayoutPage> pages = layout.Pages;
-        object index = InvokeBuildSourceBlockIndex(pages);
-        int[] blocks = DocxLayoutSnapshot.FromLayout(layout).SourceBlocks.Select(block => block.SourceBlockIndex).ToArray();
-        TestAssert.True(blocks.Length >= 5, "Fixture must lay out several blocks.");
-        int low = blocks.Min() - 1;
-        int high = blocks.Max() + 1;
-        int found = 0;
-        for (int block = low; block <= high; block++)
+        object index = InvokeBuildSourceBlockIndex(CreateFloatingSourceBlockDocumentLayout().Pages);
+        (int Block, int Page, double Top, double Bottom)[] expected =
+        [
+            (0, 0, 110d, 100.4d),
+            (1, 0, 98d, 88.4d),
+            (2, 0, 86d, 76.4d),
+            (3, 0, 74d, 64.4d),
+            (4, 0, 62d, 52.4d),
+            (5, 0, 50d, 40.4d),
+            (6, 0, 38d, 24.8d),
+            (7, 0, 24.8d, 15.2d),
+            (8, 1, 110d, 100.4d),
+            (9, 1, 98d, 88.4d),
+            (10, 1, 86d, 76.4d),
+            (11, 1, 74d, 64.4d),
+            (12, 1, 62d, 52.4d),
+        ];
+        TestAssert.Equal(expected.Length, (int)index.GetType().GetProperty("Count")!.GetValue(index)!);
+        foreach (var row in expected)
         {
-            object? expected = InvokeFindSourceBlockBounds(pages, block);
-            bool hit = TryLookupBlock(index, block, out object? actual);
-            TestAssert.True((expected is null) == !hit, string.Format("Block {0} presence must match.", block));
-            if (expected is not null)
-            {
-                TestAssert.True(expected.Equals(actual), string.Format("Block {0} bounds must match.", block));
-                found++;
-            }
+            TestAssert.True(TryLookupBlock(index, row.Block, out object? actual), $"Block {row.Block} must be present.");
+            Type type = actual!.GetType();
+            foreach (string name in new[] { "FirstPageIndex", "LastPageIndex" })
+                TestAssert.Equal(row.Page, (int)type.GetProperty(name)!.GetValue(actual)!);
+            foreach (string name in new[] { "FirstColumnIndex", "LastColumnIndex" })
+                TestAssert.Equal(0, (int)type.GetProperty(name)!.GetValue(actual)!);
+            TestAssert.True(Math.Abs(row.Top - (double)type.GetProperty("VerticalTop")!.GetValue(actual)!) < 1e-8,
+                $"Block {row.Block} top must retain its source geometry.");
+            TestAssert.True(Math.Abs(row.Bottom - (double)type.GetProperty("VerticalBottom")!.GetValue(actual)!) < 1e-8,
+                $"Block {row.Block} bottom must retain its source geometry.");
         }
-        TestAssert.True(found >= 5, "Agreement must cover several present blocks.");
+        foreach (int absent in new[] { -1, 13, 999 })
+            TestAssert.True(!TryLookupBlock(index, absent, out _), $"Block {absent} must be absent.");
     }
 
     private static DocxLayout CreateFloatingSourceBlockDocumentLayout()
@@ -1601,20 +1614,6 @@ internal static class DocxPageTests
         try
         {
             return build.Invoke(null, [pages, CancellationToken.None])!;
-        }
-        catch (System.Reflection.TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-    }
-
-    private static object? InvokeFindSourceBlockBounds(object pages, int block)
-    {
-        System.Reflection.MethodInfo find = typeof(DocxLayoutEngine).GetMethod("FindSourceBlockBounds", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            ?? throw new InvalidOperationException("Expected source-block scan.");
-        try
-        {
-            return find.Invoke(null, [pages, block]);
         }
         catch (System.Reflection.TargetInvocationException ex)
         {

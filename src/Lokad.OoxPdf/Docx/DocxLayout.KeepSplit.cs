@@ -573,13 +573,6 @@ internal sealed partial class DocxLayoutEngine
         return chain;
     }
 
-    private static bool TryFindNextKeepTarget(IReadOnlyList<DocxBodyElement> elements, int startIndex, out DocxBodyElement? target)
-    {
-        bool found = TryFindNextKeepTarget(elements, startIndex, out _, out DocxBodyElement? indexedTarget);
-        target = indexedTarget;
-        return found;
-    }
-
     private static bool TryFindNextKeepTarget(IReadOnlyList<DocxBodyElement> elements, int startIndex, out int targetIndex, out DocxBodyElement? target)
     {
         for (int i = startIndex; i < elements.Count; i++)

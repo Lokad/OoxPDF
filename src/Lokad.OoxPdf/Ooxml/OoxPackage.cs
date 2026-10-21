@@ -21,12 +21,8 @@ internal sealed class OoxPackage
     // downstream code only reads them (chart cache hydration is idempotent and
     // deterministic) or works on explicit copies. Single-owner affinity: the package
     // serves one conversion on one thread; these caches are not synchronized.
-    // XmlParseCount/RelationshipParseCount instrument the W01 acceptance (one parse per
-    // unique immutable part).
     private readonly Dictionary<string, XDocument> xmlCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IReadOnlyDictionary<string, OoxRelationship>> relationshipCache = new(StringComparer.OrdinalIgnoreCase);
-    private int xmlParseCount;
-    private int relationshipParseCount;
 
     private OoxPackage(Dictionary<string, OoxPart> parts, OoxContentTypes contentTypes)
     {
@@ -37,13 +33,6 @@ internal sealed class OoxPackage
     public OoxContentTypes ContentTypes { get; }
 
     public IReadOnlyCollection<OoxPart> Parts => parts.Values;
-
-    // Counts every part-XML parse through LoadXml: content parts and relationship
-    // parts alike. Together with RelationshipParseCount it shows each unique part
-    // parsed once (a 3-slide shared-master deck parses 6 content + 6 rels parts).
-    internal int XmlParseCount => xmlParseCount;
-
-    internal int RelationshipParseCount => relationshipParseCount;
 
     public static OoxPackage Open(string path, CancellationToken cancellationToken)
     {
@@ -501,7 +490,7 @@ internal sealed class OoxPackage
         OoxPart? relationshipPart = GetPart(relationshipPartName);
         if (relationshipPart is null)
         {
-            // Missing relationship parts are cached as empty without counting as parses.
+            // Missing relationship parts share a cached empty dictionary.
             IReadOnlyDictionary<string, OoxRelationship> empty = new Dictionary<string, OoxRelationship>(StringComparer.Ordinal);
             relationshipCache[relationshipPartName] = empty;
             return empty;
@@ -509,7 +498,6 @@ internal sealed class OoxPackage
 
         IReadOnlyDictionary<string, OoxRelationship> relationships = ParseRelationshipDocument(LoadXml(relationshipPart, cancellationToken), sourcePartName, cancellationToken);
         relationshipCache[relationshipPartName] = relationships;
-        relationshipParseCount++;
         return relationships;
     }
 
@@ -524,7 +512,6 @@ internal sealed class OoxPackage
         using Stream stream = part.OpenRead();
         XDocument document = SafeXml.Load(stream, cancellationToken);
         xmlCache[part.Name] = document;
-        xmlParseCount++;
         return document;
     }
 

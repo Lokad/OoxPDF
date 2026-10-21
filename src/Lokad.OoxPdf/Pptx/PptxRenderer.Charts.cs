@@ -118,11 +118,6 @@ internal sealed partial class PptxRenderer
         return ChartPalette(null, null, index);
     }
 
-    private static RgbColor ChartPalette(PptxTheme? theme, int index)
-    {
-        return ChartPalette(null, theme, index);
-    }
-
     private static void StrokeChartPointRectangleInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, int seriesIndex, int categoryIndex, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, double x, double y, double width, double height, ChartSeriesStroke? fallbackStroke)
     {
         bool hasExplicitStroke = seriesIndex < pointStrokes.Count && pointStrokes[seriesIndex].ContainsKey(categoryIndex);

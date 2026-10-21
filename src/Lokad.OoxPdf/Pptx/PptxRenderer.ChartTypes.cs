@@ -53,33 +53,8 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartIndexedNumberPoint> WorkbookPoints,
         bool PlotVisibleOnly)
     {
-        public IReadOnlyList<ChartIndexedNumberPoint?> DensePoints()
-        {
-            IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];
-            int pointCount = ResolveDensePointCount(PointCount, points);
-            if (pointCount <= 0)
-            {
-                return [];
-            }
-
-            var values = new ChartIndexedNumberPoint?[pointCount];
-            foreach (ChartIndexedNumberPoint point in points)
-            {
-                if (point.Index >= 0 && point.Index < pointCount && point.Value is not null)
-                {
-                    values[point.Index] = point;
-                }
-            }
-
-            return values;
-        }
-
-        // RV20: compact dense value/index/validity view. Carries the same slot
-        // values as DensePoints (same resolution, charge and validity
-        // predicate, last-wins duplicates) at one nullable double per slot
-        // instead of one fat provenance struct, for value-only consumers.
-        // Provenance stays once in Points; use GetDensePoint for lossless
-        // per-slot provenance.
+        // Compact value slots preserve holes and last-wins duplicates. Full
+        // provenance remains in Points and its rendering-time sparse index.
         public double?[] DenseValues()
         {
             IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];
@@ -99,32 +74,6 @@ internal sealed partial class PptxRenderer
             }
 
             return values;
-        }
-
-        // RV20: lossless per-slot provenance lookup over the sparse source:
-        // returns exactly what DensePoints would hold at index (last-wins
-        // duplicates, holes for missing/null/negative/out-of-range), without
-        // materializing the dense array. Same resolution and caps as
-        // DensePoints; lookups allocate nothing proportional and charge nothing.
-        public ChartIndexedNumberPoint? GetDensePoint(int index)
-        {
-            IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];
-            int pointCount = ResolveDensePointCount(PointCount, points);
-            if (index < 0 || index >= pointCount)
-            {
-                return null;
-            }
-
-            ChartIndexedNumberPoint? found = null;
-            foreach (ChartIndexedNumberPoint point in points)
-            {
-                if (point.Index == index && point.Value is not null)
-                {
-                    found = point;
-                }
-            }
-
-            return found;
         }
 
         public bool HasAnyValue()
@@ -153,8 +102,8 @@ internal sealed partial class PptxRenderer
             return ResolveDensePointCount(PointCount, points) > 0;
         }
 
-        // R15: sparse dense length behind the same resolution as DensePoints so
-        // count-only passes never materialize (or charge) dense arrays.
+        // Count-only passes share slot resolution with DenseValues without
+        // materializing a dense array.
         public int DensePointCount()
         {
             IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];

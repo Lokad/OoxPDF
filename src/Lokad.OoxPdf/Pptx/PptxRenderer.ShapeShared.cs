@@ -154,11 +154,6 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private static bool TryReadShapeFontColor(XElement shape, PptxTheme theme, out RgbColor color)
-    {
-        return TryReadShapeFontColor(shape, theme, PptxColorMap.Default, out color);
-    }
-
     private static bool TryReadShapeFontColor(XElement shape, PptxTheme theme, PptxColorMap colorMap, out RgbColor color)
     {
         XElement? fontRef = shape

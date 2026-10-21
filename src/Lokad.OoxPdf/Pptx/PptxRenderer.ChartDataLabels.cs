@@ -708,16 +708,6 @@ internal sealed partial class PptxRenderer
             : string.Empty;
     }
 
-    private static string FormatChartDataLabelValue(double value, ChartDataLabelOptions options)
-    {
-        return FormatChartDataLabelValue(value, options.NumberFormatInfo, options.NumberFormat, sourceFormatCode: null, date1904: options.Date1904);
-    }
-
-    private static string FormatChartDataLabelValue(double value, ChartDataLabelOptions options, ChartIndexedNumberPoint? sourcePoint)
-    {
-        return FormatChartDataLabelValue(value, options, sourcePoint, sourceFormatCode: null);
-    }
-
     private static string FormatChartDataLabelValue(double value, ChartDataLabelOptions options, ChartIndexedNumberPoint? sourcePoint, string? sourceFormatCode)
     {
         if (ResolveSourceLinkedChartNumberFormatCode(options.NumberFormatInfo, sourcePoint) is { } sourceFormat)
@@ -726,11 +716,6 @@ internal sealed partial class PptxRenderer
         }
 
         return FormatChartDataLabelValue(value, options.NumberFormatInfo, options.NumberFormat, sourceFormatCode, options.Date1904);
-    }
-
-    private static string FormatChartDataLabelValue(double value, ChartNumberFormat numberFormat, string legacyNumberFormat, bool date1904 = false)
-    {
-        return FormatChartDataLabelValue(value, numberFormat, legacyNumberFormat, sourceFormatCode: null, date1904: date1904);
     }
 
     private static string FormatChartDataLabelValue(double value, ChartNumberFormat numberFormat, string legacyNumberFormat, string? sourceFormatCode, bool date1904 = false)

@@ -147,11 +147,11 @@ internal static class PptxChartNumberFormatsTests
             "ReadSceneOrXmlDataLabelOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new System.InvalidOperationException("Expected data-label option resolver.");
         System.Reflection.MethodInfo formatLabel = typeof(PptxRenderer).GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            .Single(m => m.Name == "FormatChartDataLabelValue" && m.GetParameters().Length == 2);
+            .Single(m => m.Name == "FormatChartDataLabelValue" && m.GetParameters().Length == 4);
         object datedOptions = readOptions.Invoke(null, new object?[] { null, null, dated, PptxTheme.Empty, PptxColorMap.Default }) ?? throw new System.InvalidOperationException("Expected dated label options.");
         object undatedOptions = readOptions.Invoke(null, new object?[] { null, null, undated, PptxTheme.Empty, PptxColorMap.Default }) ?? throw new System.InvalidOperationException("Expected undated label options.");
-        TestAssert.Equal("1/1/04", formatLabel.Invoke(null, new object?[] { 0d, datedOptions }) as string ?? throw new System.InvalidOperationException("Expected formatted dated data label."));
-        TestAssert.Equal("1/0/00", formatLabel.Invoke(null, new object?[] { 0d, undatedOptions }) as string ?? throw new System.InvalidOperationException("Expected formatted undated data label."));
+        TestAssert.Equal("1/1/04", formatLabel.Invoke(null, new object?[] { 0d, datedOptions, null, null }) as string ?? throw new System.InvalidOperationException("Expected formatted dated data label."));
+        TestAssert.Equal("1/0/00", formatLabel.Invoke(null, new object?[] { 0d, undatedOptions, null, null }) as string ?? throw new System.InvalidOperationException("Expected formatted undated data label."));
     }
 
     public static void PptxChartNumberLiteralsEmitAroundValue()

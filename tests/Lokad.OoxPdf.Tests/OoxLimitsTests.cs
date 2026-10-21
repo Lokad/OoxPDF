@@ -108,12 +108,12 @@ internal static partial class OoxLimitsTests
 
     public static void DocxFragmentNormalPasses()
     {
-        MethodInfo compute = typeof(DocxLayoutEngine).GetMethod("ComputeTableRowFragmentHeights", BindingFlags.NonPublic | BindingFlags.Static, null, [typeof(double), typeof(double), typeof(double)], null)
+        MethodInfo compute = typeof(DocxLayoutEngine).GetMethod("ComputeTableRowFragmentHeights", BindingFlags.NonPublic | BindingFlags.Static, null, [typeof(double), typeof(IReadOnlyList<double>), typeof(double), typeof(double)], null)
             ?? throw new InvalidOperationException("Expected fragment helper.");
         object? result;
         try
         {
-            result = compute.Invoke(null, [100d, 60d, 1000d]);
+            result = compute.Invoke(null, [100d, new double[] { 60d }, 1000d, 0d]);
         }
         catch (TargetInvocationException ex)
         {
@@ -125,11 +125,11 @@ internal static partial class OoxLimitsTests
 
     public static void DocxFragmentHugeThrowsBeforeUnboundedList()
     {
-        MethodInfo compute = typeof(DocxLayoutEngine).GetMethod("ComputeTableRowFragmentHeights", BindingFlags.NonPublic | BindingFlags.Static, null, [typeof(double), typeof(double), typeof(double)], null)
+        MethodInfo compute = typeof(DocxLayoutEngine).GetMethod("ComputeTableRowFragmentHeights", BindingFlags.NonPublic | BindingFlags.Static, null, [typeof(double), typeof(IReadOnlyList<double>), typeof(double), typeof(double)], null)
             ?? throw new InvalidOperationException("Expected fragment helper.");
         try
         {
-            compute.Invoke(null, [100000d, 1d, 1d]);
+            compute.Invoke(null, [100000d, new double[] { 1d }, 1d, 0d]);
         }
         catch (TargetInvocationException ex)
         {
@@ -141,11 +141,11 @@ internal static partial class OoxLimitsTests
 
     public static void DocxFragmentNonFiniteThrows()
     {
-        MethodInfo compute = typeof(DocxLayoutEngine).GetMethod("ComputeTableRowFragmentHeights", BindingFlags.NonPublic | BindingFlags.Static, null, [typeof(double), typeof(double), typeof(double)], null)
+        MethodInfo compute = typeof(DocxLayoutEngine).GetMethod("ComputeTableRowFragmentHeights", BindingFlags.NonPublic | BindingFlags.Static, null, [typeof(double), typeof(IReadOnlyList<double>), typeof(double), typeof(double)], null)
             ?? throw new InvalidOperationException("Expected fragment helper.");
         try
         {
-            compute.Invoke(null, [double.PositiveInfinity, 10d, 1000d]);
+            compute.Invoke(null, [double.PositiveInfinity, new double[] { 10d }, 1000d, 0d]);
         }
         catch (TargetInvocationException ex)
         {
@@ -1831,10 +1831,6 @@ internal static partial class OoxLimitsTests
     public static void SharedMasterLayoutParseOnceAcrossSlides()
     {
         // three slides sharing one layout/master must parse shared parts once.
-        // Expected part-XML parses: presentation + 3 slides (visibility reuses scene
-        // parses) + layout + master + 6 relationship parts = 12, each exactly once.
-        // Expected relationship-dictionary builds: root + presentation + 3 slide parts
-        // + layout = 6 (the master has no rels file and is not counted).
         string input = ThreeSlideSharedMasterPackage();
         OoxPackage package;
         using (FileStream stream = File.OpenRead(input))
@@ -1846,8 +1842,13 @@ internal static partial class OoxLimitsTests
         TestAssert.Equal(3, document.Slides.Count);
         PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         TestAssert.Equal(3, scene.Slides.Count);
-        TestAssert.Equal(12, package.XmlParseCount);
-        TestAssert.Equal(6, package.RelationshipParseCount);
+        var masterPart = TestAssert.NotNull(package.GetPart("/ppt/slideMasters/slideMaster1.xml"));
+        TestAssert.True(ReferenceEquals(scene.Slides[0].MasterXml, package.LoadXml(masterPart, CancellationToken.None)),
+            "Direct XML loads must reuse the same immutable master DOM.");
+        var relationships = package.GetRelationshipDictionary("/ppt/presentation.xml", CancellationToken.None);
+        TestAssert.Equal(3, relationships.Count);
+        TestAssert.True(ReferenceEquals(relationships, package.GetRelationshipDictionary("/ppt/presentation.xml", CancellationToken.None)),
+            "Repeated relationship loads must reuse the parsed dictionary.");
         TestAssert.True(ReferenceEquals(scene.Slides[0].MasterXml, scene.Slides[1].MasterXml), "Shared master DOM must not be rebuilt per slide.");
         TestAssert.True(ReferenceEquals(scene.Slides[1].MasterXml, scene.Slides[2].MasterXml), "Shared master DOM must not be rebuilt per slide.");
         TestAssert.True(ReferenceEquals(scene.Slides[0].LayoutXml, scene.Slides[2].LayoutXml), "Shared layout DOM must not be rebuilt per slide.");

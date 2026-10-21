@@ -1433,43 +1433,6 @@ internal sealed partial class PptxRenderer
         return run.Outline?.Width ?? PptxTextMetricRules.SyntheticBoldStrokeWidth(run.FontSize);
     }
 
-    private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, double characterSpacing, PdfEmbeddedFont embedded)
-    {
-        if (MeasureRenderedText(embedded, text, fontSize, characterSpacing, kerningEnabled: true) <= maxWidth)
-        {
-            yield return text;
-            yield break;
-        }
-
-        string[] words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (words.Length == 0)
-        {
-            yield break;
-        }
-
-        var line = new StringBuilder();
-        foreach (string word in words)
-        {
-            string candidate = line.Length == 0 ? word : line + " " + word;
-            if (line.Length > 0 && MeasureRenderedText(embedded, candidate, fontSize, characterSpacing, kerningEnabled: true) > maxWidth)
-            {
-                yield return line.ToString();
-                line.Clear();
-                line.Append(word);
-            }
-            else
-            {
-                line.Clear();
-                line.Append(candidate);
-            }
-        }
-
-        if (line.Length > 0)
-        {
-            yield return line.ToString();
-        }
-    }
-
     private static double MeasureRenderedText(PdfEmbeddedFont embedded, string text, double fontSize, double characterSpacing, bool kerningEnabled)
     {
         double width = embedded.MeasureTextPoints(text, fontSize, kerningEnabled);

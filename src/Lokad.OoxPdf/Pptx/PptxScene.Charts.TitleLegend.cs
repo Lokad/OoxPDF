@@ -21,11 +21,6 @@ internal sealed partial class PptxSceneBuilder
         return ReadChartTitleElement(chart.Element(ChartNamespace + "title"), theme, colorMap, isAutoDeleted, isAutoDeletedValue, plots);
     }
 
-    private static PptxSceneChartTitle ReadChartTitleElement(XElement? title, PptxTheme theme, bool? isAutoDeleted, string isAutoDeletedValue, IReadOnlyList<PptxSceneChartPlot>? plots)
-    {
-        return ReadChartTitleElement(title, theme, PptxColorMap.Default, isAutoDeleted, isAutoDeletedValue, plots);
-    }
-
     private static PptxSceneChartTitle ReadChartTitleElement(XElement? title, PptxTheme theme, PptxColorMap colorMap, bool? isAutoDeleted, string isAutoDeletedValue, IReadOnlyList<PptxSceneChartPlot>? plots)
     {
         if (title is null)

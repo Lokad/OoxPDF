@@ -14,10 +14,6 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
-    private static DocxFontResources PrepareFontResources(DocxDocument document, IFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken, bool includeReviewAutofitMarks = false)
-        => PrepareFontResourcesCore(document, fontResolver, diagnosticSink, cancellationToken, includeReviewAutofitMarks, null,
-            new Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>());
-
     private static DocxFontResources PrepareFontResourcesCore(DocxDocument document, IFontResolver fontResolver,
         Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken, bool includeReviewAutofitMarks, int? pageCount,
         Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache)
