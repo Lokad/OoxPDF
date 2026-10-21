@@ -210,14 +210,34 @@ static void WriteDiagnostics(string? diagnosticsPath, IReadOnlyList<OoxPdfDiagno
         return;
     }
 
-    string? directory = Path.GetDirectoryName(Path.GetFullPath(diagnosticsPath));
+    diagnosticsPath = Path.GetFullPath(diagnosticsPath);
+    string? directory = Path.GetDirectoryName(diagnosticsPath);
     if (!string.IsNullOrEmpty(directory))
     {
         Directory.CreateDirectory(directory);
     }
 
-    var options = new JsonSerializerOptions { WriteIndented = true };
-    File.WriteAllText(diagnosticsPath, JsonSerializer.Serialize(diagnostics, options));
+    // Replacing the directory entry also separates existing hard/symbolic links:
+    // writing through one must never truncate its input or destination target.
+    string stagingPath = diagnosticsPath + ".tmp-" + Guid.NewGuid().ToString("N");
+    bool ownsStagingFile = false;
+    try
+    {
+        using (var stream = new FileStream(stagingPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        {
+            ownsStagingFile = true;
+            JsonSerializer.Serialize(stream, diagnostics, new JsonSerializerOptions { WriteIndented = true });
+        }
+        File.Move(stagingPath, diagnosticsPath, overwrite: true);
+    }
+    finally
+    {
+        if (ownsStagingFile)
+        {
+            try { File.Delete(stagingPath); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
+    }
 }
 
 
