@@ -125,7 +125,8 @@ deterministic cleanup, atomic file publication and PDF structural checks remain.
 Host admission is not comprehensive heap accounting. Separate Office/PDFium
 validation tools are outside the shipped library.
 
-The eighth maintenance batch protects final input-link referents from output
-and diagnostics publication, and removes unused wrapping counters and the
-128-probe wrap ceiling. Cooperative cancellation remains. Long mixed-width
-words can use the available line width; no general wrapping rewrite is included.
+Recent maintenance protects final input-link referents from output and diagnostics
+publication and removes wrapping fuel, unused counters and inactive helpers.
+Retired zero-valued markup corrections are removed while authored spacing,
+revision colors and nonzero balloon geometry remain. Tests and allocation tooling
+use live implementations. There is no additional public API removal.

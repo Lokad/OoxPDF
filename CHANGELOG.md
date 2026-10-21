@@ -2,6 +2,11 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Removes inactive private overloads, obsolete test/probe-only paths, parse-count
+  instrumentation and retired zero-valued DOCX corrections. Tests and allocation
+  tooling target live implementations; authored spacing and qualified rendering
+  behavior remain. No additional public API is removed.
+
 - Restores supported DOCX content in ordinary combinations: bookmarks and
   multiple equations, pictures, table cells, headers/footers and qualified notes.
   Shared source frames carry layout geometry into painting and navigation.
