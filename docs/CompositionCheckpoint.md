@@ -9500,3 +9500,27 @@ portfolio Office/raster replay. The 5.149 GB scan has zero errors before a small
 inspector smoke. Publication deferred. Full identities, failed attempts and residuals:
 [PreviewQualification.md](PreviewQualification.md), ignored
 artifacts/review-fourth-20261021/qualification.json.
+
+## Fifth bounded review — captured paths and tooling closure (2026-10-21)
+
+Production/source batch 56643b15/2a5182b5/dfc5f018 fixes wrong-target publication
+under working-directory callbacks, Linux path comparison, spaced raster arguments
+and frozen-inspector source identity. Deleted 28 unused PDFium SDK files / 610,054 bytes;
+DLL pin/licenses/version preserved. Corrected current release/setup guidance; no API
+removal, rendering rule or threshold change. Useful inspectors and protection remain.
+
+One Release DLL 4DE13383… from dfc5f018; test-only fixture repair b5a6a1a7 retains all
+21 runtime/support assets and 2,582 inputs. Windows 3,732 pass / 1 inherited fail / 5 skip,
+3,738 unique; Ubuntu 817 pass / 0 fail / 43 skip, 860 unique. Rerun only the repaired method:
+Windows 3,739 attempts; Ubuntu 862 includes retained missing-temp attempt. Broad suites
+not replayed. Exact 19-method capability, 28 transfer checks per platform, 5 native
+raster checks and existing atomic diagnostics checks pass with declared platform skips.
+
+Nine sources/16 outcomes / 32 pages preserve parent PDFs/diagnostics/semantic fields;
+2 PPTX strict passes / 14 DOCX failures carried by identity. No Office export/portfolio
+raster replay. Same-package consumers both platforms, 24-asset/two-smoke root transfer
+and CI 39574793428 pass. Inherited balloon/native-font/strict visual residuals remain.
+Workspace 5.266 GB / zero errors, near loose cap. Publication/performance/features deferred.
+
+Evidence: artifacts/preview-paths-20261021/qualification.json and completion-audit.json;
+current readable record: [PreviewQualification.md](PreviewQualification.md).
