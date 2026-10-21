@@ -170,6 +170,46 @@ internal static class CliTests
         }
     }
 
+    public static void CliPreservesInputAndPdfForCaseAliases()
+    {
+        string original = WriteBasicDocx();
+        byte[] source = File.ReadAllBytes(original);
+        File.Delete(original);
+        string directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ooxpdf-cli-alias-" + Guid.NewGuid().ToString("N"))).FullName;
+        try
+        {
+            foreach (string target in new[] { "input", "output", "unresolved" })
+            {
+                string run = Directory.CreateDirectory(Path.Combine(directory, target)).FullName;
+                string input = Path.Combine(run, "source.docx");
+                string output = Path.Combine(run, "out.pdf");
+                string diagnostics = Path.Combine(run, target == "input" ? "SOURCE.DOCX" : "OUT.PDF");
+                File.WriteAllBytes(input, source);
+                if (target != "unresolved") { File.WriteAllText(output, "Existing PDF sentinel"); }
+                bool aliases = target == "unresolved" || File.Exists(diagnostics);
+                if (!aliases) { File.WriteAllText(diagnostics, "Independent diagnostic destination"); }
+                CliResult result = RunCli("convert", input, output, "--diagnostics", diagnostics);
+                TestAssert.Equal(aliases ? 2 : 0, result.ExitCode);
+                TestAssert.True(source.SequenceEqual(File.ReadAllBytes(input)), "Diagnostics must preserve the input.");
+                if (target == "unresolved")
+                {
+                    TestAssert.True(!File.Exists(output) && !File.Exists(diagnostics), "Unresolved case-only outputs refuse before conversion.");
+                }
+                else if (aliases)
+                {
+                    TestAssert.Equal("Existing PDF sentinel", File.ReadAllText(output));
+                }
+                else
+                {
+                    TestAssert.True(File.ReadAllText(output).StartsWith("%PDF-", StringComparison.Ordinal), "Distinct output remains a PDF.");
+                    TestAssert.True(File.ReadAllText(diagnostics).TrimStart().StartsWith("[", StringComparison.Ordinal), "Distinct diagnostics remain JSON.");
+                }
+                TestAssert.Equal(0, Directory.GetFiles(run, "*.tmp-*").Length);
+            }
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
+
     public static void CliReportsMalformedNumericInputAsConversionFailure()
     {
         string input = WriteMalformedNumericDocx();

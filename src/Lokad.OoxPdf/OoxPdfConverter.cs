@@ -111,7 +111,7 @@ public static class OoxPdfConverter
         string baseDirectory = Environment.CurrentDirectory;
         inputPath = Path.GetFullPath(inputPath, baseDirectory);
         outputPath = Path.GetFullPath(outputPath, baseDirectory);
-        if (string.Equals(inputPath, outputPath, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+        if (FilePathPolicy.MayReferToSameEntry(inputPath, outputPath))
         {
             throw new ArgumentException("Input and output file paths must be different.", nameof(outputPath));
         }

@@ -195,8 +195,7 @@ static bool AreSamePath(string first, string second)
 {
     try
     {
-        return string.Equals(Path.GetFullPath(first), Path.GetFullPath(second),
-            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+        return FilePathPolicy.MayReferToSameEntry(first, second);
     }
     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
     {

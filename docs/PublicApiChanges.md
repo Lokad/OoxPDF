@@ -70,5 +70,9 @@ repairs; they add no public API or buffering layer.
 
 File conversions capture absolute input/output paths before admission, resolver
 or diagnostic callbacks. Changing the process working directory during a callback
-does not redirect input lookup or publication. File-path equality follows platform
-case comparison; file-extension matching remains case-insensitive.
+does not redirect input lookup or publication. Case-only aliases of inputs,
+outputs and CLI diagnostics refuse on case-insensitive mounts regardless of OS.
+Provably distinct case-only names in the same directory remain allowed. Two
+uncreated case-only outputs or differently spelled case-only parent paths refuse
+conservatively; choose names that differ beyond case. This is a path-protection
+repair with no public signature change. File-extension matching remains case-insensitive.

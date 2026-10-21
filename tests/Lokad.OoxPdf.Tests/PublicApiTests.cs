@@ -528,6 +528,48 @@ internal static class PublicApiTests
         finally { Directory.Delete(directory, recursive: true); }
     }
 
+    public static void ConvertPreservesInputForCaseAliasesAndDistinctExistingEntries()
+    {
+        string directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ooxpdf-path-alias-" + Guid.NewGuid().ToString("N"))).FullName;
+        try
+        {
+            string input = Path.Combine(directory, "source.docx");
+            string output = Path.Combine(directory, "SOURCE.DOCX");
+            byte[] source = ReadMinimalDocxBytes("<w:p/>");
+            File.WriteAllBytes(input, source);
+            if (File.Exists(output))
+            {
+                TestAssert.Throws<ArgumentException>(() => OoxPdfConverter.Convert(input, output));
+            }
+            else
+            {
+                File.WriteAllText(output, "Independent existing destination");
+                OoxPdfConverter.Convert(input, output);
+                ValidatePdfXref(File.ReadAllBytes(output));
+            }
+            TestAssert.True(source.SequenceEqual(File.ReadAllBytes(input)), "Case-only aliases must never replace the source.");
+            TestAssert.Equal(0, Directory.GetFiles(directory, "*.tmp-*").Length);
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
+
+    public static void ConvertRejectsUnresolvedCaseOnlyParentPaths()
+    {
+        string directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ooxpdf-parent-alias-" + Guid.NewGuid().ToString("N"))).FullName;
+        try
+        {
+            string parent = Directory.CreateDirectory(Path.Combine(directory, "parent")).FullName;
+            string input = Path.Combine(parent, "source.docx");
+            string output = Path.Combine(directory, "PARENT", "source.docx");
+            byte[] source = ReadMinimalDocxBytes("<w:p/>");
+            File.WriteAllBytes(input, source);
+            TestAssert.Throws<ArgumentException>(() => OoxPdfConverter.Convert(input, output));
+            TestAssert.True(source.SequenceEqual(File.ReadAllBytes(input)), "Ambiguous ancestors must not redirect publication.");
+            TestAssert.Equal(0, Directory.GetFiles(directory, "*.tmp-*", SearchOption.AllDirectories).Length);
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
+
     private static byte[] ReadMinimalPptxBytes()
     {
         string path = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

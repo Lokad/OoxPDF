@@ -192,6 +192,11 @@ dotnet src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll convert input
 
 Add `--strict` to make the command return exit code `3` when conversion succeeds but warnings or errors were emitted.
 
+File conversion and CLI diagnostics reject case-only aliases of their input or
+output. Distinct spellings are allowed when existing directory entries establish
+separation. Unresolved case-only paths, including two uncreated outputs, refuse
+conservatively; choose names that differ beyond case.
+
 Exit codes:
 
 - `0`: conversion succeeded without strict-mode warnings or errors.
