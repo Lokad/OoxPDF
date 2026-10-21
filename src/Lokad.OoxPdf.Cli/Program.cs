@@ -78,7 +78,7 @@ static int Run(string[] args)
     try
     {
         // Validate before input detection: its failure handler can also write diagnostics.
-        if (diagnosticsPath is not null && (AreSamePath(diagnosticsPath, inputPath) || AreSamePath(diagnosticsPath, outputPath)))
+        if (diagnosticsPath is not null && (PathsConflict(inputPath, diagnosticsPath, readFirst: true) || PathsConflict(diagnosticsPath, outputPath)))
         {
             Console.Error.WriteLine("Diagnostics output path must be different from input and output paths.");
             return 2;
@@ -191,11 +191,11 @@ static bool TryParseDocxMarkupGeometryMode(string value, out OoxPdfDocxMarkupGeo
     }
 }
 
-static bool AreSamePath(string first, string second)
+static bool PathsConflict(string first, string second, bool readFirst = false)
 {
     try
     {
-        return FilePathPolicy.MayReferToSameEntry(first, second);
+        return readFirst ? FilePathPolicy.MayOverwriteInput(first, second) : FilePathPolicy.MayReferToSameEntry(first, second);
     }
     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
     {

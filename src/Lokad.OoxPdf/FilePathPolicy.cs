@@ -5,6 +5,24 @@ namespace Lokad.OoxPdf;
 // Leave final file links alone: publication replaces their separate entry.
 internal static class FilePathPolicy
 {
+    internal static bool MayOverwriteInput(string input, string destination)
+    {
+        if (MayReferToSameEntry(input, destination)) { return true; }
+        try
+        {
+            var file = new FileInfo(Path.GetFullPath(input));
+            // Opening input follows its final link. Publication replaces only
+            // its destination entry, so resolve this side of the comparison.
+            if (file.LinkTarget is not null)
+            {
+                input = (file.ResolveLinkTarget(returnFinalTarget: true)
+                    ?? throw new IOException("Input file link could not be resolved.")).FullName;
+            }
+            return MayReferToSameEntry(input, destination);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return true; }
+    }
+
     internal static bool MayReferToSameEntry(string first, string second)
     {
         try

@@ -113,8 +113,68 @@ foreach ($kind in @('LibraryAlias','LibraryAncestorAlias','LibraryTargetAncestor
         if ($targetAlias) { [IO.Directory]::Delete($targetAlias) }
     }
 }
+foreach ($kind in @('LibraryInputLink','LibraryInputLinkSameEntry','CliInputLinkSameEntry','LibraryInputLinkChain','LibraryInputLinkTargetAncestor','CliInputLinkOutput','CliInputLinkDiagnostics','LibraryOutputLinkControl','LibraryInputHardLinkControl')) {
+    $run=New-Item -ItemType Directory -Path (Join-Path $root.FullName $kind)
+    $inputFile=Join-Path $run.FullName 'source.docx'
+    [IO.File]::WriteAllBytes($inputFile,$source)
+    $outputFile=Join-Path $run.FullName 'result.pdf'
+    $alias=Join-Path $run.FullName 'input-link.docx'
+    $directoryAlias=$null
+    try {
+        if ($kind -eq 'LibraryOutputLinkControl') {
+            New-Item -ItemType SymbolicLink -Path $outputFile -Target $inputFile | Out-Null
+        }
+        else {
+            $target=$inputFile
+            if ($kind -eq 'LibraryInputLinkTargetAncestor') {
+                $directoryAlias=Join-Path $run.FullName 'parent-link'
+                New-Item -ItemType $(if ($IsWindows) {'Junction'} else {'SymbolicLink'}) -Path $directoryAlias -Target $run.FullName | Out-Null
+                $target=Join-Path $directoryAlias 'source.docx'
+            }
+            if ($kind -eq 'LibraryInputLinkChain') {
+                $middle=Join-Path $run.FullName 'middle.docx'
+                New-Item -ItemType SymbolicLink -Path $middle -Target $target | Out-Null
+                $target=$middle
+            }
+            New-Item -ItemType $(if ($kind -eq 'LibraryInputHardLinkControl') {'HardLink'} else {'SymbolicLink'}) -Path $alias -Target $target | Out-Null
+        }
+    }
+    catch {
+        if ($directoryAlias) { [IO.Directory]::Delete($directoryAlias) }
+        if (!$IsWindows -or $_.Exception.Message -notmatch 'privilege|permission|access|1314') { throw }
+        $results+=@{Kind=$kind;Target='input-referent';Outcome='skipped';Reason='Windows symbolic-link privilege unavailable'}
+        continue
+    }
+    try {
+        if ($kind -like 'Cli*') {
+            $diagnostics=if ($kind -eq 'CliInputLinkSameEntry') {$alias} elseif ($kind -eq 'CliInputLinkDiagnostics') {$inputFile} else {Join-Path $run.FullName 'diagnostics.json'}
+            $destination=if ($kind -eq 'CliInputLinkOutput') {$inputFile} else {$outputFile}
+            & dotnet $cli convert $alias $destination --diagnostics $diagnostics *> (Join-Path $run.FullName 'cli.log')
+            $expected=if ($kind -in @('CliInputLinkDiagnostics','CliInputLinkSameEntry')) {2} else {1}
+            if ($LASTEXITCODE -ne $expected) { throw ('CLI input referent was not protected: '+$kind) }
+        }
+        elseif ($kind -in @('LibraryOutputLinkControl','LibraryInputHardLinkControl')) {
+            $readPath=if ($kind -eq 'LibraryInputHardLinkControl') {$alias} else {$inputFile}
+            $destination=if ($kind -eq 'LibraryInputHardLinkControl') {$inputFile} else {$outputFile}
+            [Lokad.OoxPdf.OoxPdfConverter]::Convert($readPath,$destination)
+            if ((Get-FileHash $readPath).Hash -ne $fixtureHash) { throw ('Separate file-link replacement changed input: '+$kind) }
+            if (![Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($destination),0,5).StartsWith('%PDF-')) { throw 'Allowed link destination is not PDF' }
+        }
+        else {
+            $failure=$null
+            try { [Lokad.OoxPdf.OoxPdfConverter]::Convert($alias,$(if ($kind -eq 'LibraryInputLinkSameEntry') {$alias} else {$inputFile})) }
+            catch { $failure=$_.Exception.GetBaseException() }
+            if ($failure -isnot [ArgumentException]) { throw ('Input file referent was not rejected: '+$kind) }
+        }
+        if ($kind -ne 'LibraryInputHardLinkControl' -and (Get-FileHash $inputFile).Hash -ne $fixtureHash) { throw ('Input file referent changed: '+$kind) }
+        if (@(Get-ChildItem -LiteralPath $run.FullName -Filter '*.tmp-*').Count) { throw 'Input-link staging file leaked' }
+        $results+=@{Kind=$kind;Target='input-referent';Outcome='passed'}
+    }
+    finally { if ($directoryAlias) { [IO.Directory]::Delete($directoryAlias) } }
+}
 if ((Get-FileHash $fixture).Hash -ne $fixtureHash) { throw 'Original public fixture changed' }
 if ((Get-FileHash $cli).Hash -ne $cliHash -or (Get-FileHash $library).Hash -ne $libraryHash) { throw 'CLI runtime changed' }
 @{CliSha256=$cliHash;LibrarySha256=$libraryHash;Builds=0;OfficeExports=0;Results=$results} |
     ConvertTo-Json -Depth 5 | Set-Content (Join-Path $root.FullName 'evidence.json') -Encoding utf8
 Write-Output ('CLI diagnostics publication: '+@($results | Where-Object Outcome -EQ 'passed').Count+' pass, '+@($results | Where-Object Outcome -EQ 'skipped').Count+' skip; no build.')
+$global:LASTEXITCODE=0
