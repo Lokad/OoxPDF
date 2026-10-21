@@ -55,6 +55,11 @@ if (!File.Exists(inputPdf))
     return 1;
 }
 
+if (Directory.Exists(outputDirectory) && Directory.EnumerateFiles(outputDirectory, "*.png").Any())
+{
+    Console.Error.WriteLine("Raster output already contains PNG images; choose a fresh directory.");
+    return 2;
+}
 Directory.CreateDirectory(outputDirectory);
 
 string nativeDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "vendor", "pdfium", "win-x64", "bin"));

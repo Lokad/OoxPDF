@@ -34,6 +34,10 @@ if ($actualHash -ne $pinnedHash[0]) {
 }
 
 $inputFull = (Resolve-Path -LiteralPath $InputPdf).Path
+if ((Test-Path -LiteralPath $OutputDirectory -PathType Container) -and
+    @(Get-ChildItem -LiteralPath $OutputDirectory -Filter '*.png' -File).Count) {
+    throw 'Raster output already contains PNG images; choose a fresh directory.'
+}
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $outputFull = (Resolve-Path -LiteralPath $OutputDirectory).Path
 
