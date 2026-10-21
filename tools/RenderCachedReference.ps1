@@ -34,6 +34,10 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 
 $inputFull = (Resolve-Path -LiteralPath $InputPath).Path
 $isDocxMarkupVariant = [IO.Path]::GetExtension($inputFull) -eq '.docx' -and $CacheVariant -match '(^|;)docxMarkup='
+if ((Test-Path -LiteralPath $OutputDirectory -PathType Container) -and
+    @(Get-ChildItem -LiteralPath $OutputDirectory -Filter '*.png' -File).Count) {
+    throw 'Reference output already contains PNG images; choose a fresh directory.'
+}
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $outputFull = (Resolve-Path -LiteralPath $OutputDirectory).Path
 

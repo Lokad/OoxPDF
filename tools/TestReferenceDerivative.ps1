@@ -76,5 +76,27 @@ Assert-State 'recorded-legacy-provenance-remains-usable' 'Complete'
 $before=(Get-FileHash $metadataPath).Hash
 & (Join-Path $tools 'RenderCachedReference.ps1') -InputPath $inputFile -OutputDirectory (Join-Path $root 'reused') -CacheOnly -SkipBuild *> (Join-Path $root 'reuse.log')
 if ((Get-FileHash $metadataPath).Hash -ne $before -or @(Get-ChildItem (Join-Path $cache 'raster') -Directory -Filter '_raster-*').Count) {throw 'Reuse rerastered or leaked staging'}
+foreach ($kind in @('stale-pages','unrelated-png')) {
+    $output=Join-Path $root $kind
+    New-Item -ItemType Directory -Path $output | Out-Null
+    [IO.File]::WriteAllText((Join-Path $output 'reference.pdf'),'Retain previous served PDF')
+    $image=Join-Path $output $(if ($kind -eq 'stale-pages') {'page-002.png'} else {'artwork.png'})
+    [IO.File]::WriteAllText($image,'Retain caller PNG')
+    $caught=$null
+    try { & (Join-Path $tools 'RenderCachedReference.ps1') -InputPath $inputFile -OutputDirectory $output -CacheOnly -SkipBuild *> ($output+'.log') }
+    catch { $caught=$_.Exception.Message }
+    if (!$caught -or !$caught.Contains('choose a fresh directory') -or
+        [IO.File]::ReadAllText($image) -ne 'Retain caller PNG' -or
+        [IO.File]::ReadAllText((Join-Path $output 'reference.pdf')) -ne 'Retain previous served PDF' -or
+        (Get-FileHash $metadataPath).Hash -ne $before) { throw ('Reference serving did not preserve/refuse existing output: '+$kind) }
+    $checks+=('reject-served-'+$kind)
+}
+$fresh=Join-Path $root 'fresh-served-control'
+New-Item -ItemType Directory -Path $fresh | Out-Null
+[IO.File]::WriteAllText((Join-Path $fresh 'caller.txt'),'Retain caller text')
+& (Join-Path $tools 'RenderCachedReference.ps1') -InputPath $inputFile -OutputDirectory $fresh -CacheOnly -SkipBuild *> ($fresh+'.log')
+if (@(Get-ChildItem $fresh -Filter '*.png' -File).Count -ne 1 -or
+    [IO.File]::ReadAllText((Join-Path $fresh 'caller.txt')) -ne 'Retain caller text') { throw 'Fresh served reference page set differs' }
+$checks+='fresh-served-page-set'
 @{Checks=$checks;Builds=0;OfficeExports=0;SyntheticOnly=$true;ReferencePdfPreserved=$true} | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $root 'evidence.json') -Encoding utf8
 "Reference derivative: $($checks.Count) checks pass; no build or Office export."
