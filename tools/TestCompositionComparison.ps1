@@ -14,6 +14,7 @@ $tools = Join-Path $repo 'tools'
 New-Item -ItemType Directory -Path $tools -Force | Out-Null
 $script = Join-Path $tools 'CompareCompositionPortfolio.ps1'
 Copy-Item -LiteralPath $ComparisonScript -Destination $script
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ReferenceCache.ps1') -Destination $tools
 @'
 param($InputPdf, $OutputDirectory, $Dpi, [switch]$SkipBuild)
 'Unexpected raster stage' | Set-Content -LiteralPath ($OutputDirectory + '.called')
@@ -180,6 +181,87 @@ if ($report.Rows.Count -ne 2 -or @($report.Rows | Where-Object {
     throw 'Split reference caches must reuse the pinned failures and provenance without copies or rendering'
 }
 $passed += 'multi-reuse-identical-duplicates'
-@{Passed=$passed;LibraryBuilds=0;Conversions=0;Rasterizations=0;Scope='Fake PDF inputs; tool orchestration only'} |
+# Exercise the real raster-identity branches with tiny owned PDF/page stand-ins.
+@'
+param($InputPdf, $OutputDirectory, $Dpi, [switch]$SkipBuild)
+New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
+$count=if ([IO.File]::ReadAllText($InputPdf).Contains('two pages')) {2} else {1}
+for ($i=1;$i -le $count;$i++) { [IO.File]::WriteAllText((Join-Path $OutputDirectory ('page-{0:000}.png' -f $i)),('owned page '+$i)) }
+$global:LASTEXITCODE=0
+'@ | Set-Content -LiteralPath (Join-Path $tools 'RasterizePdf.ps1')
+$comparisonProbeState=@{DiffCalls=0}
+function dotnet {
+    $comparisonProbeState.DiffCalls++
+    $reference=$args[1];$candidate=$args[2];$diff=$args[3]
+    New-Item -ItemType Directory -Path $diff | Out-Null
+    $names=@(@((Get-ChildItem $reference -Filter 'page-*.png').Name)+@((Get-ChildItem $candidate -Filter 'page-*.png').Name) | Sort-Object -Unique)
+    $metrics=@(foreach ($name in $names) {
+        @{ReferenceFile=$(if (Test-Path (Join-Path $reference $name)) {$name} else {$null});
+          CandidateFile=$(if (Test-Path (Join-Path $candidate $name)) {$name} else {$null});
+          DimensionsMatch=$true;MeanAbsoluteError=0;ChangedPixelRatioAtThreshold16=0;ForegroundRecall=1;StructuralSimilarity=1}
+    })
+    ConvertTo-Json -InputObject $metrics -Depth 5 | Set-Content (Join-Path $diff 'metrics.json')
+    $global:LASTEXITCODE=0
+}
+try {
+    $baseline=New-Case 'complete-raster-baseline' 'legacy'
+    & $script -CandidateDirectory $baseline.CandidateDirectory -ReferenceDirectory $baseline.ReferenceDirectory -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools | Out-Null
+    foreach ($id in @('first','second')) {
+        # Preserve the completed attempt while testing derivative reuse separately
+        # from the existing-comparison refusal. All paths belong to this fixture.
+        $diff=[IO.Path]::GetFullPath((Join-Path $baseline.CandidateDirectory ($id+'-final-preserve/office-diff')))
+        $ownedRoot=[IO.Path]::GetFullPath($OutputDirectory)+[IO.Path]::DirectorySeparatorChar
+        if (!$diff.StartsWith($ownedRoot,[StringComparison]::OrdinalIgnoreCase)) { throw 'Fixture move outside test directory' }
+        [IO.Directory]::Move($diff,$diff+'.completed')
+    }
+    foreach ($fault in @('valid-raster-reuse','stale-pdf','missing-page','changed-page','extra-page','wrong-dpi','wrong-tool','missing-pin')) {
+        $directory=Join-Path $OutputDirectory $fault
+        Copy-Item -LiteralPath $baseline.Directory -Destination $directory -Recurse
+        $candidate=Join-Path $directory 'candidate';$reference=Join-Path $directory 'reference'
+        $run=Join-Path $candidate 'first-final-preserve';$raster=Join-Path $run 'portfolio-raster'
+        $pinPath=Join-Path $raster 'raster-identity.json';$pin=Get-Content $pinPath -Raw | ConvertFrom-Json
+        switch ($fault) {
+            'stale-pdf' {
+                Add-Content (Join-Path $run 'candidate.pdf') 'two pages'
+                $outcomes=Get-Content (Join-Path $candidate 'outcomes.json') -Raw | ConvertFrom-Json
+                $outcomes.Rows[0].PdfSha256=(Get-FileHash (Join-Path $run 'candidate.pdf')).Hash
+                $outcomes | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $candidate 'outcomes.json')
+            }
+            'missing-page' { Remove-Item -LiteralPath (Join-Path $raster 'page-001.png') }
+            'changed-page' { Add-Content (Join-Path $raster 'page-001.png') 'changed' }
+            'extra-page' { Set-Content (Join-Path $raster 'page-002.png') 'extra' }
+            'wrong-dpi' { $pin.Dpi=72;$pin | ConvertTo-Json -Depth 5 | Set-Content $pinPath }
+            'wrong-tool' { $pin.RasterizerId='wrong';$pin | ConvertTo-Json -Depth 5 | Set-Content $pinPath }
+            'missing-pin' { Remove-Item -LiteralPath $pinPath }
+        }
+        $before=Snapshot $directory;$beforeCalls=$comparisonProbeState.DiffCalls;$rejected=$false
+        try { & $script -CandidateDirectory $candidate -ReferenceDirectory $reference -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools | Out-Null }
+        catch {
+            if ($fault -eq 'valid-raster-reuse' -or $_.Exception.Message -notmatch '[Pp]ortfolio raster') { throw }
+            $rejected=$true
+        }
+        if ($fault -eq 'valid-raster-reuse') {
+            if ($rejected -or $comparisonProbeState.DiffCalls -ne $beforeCalls+2) { throw 'Valid pinned raster was not reused' }
+        }
+        elseif (!$rejected -or $comparisonProbeState.DiffCalls -ne $beforeCalls -or (Snapshot $directory) -ne $before) {
+            throw ('Invalid raster reached comparison or mutated retained evidence: '+$fault)
+        }
+        $passed+=$fault
+    }
+    $case=New-Case 'legacy-raster-two-page-control' 'legacy'
+    $run=Join-Path $case.CandidateDirectory 'first-final-preserve'
+    Add-Content (Join-Path $run 'candidate.pdf') 'two pages'
+    $outcomes=Get-Content (Join-Path $case.CandidateDirectory 'outcomes.json') -Raw | ConvertFrom-Json
+    $outcomes.Rows[0].PdfSha256=(Get-FileHash (Join-Path $run 'candidate.pdf')).Hash
+    $outcomes | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $case.CandidateDirectory 'outcomes.json')
+    New-Item -ItemType Directory -Path (Join-Path $run 'raster') | Out-Null
+    Set-Content (Join-Path $run 'raster/page-001.png') 'stale one-page legacy raster'
+    & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools | Out-Null
+    $result=Get-Content (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
+    if ($result.Rows[0].Failures -notcontains 'Pagination') { throw 'Stale legacy raster concealed the second page' }
+    $passed+='legacy-raster-cannot-conceal-pagination'
+}
+finally { Remove-Item Function:\dotnet }
+@{Passed=$passed;LibraryBuilds=0;Conversions=0;NativeRasterizations=0;Scope='Fake PDF/page inputs; real preflight, reuse and comparison branches'} |
     ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json')
-Write-Output ($passed.Count.ToString() + ' comparison orchestration checks passed; no build or rendering.')
+Write-Output ($passed.Count.ToString() + ' comparison orchestration checks passed; no build or native rendering.')

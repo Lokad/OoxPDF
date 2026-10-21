@@ -8,6 +8,7 @@ param(
     [string[]] $ReuseComparisonDirectory = @()
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'ReferenceCache.ps1')
 $candidate = (Resolve-Path -LiteralPath $CandidateDirectory).Path
 $references = @($ReferenceDirectory | ForEach-Object { (Resolve-Path -LiteralPath $_).Path } | Select-Object -Unique)
 $outcomes = Get-Content -LiteralPath (Join-Path $candidate 'outcomes.json') -Raw | ConvertFrom-Json
@@ -84,6 +85,52 @@ $jobs = @(foreach ($row in $outcomes.Rows) {
         ReferencePdf=$referencePdf;ReferenceHash=$referenceHash;Identity=$selected.Identity;IdentityHash=$selected.IdentityHash;
         ExportLog=$selected.ExportLog;ExportLogHash=$selected.ExportLogHash;Reuse=$reuse;Diff=$diff}
 })
+# Match the reference cache's PDF/DPI/tool/page-hash convention. Legacy raster
+# folders stay untouched: only derivatives completed by this command may be reused.
+$rasterizerDll = Join-Path $ValidationToolsDirectory 'Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll'
+$rasterizerIdentity = [ordered]@{
+    SourceAndNativeId = Get-RasterizerId
+    WrapperSha256 = (Get-FileHash (Join-Path $ValidationToolsDirectory 'RasterizePdf.ps1')).Hash
+    AssemblySha256 = if (Test-Path -LiteralPath $rasterizerDll) { (Get-FileHash $rasterizerDll).Hash } else { $null }
+}
+$rasterizerId = Get-ShortSha256 ([Text.Encoding]::UTF8.GetBytes(($rasterizerIdentity | ConvertTo-Json -Compress))) 32
+function Get-PortfolioRaster([string] $Pdf, [string] $Folder) {
+    $pdfHash = (Get-FileHash -LiteralPath $Pdf).Hash
+    $identityPath = Join-Path $Folder 'raster-identity.json'
+    $reuseRaster = Test-Path -LiteralPath $Folder
+    if ($reuseRaster) {
+        if (!(Test-Path -LiteralPath $identityPath -PathType Leaf)) { throw ('Unpinned or incomplete portfolio raster: ' + $Folder) }
+        $pin = Get-Content -LiteralPath $identityPath -Raw | ConvertFrom-Json
+        if ($pin.PdfSha256 -ne $pdfHash -or $pin.Dpi -ne 144 -or $pin.RasterizerId -ne $rasterizerId) {
+            throw ('Portfolio raster identity differs: ' + $Folder)
+        }
+    }
+    else {
+        & (Join-Path $ValidationToolsDirectory 'RasterizePdf.ps1') -InputPdf $Pdf -OutputDirectory $Folder -Dpi 144 -SkipBuild *> ($Folder+'.log')
+        if ($LASTEXITCODE -ne 0) { throw ('Portfolio rasterization failed: ' + $Pdf) }
+    }
+    $files = @(Get-ChildItem -LiteralPath $Folder -Filter 'page-*.png' -File)
+    if (!$files.Count -or @($files | Where-Object Name -CNotMatch '^page-[0-9]+\.png$').Count) { throw ('Portfolio raster page set is incomplete: ' + $Folder) }
+    $files = @($files | Sort-Object { [int]$_.BaseName.Substring(5) })
+    $pages = @(for ($index=0; $index -lt $files.Count; $index++) {
+        if ($files[$index].Name -cne ('page-{0:000}.png' -f ($index+1))) { throw ('Portfolio raster page set is incomplete: ' + $Folder) }
+        [ordered]@{Name=$files[$index].Name;Sha256=(Get-FileHash -LiteralPath $files[$index].FullName).Hash}
+    })
+    if ($reuseRaster) {
+        if ($pin.Pages.Count -ne $pages.Count) { throw ('Portfolio raster page set differs: ' + $Folder) }
+        for ($index=0; $index -lt $pages.Count; $index++) {
+            if ($pin.Pages[$index].Name -cne $pages[$index].Name -or $pin.Pages[$index].Sha256 -ne $pages[$index].Sha256) {
+                throw ('Portfolio raster page identity differs: ' + $Folder)
+            }
+        }
+    }
+    if ((Get-FileHash -LiteralPath $Pdf).Hash -ne $pdfHash) { throw ('Rasterized PDF changed: ' + $Pdf) }
+    if (!$reuseRaster) {
+        @{PdfSha256=$pdfHash;Dpi=144;RasterizerId=$rasterizerId;Pages=$pages} | ConvertTo-Json -Depth 5 |
+            Set-Content -LiteralPath $identityPath -Encoding utf8
+    }
+    return $Folder
+}
 $rows = @()
 foreach ($job in $jobs) {
     $row = $job.Row; $id = $job.Id; $run = $job.Run; $source = $job.Source
@@ -106,18 +153,9 @@ foreach ($job in $jobs) {
         Write-Output ($id + ': reused identical PDFs and threshold sources')
         continue
     }
-    foreach ($item in @(@{Pdf=$pdf;Folder=(Join-Path $run 'raster')},@{Pdf=$referencePdf;Folder=(Join-Path $source 'raster')})) {
-        # A failed rasterizer startup can leave an empty output directory.
-        # Retry that incomplete stage instead of reporting missing PDF pages.
-        if (!(Test-Path -LiteralPath $item.Folder) -or
-            !(Get-ChildItem -LiteralPath $item.Folder -Filter 'page-*.png' -File | Select-Object -First 1)) {
-            & (Join-Path $ValidationToolsDirectory 'RasterizePdf.ps1') -InputPdf $item.Pdf -OutputDirectory $item.Folder -Dpi 144 -SkipBuild *> ($item.Folder+'.log')
-        }
-        if (!(Get-ChildItem -LiteralPath $item.Folder -Filter 'page-*.png' -File | Select-Object -First 1)) {
-            throw ('Rasterization produced no pages: ' + $item.Pdf)
-        }
-    }
-    dotnet $VisualDiffPath (Join-Path $source 'raster') (Join-Path $run 'raster') $diff *> (Join-Path $run 'office-diff.log')
+    $candidateRaster = Get-PortfolioRaster $pdf (Join-Path $run 'portfolio-raster')
+    $referenceRaster = Get-PortfolioRaster $referencePdf (Join-Path $source 'portfolio-raster')
+    dotnet $VisualDiffPath $referenceRaster $candidateRaster $diff *> (Join-Path $run 'office-diff.log')
     if ($LASTEXITCODE -ne 0) { throw ('Visual comparison failed: ' + $id) }
     $metrics = @(Get-Content (Join-Path $diff 'metrics.json') -Raw | ConvertFrom-Json)
     $limits = if ($row.Mode -eq 'presentation') {$thresholds.pptx} else {$thresholds.docx}
