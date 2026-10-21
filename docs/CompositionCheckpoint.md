@@ -1,5 +1,26 @@
 # Composed-document reliability checkpoint
 
+## 2026-10-21 directory publication and raster freshness follow-up
+
+Frozen source ece0b9e6 resolves directory-link ancestors before publication,
+including Unix targets with linked parents. Separate final file links remain
+replaceable. Raster wrappers and the direct validator refuse existing PNG output;
+kerning scans use cancellation instead of work-only fuel, retaining storage bounds.
+
+One artifact: Windows 3,738 pass / one inherited balloon failure / five skips;
+Ubuntu 823 pass / 43 skips. Each platform's 41 affected methods are excluded from
+the remaining selection. Publication controls pass (Windows 12 plus two privilege
+skips, Ubuntu 14); ten raster controls pass. Sixteen portfolio PDFs, diagnostics
+and semantic outcomes preserve identity, retaining two strict PPTX passes and
+fourteen strict DOCX failures. Same-package consumers and 24-asset transfer/two
+smokes pass. Safe managed execution, Office thresholds and rendering scope remain.
+
+Tool-only 23e00dbf clears an expected native-refusal status after successful checks;
+the first failed CI run and corrected caller-scope evidence remain. No local
+library rebuild or broad replay follows that repair. Details and final CI:
+[current qualification](PreviewQualification.md). Publication and expansion remain deferred.
+Evidence: artifacts/preview-directory-raster-20261021/. Latest footprint 5.454 GB.
+
 
 ## 2026-10-20 bounded review follow-up
 

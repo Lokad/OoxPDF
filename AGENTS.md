@@ -29,9 +29,9 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 
 ## Tools
 
-- `tools/TestRasterizePdfPaths.ps1`: check spaced wrapper/tool/PDF paths plus native failure and timeout using an existing rasterizer; never builds.
+- `tools/TestRasterizePdfPaths.ps1`: check spaced paths, failure/timeout and stale raster refusal with an existing tool; never builds.
 - `tools/TestReferenceDerivative.ps1`, `TestReferenceWorkerPaths.ps1`, `TestAffectedTestReporting.ps1`: focused cache/worker/report mechanics without builds or Office.
-- `tools/TestCliDiagnosticsPublication.ps1`: check atomic diagnostics against a frozen CLI, including owned hard/symbolic-link aliases; never builds.
+- `tools/TestCliDiagnosticsPublication.ps1`: check frozen library/CLI publication through directory aliases and separate file links; never builds.
 - `tools/BuildQualificationArtifact.ps1`: build/freeze an explicit committed linked worktree and revision; absolute projects prevent accidental root builds. Reuse the frozen artifact for qualification and transfer.
 - `tools/NewFrozenAllocationRuntime.ps1`: build/self-test the existing allocation probe against a frozen library without rebuilding the library.
 - `tools/AuditCompositionContent.py`: screen frozen public portfolio prose and simple math against Office; retain unresolved extraction and visual failures.

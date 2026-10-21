@@ -1,35 +1,37 @@
 # 0.2.0-preview qualification — 2026-10-21
 
-The sixth bounded maintenance milestone is qualified with the retained failures
+The seventh bounded maintenance milestone is qualified with the retained failures
 below. Publication, tags, releases, performance optimization and broader rendering
 expansion remain deferred. See [scope](PreviewRelease.md), [migration](PublicApiChanges.md)
 and the retained [document review](PreviewVisualReview.md).
 
 One Release production/test artifact was built and frozen at
-`6b863c580621ccd20f2212e3448e1b6832e6cf0b`, with 24 assets and 2,582 public inputs.
-A later tool-only change at `b5b9f855845b2772585f1c5bdf97f74df33ceb8a` contains and
-restores Unix runner TMPDIR; it changes no compiled production or test source.
-The allocation probe alone was rebuilt/self-tested against the frozen DLL after
-its forwarding call was redirected. No library rebuild or performance claim.
+`ece0b9e67b7f47f3df9c2fa90c0a1b8405ac8094`, with 24 assets and 2,582 shared public
+inputs. Tool-only repair `23e00dbf63ff0ad2dd12a5c2ba1982f734313621` clears the expected
+native-refusal status after successful raster checks. The corrected script passes
+in CI's caller scope against the same validator. No local library rebuild or
+broad-suite replay followed this harness repair. No performance claim.
 
 Library SHA-256:
-`CE8F6B8EB924B35886D01DD69F23604A434BFC373A829BB17B5F44C65B223DF9`.
-[Windows and Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/39585004509)
-at `b5b9f855`. CI compiler outputs remain independent of the locally qualified DLL.
+`01E8D8588ED6F908F6A6EB10C42E11D4D98592F94D95092F0DE2F676AB7450F8`.
+[Windows and Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/39593928460)
+at `23e00dbf`. The first run's Ubuntu job passed; Windows ran all ten raster
+assertions successfully but failed the step because the expected direct-tool
+exit 2 leaked to its caller. That unsuccessful run and its log remain evidence.
+CI outputs are independent of the locally qualified DLL.
 
 | Gate | Result |
 |---|---|
 | Release build | Passed; two existing nullable warnings in unchanged DOCX test code |
-| Windows milestone | 3,735 pass, **1 inherited fail**, 5 skips across 3,741 unique methods |
-| Same frozen DLL on Ubuntu | 820 pass, 0 fail, 43 environmental skips across 863 unique methods |
-| Exact affected capability | 22 methods: Windows 20 pass / 2 explicitly declared filesystem skips; ext4 Ubuntu all 22 pass |
+| Windows milestone | 3,738 pass, **1 inherited fail**, 5 skips across 3,744 unique methods |
+| Same frozen DLL on Ubuntu | 823 pass, 0 fail, 43 environmental skips across 866 unique methods |
+| Exact affected capabilities | 41 methods: Windows 39 pass / 2 explicitly declared filesystem skips; ext4 Ubuntu all 41 pass |
 | Test reuse | Each platform's affected methods excluded from its remaining milestone selection; two disjoint invocations, no unchanged-method replay |
-| Filesystem regression | Three additional checks pass on Ubuntu using case-insensitive NTFS; all three fail with the preceding runtime. ext4 preserves distinct existing entries |
-| Reference cache | 12 synthetic checks per platform cover completion, recovery, page names/count/bytes, DPI/tool/PDF identity and retained legacy provenance; real cached Office PDF served unchanged |
-| Worker supervision | Seven fake-worker checks per platform cover spaced/quoted paths, healthy/unavailable/timeout outcomes, retained logs and unrelated process survival; no Office export |
-| Adjacent comparison scripts | Text, graphics, flow and PPTX emission suites pass from spaced repository paths on both platforms |
-| Affected report mechanics | Eight controls per platform: declared skips pass; unexpected skips, failures, duplicates, incomplete coverage and inconsistent counts refuse; outcomes retained and TMPDIR restored |
-| CLI diagnostics | Windows 4 pass / 2 symbolic-link privilege skips; Ubuntu all 6 pass. Existing link publication and failed-publication cleanup remain covered |
+| Directory publication | Windows 12 pass / 2 symbolic-link privilege skips; Ubuntu 14 pass. Junction/symlink ancestors, targets with linked parents, input/PDF/diagnostics refusal, uncreated outputs and allowed distinct/hardlink destinations |
+| Parent regression | Retained Windows/Ubuntu probes show the preceding DLL overwrites through directory aliases. New zero-adjustment scan test fails with its retired work ceiling |
+| Raster freshness | Ten real-tool checks pass, including shrinking-page reuse, direct-tool refusal, preserved existing files, fresh shorter output, spaced paths and failure/timeout; caller-scope harness repair passes against identical binaries |
+| Reference cache | Twelve existing completion/recovery/provenance controls pass; earlier independent Windows/Ubuntu cache and supervision evidence remains retained |
+| Existing raster identity | Two pages from the earlier validator remain byte-identical at 144 DPI after the new validator is transferred; no accepted reference was changed |
 | Package consumers | Windows and Ubuntu consume the same .nupkg; DLL identity, versions, caller guides, embedded fonts and admission lifetime pass |
 | Representative documents | Nine sources / 16 outcomes / 32 pages; every PDF, diagnostic list and semantic result matches the preceding runtime. Each outcome converted once |
 | Independent Office comparisons | Reused through proven input/mode/PDF identity: two PPTX strict passes / fourteen DOCX strict failures; no new Office exports, portfolio rasters or changed thresholds |
@@ -45,30 +47,30 @@ from green CI.
 
 ## Changes and compatibility
 
-File-path guards now use existing directory entries instead of inferring storage
-case behavior from the OS. Case aliases on Linux NTFS cannot replace source input
-or a generated PDF through diagnostics. Provably distinct case-only entries remain
-allowed; two uncreated case-only outputs and case-only parent ambiguity refuse
-conservatively. Choose names that differ beyond case. Captured paths, observer
-exceptions, cancellation, admission lifetime and atomic publication remain covered.
+File-path guards now resolve directory-link ancestors, including Unix targets
+whose parents still contain links. Input/output/diagnostics aliases refuse before
+publication. Final output file links remain separate replaceable entries. Cyclic
+or inaccessible links refuse conservatively; external concurrent directory changes
+are outside this path contract. Existing case-only protection remains: provably
+distinct entries are allowed; uncreated case-only outputs and case-only parent
+ambiguity refuse. Captured paths, callbacks, cancellation and atomic staging remain.
 
-The generic cache requires its existing derivative completion record and exact
-ordered page identity. An interrupted/unrecorded raster recovers through fresh
-staging from the trusted PDF; old partial pages remain separate as evidence.
-Metadata updates replace their file atomically. Recorded corruption refuses.
-The real cached Office PDF smoke preserved its exact bytes; no Office was launched.
+The raster wrapper and direct validator refuse destinations that contain PNGs.
+Use fresh output storage instead of reusing a visual run ID. Existing files are
+preserved, so a shorter or failed render cannot silently consume old success
+pages. Existing complete reference derivatives and fresh cache staging remain.
 
-Office supervision passes discrete arguments and retains redirected logs through
-success, failure and timeout. The four neighboring comparison tests use direct
-argument arrays. Affected reporting preserves all outcomes and requires exact
-expected-skip declarations; it cannot silently turn an unexpected skip or failed
-check into a pass. Existing report-join failure-to-skip rejection remains covered.
+Kerning no longer decrements a scan-work ceiling or passes a ref fuel counter
+through parser helpers. Repetitive scans observe cancellation; pair, coverage and
+class storage bounds remain. Signed/last-wins, source ownership, truncated-prefix
+and fallback neighbors pass. The review demonstrated a policy inconsistency on
+synthetic data, not a real-document font failure or a performance improvement.
 
-The four-line internal WriteBlank forwarding wrapper was deleted. Its 34 test
-calls and one allocation-probe call now use WriteStaged with the same defaults.
-There is no new public signature removal, rendering rule, ownership layer, quota
-or validation framework. Useful inspectors, font caches, coarse host admission,
-input bounds, cancellation, bounded staging and PDF validity remain.
+Completed prior cleanup stays complete: WriteBlank and other verified dead helpers
+remain deleted; cache ownership, worker argument handling and exact-test reporting
+remain shared. There is no new public signature removal, rendering rule, ownership
+layer, quota or validation framework. Safe managed execution, useful caches,
+coarse admission, structural bounds, bounded staging and PDF validity remain.
 
 Existing chart point-count, five-paragraph balloon and font/size/document-shape
 rules remain live, documented debt. No new independent Office evidence justified
@@ -79,16 +81,17 @@ field/extraction flags remain. None were relabeled cosmetic or passed.
 
 ## Retained candidate evidence
 
-Ignored evidence: `artifacts/preview-alias-cache-20261021/qualification.json` and
-`completion-audit.json`; frozen runtime under `candidate/`. Failed mock-runner
-and environment-restoration attempts remain separately retained. The preceding
-runtime's three negative-regression failures remain evidence, not current failures.
+Ignored evidence: `artifacts/preview-directory-raster-20261021/qualification.json`;
+frozen runtime under `candidate/`. The first failed CI run, corrected caller-scope
+raster evidence and an initial missing-manifest attempt (before any conversion)
+remain retained. Preceding path/raster witnesses remain under
+`artifacts/review-seventh-20261021/`. Earlier milestone evidence is unchanged.
 
-Package: `artifacts/nuget/preview-020-alias-cache-20261021/`. Its DLL, symbol PDB and
+Package: `artifacts/nuget/preview-020-directory-raster-20261021/`. Its DLL, symbol PDB and
 four caller guides match the qualified checkout; both consumer summaries pin the
 same package. Package hashes and exact evidence locations are in
 `package-identity.json`. Publication remains deferred.
 
-Latest infrequent workspace scan: **5.361 GB**, 853,244 files, zero errors.
+Latest infrequent workspace scan: **5.454 GB**, 857,242 files, zero errors.
 This counts unique file-content lengths, not allocated clusters. It remains near
 the loose 5 GB target; no historical purge or protected-target deletion occurred.
