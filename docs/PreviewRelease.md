@@ -44,19 +44,18 @@ that also occurs with the preceding qualified DLL on the same machine. The
 assertion and rendering policy remain unchanged. Local failed checks and
 platform skips are reported separately from green CI.
 
-The second review also repairs diagnostic-observer propagation and cancellation
-from the final resource-summary callback. Caller failures keep their original
-exception identity, type and stack; PPTX malformed-content recovery no longer
-swallows them. The unused image-backed luminosity-mask subsystem and test-only
-decoder wrappers are removed; live PNG alpha masks and vector luminosity groups
-remain. Frozen visual family binding and byte-stable fixture checkout support the
-one-artifact workflow. These repairs add no public API removal.
+Maintenance repairs preserve diagnostic-observer exception identity/type/stack and
+observe final-summary cancellation before publication. CLI diagnostics validate
+literal path separation and publish atomically, so existing hard/symbolic links
+cannot overwrite source or old destination files. The unused luminosity-mask path,
+decoder wrappers and isolated test-only math/PPTX snapshot helpers are removed;
+live PNG alpha masks and vector luminosity groups remain.
 
-The third bounded review also protects CLI input/output from aliased failure
-diagnostics, checks tracked root build settings during artifact reuse and binds
-cached markup conversion/inspection to matching frozen runtimes. Exhaustive
-balloon rendering sweeps remain available as slow checks beside focused fast
-coverage. Two test-only math helpers are removed; rendering policies are unchanged.
+Qualification checks root build settings and binds converter/inspectors to one
+frozen runtime. Local capability selections keep explicit broad milestone sets.
+Complete raster derivatives bind PDF, DPI, tool and page identities; stale or
+incomplete derivatives refuse rather than producing a visual pass. CI retains all
+frozen runtime assets. These repairs add no public API removal or rendering rule.
 
 All sixteen portfolio PDFs and diagnostic lists remain byte-identical to the
 accepted baseline, with matching Office page counts. Two PPTX strict pixel gates

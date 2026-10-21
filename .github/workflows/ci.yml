@@ -65,6 +65,8 @@ jobs:
           pwsh -NoProfile -File tools/TestVisualFamilyBinding.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pwsh -NoProfile -File tools/TestFrozenMarkupBinding.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh -NoProfile -File tools/TestCliDiagnosticsPublication.ps1 -CliPath artifacts/ci-candidate/src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.Cli.dll
       - name: Text content gate
         if: runner.os == 'Windows'
         run: pwsh -NoProfile -File tools/CheckPdfTextContent.ps1
@@ -129,7 +131,6 @@ jobs:
           retention-days: 7
           path: |
             artifacts/ci-candidate/identity.json
-            artifacts/ci-candidate/src/**/bin/Release/net10.0/*
-            artifacts/ci-candidate/tests/**/bin/Release/net10.0/*
+            artifacts/ci-candidate/**/bin/Release/net10.0/*
             artifacts/nuget/package-smoke/**/*.nupkg
             artifacts/package-smoke/**/summary.json

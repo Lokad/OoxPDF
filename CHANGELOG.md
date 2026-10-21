@@ -18,10 +18,12 @@
   recovery and observes final-summary cancellation before file publication.
   Removes the unused image-backed luminosity-mask path and decoder wrappers;
   live PNG alpha masks and SVG vector luminosity groups remain supported.
-- Rejects CLI diagnostics paths that alias input or output before early failures
-  can overwrite either file. Qualification reuse now checks root build settings;
-  cached markup conversion/inspection can bind to the same frozen library.
-  Focused fast checks retain exhaustive balloon sweeps as explicit slow coverage.
+- Protects CLI input/output from aliased diagnostics: literal path checks precede
+  early failures, and atomic diagnostics publication replaces existing links.
+  Qualification checks root build settings, binds cached markup to matching frozen
+  runtimes and verifies complete raster identity before reuse. Local capability
+  selections retain broader milestone coverage and exhaustive slow balloon checks.
+  Removes the isolated test-only PPTX source-run snapshot/coalescer.
 - Removes ineffective `Deterministic`, library `Strict` and cumulative work or
   nonrefunding memory quotas. Uses cooperative cancellation and optional coarse
   host memory admission; preserves input/output bounds, bounded page staging,
