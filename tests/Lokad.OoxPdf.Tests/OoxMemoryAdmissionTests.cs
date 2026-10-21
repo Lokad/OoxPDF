@@ -12,8 +12,8 @@ internal static class OoxMemoryAdmissionTests
         string directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ooxpdf-admission-path-" + Guid.NewGuid().ToString("N"))).FullName;
         string elsewhere = Directory.CreateDirectory(Path.Combine(directory, "elsewhere")).FullName;
         string input = Path.Combine(directory, "source.docx");
-        File.Copy(Case("docx-ladder-00-blank.docx"), input);
-        byte[] source = File.ReadAllBytes(input);
+        byte[] source = File.ReadAllBytes(Case("docx-ladder-00-blank.docx"));
+        File.WriteAllBytes(input, source);
         var pool = new Pool(ReservationBytes);
         var admission = new Admission(pool, () => Environment.CurrentDirectory = elsewhere);
         string previousDirectory = Environment.CurrentDirectory;
