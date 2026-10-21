@@ -138,7 +138,7 @@ internal static class DocxMathFunctionLayoutTests
             "A larger invisible control must retain its descent even though every painted glyph is smaller.");
         var graphics = new PdfGraphicsBuilder(); DocxMathBoxPainter.Paint(measured, graphics, 20d, 60d, CancellationToken.None);
         using var output = new MemoryStream();
-        PdfDocumentWriter.WriteBlank(output, [new PdfPage(250d, 180d, graphics.ToString(), [names, arguments])], CancellationToken.None);
+        PdfDocumentWriter.WriteStaged(output, [new PdfPage(250d, 180d, graphics.ToString(), [names, arguments])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
         TestAssert.True(output.Length > 0, "Only painted resources are required; a metric-only font never needs an empty subset.");
     }
 

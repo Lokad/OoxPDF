@@ -49,7 +49,7 @@ internal static partial class DocxMathFractionTests
         TestAssert.Equal(root.AssemblyParts.Count + 1,
             System.Text.RegularExpressions.Regex.Matches(page.Content, @"<[^>]+> Tj").Count);
         using var output = new MemoryStream();
-        PdfDocumentWriter.WriteBlank(output, [page], default);
+        PdfDocumentWriter.WriteStaged(output, [page], new OoxConversionLimits(), diagnosticSink: null, default);
         TestAssert.True(output.Length > 0, "The one-symbol assembly writes a complete PDF with mapped physical glyphs.");
         TestAssert.True(!DocxMathLayout.TryMeasure(equation, _ => missingParts, default, out var absent, out _,
             resolveControlFont: _ => missingParts) && absent is null, "A missing late assembly CID cannot publish a partial root or child.");

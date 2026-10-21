@@ -95,7 +95,7 @@ internal static class PdfTransparencyGroupTests
         {
             using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxOutputBytesPerConversion = limit });
             using var output = new MemoryStream();
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteBlank(output, pages, CancellationToken.None));
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStaged(output, pages, new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None));
             TestAssert.True(output.Length <= limit, "Group dictionary/stream bytes must be admitted before writing.");
         }
     }
@@ -122,7 +122,7 @@ internal static class PdfTransparencyGroupTests
         {
             var group = new PdfTransparencyGroup(Bounds, content, [], [], []);
             using var output = new MemoryStream();
-            TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteBlank(output, [GroupPage(group)], CancellationToken.None));
+            TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteStaged(output, [GroupPage(group)], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None));
             TestAssert.Equal(0, output.Length);
         }
     }
@@ -214,7 +214,7 @@ internal static class PdfTransparencyGroupTests
         Write([PageWith(chain)]);
         var tooDeep = new PdfTransparencyGroup(Bounds, "/Child Do\n", [], [], [new("Child", chain)]);
         using var output = new MemoryStream();
-        TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteBlank(output, [PageWith(tooDeep)], default));
+        TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteStaged(output, [PageWith(tooDeep)], new OoxConversionLimits(), diagnosticSink: null, default));
         TestAssert.Equal(0L, output.Length);
     }
 
@@ -225,7 +225,7 @@ internal static class PdfTransparencyGroupTests
         var page = new PdfPage(100, 100, "/Valid Do /Invalid Do\n", [], [], [], [], [], [],
             groups: [new("Valid", valid), new("Invalid", invalid)]);
         using var output = new MemoryStream();
-        TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteBlank(output, [page], default));
+        TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteStaged(output, [page], new OoxConversionLimits(), diagnosticSink: null, default));
         TestAssert.Equal(0L, output.Length);
     }
 
@@ -359,7 +359,7 @@ internal static class PdfTransparencyGroupTests
         })
         {
             using var output = new MemoryStream();
-            TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteBlank(output, [page], CancellationToken.None));
+            TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteStaged(output, [page], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None));
             TestAssert.Equal(0, output.Length);
         }
     }
@@ -396,7 +396,7 @@ internal static class PdfTransparencyGroupTests
         {
             using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxOutputBytesPerConversion = maximum });
             using var output = new MemoryStream();
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteBlank(output, [page], CancellationToken.None));
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStaged(output, [page], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None));
             TestAssert.True(output.Length <= maximum, "Mask streams cannot write beyond the admitted output.");
         }
         string[] before = Directory.GetFiles(Path.GetTempPath(), "OoxPdfPages-*.tmp");
@@ -483,7 +483,7 @@ internal static class PdfTransparencyGroupTests
         foreach (PdfPage page in rejected)
         {
             using var output = new MemoryStream();
-            TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteBlank(output, [page], CancellationToken.None));
+            TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteStaged(output, [page], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None));
             TestAssert.Equal(0, output.Length);
         }
     }
@@ -544,7 +544,7 @@ internal static class PdfTransparencyGroupTests
             {
                 PdfPage admitted = PatternPage(30_000);
                 scope.Budget.ChargePdfContentBytes(admitted.Content.Length);
-                PdfDocumentWriter.WriteBlank(output, [admitted], CancellationToken.None);
+                PdfDocumentWriter.WriteStaged(output, [admitted], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
             });
             TestAssert.Equal(0, output.Length);
         }
@@ -552,7 +552,7 @@ internal static class PdfTransparencyGroupTests
         {
             using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxOutputBytesPerConversion = maximum });
             using var output = new MemoryStream();
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteBlank(output, [page], CancellationToken.None));
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStaged(output, [page], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None));
             TestAssert.True(output.Length <= maximum, "Pattern objects must respect output admission.");
         }
         string[] before = Directory.GetFiles(Path.GetTempPath(), "OoxPdfPages-*.tmp");
@@ -656,7 +656,7 @@ internal static class PdfTransparencyGroupTests
     private static byte[] Write(IReadOnlyList<PdfPage> pages)
     {
         using var output = new MemoryStream();
-        PdfDocumentWriter.WriteBlank(output, pages, CancellationToken.None);
+        PdfDocumentWriter.WriteStaged(output, pages, new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
         return output.ToArray();
     }
     private static int Count(string text, string value) => (text.Length - text.Replace(value, string.Empty, StringComparison.Ordinal).Length) / value.Length;

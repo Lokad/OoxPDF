@@ -1032,7 +1032,7 @@ internal static class PdfWriterTests
     private static byte[] WritePdfBytes(IReadOnlyList<PdfPage> pages, DateTimeOffset? creationDate)
     {
         using var stream = new MemoryStream();
-        PdfDocumentWriter.WriteBlank(stream, pages, CancellationToken.None, creationDate);
+        PdfDocumentWriter.WriteStaged(stream, pages, new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, creationDate);
         return stream.ToArray();
     }
 

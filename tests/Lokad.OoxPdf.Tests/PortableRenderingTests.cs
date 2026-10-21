@@ -1707,7 +1707,7 @@ internal static class PortableRenderingTests
     {
         TestAssert.True(pages.Length > 0 && pages.All(page => page.Fonts.Count > 0), "Real embedded text resources are required.");
         using var output = new MemoryStream();
-        PdfDocumentWriter.WriteBlank(output, pages, default);
+        PdfDocumentWriter.WriteStaged(output, pages, new OoxConversionLimits(), diagnosticSink: null, default);
         string pdf = Encoding.Latin1.GetString(output.ToArray());
         TestAssert.Contains("/FontFile2", pdf);
         TestAssert.Contains("/ToUnicode", pdf);

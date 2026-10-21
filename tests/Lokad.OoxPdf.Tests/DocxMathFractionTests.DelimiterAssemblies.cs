@@ -96,7 +96,7 @@ internal static partial class DocxMathFractionTests
             PdfContentValidator.ValidatePage(page, 0, default);
             TestAssert.Equal("(A)", string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text)));
             using var output = new MemoryStream();
-            PdfDocumentWriter.WriteBlank(output, [page], default);
+            PdfDocumentWriter.WriteStaged(output, [page], new OoxConversionLimits(), diagnosticSink: null, default);
             TestAssert.True(output.Length > 0, "Complete delimiter assemblies write as one logical scalar per mark.");
             bool complete = DocxMathLayout.TryMeasure(equation, _ => missing, default, out var absent, out _, resolveControlFont: _ => missing);
             TestAssert.True(grow ? !complete && absent is null : complete,

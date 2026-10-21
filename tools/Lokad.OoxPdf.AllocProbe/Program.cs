@@ -557,7 +557,7 @@ static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSh
     (byte[] stagedBytes, object writeMetrics) = MeasureStep(() =>
     {
         using var output = new MemoryStream();
-        Lokad.OoxPdf.Pdf.PdfDocumentWriter.WriteBlank(output, pages, CancellationToken.None, creationDate: null);
+        Lokad.OoxPdf.Pdf.PdfDocumentWriter.WriteStaged(output, pages, new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, creationDate: null);
         return output.ToArray();
     }, "exclusive: PDF serialization of prebuilt pages into a memory buffer");
     string stagedSha = Convert.ToHexString(SHA256.HashData(stagedBytes)).ToLowerInvariant();

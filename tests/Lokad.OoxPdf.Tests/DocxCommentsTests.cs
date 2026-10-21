@@ -3604,7 +3604,7 @@ internal static partial class DocxCommentsTests
             byte[] Serialize(DocxDocument input)
             {
                 using var output = new MemoryStream();
-                PdfDocumentWriter.WriteBlank(output, renderer.RenderBlankPages(input, null, CancellationToken.None).ToArray(), CancellationToken.None);
+                PdfDocumentWriter.WriteStaged(output, renderer.RenderBlankPages(input, null, CancellationToken.None).ToArray(), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
                 return output.ToArray();
             }
             TestAssert.True(Serialize(document).SequenceEqual(Serialize(document with { RelatedStories = [formerStory] })),
@@ -3777,7 +3777,7 @@ internal static partial class DocxCommentsTests
                     byte[] Serialize(DocxDocument input)
                     {
                         using var output = new MemoryStream();
-                        PdfDocumentWriter.WriteBlank(output, renderer.RenderBlankPages(input, null, CancellationToken.None).ToArray(), CancellationToken.None);
+                        PdfDocumentWriter.WriteStaged(output, renderer.RenderBlankPages(input, null, CancellationToken.None).ToArray(), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
                         return output.ToArray();
                     }
                     TestAssert.True(Serialize(guarded with { RelatedStories = [retainedStory] }).SequenceEqual(Serialize(guarded with { RelatedStories = [formerStory] })),

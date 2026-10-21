@@ -1372,7 +1372,7 @@ internal static class OoxResourceGuaranteeTests
         TestAssert.Equal(6, images.Length);
         TestAssert.True(images.All(image => ReferenceEquals(images[0], image)), "Repeated headers reuse the same image resource.");
         using var output = new MemoryStream();
-        PdfDocumentWriter.WriteBlank(output, pages, default);
+        PdfDocumentWriter.WriteStaged(output, pages, new OoxConversionLimits(), diagnosticSink: null, default);
         string pdf = Encoding.Latin1.GetString(output.ToArray());
         TestAssert.Equal(1, System.Text.RegularExpressions.Regex.Matches(pdf, @"/Subtype /Image\b").Count);
     }

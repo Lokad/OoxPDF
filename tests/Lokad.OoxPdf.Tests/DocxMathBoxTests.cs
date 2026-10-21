@@ -59,7 +59,7 @@ internal static class DocxMathBoxTests
         TestAssert.Equal(0, graphics.StateDepth);
         TestAssert.Contains("0.333", graphics.ToString());
         using var output = new MemoryStream();
-        PdfDocumentWriter.WriteBlank(output, [new PdfPage(200d, 150d, graphics.ToString(), [font])], CancellationToken.None);
+        PdfDocumentWriter.WriteStaged(output, [new PdfPage(200d, 150d, graphics.ToString(), [font])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
         TestAssert.True(output.Length > 0, "Slanted glyph painting retains resource and graphics-state validation.");
     }
 
@@ -196,7 +196,7 @@ internal static class DocxMathBoxTests
         TestAssert.True(graphics.UsedFontResourceNames.SetEquals(new[] { "Math1" }), "Painting must use the measured font resource.");
         TestAssert.Equal(0, graphics.StateDepth);
         using var output = new MemoryStream();
-        PdfDocumentWriter.WriteBlank(output, [new PdfPage(200d, 100d, content, [font])], CancellationToken.None);
+        PdfDocumentWriter.WriteStaged(output, [new PdfPage(200d, 100d, content, [font])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
         TestAssert.True(output.Length > 0, "Measured native math must produce a validated PDF.");
     }
 

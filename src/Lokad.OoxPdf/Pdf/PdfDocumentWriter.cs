@@ -40,11 +40,6 @@ internal sealed class PdfDocumentWriter
     // charge remains. On success the admitted total equals the returned position.
     // Pages and content bytes admit per produced page during rendering (R06.2);
     // the writer keeps page validation, planning, and numbering.
-    public static long WriteBlank(Stream stream, IReadOnlyList<PdfPage> pages, CancellationToken cancellationToken, DateTimeOffset? creationDate = null)
-    {
-        return WriteStaged(stream, pages, new OoxConversionLimits(), diagnosticSink: null, cancellationToken, creationDate);
-    }
-
     // R06.3: staged emission. The producer enumerable is drained once: each page is
     // validated, its page/group content bytes are encoded a single time and handed
     // to one spill store, and only blanked descriptors are retained. Planning, numbering, and
