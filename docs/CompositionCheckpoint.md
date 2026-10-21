@@ -9524,3 +9524,26 @@ Workspace 5.266 GB / zero errors, near loose cap. Publication/performance/featur
 
 Evidence: artifacts/preview-paths-20261021/qualification.json and completion-audit.json;
 current readable record: [PreviewQualification.md](PreviewQualification.md).
+
+## Sixth maintenance review: case aliases and qualification completion, 2026-10-21
+
+Source commits 253be2b1 / 9e9aa31e / 6b863c58 protect filesystem case aliases,
+require recorded ordered reference derivatives, preserve Office worker arguments
+and report declared skips, and delete WriteBlank's four-line forwarding wrapper.
+Its 34 test and one probe callers now use the live staged writer. Tool-only
+b5b9f855 contains/restores Unix TMPDIR, including absent-variable restoration.
+
+One Release artifact built at 6b863c58; library CE8F6B8E. Windows 3,735 pass /
+one identical inherited balloon failure / five skips; Ubuntu 820 pass / zero
+failures / 43 skips. Exact 22-method affected sets were excluded from remaining
+milestone runs. Three NTFS preservation checks pass and fail on the preceding
+runtime. Twelve cache, seven worker and eight report controls per platform pass;
+four comparison suites pass from spaced paths. A genuine cached Office PDF
+serves unchanged. No real Office export or library rebuild for allocation tooling.
+
+Sixteen outcomes / 32 pages preserve all PDFs, diagnostics and semantics, carrying
+two PPTX strict passes / fourteen DOCX strict failures by identity. Same package
+consumers pass on both platforms; all 24 root assets and two smoke PDFs match.
+CI 39585004509 is green at b5b9f855. No root build, unchanged-method replay,
+threshold relaxation, public signature removal or rendering-policy expansion.
+Evidence: artifacts/preview-alias-cache-20261021/qualification.json and completion-audit.json.
