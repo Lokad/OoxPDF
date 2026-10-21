@@ -241,3 +241,17 @@ and Word-compatible AllMarkup outcomes distinct.
 
 The former per-slice validation journal remains in
 [Git history](https://github.com/Lokad/OoxPDF/blob/78e7589ef3f0ddc9b1fbc38c94fa6743fd7fde16/docs/VisualValidation.md).
+
+
+Local qualification uses capability-specific selections in
+`tools/qualification-capabilities.json`. The reviewed single-math annotations,
+display groups and review-body frame capabilities select small sets with neighboring
+behavior. Their complete preceding sets remain under the corresponding `milestone-`
+names; use those at broad checkpoints, not for every local edit.
+
+`CompareCompositionPortfolio.ps1` reuses only completed `portfolio-raster/`
+derivatives with matching PDF, DPI, rasterizer and complete page hashes. It leaves
+legacy `raster/` evidence untouched. Stale/incomplete derivative directories refuse;
+use a fresh owned run directory after investigating them. Identical PDF/threshold
+comparison reports can still be reused without rasterization. Office thresholds and
+residual failures stay unchanged.
