@@ -7,6 +7,35 @@ internal static class OoxMemoryAdmissionTests
 {
     private const long ReservationBytes = 128L * 1024 * 1024;
 
+    public static void MemoryAdmissionCallbackCannotRedirectRelativeInputOrOutput()
+    {
+        string directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ooxpdf-admission-path-" + Guid.NewGuid().ToString("N"))).FullName;
+        string elsewhere = Directory.CreateDirectory(Path.Combine(directory, "elsewhere")).FullName;
+        string input = Path.Combine(directory, "source.docx");
+        File.Copy(Case("docx-ladder-00-blank.docx"), input);
+        byte[] source = File.ReadAllBytes(input);
+        var pool = new Pool(ReservationBytes);
+        var admission = new Admission(pool, () => Environment.CurrentDirectory = elsewhere);
+        string previousDirectory = Environment.CurrentDirectory;
+        try
+        {
+            Environment.CurrentDirectory = directory;
+            OoxPdfConverter.Convert("source.docx", "result.pdf", new OoxPdfOptions { MemoryAdmission = admission });
+            TestAssert.Contains("%PDF-", System.Text.Encoding.ASCII.GetString(File.ReadAllBytes(Path.Combine(directory, "result.pdf"))));
+            TestAssert.True(!File.Exists(Path.Combine(elsewhere, "result.pdf")), "Admission cannot redirect the destination.");
+            TestAssert.True(source.SequenceEqual(File.ReadAllBytes(input)), "Admission must preserve input.");
+            TestAssert.Equal(1, admission.Requests);
+            TestAssert.Equal(1, pool.Releases);
+            TestAssert.Equal(0L, pool.Reserved);
+            TestAssert.Equal(0, Directory.GetFiles(directory, "*.tmp-*").Length);
+        }
+        finally
+        {
+            Environment.CurrentDirectory = previousDirectory;
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
     public static void MemoryAdmissionRefusalLeavesFileAndStreamUntouched()
     {
         var pool = new Pool(0);

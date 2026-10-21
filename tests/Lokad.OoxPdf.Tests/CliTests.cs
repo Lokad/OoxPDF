@@ -147,6 +147,29 @@ internal static class CliTests
         TestAssert.Contains("Diagnostics output path must be different", result.Error);
     }
 
+    public static void CliAllowsCaseDistinctDiagnosticsOnCaseSensitiveFileSystems()
+    {
+        string input = WriteBasicDocx();
+        string directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ooxpdf-cli-case-" + Guid.NewGuid().ToString("N"))).FullName;
+        try
+        {
+            string output = Path.Combine(directory, "out.pdf");
+            string diagnostics = Path.Combine(directory, "OUT.PDF");
+            File.WriteAllText(output, "destination sentinel");
+            if (File.Exists(diagnostics)) { TestAssert.Skip("The temporary filesystem is case-insensitive."); }
+            CliResult result = RunCli("convert", input, output, "--diagnostics", diagnostics);
+            TestAssert.Equal(0, result.ExitCode);
+            TestAssert.True(File.ReadAllText(output).StartsWith("%PDF-", StringComparison.Ordinal), "CLI publishes the PDF.");
+            TestAssert.True(File.ReadAllText(diagnostics).TrimStart().StartsWith("[", StringComparison.Ordinal), "CLI publishes separate JSON diagnostics.");
+            TestAssert.Equal(0, Directory.GetFiles(directory, "*.tmp-*").Length);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+            File.Delete(input);
+        }
+    }
+
     public static void CliReportsMalformedNumericInputAsConversionFailure()
     {
         string input = WriteMalformedNumericDocx();

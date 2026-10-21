@@ -106,7 +106,12 @@ public static class OoxPdfConverter
         options.Validate();
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (string.Equals(Path.GetFullPath(inputPath), Path.GetFullPath(outputPath), StringComparison.OrdinalIgnoreCase))
+        // Host admission, resolvers and observers may change the process working
+        // directory. Keep input, staging and publication bound to this call's paths.
+        string baseDirectory = Environment.CurrentDirectory;
+        inputPath = Path.GetFullPath(inputPath, baseDirectory);
+        outputPath = Path.GetFullPath(outputPath, baseDirectory);
+        if (string.Equals(inputPath, outputPath, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
         {
             throw new ArgumentException("Input and output file paths must be different.", nameof(outputPath));
         }
@@ -130,7 +135,7 @@ public static class OoxPdfConverter
         // the summary reports writer-stage fields, still before the atomic move (R20).
         OoxConversionTotals totals;
         int pageCount;
-        string? outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath));
+        string? outputDirectory = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(outputDirectory))
         {
             Directory.CreateDirectory(outputDirectory);

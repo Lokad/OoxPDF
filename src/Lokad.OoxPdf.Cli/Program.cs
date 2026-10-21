@@ -195,7 +195,8 @@ static bool AreSamePath(string first, string second)
 {
     try
     {
-        return string.Equals(Path.GetFullPath(first), Path.GetFullPath(second), StringComparison.OrdinalIgnoreCase);
+        return string.Equals(Path.GetFullPath(first), Path.GetFullPath(second),
+            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
     }
     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
     {

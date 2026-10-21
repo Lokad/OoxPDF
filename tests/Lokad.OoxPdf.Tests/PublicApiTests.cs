@@ -467,6 +467,67 @@ internal static class PublicApiTests
         TestAssert.Throws<ArgumentException>(() => OoxPdfConverter.Convert(input, input));
     }
 
+    public static void ConvertCapturesDestinationBeforeSummaryChangesWorkingDirectory()
+    {
+        string input = WriteMinimalDocx("<w:p/>");
+        string directory = Path.Combine(Path.GetTempPath(), "ooxpdf-publication-" + Guid.NewGuid().ToString("N"));
+        string requestedDirectory = Directory.CreateDirectory(Path.Combine(directory, "requested")).FullName;
+        string unrelatedDirectory = Directory.CreateDirectory(Path.Combine(directory, "unrelated")).FullName;
+        string requested = Path.Combine(requestedDirectory, "result.pdf");
+        string unrelated = Path.Combine(unrelatedDirectory, "result.pdf");
+        string previousDirectory = Environment.CurrentDirectory;
+        try
+        {
+            foreach (bool relative in new[] { true, false })
+            foreach (bool asynchronous in new[] { false, true })
+            {
+                File.WriteAllText(requested, "requested sentinel");
+                File.WriteAllText(unrelated, "unrelated sentinel");
+                Environment.CurrentDirectory = requestedDirectory;
+                bool summarySeen = false;
+                var options = new OoxPdfOptions { ReportResourceUsage = true, DiagnosticSink = diagnostic =>
+                {
+                    if (diagnostic.Id == "CONVERSION_RESOURCE_SUMMARY")
+                    {
+                        summarySeen = true;
+                        Environment.CurrentDirectory = unrelatedDirectory;
+                    }
+                }};
+                string destination = relative ? "result.pdf" : requested;
+                if (asynchronous) { OoxPdfConverter.ConvertAsync(input, destination, options).GetAwaiter().GetResult(); }
+                else { OoxPdfConverter.Convert(input, destination, options); }
+                TestAssert.True(summarySeen, "Exercise working-directory changes at publication.");
+                ValidatePdfXref(File.ReadAllBytes(requested));
+                TestAssert.Equal("unrelated sentinel", File.ReadAllText(unrelated));
+                TestAssert.Equal(0, Directory.GetFiles(requestedDirectory, "*.tmp-*").Length);
+                TestAssert.Equal(0, Directory.GetFiles(unrelatedDirectory, "*.tmp-*").Length);
+            }
+        }
+        finally
+        {
+            Environment.CurrentDirectory = previousDirectory;
+            Directory.Delete(directory, recursive: true);
+            File.Delete(input);
+        }
+    }
+
+    public static void ConvertAllowsCaseDistinctPathsOnCaseSensitiveFileSystems()
+    {
+        string directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ooxpdf-path-case-" + Guid.NewGuid().ToString("N"))).FullName;
+        try
+        {
+            string input = Path.Combine(directory, "report.docx");
+            string output = Path.Combine(directory, "REPORT.DOCX");
+            byte[] source = ReadMinimalDocxBytes("<w:p/>");
+            File.WriteAllBytes(input, source);
+            if (File.Exists(output)) { TestAssert.Skip("The temporary filesystem is case-insensitive."); }
+            OoxPdfConverter.Convert(input, output);
+            ValidatePdfXref(File.ReadAllBytes(output));
+            TestAssert.True(source.SequenceEqual(File.ReadAllBytes(input)), "Case-distinct publication must preserve input.");
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
+
     private static byte[] ReadMinimalPptxBytes()
     {
         string path = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
