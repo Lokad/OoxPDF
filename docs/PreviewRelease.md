@@ -53,7 +53,9 @@ live PNG alpha masks and vector luminosity groups remain.
 
 File conversion captures absolute input/output paths before host callbacks, so
 working-directory changes cannot redirect input lookup or final publication.
-File-path guards respect platform case comparison. Raster validation preserves
+File-path guards use existing directory entries to protect case aliases on either
+platform. Provably distinct names remain allowed; unresolved case-only paths
+refuse conservatively. Raster validation preserves
 spaced process arguments and its external timeout; transfer checks include the
 frozen DOCX inspector's source and parent build settings. These are contract and
 tool repairs, with no additional public API removal or rendering rule.
@@ -61,7 +63,11 @@ tool repairs, with no additional public API removal or rendering rule.
 Qualification checks root build settings and binds converter/inspectors to one
 frozen runtime. Local capability selections keep explicit broad milestone sets.
 Complete raster derivatives bind PDF, DPI, tool and page identities; stale or
-incomplete derivatives refuse rather than producing a visual pass. CI retains all
+incomplete derivatives cannot satisfy a hit. Missing completion records recover
+through fresh staging from the retained PDF; old partial pages stay separate.
+Office worker arguments preserve spaces and logs through success/failure/timeout.
+Affected qualification declares expected platform skips and retains all outcomes;
+unexpected skips still reject its gate. CI retains all
 frozen runtime assets. These repairs add no public API removal or rendering rule.
 
 All sixteen portfolio PDFs and diagnostic lists remain byte-identical to the

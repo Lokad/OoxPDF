@@ -51,7 +51,7 @@ function New-CacheMissMessage($resolution) {
     return "Reference cache miss for '$inputFull'$variantMessage at $Dpi DPI ($($resolution.Reason)). Cache-only mode refuses to invoke Office/COM reference rendering. Expected identity directory: artifacts/reference-cache/$($resolution.IdentityKey). To populate it on an Office setup, run: $populate"
 }
 
-$resolution = Use-ReferenceCacheLock ("resolve-" + (Get-ReferenceIdentityKey $inputFull $CacheVariant)) {
+$resolution = Use-ReferenceCacheLock (Get-ReferenceIdentityKey $inputFull $CacheVariant) {
     Resolve-ReferenceCacheEntry $inputFull $Dpi $CacheVariant
 }
 
@@ -148,10 +148,27 @@ if ($derivative.State -eq "Missing") {
     }
 
     Use-ReferenceCacheLock $resolution.IdentityKey {
-        $derivativeDir = Join-Path (Join-Path $resolution.CacheDirectory "raster") $resolution.DerivativeName
-        New-Item -ItemType Directory -Force -Path $derivativeDir | Out-Null
-        & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf (Join-Path $resolution.CacheDirectory "reference.pdf") -OutputDirectory $derivativeDir -Dpi $Dpi -SkipBuild:$SkipBuild
-        Add-ReferenceDerivativeRecord $resolution.CacheDirectory $resolution.DerivativeName $Dpi (Get-RasterizerId)
+        $current = Test-ReferenceDerivative $resolution.CacheDirectory $resolution.DerivativeName $metadata
+        if ($current.State -eq 'Complete') { return }
+        if ($current.State -ne 'Missing') { throw ('Reference derivative changed: ' + $current.Reason) }
+        $rasterRoot = [IO.Path]::GetFullPath((Join-Path $resolution.CacheDirectory 'raster'))
+        $derivativeDir = [IO.Path]::GetFullPath((Join-Path $rasterRoot $resolution.DerivativeName))
+        $staging = Join-Path $rasterRoot ('_raster-' + [Guid]::NewGuid().ToString('N'))
+        $previous = $derivativeDir + '.incomplete-' + [Guid]::NewGuid().ToString('N')
+        foreach ($owned in @($derivativeDir, $staging, $previous)) {
+            if ([IO.Path]::GetDirectoryName($owned) -ne $rasterRoot) { throw 'Unexpected raster publication target' }
+        }
+        New-Item -ItemType Directory -Force -Path $staging | Out-Null
+        try {
+            & (Join-Path $PSScriptRoot 'RasterizePdf.ps1') -InputPdf (Join-Path $resolution.CacheDirectory 'reference.pdf') -OutputDirectory $staging -Dpi $Dpi -SkipBuild:$SkipBuild
+            if (!(Get-ReferenceRasterPages $staging).Count) { throw 'Rasterizer produced no pages' }
+            # Retain interrupted derivatives as evidence, never mix their pages
+            # into a fresh run. Only complete pages receive a completion record.
+            if (Test-Path -LiteralPath $derivativeDir) { [IO.Directory]::Move($derivativeDir, $previous) }
+            [IO.Directory]::Move($staging, $derivativeDir)
+            Add-ReferenceDerivativeRecord $resolution.CacheDirectory $resolution.DerivativeName $Dpi (Get-RasterizerId)
+        }
+        finally { if (Test-Path -LiteralPath $staging) { Remove-Item -LiteralPath $staging -Recurse -Force } }
     }
     $derivative = Test-ReferenceDerivative $resolution.CacheDirectory $resolution.DerivativeName $metadata
 }

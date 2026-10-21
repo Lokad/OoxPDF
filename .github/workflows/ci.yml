@@ -97,6 +97,13 @@ jobs:
         run: pwsh -NoProfile -File tools/TestQualificationBuild.ps1
       - name: Qualification report reuse checks
         run: pwsh -NoProfile -File tools/TestQualificationReportJoin.ps1
+      - name: Reference and affected-report mechanics
+        run: |
+          pwsh -NoProfile -File tools/TestReferenceDerivative.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh -NoProfile -File tools/TestReferenceWorkerPaths.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh -NoProfile -File tools/TestAffectedTestReporting.ps1
       - name: Markup text geometry checks
         run: pwsh -NoProfile -File tools/TestMarkupTextGeometry.ps1
       - name: Markup annotation checks

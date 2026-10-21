@@ -10,6 +10,7 @@ param(
     [Parameter(ParameterSetName = 'Capabilities')]
     [string] $SelectionManifest = (Join-Path $PSScriptRoot 'qualification-capabilities.json'),
     [Parameter(Mandatory = $true, ParameterSetName = 'Milestone')] [switch] $AllDocx,
+    [string[]] $ExpectedSkip = @(),
     [switch] $ListOnly
 )
 $ErrorActionPreference = 'Stop'
@@ -83,6 +84,7 @@ foreach ($filter in $filters) {
     if (!$found) { throw ('Empty capability selector: ' + $filter) }
 }
 $selectionPath = Join-Path $output 'selected-methods.json'
+if (@($ExpectedSkip | Where-Object { !$selected.Contains($_) }).Count) { throw 'Expected skips must name selected exact methods' }
 ConvertTo-Json -InputObject @($selected | Sort-Object) | Set-Content -LiteralPath $selectionPath -Encoding utf8
 $inventory = [ordered]@{
     Mode = if ($AllDocx) { 'Broader milestone' } else { 'Affected capabilities' }
@@ -95,6 +97,7 @@ $inventory = [ordered]@{
     CatalogueSha256 = (Get-FileHash -LiteralPath $catalogPath).Hash
     SelectionSha256 = (Get-FileHash -LiteralPath $selectionPath).Hash
     TemporaryDirectory = $temporaryDirectory
+    ExpectedSkips = @($ExpectedSkip | Sort-Object -Unique)
 }
 if ($Capability) {
     $inventory.Capabilities = $Capability
@@ -106,13 +109,14 @@ $rows = [Collections.Generic.List[object]]::new()
 $path = Join-Path $output ('selection-{0:D3}.json' -f $sources.Count)
 Assert-FrozenAssembly
 $exitCode = Invoke-FrozenTests @('--test-set', $selectionPath, '--report', $path) ($path + '.log')
-if ($exitCode -ne 0) { throw 'Capability qualification failed; see the selection log' }
 $report = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
 $names = @($report.tests.name)
-if ($report.passed -ne $selected.Count -or $report.failed -ne 0 -or
-    $report.skipped -ne 0 -or $names.Count -ne $selected.Count -or
+if ($report.passed + $report.failed + $report.skipped -ne $selected.Count -or $names.Count -ne $selected.Count -or
     @(Compare-Object ($names | Sort-Object) ($selected | Sort-Object)).Count -or
-    @($report.tests | Where-Object { $_.outcome -ne 'passed' }).Count) {
+    @($report.tests | Where-Object { $_.outcome -notin @('passed', 'failed', 'skipped') }).Count -or
+    @($report.tests | Where-Object outcome -EQ 'passed').Count -ne $report.passed -or
+    @($report.tests | Where-Object outcome -EQ 'failed').Count -ne $report.failed -or
+    @($report.tests | Where-Object outcome -EQ 'skipped').Count -ne $report.skipped) {
     throw ('Incomplete affected report: ' + $path)
 }
 Assert-FrozenAssembly
@@ -125,11 +129,15 @@ if ($rows.Count -ne $selected.Count -or @($rows.name | Sort-Object -Unique).Coun
 $inventory.CompletedUtc = [DateTime]::UtcNow.ToString('o')
 $inventory.UniqueExecutedMethods = $rows.Count
 $inventory.SourceReports = @($sources)
+$inventory.RunnerExitCode = $exitCode
+$inventory.UnexpectedSkips = @($rows | Where-Object { $_.outcome -eq 'skipped' -and $_.name -cnotin $ExpectedSkip } | ForEach-Object name)
+$inventory.GatePassed = $exitCode -eq 0 -and $report.failed -eq 0 -and !$inventory.UnexpectedSkips.Count
 $reportPath = Join-Path $output 'affected-tests.json'
 [ordered]@{
-    passed = $rows.Count; failed = 0; skipped = 0; tests = @($rows)
+    passed = $report.passed; failed = $report.failed; skipped = $report.skipped; tests = @($rows)
     provenance = $inventory
 } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding utf8
 $inventory.AffectedReportSha256 = (Get-FileHash -LiteralPath $reportPath).Hash
 $inventory | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $output 'evidence.json') -Encoding utf8
-Write-Output "$($rows.Count) unique capability checks passed in 1 runner invocation."
+if (!$inventory.GatePassed) { throw 'Capability qualification failed or had unexpected skips; see retained affected-tests.json and selection log' }
+Write-Output "$($rows.Count) unique capability checks: $($report.passed) pass / $($report.skipped) expected skip in 1 runner invocation."

@@ -90,6 +90,7 @@ $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
 $mutex = New-Object System.Threading.Mutex($false, "Global\OoxPdfOfficeRender")
 $mutexAcquired = $false
 $workerWorkDir = Join-Path $outputFull ("_worker-" + [System.Guid]::NewGuid().ToString("N"))
+$worker = $null
 try {
     $mutexWaitMs = [Math]::Max(0, [int](($deadline - [DateTime]::UtcNow).TotalMilliseconds))
     Write-SupervisorLog "waiting for office-render mutex"
@@ -111,33 +112,57 @@ try {
     $shellPath = if ($null -ne $shell) { $shell.Source } else { "powershell" }
     $workerArgs = @("-NoProfile", "-File", $WorkerScript, "-InputPath", $inputFull, "-WorkDirectory", $workerWorkDir, "-Dpi", "$Dpi", "-ProgressLog", $workerProgressLog, "-StatusPath", $workerStatusPath)
     Write-SupervisorLog "starting owned worker: $shellPath"
-    $worker = Start-Process -FilePath $shellPath -ArgumentList $workerArgs -PassThru -WindowStyle Hidden -RedirectStandardOutput (Join-Path $workerWorkDir "worker-stdout.log") -RedirectStandardError (Join-Path $workerWorkDir "worker-stderr.log")
-    Write-SupervisorLog ("owned worker pid={0}" -f $worker.Id)
+    $start = [Diagnostics.ProcessStartInfo]::new($shellPath)
+    $start.UseShellExecute = $false
+    $start.CreateNoWindow = $true
+    $start.RedirectStandardOutput = $true
+    $start.RedirectStandardError = $true
+    foreach ($argument in $workerArgs) { $start.ArgumentList.Add($argument) }
+    $stdout = $null
+    $stderr = $null
+    $copies = @()
     try {
-        while (-not $worker.HasExited -and [DateTime]::UtcNow -lt $deadline) {
-            Start-Sleep -Milliseconds 250
-        }
-
-        if (-not $worker.HasExited) {
-            Stop-Process -Id $worker.Id -Force -ErrorAction SilentlyContinue
-            $worker.WaitForExit(10000)
-            $stage = Get-LastWorkerStage $workerProgressLog
-            # Post-mortem grace poll: the kill can land while final stage writes are
-            # still in flight, so re-read briefly before concluding "starting".
-            $stageWaitMs = 0
-            while ($stage -eq "starting" -and $stageWaitMs -lt 5000) {
+        $stdout = [IO.File]::Create((Join-Path $workerWorkDir 'worker-stdout.log'))
+        $stderr = [IO.File]::Create((Join-Path $workerWorkDir 'worker-stderr.log'))
+        $worker = [Diagnostics.Process]::Start($start)
+        $copies = @($worker.StandardOutput.BaseStream.CopyToAsync($stdout), $worker.StandardError.BaseStream.CopyToAsync($stderr))
+        Write-SupervisorLog ("owned worker pid={0}" -f $worker.Id)
+        try {
+            while (-not $worker.HasExited -and [DateTime]::UtcNow -lt $deadline) {
                 Start-Sleep -Milliseconds 250
-                $stageWaitMs += 250
-                $stage = Get-LastWorkerStage $workerProgressLog
             }
-            Copy-Item -LiteralPath $workerProgressLog -Destination $progressLog -Force -ErrorAction SilentlyContinue
-            Write-OutputStatus "timeout" $stage ("Office reference worker (owned pid {0}) exceeded the {1}s deadline during stage '{2}' and was terminated. An Office process started by the hung worker may have been orphaned; no other processes were touched." -f $worker.Id, $TimeoutSeconds, $stage) $true
-            throw "Office reference rendering timed out during stage '$stage' after ${TimeoutSeconds}s; owned worker terminated."
+
+            if (-not $worker.HasExited) {
+                Stop-Process -Id $worker.Id -Force -ErrorAction SilentlyContinue
+                $worker.WaitForExit(10000)
+                $stage = Get-LastWorkerStage $workerProgressLog
+                # Post-mortem grace poll: the kill can land while final stage writes are
+                # still in flight, so re-read briefly before concluding "starting".
+                $stageWaitMs = 0
+                while ($stage -eq "starting" -and $stageWaitMs -lt 5000) {
+                    Start-Sleep -Milliseconds 250
+                    $stageWaitMs += 250
+                    $stage = Get-LastWorkerStage $workerProgressLog
+                }
+                Copy-Item -LiteralPath $workerProgressLog -Destination $progressLog -Force -ErrorAction SilentlyContinue
+                Write-OutputStatus "timeout" $stage ("Office reference worker (owned pid {0}) exceeded the {1}s deadline during stage '{2}' and was terminated. An Office process started by the hung worker may have been orphaned; no other processes were touched." -f $worker.Id, $TimeoutSeconds, $stage) $true
+                throw "Office reference rendering timed out during stage '$stage' after ${TimeoutSeconds}s; owned worker terminated."
+            }
+        }
+        finally {
+            if (-not $worker.HasExited) {
+                Stop-Process -Id $worker.Id -Force -ErrorAction SilentlyContinue
+                $null = $worker.WaitForExit(10000)
+            }
+            $null = [Threading.Tasks.Task]::WaitAll([Threading.Tasks.Task[]]$copies, 5000)
         }
     }
     finally {
-        if (-not $worker.HasExited) {
-            Stop-Process -Id $worker.Id -Force -ErrorAction SilentlyContinue
+        if ($null -ne $stdout) { $stdout.Dispose() }
+        if ($null -ne $stderr) { $stderr.Dispose() }
+        foreach ($name in @('stdout', 'stderr')) {
+            $log = Join-Path $workerWorkDir ('worker-' + $name + '.log')
+            if (Test-Path -LiteralPath $log) { Copy-Item -LiteralPath $log -Destination (Join-Path $outputFull ('reference-worker-' + $name + '.log')) -Force }
         }
     }
 
@@ -166,6 +191,7 @@ try {
     Write-SupervisorLog "success"
 }
 finally {
+    if ($null -ne $worker) { $worker.Dispose() }
     if ($mutexAcquired) {
         $mutex.ReleaseMutex()
     }

@@ -30,6 +30,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 ## Tools
 
 - `tools/TestRasterizePdfPaths.ps1`: check spaced wrapper/tool/PDF paths plus native failure and timeout using an existing rasterizer; never builds.
+- `tools/TestReferenceDerivative.ps1`, `TestReferenceWorkerPaths.ps1`, `TestAffectedTestReporting.ps1`: focused cache/worker/report mechanics without builds or Office.
 - `tools/TestCliDiagnosticsPublication.ps1`: check atomic diagnostics against a frozen CLI, including owned hard/symbolic-link aliases; never builds.
 - `tools/BuildQualificationArtifact.ps1`: build/freeze an explicit committed linked worktree and revision; absolute projects prevent accidental root builds. Reuse the frozen artifact for qualification and transfer.
 - `tools/NewFrozenAllocationRuntime.ps1`: build/self-test the existing allocation probe against a frozen library without rebuilding the library.
@@ -39,7 +40,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 
 - `tools/ExportCompositionReferences.ps1`: export or reuse pinned Office references by manifest and optional DOCX preset.
 - `tools/NewParentRegressionRuntime.ps1`: prepare parent regressions with independent owned public-input copies; reject unowned or linked output directories.
-- `tools/RunDocxAffectedTests.ps1`: run a manifest capability (`-Capability`) or specific selectors as one exact method set on a frozen assembly; use `-AllDocx` at broader milestones.
+- `tools/RunDocxAffectedTests.ps1`: run a capability or selectors as one exact method set on a frozen assembly; declare understood skips with `-ExpectedSkip`, use `-AllDocx` at broader milestones.
 - `tools/JoinQualificationTestReports.ps1`: join reviewed harness repairs from a manifest after checking unchanged production source, runtime assets, public inputs and complete exact-test coverage; retain failed attempts.
 - `tools/JoinCompositionPortfolio.ps1`: join measured outcomes from one runtime using a manifest; copy independent PDFs/inspection summaries and reuse source comparisons instead of copying raster/diff trees.
 - `tools/SummarizeDocxTableCellGeometry.ps1`: supplement raw graphics gates with source-backed table-cell clip mapping and unresolved counts.

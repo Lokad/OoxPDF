@@ -4,6 +4,7 @@
 # fail as a delta. No Office/COM or reference cache needed.
 
 $ErrorActionPreference = "Stop"
+$PSNativeCommandUseErrorActionPreference = $false
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $scratch = Join-Path $repoRoot "artifacts/emission-compare-probe"
 if (Test-Path -LiteralPath $scratch) {
@@ -31,8 +32,8 @@ function Invoke-Case([string] $Name, [object[]] $Reference, [object[]] $Candidat
     $outPath = Join-Path $scratch ($Name + "-out.txt")
     $tool = Join-Path $repoRoot "tools/ComparePptxTextEmission.ps1"
     $toolArgs = @("-NoProfile", "-File", $tool, "-ReferenceTextOperations", $refPath, "-CandidateGlyphRuns", $candPath, "-MatchByPosition") + @($ExtraArgs -split " " | Where-Object { $_ -ne "" })
-    $proc = Start-Process pwsh -ArgumentList $toolArgs -NoNewWindow -Wait -PassThru -RedirectStandardOutput $outPath
-    $code = $proc.ExitCode
+    & pwsh @toolArgs > $outPath
+    $code = $LASTEXITCODE
     $missing = @(Get-Content -LiteralPath $outPath | Where-Object { $_ -match "^\s*\d+\s+missing\b" }).Count
     if ($code -ne $ExpectedExit -or $missing -ne $ExpectedMissing) {
         $script:failures += ("{0}: exit={1} (want {2}), missing={3} (want {4})" -f $Name, $code, $ExpectedExit, $missing, $ExpectedMissing)

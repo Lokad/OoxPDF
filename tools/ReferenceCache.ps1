@@ -223,28 +223,47 @@ function Test-ReferenceIdentityEntry([string] $CacheDir, [string] $InputSha256, 
     return [pscustomobject]@{ State = "Complete"; Reason = $null; Metadata = $metadata }
 }
 
+function Get-ReferenceRasterPages([string] $Directory) {
+    $pages = @(Get-ChildItem -LiteralPath $Directory -Filter 'page-*.png' -File -ErrorAction SilentlyContinue)
+    if (@($pages | Where-Object Name -CNotMatch '^page-[0-9]+\.png$').Count) { throw 'Invalid raster page name' }
+    $pages = @($pages | Sort-Object { [int]$_.BaseName.Substring(5) })
+    for ($index = 0; $index -lt $pages.Count; $index++) {
+        if ($pages[$index].Name -cne ('page-{0:000}.png' -f ($index + 1))) { throw 'Incomplete raster page sequence' }
+    }
+    return ,$pages
+}
+
 function Test-ReferenceDerivative([string] $CacheDir, [string] $DerivativeName, [string] $PdfSha256) {
     $derivativeDir = Join-Path (Join-Path $CacheDir "raster") $DerivativeName
-    $pages = @(Get-ChildItem -LiteralPath $derivativeDir -Filter "page-*.png" -ErrorAction SilentlyContinue | Sort-Object Name)
-    if ($pages.Count -eq 0) {
-        return [pscustomobject]@{ State = "Missing"; Reason = "no raster pages for derivative '$DerivativeName'"; Directory = $derivativeDir }
-    }
-
     $metadata = Read-ReferenceMetadata $CacheDir
     $recorded = $null
     if ($null -ne $metadata -and $null -ne $metadata.Derivatives) {
         $recorded = $metadata.Derivatives.$DerivativeName
     }
 
-    if ($null -ne $recorded) {
-        if ([string]$recorded.PdfSha256 -ne $PdfSha256) {
-            return [pscustomobject]@{ State = "Corrupt"; Reason = "derivative '$DerivativeName' was rasterized from a different reference.pdf"; Directory = $derivativeDir }
-        }
-
-        $expected = @($recorded.Pages | ForEach-Object { $_.Sha256 })
-        $actual = @($pages | ForEach-Object { (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() })
-        if (($expected -join ",") -ne ($actual -join ",")) {
-            return [pscustomobject]@{ State = "Corrupt"; Reason = "derivative '$DerivativeName' page hashes do not match recorded metadata"; Directory = $derivativeDir }
+    if ($null -eq $recorded) {
+        return [pscustomobject]@{ State = 'Missing'; Reason = "derivative '$DerivativeName' has no completion record"; Directory = $derivativeDir }
+    }
+    if ([string]$recorded.PdfSha256 -ne $PdfSha256) {
+        return [pscustomobject]@{ State = 'Corrupt'; Reason = "derivative '$DerivativeName' was rasterized from a different reference.pdf"; Directory = $derivativeDir }
+    }
+    $tool = ([string]$recorded.RasterizerId) -replace '^legacy-', ''
+    if ($tool -cnotmatch '^[0-9a-f]{8,64}$' -or $recorded.Dpi -le 0 -or
+        $DerivativeName -cne ('dpi{0}-{1}' -f $recorded.Dpi, $tool.Substring(0, 8))) {
+        return [pscustomobject]@{ State = 'Corrupt'; Reason = "derivative '$DerivativeName' DPI/tool identity differs"; Directory = $derivativeDir }
+    }
+    try { $pages = Get-ReferenceRasterPages $derivativeDir }
+    catch { return [pscustomobject]@{ State = 'Corrupt'; Reason = $_.Exception.Message; Directory = $derivativeDir } }
+    if (!$pages.Count) {
+        return [pscustomobject]@{ State = 'Missing'; Reason = "no raster pages for derivative '$DerivativeName'"; Directory = $derivativeDir }
+    }
+    if ($recorded.PageCount -ne $pages.Count -or @($recorded.Pages).Count -ne $pages.Count) {
+        return [pscustomobject]@{ State = 'Corrupt'; Reason = "derivative '$DerivativeName' page count differs"; Directory = $derivativeDir }
+    }
+    for ($index = 0; $index -lt $pages.Count; $index++) {
+        if ($recorded.Pages[$index].Name -cne $pages[$index].Name -or
+            $recorded.Pages[$index].Sha256 -ne (Get-FileHash -LiteralPath $pages[$index].FullName).Hash) {
+            return [pscustomobject]@{ State = 'Corrupt'; Reason = "derivative '$DerivativeName' page identity differs"; Directory = $derivativeDir }
         }
     }
 
@@ -416,7 +435,7 @@ function Add-ReferenceDerivativeRecord(
     [int] $DpiValue,
     [string] $RasterizerId) {
     $derivativeDir = Join-Path (Join-Path $CacheDir "raster") $DerivativeName
-    $pages = @(Get-ChildItem -LiteralPath $derivativeDir -Filter "page-*.png" -ErrorAction SilentlyContinue | Sort-Object Name)
+    $pages = Get-ReferenceRasterPages $derivativeDir
     if ($pages.Count -eq 0) {
         throw "Cannot record derivative '$DerivativeName': no page-*.png raster output."
     }
@@ -445,7 +464,13 @@ function Add-ReferenceDerivativeRecord(
         PageCount = $pages.Count
         Pages = $pageRecords
     }) -Force
-    $metadata | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $CacheDir "reference-metadata.json") -Encoding UTF8
+    $metadataPath = Join-Path $CacheDir 'reference-metadata.json'
+    $stagingPath = $metadataPath + '.tmp-' + [Guid]::NewGuid().ToString('N')
+    try {
+        $metadata | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $stagingPath -Encoding utf8
+        [IO.File]::Move($stagingPath, $metadataPath, $true)
+    }
+    finally { if (Test-Path -LiteralPath $stagingPath) { Remove-Item -LiteralPath $stagingPath -Force } }
 }
 
 function Publish-ReferenceStagedDirectory([string] $StagedDirectory, [string] $CacheDirectory) {

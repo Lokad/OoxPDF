@@ -6,6 +6,7 @@
 # real delta. No Office/COM or reference cache needed.
 
 $ErrorActionPreference = "Stop"
+$PSNativeCommandUseErrorActionPreference = $false
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $scratch = Join-Path $repoRoot "artifacts/text-compare-probe"
 $scratchFullPath = [IO.Path]::GetFullPath($scratch)
@@ -38,8 +39,8 @@ function Invoke-Case([string] $Name, [object[]] $Reference, [object[]] $Candidat
     if (!$ByIndex) { $toolArgs += '-MatchByPosition' }
     $toolArgs += @($ExtraArgs -split " " | Where-Object { $_ -ne "" })
     $toolArgs += @('-OutputPath', $reportPath)
-    $proc = Start-Process pwsh -ArgumentList $toolArgs -NoNewWindow -Wait -PassThru -RedirectStandardOutput $outPath
-    $code = $proc.ExitCode
+    & pwsh @toolArgs > $outPath
+    $code = $LASTEXITCODE
     $report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
     if ($report.ReferenceSha256 -ne (Get-FileHash -LiteralPath $refPath).Hash -or
         $report.CandidateSha256 -ne (Get-FileHash -LiteralPath $candPath).Hash -or

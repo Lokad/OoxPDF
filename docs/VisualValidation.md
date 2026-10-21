@@ -33,6 +33,12 @@ temp directory. Keep the generated files with the ignored validation output.
 For other test batches, use a fresh ignored temp directory in the launching
 process; retain the same frozen binaries, fixtures and checks.
 
+The affected-test gate rejects skipped methods unless their exact names are
+declared with `-ExpectedSkip`. Declare only understood platform preconditions;
+reports retain skip reasons and counts. An expected skip never replaces a failed
+check when joining repaired reports. Undeclared skips and failures retain their
+reports and reject qualification.
+
 For qualification, bind the case or family to the already qualified CLI:
 
 ```powershell

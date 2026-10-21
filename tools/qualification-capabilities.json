@@ -1,5 +1,8 @@
 {
   "preview-path-publication": [
+    "ConvertPreservesInputForCaseAliasesAndDistinctExistingEntries",
+    "ConvertRejectsUnresolvedCaseOnlyParentPaths",
+    "CliPreservesInputAndPdfForCaseAliases",
     "ConvertCapturesDestinationBeforeSummaryChangesWorkingDirectory",
     "MemoryAdmissionCallbackCannotRedirectRelativeInputOrOutput",
     "ConvertAllowsCaseDistinctPathsOnCaseSensitiveFileSystems",

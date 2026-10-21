@@ -19,8 +19,9 @@
   Removes the unused image-backed luminosity-mask path and decoder wrappers;
   live PNG alpha masks and SVG vector luminosity groups remain supported.
 - Captures file input/output paths before host callbacks, preventing working-directory
-  changes from redirecting publication. File-path guards respect platform case
-  comparison. Raster validation handles spaced arguments, and transfer checks
+  changes from redirecting publication. File-path guards protect case aliases on
+  case-insensitive Linux mounts and retain provably distinct entries; unresolved
+  case-only paths refuse conservatively. Raster validation handles spaced arguments, and transfer checks
   include the frozen DOCX inspector and its parent build settings.
 - Protects CLI input/output from aliased diagnostics: literal path checks precede
   early failures, and atomic diagnostics publication replaces existing links.
@@ -28,6 +29,11 @@
   runtimes and verifies complete raster identity before reuse. Local capability
   selections retain broader milestone coverage and exhaustive slow balloon checks.
   Removes the isolated test-only PPTX source-run snapshot/coalescer.
+- Requires recorded, ordered reference-raster page identities and recovers
+  interrupted derivatives without mixing stale pages or replacing trusted PDFs.
+  Office worker arguments preserve spaces; qualification reports retain declared
+  platform skips and reject unexpected skips. Removes the internal WriteBlank
+  forwarding wrapper; tests and allocation tooling call the staged writer directly.
 - Removes ineffective `Deterministic`, library `Strict` and cumulative work or
   nonrefunding memory quotas. Uses cooperative cancellation and optional coarse
   host memory admission; preserves input/output bounds, bounded page staging,

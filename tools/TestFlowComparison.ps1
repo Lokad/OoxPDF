@@ -3,6 +3,7 @@
 # exactly one mapping verdict. No Office/COM or reference cache needed.
 
 $ErrorActionPreference = "Stop"
+$PSNativeCommandUseErrorActionPreference = $false
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $scratch = Join-Path $repoRoot "artifacts/flow-compare-probe"
 if (Test-Path -LiteralPath $scratch) {
@@ -48,8 +49,8 @@ function Invoke-FlowCase([string] $Name, [object[]] $CandidateOps) {
     $dir = Write-CaseDir $Name $CandidateOps
     $out = Join-Path $dir "summary.json"
     $tool = Join-Path $repoRoot "tools/CompareDocxLayoutPdfFlow.ps1"
-    $proc = Start-Process pwsh -ArgumentList "-NoProfile", "-File", $tool, "-RunDirectory", $dir, "-LayoutSnapshot", (Join-Path $scratch "layout.json"), "-OutputJson", $out -NoNewWindow -Wait -PassThru -RedirectStandardOutput (Join-Path $dir "stdout.txt")
-    if ($proc.ExitCode -ne 0) { throw ("Flow case " + $Name + " exited " + $proc.ExitCode) }
+    & pwsh -NoProfile -File $tool -RunDirectory $dir -LayoutSnapshot (Join-Path $scratch 'layout.json') -OutputJson $out > (Join-Path $dir 'stdout.txt')
+    if ($LASTEXITCODE -ne 0) { throw ("Flow case " + $Name + " exited " + $LASTEXITCODE) }
     return Get-Content -Raw -LiteralPath $out | ConvertFrom-Json
 }
 
