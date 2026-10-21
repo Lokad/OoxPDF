@@ -263,7 +263,9 @@
     "CliRejectsDiagnosticsPathEqualToOutput",
     "CliRejectsEarlyFailureDiagnosticsAliasingInput",
     "CliRejectsEarlyFailureDiagnosticsAliasingOutput",
-    "CliWritesSeparateDiagnosticsForUnsupportedInputWithoutChangingFiles"
+    "CliWritesSeparateDiagnosticsForUnsupportedInputWithoutChangingFiles",
+    "ConvertAsyncCapturesPathsBeforeWorkerStarts",
+    "ConvertAsyncKeepsValidationAndCancellationOnReturnedTask"
   ],
   "preview-review-follow-up": [
     "WindowsResolverConcurrentRequestsSurviveCapacityEviction",
@@ -9932,7 +9934,8 @@
     "RecoverableDiagnosticExceptionsLeaveStreamEmpty",
     "DiagnosticCancellationPreservesCallerToken",
     "DiagnosticCallbacksCanRunNestedConversionsWithoutAffectingRecovery",
-    "FinalSummaryCancellationPreventsPublication"
+    "FinalSummaryCancellationPreventsPublication",
+    "InfoOnlyOverflowRemainsInformational"
   ],
   "docx-balloon-focused": [
     "DocxWordCompatibleMixedBalloonParagraphBodyBoundaries",

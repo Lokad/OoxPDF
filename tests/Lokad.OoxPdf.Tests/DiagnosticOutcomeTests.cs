@@ -9,17 +9,38 @@ internal static class DiagnosticOutcomeTests
 {
     public static void OverflowPreservesErrorSeverity()
     {
-        var collector = new DiagnosticCollector();
-        for (int i = 0; i < DiagnosticCollector.MaxRetainedDiagnostics; i++)
+        foreach (OoxPdfSeverity severity in new[] { OoxPdfSeverity.Warning, OoxPdfSeverity.Error })
         {
-            collector.Add(new OoxPdfDiagnostic("INFO", OoxPdfSeverity.Info, "probe", null, null, null, null, null));
+            var collector = new DiagnosticCollector();
+            for (int i = 0; i < DiagnosticCollector.MaxRetainedDiagnostics; i++)
+            {
+                collector.Add(new OoxPdfDiagnostic("INFO", OoxPdfSeverity.Info, "probe"));
+            }
+
+            TestAssert.True(!collector.HasWarningsOrErrors, "Info-only samples must not report warnings or errors.");
+            collector.Add(new OoxPdfDiagnostic("SEVERITY", severity, "probe"));
+            TestAssert.Equal(1, collector.DroppedCount);
+            TestAssert.Equal(1, collector.OccurrenceCounts["SEVERITY"]);
+            TestAssert.True(collector.HasWarningsOrErrors, "A dropped warning/error must still affect CLI strict mode.");
+            TestAssert.Equal(OoxPdfSeverity.Error, collector.DiagnosticsWithOverflow()[^1].Severity);
+        }
+    }
+
+    public static void InfoOnlyOverflowRemainsInformational()
+    {
+        var collector = new DiagnosticCollector();
+        for (int i = 0; i <= DiagnosticCollector.MaxRetainedDiagnostics; i++)
+        {
+            collector.Add(new OoxPdfDiagnostic("INFO", OoxPdfSeverity.Info, "probe"));
         }
 
-        TestAssert.True(!collector.HasWarningsOrErrors, "Info-only overflow must not report warnings or errors.");
-        collector.Add(new OoxPdfDiagnostic("ERROR", OoxPdfSeverity.Error, "probe", null, null, null, null, null));
+        TestAssert.Equal(DiagnosticCollector.MaxRetainedDiagnostics, collector.Diagnostics.Count);
         TestAssert.Equal(1, collector.DroppedCount);
-        TestAssert.Equal(1, collector.OccurrenceCounts["ERROR"]);
-        TestAssert.True(collector.HasWarningsOrErrors, "A dropped error must still report warnings or errors for CLI strict mode.");
+        TestAssert.Equal(DiagnosticCollector.MaxRetainedDiagnostics + 1, collector.OccurrenceCounts["INFO"]);
+        TestAssert.True(!collector.HasWarningsOrErrors, "Losing informational samples must remain informational.");
+        OoxPdfDiagnostic overflow = collector.DiagnosticsWithOverflow()[^1];
+        TestAssert.Equal("DIAGNOSTIC_OVERFLOW", overflow.Id);
+        TestAssert.Equal(OoxPdfSeverity.Info, overflow.Severity);
     }
 
     public static void ThrowingSummaryCallbackLeavesFileDestinationUntouched()

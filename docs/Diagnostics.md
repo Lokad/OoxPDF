@@ -111,7 +111,7 @@ These warnings are document-scoped. Duplicate occurrences of the same unsupporte
   definitions and effective unit opacity do not add these warnings; inline
   style overrides presentation attributes.
 
-- `DIAGNOSTIC_OVERFLOW`: error, the collector retained the first diagnostics and dropped further occurrences; per-ID totals stay available on the collector.
+- `DIAGNOSTIC_OVERFLOW`: the collector retained the first diagnostics and dropped further occurrences; per-ID totals stay available on the collector. Info-only overflow is informational and does not affect CLI strict mode. If any warning/error was observed, the marker remains an error and strict mode still reports it, including when the original warning/error was dropped.
 
 The CLI writes diagnostics JSON when `--diagnostics <file>` is provided. The JSON is an array of diagnostic entries with these fields when available:
 

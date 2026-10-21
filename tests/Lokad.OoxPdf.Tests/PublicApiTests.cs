@@ -5,7 +5,7 @@ using Lokad.OoxPdf.Fonts;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PublicApiTests
+internal static partial class PublicApiTests
 {
     public static void PublicApiPreservesOptionalRecordArguments()
     {

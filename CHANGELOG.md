@@ -2,6 +2,9 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Binds asynchronous relative file paths before queuing, preserving the caller's
+  directory through worker delays. Info-only diagnostic overflow stays
+  informational; warning/error overflow retains CLI strict behavior.
 - Removes inactive private/internal overloads, obsolete test/probe-only paths,
   parse-count instrumentation and retired zero-valued DOCX corrections. Inert
   PPTX emission/legend state and unread argument plumbing are removed. Tests and

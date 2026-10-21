@@ -47,6 +47,8 @@ public sealed class DiagnosticCollector
     /// <summary>
     /// Retained samples plus a terminal overflow marker when samples were dropped,
     /// so serialized diagnostics disclose the loss instead of truncating silently.
+    /// Info-only collections retain informational severity; a collection that saw
+    /// warnings or errors retains the existing error marker.
     /// </summary>
     public IReadOnlyList<OoxPdfDiagnostic> DiagnosticsWithOverflow()
     {
@@ -60,7 +62,7 @@ public sealed class DiagnosticCollector
             .. diagnostics,
             new OoxPdfDiagnostic(
                 "DIAGNOSTIC_OVERFLOW",
-                OoxPdfSeverity.Error,
+                sawWarningOrError ? OoxPdfSeverity.Error : OoxPdfSeverity.Info,
                 $"Retained the first {MaxRetainedDiagnostics} diagnostics and dropped {droppedCount} further occurrences; per-ID totals are available on the collector.",
                 PartName: null,
                 SlideIndex: null,

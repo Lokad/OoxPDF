@@ -70,6 +70,17 @@ the token during the final resource summary also prevents file publication.
 Callbacks remain synchronous and may invoke nested conversions. These are contract
 repairs; they add no public API or buffering layer.
 
+Asynchronous file conversions also capture the invocation working directory
+before queuing. Changing the process directory while a conversion waits for a
+worker no longer changes its relative input/output paths. Argument failures
+still fault the returned task, and pre-cancellation still takes precedence.
+
+Info-only diagnostic overflow now emits an informational `DIAGNOSTIC_OVERFLOW`
+marker, consistent with `DiagnosticCollector.HasWarningsOrErrors == false`.
+Collections that saw warnings/errors retain the error overflow marker and CLI
+strict behavior, including when those entries were dropped from retained samples.
+These corrections remove no public declarations.
+
 File conversions capture absolute input/output paths before admission, resolver
 or diagnostic callbacks. Changing the process working directory during a callback
 does not redirect input lookup or publication. Case-only aliases of inputs,

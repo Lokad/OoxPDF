@@ -17,6 +17,8 @@ namespace Lokad.OoxPdf;
 /// variants offload the synchronous pipeline to the thread pool and perform no true
 /// asynchronous I/O; awaiting one yields byte-identical output to the matching sync
 /// overload for the same inputs.</item>
+/// <item>File paths are resolved against the working directory at invocation,
+/// including asynchronous calls that wait in the thread pool.</item>
 /// <item>Caller-owned streams are never closed or disposed. Input is read sequentially
 /// and output needs only forward writes; non-seekable host streams are supported.
 /// File outputs publish atomically: any failure, including cancellation, leaves a
@@ -82,9 +84,11 @@ public static class OoxPdfConverter
         return ConvertAsync(inputPath, outputPath, new OoxPdfOptions(), cancellationToken);
     }
 
-    public static Task ConvertAsync(string inputPath, string outputPath, OoxPdfOptions? options, CancellationToken cancellationToken = default)
+    public static async Task ConvertAsync(string inputPath, string outputPath, OoxPdfOptions? options, CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => ConvertCore(inputPath, outputPath, options, cancellationToken), cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        string baseDirectory = Environment.CurrentDirectory;
+        await Task.Run(() => ConvertCore(inputPath, outputPath, options, cancellationToken, baseDirectory), cancellationToken).ConfigureAwait(false);
     }
 
     public static Task ConvertAsync(Stream input, Stream output, OoxPdfOptions? options)
@@ -97,7 +101,7 @@ public static class OoxPdfConverter
         return Task.Run(() => ConvertCore(input, output, options, cancellationToken), cancellationToken);
     }
 
-    private static void ConvertCore(string inputPath, string outputPath, OoxPdfOptions? options, CancellationToken cancellationToken)
+    private static void ConvertCore(string inputPath, string outputPath, OoxPdfOptions? options, CancellationToken cancellationToken, string? baseDirectory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(inputPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
@@ -108,7 +112,7 @@ public static class OoxPdfConverter
 
         // Host admission, resolvers and observers may change the process working
         // directory. Keep input, staging and publication bound to this call's paths.
-        string baseDirectory = Environment.CurrentDirectory;
+        baseDirectory ??= Environment.CurrentDirectory;
         inputPath = Path.GetFullPath(inputPath, baseDirectory);
         outputPath = Path.GetFullPath(outputPath, baseDirectory);
         if (FilePathPolicy.MayOverwriteInput(inputPath, outputPath))
