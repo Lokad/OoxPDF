@@ -67,3 +67,8 @@ into a successful conversion with a node-failure warning. A callback that cancel
 the token during the final resource summary also prevents file publication.
 Callbacks remain synchronous and may invoke nested conversions. These are contract
 repairs; they add no public API or buffering layer.
+
+File conversions capture absolute input/output paths before admission, resolver
+or diagnostic callbacks. Changing the process working directory during a callback
+does not redirect input lookup or publication. File-path equality follows platform
+case comparison; file-extension matching remains case-insensitive.

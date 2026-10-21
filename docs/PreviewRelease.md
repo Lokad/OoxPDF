@@ -51,6 +51,13 @@ cannot overwrite source or old destination files. The unused luminosity-mask pat
 decoder wrappers and isolated test-only math/PPTX snapshot helpers are removed;
 live PNG alpha masks and vector luminosity groups remain.
 
+File conversion captures absolute input/output paths before host callbacks, so
+working-directory changes cannot redirect input lookup or final publication.
+File-path guards respect platform case comparison. Raster validation preserves
+spaced process arguments and its external timeout; transfer checks include the
+frozen DOCX inspector's source and parent build settings. These are contract and
+tool repairs, with no additional public API removal or rendering rule.
+
 Qualification checks root build settings and binds converter/inspectors to one
 frozen runtime. Local capability selections keep explicit broad milestone sets.
 Complete raster derivatives bind PDF, DPI, tool and page identities; stale or
@@ -67,7 +74,7 @@ follow-up.
 
 The source, runtime, package and report identities are retained in the local
 candidate record. Preparatory builds with different compiler outputs are kept
-separate. Root transfer verifies all 17 assets and two PDF integration smokes;
+separate. Root transfer verifies every frozen asset and two PDF integration smokes;
 it does not rebuild or repeat the broad suite. Packaging documentation and
 symbols reuse the qualified library and PDB. No performance speedup is claimed.
 Broader features and optimization are deferred.

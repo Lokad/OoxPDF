@@ -18,6 +18,10 @@
   recovery and observes final-summary cancellation before file publication.
   Removes the unused image-backed luminosity-mask path and decoder wrappers;
   live PNG alpha masks and SVG vector luminosity groups remain supported.
+- Captures file input/output paths before host callbacks, preventing working-directory
+  changes from redirecting publication. File-path guards respect platform case
+  comparison. Raster validation handles spaced arguments, and transfer checks
+  include the frozen DOCX inspector and its parent build settings.
 - Protects CLI input/output from aliased diagnostics: literal path checks precede
   early failures, and atomic diagnostics publication replaces existing links.
   Qualification checks root build settings, binds cached markup to matching frozen
