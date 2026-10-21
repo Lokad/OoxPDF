@@ -108,3 +108,5 @@ if ((Get-FileHash -LiteralPath $plain).Hash -ne $inputHash -or (Get-FileHash -Li
     LibraryBuilds=0;OfficeExports=0;Checks=$rows} |
     ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $root 'evidence.json') -Encoding utf8
 Write-Output ('Raster wrapper: '+$rows.Count+' checks passed; no build.')
+# The direct-tool refusal above is expected; callers must not inherit its exit 2.
+$global:LASTEXITCODE=0
