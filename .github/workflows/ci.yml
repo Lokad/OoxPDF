@@ -51,6 +51,9 @@ jobs:
             dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -- --group $group --skip-slow --report "artifacts/ci-tests/$group.json"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+      - name: Affected PPTX scene inspection (Windows, native fonts)
+        if: runner.os == 'Windows'
+        run: dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -- --test PptxSceneBuilderBuildsResolvedNodeLists --report artifacts/ci-tests/pptx-scene.json
       - name: Portable picture effects (Ubuntu)
         if: runner.os == 'Linux'
         run: pwsh -NoProfile -File tools/RunDocxAffectedTests.ps1 -RunnerPath tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/pptx-picture-effects -Capability pptx-picture-blur
