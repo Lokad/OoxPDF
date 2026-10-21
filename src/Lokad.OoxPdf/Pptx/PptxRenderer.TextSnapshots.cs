@@ -11,75 +11,6 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    internal static IReadOnlyList<PptxTextRunSnapshot> InspectTextRuns(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null)
-    {
-        return ReadSceneTextRunsForInspection(document, package, slideIndex, sharedScene)
-            .Select(ToSnapshot)
-            .ToArray();
-    }
-
-    private static IReadOnlyList<TextRun> ReadSceneTextRunsForInspection(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null)
-    {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene);
-        if (context is null)
-        {
-            return [];
-        }
-
-        return CoalesceSourceTextRunsForInspection(
-                ReadSceneShapeTextSpans(context)
-                    .Concat(ReadSceneTableTextSpans(context))
-                    .ToArray())
-            .Select(span => span.Run)
-            .ToArray();
-
-        IReadOnlyList<PptxPositionedTextSpan> CoalesceSourceTextRunsForInspection(IReadOnlyList<PptxPositionedTextSpan> textSpans)
-        {
-            var coalesced = new List<PptxPositionedTextSpan>(textSpans.Count);
-            foreach (PptxPositionedTextSpan span in textSpans)
-            {
-                if (coalesced.Count != 0 && CanCoalesceSourceTextRunForInspection(coalesced[^1], span))
-                {
-                    PptxPositionedTextSpan previous = coalesced[^1];
-                    TextRun mergedRun = previous.Run with
-                    {
-                        Text = previous.Run.Text + span.Run.Text,
-                        Width = Math.Max(previous.Run.Width, span.Run.X + span.Run.Width - previous.Run.X)
-                    };
-                    coalesced[^1] = previous with
-                    {
-                        Run = mergedRun,
-                        EndX = Math.Max(previous.EndX, span.EndX),
-                        Atoms = previous.Atoms.Concat(span.Atoms).ToArray()
-                    };
-                    continue;
-                }
-
-                coalesced.Add(span);
-            }
-
-            return coalesced;
-
-            bool CanCoalesceSourceTextRunForInspection(PptxPositionedTextSpan left, PptxPositionedTextSpan right)
-            {
-                return left.SourceRun is not null &&
-                    ReferenceEquals(left.SourceRun, right.SourceRun) &&
-                    left.FrameIndex == right.FrameIndex &&
-                    left.ParagraphIndex == right.ParagraphIndex &&
-                    left.SourceRunIndex == right.SourceRunIndex &&
-                    left.Run.Color.Equals(right.Run.Color) &&
-                    Math.Abs(left.Run.Alpha - right.Run.Alpha) < PptxTextMetricRules.TextStateTolerance &&
-                    left.Run.HighlightColor.Equals(right.Run.HighlightColor) &&
-                    left.Run.Bold == right.Run.Bold &&
-                    left.Run.Italic == right.Run.Italic &&
-                    left.Run.Underline == right.Run.Underline &&
-                    left.Run.Strike == right.Run.Strike &&
-                    left.Run.KerningEnabled == right.Run.KerningEnabled &&
-                    string.Equals(left.Run.FontFamily, right.Run.FontFamily, StringComparison.OrdinalIgnoreCase);
-            }
-        }
-    }
-
     private static IReadOnlyList<PptxPositionedTextSpan> ReadSlideTextSpansForInspection(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null)
     {
         PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene);
@@ -141,26 +72,6 @@ internal sealed partial class PptxRenderer
 
             return new PptxTextFlowModel(frames);
         }
-    }
-
-    private static PptxTextRunSnapshot ToSnapshot(TextRun run)
-    {
-        return new PptxTextRunSnapshot(
-            run.Text,
-            run.X,
-            run.Y,
-            run.Width,
-            run.FontSize,
-            run.CharacterSpacing,
-            run.Color,
-            run.Alpha,
-            run.HighlightColor,
-            run.Bold,
-            run.Italic,
-            run.Underline,
-            run.Strike,
-            run.Alignment.ToString(),
-            run.FontFamily);
     }
 
     private static PptxTextLayoutSnapshot ToSnapshot(PptxTextLayoutModel layout)

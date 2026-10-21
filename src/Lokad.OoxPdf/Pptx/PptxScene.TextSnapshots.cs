@@ -5,23 +5,6 @@ using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Pptx;
 
-internal sealed record PptxTextRunSnapshot(
-    string Text,
-    double X,
-    double Y,
-    double Width,
-    double FontSize,
-    double CharacterSpacing,
-    RgbColor Color,
-    double Alpha,
-    RgbColor? Highlight,
-    bool Bold,
-    bool Italic,
-    bool Underline,
-    bool Strike,
-    string Alignment,
-    string? FontFamily);
-
 internal sealed record PptxTextFrameModelSnapshot(
     double FrameX,
     double FrameY,

@@ -1059,19 +1059,14 @@ internal static class PptxModelTests
         TestAssert.True(textBody.Paragraphs[0].Runs[0].ResolvedStyle.Strike, "Expected master defaultTextStyle to participate in resolved scene style.");
         TestAssert.Equal(new RgbColor(255, 255, 0), textBody.Paragraphs[0].Runs[0].ResolvedStyle.Highlight ?? default);
 
-        IReadOnlyList<PptxTextRunSnapshot> directTextRuns = PptxRenderer.InspectTextRuns(document, package, 0);
-        TestAssert.True(
-            directTextRuns.Any(run => run.Text == "Hello"),
-            "Expected direct text inspection to include Hello. Runs: " + string.Join("|", directTextRuns.Select(run => run.Text)));
-        PptxTextRunSnapshot directHello = directTextRuns.First(run => run.Text == "Hello");
-        TestAssert.Equal(26d, directHello.FontSize);
-        TestAssert.True(directHello.Underline, "Expected direct renderer inspection to expose run underline.");
-        TestAssert.Equal(new RgbColor(255, 255, 0), directHello.Highlight ?? default);
-
         PptxTextGlyphRunSnapshot[] glyphHelloRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
             .Where(run => run.FrameIndex == 0 && run.ParagraphIndex == 0 && run.SourceRunIndex == 0)
             .ToArray();
         TestAssert.Equal("Hello", string.Concat(glyphHelloRuns.Select(run => run.Text)));
+        TestAssert.True(glyphHelloRuns.Length != 0 && glyphHelloRuns.All(run => run.Underline),
+            "The live glyph inspector retains underline on every emitted source segment.");
+        TestAssert.True(glyphHelloRuns.All(run => run.HighlightColor == new RgbColor(255, 255, 0)),
+            "The live glyph inspector retains the resolved source highlight.");
         TestAssert.True(
             glyphHelloRuns.All(run => run.UnderlineWidth is not null && run.UnderlineHeight is not null),
             "Expected glyph-run inspection to expose underline geometry for each emitted source-run segment.");
@@ -2302,12 +2297,14 @@ internal static class PptxModelTests
         PptxSceneRunStyle style = node.TextBody!.Paragraphs[0].Runs[0].ResolvedStyle;
 
         TestAssert.Equal(new RgbColor(17, 34, 51), style.Color);
-        IReadOnlyList<PptxTextRunSnapshot> textRuns = PptxRenderer.InspectTextRuns(document, package, 0);
-        TestAssert.Equal(new RgbColor(17, 34, 51), textRuns.Single(run => run.Text == "Mapped").Color);
-        TestAssert.Equal(new RgbColor(17, 34, 51), textRuns.Single(run => run.Text == "CellMapped").Color);
         TestAssert.Equal(new RgbColor(17, 34, 51), node.Shape!.Fill.Color);
         TestAssert.Equal(new RgbColor(68, 85, 102), node.Shape.Line.Color);
         PptxSceneTableCell cell = scene.Slides[0].SlideNodes[1].Table!.Rows[0].Cells[0];
+        XElement cellRun = cell.TextBody!.Descendants(OoxNamespaces.DrawingNamespace + "r")
+            .Single(run => run.Element(OoxNamespaces.DrawingNamespace + "t")?.Value == "CellMapped");
+        TestAssert.True(PptxColorResolver.TryReadSolidColor(cellRun.Element(OoxNamespaces.DrawingNamespace + "rPr"),
+            scene.Theme, scene.Slides[0].SlideColorMap, out RgbColor cellTextColor), "The live color resolver reads the cell run fill.");
+        TestAssert.Equal(new RgbColor(17, 34, 51), cellTextColor);
         TestAssert.Equal(new RgbColor(17, 34, 51), cell.Fill.Color);
         TestAssert.Equal(new RgbColor(68, 85, 102), cell.Borders.Left.Line.Color);
         TestAssert.Equal(new RgbColor(68, 85, 102), cell.StyleFill.Color);
