@@ -9474,3 +9474,29 @@ broad replay. The 5.044 GB scan is near the loose cap with zero errors; historic
 artifacts remain. Publication deferred. Current identities and residuals:
 [PreviewQualification.md](PreviewQualification.md), ignored
 artifacts/review-third-20261020/qualification.json. Earlier failed attempts stay retained.
+
+
+## Fourth bounded review - 2026-10-21
+
+Source e76fbf74 stages CLI diagnostics and atomically replaces existing link entries;
+the preceding CLI fails the new hard-link control. Portfolio raster derivatives now
+bind PDF/DPI/tool identities and complete page hashes. The real two-page/one-page
+control exposes the pagination defect previously hidden by stale PNGs. Both platforms
+pass 21 orchestration checks. CI retains all 24 frozen assets, verified by downloading
+the Windows candidate including its seven DOCX-inspector files.
+
+Three local capability sets shrink 642/636/621 to 20/22/18, retaining complete original
+sets as milestones. The isolated test-only PPTX source-run snapshot/coalescer is gone;
+scene/color/glyph assertions and useful inspectors remain. Retired unsupported-note
+entries are removed. No public API or rendering policy changes.
+
+Windows 3,731 pass/1 inherited balloon failure/3 skip; all77 affected results reused,
+with one affected slow method separate from the regular selection and no duplicate
+method runs. Ubuntu portable 813 pass/0 fail/43 skip; the additional nonportable slow
+glyph-inspection probe fails identically on current/preceding runtimes without the
+native font. Both package consumers, sixteen exact portfolio outcomes and 24-asset/
+two-PDF root transfer pass. CI 39565300451 is green. No root rebuild, broad replay or
+portfolio Office/raster replay. The 5.149 GB scan has zero errors before a small retained-
+inspector smoke. Publication deferred. Full identities, failed attempts and residuals:
+[PreviewQualification.md](PreviewQualification.md), ignored
+artifacts/review-fourth-20261021/qualification.json.

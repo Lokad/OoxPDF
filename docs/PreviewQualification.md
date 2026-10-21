@@ -1,87 +1,90 @@
-# 0.2.0-preview qualification — 2026-10-20
+# 0.2.0-preview qualification - 2026-10-21
 
-The third bounded review is locally qualified and the preview package is prepared.
-Publication, tagging, release creation, renderer optimization and broader feature
+The fourth bounded review is qualified with the retained failures below. The preview
+package is prepared; publication, tags, releases, renderer optimization and feature
 expansion remain deferred. See [scope](PreviewRelease.md) and [migration](PublicApiChanges.md).
 
-One Release runtime is frozen from `04667ad36298dddfb0c3f5b49f1d4f243a157174`.
+One committed Release artifact is frozen from `e76fbf74b632b9e187d01c7987aab5b36cea373e`.
 Library SHA-256:
-`394AB3044AAA80060F88B6648CFFB21B3FE1B65EE2BDA926867B9174D779814F`.
+`F85CFD70F758376DC9FFFB5694E3930E8EDA1B8CF123C3C6EC83B37D95964EF4`.
 Test assembly SHA-256:
-`5ECA094764619A5E1D4202ED0C3E726BBBB90AC54124FEB351EC6647E2BDA898`.
-[Candidate CI](https://github.com/Lokad/OoxPDF/actions/runs/39468596965) uses
-`3ab20f2a`, which adds the inspector to the solution without changing library/tests.
-Its independently built Windows/Ubuntu outputs are separate from this artifact.
-Both Windows and Ubuntu jobs passed. Final documentation changes leave the
-qualified source and assets unchanged; no broad suite is replayed.
+`F4BF669669EB9CB2C893EA86FECA1C2E5803552B6E77C08D85F0C3202029B324`.
+[Windows and Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/39565300451)
+at `4ae2c6d2`; its subsequent tool/workflow repairs leave library/test source unchanged.
+CI compiler outputs are independent of this locally qualified artifact.
 
 | Gate | Result |
 |---|---|
-| Affected checks | All 41 pass, extracted from the Windows milestone report; no affected-suite replay |
-| Windows milestone | 3,732 pass, **1 inherited fail**, 3 environmental skips; includes the two retained exhaustive balloon methods and four CLI compatibility checks |
-| Same frozen DLL on Ubuntu | 822 pass, 0 fail, 49 environmental skips; one exact 871-method invocation, no library rebuild |
-| Parent CLI controls | Both new alias regressions fail against the preceding CLI; separate failure diagnostics pass |
-| Qualification tools, each platform | 23 freeze checks, 10 build guards, one report join/seven refusals, 10 frozen bindings and 8 inspector-build checks |
-| Capability catalog / manifests | All 275 capabilities and 2,183 distinct selectors resolve; 715 visual manifests validate. These checks execute no rendering tests and do not imply visual fidelity |
-| Frozen markup integration | Actual DOCX inspection on both platforms; complete cached-markup smoke with matching converter/inspector and no build. Its reference is the preceding candidate, an identity control without an Office parity claim |
-| Package consumers | Windows and Ubuntu consume the same final .nupkg; DLL identity, version, caller guides, embedded fonts and admission lifetime pass |
-| Representative documents | Nine sources, sixteen outcomes, 32 pages; every PDF, diagnostic list and recorded semantic result matches the accepted parent |
-| Independent Office comparisons | Reused by input/options/PDF identity: two PPTX strict passes, fourteen DOCX strict failures; no export, new raster or threshold change |
-| Root transfer | All 24 assets verified and two integration PDFs match; no root build or suite replay |
-| Safe managed | Explicit AllowUnsafeBlocks=false, IL-only, zero P/Invoke/imported COM types, no NuGet runtime dependencies |
+| Windows milestone | 3,731 pass, **1 inherited fail**, 3 skips across 3,735 unique methods: regular suite plus one affected slow native-font method; no method replay |
+| Same frozen DLL on Ubuntu | Portable selection: 813 pass, 0 fail, 43 environmental skips across 856 exact methods, one invocation |
+| Additional Ubuntu native-font probe | One existing slow glyph-inspection assertion fails without the native font; preceding runtime fails identically. Windows affected method passes. This result is separate from the portable selection |
+| Affected checks | All 77 pass on Windows; results extracted from the milestone reports |
+| Atomic CLI diagnostics | Windows: 4 pass, 2 symbolic-link privilege skips. Ubuntu: all 6 pass. Hard-link source/destination aliases, symbolic links, separate diagnostics and failed-publication cleanup are covered; preceding CLI fails the new hard-link regression |
+| Raster qualification | 21 orchestration checks per platform cover provenance, complete reuse and stale/changed/missing/extra pages, DPI and tool mismatches. Real PDFium/VisualDiff exposes pagination in the two-page versus one-page control that previously falsely passed |
+| CI artifact retention | Downloaded Windows candidate: all 24 runtime assets present and hash-verified, including the seven previously omitted DOCX-inspector files |
+| Capability selections | Local math-annotation/display-group/review-frame sets: 20/22/18 methods, previously 642/636/621. Complete preceding sets remain under explicit milestone names. All 278 capabilities and 2,198 distinct selectors resolve |
+| Package consumers | Windows and Ubuntu consume the same .nupkg; DLL identity, version, caller guides, embedded fonts and admission lifetime pass |
+| Representative documents | Nine sources, 16 outcomes, 32 pages; every PDF, diagnostic list and recorded semantic result matches the preceding accepted runtime |
+| Independent Office comparisons | Reused by proven input/options/PDF identity: two PPTX strict passes, fourteen DOCX strict failures; no portfolio export/raster replay or threshold changes |
+| Root transfer | All 24 assets verified, two integration PDFs match; no root rebuild or suite replay |
+| Safe managed | Explicit AllowUnsafeBlocks=false, IL-only, no P/Invoke/imported COM types, no NuGet runtime dependencies; assembly/file version 0.2.0.0 |
 
-The local balloon assertion sees a 12.61pt single-row body where its Office-derived
-expectation requires a second row. The preceding qualified DLL fails identically
-on this machine; its cause remains unresolved. The assertion and rendering guards
-stay unchanged. Previous CI skipped it without Aptos. Local qualification retains
-this failure even when affected checks pass.
+The Windows balloon assertion retains a 12.61pt single-row body where its Office-derived
+expectation requires a second row; the preceding DLL fails identically. The additional
+Ubuntu slow inspection probe reports missing Hello glyphs when its native font is
+unavailable; the preceding runtime fails identically. This is a nonportable inspection
+test, not a newly demonstrated conversion omission. Assertions and rendering guards
+remain unchanged. Local failures and environmental skips are distinct from green CI.
 
-## Bounded changes
+## Changes and qualification scope
 
-CLI diagnostics-path aliases are rejected before input detection can fail, preserving
-both source and existing destination for unsupported, malformed or missing inputs.
-Ordinary separate failure diagnostics and strict-exit behavior remain covered.
-Transfer and report reuse now include root build settings in existing revision checks;
-dirty/committed props and newly added targets cannot silently satisfy transfer identity.
+CLI diagnostics are serialized into an independently owned file and atomically replace
+the destination entry, separating existing hard/symbolic links. Literal path aliases
+still reject before early failures. Failed diagnostic publication removes only its own
+staging file; ordinary argument, conversion and strict-exit behavior stays covered.
 
-The two exhaustive balloon assertion sweeps remain available as slow/milestone tests.
-They pass once in 159.813 seconds combined. Three focused methods cover layout boundaries and
-the live spacing predicate in 422 ms on the same Windows run. Rendering policy and
-Office assertions are unchanged; this reduces routine qualification cost, not renderer
-runtime. Capability selections retain neighboring checks and explicit exhaustive access.
+Portfolio raster reuse binds the current PDF, DPI, wrapper/rasterizer/native identity
+and complete page hashes. It rejects stale/incomplete derivatives, leaves legacy raster
+evidence untouched and preserves reuse of accepted identical comparison reports.
+The real pagination control uses qualified synthetic PDFs, not a new Office reference.
 
-Cached markup qualification accepts a frozen CLI and matching DOCX inspector together,
-checks library hashes and forwards no-build binding. DOCX/PPTX/PDF inspectors accept
-explicit runtimes; independent validation tools remain separate. The DOCX inspector
-is included in the one frozen artifact and solution build. Deleted exactly two tiny
-test-only helpers, IsEmptyMatrix and IsSupportedSimpleCell; tests use live measurement
-or local source-shape checks. Capability prose now describes qualified composition
-and explicit fallbacks. No public API removal or renderer behavior change is introduced.
-Earlier cleanup and intentional API removals remain in the migration guide and Git
-history; the preceding qualification is retained under artifacts/review-second-20261020/.
+Removed the test-only InspectTextRuns path, its source-run coalescer, converter and
+PptxTextRunSnapshot type. Both test callers use live scene/color/glyph contracts;
+independent frame/layout/flow/glyph inspectors remain. The retained PPTX inspector
+also runs successfully against the qualified library without a library build. Removed two retired unsupported-
+note diagnostic entries from the caller guide; current approximation IDs remain.
+No public API removal or rendering rule is introduced by this milestone.
 
-## Packages and residuals
+The three curated selections retain semantic neighbors and independent Office checks.
+Their recorded method times change from approximately 142s each to 1.407/4.375/.640s
+using the preceding report; these are selection-cost sums, not a renderer speedup or
+new standalone timing measurement. Existing broad sets remain explicit milestones.
+Unchanged exhaustive DOCX balloon sweeps were not repeated. The affected slow PPTX
+method ran once outside the regular selection; its results are retained separately.
 
-Final packages: `artifacts/nuget/preview-020-third-review-20261020/`.
+## Package and residuals
 
-- .nupkg SHA-256: `2B09FE064A3634AEC4F62874BFE25D599FB888063ED563C9C4F6B77D8C4BD241`.
-- .snupkg SHA-256: `0237199FA3AD8455C8F5CAF61ECC02046E9A7E6D137960D0D051B6E75ADFFF02`.
+Final packages: `artifacts/nuget/preview-020-fourth-review-20261021/`.
 
-Packed from the committed frozen build without recompilation. All four bundled caller
-guides match its checkout and normalized Git text. Package/informational version stays
-`0.2.0-preview`; assembly/file version stays `0.2.0.0`.
+- .nupkg SHA-256: `A7C19B0BB95CD23036DA4B5CB747976AAA017F0B099FFCE26792CBAD6F6BFC97`.
+- .snupkg SHA-256: `D5FD9E82EFB4BF96B0715EFF22FAB2E785AC6CF51F3CDE8139D3912A533B7742`.
 
-Fourteen DOCX strict failures include significant geometry and typography. SVG Review
-prose Y remains 1.436035pt against the unchanged 1pt gate; raw linked-footnote Word URI
+Packed without recompilation; all four bundled caller guides match the committed
+checkout. Package/informational version stays `0.2.0-preview`. Prior runtime/package
+and failed or superseded attempts remain retained.
+
+Fourteen DOCX strict failures include significant geometry/typography. SVG Review
+prose Y remains 1.436035pt against the original 1pt gate; raw linked-footnote Word URI
 difference remains 46.794pt while native picture/link bounds agree within .000016pt.
 Two cached-field/extraction flags remain explicit. The fixed portfolio shows no new
-supported-scope content or pagination regression; it does not establish arbitrary-
-document ink/clipping fidelity. Chart point-count, exact-five-paragraph balloon and
-font/document-shape guards retain unresolved behavior without expansion or replacement.
+content/pagination regression; arbitrary-document fidelity is not established. Chart
+point-count and font/size/document-shape guards retain unresolved behavior without
+expansion or speculative replacement. All 715 visual manifests validate; that count
+is not an Office visual-pass count.
 
-Full identities, deletions, controls, failed attempts and residuals:
-`artifacts/review-third-20261020/qualification.json`. Latest scan: **5.044 GB**, zero errors; near the loose cap. Historical evidence
-and runtimes remain preserved.
-Preserve safe managed execution, input bounds, coarse admission/refunds, bounded
-caches/page staging, cancellation, deterministic cleanup, atomic publication and PDF
-validity. Keep the loose 5 GB workspace cap and infrequent checks.
+Full identities, reports, deletion/capability evidence, retained failures and CI:
+`artifacts/review-fourth-20261021/qualification.json`. Latest scan: **5.149 GB**, zero errors, before the small retained-inspector smoke.
+Historical inputs, comparisons and runtimes are preserved.
+Keep the loose 5 GB workspace target and preserve safe managed execution, input
+bounds, bounded caches/staging, coarse admission/refunds, cancellation, deterministic
+cleanup, atomic publication and PDF structural validity.
