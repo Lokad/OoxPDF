@@ -10,17 +10,6 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    // R07.2: finite work limit for break-search scans. Grow stops at the first
-    // overflow by construction but could still walk far on adversary-sized capacities,
-    // so it emits the fitting candidate when capped. Shrink scans walk backward for a
-    // fitting safe prefix and could traverse the whole token on adversarial non-monotonic
-    // widths; past the cap the conversion fails defined (observable limit message)
-    // instead of searching unbounded or silently changing breaks.
-    private const int MaxSearchProbesPerLine = 128;
-
-    // RV13: break-search work counters. Opportunity/safe predicate evaluations are
-    // otherwise invisible (pure character reads, no shaping or allocation), so the
-    // linear-scaling tests observe them through this per-call instance.
     // RV05: image-driven breaking. Character offset of an affined image in the concatenated
     // paragraph text, shared by wrapping and mid-line placement.
     private static int ResolveInlineImageCharOffset(
@@ -116,7 +105,6 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null)
     {
         string text = string.Concat(spans.Select(span => span.Text));
-        var counters = new WrapScanCounters();
         int lineIndex = 0;
         int segmentStart = 0;
         while (segmentStart <= text.Length)
@@ -124,7 +112,7 @@ internal sealed partial class DocxLayoutEngine
             int breakIndex = text.IndexOf('\n', segmentStart);
             int segmentLength = breakIndex < 0 ? text.Length - segmentStart : breakIndex - segmentStart;
             bool yielded = false;
-            foreach (DocxWrappedTextLine line in WrapWords(text, spans, segmentStart, segmentLength, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, allowOverwideTokenBreaks, dynamicFieldPageNumber, cancellationToken, counters, inlineImageWidths))
+            foreach (DocxWrappedTextLine line in WrapWords(text, spans, segmentStart, segmentLength, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, allowOverwideTokenBreaks, dynamicFieldPageNumber, cancellationToken, inlineImageWidths))
             {
                 yielded = true;
                 yield return line;
@@ -164,7 +152,6 @@ internal sealed partial class DocxLayoutEngine
         bool allowOverwideTokenBreaks,
         int? dynamicFieldPageNumber,
         CancellationToken cancellationToken,
-        WrapScanCounters counters,
         IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null)
     {
         // slice widths are memoized by text coordinates for this segment so
@@ -223,7 +210,7 @@ internal sealed partial class DocxLayoutEngine
         // searches binary-search instead of walking the remainder per line.
         // Opportunity-after is a pure function of the character, so the index
         // agrees with the walks exactly (same positions, same order).
-        int[] breakOpportunities = FindBreakOpportunities(text, segmentStart, segmentLength, counters);
+        int[] breakOpportunities = FindBreakOpportunities(text, segmentStart, segmentLength);
 
         int lineStart = tokens[0].Start;
         int lineLength = 0;
@@ -298,7 +285,7 @@ internal sealed partial class DocxLayoutEngine
                     double usedWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, lineStart, lineLength, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts) + ImageWidthInRange(imageWrapIndex, lineStart, lineStart + lineLength);
                     double remainingWidth = maxWidth(lineIndex) - usedWidth;
                     if (remainingWidth > 0d &&
-                        TryFindPreferredTokenBreak(text, spans, token, remainingWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, counters, breakOpportunities, out int preferredBreakLength))
+                        TryFindPreferredTokenBreak(text, spans, token, remainingWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, breakOpportunities, out int preferredBreakLength))
                     {
                         yield return CreateWrappedTextLine(text, spans, lineStart, lineLength + preferredBreakLength, endsWithIntraTokenBreak: true, spanStarts);
                         lineIndex++;
@@ -323,7 +310,7 @@ internal sealed partial class DocxLayoutEngine
 
             if (lineLength == 0 &&
                 !token.IsBreakableWhitespace &&
-                TryFindPreferredTokenBreak(text, spans, token, maxWidth(lineIndex), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, counters, breakOpportunities, out int breakLength))
+                TryFindPreferredTokenBreak(text, spans, token, maxWidth(lineIndex), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, breakOpportunities, out int breakLength))
             {
                 yield return CreateWrappedTextLine(text, spans, token.Start, breakLength, endsWithIntraTokenBreak: true, spanStarts);
                 lineIndex++;
@@ -336,7 +323,7 @@ internal sealed partial class DocxLayoutEngine
             }
             else if (lineLength == 0 &&
                 !token.IsBreakableWhitespace &&
-                TryFindOverwideTokenBreak(text, spans, token, maxWidth(lineIndex), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, counters, breakOpportunities, out breakLength) &&
+                TryFindOverwideTokenBreak(text, spans, token, maxWidth(lineIndex), fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, breakOpportunities, out breakLength) &&
                 (allowOverwideTokenBreaks || CanEmergencyBreakWord(token)))
             {
                 yield return CreateWrappedTextLine(text, spans, token.Start, breakLength, endsWithIntraTokenBreak: true, spanStarts);
@@ -393,11 +380,10 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken cancellationToken,
         int[] spanStarts,
         Dictionary<int, double> chainAverages,
-        WrapScanCounters counters,
         int[] breakOpportunities,
         out int breakLength)
     {
-        if (TryFindPreferredTokenBreak(text, spans, token, maxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, counters, breakOpportunities, out breakLength))
+        if (TryFindPreferredTokenBreak(text, spans, token, maxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, dynamicFieldPageNumber, measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, cancellationToken, spanStarts, chainAverages, breakOpportunities, out breakLength))
         {
             return true;
         }
@@ -448,15 +434,9 @@ internal sealed partial class DocxLayoutEngine
         {
             int best = candidate;
             int next = candidate + 1;
-            int growProbes = 0;
             while (next < token.Length)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (++growProbes > MaxSearchProbesPerLine)
-                {
-                    // R07.2: emit the fitting candidate instead of walking further.
-                    break;
-                }
                 if (!IsSafeEmergencyTokenBreak(next))
                 {
                     next++;
@@ -477,7 +457,7 @@ internal sealed partial class DocxLayoutEngine
             }
 
             // RV13: the scan reached the end of the token with every proper
-            // prefix fitting (cap and overflow exits keep next short of the
+            // prefix fitting (overflow exits keep next short of the
             // end). The skipped full measure may have estimated overflow on a
             // mixed-width chain, so confirm: a fitting whole remainder needs
             // no break. Uses the same unpreserved fit question as the gate.
@@ -497,7 +477,6 @@ internal sealed partial class DocxLayoutEngine
         else
         {
             int current = candidate - 1;
-            int shrinkProbes = 0;
             while (current > 0)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -505,11 +484,6 @@ internal sealed partial class DocxLayoutEngine
                 {
                     current--;
                     continue;
-                }
-
-                if (++shrinkProbes > MaxSearchProbesPerLine)
-                {
-                    throw new OoxPdfLimitExceededException("Emergency wrap search exceeded " + MaxSearchProbesPerLine + " shrink probes on one line; widths are non-monotonic over the feasible prefixes.");
                 }
 
                 bool currentPreserveTerminalSoftHyphen = text[token.Start + current - 1] == '\u00AD';
@@ -530,7 +504,6 @@ internal sealed partial class DocxLayoutEngine
 
         bool IsSafeEmergencyTokenBreak(int length)
         {
-            counters.SafeEvaluations++;
             if (length <= 0 || length >= token.Length)
             {
                 return false;
@@ -559,13 +532,13 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
-    private static int[] FindBreakOpportunities(string text, int segmentStart, int segmentLength, WrapScanCounters counters)
+    private static int[] FindBreakOpportunities(string text, int segmentStart, int segmentLength)
     {
         var positions = new List<int>();
         int end = segmentStart + segmentLength;
         for (int i = segmentStart; i < end; i++)
         {
-            if (CountedOpportunity(counters, text, i))
+            if (DocxLineBreakOpportunities.IsOpportunityAfter(text[i]))
             {
                 positions.Add(i);
             }
@@ -620,12 +593,6 @@ internal sealed partial class DocxLayoutEngine
         return true;
     }
 
-    private static bool CountedOpportunity(WrapScanCounters counters, string text, int index)
-    {
-        counters.OpportunityEvaluations++;
-        return DocxLineBreakOpportunities.IsOpportunityAfter(text[index]);
-    }
-
     private static bool TryFindPreferredTokenBreak(
         string text,
         IReadOnlyList<DocxTextSpan> spans,
@@ -642,7 +609,6 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken cancellationToken,
         int[] spanStarts,
         Dictionary<int, double> chainAverages,
-        WrapScanCounters counters,
         int[] breakOpportunities,
         out int breakLength)
     {
@@ -693,16 +659,10 @@ internal sealed partial class DocxLayoutEngine
         {
             int bestPreferred = preferredCandidate;
             int nextPreferred = preferredCandidate + 1;
-            int preferredGrowProbes = 0;
             while (nextPreferred < token.Length)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (++preferredGrowProbes > MaxSearchProbesPerLine)
-                {
-                    // R07.2: emit the fitting candidate instead of walking further.
-                    break;
-                }
-                if (!CountedOpportunity(counters, text, token.Start + nextPreferred - 1))
+                if (!DocxLineBreakOpportunities.IsOpportunityAfter(text[token.Start + nextPreferred - 1]))
                 {
                     nextPreferred++;
                     continue;
@@ -739,7 +699,6 @@ internal sealed partial class DocxLayoutEngine
         else
         {
             int currentPreferred = preferredCandidate - 1;
-            int preferredShrinkProbes = 0;
             while (currentPreferred > 0)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -750,10 +709,6 @@ internal sealed partial class DocxLayoutEngine
                 }
 
                 bool currentPreferredPreserve = text[token.Start + currentPreferred - 1] == '\u00AD';
-                if (++preferredShrinkProbes > MaxSearchProbesPerLine)
-                {
-                    throw new OoxPdfLimitExceededException("Preferred wrap search exceeded " + MaxSearchProbesPerLine + " shrink probes on one line; widths are non-monotonic over the feasible prefixes.");
-                }
 
                 double currentPreferredWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, currentPreferred, fontSize, textMeasurer, tabStops, defaultTabStopPoints, currentPreferredPreserve, dynamicFieldPageNumber, spanStarts);
                 if (currentPreferredWidth <= maxWidth)
@@ -1112,15 +1067,6 @@ internal sealed partial class DocxLayoutEngine
         {
             return value is '-' or '/' or '\\' or '\u00AD' or '\u200B' or '\u2010' or '\u2012' or '\u2013' or '\u2014';
         }
-    }
-
-    // RV13: break-search work counters. Opportunity/safe predicate evaluations are
-    // otherwise invisible (pure character reads, no shaping or allocation), so the
-    // linear-scaling tests observe them through this per-call instance.
-    internal sealed class WrapScanCounters
-    {
-        public long OpportunityEvaluations;
-        public long SafeEvaluations;
     }
 
     private readonly record struct TextToken(int Start, int Length, bool IsBreakableWhitespace);

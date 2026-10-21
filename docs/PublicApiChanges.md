@@ -82,3 +82,11 @@ Directory-link ancestors are resolved before separation checks, including juncti
 and symbolic-link targets with linked parents. Unresolvable/cyclic links refuse
 conservatively. Final output file links remain replaceable as separate entries.
 These checks do not provide protection against concurrent external directory changes.
+
+Final input file symlinks are followed for input protection, including link chains
+and targets with linked ancestors. PDF and CLI diagnostics publication reject the
+readable source as well as the input entry. Separate output file links and
+hardlink entries can still be replaced atomically without altering the input.
+DOCX wrap searches now use cancellation instead of a 128-probe work ceiling;
+long mixed-width words may fill lines that previously broke early. Unicode
+boundaries, preferred breaks and the existing overwide fallback remain.

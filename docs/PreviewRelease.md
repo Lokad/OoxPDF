@@ -69,7 +69,7 @@ Office worker arguments preserve spaces and logs through success/failure/timeout
 Affected qualification declares expected platform skips and retains all outcomes;
 unexpected skips still reject its gate. CI retains all
 frozen runtime assets. These repairs add no public API removal or rendering rule.
-Raster wrappers and the direct rasterizer refuse destinations containing PNGs;
+Raster wrappers, cached-reference serving and the direct rasterizer refuse destinations containing PNGs;
 use a fresh output directory rather than reusing a visual run ID. Existing files
 are preserved. Kerning scans use cancellation rather than work-only fuel while
 retaining pair/coverage/class expansion bounds.
@@ -124,3 +124,8 @@ bounded caches and page staging, optional coarse host memory admission,
 deterministic cleanup, atomic file publication and PDF structural checks remain.
 Host admission is not comprehensive heap accounting. Separate Office/PDFium
 validation tools are outside the shipped library.
+
+The eighth maintenance batch protects final input-link referents from output
+and diagnostics publication, and removes unused wrapping counters and the
+128-probe wrap ceiling. Cooperative cancellation remains. Long mixed-width
+words can use the available line width; no general wrapping rewrite is included.
