@@ -107,7 +107,7 @@ function Get-PortfolioRaster([string] $Pdf, [string] $Folder) {
     }
     else {
         & (Join-Path $ValidationToolsDirectory 'RasterizePdf.ps1') -InputPdf $Pdf -OutputDirectory $Folder -Dpi 144 -SkipBuild *> ($Folder+'.log')
-        if ($LASTEXITCODE -ne 0) { throw ('Portfolio rasterization failed: ' + $Pdf) }
+        # The wrapper throws on native failure; Start-Process does not set LASTEXITCODE.
     }
     $files = @(Get-ChildItem -LiteralPath $Folder -Filter 'page-*.png' -File)
     if (!$files.Count -or @($files | Where-Object Name -CNotMatch '^page-[0-9]+\.png$').Count) { throw ('Portfolio raster page set is incomplete: ' + $Folder) }
