@@ -84,11 +84,6 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private static RgbColor ChartPalette(IReadOnlyList<RgbColor>? chartPalette, PptxTheme? theme, int index)
-    {
-        return ChartPalette(chartPalette, theme, PptxColorMap.Default, index);
-    }
-
     private static RgbColor ChartPalette(IReadOnlyList<RgbColor>? chartPalette, PptxTheme? theme, PptxColorMap colorMap, int index)
     {
         if (chartPalette is { Count: > 0 })
@@ -111,11 +106,6 @@ internal sealed partial class PptxRenderer
             new RgbColor(112, 173, 71)
         ];
         return palette[index % palette.Length];
-    }
-
-    private static RgbColor ChartPalette(int index)
-    {
-        return ChartPalette(null, null, index);
     }
 
     private static void StrokeChartPointRectangleInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, int seriesIndex, int categoryIndex, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, double x, double y, double width, double height, ChartSeriesStroke? fallbackStroke)
