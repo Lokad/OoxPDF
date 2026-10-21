@@ -35,15 +35,18 @@ function Invoke-FrozenTests([string[]] $Arguments, [string] $Log) {
     New-Item -ItemType Directory -Force -Path $temporaryDirectory | Out-Null
     $previousTmp = [Environment]::GetEnvironmentVariable('TMP')
     $previousTemp = [Environment]::GetEnvironmentVariable('TEMP')
+    $previousTmpDir = [Environment]::GetEnvironmentVariable('TMPDIR')
     try {
         [Environment]::SetEnvironmentVariable('TMP', $temporaryDirectory)
         [Environment]::SetEnvironmentVariable('TEMP', $temporaryDirectory)
+        [Environment]::SetEnvironmentVariable('TMPDIR', $temporaryDirectory)
         dotnet $runner @Arguments *> $Log
         return $LASTEXITCODE
     }
     finally {
-        [Environment]::SetEnvironmentVariable('TMP', $previousTmp)
-        [Environment]::SetEnvironmentVariable('TEMP', $previousTemp)
+        [Environment]::SetEnvironmentVariable('TMP', ($null -eq $previousTmp ? [NullString]::Value : $previousTmp))
+        [Environment]::SetEnvironmentVariable('TEMP', ($null -eq $previousTemp ? [NullString]::Value : $previousTemp))
+        [Environment]::SetEnvironmentVariable('TMPDIR', ($null -eq $previousTmpDir ? [NullString]::Value : $previousTmpDir))
     }
 }
 $catalogPath = Join-Path $output 'catalog.txt'

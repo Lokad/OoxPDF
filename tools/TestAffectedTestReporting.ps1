@@ -14,6 +14,7 @@ function dotnet {
         'FAST fixture ReportAlpha';'FAST fixture ReportNeighbor';$global:LASTEXITCODE=0;return
     }
     $report=$args[[Array]::IndexOf([object[]]$args,'--report')+1]
+    if([IO.Path]::GetFileName($env:TMPDIR) -ne 'temporary-files') {throw 'Runner temp path escaped its output directory'}
     $outcome=if($global:ooxPdfAffectedReportFault -eq 'failed') {'failed'} elseif($global:ooxPdfAffectedReportFault -in @('expected-skip','unexpected-skip')) {'skipped'} else {'passed'}
     $rows=@(@{name='ReportAlpha';outcome=$outcome},@{name='ReportNeighbor';outcome='passed'})
     if($global:ooxPdfAffectedReportFault -eq 'incomplete') {$rows=@($rows[0])}
@@ -34,8 +35,10 @@ try {
         if($case -in @('expected-skip','failed')) {$expected=@('ReportAlpha')}
         if($case -eq 'unknown-expected') {$expected=@('NotSelected')}
         $caught=$null
+        $beforeTmpDir=[Environment]::GetEnvironmentVariable('TMPDIR')
         try {& (Join-Path $PSScriptRoot 'RunDocxAffectedTests.ps1') -RunnerPath $runner -OutputDirectory $output -TestFilter @('ReportAlpha','ReportNeighbor') -ExpectedSkip $expected *> (Join-Path $root ($case+'.log'))}
         catch {$caught=$_.Exception.Message}
+        if([Environment]::GetEnvironmentVariable('TMPDIR') -cne $beforeTmpDir) {throw 'Runner did not restore TMPDIR'}
         $shouldPass=$case -in @('pass','expected-skip')
         if($shouldPass -eq ($null -ne $caught)) {throw ($case+': unexpected gate outcome '+$caught)}
         $retained=Test-Path (Join-Path $output 'affected-tests.json')
