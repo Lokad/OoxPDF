@@ -135,11 +135,6 @@ internal sealed partial class PptxSceneBuilder
         return blipFill?.Element(DrawingNamespace + "blip");
     }
 
-    internal static PptxSceneImageRecolor ReadImageRecolor(XElement picture, PptxTheme theme)
-    {
-        return ReadImageRecolor(picture, theme, PptxColorMap.Default);
-    }
-
     internal static PptxSceneImageRecolor ReadImageRecolor(XElement picture, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? blip = picture

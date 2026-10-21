@@ -23,10 +23,7 @@ internal sealed partial class PptxRenderer
         ChartWorkbookData? workbook,
         List<PdfFontResource> fonts,
         PresentationFontResolver fontResolver,
-        bool plotVisibleOnly,
-        PptxRenderContext context,
-        List<PdfLinkAnnotation> linkAnnotations,
-        HashSet<string> reportedHyperlinkIds)
+        bool plotVisibleOnly)
     {
         XElement? radarChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Radar);
         if (radarChart is not null)

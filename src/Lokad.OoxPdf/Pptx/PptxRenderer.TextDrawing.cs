@@ -664,7 +664,7 @@ internal sealed partial class PptxRenderer
                     graphics.SetAlpha(run.Alpha, run.Outline?.Alpha ?? 1d);
                 }
 
-                double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(run.FontSize);
+                double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(run.FontSize);
                 var glyphs = new List<PdfFallbackGlyph>(runes.Length);
                 double slot = run.Width / runes.Length;
                 for (int i = 0; i < runes.Length; i++)
@@ -812,7 +812,7 @@ internal sealed partial class PptxRenderer
                     graphics.SetAlpha(run.Alpha, run.Outline?.Alpha ?? 1d);
                 }
 
-                double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(run.FontSize);
+                double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(run.FontSize);
                 int totalUnits = 0;
                 foreach (Rune rune in runes)
                 {
@@ -1030,7 +1030,7 @@ internal sealed partial class PptxRenderer
             TextAlignment.Right => run.X + Math.Max(0, run.Width - lineWidth),
             _ => run.X
         };
-        double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(run.FontSize);
+        double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(run.FontSize);
         double pdfCharacterSpacing = run.CharacterSpacing;
         string? positioningArray = EncodeGlyphPositioningArray(embedded, glyphs, run.FontSize, pdfFontSize, pdfCharacterSpacing, forcePositioningArray: true);
         return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, pdfFontSize, pdfCharacterSpacing, syntheticBold, syntheticItalic);
@@ -1094,60 +1094,16 @@ internal sealed partial class PptxRenderer
             TextAlignment.Right => run.X + Math.Max(0, run.Width - lineWidth),
             _ => run.X
         };
-        PptxPdfTextEmissionContext emissionContext = CreatePdfTextEmissionContext();
-        double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(emissionContext);
+        double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(run.FontSize);
         double pdfCharacterSpacing = span.PdfCharacterSpacingOverride
-            ?? PptxPdfTextEmissionProfile.CharacterSpacing(emissionContext, span.GlyphSpan.CharacterSpacing);
+            ?? span.GlyphSpan.CharacterSpacing;
         string? positioningArray = EncodeGlyphPositioningArray(embedded, span.GlyphSpan, pdfFontSize, pdfCharacterSpacing, forcePositioningArray: true);
         IReadOnlyList<TextGlyphAtom> glyphs = span.GlyphSpan.Glyphs
             .Select(glyph => new TextGlyphAtom(glyph.CodePoint, glyph.Typeface, glyph.TypefaceResolutionSource, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore))
             .ToArray();
         return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, pdfFontSize, pdfCharacterSpacing, syntheticBold, syntheticItalic);
 
-        PptxPdfTextEmissionContext CreatePdfTextEmissionContext()
-        {
-            TextRun emissionRun = span.Run;
-            return new PptxPdfTextEmissionContext(
-                emissionRun.FontSize,
-                emissionRun.Y + emissionRun.BaselineOffset,
-                span.FrameIndex,
-                span.ParagraphIndex,
-                span.LineIndex,
-                span.SpanIndex,
-                span.LineSpanCount,
-                span.FrameFontScale,
-                span.FrameShapeX,
-                span.FrameShapeTopY,
-                span.FrameShapeWidth,
-                span.FrameShapeHeight,
-                span.TableRowIndex,
-                span.TableColumnIndex,
-                span.TableRowSpan,
-                span.TableColumnSpan,
-                span.FrameInsetLeft,
-                span.FrameInsetRight,
-                span.FrameInsetTop,
-                span.FrameInsetBottom,
-                span.FrameWrapMode.ToString(),
-                span.FrameWrapValue,
-                span.FrameVerticalOverflowMode.ToString(),
-                span.FrameVerticalOverflowValue,
-                span.FrameVerticalOverflowSource.ToString(),
-                span.FrameAutofitModeValue,
-                span.FrameTextX,
-                span.FrameTextWidth,
-                span.FrameTextWrapWidth,
-                span.FrameTextHeight,
-                span.FrameClipX,
-                span.FrameClipWidth,
-                span.FrameClipY,
-                span.FrameClipHeight,
-                span.FrameColumnCount,
-                span.FrameColumnSpacing,
-                span.LineBox?.TopY ?? emissionRun.Y,
-                span.LineBox?.Advance ?? 0d,
-                span.LineBox?.MaxFontSize ?? emissionRun.FontSize);
-        }
+
     }
 
     // RV01 residual: estimator-unresolvable runes render the prepared question mark

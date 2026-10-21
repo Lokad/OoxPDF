@@ -7,11 +7,6 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxSceneBuilder
 {
-    internal static bool TryReadShapeGradientFill(XElement? shapeProperties, PptxTheme theme, out PptxSceneGradientFill fill)
-    {
-        return TryReadShapeGradientFill(shapeProperties, theme, PptxColorMap.Default, out fill);
-    }
-
     private static PptxSceneGradientFill ReadShapeGradientFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
     {
         TryReadShapeGradientFill(shapeProperties, theme, colorMap, out PptxSceneGradientFill fill);

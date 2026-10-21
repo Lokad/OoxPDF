@@ -20,7 +20,6 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints,
         double paragraphSpacingScale,
         CancellationToken cancellationToken,
-        int? pageNumber,
         int? pageCount,
         IDocxTextMeasurer? unscaledTextMeasurer = null)
     {
@@ -311,7 +310,7 @@ internal sealed partial class DocxLayoutEngine
         }
         // RV05: ordered inline atoms (related-story path). Affined images in
         // text-mixed paragraphs attach to wrapped lines at run position.
-        DocxMidLinePlan? storyMidLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, storyBaselineOffset, baseLineHeight);
+        DocxMidLinePlan? storyMidLinePlan = CreateMidLinePlan(paragraph, textSpans, lines, paragraphWidth, continuationParagraphWidth, storyBaselineOffset);
         var layouts = new List<DocxTextLineLayout>(lines.Length);
         var placedImages = new List<DocxInlineImageLayout>();
         double startCursorY = cursorY;
@@ -555,8 +554,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
-        CancellationToken cancellationToken,
-        IDocxTextMeasurer? unscaledTextMeasurer = null)
+        CancellationToken cancellationToken)
     {
         var layouts = new List<DocxFloatingDrawingLayout>();
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)

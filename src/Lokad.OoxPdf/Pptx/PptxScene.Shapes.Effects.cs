@@ -27,11 +27,6 @@ internal sealed partial class PptxSceneBuilder
             effect.Name != DrawingNamespace + "glow";
     }
 
-    internal static bool TryReadGlow(XElement? shapeProperties, PptxTheme theme, out PptxSceneGlow glow)
-    {
-        return TryReadGlow(shapeProperties, theme, PptxColorMap.Default, out glow);
-    }
-
     internal static bool TryReadGlow(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, out PptxSceneGlow glow)
     {
         XElement? glowElement = shapeProperties
@@ -59,11 +54,6 @@ internal sealed partial class PptxSceneBuilder
 
         glow = default;
         return false;
-    }
-
-    internal static bool TryReadOuterShadow(XElement? shapeProperties, PptxTheme theme, out PptxSceneOuterShadow shadow)
-    {
-        return TryReadOuterShadow(shapeProperties, theme, PptxColorMap.Default, out shadow);
     }
 
     internal static bool TryReadOuterShadow(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, out PptxSceneOuterShadow shadow)

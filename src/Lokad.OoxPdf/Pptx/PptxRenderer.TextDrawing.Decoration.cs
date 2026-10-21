@@ -61,7 +61,7 @@ internal sealed partial class PptxRenderer
         TextRun run = glyphRun.Source;
         rectangle = new TextDecorationRectangle(
             glyphRun.X,
-            PptxTextMetricRules.StrikeY(embedded, glyphRun.BaselineY, run.FontSize),
+            PptxTextMetricRules.StrikeY(glyphRun.BaselineY, run.FontSize),
             glyphRun.Width,
             PptxTextMetricRules.StrikeThickness(embedded, run.FontSize));
         return glyphRun.Width > PptxTextMetricRules.TextStateTolerance && rectangle.Height > 0d;

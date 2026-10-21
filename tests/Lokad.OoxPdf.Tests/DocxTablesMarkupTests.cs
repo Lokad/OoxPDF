@@ -1923,7 +1923,7 @@ internal static class DocxTablesMarkupTests
         };
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
-        string preview = DocxRenderer.BuildCommentBalloonPreview(layout.RelatedStories.Single());
+        string preview = DocxRenderer.BuildCommentBalloonPreview(layout.RelatedStories.Single(), []);
 
         TestAssert.Contains("[table]", preview);
         TestAssert.Contains("[image]", preview);

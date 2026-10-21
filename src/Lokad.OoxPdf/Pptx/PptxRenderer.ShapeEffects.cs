@@ -12,7 +12,6 @@ internal sealed partial class PptxRenderer
 {
     private static void DrawOuterShadow(
         PdfGraphicsBuilder graphics,
-        string preset,
         double x,
         double y,
         double width,
@@ -188,7 +187,6 @@ internal sealed partial class PptxRenderer
 
     private static void DrawGlow(
         PdfGraphicsBuilder graphics,
-        string preset,
         double x,
         double y,
         double width,

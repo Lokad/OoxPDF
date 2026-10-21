@@ -306,10 +306,10 @@ internal sealed partial class PptxRenderer
 
             double separatorWidth = textMeasurer.Measure(GetChartDataLabelSeparator(options), style);
             double totalWidth = labelRuns.Sum(run => run.Width) + separatorWidth * Math.Max(0, labelRuns.Length - 1);
-            clipBox = ExpandPieLabelClipToText(clipBox, x, y, width, height, totalWidth);
+            clipBox = ExpandPieLabelClipToText(clipBox, x, width, totalWidth);
             if (wrapLines is not null && wrapLines.Count > 1)
             {
-                clipBox = ExpandPieLabelClipToText(clipBox, x, y, width, height + (wrapLines.Count - 1) * height, totalWidth);
+                clipBox = ExpandPieLabelClipToText(clipBox, x, width, totalWidth);
                 double lineY = y;
                 foreach (ChartTextRunLayout[] wrapLine in wrapLines)
                 {
@@ -355,7 +355,7 @@ internal sealed partial class PptxRenderer
     // than its box (Office wraps instead, still open) would otherwise lose glyphs at
     // the box clip. Fitting text returns the clip unchanged; all alignments stay inside
     // the centered expansion.
-    private static ChartLayoutBox ExpandPieLabelClipToText(ChartLayoutBox clip, double x, double y, double width, double height, double textWidth)
+    private static ChartLayoutBox ExpandPieLabelClipToText(ChartLayoutBox clip, double x, double width, double textWidth)
     {
         if (textWidth <= width)
         {

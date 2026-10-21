@@ -280,7 +280,7 @@ internal sealed partial class PptxRenderer
                 if (double.IsNaN(cursorY))
                 {
                     cursorY = cursorLineTop - (afterLeadingManualLineBreak
-                        ? ManualBreakBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, frame.UseOfficeBaselineFloor, useExplicitMultipleBaselineOffset)
+                        ? ManualBreakBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, useExplicitMultipleBaselineOffset)
                         : LineBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator, frame.UseOfficeBaselineFloor, useExplicitMultipleBaselineOffset));
                     afterManualLineBreak = false;
                     afterLeadingManualLineBreak = false;
@@ -383,7 +383,7 @@ internal sealed partial class PptxRenderer
                     if (double.IsNaN(cursorY))
                     {
                         cursorY = cursorLineTop - (afterLeadingManualLineBreak
-                            ? ManualBreakBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, frame.UseOfficeBaselineFloor, useExplicitMultipleBaselineOffset)
+                            ? ManualBreakBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, useExplicitMultipleBaselineOffset)
                             : LineBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator, frame.UseOfficeBaselineFloor, useExplicitMultipleBaselineOffset));
                         afterManualLineBreak = false;
                         afterLeadingManualLineBreak = false;
@@ -732,8 +732,8 @@ currentSegment = currentSegment.TrimStart();
             if (double.IsNaN(cursorY))
             {
                 cursorY = cursorLineTop - (afterManualLineBreak
-                    ? ManualBreakBaselineOffset(paragraphLineFontSize, paragraphStyle.LineSpacing, frame.UseOfficeBaselineFloor, useExplicitMultipleBaselineOffset)
-                    : LineBaselineOffset(paragraphLineFontSize, paragraphStyle.LineSpacing, frame.UseOfficeBaselineFloor, useExplicitMultipleBaselineOffset));
+                    ? ManualBreakBaselineOffset(paragraphLineFontSize, paragraphStyle.LineSpacing, useExplicitMultipleBaselineOffset)
+                    : LineBaselineOffset(paragraphLineFontSize, paragraphStyle.LineSpacing, useExplicitMultipleBaselineOffset));
             }
 
             AddClippedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, paragraphLineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator, cullOutOfFrameLines, cursorY, frame.TextClipY, frame.TextClipHeight, suppressNoWrapDistribution);

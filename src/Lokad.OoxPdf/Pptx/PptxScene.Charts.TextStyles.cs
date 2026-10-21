@@ -7,11 +7,6 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxSceneBuilder
 {
-    internal static PptxSceneChartTextStyleOverride ReadChartTextStyleOverride(XElement? parent, PptxTheme theme)
-    {
-        return ReadChartTextStyleOverride(parent, theme, PptxColorMap.Default);
-    }
-
     internal static PptxSceneChartTextStyleOverride ResolveChartTitleTextStyleOverride(PptxSceneChart chart)
     {
         return ResolveChartElementTextStyleOverride(chart, chart.Title.TextStyle, "title");

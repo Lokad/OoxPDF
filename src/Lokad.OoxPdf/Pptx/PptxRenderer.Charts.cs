@@ -64,7 +64,7 @@ internal sealed partial class PptxRenderer
         }
 
         if (TryRenderRadarChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds))
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly))
         {
             return true;
         }

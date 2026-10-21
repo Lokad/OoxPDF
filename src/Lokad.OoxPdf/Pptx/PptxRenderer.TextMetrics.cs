@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static double LineBaselineOffset(double fontSize, LineSpacing lineSpacing, bool useOfficeBaselineFloor, bool useExplicitMultipleBaselineOffset)
+    private static double LineBaselineOffset(double fontSize, LineSpacing lineSpacing, bool useExplicitMultipleBaselineOffset)
     {
         if (lineSpacing.IsAbsolute)
         {
@@ -41,9 +41,9 @@ internal sealed partial class PptxRenderer
             : BaselineOffset(fontSize, style, advanceEstimator, useOfficeBaselineFloor, lineSpacing);
     }
 
-    private static double ManualBreakBaselineOffset(double fontSize, LineSpacing lineSpacing, bool useOfficeBaselineFloor, bool useExplicitMultipleBaselineOffset)
+    private static double ManualBreakBaselineOffset(double fontSize, LineSpacing lineSpacing, bool useExplicitMultipleBaselineOffset)
     {
-        return lineSpacing.IsExplicit ? LineBaselineOffset(fontSize, lineSpacing, useOfficeBaselineFloor, useExplicitMultipleBaselineOffset) : fontSize * PptxTextMetricRules.OfficeManualBreakBaselineFallback;
+        return lineSpacing.IsExplicit ? LineBaselineOffset(fontSize, lineSpacing, useExplicitMultipleBaselineOffset) : fontSize * PptxTextMetricRules.OfficeManualBreakBaselineFallback;
     }
 
     private static bool ShouldUseExplicitMultipleBaselineOffset(PptxTextFrameModel frame, LineSpacing lineSpacing)
@@ -115,7 +115,7 @@ internal sealed partial class PptxRenderer
             source = "Fallback";
         }
 
-        if (useOfficeBaselineFloor && TextMetricUsesOfficeBaselineFloor(font, runStyle, advanceEstimator, ascenderRatio))
+        if (useOfficeBaselineFloor && TextMetricUsesOfficeBaselineFloor(font, ascenderRatio))
         {
             ratio = Math.Max(fallbackRatio, ratio);
         }
@@ -160,7 +160,7 @@ internal sealed partial class PptxRenderer
         return Math.Max(ratio, PptxTextMetricRules.MinimumBaselineMetricRatio);
     }
 
-    private static bool TextMetricUsesOfficeBaselineFloor(OpenTypeFont font, ResolvedRunTextStyle runStyle, TextAdvanceEstimator advanceEstimator, double ascenderRatio)
+    private static bool TextMetricUsesOfficeBaselineFloor(OpenTypeFont font, double ascenderRatio)
     {
         return ascenderRatio <= 0d ||
             ascenderRatio > PptxTextMetricRules.MaximumBaselineMetricRatio ||

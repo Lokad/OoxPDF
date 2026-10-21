@@ -2003,7 +2003,7 @@ internal static class DocxTextTests
             ScriptBaseFontSize = scriptBase
         };
         TestAssert.Equal(7d, DocxVerticalAlignMetrics.ResolveFontSize(12d, MarkRun(12d, 11d)));
-        TestAssert.Equal(4d, DocxVerticalAlignMetrics.ResolveBaselineOffset(12d, 7d, MarkRun(12d, 11d)));
+        TestAssert.Equal(4d, DocxVerticalAlignMetrics.ResolveBaselineOffset(12d, MarkRun(12d, 11d)));
         TestAssert.Equal(7d, DocxVerticalAlignMetrics.ResolveFontSize(12d, MarkRun(12d, 11d) with { VerticalAlignmentValue = "subscript" }));
     }
 

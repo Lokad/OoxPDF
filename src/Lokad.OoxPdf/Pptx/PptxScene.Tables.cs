@@ -46,11 +46,6 @@ internal sealed partial class PptxSceneBuilder
             .ToArray() ?? [];
     }
 
-    internal static IReadOnlyList<PptxSceneTableRow> ReadTableRows(XElement? table, PptxTheme theme, PptxSceneTableStyle tableStyle, int rowCount, int columnCount)
-    {
-        return ReadTableRows(table, theme, PptxColorMap.Default, tableStyle, rowCount, columnCount);
-    }
-
     internal static IReadOnlyList<PptxSceneTableRow> ReadTableRows(XElement? table, PptxTheme theme, PptxColorMap colorMap, PptxSceneTableStyle tableStyle, int rowCount, int columnCount)
     {
         if (table is null)
@@ -121,11 +116,6 @@ internal sealed partial class PptxSceneBuilder
     private static string ReadTablePropertyFlagValue(XElement? tableProperties, string name)
     {
         return (string?)tableProperties?.Attribute(name) ?? string.Empty;
-    }
-
-    internal static PptxSceneTableCell ReadTableCell(XElement cell, PptxTheme theme, PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount)
-    {
-        return ReadTableCell(cell, theme, PptxColorMap.Default, tableStyle, rowIndex, columnIndex, rowCount, columnCount);
     }
 
     internal static PptxSceneTableCell ReadTableCell(XElement cell, PptxTheme theme, PptxColorMap colorMap, PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount)
@@ -314,22 +304,12 @@ internal sealed partial class PptxSceneBuilder
             ?.Attribute("anchor");
     }
 
-    internal static PptxSceneFillStyle ReadTableCellFill(XElement cell, PptxTheme theme)
-    {
-        return ReadTableCellFill(cell, theme, PptxColorMap.Default);
-    }
-
     internal static PptxSceneFillStyle ReadTableCellFill(XElement cell, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
         return PptxColorResolver.TryReadSolidColorWithAlpha(cellProperties, theme, colorMap, out RgbColor color, out double alpha)
             ? new PptxSceneFillStyle(true, color, alpha)
             : default;
-    }
-
-    internal static PptxSceneTableCellBorders ReadTableCellBorders(XElement cell, PptxTheme theme)
-    {
-        return ReadTableCellBorders(cell, theme, PptxColorMap.Default);
     }
 
     internal static PptxSceneTableCellBorders ReadTableCellBorders(XElement cell, PptxTheme theme, PptxColorMap colorMap)

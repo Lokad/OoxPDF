@@ -648,7 +648,7 @@ internal sealed partial class DocxLayoutEngine
         double fontSize = span.StyleRun.EffectiveProperties.FontSize;
         double nominalFontSize = fontSize > 0d ? fontSize : fallbackFontSize;
         double layoutFontSize = DocxVerticalAlignMetrics.ResolveFontSize(nominalFontSize, span.StyleRun);
-        return DocxVerticalAlignMetrics.ResolveBaselineOffset(nominalFontSize, layoutFontSize, span.StyleRun);
+        return DocxVerticalAlignMetrics.ResolveBaselineOffset(nominalFontSize, span.StyleRun);
     }
 
     private static DocxResolvedTabStop ResolveNextTabStop(double width, IReadOnlyList<DocxTabStop> tabStops, double defaultTabStopPoints)
@@ -701,7 +701,6 @@ internal sealed partial class DocxLayoutEngine
         double firstLineMaxWidth,
         double continuationLineMaxWidth,
         double baselineOffset,
-        double lineHeight,
         double imageScale = 1d,
         IDocxTextMeasurer? textMeasurer = null)
     {

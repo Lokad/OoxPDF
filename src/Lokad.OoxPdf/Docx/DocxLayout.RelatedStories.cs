@@ -1073,7 +1073,6 @@ internal sealed partial class DocxLayoutEngine
         DocxRelatedStoryLayout? continuationSeparatorLayout,
         IDocxTextMeasurer? separatorMeasurer,
         double printScale = 1d, 
-        Func<DocxLayoutPage, int, int, double>? headerKeepOut = null,
         Func<DocxLayoutPage, int, int, double>? frameBottom = null,
         bool hasPlacedSource = false)
     {
@@ -2590,7 +2589,6 @@ internal sealed partial class DocxLayoutEngine
             defaultTabStopPoints,
             paragraphSpacingScale,
             cancellationToken,
-            pageNumber,
             pageCount,
             unscaledTextMeasurer);
         return new DocxRelatedStoryLayout(story, storyIndex, textLines.ToArray(), inlineImages.ToArray(), floatingDrawings, tableRows.ToArray(), Math.Abs(cursorY));

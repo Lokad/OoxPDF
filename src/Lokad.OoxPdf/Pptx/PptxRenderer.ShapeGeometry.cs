@@ -315,7 +315,7 @@ internal sealed partial class PptxRenderer
             }
             else if (command.Kind == PptxSceneCustomCommandKind.ArcTo && current is { } arcStart)
             {
-                current = AppendCustomGeometryArc(graphics, command, arcStart, x, y, width, height, coordinateWidth, coordinateHeight, guides);
+                current = AppendCustomGeometryArc(graphics, command, arcStart, width, height, coordinateWidth, coordinateHeight, guides);
             }
             else if (command.Kind == PptxSceneCustomCommandKind.Close)
             {
@@ -373,8 +373,6 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         PptxSceneCustomCommand arc,
         (double X, double Y) start,
-        double x,
-        double y,
         double width,
         double height,
         double coordinateWidth,

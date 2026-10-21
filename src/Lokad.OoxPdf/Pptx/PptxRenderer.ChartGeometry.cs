@@ -205,11 +205,6 @@ internal sealed partial class PptxRenderer
             : PptxChartMetricRules.PieLabeledRadiusRatio;
     }
 
-    private static double GetPieOrDoughnutRadiusBase(ChartPolarKind kind, double plotWidth, double plotHeight)
-    {
-        return plotHeight;
-    }
-
     private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPolarKind kind, ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, ChartLegendLayout legend, bool hasVisibleDataLabels, bool hasLegendReserve = false, double explodedRightLegendReserve = 0d, double leftLegendBoxRight = 0d, bool doughnutHasTitle = false)
     {
         double explosionReserve = pointExplosions.Count == 0 ? 0d : pointExplosions.Values.Max();
@@ -223,7 +218,7 @@ internal sealed partial class PptxRenderer
 
         ChartPolarGeometry GetPieOrDoughnutGeometry()
         {
-            double radius = GetPieOrDoughnutRadiusBase(kind, plotBox.Width, plotBox.Height) * GetPieOrDoughnutRadiusRatio();
+            double radius = plotBox.Height * GetPieOrDoughnutRadiusRatio();
             if (kind == ChartPolarKind.Doughnut)
             {
                 radius = Math.Min(radius, Math.Max(1d, (plotBox.Width - 2d * PptxChartMetricRules.DoughnutPlotSideMargin) / 2d));
@@ -572,12 +567,12 @@ internal sealed partial class PptxRenderer
     {
         if (ToGlow(style.Glow) is { } glow)
         {
-            DrawGlow(graphics, "rect", x, y, width, height, glow);
+            DrawGlow(graphics, x, y, width, height, glow);
         }
 
         if (ToOuterShadow(style.OuterShadow) is { } outerShadow)
         {
-            DrawOuterShadow(graphics, "rect", x, y, width, height, outerShadow);
+            DrawOuterShadow(graphics, x, y, width, height, outerShadow);
         }
 
         if (style.GradientFill is { } gradientFill)

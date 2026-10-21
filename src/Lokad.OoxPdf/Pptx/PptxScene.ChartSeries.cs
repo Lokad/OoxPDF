@@ -323,11 +323,6 @@ internal sealed partial class PptxSceneBuilder
             ?.Attribute("action");
     }
 
-    internal static IReadOnlyList<PptxSceneChartTextRun> ReadChartTextRuns(XElement? text, PptxTheme theme)
-    {
-        return ReadChartTextRuns(text, theme, PptxColorMap.Default);
-    }
-
     internal static IReadOnlyList<PptxSceneChartTextRun> ReadChartTextRuns(XElement? text, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? rich = text?.Element(ChartNamespace + "rich");

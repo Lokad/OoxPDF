@@ -28,7 +28,7 @@ internal static partial class PptxImagesTests
               </p:blipFill>
             </p:pic>
             """);
-        PptxSceneImageRecolor luminance = PptxSceneBuilder.ReadImageRecolor(luminancePicture, PptxTheme.Empty);
+        PptxSceneImageRecolor luminance = PptxSceneBuilder.ReadImageRecolor(luminancePicture, PptxTheme.Empty, PptxColorMap.Default);
         TestAssert.Equal(PptxSceneImageRecolorKind.Luminance, luminance.Kind);
         TestAssert.Equal("lum", luminance.KindValue ?? string.Empty);
         TestAssert.Equal("25000", luminance.BrightnessValue ?? string.Empty);
@@ -46,7 +46,7 @@ internal static partial class PptxImagesTests
               </p:blipFill>
             </p:pic>
             """);
-        PptxSceneImageRecolor biLevel = PptxSceneBuilder.ReadImageRecolor(biLevelPicture, PptxTheme.Empty);
+        PptxSceneImageRecolor biLevel = PptxSceneBuilder.ReadImageRecolor(biLevelPicture, PptxTheme.Empty, PptxColorMap.Default);
         TestAssert.Equal(PptxSceneImageRecolorKind.BiLevel, biLevel.Kind);
         TestAssert.Equal("biLevel", biLevel.KindValue ?? string.Empty);
         TestAssert.Equal("62500", biLevel.ThresholdValue ?? string.Empty);

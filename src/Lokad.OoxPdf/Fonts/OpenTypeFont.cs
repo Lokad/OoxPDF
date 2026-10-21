@@ -115,7 +115,7 @@ internal sealed partial class OpenTypeFont
         string scalerTag = ReadScalerTag(bytes);
         try
         {
-        Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, 12, U16(bytes, 4), "font");
+        Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, 12, U16(bytes, 4));
         cancellationToken.ThrowIfCancellationRequested();
         RequireMinimumLength(tables, "head", 54);
         RequireMinimumLength(tables, "hhea", 36);
@@ -303,11 +303,6 @@ internal sealed partial class OpenTypeFont
     // be parsed in place. Every validation below mirrors ExtractCollectionFont exactly,
     // and the shared core runs the same directory/table/header reads, so in-place faces
     // accept and reject precisely like repackaged ones.
-    internal static FontDiscoveryHeaders ReadCollectionFaceDiscoveryHeaders(byte[] bytes, int fontIndex)
-    {
-        return ReadCollectionFaceDiscoveryHeaders(bytes, fontIndex, fileLength: null);
-    }
-
     // fileLength carries the real file size when bytes is a leading span (R13); extent
     // validation then matches whole-file reads exactly. Null keeps historical behavior.
     internal static FontDiscoveryHeaders ReadCollectionFaceDiscoveryHeaders(byte[] bytes, int fontIndex, long? fileLength)
@@ -342,7 +337,7 @@ internal sealed partial class OpenTypeFont
             throw new InvalidDataException("TrueType collection table directory is invalid.");
         }
 
-        Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, (int)fontOffset + 12, faceTableCount, "collection face", extentLimit);
+        Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, (int)fontOffset + 12, faceTableCount, extentLimit);
         long outputLength = directoryLength;
         for (int i = 0; i < faceTableCount; i++)
         {
@@ -364,7 +359,7 @@ internal sealed partial class OpenTypeFont
         ReadScalerTagAt(bytes, scalerOffset);
         try
         {
-        Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, directoryOffset, U16(bytes, scalerOffset + 4), what, fileLength);
+        Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, directoryOffset, U16(bytes, scalerOffset + 4), fileLength);
         RequireMinimumLength(tables, "head", 54);
         RequireMinimumLength(tables, "hhea", 36);
         RequireMinimumLength(tables, "maxp", 6);
@@ -433,7 +428,7 @@ internal sealed partial class OpenTypeFont
 
             // Validate and dedupe through the shared directory reader, then keep
             // directory order for the byte-exact rebuild below.
-            Dictionary<string, TableRecord> faceTables = ReadTableDirectory(bytes, (int)fontOffset + 12, collectionTableCount, "collection face");
+            Dictionary<string, TableRecord> faceTables = ReadTableDirectory(bytes, (int)fontOffset + 12, collectionTableCount);
             var records = new TableRecord[collectionTableCount];
             for (int i = 0; i < collectionTableCount; i++)
             {
@@ -909,7 +904,7 @@ internal sealed partial class OpenTypeFont
     // so late tables such as glyf do not fail validation merely for lying beyond the
     // discovery span. Reads still come from bytes; anything actually touched beyond the
     // slice throws and callers fall back to a full read.
-    private static Dictionary<string, TableRecord> ReadTableDirectory(ReadOnlySpan<byte> bytes, int directoryOffset, ushort tableCount, string what, long? extentLimit = null)
+    private static Dictionary<string, TableRecord> ReadTableDirectory(ReadOnlySpan<byte> bytes, int directoryOffset, ushort tableCount, long? extentLimit = null)
     {
         if ((long)directoryOffset + (long)tableCount * 16L > bytes.Length)
         {

@@ -308,11 +308,6 @@ internal sealed partial class PptxSceneBuilder
                 SourceLinkedValue: (string?)numberFormat.Attribute("sourceLinked") ?? string.Empty);
     }
 
-    internal static PptxSceneChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme)
-    {
-        return ReadChartShapeStyle(shapeProperties, theme, PptxColorMap.Default);
-    }
-
     internal static PptxSceneChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
     {
         bool noFill = shapeProperties?.Element(DrawingNamespace + "noFill") is not null;

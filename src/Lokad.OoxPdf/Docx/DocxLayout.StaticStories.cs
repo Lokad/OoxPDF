@@ -97,7 +97,7 @@ internal sealed partial class DocxLayoutEngine
                 // Static first baselines join the hhea-ascender opt-in (Word 16.0 header
                 // grid: Tahoma sits 0.56 low with hheaAsc 1.0005); providers without hhea
                 // metrics keep legacy.
-                double? footerHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(firstFooterParagraph, firstFooterSize, unscaledLineMetrics);
+                double? footerHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(firstFooterParagraph, unscaledLineMetrics);
                 double firstFooterOffset = DocxLineMetrics.ResolveBodyBaselineOffset(firstFooterSize, firstFooterLine.LineHeight ?? firstFooterSize, hasExplicitLineSpacing: false, footerHheaAscender);
                 if (firstFooterLine.LineHeightSource == DocxLineHeightSource.ExactLineSpacing)
                 {
@@ -361,7 +361,7 @@ internal sealed partial class DocxLayoutEngine
                 // above the picture baseline. The shared fragment frame takes
                 // the larger of that strut and each picture's occupied height.
                 double sourceInset = pictureOnly ? sourceHeight * factor : DocxLineMetrics.ResolveBodyBaselineOffset(size, sourceHeight * factor, false,
-                    DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, size, unscaledLineMetrics));
+                    DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, unscaledLineMetrics));
                 double firstInset = GetParagraphFirstLineTextStartOffset(paragraph, size, textMeasurer, paragraphSpacingScale, defaultTabStopPoints);
                 double nextInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
                 double rightInset = GetParagraphRightInset(paragraph, paragraphSpacingScale);
@@ -459,7 +459,7 @@ internal sealed partial class DocxLayoutEngine
                         double staticDesignLineHeight = rawSingleLineHeight * staticAutoFactor;
                         staticSingleLineHeight = rawSingleLineHeight;
                         staticLineHeight = staticDesignLineHeight * paragraphSpacingScale;
-                        double? staticHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, staticFontSize, unscaledLineMetrics);
+                        double? staticHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, unscaledLineMetrics);
                         double staticBaselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(staticFontSize, staticDesignLineHeight, hasExplicitLineSpacing: false, staticHheaAscender);
                         if (HasNoSpacingElement(staticEffective) && Math.Abs(staticFontSize - 11d) < 0.000000001d)
                         {
@@ -770,7 +770,7 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            return CreateMidLinePlan(planParagraph, planSpans, planLines, planWidth, planWidth, maxDisplacement, maxHeight);
+            return CreateMidLinePlan(planParagraph, planSpans, planLines, planWidth, planWidth, maxDisplacement);
         }
 
         DocxTextSpan[] CreateStaticTextSpans(IReadOnlyList<DocxTextRun> runs)
@@ -805,7 +805,7 @@ internal sealed partial class DocxLayoutEngine
                 DocxTextSpan span = spans[i];
                 double nominalFontSize = span.StyleRun.EffectiveProperties.FontSize;
                 double layoutFontSize = DocxVerticalAlignMetrics.ResolveFontSize(nominalFontSize, span.StyleRun);
-                double baselineOffset = DocxVerticalAlignMetrics.ResolveBaselineOffset(nominalFontSize, layoutFontSize, span.StyleRun);
+                double baselineOffset = DocxVerticalAlignMetrics.ResolveBaselineOffset(nominalFontSize, span.StyleRun);
                 double segmentWidth = textMeasurer.MeasureText(span.StyleRun, span.Text, layoutFontSize);
                 segments.Add(new DocxTextSegmentLayout(
                     span.Text,

@@ -327,7 +327,7 @@ internal static class DocxLineMetrics
     // Office footnote first baselines stay invariant across same-size mixed runs in every
     // order (edge-fnmix edge-fnmix3: 85.46 everywhere), which neither max-hhea nor widest-run
     // tie-breaking reproduces. Mixed-size takes stay a separate probe.
-    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxLineMetricsProvider? provider, bool selectMaxHhea = true)
+    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, IDocxLineMetricsProvider? provider, bool selectMaxHhea = true)
     {
         if (provider is null || paragraph.Runs.Count == 0)
         {
@@ -374,7 +374,7 @@ internal static class DocxLineMetrics
 
     internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? measurer, bool selectMaxHhea = true)
     {
-        return ResolveHheaAscenderPoints(paragraph, fontSize, measurer as IDocxLineMetricsProvider, selectMaxHhea);
+        return ResolveHheaAscenderPoints(paragraph, measurer as IDocxLineMetricsProvider, selectMaxHhea);
     }
 
     // RV06 big-gap body probes (Word COM references edge-endsepgrid-fort/palb/bauh/sitka with Calibri
@@ -498,7 +498,7 @@ internal static class DocxVerticalAlignMetrics
         return Math.Max(0.5d, Math.Floor(baseSize * SuperscriptSubscriptScale * HalfPointGrid) / HalfPointGrid);
     }
 
-    public static double ResolveBaselineOffset(double nominalFontSize, double layoutFontSize, DocxTextRun run)
+    public static double ResolveBaselineOffset(double nominalFontSize, DocxTextRun run)
     {
         if (IsSuperscript(run))
         {

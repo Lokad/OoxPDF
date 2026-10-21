@@ -453,13 +453,6 @@ internal sealed partial class PptxRenderer
         bool Horizontal,
         bool SideStrokeLegend);
 
-    private readonly record struct ChartRightLegendReserve(
-        double Width,
-        double FontSize,
-        double MaxTextWidth,
-        int MaxTextLength,
-        bool IncludesAreaReserve);
-
     private readonly record struct ChartAxisSource(PptxSceneChartAxis? SceneAxis, XElement? XmlAxis);
 
     private readonly record struct ChartPlotLayout(ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, PptxSceneChartManualLayoutTarget? ManualLayoutTargetKind)

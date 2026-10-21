@@ -3180,15 +3180,15 @@ var tail = rendererType.GetMethod(
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected chart right-reserve helper to remain inspectable by the Office evidence guard.");
 
-        double lineScatter = (double)method!.Invoke(null, [18d, 9, 720d, false, 0d, 0d])!;
-        double shortName = (double)method.Invoke(null, [18d, 5, 720d, false, 0d, 0d])!;
-        double scatterWideX = (double)method.Invoke(null, [18d, 9, 720d, false, 0d, 18.25d])!;
-        double areaWideCats = (double)method.Invoke(null, [18d, 9, 720d, true, 36.56d, 0d])!;
-        double areaNarrowCats = (double)method.Invoke(null, [18d, 9, 720d, true, 21.25d, 0d])!;
-        double areaNoCats = (double)method.Invoke(null, [18d, 9, 720d, true, 0d, 0d])!;
+        double lineScatter = (double)method!.Invoke(null, [18d, false, 0d, 0d])!;
+        double smallFont = (double)method.Invoke(null, [9d, false, 0d, 0d])!;
+        double scatterWideX = (double)method.Invoke(null, [18d, false, 0d, 18.25d])!;
+        double areaWideCats = (double)method.Invoke(null, [18d, true, 36.56d, 0d])!;
+        double areaNarrowCats = (double)method.Invoke(null, [18d, true, 21.25d, 0d])!;
+        double areaNoCats = (double)method.Invoke(null, [18d, true, 0d, 0d])!;
 
         TestAssert.True(Math.Abs(lineScatter - 47.1d) < 0.001d, "Line/scatter tail should be marker block plus 10.8pt Office padding. Got " + lineScatter);
-        TestAssert.True(Math.Abs(shortName - 47.1d) < 0.001d, "Short names must not shrink the tail: the widest name already spans the text. Got " + shortName);
+        TestAssert.True(Math.Abs(smallFont - 28.95d) < 0.001d, "Smaller legend fonts shrink the marker block while retaining the Office tail. Got " + smallFont);
         TestAssert.True(Math.Abs(scatterWideX - 55.425d) < 0.001d, "Scatter padding should add half the overhanging edge label with its own tail. Got " + scatterWideX);
         TestAssert.True(Math.Abs(areaWideCats - 60.33d) < 0.001d, "Area padding should be the 42.05pt block plus half the last category label. Got " + areaWideCats);
         TestAssert.True(Math.Abs(areaNarrowCats - 52.675d) < 0.001d, "Narrow edge labels should shrink the area padding. Got " + areaNarrowCats);
@@ -3444,10 +3444,10 @@ var tail = rendererType.GetMethod(
         TestAssert.True(method is not null, "Expected pie clip helper to remain inspectable by the Office evidence guard.");
         var boxType = renderer.GetNestedType("ChartLayoutBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected layout box.");
         object box = System.Activator.CreateInstance(boxType, [136d, 100d, 80d, 24d])!;
-        object fitting = method!.Invoke(null, [box, 136d, 100d, 80d, 24d, 62d])!;
+        object fitting = method!.Invoke(null, [box, 136d, 80d, 62d])!;
         (double fx, double fy) = ReadLayoutBoxXY(fitting);
         TestAssert.True(Math.Abs(fx - 136d) < 0.0001d, "Fitting text should keep the clip. Got " + fx);
-        object wide = method.Invoke(null, [box, 136d, 100d, 80d, 24d, 100d])!;
+        object wide = method.Invoke(null, [box, 136d, 80d, 100d])!;
         (double wx, double wy) = ReadLayoutBoxXY(wide);
         TestAssert.True(Math.Abs(wx - 126d) < 0.0001d, "Overflowing text should expand the clip symmetrically. Got " + wx);
     }
@@ -3774,19 +3774,29 @@ var tail = rendererType.GetMethod(
     {
         var renderer = typeof(PptxRenderer);
         var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
-        var method = renderer.GetMethod("GetPieOrDoughnutRadiusBase", flags);
-        TestAssert.True(method is not null, "Expected polar radius helper to remain inspectable by the Office evidence guard.");
-        var kindType = renderer.GetNestedType("ChartPolarKind", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected polar kind.");
-        object pie = System.Enum.ToObject(kindType, 0);
-        object doughnut = System.Enum.ToObject(kindType, 1);
+        var method = renderer.GetMethod("ResolvePieOrDoughnutLayout", flags)
+            ?? throw new InvalidOperationException("Expected live polar layout.");
+        var kindType = renderer.GetNestedType("ChartPolarKind", System.Reflection.BindingFlags.NonPublic)!;
+        var plotType = renderer.GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic)!;
+        var legendType = renderer.GetNestedType("ChartLegendLayout", System.Reflection.BindingFlags.NonPublic)!;
+        object hidden = legendType.GetProperty("Hidden", flags | System.Reflection.BindingFlags.Public)!.GetValue(null)!;
 
-        double piePortrait = (double)method!.Invoke(null, [pie, 396d, 432d])!;
-        double pieLandscape = (double)method.Invoke(null, [pie, 720d, 432d])!;
-        double doughnutPortrait = (double)method.Invoke(null, [doughnut, 396d, 432d])!;
+        double Radius(int kind, double width)
+        {
+            object plot = Activator.CreateInstance(plotType, [0d, 0d, width, 432d])!;
+            object result = method.Invoke(null, [Enum.ToObject(kindType, kind), plot,
+                new Dictionary<int, double>(), hidden, false, false, 0d, 0d, false])!;
+            return ReadPolarGeometry(result).Radius;
+        }
 
-        TestAssert.True(Math.Abs(piePortrait - 432d) < 0.000001d, "Portrait pies should keep the height-based radius. Got " + piePortrait);
-        TestAssert.True(Math.Abs(pieLandscape - 432d) < 0.000001d, "Landscape pies are unchanged. Got " + pieLandscape);
-        TestAssert.True(Math.Abs(doughnutPortrait - 432d) < 0.000001d, "Portrait doughnut probes use the height base with the width-margin min. Got " + doughnutPortrait);
+        TestAssert.True(Math.Abs(Radius(0, 396d) - 187.488d) < 0.000001d,
+            "Portrait pies retain the Office height-based radius.");
+        TestAssert.True(Math.Abs(Radius(0, 720d) - 187.488d) < 0.000001d,
+            "Landscape pies use the same height-based radius.");
+        TestAssert.True(Math.Abs(Radius(1, 396d) - 187.03d) < 0.000001d,
+            "Portrait doughnuts retain the independent width-margin clamp.");
+        TestAssert.True(Math.Abs(Radius(1, 720d) - 205.0272d) < 0.000001d,
+            "Wide doughnuts retain their height-based radius.");
     }
 
     public static void PptxSyntheticChartMeasuredLeftInsetKeepsPresetFloor()

@@ -76,7 +76,7 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
-        if (ShouldResolveTrailingOverflowColumnBalance(layout, counts, balancedFloor, balancedCeiling))
+        if (ShouldResolveTrailingOverflowColumnBalance(layout, counts, balancedFloor))
         {
             lineBalanceTarget = balancedFloor;
             lineBalanceStartColumn = 1;
@@ -99,7 +99,7 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private static bool ShouldResolveTrailingOverflowColumnBalance(PptxTextFrameLayout layout, int[] counts, int balancedFloor, int balancedCeiling)
+    private static bool ShouldResolveTrailingOverflowColumnBalance(PptxTextFrameLayout layout, int[] counts, int balancedFloor)
     {
         PptxTextFrameModel frame = layout.Model;
         return frame.ColumnCount >= 3 &&

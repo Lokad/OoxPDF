@@ -92,7 +92,7 @@ internal sealed partial class PptxRenderer
         public static double OfficeHighlightContinuationCharacterSpacing(double fontSize) =>
             fontSize * OfficeHighlightContinuationCharacterSpacingEm;
 
-        public static double StrikeY(PdfEmbeddedFont embedded, double baselineY, double fontSize)
+        public static double StrikeY(double baselineY, double fontSize)
         {
             return baselineY + fontSize * OfficeStrikePositionFontScale;
         }
@@ -147,15 +147,6 @@ internal sealed partial class PptxRenderer
         {
             return Math.Max(0d, codeUnitCount * fontSize * FallbackAdvanceWidthScale + Math.Max(0, runeCount - 1) * characterSpacing);
         }
-    }
-
-    private static class PptxPdfTextEmissionProfile
-    {
-        public static double FontSize(PptxPdfTextEmissionContext context) => FontSize(context.LayoutFontSize);
-
-        public static double CharacterSpacing(PptxPdfTextEmissionContext context, double layoutCharacterSpacing) => layoutCharacterSpacing;
-
-        public static double FontSize(double layoutFontSize) => OfficePdfTextEmissionProfile.FontSize(layoutFontSize);
     }
 
     private static class PptxChartMetricRules

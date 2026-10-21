@@ -370,7 +370,7 @@ internal sealed partial class PptxRenderer
         PptxTextRunModel? firstRun = paragraph.Runs.FirstOrDefault(run => run.Kind != PptxTextRunKind.Break);
         double fontSize = firstRun?.Style.NominalFontSize ?? paragraph.FirstLineFallbackFontSize;
         return startsWithManualLineBreak || paragraph.HasManualLineBreak
-            ? ManualBreakBaselineOffset(fontSize, lineSpacing, useOfficeBaselineFloor, useExplicitMultipleBaselineOffset)
+            ? ManualBreakBaselineOffset(fontSize, lineSpacing, useExplicitMultipleBaselineOffset)
             : LineBaselineOffset(fontSize, lineSpacing, firstRun?.Style, advanceEstimator, useOfficeBaselineFloor, useExplicitMultipleBaselineOffset);
     }
 

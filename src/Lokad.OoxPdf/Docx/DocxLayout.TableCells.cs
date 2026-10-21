@@ -93,9 +93,7 @@ internal sealed partial class DocxLayoutEngine
         bool cellPageBreakAlignsWithFragmentBoundary,
         DocxInlineImageLayout image,
         double cellY,
-        double cellHeight,
-        int fragmentIndex,
-        int fragmentCount)
+        double cellHeight)
     {
         return IsCellFragmentGeometryVisible(
             cellPageBreakAlignsWithFragmentBoundary,
@@ -109,9 +107,7 @@ internal sealed partial class DocxLayoutEngine
         bool useCellPageBreakBoundaryPartition,
         int lowerParagraphBoundaryIndex,
         int? upperParagraphBoundaryIndex,
-        DocxTableCell cell,
         DocxInlineTextBoxLayout box,
-        int fragmentIndex,
         int fragmentCount)
     {
         return IsSourceParagraphIndexOnVisibleSideOfCellPageBreak(
@@ -126,9 +122,7 @@ internal sealed partial class DocxLayoutEngine
         bool cellPageBreakAlignsWithFragmentBoundary,
         DocxInlineTextBoxLayout box,
         double cellY,
-        double cellHeight,
-        int fragmentIndex,
-        int fragmentCount)
+        double cellHeight)
     {
         return IsCellFragmentGeometryVisible(
             cellPageBreakAlignsWithFragmentBoundary,
@@ -142,9 +136,7 @@ internal sealed partial class DocxLayoutEngine
         bool cellPageBreakAlignsWithFragmentBoundary,
         DocxTableRowLayout row,
         double cellY,
-        double cellHeight,
-        int fragmentIndex,
-        int fragmentCount)
+        double cellHeight)
     {
         return IsCellFragmentGeometryVisible(
             cellPageBreakAlignsWithFragmentBoundary,
@@ -331,9 +323,7 @@ var context = new DocxTableCellLayoutContext(
         bool useCellPageBreakBoundaryPartition,
         int lowerParagraphBoundaryIndex,
         int? upperParagraphBoundaryIndex,
-        DocxTableCell cell,
         DocxTextLineLayout line,
-        int fragmentIndex,
         int fragmentCount)
     {
         return IsSourceParagraphIndexOnVisibleSideOfCellPageBreak(
@@ -348,9 +338,7 @@ var context = new DocxTableCellLayoutContext(
         bool useCellPageBreakBoundaryPartition,
         int lowerParagraphBoundaryIndex,
         int? upperParagraphBoundaryIndex,
-        DocxTableCell cell,
         DocxInlineImageLayout image,
-        int fragmentIndex,
         int fragmentCount)
     {
         return IsSourceParagraphIndexOnVisibleSideOfCellPageBreak(
