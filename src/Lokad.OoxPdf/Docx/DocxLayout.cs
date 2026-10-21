@@ -1686,7 +1686,7 @@ internal sealed partial class DocxLayoutEngine
                         DocxTextAlignment.Right => paragraphX + Math.Max(0, paragraphWidth - lineAlignWidth),
                         _ => paragraphX
                     };
-                    double? bodyHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, paragraphFontSize, textMeasurer);
+                    double? bodyHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, textMeasurer as IDocxLineMetricsProvider);
                     double? bodyTierAMax = DocxLineMetrics.ResolveBodyTierAMaxPoints(paragraph, textMeasurer);
                     double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, baselineLineHeight, IsExactLineSpacing(effective), bodyHheaAscender, bodyTierAMax);
                     baselineOffset = typographicBaselineInset ?? baselineOffset;

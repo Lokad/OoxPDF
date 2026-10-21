@@ -209,7 +209,7 @@ internal sealed partial class DocxLayoutEngine
         double lineHeight, IDocxTextMeasurer textMeasurer, DocxStoryKind? kind)
     {
         double? hheaAscender = kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote
-            ? DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, fontSize, textMeasurer, selectMaxHhea: false) : null;
+            ? DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, textMeasurer as IDocxLineMetricsProvider, selectMaxHhea: false) : null;
         if (kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote or DocxStoryKind.TextBox &&
             textMeasurer is IDocxHheaLineGapProvider gapProvider &&
             ResolveRelatedStoryFirstInsetPoints(paragraph, textMeasurer, gapProvider, kind is DocxStoryKind.TextBox) is double inset &&

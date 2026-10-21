@@ -320,7 +320,7 @@ internal static class DocxLineMetrics
             return cellFirst;
         }
 
-        return ResolveBodyBaselineOffset(fontSize, lineHeight, hasExplicitLineSpacing, ResolveHheaAscenderPoints(paragraph, fontSize, measurer));
+        return ResolveBodyBaselineOffset(fontSize, lineHeight, hasExplicitLineSpacing, ResolveHheaAscenderPoints(paragraph, measurer as IDocxLineMetricsProvider));
     }
 
     // Related-story content (footnotes/endnotes) keeps order-blind min-hhea selection:
@@ -370,11 +370,6 @@ internal static class DocxLineMetrics
         }
 
         return maxAscender;
-    }
-
-    internal static double? ResolveHheaAscenderPoints(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? measurer, bool selectMaxHhea = true)
-    {
-        return ResolveHheaAscenderPoints(paragraph, measurer as IDocxLineMetricsProvider, selectMaxHhea);
     }
 
     // RV06 big-gap body probes (Word COM references edge-endsepgrid-fort/palb/bauh/sitka with Calibri

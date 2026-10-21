@@ -390,7 +390,7 @@ internal sealed partial class DocxLayoutEngine
                     {
                         frame = resolveFrame();
                         rowHeights = frame.RowHeights;
-                        AddRepeatedTableHeaderRows(table, frame.Context, rowHeights, headerRows, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, frame.TableX, paragraphSpacingScale);
+                        AddRepeatedTableHeaderRows(table, frame.Context, rowHeights, headerRows, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, paragraphSpacingScale);
                         markBoundaryContent();
                     }
                 }
@@ -434,7 +434,7 @@ internal sealed partial class DocxLayoutEngine
                 {
                     frame = resolveFrame();
                     rowHeights = frame.RowHeights;
-                    AddRepeatedTableHeaderRows(table, frame.Context, rowHeights, headerRows, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, frame.TableX, paragraphSpacingScale);
+                    AddRepeatedTableHeaderRows(table, frame.Context, rowHeights, headerRows, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, paragraphSpacingScale);
                     markBoundaryContent();
                 }
             }
@@ -1783,7 +1783,7 @@ internal sealed partial class DocxLayoutEngine
                 if (!row.IsHeader)
                 {
                     frame = resolveFrame();
-                    AddRepeatedTableHeaderRows(table, frame.Context, frame.RowHeights, headerRows, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, frame.TableX, paragraphSpacingScale);
+                    AddRepeatedTableHeaderRows(table, frame.Context, frame.RowHeights, headerRows, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, paragraphSpacingScale);
                 }
             }
         }
@@ -1801,7 +1801,6 @@ internal sealed partial class DocxLayoutEngine
         Func<int> getPageNumber,
         ref List<DocxLayoutItem> currentItems,
         ref double cursorY,
-        double x,
         double paragraphSpacingScale)
     {
         foreach ((DocxTableRow headerRow, int headerRowIndex) in headerRows)

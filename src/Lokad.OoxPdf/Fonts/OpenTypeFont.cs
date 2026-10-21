@@ -294,7 +294,7 @@ internal sealed partial class OpenTypeFont
             throw new InvalidDataException("Font index can only be non-zero for TrueType collections.");
         }
 
-        return ReadDiscoveryHeadersCore(bytes, scalerOffset: 0, directoryOffset: 12, what: "font", fileLength: fileLength);
+        return ReadDiscoveryHeadersCore(bytes, scalerOffset: 0, directoryOffset: 12, fileLength: fileLength);
     }
 
     // TrueType collections fan one file out to many faces, and repackaging
@@ -351,10 +351,10 @@ internal sealed partial class OpenTypeFont
             throw new InvalidDataException("TrueType collection face exceeds file length.");
         }
 
-        return ReadDiscoveryHeadersCore(bytes, scalerOffset: (int)fontOffset, directoryOffset: (int)fontOffset + 12, what: "collection face", fileLength: fileLength);
+        return ReadDiscoveryHeadersCore(bytes, scalerOffset: (int)fontOffset, directoryOffset: (int)fontOffset + 12, fileLength: fileLength);
     }
 
-    private static FontDiscoveryHeaders ReadDiscoveryHeadersCore(byte[] bytes, int scalerOffset, int directoryOffset, string what, long? fileLength)
+    private static FontDiscoveryHeaders ReadDiscoveryHeadersCore(byte[] bytes, int scalerOffset, int directoryOffset, long? fileLength)
     {
         ReadScalerTagAt(bytes, scalerOffset);
         try

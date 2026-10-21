@@ -61,7 +61,7 @@ internal sealed partial class DocxLayoutEngine
             DocxLineMetrics.ResolveUniformBodyTypographicBaselineInset(paragraph, size, measurer) is { } typographic
             ? typographic
             : DocxLineMetrics.ResolveBodyBaselineOffset(size, lineHeight, DocxPlainBodyFrame.HasFixedLineFlow(paragraph),
-            DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, size, measurer),
+            DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, measurer as IDocxLineMetricsProvider),
             DocxLineMetrics.ResolveBodyTierAMaxPoints(paragraph, measurer));
 
     private static IReadOnlyDictionary<DocxParagraph, DocxInlineParagraphFrame>? GetOrderedInlineParagraphFrames(

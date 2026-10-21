@@ -263,7 +263,7 @@ internal sealed partial class PptxRenderer
                         }
                         else
                         {
-                            RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetSharedBarChartValueExtents(barPlot, barChart, barOptions.Grouping, workbook, plotVisibleOnly), fontResolver, chartFonts: fonts, primarySceneAxis: valueSceneAxis, primaryXmlAxis: valueAxis);
+                            RenderSecondaryChartValueAxisLabels(theme, graphics, plotBox, chartXml, sceneChart, GetSharedBarChartValueExtents(barPlot, barChart, barOptions.Grouping, workbook, plotVisibleOnly), fontResolver, chartFonts: fonts, primarySceneAxis: valueSceneAxis, primaryXmlAxis: valueAxis);
                         }
                     }
                 }
