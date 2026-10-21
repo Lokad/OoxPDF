@@ -73,6 +73,11 @@ jobs:
       - name: Text content gate
         if: runner.os == 'Windows'
         run: pwsh -NoProfile -File tools/CheckPdfTextContent.ps1
+      - name: Raster wrapper paths and failures
+        if: runner.os == 'Windows'
+        run: |
+          $pdf = Get-ChildItem artifacts/text-content -Recurse -Filter output.pdf -File | Select-Object -First 1
+          & ./tools/TestRasterizePdfPaths.ps1 -InputPdf $pdf.FullName -RasterizerPath tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Release/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll
       - name: Allocation probe self-test
         run: pwsh -NoProfile -File tools/MeasureAllocation.ps1 -SelfTest
       - name: Package smoke test

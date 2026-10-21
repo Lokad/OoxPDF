@@ -14,8 +14,10 @@ $qualification = Get-Content -LiteralPath $QualificationEvidence -Raw | ConvertF
 if ($qualification.LibrarySha256 -ne $pin.LibrarySha256 -or
     $qualification.TestAssemblySha256 -ne $pin.TestAssemblySha256) { throw 'Qualification identities differ' }
 # Root imports can change compiled behavior without changing a source/project file.
-$buildInputs = @('src', 'tests', ':(top,glob)*.props', ':(top,glob)*.targets',
-    'Directory.Build.rsp', 'global.json', 'NuGet.Config', 'nuget.config', '.gitattributes')
+$buildInputs = @('src', 'tests', 'tools/Lokad.OoxPdf.DocxInspect',
+    ':(top,glob)*.props', ':(top,glob)*.targets', ':(top,glob)tools/*.props', ':(top,glob)tools/*.targets',
+    'Directory.Build.rsp', 'tools/Directory.Build.rsp', 'global.json', 'tools/global.json',
+    'NuGet.Config', 'nuget.config', 'tools/NuGet.Config', 'tools/nuget.config', '.gitattributes')
 $changes = @(git -C $repo diff --name-only $pin.Revision HEAD -- @buildInputs)
 if ($LASTEXITCODE -ne 0) { throw 'Frozen source revision is unavailable' }
 if ($changes.Count -or

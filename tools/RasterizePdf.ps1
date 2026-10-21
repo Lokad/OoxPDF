@@ -48,11 +48,25 @@ else {
     & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Project $rasterizerProject -OutputDll $rasterizerDll -Description "PDFium rasterizer"
 }
 
-$rasterizer = Start-Process -FilePath "dotnet" -ArgumentList @($rasterizerDll, $inputFull, $outputFull, $Dpi) -NoNewWindow -PassThru
-if (-not $rasterizer.WaitForExit($TimeoutSeconds * 1000)) {
-    try { $rasterizer.Kill() } catch { }
-    throw "PDFium rasterizer timed out after $TimeoutSeconds seconds on $InputPdf."
+$start = [Diagnostics.ProcessStartInfo]::new("dotnet")
+$start.UseShellExecute = $false
+$start.CreateNoWindow = $true
+foreach ($argument in @($rasterizerDll, $inputFull, $outputFull, $Dpi.ToString([Globalization.CultureInfo]::InvariantCulture))) {
+    $start.ArgumentList.Add($argument)
 }
-if ($rasterizer.ExitCode -ne 0) {
-    throw "PDFium rasterizer failed with exit code $($rasterizer.ExitCode)."
+$rasterizer = [Diagnostics.Process]::Start($start)
+try {
+    if (-not $rasterizer.WaitForExit($TimeoutSeconds * 1000)) {
+        try {
+            $rasterizer.Kill($true)
+            $null = $rasterizer.WaitForExit(5000)
+        } catch { }
+        throw "PDFium rasterizer timed out after $TimeoutSeconds seconds on $InputPdf."
+    }
+    if ($rasterizer.ExitCode -ne 0) {
+        throw "PDFium rasterizer failed with exit code $($rasterizer.ExitCode)."
+    }
+}
+finally {
+    $rasterizer.Dispose()
 }

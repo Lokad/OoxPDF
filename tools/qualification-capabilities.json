@@ -1,4 +1,25 @@
 {
+  "preview-path-publication": [
+    "ConvertCapturesDestinationBeforeSummaryChangesWorkingDirectory",
+    "MemoryAdmissionCallbackCannotRedirectRelativeInputOrOutput",
+    "ConvertAllowsCaseDistinctPathsOnCaseSensitiveFileSystems",
+    "CliAllowsCaseDistinctDiagnosticsOnCaseSensitiveFileSystems",
+    "ConvertRejectsSameInputOutputPath",
+    "ConvertPreservesExistingDestinationWhenWriterRejectsPage",
+    "ConvertReplacesExistingDestinationOnSuccess",
+    "ConvertPreservesExistingDestinationOnUnreadableInput",
+    "ThrowingSummaryCallbackLeavesFileDestinationUntouched",
+    "FinalSummaryCancellationPreventsPublication",
+    "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
+    "MemoryAdmissionRefundsOnFailureCancellationAndObserverException",
+    "MemoryAdmissionReleaseFailurePreventsFilePublication",
+    "MemoryAdmissionPreCancellationDoesNotAcquireAndAsyncRefunds",
+    "CliRejectsDiagnosticsPathEqualToInput",
+    "CliRejectsDiagnosticsPathEqualToOutput",
+    "CliRejectsEarlyFailureDiagnosticsAliasingInput",
+    "CliRejectsEarlyFailureDiagnosticsAliasingOutput",
+    "CliWritesSeparateDiagnosticsForUnsupportedInputWithoutChangingFiles"
+  ],
   "preview-review-follow-up": [
     "WindowsResolverConcurrentRequestsSurviveCapacityEviction",
     "FontPackResolverConcurrentRequestsSurviveCapacityEviction",

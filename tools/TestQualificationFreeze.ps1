@@ -28,6 +28,9 @@ if ($IsWindows) { Invoke-Git @('config', 'core.longpaths', 'true') }
 '<Project />' | Set-Content -LiteralPath (Join-Path $repo 'Directory.Build.props')
 Copy-Item -LiteralPath (Join-Path (Split-Path $PSScriptRoot) '.gitattributes') -Destination $repo
 $inputPath = 'tests/Lokad.OoxPdf.Tests/Cases/sample.txt'
+$inspectorSource = Join-Path $repo 'tools/Lokad.OoxPdf.DocxInspect/Program.cs'
+New-Item -ItemType Directory -Path (Split-Path $inspectorSource) -Force | Out-Null
+'// owned inspector source' | Set-Content -LiteralPath $inspectorSource
 $inputFile = Join-Path $repo $inputPath
 New-Item -ItemType Directory -Path (Split-Path $inputFile) -Force | Out-Null
 [IO.File]::WriteAllText($inputFile, "first fixture`n")
@@ -137,6 +140,35 @@ Invoke-Git @('commit', '--quiet', '-m', 'Restore production build setting')
 '<Project />' | Set-Content -LiteralPath (Join-Path $repo 'Directory.Build.targets')
 Reject-Transfer 'new-root-targets'
 Remove-Item -LiteralPath (Join-Path $repo 'Directory.Build.targets')
+'// changed owned inspector source' | Set-Content -LiteralPath $inspectorSource
+Reject-Transfer 'dirty-inspector-source'
+Invoke-Git @('add', 'tools/Lokad.OoxPdf.DocxInspect/Program.cs')
+Invoke-Git @('commit', '--quiet', '-m', 'Changed frozen inspector source')
+Reject-Transfer 'committed-inspector-source'
+'// owned inspector source' | Set-Content -LiteralPath $inspectorSource
+Invoke-Git @('add', 'tools/Lokad.OoxPdf.DocxInspect/Program.cs')
+Invoke-Git @('commit', '--quiet', '-m', 'Restore frozen inspector source')
+$toolsTargets = Join-Path $repo 'tools/Directory.Build.targets'
+'<Project />' | Set-Content -LiteralPath $toolsTargets
+Reject-Transfer 'new-tools-targets'
+Invoke-Git @('add', 'tools/Directory.Build.targets')
+Invoke-Git @('commit', '--quiet', '-m', 'Add inspector parent targets')
+Reject-Transfer 'committed-tools-targets'
+Invoke-Git @('rm', '--quiet', 'tools/Directory.Build.targets')
+Invoke-Git @('commit', '--quiet', '-m', 'Restore inspector parent targets')
+# Orchestration scripts do not compile into the frozen inspector. Permitted
+# harness repairs must not force another library build or qualification suite.
+$harness = Join-Path $repo 'tools/owned-harness.ps1'
+'# owned harness change' | Set-Content -LiteralPath $harness
+function dotnet {
+    [IO.File]::WriteAllText([IO.Path]::GetFullPath([string]$args[3]), 'fake transfer smoke')
+    $global:LASTEXITCODE = 0
+}
+try {
+    & $transferScript -ArtifactDirectory (Join-Path $repo 'artifacts/first') -QualificationEvidence $qualification -SmokeManifest $smoke -OutputDirectory (Join-Path $OutputDirectory 'harness-repair-transfer') | Out-Null
+}
+finally { Remove-Item Function:\dotnet }
+Remove-Item -LiteralPath $harness
 if ($first.ReusedInputSnapshot -or !$second.ReusedInputSnapshot -or
     $first.InputSnapshot -ne $second.InputSnapshot -or $first.InputTree -ne $second.InputTree) { throw 'Unchanged input reuse failed' }
 $link = Get-Item -LiteralPath (Join-Path $repo ('artifacts/second/' + (Split-Path $inputPath)))
@@ -265,8 +297,10 @@ Reject 'mixed' 'Release library copies differ'
         'Corrupt snapshot rejection', 'Mixed library rejection',
         'Owned parent input isolation', 'Owned parent reuse', 'Frozen parent destination rejection',
         'Duplicate asset sharing', 'Separate frozen output isolation', 'Writable build isolation',
-        'Independent transfer copies', 'Dirty root build-setting refusal', 'Committed root build-setting refusal', 'New root targets refusal')
+        'Independent transfer copies', 'Dirty root build-setting refusal', 'Committed root build-setting refusal', 'New root targets refusal',
+        'Dirty inspector source refusal', 'Committed inspector source refusal',
+        'New tools targets refusal', 'Committed tools targets refusal', 'Harness-only repair transfer')
     LibraryBuilds=0;LibraryTestRuns=0;First=$first;Second=$second;Changed=$changed
     SharedInputPathLength=$changedNested.Length
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json') -Encoding utf8
-Write-Output 'Twenty-three fixture-freeze/asset/parent-ownership checks passed; no library build or test-suite replay.'
+Write-Output 'Twenty-eight fixture-freeze/asset/parent-ownership checks passed; no library build or test-suite replay.'
