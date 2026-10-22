@@ -50,8 +50,22 @@ Write-Host ("Smoking package {0}." -f $package.Name)
 
 $archive = [IO.Compression.ZipFile]::OpenRead($package.FullName)
 try {
-    foreach ($required in @('docs/PublicApiChanges.md', 'docs/PreviewRelease.md')) {
-        if ($null -eq $archive.GetEntry($required)) { throw "Packed caller documentation is missing: $required" }
+    $localDocumentationLinks = 0
+    foreach ($required in @('README.md', 'CHANGELOG.md', 'docs/PublicApiChanges.md', 'docs/PreviewRelease.md')) {
+        $entry = $archive.GetEntry($required)
+        if ($null -eq $entry) { throw "Packed caller documentation is missing: $required" }
+        $reader = [IO.StreamReader]::new($entry.Open())
+        try { $markdown = $reader.ReadToEnd() }
+        finally { $reader.Dispose() }
+        # These authored guides use ordinary inline links. Check archive-local
+        # targets, including ../CHANGELOG.md; repository-only guides use URLs.
+        foreach ($link in [regex]::Matches($markdown, '(?<!!)\[[^\]]+\]\(([^)\s]+)\)')) {
+            $target = $link.Groups[1].Value
+            if ($target.StartsWith('#') -or $target -match '^[a-zA-Z][a-zA-Z0-9+.-]*:') { continue }
+            $resolved = [Uri]::new([Uri]('https://package.invalid/' + $required), $target).AbsolutePath.TrimStart('/')
+            if ($null -eq $archive.GetEntry($resolved)) { throw "Packed guide $required links to absent document $resolved" }
+            $localDocumentationLinks++
+        }
     }
     $libraryEntry = $archive.GetEntry("lib/net10.0/Lokad.OoxPdf.dll")
     if ($null -eq $libraryEntry) { throw "Packed library DLL is missing." }
@@ -195,6 +209,7 @@ Write-Host "Package smoke test passed through the packed library."
     MemoryAdmissionChecked = $true
     VersionMetadataChecked = $true
     CallerDocumentationChecked = $true
+    LocalDocumentationLinksChecked = $localDocumentationLinks
     Package = $package.FullName
     PackageVersion = $version
     PackageSha256 = (Get-FileHash -LiteralPath $package.FullName -Algorithm SHA256).Hash

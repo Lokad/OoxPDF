@@ -220,18 +220,18 @@ The validation tools require Windows with Office installed for reference renderi
 
 ## Capabilities And Limits
 
-See [docs/Capabilities.md](docs/Capabilities.md) for the supported, partial, approximated, and unsupported PPTX/DOCX feature set.
+See [docs/Capabilities.md](https://github.com/Lokad/OoxPDF/blob/master/docs/Capabilities.md) for the supported, partial, approximated, and unsupported PPTX/DOCX feature set.
 
-See [docs/Diagnostics.md](docs/Diagnostics.md) for diagnostic code conventions and emitted unsupported-feature warnings.
+See [docs/Diagnostics.md](https://github.com/Lokad/OoxPDF/blob/master/docs/Diagnostics.md) for diagnostic code conventions and emitted unsupported-feature warnings.
 
-See [docs/DocxMarkupModes.md](docs/DocxMarkupModes.md) for DOCX final/original/simple/all markup mode semantics, CLI usage, and current approximations.
+See [docs/DocxMarkupModes.md](https://github.com/Lokad/OoxPDF/blob/master/docs/DocxMarkupModes.md) for DOCX final/original/simple/all markup mode semantics, CLI usage, and current approximations.
 
-See [docs/RenderingModel.md](docs/RenderingModel.md) for the package, layout, page, and PDF writer architecture.
+See [docs/RenderingModel.md](https://github.com/Lokad/OoxPDF/blob/master/docs/RenderingModel.md) for the package, layout, page, and PDF writer architecture.
 
-See [docs/OperatingEnvelope.md](docs/OperatingEnvelope.md) for measured memory and
+See [docs/OperatingEnvelope.md](https://github.com/Lokad/OoxPDF/blob/master/docs/OperatingEnvelope.md) for measured memory and
 concurrency workloads, reproduction steps, and the limits of those measurements.
 
-See [docs/PrivateValidation.md](docs/PrivateValidation.md) for local-only validation of documents that must not be versioned or made public.
+See [docs/PrivateValidation.md](https://github.com/Lokad/OoxPDF/blob/master/docs/PrivateValidation.md) for local-only validation of documents that must not be versioned or made public.
 
 ## Development
 

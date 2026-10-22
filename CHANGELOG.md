@@ -2,6 +2,12 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Keeps opaque font IDs ordinal and scoped to their owning resolver during PPTX
+  fallback and program reuse. Subsets reuse the resolved immutable program rather
+  than a second string identity. No public API change; cache reuse is retained.
+- Makes packaged preview guidance reach repository-only guides and checks local
+  documentation links in the package smoke. Escapes a literal source NUL and
+  corrects an outdated chart-hyperlink comment without changing hyperlink keys.
 - Preserves PNG transparent-color keys for supported RGB and packed grayscale
   inputs, matching equivalent full-alpha images through DOCX/PPTX and picture
   effects. Rejects malformed fixed headers and transparency metadata through the

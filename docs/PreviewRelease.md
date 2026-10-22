@@ -16,7 +16,7 @@ requires recompiling consumers. Package/informational version is
 | Unsupported or staged fallback | Arbitrary floating/nested/fragmented DOCX stories, general Word field evaluation, unrestricted equation/shaping coverage, advanced charts and SmartArt, arbitrary custom picture geometry, and SVG picture-link composition beyond qualified raster links. Unsupported content may receive a diagnostic and be simplified or omitted; inspect diagnostics before relying on a conversion. |
 
 These are scope summaries, not blanket guarantees for every combination. The
-[capability inventory](Capabilities.md) and [markup modes](DocxMarkupModes.md)
+[capability inventory](https://github.com/Lokad/OoxPDF/blob/master/docs/Capabilities.md) and [markup modes](https://github.com/Lokad/OoxPDF/blob/master/docs/DocxMarkupModes.md)
 describe constraints and fallbacks. Public DOCX defaults remain Final with
 preserved document layout. Qualification also measures AllMarkup with the
 Word-compatible review margin separately.
