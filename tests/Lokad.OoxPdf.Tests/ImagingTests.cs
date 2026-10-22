@@ -630,11 +630,68 @@ internal static class ImagingTests
         }
     }
 
+    public static void PngTransparentKeysMatchSourceSamplesAcrossDepthsAndInterlace()
+    {
+        foreach (int depth in new[] { 1, 2, 4, 8 })
+        foreach (int interlace in new[] { 0, 1 })
+        {
+            int maximum = (1 << depth) - 1;
+            int key = Math.Max(1, maximum / 2);
+            foreach (int sample in new[] { 0, key, maximum }.Distinct())
+            {
+                byte gray = (byte)(sample * 255 / maximum);
+                byte alpha = sample == key ? (byte)0 : (byte)255;
+                // Deliberately set unused bits: tRNS comparison uses source-depth low bits.
+                byte[] transparent = [0xA5, (byte)(key | (255 & ~maximum))];
+                byte[] png = BuildStoredPng(1, 1, depth, 0, interlace,
+                    [0, (byte)(sample << (8 - depth))], transparency: transparent);
+                using DecodedPixels image = PngImage.ReadOwned(png);
+                using DecodedPixels rgba = PngImage.ReadOwned(BuildStoredPng(1, 1, 8, 6, interlace, [0, gray, gray, gray, alpha]));
+                TestAssert.True(image.Rgb.SequenceEqual(rgba.Rgb) && image.Alpha is not null && image.Alpha.SequenceEqual(rgba.Alpha!),
+                    $"Gray depth {depth}, sample {sample}, key {key}, interlace {interlace} must match equivalent RGBA.");
+            }
+        }
+
+        foreach (int interlace in new[] { 0, 1 })
+        foreach (byte[] rgb in new byte[][] { [25, 50, 200], [26, 50, 200], [25, 51, 200], [25, 50, 201] })
+        {
+            byte expected = rgb.SequenceEqual(new byte[] { 25, 50, 200 }) ? (byte)0 : (byte)255;
+            using DecodedPixels image = PngImage.ReadOwned(BuildStoredPng(1, 1, 8, 2, interlace,
+                [0, .. rgb], transparency: [0xA5, 25, 0xA5, 50, 0xA5, 200]));
+            TestAssert.True(image.Rgb.SequenceEqual(rgb), "Color keys must preserve source RGB.");
+            TestAssert.True(image.Alpha is not null && image.Alpha[0] == expected,
+                "All three original channels must match the transparent key.");
+        }
+    }
+
+    public static void PngRejectsMalformedFixedHeaderAndTransparencyMetadata()
+    {
+        foreach (int length in new[] { 0, 1, 8, 9, 12, 14 })
+        {
+            byte[] png = BuildStoredPng(1, 1, 8, 2, 0, [0, 10, 20, 30], header: new byte[length]);
+            TestAssert.Throws<InvalidDataException>(() => PngImage.ReadOwned(png));
+        }
+        byte[] complete = BuildStoredPng(1, 1, 8, 2, 0, [0, 10, 20, 30]);
+        byte[] missingHeader = [.. complete.AsSpan(0, 8), .. complete.AsSpan(33)];
+        TestAssert.Throws<InvalidDataException>(() => PngImage.ReadOwned(missingHeader));
+        foreach (int field in new[] { 10, 11 })
+        {
+            byte[] header = [0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0];
+            header[field] = 1;
+            TestAssert.Throws<NotSupportedException>(() => PngImage.ReadOwned(BuildStoredPng(1, 1, 8, 2, 0, [0, 10, 20, 30], header: header)));
+        }
+        foreach (var (color, length) in new[] { (0, 0), (0, 1), (0, 3), (2, 0), (2, 5), (2, 7), (4, 2), (6, 6) })
+        {
+            byte[] png = BuildStoredPng(1, 1, 8, color, 0, [0, 10, 20, 30, 40], transparency: new byte[length]);
+            TestAssert.Throws<InvalidDataException>(() => PngImage.ReadOwned(png));
+        }
+    }
+
     internal static byte[] BuildStoredPng(int width, int height, int bitDepth, int colorType, int interlace, byte[] rawRows,
-        byte[]? palette = null, byte[]? transparency = null, bool splitIdat = false)
+        byte[]? palette = null, byte[]? transparency = null, bool splitIdat = false, byte[]? header = null)
     {
         var bytes = new List<byte> { 137, 80, 78, 71, 13, 10, 26, 10 };
-        WritePngChunk(bytes, "IHDR", new byte[]
+        WritePngChunk(bytes, "IHDR", header ?? new byte[]
         {
             (byte)(width >> 24), (byte)(width >> 16), (byte)(width >> 8), (byte)width,
             (byte)(height >> 24), (byte)(height >> 16), (byte)(height >> 8), (byte)height,

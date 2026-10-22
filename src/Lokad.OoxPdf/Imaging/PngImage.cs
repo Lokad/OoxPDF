@@ -58,11 +58,19 @@ internal sealed class PngImage
 
             if (type == "IHDR")
             {
+                if (data.Length != 13)
+                {
+                    throw new InvalidDataException("PNG image header must contain 13 bytes.");
+                }
                 width = ReadInt32(data);
                 height = ReadInt32(data[4..]);
                 bitDepth = data[8];
                 colorType = data[9];
                 interlace = data[12];
+                if (data[10] != 0 || data[11] != 0)
+                {
+                    throw new NotSupportedException("Unsupported PNG compression or filter method.");
+                }
                 if (!IsSupportedFormat(bitDepth, colorType) || interlace is not (0 or 1))
                 {
                     throw new NotSupportedException($"Unsupported PNG format: bitDepth={bitDepth}, colorType={colorType}, interlace={interlace}.");
@@ -86,6 +94,21 @@ internal sealed class PngImage
             {
                 break;
             }
+        }
+
+        if (width == 0 || height == 0)
+        {
+            throw new InvalidDataException("PNG image header is missing.");
+        }
+        if (transparency is not null && !(colorType switch
+            {
+                0 => transparency.Length == 2,
+                2 => transparency.Length == 6,
+                3 => palette is not null && transparency.Length <= palette.Length / 3,
+                _ => false
+            }))
+        {
+            throw new InvalidDataException("PNG transparency metadata is invalid.");
         }
 
         long compressedTotal = 0L;
@@ -145,12 +168,8 @@ internal sealed class PngImage
         };
         int filterBytesPerPixel = Math.Max(1, (bitsPerPixel + 7) / 8);
         var rgb = new byte[width * height * 3];
-        byte[]? alpha = colorType is 3 or 4 or 6 || HasGrayscaleTransparency() ? new byte[width * height] : null;
-
-        bool HasGrayscaleTransparency()
-        {
-            return colorType == 0 && transparency is { Length: >= 2 };
-        }
+        byte[]? alpha = colorType is 3 or 4 or 6 || colorType is 0 or 2 && transparency is not null
+            ? new byte[width * height] : null;
 
         int maximumStride = checked((width * bitsPerPixel + 7) / 8);
         var previous = new byte[maximumStride];
@@ -231,7 +250,7 @@ internal sealed class PngImage
                 rgb[rgbTarget++] = gray;
                 if (alpha is not null)
                 {
-                    alpha[alphaTarget++] = MatchesTransparentGray(gray, transparency) ? (byte)0 : (byte)255;
+                    alpha[alphaTarget++] = MatchesTransparentSample(graySample, bitDepth, transparency, 0) ? (byte)0 : (byte)255;
                 }
 
                 break;
@@ -241,6 +260,12 @@ internal sealed class PngImage
                 rgb[rgbTarget++] = current[trueColor];
                 rgb[rgbTarget++] = current[trueColor + 1];
                 rgb[rgbTarget++] = current[trueColor + 2];
+                if (alpha is not null)
+                {
+                    alpha[alphaTarget++] = MatchesTransparentSample(current[trueColor], bitDepth, transparency, 0) &&
+                        MatchesTransparentSample(current[trueColor + 1], bitDepth, transparency, 2) &&
+                        MatchesTransparentSample(current[trueColor + 2], bitDepth, transparency, 4) ? (byte)0 : (byte)255;
+                }
                 break;
 
             case 3:
@@ -302,9 +327,12 @@ internal sealed class PngImage
         return (current[byteIndex] >> shift) & mask;
     }
 
-    private static bool MatchesTransparentGray(byte gray, byte[]? transparency)
+    private static bool MatchesTransparentSample(int sample, int bitDepth, byte[]? transparency, int offset)
     {
-        return transparency is { Length: >= 2 } && transparency[0] == 0 && transparency[1] == gray;
+        // Compare source samples before expanding packed gray values to RGB.
+        // tRNS uses a 16-bit field even for smaller depths; only the low bits apply.
+        return transparency is not null &&
+            sample == (((transparency[offset] << 8) | transparency[offset + 1]) & ((1 << bitDepth) - 1));
     }
 
     private static void Unfilter(byte filter, Span<byte> current, ReadOnlySpan<byte> previous, int bpp)

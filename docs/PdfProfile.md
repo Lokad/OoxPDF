@@ -30,6 +30,8 @@ written inline with explicit `/Length`.
 and progressive frames) or
 `/FlateDecode` for re-encoded raster (PNG/BMP/recolored JPEG) and grayscale
 soft masks. Color spaces are device gray, RGB, or CMYK only.
+PNG transparent-color keys at supported grayscale/RGB depths expand to the same
+soft-mask representation as equivalent explicit-alpha inputs.
 JPEG passthrough checks positive frame dimensions and consistent supported
 component metadata before publication; it does not validate the full entropy
 stream. Unsupported or malformed metadata uses the image error/omission fallback.

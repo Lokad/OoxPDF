@@ -1,4 +1,11 @@
 {
+  "png-semantics-recovery": [
+    "Png",
+    "SharedDecoder",
+    "ImageIdentityUsesFullDigests",
+    "ImageContentEqualityIsExact",
+    "DeduplicateImages"
+  ],
   "image-interpretation-recovery": [
     "Jpeg",
     "PngTruncation",
@@ -10059,4 +10066,3 @@
     "DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate"
   ]
 }
-

@@ -5,6 +5,37 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PngRecoveryTests
 {
+    public static void PngTransparentKeysAndEquivalentRgbaProduceIdenticalPdfAcrossContainersAndEffects()
+    {
+        var pairs = new[]
+        {
+            (Keyed: ImagingTests.BuildStoredPng(2, 1, 8, 2, 0, [0, 25, 50, 200, 0, 255, 0], transparency: [0, 0, 0, 255, 0, 0]),
+             Rgba: ImagingTests.BuildStoredPng(2, 1, 8, 6, 0, [0, 25, 50, 200, 255, 0, 255, 0, 0])),
+            (Keyed: ImagingTests.BuildStoredPng(2, 1, 1, 0, 0, [0, 0x40], transparency: [0, 1]),
+             Rgba: ImagingTests.BuildStoredPng(2, 1, 8, 6, 0, [0, 0, 0, 0, 255, 255, 255, 255, 0]))
+        };
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (var (pptx, effect) in new[] { (false, ""), (true, ""), (true, "crop"), (true, "recolor") })
+        foreach (var pair in pairs)
+        {
+            byte[] Convert(byte[] image)
+            {
+                using var input = TestFixtures.CreateZipPackage(PictureEntries(pptx, effect, image));
+                using var output = new MemoryStream();
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+                {
+                    InputKind = pptx ? OoxPdfInputKind.Pptx : OoxPdfInputKind.Docx,
+                    FontResolver = resolver, DiagnosticSink = diagnostics.Add
+                });
+                TestAssert.Equal(0, diagnostics.Count);
+                return output.ToArray();
+            }
+            TestAssert.True(Convert(pair.Keyed).SequenceEqual(Convert(pair.Rgba)),
+                $"Equivalent PNG transparency must preserve the PDF: PPTX={pptx}, effect={effect}.");
+        }
+    }
+
     public static void PngTruncationUsesImageErrorsAcrossContainersAndEffects()
     {
         byte[][] images =
@@ -12,7 +43,10 @@ internal static class PngRecoveryTests
             ImagingTests.BuildStoredPng(2, 2, 8, 2, 0, [0, 10, 20, 30, 40, 50, 60, 0, 70, 80, 90, 100, 110, 120]),
             ImagingTests.BuildStoredPng(2, 2, 8, 2, 0, [0, 10, 20, 30, 40, 50, 60]),
             ImagingTests.BuildStoredPng(2, 2, 8, 2, 0, [0, 10, 20, 30, 40, 50, 60, 0, 70, 80, 90]),
-            ImagingTests.BuildStoredPng(1, 1, 8, 6, 1, [0, 10, 20, 30])
+            ImagingTests.BuildStoredPng(1, 1, 8, 6, 1, [0, 10, 20, 30]),
+            ImagingTests.BuildStoredPng(1, 1, 8, 2, 0, [], header: []),
+            ImagingTests.BuildStoredPng(1, 1, 8, 2, 0, [], header: [0, 0, 0, 1, 0, 0, 0, 1, 8]),
+            ImagingTests.BuildStoredPng(1, 1, 8, 2, 0, [0, 10, 20, 30], transparency: [0, 0, 0, 0, 0])
         ];
         var resolver = new PortableRenderingTests.PinnedResolver();
         foreach (var (pptx, effect) in new[] { (false, ""), (true, ""), (true, "crop"), (true, "recolor") })
@@ -39,25 +73,32 @@ internal static class PngRecoveryTests
 
     public static void PngImageErrorsPreserveFilePublicationOnObserverFailureAndCancellation()
     {
-        byte[] bad = ImagingTests.BuildStoredPng(2, 2, 8, 2, 0, [0, 10, 20, 30, 40, 50, 60]);
-        string input = TestFixtures.WriteTempPackage(".docx", PictureEntries(false, "", bad));
+        byte[][] malformed =
+        [
+            ImagingTests.BuildStoredPng(2, 2, 8, 2, 0, [0, 10, 20, 30, 40, 50, 60]),
+            ImagingTests.BuildStoredPng(1, 1, 8, 2, 0, [], header: [])
+        ];
         var resolver = new PortableRenderingTests.PinnedResolver();
-        foreach (bool cancel in new[] { false, true })
+        foreach (byte[] bad in malformed)
         {
-            string output = Path.ChangeExtension(input, cancel ? ".cancel.pdf" : ".observer.pdf");
-            File.WriteAllText(output, "previous PDF sentinel");
-            using var cancellation = new CancellationTokenSource();
-            var failure = new InvalidOperationException("Image observer failure.");
-            var options = new OoxPdfOptions { FontResolver = resolver, DiagnosticSink = diagnostic =>
+            string input = TestFixtures.WriteTempPackage(".docx", PictureEntries(false, "", bad));
+            foreach (bool cancel in new[] { false, true })
             {
-                if (diagnostic.Id != "IMAGE_UNSUPPORTED_FORMAT") return;
-                if (cancel) cancellation.Cancel();
-                else throw failure;
-            } };
-            if (cancel) TestAssert.Throws<OperationCanceledException>(() => OoxPdfConverter.Convert(input, output, options, cancellation.Token));
-            else TestAssert.True(ReferenceEquals(failure, TestAssert.Throws<InvalidOperationException>(() => OoxPdfConverter.Convert(input, output, options))), "Preserve the original observer exception.");
-            TestAssert.Equal("previous PDF sentinel", File.ReadAllText(output));
-            TestAssert.Equal(0, Directory.GetFiles(Path.GetDirectoryName(output)!, Path.GetFileName(output) + ".tmp-*").Length);
+                string output = Path.ChangeExtension(input, cancel ? ".cancel.pdf" : ".observer.pdf");
+                File.WriteAllText(output, "previous PDF sentinel");
+                using var cancellation = new CancellationTokenSource();
+                var failure = new InvalidOperationException("Image observer failure.");
+                var options = new OoxPdfOptions { FontResolver = resolver, DiagnosticSink = diagnostic =>
+                {
+                    if (diagnostic.Id != "IMAGE_UNSUPPORTED_FORMAT") return;
+                    if (cancel) cancellation.Cancel();
+                    else throw failure;
+                } };
+                if (cancel) TestAssert.Throws<OperationCanceledException>(() => OoxPdfConverter.Convert(input, output, options, cancellation.Token));
+                else TestAssert.True(ReferenceEquals(failure, TestAssert.Throws<InvalidOperationException>(() => OoxPdfConverter.Convert(input, output, options))), "Preserve the original observer exception.");
+                TestAssert.Equal("previous PDF sentinel", File.ReadAllText(output));
+                TestAssert.Equal(0, Directory.GetFiles(Path.GetDirectoryName(output)!, Path.GetFileName(output) + ".tmp-*").Length);
+            }
         }
     }
 
