@@ -2,6 +2,10 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Qualification transfer replaces root asset entries through independent staging,
+  preserving older artifacts behind hard links. Linked asset directories refuse
+  before mutation. Host guidance clarifies that active file-backed font sources
+  require unchanged font files; bounded caching and the public API are unchanged.
 - Qualification joins reject duplicate document outcomes from distinct reports,
   even when PDF bytes match. Select one authoritative source; repeating the same
   report selection remains allowed. Failures first observed during test repairs

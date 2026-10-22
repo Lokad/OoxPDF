@@ -62,6 +62,16 @@ destination atomically. This clarifies the existing behavior; it adds no bufferi
 or public API removal. Built-in resolvers now synchronize their bounded request
 caches so sharing a resolver across concurrent conversions is safe.
 
+Keep local font files unchanged while their `FileFontProgramSource` or resolver
+snapshot is in use. Eviction releases a cached reference; a later request rereads
+the file under the same path-based `StableId`. Previously returned bytes remain
+immutable, but lifetime byte identity requires the file itself to stay unchanged.
+Before replacing fonts, finish affected conversions and retire those sources and
+resolvers. `WindowsFontResolver.InvalidateDiscoveryCaches()` makes subsequently
+created resolvers rediscover fonts; existing resolvers keep their snapshot.
+Custom `IFontProgramSource` implementations must likewise publish immutable,
+byte-identical content for each identity. Bounded caching remains unchanged.
+
 Diagnostic-observer failures now preserve the original exception identity, type
 and callback stack even when its type also denotes recoverable malformed PPTX
 content. They fail conversion before file publication; they are never translated
