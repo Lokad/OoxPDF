@@ -105,9 +105,10 @@ $config.Repairs=@(@{Artifact='repo/artifacts/after';Report='repair-failed.json'}
 Write-Json $manifest $config
 Reject 'terminal-repair-failure' 'failed check remains'
 $config.Repairs+=@{Artifact='repo/artifacts/after';Report='repair-passed.json'}
-Write-Json $manifest $config
+$resolvedManifest=Join-Path $root 'repair-failure-resolved-manifest.json'
+Write-Json $resolvedManifest $config
 $resolvedPath=Join-Path $root 'repair-failure-resolved.json'
-$null=& $join -Manifest $manifest -OutputPath $resolvedPath
+$null=& $join -Manifest $resolvedManifest -OutputPath $resolvedPath
 $resolved=Get-Content -LiteralPath $resolvedPath -Raw | ConvertFrom-Json
 if ($resolved.passed -ne 3 -or $resolved.failed -ne 0 -or $resolved.skipped -ne 0 -or
     @($resolved.InitialFailuresRetained).Count -ne 1 -or $resolved.InitialFailuresRetained[0] -ne 'Corrected' -or
@@ -142,11 +143,12 @@ $null=Invoke-Git @('add','src/source.txt');$null=Invoke-Git @('commit','--quiet'
 $finalPin.Revision=[string](Invoke-Git @('rev-parse','HEAD'));Write-Json $finalPinPath $finalPin
 Reject 'changed-production' 'Production source changed'
 foreach ($path in $positiveInputs.Keys) { [IO.File]::WriteAllBytes($path,$positiveInputs[$path]) }
-$positivePins=@($result.Manifest,$result.Selection,$result.Tool)
-foreach ($source in $result.Sources) { $positivePins+=@($source.Report,$source.ArtifactIdentity) }
+$positivePins=@($result.Manifest,$result.Selection,$result.Tool,$resolved.Manifest,$resolved.Selection,$resolved.Tool)
+foreach ($source in @($result.Sources)+@($resolved.Sources)) { $positivePins+=@($source.Report,$source.ArtifactIdentity) }
 foreach ($pin in $positivePins) {
     if ((Get-FileHash -LiteralPath $pin.Path).Hash -ne $pin.Sha256) { throw 'Negative fixtures invalidated retained positive provenance' }
 }
 Write-Json (Join-Path $root 'evidence.json') @{PositiveReportSha256=(Get-FileHash -LiteralPath $positive).Hash
+    ResolvedRepairReportSha256=(Get-FileHash -LiteralPath $resolvedPath).Hash;PositiveJoins=2
     Rejections=$rejections;FilesRetained=$true;Builds=0;Conversions=0;RunnerInvocations=0}
-"Qualification report join checks pass: one provenance-preserving join, $($rejections.Count) pre-publication rejections; no builds/tests/conversions."
+"Qualification report join checks pass: two provenance-preserving joins, $($rejections.Count) pre-publication rejections; no builds/tests/conversions."
