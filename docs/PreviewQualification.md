@@ -1,102 +1,111 @@
-# 0.2.0-preview qualification — 2026-10-22
+# 0.2.0-preview qualification
 
-This bounded milestone fixes PNG transparent-color interpretation and malformed
-header recovery, preserves Office reference failure attribution, and removes
-small stale guidance/comments. Publication, tagging, performance optimization
-and broader feature expansion remain deferred. See [scope](PreviewRelease.md),
-[migration](PublicApiChanges.md), [capabilities](Capabilities.md) and
-[document review](PreviewVisualReview.md).
-
-One committed Release artifact at `7cd9e45ceb89879162c9819c777fdc4824a5d5ac`
-contains 24 runtime assets and 2,582 shared public inputs. It was qualified on
-Windows/Ubuntu, consumed through the same package on both platforms, and
-transferred with two integration smokes. No root rebuild, local method replay
-or test-assembly repair was needed.
-
-Library SHA-256:
-`3EB2BCCBB4F213DB70FDC79E7E811941E9E27922AB884A05CD21F75EFCEE593C`.
-[Windows and Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/39811906403)
-at that source revision. CI builds are independent of the locally qualified DLL.
+The bounded font-identity, packaged-guidance and source-hygiene milestone is
+qualified at source `affc955940876c5b05fdf4c418409aede5416367`. Publication,
+performance optimization and broader feature expansion remain deferred.
+The library SHA-256 is
+`3AA0CECA044D6AC3F541EE46CAC6FA40670AEDC8877D3C8680856CC4680E98E4`.
+[Windows/Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/39819749039)
+at that source. CI builds are independent of the locally qualified artifact.
 
 | Gate | Result |
 |---|---|
-| Release/affected checks | Build passes with two inherited nullable warnings; all 51 exact affected methods pass on both platforms, no skips |
-| Windows milestone | **3,767 pass, one inherited failure, five skips**; 3,773 unique methods in two disjoint invocations |
-| Same library on Ubuntu | **962 pass, zero failures, 49 skips**; 1,011 unique methods in two disjoint invocations, including four additional PNG neighbors beyond the prior selection |
-| PNG semantics | Original-sample/alpha controls cover supported gray depths and RGB, ordinary/Adam7 data and equivalent RGBA output through DOCX/PPTX/crop/recolor |
-| Pinned public probes | Eleven conversions; all four malformed headers return strict 3 with one image Error/no image object. Keyed/RGBA PDFs agree; four already-working control PDFs are unchanged |
-| Independent PNG comparison | Two retained PowerPoint16 references: candidate/reference rasters are pixel-identical at 72 dpi; existing raw and support numerical thresholds pass |
-| Representative documents | Nine sources/16 outcomes/32 pages; PDFs, diagnostics and semantic outcomes match the preceding candidate exactly; each outcome converted once |
-| Independent portfolio gates | Reused through PDF/input identity: two PPTX strict passes/fourteen DOCX strict failures; no new Office exports or portfolio rasters |
-| Reference tooling | Seven supervision/eight actual-worker failure-stage checks pass locally on Windows and in Windows/Ubuntu CI; no COM or build needed for synthetic controls |
-| API/runtime | All 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0 |
-| Package/transfer | Same dependency-free 0.2.0-preview package passes both consumers; all 24 root assets/two integration PDFs match; all 192 checked retained/current/root assets retain their identities |
+| Release/focused checks | One committed linked-worktree artifact; build succeeds with two inherited nullable warnings. All 40 affected Windows checks pass; all 14 portable font/cache/fallback neighbors pass on both platforms. |
+| Windows milestone | **3,770 pass, one inherited failure, five skips**; 3,776 exact unique methods in two disjoint invocations. |
+| Ubuntu milestone | **996 pass, three inherited failures, 50 skips**; 1,049 exact unique methods in two disjoint invocations. Three newly exercised chart-link failures reproduce on the preceding qualified runtime. |
+| Public font probe | Changing the custom primary's opaque ID no longer changes fallback, advance or PDF bytes; all three variants match the previous neutral control. Independent catalog programs no longer alias the primary. |
+| Representative documents | Nine sources/16 outcomes/32 pages; PDFs, diagnostics and semantic outcomes match the preceding candidate. Each outcome converted once. |
+| Independent portfolio gates | Reused through PDF/input identity: two strict PPTX passes/fourteen strict DOCX failures. No new Office export, portfolio raster or weakened threshold. |
+| API/runtime | All 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0. |
+| Package | Same dependency-free 0.2.0-preview package and consumer source pass Windows/Ubuntu. All four packed guides match qualified source; eight local references resolve. The previous package's absent guide is refused before consumer execution. |
+| Transfer | All 24 root assets and two integration PDFs match the qualified artifact. All 24 preceding frozen assets remain unchanged; no root build or suite replay. |
 
-## Behavior and supported scope
+## Behavior and bounded cleanup
 
-RGB transparent-color keys now create the same alpha plane as equivalent RGBA
-images. Packed grayscale keys compare original samples before expansion to RGB;
-unused high bits in the key are masked to the supported sample depth. Existing
-palette/full-alpha behavior remains covered. This adds no codec, color-management
-framework, public API, quota or supported bit depth.
+PPTX fallback now treats font IDs as ordinal identities belonging to their
+resolver. A separately owned discovery catalog has its own program-cache
+namespace; a primary resolver that also supplies its catalog retains shared
+program reuse. Font-family matching remains case-insensitive.
 
-The retained truecolor probe previously painted a green opaque area; the one-bit
-gray probe painted white. Both now reveal the gold slide background exactly like
-PowerPoint. Native PDFium comparison at 72 dpi has MAE 0, SSIM 1, histogram
-correlation 1 and foreground recall 1 for each probe. Input/reference PDF/PNG
-identities are retained. These two synthetic probes establish their specific
-outcomes; they do not establish general PNG conformance or Office fidelity.
-No visual threshold was relaxed.
+Subsets use the resolved immutable font program and normalized codepoint-set hash
+as their key, with exact set comparison on hits. This removes a redundant source
+resolution argument and string-key construction while retaining repeated
+face/style/collection/subset reuse. No public identity API, framework or global
+counter was introduced. Existing cancellation and cache ownership remain.
 
-Fixed IHDR size and transparent-key shape are checked before field access.
-Malformed headers now use the existing IMAGE_UNSUPPORTED_FORMAT Error/omission
-policy instead of an unhandled indexing exception. Unsupported compression/filter
-methods are explicit. Scanline recovery, cancellation, original observer exceptions
-and existing-file preservation remain covered. There is no blanket exception catch
-or complete PNG validator; sixteen-bit samples remain unsupported.
+Portable regressions use different glyph coverage to challenge case-distinct IDs
+and equal IDs under independent owners. They check repeat reuse, shared-catalog
+ownership and cancellation on cache hits. Ubuntu CI now retains this small exact
+capability selection alongside existing portable rendering coverage.
 
-Successful Office cleanup restores the pending operation's failure stage. A real
-cleanup failure remains attributed to cleanup. Actual-worker controls cover
-activation, open, export and cleanup for Word and PowerPoint. Local WSL has no
-PowerShell installed, so those tool checks use Ubuntu CI; local Ubuntu still
-qualifies the frozen library and package. The pinned-PDFium recovery hint now agrees
-with its version/hash instructions. Thirty-seven detached chart-comment/blank
-lines were removed; no live chart or DOCX layout rule changed.
+The public custom-resolver probe previously selected Abadi with a neutral ID and
+Aptos with either an intersecting case variant or exact ID. At 12pt its advance
+changed from 7.5pt to 7.072266pt. All variants now select Abadi at 7.5pt and produce
+the same PDF as the previous neutral control. The exact cross-owner program lookup
+now maps U+0100 to glyph 10 rather than the primary program's zero glyph. These
+are identity-contract results, not an Office font-preference or arbitrary-document
+fidelity claim. The original probe retained its text; memory corruption and new
+content loss were not demonstrated.
+
+Repository-only documentation links in the packed README/preview guide use
+explicit URLs. The existing package smoke checks local references in the four
+authored guides, including the valid parent changelog link. No Markdown dependency
+or renderer was added. A literal NUL in hyperlink source is expressed as the
+equivalent C# escape, restoring normal source searches; its false unfinished-chart
+comment is corrected. Hyperlink keys and live chart/layout guards are unchanged.
 
 ## Inherited failures and deferred concerns
 
-**DocxWordCompatibleBalloonBodyWrapsLikeOfficeTitles** still fails:
+**DocxWordCompatibleBalloonBodyWrapsLikeOfficeTitles** still fails locally:
 `InvalidOperationException: The second body should wrap to a second row like Office; observed Height=12.610000000000001.`
-It remains a failure; CI may skip its Office-font precondition. Local Ubuntu
-filesystem/PDFium/font skips remain explicit and are not counted as passes.
+It remains a failure; CI may skip its Office-font precondition.
 
-The fourteen DOCX strict failures include significant geometry/typography.
-SVG Review Y remains 1.436035pt against 1pt; raw Word footnote annotation mismatch
-is 46.794pt while candidate picture/link agree within .000016pt. Two field/extraction
-flags and historical font limitations remain. The preceding CMYK qualification
-retains histogram correlation .311828 against .98: needs-review, without a complete
-ICC/YCCK color-parity claim. This PNG batch does not resolve that difference.
+The expanded Linux neighboring selection also exercises these older tests:
 
-Transparency-group rollback retains an output charge in an internal probe; no
-public document sequence was established. That investigation remains deferred,
-with runtime accounting unchanged. Existing partial MCE, enum-helper and qualified
-chart/font/size/document-shape limitations remain documented. Completed ownership
-and validation simplification stays closed.
+- `PptxChartTitleExternalHyperlinkEmitsUriAnnotation`
+- `PptxChartAxisTitleExternalHyperlinkEmitsUriAnnotation`
+- `PptxChartDataLabelCustomTextHyperlinkEmitsUriAnnotation`
+
+Each fails with `InvalidOperationException: Sequence contains no elements` when
+the default Windows font catalog is absent. All three fail identically with the
+preceding frozen test assembly/library on the same Linux environment. They assume
+ambient fonts for annotation emission and remain portability debt, not passes.
+No assertion relaxation, skip substitution or production font policy was added.
+The new synthetic-font controls pass. The additional native-font precondition skip
+and the 49 previously retained platform skips remain separate from failures.
+
+The fourteen strict DOCX visual failures include significant typography/geometry.
+SVG Review Y remains 1.436035pt against 1pt; the raw Word footnote annotation
+discrepancy is 46.794pt, while candidate picture/link agree within .000016pt.
+Two field/extraction flags and historical font limitations remain. The earlier
+CMYK histogram .311828 versus .98 stays needs-review; no ICC/YCCK parity claim
+follows from this font maintenance.
+
+Transparency-group rollback accounting still has only an internal counterexample;
+no public document sequence was established. Partial MCE, enum-helper and qualified
+chart/font/size/document-shape limitations remain. No live rendering guard was
+demonstrated redundant or replaced. The previous cache/accounting/validation
+cleanup remains closed.
 
 ## Evidence and workflow
 
-Ignored evidence: `artifacts/preview-png-semantics-20261022/qualification.json`;
-frozen runtime: `candidate-final/`; package:
-`artifacts/nuget/preview-020-png-semantics-20261022/`.
-Exact selections, public image/reference identities, raw native metrics, package
-consumers, stage controls and transfer evidence are retained. One local catalogue
-invocation failed native PowerShell array binding before execution; the corrected
-in-process invocation validates the same frozen assembly. No library rebuild or
-method rerun was required. Original error evidence remains available.
+Ignored evidence: `artifacts/preview-font-identity-20261022/qualification.json`;
+artifact: `candidate-final/`; package:
+`artifacts/nuget/preview-020-font-identity-20261022/`.
+One artifact served focused checks, disjoint broader remainders, public probes,
+document outcomes, package consumers and transfer. Candidate test methods were
+not rerun. The three parent-only Linux checks used the existing preceding runtime,
+without a build. Two spaced CI queries established success.
 
-The [preceding qualification](https://github.com/Lokad/OoxPDF/blob/e817a2fe/docs/PreviewQualification.md)
-retains the CMYK/scanline/metric milestone and earlier Office-comparison history.
-The rendering roadmap remains preserved. Latest full workspace measurement stays
-**5.943 GB/885,270 files**, above the loose 5 GB target; no new full walk or purge
-was repeated. This milestone directory measures about **49 MB/3,860 files**;
-reuse the worktree, fixture snapshot and immutable outputs.
+Exact selections, preflight corrections, raw failures and artifact identities are
+retained in the ignored qualification record. No extra document conversion or
+candidate test replay was needed to complete those corrections.
+
+The [preceding qualification](https://github.com/Lokad/OoxPDF/blob/a7e15d0e/docs/PreviewQualification.md)
+retains PNG semantics, independent PowerPoint comparisons and earlier history.
+Safe managed dependency-free execution, meaningful bounds, cancellation, coarse
+host admission/refunds, bounded caches/staging, deterministic cleanup, atomic
+publication and PDF validity are preserved. The roadmap remains deferred.
+The last full workspace inventory remains **5.943 GB/885,270 files**, above the
+loose 5 GB target; no new full walk or purge was performed. The milestone's scoped
+footprint is recorded in qualification.json; shared inputs/worktree are reused.
