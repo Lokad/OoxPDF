@@ -97,7 +97,12 @@ internal static class JpegPassthroughTests
             using var input = TestFixtures.CreateZipPackage(entries);
             using var output = new MemoryStream();
             var diagnostics = new List<OoxPdfDiagnostic>();
-            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver, DiagnosticSink = diagnostics.Add });
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+            {
+                InputKind = pptx ? OoxPdfInputKind.Pptx : OoxPdfInputKind.Docx,
+                FontResolver = resolver,
+                DiagnosticSink = diagnostics.Add
+            });
             string pdf = Encoding.Latin1.GetString(output.ToArray());
             TestAssert.Contains("%PDF-", pdf);
             TestAssert.Equal(valid ? 0 : 1, diagnostics.Count(d => d.Id == "IMAGE_UNSUPPORTED_FORMAT"));
