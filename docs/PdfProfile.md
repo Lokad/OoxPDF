@@ -26,9 +26,13 @@ otherwise the trailer carries no `/Info` and output stays deterministic.
 written inline with explicit `/Length`.
 - Text uses `Tj`/`TJ` with `Tm`/`Tf`/`Tc` positioning; glyphs address a
 `/Identity-H` CID space for embedded fonts or WinAnsi for Type1 fallbacks (see Fonts).
-- Images arrive as `/DCTDecode` passthrough for baseline JPEG or
+- Images arrive as `/DCTDecode` passthrough for 8-bit JPEG (including baseline
+and progressive frames) or
 `/FlateDecode` for re-encoded raster (PNG/BMP/recolored JPEG) and grayscale
 soft masks. Color spaces are device gray, RGB, or CMYK only.
+JPEG passthrough checks positive frame dimensions and consistent supported
+component metadata before publication; it does not validate the full entropy
+stream. Unsupported or malformed metadata uses the image error/omission fallback.
 - Transparency uses ExtGState fill alpha and luminosity soft masks.
 - Gradients use RGB axial (type 2) or centered radial (type 3) shadings,
 with exponential or stitched color functions and extended endpoint colors.

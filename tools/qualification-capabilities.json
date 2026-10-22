@@ -1,4 +1,10 @@
 {
+  "jpeg-passthrough": [
+    "Jpeg",
+    "SharedDecoder",
+    "DocxUnsupportedPngImageEmitsDiagnostic",
+    "PptxUnsupportedPngImageEmitsDiagnostic"
+  ],
   "markup-compatibility": [
     "AlternateContent",
     "MustUnderstand",
@@ -10034,3 +10040,4 @@
     "DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate"
   ]
 }
+

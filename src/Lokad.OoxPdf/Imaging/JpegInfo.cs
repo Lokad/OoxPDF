@@ -72,6 +72,20 @@ internal readonly record struct JpegInfo(int Width, int Height, int BitsPerCompo
                 int height = (bytes[offset + 3] << 8) | bytes[offset + 4];
                 int width = (bytes[offset + 5] << 8) | bytes[offset + 6];
                 int componentCount = bytes[offset + 7];
+                // Passthrough publishes these values directly into a PDF image.
+                // Validate the frame header without decoding the entropy stream.
+                if (width == 0 || height == 0)
+                {
+                    throw new InvalidDataException("JPEG dimensions must be positive.");
+                }
+                if (length != 8 + 3 * componentCount)
+                {
+                    throw new InvalidDataException("JPEG frame component table has an invalid length.");
+                }
+                if (bitsPerComponent != 8 || componentCount is not (1 or 3 or 4))
+                {
+                    throw new NotSupportedException("JPEG passthrough requires 8-bit grayscale, RGB or CMYK frame data.");
+                }
                 return new JpegInfo(width, height, bitsPerComponent, componentCount, marker);
             }
 
