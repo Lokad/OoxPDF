@@ -28,6 +28,14 @@ if (!$jobs.Count) { throw 'Select a small nonempty integration smoke set' }
 # Check every source and asset before mutating root outputs.
 foreach ($name in $pin.Assets.Keys) {
     if ((Get-FileHash -LiteralPath (Join-Path $artifact $name)).Hash -ne $pin.Assets[$name]) { throw 'Frozen asset differs' }
+    $directory = Split-Path -Parent (Join-Path $repo $name)
+    while ($directory.Length -gt $repo.Length) {
+        if ((Test-Path -LiteralPath $directory) -and
+            ((Get-Item -LiteralPath $directory -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw 'Root asset directories must not be linked'
+        }
+        $directory = Split-Path -Parent $directory
+    }
 }
 foreach ($job in $jobs) {
     if ((Get-FileHash -LiteralPath $job.Input).Hash -ne $job.InputSha256) { throw 'Smoke input differs' }
@@ -36,7 +44,25 @@ New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
 foreach ($name in $pin.Assets.Keys) {
     $target = Join-Path $repo $name
     New-Item -ItemType Directory -Force -Path (Split-Path $target) | Out-Null
-    Copy-Item -LiteralPath (Join-Path $artifact $name) -Destination $target -Force
+    # Replace the entry instead of writing through an existing hard/symbolic link.
+    $temporary = $target + '.staging-' + [Guid]::NewGuid().ToString('N')
+    $ownsTemporary = $false
+    try {
+        $source = [IO.File]::OpenRead((Join-Path $artifact $name))
+        try {
+            $destination = [IO.File]::Open($temporary, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+            $ownsTemporary = $true
+            try { $source.CopyTo($destination) }
+            finally { $destination.Dispose() }
+        }
+        finally { $source.Dispose() }
+        if ((Get-FileHash -LiteralPath $temporary).Hash -ne $pin.Assets[$name]) { throw 'Staged asset differs' }
+        [IO.File]::Move($temporary, $target, $true)
+        $ownsTemporary = $false
+    }
+    finally {
+        if ($ownsTemporary -and [IO.File]::Exists($temporary)) { [IO.File]::Delete($temporary) }
+    }
     if ((Get-FileHash -LiteralPath $target).Hash -ne $pin.Assets[$name]) { throw 'Transferred asset differs' }
 }
 $cli = Join-Path $repo 'src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.Cli.dll'

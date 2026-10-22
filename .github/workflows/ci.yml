@@ -97,6 +97,8 @@ jobs:
         run: pwsh -NoProfile -File tools/TestQualificationBuild.ps1
       - name: Qualification report reuse checks
         run: pwsh -NoProfile -File tools/TestQualificationReportJoin.ps1
+      - name: Qualification transfer ownership checks
+        run: pwsh -NoProfile -File tools/TestQualificationTransfer.ps1
       - name: Reference and affected-report mechanics
         run: |
           pwsh -NoProfile -File tools/TestReferenceDerivative.ps1
