@@ -2,6 +2,14 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Maps Adobe four-component JPEG ink samples correctly during PDF passthrough,
+  including the original-image crop/recolor fallbacks. Untagged/RGB/gray behavior
+  is retained; unresolved four-component Adobe transforms diagnose explicitly.
+  This is not full ICC color management or a public API change.
+- Treats truncated PNG scanlines as invalid image data, preserving image-error
+  recovery across DOCX/PPTX rather than an unhandled CLI exception. Removes one
+  duplicate exception test. Portable direct-PNG metric checks replace the old
+  build/conversion/PDFium probe while preserving all six metric/region premises.
 - Rejects invalid JPEG frame metadata before PDF passthrough. Malformed dimensions,
   precision or component tables use the existing image error/omission diagnostic;
   baseline, progressive, grayscale and CMYK controls retain their encoded bytes.

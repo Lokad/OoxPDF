@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -93,6 +94,54 @@ internal static class ToolBudgetTests
         ToolResult result = RunTool(VisualDiffAssemblyPath.Value, referenceDirectory, candidateDirectory, outputDirectory);
         TestAssert.Equal(0, result.ExitCode);
         TestAssert.True(File.Exists(Path.Combine(outputDirectory, "metrics.json")), "VisualDiff must write metrics on success.");
+    }
+
+    public static void VisualDiffForegroundRecallCoversSparseBlankAndRegionCases()
+    {
+        byte[] white = Enumerable.Repeat((byte)255, 100 * 100 * 3).ToArray();
+        byte[] ink = (byte[])white.Clone();
+        for (int y = 10; y < 13; y++)
+            for (int x = 10; x < 14; x++)
+                Array.Clear(ink, (y * 100 + x) * 3, 3);
+        string blankDirectory = NewTempDirectory();
+        string inkDirectory = NewTempDirectory();
+        File.WriteAllBytes(Path.Combine(blankDirectory, "page-001.png"), TestFixtures.CreateRgbPng(100, 100, white));
+        File.WriteAllBytes(Path.Combine(inkDirectory, "page-001.png"), TestFixtures.CreateRgbPng(100, 100, ink));
+        string regions = Path.Combine(NewTempDirectory(), "regions.json");
+        File.WriteAllText(regions, """[{"page":1,"region":"full","xRatio":0,"yRatio":0,"widthRatio":1,"heightRatio":1},{"page":1,"region":"bottom-half","xRatio":0,"yRatio":0.5,"widthRatio":1,"heightRatio":0.5}]""");
+        (string Reference, string Candidate, bool Regional, double? Recall, double Histogram)[] cases =
+        [
+            (inkDirectory, blankDirectory, false, 0, 0),
+            (blankDirectory, inkDirectory, false, null, 0),
+            (inkDirectory, inkDirectory, false, 1, 1),
+            (blankDirectory, blankDirectory, false, null, 1),
+            (inkDirectory, blankDirectory, true, 0, 0),
+            (inkDirectory, inkDirectory, true, 1, 1)
+        ];
+        foreach (var item in cases)
+        {
+            string output = NewTempDirectory();
+            string[] arguments = item.Regional ? [item.Reference, item.Candidate, output, regions] : [item.Reference, item.Candidate, output];
+            ToolResult result = RunTool(VisualDiffAssemblyPath.Value, arguments);
+            TestAssert.Equal(0, result.ExitCode);
+            using JsonDocument page = JsonDocument.Parse(File.ReadAllText(Path.Combine(output, "metrics.json")));
+            TestAssert.Equal(1, page.RootElement.GetArrayLength());
+            CheckRecall(page.RootElement[0], item.Recall);
+            TestAssert.Equal(item.Histogram, page.RootElement[0].GetProperty("ForegroundColorHistogramCorrelation").GetDouble());
+            if (!item.Regional) continue;
+            using JsonDocument regional = JsonDocument.Parse(File.ReadAllText(Path.Combine(output, "region-metrics.json")));
+            JsonElement full = regional.RootElement.EnumerateArray().Single(row => row.GetProperty("Region").GetString() == "full");
+            JsonElement bottom = regional.RootElement.EnumerateArray().Single(row => row.GetProperty("Region").GetString() == "bottom-half");
+            CheckRecall(full, item.Recall);
+            CheckRecall(bottom, null);
+            TestAssert.Equal(1d, bottom.GetProperty("ForegroundColorHistogramCorrelation").GetDouble());
+        }
+        static void CheckRecall(JsonElement metric, double? expected)
+        {
+            JsonElement actual = metric.GetProperty("ForegroundRecall");
+            if (expected is { } recall) TestAssert.Equal(recall, actual.GetDouble());
+            else TestAssert.True(actual.ValueKind == JsonValueKind.Null, "Empty-reference recall must remain inapplicable.");
+        }
     }
 
     public static void RasterizerTotalPixelQuotaRejects()

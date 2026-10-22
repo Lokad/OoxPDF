@@ -134,9 +134,9 @@ jobs:
         run: pwsh -NoProfile -File tools/TestCompositionReferences.ps1
       - name: Chart classifier adversarial checks
         run: pwsh -NoProfile -File tools/TestChartClassifierRobustness.ps1
-      - name: VisualDiff metric probe
-        if: runner.os == 'Windows'
-        run: pwsh -NoProfile -File tools/TestVisualDiffMetrics.ps1
+      - name: Portable VisualDiff metric probe
+        if: runner.os == 'Linux'
+        run: dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -- --test VisualDiffForegroundRecallCoversSparseBlankAndRegionCases --report artifacts/ci-tests/visual-metrics.json
       - name: Publish console test reports
         if: always()
         uses: actions/upload-artifact@v4
