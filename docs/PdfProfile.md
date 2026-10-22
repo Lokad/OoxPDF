@@ -11,20 +11,21 @@ or `PdfEmbeddedFont` in `src/Lokad.OoxPdf/Pdf`, unless noted otherwise.
 `trailer<</Size /Root>>`, `startxref`, `%%EOF`.
 - Object graph: catalog, page tree, one page plus one content object per
 page, five objects per embedded font (Type0, CIDFont, descriptor, font
-program, ToUnicode), image and soft-mask image objects, shadings, tiling
-patterns, and link annotations. Object numbers are deterministic.
+program, ToUnicode), Type1 fallback fonts, image and soft-mask image objects,
+transparency Form XObjects, shadings, patterns and link annotations. Object
+numbers are deterministic.
 - No object streams, no linearization, no encryption, no outlines, no name
-tree, no embedded files, no forms, no JavaScript.
+tree, no embedded files, no interactive AcroForms, no JavaScript.
 - Document information dictionary exists only when
 `OoxPdfOptions.FixedCreationDate` is set (Producer, CreationDate, ModDate);
 otherwise the trailer carries no `/Info` and output stays deterministic.
 
 ## Content streams
 
-- Page, pattern, and luminosity soft-mask contents are uncompressed ASCII,
+- Page, pattern, transparency Form and luminosity soft-mask contents are uncompressed ASCII,
 written inline with explicit `/Length`.
 - Text uses `Tj`/`TJ` with `Tm`/`Tf`/`Tc` positioning; glyphs address a
-`/Identity-H` CID space (see Fonts).
+`/Identity-H` CID space for embedded fonts or WinAnsi for Type1 fallbacks (see Fonts).
 - Images arrive as `/DCTDecode` passthrough for baseline JPEG or
 `/FlateDecode` for re-encoded raster (PNG/BMP/recolored JPEG) and grayscale
 soft masks. Color spaces are device gray, RGB, or CMYK only.
@@ -36,20 +37,28 @@ content transform and retain the SVG path clip.
 - Repeated radial colors use a bounded stitched function; reflect spread
 reverses alternate cycle domains. Cycle bounds retain six decimal places
 to reduce phase errors in small-radius fills.
-- The full operator inventory is whatever `PdfInspect` parses; anything it
-cannot tokenize is outside the supported profile by construction.
+- The writer/builder define the emitted subset: graphics state, paths, fills,
+strokes, transforms, clipping, resource invocation and text positioning/showing.
+Marked-content spans use `BDC`/`EMC` with `ActualText` for assembled symbols.
+`PdfInspect` independently inspects a bounded subset; its parser coverage does
+not define PDF compatibility or establish general conformance.
 
 ## Fonts
 
 - Every embedded font is Type0 with `/Identity-H`, a CIDFontType2
 descendant, `/CIDToGIDMap /Identity`, a Widths array, a descriptor with
 TrueType metrics, a Flate-compressed FontFile2 subset, and a ToUnicode
-CMap. Subsets cover exactly the used glyphs.
+CMap. Subsets retain used glyphs, .notdef and required compound components.
+- Unembedded standard Type1 fallback fonts use `/WinAnsiEncoding` and a ToUnicode
+map; their appearance depends on the PDF viewer's available substitute faces.
 - Only TrueType outlines embed. CFF/OpenType-CFF faces fall back to an
 embeddable typeface with `FONT_UNSUPPORTED_OUTLINES` (see Diagnostics);
 they are never written as FontFile3/CIDFontType0.
 - ToUnicode maps preserve source scalars per emitted CID. Glyphs shared by several source scalars resolve to one scalar: spaces win over NBSP (matching Word extraction; pinned by SharedSpaceGlyphExtractsAsPlainSpace and PdfEmbeddedFontMapsSharedSpaceGlyphToPlainSpace). Private-use scalars pass through (pinned by the docx-symbols text-content gate).
 - Unbroken soft hyphens never reach the font layer: DOCX layout strips them before emission (pinned by DocxParagraphLayoutSuppressesUnbrokenSoftHyphens).
+- Assembled structural symbols may paint multiple glyph pieces inside one
+`ActualText` span so extraction retains their source scalar. ToUnicode and
+ActualText do not imply tagged PDF or general accessibility conformance.
 Extraction fidelity is gated by `tools/CheckPdfTextContent.ps1`.
 
 ## Annotations and metadata

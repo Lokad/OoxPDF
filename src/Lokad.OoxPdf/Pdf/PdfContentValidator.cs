@@ -3,7 +3,7 @@ namespace Lokad.OoxPdf.Pdf;
 // Independent structural gate over emitted pages: the graphics builder trusts its
 // callers for resource references and graphics/text state, so the writer verifies
 // each page before writing any object. The scan covers exactly the operator set
-// the builder emits (no inline images, no content dictionaries); anything outside
+// the builder emits, including ActualText dictionaries (no inline images); anything outside
 // that set still tokenizes, but unknown operators carry no checks.
 // Tiling-pattern streams get the same treatment against their own image sets,
 // since pattern content is caller-supplied free text; soft-mask streams are

@@ -2,6 +2,13 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Preserves supported DOCX/PPTX content inside declared ignorable ProcessContent
+  wrappers. Compatibility rules resolve in their original namespace scope;
+  only the selected alternate branch participates. MustUnderstand uses prefix
+  lists and retains the documented warning-only partial policy. No public API
+  change; existing image/layout fallbacks and visual thresholds remain.
+- Corrects custom font identity guidance, PDF profile and math diagnostics;
+  consolidates the capability inventory around scope and remaining limitations.
 - Qualification transfer replaces root asset entries through independent staging,
   preserving older artifacts behind hard links. Linked asset directories refuse
   before mutation. Host guidance clarifies that active file-backed font sources

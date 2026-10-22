@@ -1,241 +1,173 @@
 # Capabilities
 
-This document tracks implemented rendering behavior. Anything not listed as supported or partial should be treated as unsupported unless a diagnostic says otherwise.
+This is the supported scope of **0.2.0-preview**, including approximations and
+explicit fallbacks. A successful conversion or absence of diagnostics does not
+establish Office fidelity. Features outside this inventory remain unsupported.
+See [preview scope](PreviewRelease.md), [measured qualification](PreviewQualification.md)
+and [diagnostics](Diagnostics.md) before relying on a conversion.
+
+## Shared input and compatibility behavior
+
+- Transitional OOXML DOCX/PPTX packages; Strict OOXML is diagnosed and may render
+  missing content. Archive, XML, image and font bounds remain enforced.
+- Exactly one AlternateContent representation: the first understood Choice,
+  otherwise Fallback, otherwise no representation. Supported content inside
+  ignorable ProcessContent wrappers is exposed to the ordinary format reader.
+  Inherited namespace-prefix/QName declarations resolve at their original scope;
+  nested wrappers and namespace wildcards are supported.
+- MustUnderstand prefix lists produce a warning for unsupported or unresolved
+  requirements in active content. The preview continues with partial handling;
+  it does not implement complete MCE validation, preservation or schema processing.
+  Other extension content keeps its existing reader fallback.
+- Shared font resolution, TrueType embedding, glyph coverage fallback, managed
+  image decoding and PDF primitives. Complex-script shaping and CFF embedding
+  remain unsupported. Custom font identities must distinguish different programs.
+- Cooperative cancellation, bounded caches/page staging, optional coarse host
+  memory admission and atomic file publication. These are specific safeguards,
+  not whole-heap accounting; see the [operating envelope](OperatingEnvelope.md).
 
 ## PPTX
 
-- A single linear line-chart source axis shares its authored bounds and interval origin across label measurement/emission, ticks and grids. A finite authored maximum and positive major interval can anchor an automatic lower bound; maxima107/103 with interval20 produce minima-13/-17. Sixteen Office controls qualify eleven improvements and five exact guards across integer, fractional and negative ranges. Maximum labels appear only on the interval lattice; log, percentage/composed/secondary, unresolved-source and broader automatic-interval fallbacks remain. Dense automatic intervals and broader font-strip geometry remain partial.
-- Empty line-chart manual-layout elements and target/mode metadata without coordinates retain automatic plot measurement. Raw presence stays inspectable; explicit, partial and malformed coordinate values retain their existing geometry ownership. Twelve Office controls qualify eight improvements/four exact guards across metadata, frames/fonts and source-bound/reversed axes; malformed geometry is a separate exact candidate-only fallback.
+Supported within the following constraints:
 
-- Eligible automatic untitled/legendless single-line plots share a category-axis owner for source crossing, low/high/nextTo labels, plot clearances, authored offsets and reversed tick direction. Manual/composed/secondary, unsupported-scale, unresolved-font and small-layout fallbacks remain; broader font-strip metrics remain partial.
-- Qualified single-line modern galleries102/118/126 resolve omitted axis properties through the shared major-gridline stroke reader. Authored width/color/alpha/decorations and noFill take precedence. Independent Office comparisons qualify gray1pt defaults and partial source overrides while preserving geometry, text and glyphs. Threshold-only raster tradeoffs remain despite lower mean error. Classic/composed/other galleries, explicit style-part axis roles and minor-stroke defaults retain their existing fallbacks.
+- Slide order/size, hidden-slide exclusion and per-slide master-shape suppression;
+  common inherited backgrounds, shapes, theme colors and Latin theme fonts.
+- Common solid shapes, paths, straight lines, rotation/flips and nested group
+  translation/scaling. Advanced/custom geometry and effects remain partial.
+- JPEG/PNG pictures and bounded native SVG paint. Crop/fill clipping, source
+  transforms and supported rectangle/ellipse/rounded/polygon picture masks share
+  paint geometry. Unsupported masks retain diagnosed rectangular frames; bounded
+  supported shadows/blur retain their qualified fallbacks.
+- Fixed-grid tables with fills, explicit borders, merged continuations/row spans,
+  text and calibrated built-in styles. Vertical anchoring and typography remain
+  approximate; arbitrary automatic table layout is not promised.
+- External URI and internal-slide links on supported shapes, pictures, groups,
+  frames, tables, text runs and chart text, using their resulting transformed bounds.
+  Unresolved/action-only links are diagnosed and omitted.
+- Native cached-data bar/column, line, area, pie/doughnut, scatter, bubble and radar
+  charts, with supported titles, legends, axes/ticks, labels and source formatting.
+  Axes/data labels share number formatting, including dates, numeric sections,
+  scaling, fractions and supported accounting/currency forms. Unsupported syntax,
+  formula-only data without cached values and unsupported chart kinds are diagnosed.
+- Failed slide nodes rewind partial paint/annotations and report a diagnostic;
+  neighboring nodes may still render. Inspect diagnostic severity and fallback.
 
-- Authored category-label offsets in eligible automatic line plots share one normal-font-line-height adjustment between plot reserve and label placement. Category baselines remain anchored; default-offset output and manual/composed/unknown-font/small-layout fallbacks stay unchanged. Default font-strip metrics and dense automatic intervals remain partial.
+Approximate or restricted:
 
-- Line-chart minor units default to selected major/5; authored units take precedence. Present major-gridline elements reserve overlapping levels even with hidden paint; absent elements permit coincident minors. Automatic major/label fit and source-origin/boundary coverage remain partial; other chart kinds retain their existing minor path.
+- Textboxes support paragraphs/runs, Latin greedy wrapping, font styling and
+  alignment. Font metrics, kerning, autofit, distributed text, overflow, rotation,
+  columns and table/bullet combinations retain qualified approximations. Nominal
+  advances and explicit-zero kerning apply only in the qualified unrotated,
+  horizontal, single-column no-wrap/noAutofit frames; no blanket parity is claimed.
+- Automatic numbering covers the implemented Arabic, alphabetic and Roman
+  period/parenthesis forms with supported levels/starts and sequence resets.
+  Empty/plain paragraphs and changed settings affect continuation; richer formats
+  and table combinations remain restricted.
+- Clustered/stacked bar/column, line-with-markers and plain pie are closer-parity
+  targets. Area, scatter/bubble, secondary axes, percent-stacked and leader-label
+  layouts remain approximate; trendlines are diagnosed and omitted.
+- Automatic chart layout, label strips/baselines, dense intervals, source crossings,
+  reversed axes and manual-layout combinations retain their semantic guards.
+  Qualified automatic single-line plots share axis/label placement; authored
+  coordinates, composed/secondary plots, unsupported scales and unresolved fonts
+  keep their fallbacks. Empty manual metadata retains automatic measurement.
+- Qualified gallery defaults, authored stroke/fill precedence, line smoothing,
+  markers and point-count color regimes remain implemented. Classic/composed
+  gallery roles, minor-stroke defaults, automatic tick fitting and chart color
+  parity are incomplete. Existing independent Office thresholds still apply.
+- Ellipsis overflow clips locally without drawing the ellipsis marker. Complex
+  effects and typography may be simplified or omitted with diagnostics.
 
-- Generated numeric axis ticks reuse the existing 100000 chart expansion cap. Dense expansion rejects before allocation; invalid bounds and non-progressing floating-point additions reject through the existing limit exception.
-
-Supported:
-
-- Slide discovery, slide order, and slide size.
-- Hidden slides (`show="0"`) are excluded from export, matching PowerPoint; per-slide master-shape suppression (`showMasterSp`) is honored.
-- Blank slide pages with the corresponding PDF media box.
-- Solid slide backgrounds.
-- Solid-fill rectangles, ellipses, and straight lines.
-- Basic shape rotation and horizontal or vertical flips.
-- Slide master and slide layout backgrounds and visible shapes for common inherited cases.
-- Theme color resolution for common scheme colors.
-- Theme Latin font resolution when text runs request theme fonts.
-- JPEG image passthrough as PDF `/DCTDecode` image XObjects.
-- PNG image embedding for RGB and RGBA images, including alpha masks.
-- Picture relationships, placement, sizing, source crop/fill clipping and ordinary picture masks for rectangles, ellipses, adjusted rounded rectangles and supported preset polygons. Raster and native SVG paint share the existing picture-fill mask geometry, independently of source crop and transforms. Unsupported/custom picture geometry retains a diagnosed rectangular frame; supported picture outlines and unblurred shadows share preset stroke/fill geometry. Ellipse, rounded-rectangle and supported preset-polygon picture blur share the existing bounded effect raster with shape-aware distance. Polygon shadows reuse the vertices used for picture masking, including concave presets. Arbitrary custom geometry retains the diagnosed rectangular frame.
-- Grouped shapes with nested translation and scaling.
-- Fixed-grid tables with cell fills, explicit grid borders, merged-cell continuations (horizontal merges and row spans), vertical anchoring approximations, and cell text, plus calibrated built-in table styles (MediumStyle2 linear-light band tints at 0.60/0.80, DarkStyle1 black header with 0.60 linear-shade bands and raw unbanded rows, LightStyle1 raw accent bands; first/last row/column accents).
-- Clickable hyperlink annotations for shape, picture, connector, group, table, chart, and unknown-frame clicks plus shape and table body-text runs and chart title, axis-title, and data-label runs, resolving external URLs and internal slide targets with transformed bounds.
-- Native chart rendering for bar/column, line, area, pie/doughnut, scatter, bubble, and radar charts with cached numeric values, including titles (single-series charts gain the series name as an auto title), legends, category/value axes on any side, tick labels, measured horizontal-bar label strips and outer-manual plot reserves, and first-pass data labels. Major tick marks on bar/column, line, area, scatter, and bubble charts scale with tick-label size (Office-calibrated 0.315x) and honor explicit majorTickMark settings; unstyled chart series/gridline/marker/key strokes default to round caps/joins; vertical single-series vary-colors bar/column fills follow per-count variation rows below 96 points and the Office-calibrated linear-light recipe over theme-live accents at 96 or more points. Bar/column plot clips extend 0.69pt past the axis-bounded plot rect on the bottom and right; unstyled line, scatter, and radar series strokes plus legend key lines and glyphs render the theme accent darkened to 0.975x luminance while fills keep raw colors, except gallery line styles and smoothed series which stroke the raw base: effective style-18 series at 5pt and style-26 at 7pt with end-chord Hermite smoothing (gap-split ends eased at sixths, span joints at symmetric mean-thirds with span starts at sixths and full chart ends, zero-mode blanks plotting contiguously at zero), style-18 forcing auto diamond/square/triangle markers at 12.96pt with per-marker axial gradient fills from the shared bar stop table and raw 1pt rims (explicit symbols, nominal-5 sizeless defaults, sizes, circle gradients, quantized rect dots and dash bars, stroked asterisks, and explicit marker fills/1pt outlines honored; explicit line colors win with gallery-width inheritance when width is unspecified; series-level symbol=none wins; style 26 draws no markers), explicit smooth series at raw 3pt with forced flat 9pt markers plot-wide (explicit smooth=false keeps straight legacy; plot-level smooth=0 yields to explicit series smooth), and gallery legend keys matching with raw series-width swatches and forced 9.9 gradient markers (explicit marker fills win in keys); unstyled axes and ticks render black, except single-plot bar/column charts carrying gallery style 2 without a style part, whose unstyled axis-family strokes render gray at width 1. Unstyled axis titles render bold black. Tier-1 (clustered/stacked bar/column, line with markers, plain pie) is the close-parity target; Tier-2 (area, scatter/bubble, secondary axes, leader-line labels, percent-stacked, trendlines) remains approximate; filled-radar series under effective style 18 paint Office-derived per-channel five-stop vertical gradients (rank-mapped endpoints with span-law interiors); doughnut ports hold no open tripwires.
-- Chart number formats: sign and conditional sections, 1900/1904 dates and datetimes, scientific and fraction rendering, accounting skip/fill runs, scaling commas, quoted/escaped/bare literal runs, locale currency symbols, and source-linked workbook formats including dates; axes and data labels share one formatter.
-- Markup-compatibility Choice/Fallback selection renders exactly one AlternateContent representation (first understood Choice, else Fallback).
-- Failed slide nodes rewind partial paint and annotations, then report PPTX_NODE_RENDER_FAILED while neighboring nodes render normally.
-
-Partial or approximated:
-
-- Plain ASCII distributed PowerPoint paragraphs retain nominal text advances, including active kerning, in horizontal single-column, unrotated/unflipped non-table frames with explicit noAutofit and wrap=none, no bullets, tabs or manual breaks. Other scripts, wrapping, autofit, column, rotation, table and bullet paths retain their existing distribution approximation.
-- PowerPoint automatic numbering supports the existing Arabic, alphabetic and Roman period/right-parenthesis forms and Arabic paired parentheses outside tables, with valid levels/starts and default or overridden bullet font/size. Equal effective format/start settings continue a level; changed settings and plain paragraphs reset it, and a parent advances deeper levels to a new sequence. Empty numbered paragraphs update settings without emitting or advancing a label; run-free plain paragraphs clear the qualified sequence. Alphabetic labels follow Office's repeated-letter cycle (a..z, aa..zz, up to thirty repeated letters before cycling). Qualified numbering keeps paragraph pitch at the body font size when labels are larger. Bounded labels follow the first body run's font, preserve authored size and use nominal advances including trailing character spacing for first-fragment clearance in left horizontal single-column, unrotated/unflipped non-table frames without tabs or normal autofit, with nonpositive hanging indents and a label that fits. Font/size overrides additionally require room for the first drawable body fragment. Continuation lines retain the authored margin. For admitted wrapping with explicit noAutofit, printable ASCII text runs, no fields/manual breaks and room for the first body fragment, word fitting uses the authored line edge instead of the general bullet overrun allowance. Excluded frames, insufficient space, unsupported formats/starts, character bullets and table numbering retain their existing font/kerning/placement fallback; wrapping, manual-break baselines and broader font metrics remain approximate.
-- Text boxes support paragraphs, runs, font size, color, bold, italic, underline, and left, center, or right alignment, with simple Latin greedy wrapping. For plain left-aligned, non-bullet shape paragraphs in unrotated horizontal single-column no-wrap/noAutofit frames, explicit or inherited zero kerning disables pair adjustments in both measurement and glyph emission. Omitted kerning uses Office's 12pt default; positive explicit thresholds retain their authored boundary and scaling. Excluded explicit-zero frames retain their kerning approximation. Independent Calibri controls retain partial glyph/raster differences. Emergency splitting of unbroken first-token text in horizontal two/three-column frames uses the column edge. Single/four-plus columns and rotated/no-wrap paths retain their prior approximations; general font metrics, column balancing and autofit remain partial.
-- Untitled, legendless single line-chart plots with a visible left value axis and bottom category axis share measured cartesian label reserves and use the source font's selected line box for top clearance. Authored manual coordinates, composed/extra-axis, hidden/top-category and too-small frames retain their prior layout fallback. Empty manual metadata retains automatic measurement. Left/bottom margins remain partial; points, blank handling, series styles and text state retain their existing rules.
-- Single line plots carrying independently verified modern gallery styles 102/118/126 inherit 1pt major/minor gridline roles from the mapped text color through the shared linear-light tint. Authored strokes, visibility and style-part roles take precedence; legacy/composed/other-kind output retains its fallback. Major strokes and supported linear minor strokes share property inheritance and width-dependent dash normalization, preserving authored width/color/alpha/decorations. Invalid negative partial widths and unsupported log-scale minor geometry retain their prior fallback. Seventy-two inherited comparisons improve both raster metrics after shared source-bound/empty-layout fixes; broader axis/gallery coverage and existing dash mapping remain approximate.
-- Bold/italic use a hybrid: the resolver prefers a real font face on exact non-fallback matches; otherwise bold is synthesized with a stroked second pass and italic with an oblique shear (hybrid policy: a real face wins on exact non-fallback matches, otherwise bold is stroked and italic is sheared).
-- Table rendering honors merges and explicit borders with vertical-anchor approximations, but per-edge border styles, rich table styles beyond the first-pass built-ins, and fine vertical metrics remain approximate.
-- Shape rendering supports only a small preset geometry set.
-- SVG linear gradient strokes use native PDF shading patterns for uniformly numeric linear-pad stops, forward axes and unrotated/unflipped pictures. Admission requires 2..256 usable stops, represented intervals at least 0.001, an identity gradient transform, identity source-unit or positive axis box-path transforms, and serialized projection error at most 0.001. Plain numeric stop/node/stroke alpha multiplies once; supported root/group isolation retains local pattern resources. Fill masks restore before the stroke and later solid paint. Scaled box-path color/width and dash phase remain approximate. Radial, varying-alpha, reverse/repeated/reflected or excluded transformed strokes, unsupported opacity syntax/depth, nested SVG viewports and filled elements with partial node opacity retain diagnosed omission.
-- Rasterized outer shadows and glows, axial-gradient chart style fills and shape gradients, SVG gradients, and alpha transparency; other effects remain unsupported. SVG radial fills with distinct representable stop intervals use smooth PDF shading, including bounded repeat/reflect spread through the full clipped shape. Uniform/opaque and excluded linear gradients, hard/near-stop radial fills and dense repetition retain sampled approximations. Native repetition is capped at 128 cycles and 256 expanded normalized color stops. Fill-only radial transparency follows the user-selected smooth PowerPoint slide preview; its PDF export has different circular transparency artifacts. Uniform numeric stop-opacity attributes multiply fill/node alpha; numeric zero-opacity root/group containers do not paint. Numeric partial opacity on the outer SVG and group containers composites overlapping supported children once through isolated PDF Forms, with at most 32 nested groups. SVG picture viewport clips follow picture rotation/flip transforms, preserving the rotated footprint for the qualified opaque/isolated, cropped and grouped controls. Partial CSS/percentage container alpha and nested SVG viewport alpha retain diagnosed fallbacks. Bounded numeric varying stop alpha on radial pad fills uses a vector luminosity mask and multiplies fill/node alpha. Admission requires 2..256 usable stops, representable native radii/intervals, an identity gradient transform, no off-center focus, an identity user-space path transform and a total Form/mask depth of at most 32. Bounded numeric varying linear-pad stop alpha uses native axial color and a vector mask. It preserves normalized object-box/user-unit projection under viewport stretch. Admission requires forward vector components, an identity gradient transform, identity user-space or positive axis box path transforms, the same stop/count/depth bounds and serialized corner projection error at most 0.001. Reversed/excluded linear, sampled radial, repeated/reflected, transformed/focal and depth-excluded varying alpha, CSS/percentage stop opacity and path-level fill/stroke compositing retain their prior fallbacks. Shapes inside SVG definitions do not paint directly; supported gradient resources remain available through references. SVG strokes preserve directional widths, caps and dashes under picture viewport stretching, including combined solid fill/stroke paint where the PDF transform survives number precision; extreme aspect ratios retain scalar stroke approximation. Element transforms use the Office uniform stroke-width rule (largest singular value), including shear. Dash offsets follow Office stroke-width units; dash-array lengths remain source geometry. Solid square-cap dash lengths compensate the cap extent when every normalized painted segment exceeds the stroke width. Gradient strokes retain Office cap extension into their gaps. Qualified opaque round-dashed strokes on separate straight subpaths use flat interior ends and outward semicircles when a visible dash end lies within half a stroke width of an original endpoint. Opaque straight round-dashed paths that fall entirely in gaps use Office solid rounded fallback; a painted subpath suppresses fallback for the whole path. Single visible dashes use this rule when at least one end falls outside the endpoint region; matching native rounded dashes retain their original paint. Equal/short/zero square dashes, other round-dash paths, standard SVG affine stroke outlines, dash-offset semantics and path-level opacity compositing remain approximate.
-- Missing-glyph and missing-font fallback renders deterministic standard-14 faces with capped diagnostics (WinAnsi coverage; other scripts substitute a diagnosed mark).
-- Chart number formats keep invariant separators and English names (locale-specific rules warn instead), and axis labels use chart-side formats rather than linked workbook formats.
-
-Unsupported or ignored:
-
-- Stock, surface, and 3D charts, SmartArt, videos, audio, OLE objects, transitions, animations, macros, and ActiveX.
-- Complex effects such as 3D, most custom geometry, and effects beyond the supported subset below.
-- Strict OOXML (ISO 29500) content: only the transitional dialect is supported; strict parts warn OOXML_STRICT_DIALECT and may render missing.
-- Complex scripts, bidirectional text, text shaping, and OpenType layout features beyond coverage fallback.
-
-Unsupported chart kinds, SmartArt, videos, audio, OLE objects, transitions, and animations produce stable warning diagnostics when detected on slides. PPTX_UNSUPPORTED_CHART is now reserved for unsupported kinds, missing parts, and formula-only data without cached values (see Diagnostics.md).
+Unsupported: stock/surface/3D charts, SmartArt, live OLE, macros/ActiveX,
+audio/video, animation/transitions, unrestricted custom effects, bidirectional
+layout and general OpenType shaping. Static fallback diagnostics are listed below.
 
 ## DOCX
 
-Placed table rows mark their actual page frame as occupied, including after a
-page transition. Following prose moves to the next page when its line no longer
-fits; it cannot use an earlier page's item count to bypass the bottom margin.
-Independent plain-table and large-equation controls restore Word's page counts.
+Supported within the following constraints:
 
-Supported mathematics uses shared ordered-inline measurement and placement.
-Fitting multiple formulas, prose and inline pictures coexist in qualified body
-paragraphs, simple cells and direct headers/footers; bookmarks and unchanged-format
-run splitting preserve source content. Standalone display rows reuse prepared boxes,
-row measurements and clips for resolved automatic/minimum/exact heights. A sole
-inline formula retains its source flag while using qualified display geometry.
-Vertical-merge restart owners retain supported content; continuation/unknown owners,
-unfit objects, arbitrary fragmentation and richer unsupported structures keep their
-explicit fallbacks. Static-story height, body reservation and footer translation
-share qualified source frames. These remain approximate placements, with unchanged
-Office thresholds and recorded geometry residuals. See [native equations](docx-equations.md)
-for the current revision, empty-argument, container and fallback constraints; see
-[preview qualification](PreviewQualification.md) for measured outcomes.
+- Body paragraphs/runs, common run/paragraph/document defaults and styles,
+  margins/page sizes, paragraph spacing/line-height inheritance and basic page
+  breaking. Qualified section/page/column breaks retain their explicit limits.
+- Latin font resolution through explicit families, themes and font-table alternates.
+  Undeclared prose/list families use the documented Times New Roman fallback when
+  available, after an explicit resolver document default. Missing faces/glyphs are
+  diagnosed; no general shaping or font-independent Office parity is promised.
+- Simple decimal/bullet numbering and twip-based indents/tabs. Numbering font
+  selection follows numbering-level values and the paragraph mark/style/defaults,
+  independently of first-run styling. Supported inserted marks preserve adjacent
+  text/equations; old/new review renumbering and marker revision decoration remain
+  incomplete. Deleted/unnumbered marks keep their existing fallbacks.
+- Fixed-grid tables with fills, common collapsed border styles/conflicts,
+  nil/none suppression, repeated headers, split rows and cell content. Actual page
+  occupancy controls following-prose admission. Complex implicit borders,
+  vertical merges and nested/fragmented layout retain qualified restrictions.
+- Inline raster/SVG pictures in qualified body/cell/header/footer containers,
+  including supported crop/flips/rotation and source frames. Picture-only body
+  paragraphs use occupied height and collapsed spacing. Floating pictures/textboxes
+  have bounded positioning, clipping, z-order and first-pass wrap exclusions;
+  arbitrary Word reflow around floating content is unsupported.
+- Default headers/footers, simple page fields, supported notes and source-owned
+  links/bookmarks. Static-story placement shares physical frames with painting
+  and annotations. Complex/continued/page-dependent note compositions and arbitrary
+  nested stories retain explicit fallbacks and documented geometry residuals.
+- Simple/complex fields with stored results, including supported nested cached
+  fields and bounded dynamic placeholders. This does not evaluate general Word
+  fields, live cross-document data or arbitrary aligned/wrapping field layouts.
+- Final, Original, SimpleMarkup and AllMarkup views, with preserved-layout and
+  Word-compatible review geometry kept distinct. Public defaults are Final with
+  preserved document layout. See [markup modes](DocxMarkupModes.md) for revision,
+  comment, field and margin behavior.
 
-Body inline picture paragraphs use their occupied image height and the existing
-collapsed paragraph spacing. The keep-with-next estimate uses the same advance;
-an extra fixed gap no longer separates consecutive pictures or moves a fitting
-pair to another page. Independent Word controls cover SVG/PNG, authored spacing,
-sizes and following prose. Mixed text/image lines retain their existing behavior.
-Table and story image geometry remains separately qualified and partial.
+Approximate or restricted:
 
-Supported:
+- Supported native equations share ordered inline measurement with text/pictures.
+  Fitting multiple formulas, bookmarks and unchanged-format run splitting preserve
+  content in qualified body paragraphs, simple cells and direct headers/footers.
+  Prepared display rows reuse math boxes and source frames. Mathematical layout
+  emits DOCX_APPROXIMATED_EQUATION; omitted unsupported math is diagnosed separately.
+- Bounded literal/fraction/script/root/delimiter/n-ary/function/matrix/cases forms,
+  supported revisions, empty arguments and ready-made matrix fences retain
+  individual metric/paint ownership. Unknown/deeper structures, continuation or
+  unresolved merge owners, unfit objects and arbitrary fragmentation keep fallbacks.
+  See [native equations](docx-equations.md) for the authoritative construct and
+  placement limits; support for one construct does not imply unrestricted nesting.
+- Pagination, line leading, kerning, numbering, table/story geometry and complex
+  composition remain approximate. Font/size/document-shape guards protect independently
+  qualified behavior; they are not promises for every combination.
+- Review balloons, ranges, revision bands, comment collision/layout and note-marker
+  revisions remain partial. Remaining typography/geometry and extraction failures
+  are recorded in [document review](PreviewVisualReview.md); successful conversion
+  does not turn a failed visual threshold into a pass.
+- SVG gradients follow Office-visible centered focal geometry and smooth preview
+  transparency. Broader SVG composition, transformed picture-link combinations
+  and some alpha/color effects retain restrictions and explicit residuals.
 
-- Document package discovery.
-- Basic page size extraction.
-- Page margin extraction.
-- Basic body paragraphs and text runs.
-- Undeclared Latin prose uses Times New Roman when available, after an explicit resolver document default and before modern fallback alternatives. Explicit families, themes and font-table alternates retain their existing resolution order.
-- Document defaults, paragraph styles, and character styles for common run and paragraph properties, including paragraph spacing inheritance, contextual spacing, line-unit spacing, automatic before/after spacing, and exact/at-least line heights.
-- Simple paragraph page breaking.
-- Simple decimal and bullet list labels from `numbering.xml`, including twip-based left, right, first-line, hanging, and numbering-tab indentation. Label font family/weight/slant follows explicit numbering-level values, then the resolved paragraph mark/style/defaults, independently of first-run formatting; an undeclared label family falls back to Times New Roman. Existing label-size, color/underline and revision-decoration rules remain separately qualified.
-- Unchanged numbering markers with source text inherit paragraph color after a numbering-level override; underline comes from the numbering level. First-run authored and revision decorations remain on that run. Actual inserted numbering marks retain their prefix and adjacent supported equations across body/cells/headers/footers. Marker decoration during mark revisions and Word's old/new review renumbering pairs remain incomplete; deleted and unnumbered paragraph marks retain their existing fallbacks.
-- Inline JPEG and PNG images.
-- Anchored floating images and text boxes with page/margin/column/paragraph positioning, z-order, behind-document rendering, clipping, and first-pass wrap exclusion geometry.
-- Fixed-width tables with cell fills, common collapsed border styles, conflict resolution, nil/none suppression, inside/outer table borders, repeated headers, split rows, and cell text.
-- Default headers and footers with simple text and `PAGE` field approximation.
-- DOCX markup mode selection for final, original, simple markup, and all markup views.
-- Simple fields and complex fields with cached results, including nested cached-result fields and cached cross-references inside hyperlinks.
-  `REF` cross-references retain stored results; bookmark text is not reevaluated.
-- Markup-compatibility Choice/Fallback selection renders exactly one AlternateContent representation (first understood Choice, else Fallback).
-
-Partial or approximated:
-
-- Embedded SVG pictures use the shared vector subset for inline and anchored placement, with paths, shapes, fills, strokes, gradients and isolated opacity. Native relationships take precedence; malformed/unusable vectors can retain the authored raster preview. Word picture viewport clipping is preserved. Repeated pictures, body/table placement and naturally measured header/footer lines are qualified. Static inline images share their text baseline and measured footer block translation. Resolved exact/minimum line frames use the shared line-height rules; exact pictures retain their source extents with clipping. Visible footer pictures reserve body space. Unresolved metrics retain fallback. Authored source cropping and negative padding share viewport mapping across native/raster/fallback pictures without changing layout extents. Authored horizontal/vertical picture flips mirror native/raster/fallback paint after crop, preserving viewport and static-line clips. Picture rotation fits resolved stored dimensions uniformly inside the flow extent, anchored at its top left, with paragraph line clipping and full anchored paint. Unresolved source/line frames retain an explicit unrotated fallback. Rotated table pictures share the existing cell content clip; the public default-table rotation gate passes. Natural/exact cell alignment uses the full padded cell space. Eligible minimum-leading cells share text/picture line placement: picture growth consumes minimum headroom once, including wrapped lines and following paragraphs. Top/center/bottom alignment is qualified across fonts and picture sizes; ambiguous ownership and existing rich/split/header guards retain fallback. Eligible complete body frames share occupied minimum-picture extent with row measurement, including automatic/content-dominated rows, grids, wrapping and margins. Kept headings reuse the admitted table frame for their first-row estimate, with independently qualified page boundaries across fonts and margins. Incomplete/nested/richer/split ownership, the retained margin visual gate, small typography residuals, exact-footer parity, VML transforms and Word radial-gradient fidelity remain partial. The public isolation case retains a foreground-recall gate under review.
-
-- Paragraph text supports font size, color, bold, italic, underline, left, center, and right alignment, spacing before/after, and simple Latin greedy wrapping.
-- Bold/italic use a hybrid: the resolver prefers a real font face on exact non-fallback matches; otherwise bold is synthesized with a stroked second pass and italic with an oblique shear (hybrid policy: a real face wins on exact non-fallback matches, otherwise bold is stroked and italic is sheared).
-- Advanced numbering formats, character-unit list indents, and complex bidirectional list layout are approximate.
-- Inline images with recorded run affinity paint mid-line at run position across body, table-cell, related-story, and static header/footer paths (tall images shift the line down keeping the advance below; justified lines add distributed stretch before the image offset), and overwide images overflow past the margin. Office calibration of image baseline and line growth remains approximate.
-- Missing-glyph and missing-font fallback renders deterministic standard-14 faces with capped diagnostics, including comment and revision balloon text (word-compatible balloon text still needs embedded faces).
-- Floating drawing wrap effects on nearby body text are still approximate even when anchor placement and exclusion geometry are inspected.
-- Some decorative table border styles, table merges, cell margins, table styles, and per-cell text formatting are not yet preserved.
-- Header/footer distance, odd/even variants, first-page variants, and dynamic field evaluation are approximate or unsupported.
-- `Final` and `Original` DOCX markup modes filter inserted/deleted and moved content before layout.
-- `SimpleMarkup` renders final text with page-margin change bars and compact comment markers.
-- `AllMarkup` renders inline revision styling plus first-pass comment and tracked-change balloons with metadata or revision-kind summaries, preview text, table/image fallback markers, and connectors.
-- Footnote and endnote bodies place first-pass as related stories; split-note continuation and complex note flow stay approximate.
-- Simple paragraph-only section sequences with equal page geometry use the following section's start type for next-page/continuous boundaries. Actual current-page footnote markers with page-bottom/default placement complete the page before a continuous section; beneath-text placement and endnotes do not force it. Tables, columns, static stories, rich/revision content, changed geometry, terminal section elements and partially placed or overflowing notes retain the prior flow. Raw section metadata remains inspectable.
-- Plain uniform three-row top-aligned body tables with one/two columns reuse qualified natural automatic/absent or positive explicit exact/atLeast row geometry. Full metrics, minimum-height paragraphs, supported narrow single/double or absent borders and a complete fit in the current single-column frame are required. Declared rows include the maximum bottom margin outside the slot; automatic rows keep natural advance. A stable frame preserves admission across later rows. Content-dominated minimum rows retain per-row fallback. In 88 Word controls, 32 previews improve both raster metrics, 56 retain raster identity, 57 retain exact text operations and 26 excluded layouts retain exact PDF identity. All 276 admitted masks map within 0.70pt. Wider borders, larger shapes, default/invalid rules and complex/frame-boundary paths retain fallback.
-- Plain three-row top-aligned body tables with one/two columns may combine automatic/absent and positive explicit exact/atLeast rows. They require full metrics, minimum-height paragraphs and a complete fit in the current single-column frame. Single border bands up to 0.96pt, double bands up to 2.88pt and absent borders are qualified. Each row retains its accepted natural/declared advance and inner mask, with one stable frame for the complete table. Content-dominated minimum rows retain per-row fallback. In 119 Word controls, 80 previews improve both raster metrics, 39 retain identity and 37 excluded layouts retain exact PDF identity. All 366 admitted masks map within 0.43pt. Wider three-row borders, larger shapes, default/invalid rules and complex/frame-boundary paths retain fallback.
-- Plain two-row/one-column top-aligned body tables combining automatic/absent and positive explicit exact/atLeast rows reuse the same qualified row advance and content masks as two-by-two grids. Full metrics and minimum-height paragraphs are required, and the complete table must fit its current single-column frame. Content-dominated minimum rows retain per-row fallback. In 60 Word controls, 45 previews improve both raster metrics, 15 retain identity and nine excluded layouts retain exact PDF identity. All 100 admitted masks map within 0.79pt. Other mixed shapes, default/invalid rules, unsupported compound borders and complex/frame-boundary paths retain fallback.
-- Plain top-aligned two-by-two body grids combining automatic/absent and positive explicit exact/atLeast rows reuse each row kind's qualified geometry when the complete table fits its current single-column frame. Automatic rows retain their natural advance and inner masks; declared rows include the bottom-margin advance outside their slots. Content-dominated minimum rows retain per-row fallback. In 61 Word controls, 46 previews improve both raster metrics, 15 retain identity and nine excluded layouts retain exact PDF identity. All 204 admitted masks map within 0.77pt. Other mixed top shapes, default/invalid rules, unsupported compound borders and complex/frame-boundary paths retain fallback.
-- Plain top-aligned body tables with one or two rows and columns, positive explicit exact/atLeast heights, full metrics and minimum-height paragraphs include the row maximum bottom margin in row advance, outside the content slot. A complete table must fit its current single-column frame. Each non-content-dominated row clips inside vertical margins and qualified single/double border bands, including zero-margin rows. First-row slots, text contents, font state, horizontal placement and actual navigation retain identity; following rows and body flow include the corrected advance. In 58 Word controls, 46 previews improve both raster metrics, 12 retain identity and seven excluded layouts retain exact PDF identity. All 122 admitted masks map within 0.79pt. Other mixed top grids, default rules, content-dominated minimum rows, other compound borders and complex/frame-boundary paths retain fallback.
-- Plain top-aligned automatic/absent-height body tables with one or two rows and columns clip content inside vertical margins and qualified border insets when their complete table fits its current single-column frame. Each cell must contain minimum-height spacing and provide full metrics. Mask admission preserves exact text operations and existing slot placement. In 50 Word controls, all 112 admitted masks map within 0.81pt; three overflow previews improve, 47 retain identity and four excluded layouts retain exact PDF identity. Other mixed top shapes and complex/frame-boundary paths retain fallback.
-- Plain centered/bottom two-by-two body grids combining exact/atLeast and automatic/absent heights qualify automatic-row minimum slots and masks independently of the declared rows. The complete table must fit its current single-column frame. Declared geometry, emission and following flow retain prior behavior. In 46 Word controls, all 172 admitted masks map within 0.29pt; complex and broader mixed shapes retain fallback.
-- Plain centered/bottom automatic-height body grids that fit a complete single-column frame place minimum-slot excess above each paragraph baseline. Unequal cells align the whole slot using the row maximum bottom margin, including shorter natural-height cells. Eligible unsplit/unscaled masks use the same row maximum in PDF and snapshots. In 63 Word controls, all 192 admitted masks map within 0.77pt; Larger, complex and frame-boundary grids retain fallback.
-- Uniform double borders with equal, positive authored widths in unscaled one-column body tables use two authored-width strokes and an equal gap, shared by layout, painting and eligible content masks. Mixed/unequal widths, missing/invalid/nonpositive sizes, revised, nested, merged, legacy and cell-spaced tables retain prior behavior. Four previously unresolved declared/automatic masks now map within 0.144pt; admitted masks in 57 controls map within 0.41pt. Header and rich masks and larger mixed-height grids remain partial.
-- Ordinary, unscaled, one-column body paragraphs rendered on one line include direct/inherited before- and after-spacing in note-reference hit areas for automatic/exact line slots. The predecessor owns its after-spacing; only the remaining collapsed before-gap belongs to the note paragraph, including section starts and empty predecessors. For multiline paragraphs, only marks on the first rendered line own a positive before-gap; later-line marks retain their line slot and no multiline mark includes after-spacing. Plain numeric contextual spacing collapses the ordinary gap first, then suppresses each same-style paragraph contribution; body/table layout and keep estimates share this rule. Single-line note marks use the resolved before-gap and omit contextual after-spacing only before a same-style plain successor. Multiline first-line marks also own a positive before-gap after a plain, nonempty contextual predecessor rendered on one line; different-style predecessors retain ordinary collapse ownership. Later marks remain line-only. Current-contextual multiline first-line marks retain positive resolved gaps at section starts and after different styles. Plain numeric body/table boundaries resolve omitted versus explicit unambiguous declared default styles for contextual spacing, preserving authored identifiers and existing inheritance. Loaded styles parts without a declared default also use Office's implicit Normal identity; a named declaration retains precedence. Missing styles parts remain partial. Unsplit, top-aligned one-row/one-cell tables with two plain numeric paragraphs also admit a multiline first-line before-gap after a nonempty single-line predecessor, using automatic/exact slots. Final-cell after-spacing stays in the row and outside the multiline link. In body table grids, eligible cells with plain numeric paragraphs, uniform font state within each paragraph and full vertical metrics place excess at-least height above each minimum-height paragraph baseline, including first, middle, final and single-line paragraphs, across font family, size and bold/italic changes between those paragraphs. The correction covers positive exact/minimum row heights, including an omitted minimum rule, and explicit automatic heights whose authored value is ignored. For top-aligned cells, automatic/exact paragraph neighbors stay unchanged. Centered/bottom cells additionally require a positive exact/minimum row height; their ordinary/exact neighbors move with the aligned content. Their alignment uses actual laid-out content height and the terminal bottom-border advance. In declared positive-margin rows whose plain centered/bottom cells all contain minimum-height paragraphs, body frame measurement and keep estimates include the maximum bottom margin in row advance, outside the content-slot alignment extent. Complete tables must fit the current body frame. Recorded margin admission preserves content-dominated minimum-row fallback even when final heights coincide. Qualified row height, vertical graphics and following body flow include this margin. Admitted unsplit/unscaled positive-margin cells with single or absent borders clip content inside row-maximum margins and border insets. Their effective content clip is exposed in layout snapshots. Text operations, row geometry, border/fill painting and actual destinations remain unchanged. Unqualified compound borders and nonpositive content rectangles retain the full-cell mask. Plain centered/bottom body tables in a single-column page frame whose complete natural-height rows fit the current frame also place minimum-height paragraph excess above each first baseline. This includes absent row heights and explicit automatic heights whose authored values are ignored. In equal-height cells, values at or below the natural font height retain exact prior emission; shorter cells may move with the corrected vertical alignment. Their row geometry, ordinary/exact neighbors, following flow, graphics and actual links stay unchanged. Mixed-height shapes outside the qualified two-by-two grid, default/invalid declared rules, empty paragraphs, content-dominated minimum rows and complex/frame-boundary paths retain separate fallback. These bounded automatic cells clip content inside vertical margins and single/absent border insets, using the same content rectangle in PDF masks and layout snapshots. This changes only masks; text operations, row geometry, border/fill painting and actual links remain unchanged. Qualified uniform double-border body tables additionally use the corrected band in these existing mask admissions; other compound-border masks remain partial. Header rows, nonpositive exact/minimum or unrecognized height rules, and rich runs within paragraphs or complex/scaled/fragmented cells retain fallback. Qualified one-row/one-cell two-paragraph at-least slots also admit the remaining first-line note before-gap after a single-line predecessor. Table after-spacing and broader table note hit areas retain fallback. Wrapped/rich predecessors, auto/line-unit spacing, broader tables, rich/static/scaled content and split/manual/page-break flow retain the prior hit-area fallback. Headers/footers and note-story text retain their previous contextual-spacing branch. Horizontal bounds and actual note destinations remain unchanged.
-- Explicit false custom-mark flags retain automatic note labels/counters. True custom marks keep authored text and numbering; a single-reference source run links its immediately following first visible BMP character to the rendered note. Empty, whitespace, separate-run, multiple-reference and revision/field/comment marks retain the prior annotation fallback. Source ownership and a visible note destination are required.
-- Single-section each-page footnote labels restart on actual rendered pages in plain one-column ASCII body flow with full fonts. Explicit section `eachPage`, `decimal`/minimum-two-digit `decimalZero` and positive starts are supported. Complete source-run/actual-segment ownership admits one or several automatic markers, including same-page wrapping, independently of font-adjustment eligibility. Every marker needs a complete one-line note on the same page; only generated body/note labels change. One resource/layout retry must preserve all marker/note pages. Document-only or unknown requests, custom/revision/table/static/column/complex content, missing/ambiguous owners, incomplete/moved notes, unavailable full fonts and unstable retries retain fallback.
-- Leading, separator-reserve and font-adjustment admissions remain separately qualified. Existing note controls and exclusions remain recorded in the composition checkpoint history. Four further Word controls validate default and review numbering across Calibri zero/met thresholds, Arial and Times sizes; authored digits and actual note destinations are preserved. Typography, separator geometry and more general note flow remain approximate.
-- Known document restart metadata preserves an authoritative section each-page request. Reader and rendering admission share the supported restart vocabulary; document-only metadata does not create that request. Twenty-one Word controls across three fonts and11/12/14pt bodies qualify twelve corrections/24 improving pages and nine exact guards. Unknown metadata, unsupported shapes and source-owner stability retain fallback; existing font/size/threshold rules stay in force.
-- Complete one-line footnotes share a single separator reserve in qualified natural pagination. Requested Office-compatible output, full fonts, plain one-column ASCII flow, an authored blank separator and explicit each-page/continuous section numbering qualify. The bounded retry must retain page count and every complete marker/note pair on its original page. Nine independent controls match Word body capacity and keep body baselines within 0.22pt; nine exclusions retain parent PDFs. Both public counterparts pass the existing raster gates after the separately qualified plain-footnote kerning correction below; visible spacer controls retain raster/vertical differences. Missing/nonblank separators, continued/wrapped notes, composed layouts, keep chains, scaled/fallback fonts and unstable owners retain the original reserve.
-- Plain each-page footnote documents use source kerning thresholds for regular 12pt Calibri, Arial and Times New Roman ASCII text in requested Office-compatible output. Absent/zero and thresholds above the font size use nominal advances; positive thresholds met by the font size retain pair positioning. Document defaults, paragraph/character styles and direct overrides retain the raw cascade, including explicit zero. Measurement, emission and glyph signatures share the derived policy. Full fonts, unit print scale, one-line body/note owners and stable pages qualify. Seventeen independent admissions improve all measured raster metrics; 43 exclusions retain parent PDFs. Four existing public cases pass unchanged gates. Preserve/review output, malformed thresholds, other sizes/styles, wrapped or composed flow and unstable owners retain the established behavior. Keep chains are not independently qualified for kerning; natural visible-spacer and export-grid differences remain.
-- Qualified plain each-page footnote documents put positive minimum-height body leading above the baseline. Unwrapped, unmarked paragraphs with zero before/after spacing, uniform regular 12pt Calibri/Arial/Times and 14-24pt slots qualify in requested Office-compatible output with full fonts and unit print scale; Times slots below 16pt remain guarded. Natural line-box metrics set the shift, while paragraph tops, capacity, advances, graphics and actual note annotations retain parent geometry. Eleven independent admissions qualify 44 minimum baselines within 0.188pt; 41 exclusions retain PDFs. Three earlier natural cases improve page-one similarity from about .608 to .984, with all 120 body/spacer baselines within .212pt. The two new public counterparts retain MAE/changed-pixel failures at unchanged note-section gates. Exact/auto, marked slots outside the extension below, keep chains, rich/mixed/font/size, wrapped or composed flow retain fallback.
-- Numeric paragraph line overrides replace inherited point heights and automatic factors together through document defaults, named styles and based-on chains. A local line value without a local rule uses automatic spacing, and structure summaries report the same effective mode. Sixty-two independent Word controls qualify 29 corrections and 33 exact PDF exclusions, including ordinary/table and bold 14pt counterparts. Current/public and earlier changed controls resolve 200 labels/pages and 100 actual note links. Standalone rule-only tokens retain their earlier metadata/geometry; the two public counterparts retain MAE/changed-pixel gaps.
-- Minimum-height body lines in plain ordinary flow and coherent document defaults place positive metric excess above the baseline in requested Word-compatible output. The bounded regular 12pt Calibri/Arial/Times, single-line 14..24pt model retains slot pitch, page capacity, advances, graphics and actual note links; Times below 16pt and rich/painted/wrapped/composed paths remain excluded. Seventy independent Word controls qualify 28 corrections and 42 exact PDF exclusions; seven earlier default controls also improve. The note-default public fixture retains MAE/changed-pixel failures. The ordinary minimum fixture now passes MAE, SSIM and recall after the ordinary kerning correction; changed pixels still fail its unchanged threshold.
-- Plain ordinary DOCX body flow honors inherited kerning thresholds in requested Word-compatible output: absent/zero or thresholds above the font size use nominal advances; met positive thresholds retain pair positioning. Regular 12pt Calibri/Arial/Times, full fonts, unit scale, no notes and simple single-line unpainted flow qualify. Raw reader metadata and Preserve output remain unchanged. Ninety-five independent Word controls qualify 35 corrections and 60 exact PDF exclusions, including the inclusive 12pt threshold boundary. Both new public fixtures pass unchanged image gates; 43 earlier ordinary controls also improve. Visible advances differ by at most .219pt with stable text, fonts, pages, baselines, graphics and font resources. Other sizes, rich/painted/kept/wrapped/composed paths retain fallback.
-- Regular 11pt ordinary and complete each-page note body flow supports source kerning thresholds and minimum leading in requested Word-compatible output with full fonts and unit scale. A complete left-aligned one-column single-line frame, trusted named or loaded default styles, uniform regular Calibri/Arial/Times body runs, numeric 0..8pt spacing and 16..24pt explicit pitches bound the extension; automatic counterparts use single spacing. Only actual source-owned automatic superscript markers qualify, and note-story letters retain regular 12pt in the same family. Absent/zero/above-threshold kerning uses nominal advances; met thresholds retain pairs. Independent Word controls qualify 84 admissions and 62 exact parent PDF exclusions. All 90 admitted raster pages improve MAE, SSIM and recall; body baselines are within .228pt and actual note links within .566pt. The separately measured export grid retains visible-span residuals up to .745pt, including 56 isolated capacity spans whose errors increase by at most .342pt; complete horizontal parity remains deferred. Both public cases remain partial at unchanged image gates. Source metadata, Preserve, legacy 12pt gates, complete note pages, pitch, footer anchors and destinations retain their qualifications. Unknown styles, centered/right alignment, richer/wrapped/kept/composed flow, unsupported spacing and other new sizes retain fallback.
-- Qualified nominal 11pt body glyphs now use logical advances while keeping the visible 11.04pt size and the last natural glyph width. Automatic superscript note numbers keep their 6.96pt size and use unkerned pairs only in complete nominal body frames; other met body thresholds retain the accepted marker policy. The same strict frame/style/font/spacing gates apply. Across 177 controls, 97 admissions improve all 103 pages on MAE, SSIM and recall, and 80 exclusions retain exact parent PDFs. Visible-span and relative glyph-start errors stay within .216pt, absolute starts within .240pt and actual note rectangles within .051pt. Small isolated span worsening remains explicit: three independent repeated-i controls and twelve earlier source spans, the latter by at most .041pt. Complete horizontal parity remains unclaimed. Terminal whitespace is measured separately. The new repeated-glyph public case passes unchanged image gates; the new note case remains partial, and two earlier cases retain changed-pixel failures. Source/Preserve, font resources, graphics, vertical placement, pitch, page counts, complete note owners, footer anchors and actual destinations retain their qualifications.
-- Qualified met-threshold 11pt body frames use logical glyph and pair advances for ordinary Times and complete Calibri/Arial note flow. Every nonempty baseline body run must share one positive raw threshold at most 22 half points. Physical sizes remain 11.04/6.96pt and final natural widths remain physical; exact source-owned automatic markers use unkerned pairs. Other face/flow combinations and mixed thresholds retain accepted policies. Across 200 controls, 13 corrections improve all 13 admitted pages and 187 guards remain exact. All 104 body spans and 4,163 starts meet unchanged bounds: .170pt spans, .215pt relative starts and .239pt absolute starts; 28 actual note rectangles are within .051pt. Complete owner pages, paragraph pitch/spacing, source metadata, Preserve, 12pt related stories, footer anchors and actual destinations retain qualification. The public Times counterpart passes unchanged image gates; the Arial note counterpart remains partial on MAE and changed pixels. Broader compensation was rejected after eight controls failed individual glyph bounds despite pixel improvements.
-- Each-page automatic footnote numbering supports wrapped regular 12pt Arial/Times body paragraphs within plain single-section frames with zero numeric spacing, single automatic pitch, full fonts and unit scale. Every marked paragraph must fit one physical page and own one exact source-run/offset/display-text segment and one complete one-line note. Source digits and metadata remain intact. Existing kerning, minimum-leading and complete-reserve callers keep their one-line gates. Twenty-six controls qualify eighteen corrections, eight exact Calibri guards, thirty-six improving pages, seventy-two body/footer labels each and seventy-two actual links. Labels and pages match Word; link bounds are within .046pt and destinations .799pt. All vertical positions, wrapping and complete note placement retain parent identity. Times retains an inherited .660pt superscript-baseline residual. Both public cases remain partial at unchanged image gates. The mixed-threshold Calibri qualification below extends this scope; split/continued/custom notes and richer/kept/scaled/composed paths remain separate.
-- Regular 12pt wrapped Calibri complete-footnote frames support nominal body advances and each-page numbering when raw body thresholds are absent, zero or above 24 half points. Plain single-section frames, zero numeric spacing, single automatic pitch, full fonts and unit scale qualify exact source owners before and after the derived retry. Raw source metadata/digits, physical font sizes, Preserve and legacy one-line spacing/reserve gates remain unchanged. Twenty-eight controls qualify twenty corrections and eight exact guards; all thirty-nine affected pages improve MAE, SSIM and recall. Eighty body marks, footer labels and actual links resolve to Word labels/pages. Actual Word breaks match across 456 body lines and 31,314 visible characters, with remaining absolute glyph-start residual .352pt, span .328pt, body baseline .193pt and unchanged marker-baseline residual .233pt. Actual link bounds are within .048pt and destinations .945pt. All vertical geometry, complete note placement, font metrics, graphics and destinations retain parent identity. Both public cases remain partial at unchanged image thresholds. The mixed-threshold qualification below is separate; other sizes and richer/kept/scaled/composed or split/continued/custom/ambiguous note paths retain fallback.
-- Met-threshold wrapped Calibri supports each-page automatic footnote numbering with one uniform positive raw body threshold at most 24 half points, retained source pairs and the same regular 12pt plain complete-note frame. Only an explicit Word-compatible caller enables the extension; Preserve and legacy one-line gates retain fallback. Forty-six controls qualify eighteen corrections and twenty-eight exact guards, with thirty-six improving pages, seventy-two body/footer labels each and seventy-two actual links. Actual Word breaks match across 432 lines and 29,838 visible characters. Remaining glyph-start/span errors reach .320/.339pt, body baseline .193pt and unchanged marker baseline .207pt. Actual rectangles are within .047pt and destinations .648pt. Source metadata/digits/pairs, physical sizes, all vertical geometry, complete notes/reserve, full-font metrics, graphics, nominal admission and actual destinations retain identity. Both public cases remain partial at unchanged image gates. The mixed-threshold qualification below is separate; malformed thresholds, other sizes, rich/kept/scaled/composed or custom/continued/ambiguous note paths retain fallback.
-- Mixed-threshold regular 12pt wrapped Calibri complete-footnote frames support each-page numbering after deriving each baseline run's pair policy from its retained raw threshold. Absent/zero/unmet plus met thresholds and differing met thresholds share one frame/owner rule; existing nominal-only and uniform-met purposes remain explicit. Word-compatible output, full fonts, unit scale, zero numeric spacing, single automatic pitch, one exact source marker segment and one complete note per owner page remain required. Fifty controls qualify 34 corrections, 16 exact guards, 68 improving pages and 136 body marks/footer labels/actual links each. Actual Word breaks match across 816 lines and 56,372 visible characters; glyph starts/spans retain .320/.339pt residuals, body baseline .193pt and unchanged marker baseline .207pt. Links are within .048pt and destinations .648pt. Source metadata/digits, physical sizes, Preserve, all vertical geometry, complete-note reservation, full-font metrics, graphics and actual destinations retain identity. All 6,279 earlier PDFs remain exact. Both new public cases remain partial at unchanged image gates; broader spacing, other sizes and rich/kept/scaled/composed or split/continued/custom/ambiguous flow retain fallback.
-- Shared wrapped-note threshold purposes admit numeric after-spacing through the existing 0..8pt qualifier in requested Word-compatible output. Before-spacing remains excluded. Exact complete source owners determine numbering; only the final visible paragraph line owns an after-gap in note links. Earlier nominal-only/uniform purposes, raw source metadata/digits, physical sizes, Preserve and one-line reserve gates retain their boundaries. Ninety new controls qualify 38 corrections and 52 exact guards, with 76 improving raster pages; one earlier single-line six-point link correction retains exact pixels and is separately Word-qualified. Actual Word line sequences match for 916 lines and 63,162 visible characters. Links/destinations are within .048/.799pt; the inherited Times marker residual reaches .700pt. Both new public cases remain partial. Automatic/line-unit/contextual spacing, split/continued/custom/ambiguous owners and rich/kept/scaled/composed or other-size frames retain fallback.
-- Unit Word-compatible plain numeric-spacing flow consumes no before-gap after run page breaks and only max(0, before minus preceding after) after paragraph page breaks. Requested Word semantics are separate from effective page-frame geometry, preserving page width without balloons. The shared threshold/complete-owner rules reuse the existing 0..8pt before/after qualifier; first visible lines own consumed before-gap and final visible lines own after-gap. Original nominal/uniform purposes retain zero-spacing guards. Sixty-two controls qualify 52 corrections and ten exact guards, with 90 improving raster pages. The 38 note/public controls match Word visible sequences across 912 lines and 63,004 characters, resolving 152 body/footer labels each and 152 links; bounds/destinations are within .048/.799pt. Ordinary/note baseline residuals are .252/.195pt and physical Times marker residual reaches .740pt. Source metadata/digits, physical sizes, Preserve, note reserves and graphics remain intact. Document-start/natural flow retains identity; automatic/line-unit/contextual, rich/kept/scaled/composed, out-of-range and split/custom/continued/ambiguous frames retain fallback. Public cases remain partial at unchanged gates.
-
-- Plain ordinary and complete each-page note body flow supports contextual minimum leading with resolved named or loaded implicit/unambiguous default styles. Requested Word-compatible output, full fonts, unit scale, complete one-column single-line flow, one uniform visible regular 12pt Calibri/Arial/Times family, numeric 0..8pt before/after spacing and 16..24pt spaced/marked minimum slots bound the extension. The full body qualifies once; only automatic source-owned superscript note marks are admitted. Same/different named styles, omitted/explicit declared defaults, implicit Normal, style/document-default flags, contribution transitions, mixed gaps and two-page capacity are qualified. One hundred six independent Word controls qualify 74 corrections and 32 exact parent PDF exclusions. All 754 admitted body lines resolve within .275pt; 148 actual note links resolve within .555pt, with fixed destinations. All admitted raster pages improve MAE, SSIM and recall. Both public cases retain changed-pixel or MAE/changed-pixel failures at unchanged gates. Paragraph tops, spacing, pitch, capacity, automatic neighbors, footer baselines, font resources, graphics and horizontal glyph plans retain identity; ordinary actual annotations stay empty. Raw metadata, Preserve output, legacy zero-spacing and non-contextual gates keep earlier behavior. Missing/ambiguous/unresolved styles, automatic/line-unit spacing, richer/wrapped/kept/scaled/composed flow, broader fonts/sizes and custom/continued notes retain separate limits.
-- Plain ordinary minimum body lines support numeric 0..8pt before/after spacing in requested Word-compatible output with full fonts and unit scale. Complete one-column single-line body flow, one uniform visible regular 12pt Calibri/Arial/Times family, qualified numeric spacing across the full body and 16..24pt spaced minimum slots bound the extension. The full-frame qualification runs once. Positive font-metric excess shifts only minimum baselines; automatic neighbors, paragraph tops, authored gaps, pitch, capacity, glyph advances, graphics and empty actual annotation arrays retain identity. One hundred two independent Word controls qualify 84 corrections and 18 exact PDF exclusions, including three two-page capacity cases. All 753 body lines resolve within .305pt. Both public counterparts retain changed-pixel or MAE/changed-pixel failures at unchanged gates; all 5769 earlier PDFs retain exact bytes. Legacy zero-spacing and note gates stay unchanged. Contextual spacing outside the qualification above, automatic/line-unit spacing, richer or mixed visible fonts/sizes, wrapped/kept/composed paths and broader slots retain fallback.
-- Plain each-page note flow supports minimum-height body lines containing source-owned superscript automatic markers and numeric 0..8pt before/after spacing. Requested Word-compatible output, full fonts, unit scale, complete single-line owners, regular 12pt Calibri/Arial/Times and 16..24pt spaced/marked slots qualify. Positive font-metric excess moves body and marker baselines together while paragraph tops, pitch, capacity, glyph advances, graphics and note destinations stay fixed. Actual note rectangles include only the remaining before-gap after predecessor after-spacing, plus current after-spacing; inherited defaults and page tops use the same ownership. The earlier zero-before batch qualifies 37 corrections and 17 exclusions. A further 87 independent Word controls qualify 69 before-spacing corrections and 18 exact PDF exclusions, including three two-page counterparts. New body baselines differ by at most .298pt; Times markers retain up to .740pt of vertical residual. The public counterparts retain unchanged MAE/changed-pixel failures. Ordinary spacing outside the qualified scope above, custom/unowned or differently formatted marks, rich/wrapped/kept/composed paths and broader slots retain fallback.
-- Automatic note labels in simple section sequences support continuous and `eachSect` numbering, section starts/formats and their defaults, including minimum two-digit `decimalZero`. Continuous labels use document occurrence counts with the current section start; section restarts count from the section boundary. Custom marks do not advance automatic numbering, and authored document settings remain inspectable. Unsupported or malformed settings, revision bodies and hidden/nested section boundaries retain the prior numbering fallback.
-- Multi-column sections flow explicit breaks with first-pass exclusion geometry while continuous balancing stays approximate.
-- Markup modes keep the authored PDF media box and text-column geometry; no expanded review-pane margin is created.
-- Native OMML body equations support approximate standalone display and fitting inline rows, including literal/fraction/stack/script sequences, square/nth roots using ready-made variants, a single fraction/stack or supported script box used as a radicand, a fraction/stack script base, and centered growing or fixed delimiters around literal or bounded fraction/stack arguments with supported or empty separators (also in bounded mixed rows), and display/fitting inline sums/products with explicit stacked or side literal limits, including genuinely empty hidden arguments and document-default limit placement.
-Sum/product bodies can also contain one fraction/stack or supported script box. Inline integrals support the same
-bounded bodies, using extended-shape and italic metrics for their side limits. Authored n-ary growth-off is
-supported; explicit growth fits occupied body height using ready-made variants. These n-ary boxes also
-participate in bounded mixed rows through semantic operator/body edges. Literal function names with bounded literal, delimiter,
-script or fraction arguments also render standalone or in bounded mixed rows,
-with independent control and paint fonts. Bounded matrices are also supported
-as function arguments. Native matrices support nonempty literal
-or bounded fraction/stack/script cells in
-standalone/fitting-inline grids or bounded mixed rows, with centered or declared left/right/grouped columns,
-top/center/bottom base justification, default row spacing and authored column
-widths/gaps (including explicit defaults). Shared font metrics, child glyph ownership and source-order rules retain explicit fallbacks for stored hidden root degrees, other delimiter argument/shape profiles, assemblies, unsupported deeper/rich structures, unqualified operator breaking and nested/floating story combinations. See [native DOCX equations](docx-equations.md) for independent Word evidence and remaining visual residuals.
-
-Supported equation sequences compose with prose, pictures, bookmarks and actual
-inserted/deleted owners across body, simple cells and direct headers/footers.
-Final preserves supported empty bar-fraction structure after deleting its text;
-authored empty fractions use the same metric-only placeholders. Partial-empty bar-fraction arguments also retain metric-only geometry. Nonempty
-literal math-run insertions/deletions preserve source-specific review ink and other
-arguments. Empty or structurally different inner revision wrappers, empty stacks
-and richer unsupported revision structures retain fallback.
-
-Supported empty subscript/superscript arguments and partial empty matrix cells
-retain metric-only placeholder geometry and remaining source content. Known matrix
-placeholder visibility values/defaults share the independently validated printed
-layout, including empty rows/columns. Empty literal script bases and visible n-ary limits retain metric-only
-geometry and remaining source content, including Final deletion. Unpainted empty
-function/grid forms and unknown properties retain fallback.
-
-Empty literal function arguments and n-ary bodies retain shared metric-only
-geometry and remaining names/operators/limits, including Final deletion. Source ink
-and group starts have independent Word controls. Empty literal function names retain
-their argument. Root/delimiter/n-ary symbols retain actual structural paint ownership
-without printable literal source runs, using shared control-font preparation and
-metric-only arguments. Unpainted empty function/grid forms and unknown/deeper
-structures retain fallback.
-
-Empty visible root degrees share script-level metric-only argument sizing and
-retain root/body content, including Final deletion. Larger-control placement remains
-approximate (up to 1.96pt Y in independent controls); stored nonempty hidden degrees
-and unknown/deeper structures retain fallback.
-
-Bounded matrices also render inside ready-made round/square delimiters, retaining
-independent metric and paint owners. Fence variant and vertical-layout residuals
-remain explicit; arbitrary deeper delimiter nesting retains fallback.
-
-Unsupported or ignored:
-
-- Full Word-style tracked-change balloon content and collision-aware markup margin pagination.
-- Floating charts, SmartArt, unsupported equation constructs/placements, live OLE content, macros, and full Word-style text reflow around floating objects.
-- Section variants beyond the simple page setup used by the current renderer.
-- Strict OOXML (ISO 29500) content: only the transitional dialect is supported; strict parts warn OOXML_STRICT_DIALECT and may render missing.
-- Complex scripts, bidirectional text, text shaping, and OpenType layout features beyond coverage fallback.
-
-Comments, tracked changes, formatting revisions, complex fields, equations, OLE objects, floating drawings, footnotes, endnotes, multi-column sections, and macros produce stable warning or approximation diagnostics when detected.
+Unsupported: full Word balloon/collision pagination, floating charts, SmartArt,
+live OLE/macros, unrestricted section/column balancing, arbitrary nested/floating
+story reflow, complex scripts/bidirectional shaping and unlisted equation constructs.
+Detected unsupported content may be simplified or omitted; diagnostics are not
+a complete inventory of every feature in an arbitrary document.
 
 ## PDF Output
 
-Supported:
+- Deterministic resource naming/object order for stable input, fonts and options;
+  optional fixed creation-date metadata. There is no Deterministic option/mode.
+- Subset embedded TrueType/CID fonts with ToUnicode, plus standard Type1/WinAnsi
+  fallbacks. Subsets retain required compound glyphs; assembled structural symbols
+  may use ActualText. CFF/OpenType-CFF outlines are substituted and diagnosed.
+- Supported path/fill/stroke/transform/clipping/text operators, raster images,
+  bounded gradients/patterns, transparency Form XObjects and soft masks.
+- External/internal Link annotations for supported DOCX/PPTX source links.
+- Minimal metadata; no interactive AcroForms, other annotation kinds, outlines,
+  embedded files, tagged PDF, audio/video or JavaScript. No PDF/A or PDF/UA claim.
+  See the source-backed [PDF profile](PdfProfile.md) for emission and validation scope.
 
-- Deterministic object ordering and resource naming for stable inputs.
-- Embedded TrueType/CID fonts with ToUnicode maps for searchable copied text in supported runs.
-- JPEG passthrough and PNG RGB/RGBA embedding.
-- Basic path, fill, stroke, transform, clipping, and text operators.
+Detailed historical calibration and qualification narratives remain in
+[the prior capability record](https://github.com/Lokad/OoxPDF/blob/b4ae23938be7df60bb6b1be09985e73fc2e2a523/docs/Capabilities.md).
+Condensing this inventory does not remove those rendering rules, evidence or
+thresholds, and does not expand supported combinations.
 
-Partial or approximated:
-
-- PDF metadata is intentionally minimal in deterministic mode.
-- Embedded TrueType fonts are subset to the glyphs, metrics, and Unicode map entries used by the rendered document (see CHANGELOG 0.1.1); whole-font embedding is no longer the default.
-- CFF/OpenType-CFF outlines are never embedded; affected runs fall back to an embeddable typeface with a `FONT_UNSUPPORTED_OUTLINES` warning (see Diagnostics).
-
-Unsupported or ignored:
-
-- Interactive PDF features such as forms, non-link annotations, outlines, tagged PDF structure, video, audio, and JavaScript. Hyperlink annotations (/Link with URI actions and internal destinations) are supported for DOCX and PPTX links.
 
 ## Static-content fallback matrix
 
@@ -260,17 +192,3 @@ Each row links an unsupported family to its detection diagnostic, fallback, and 
 | DOCX macros | `DOCX_UNSUPPORTED_MACRO` Warning | Ignored | `DocxUnsupportedFeaturesEmitDiagnostics` (docx-core) |
 | Strict OOXML | `OOXML_STRICT_DIALECT` Warning | May render missing | OoxmlTests dialect probes (ooxml) |
 | Font packs | `FONT_PACK_*` throw codes | Conversion fails with DiagnosticId | FontTests pack suites (fonts) |
-
-
-Gallery2 bar-axis fallbacks remain available when an unrelated chart style part
-exists. Explicit/no-fill strokes retain precedence. Nine PowerPoint controls
-qualify three corrections/six exact guards; modified explicit axis role colors
-are ignored by PowerPoint in this context, so role inheritance remains deferred.
-This scope preserves major-gridline ownership and other gallery/plot guards.
-
-
-Category and value axes share a nominal10pt default when source text sizes are
-omitted (9.96pt after existing chart quantization). Source/style/element sizes
-retain precedence. Sixteen PowerPoint controls qualify ten improvements/six exact
-guards across frames, galleries and bar/line plots; default strip/baseline, dense
-interval and bar geometry remain partial at unchanged visual gates.

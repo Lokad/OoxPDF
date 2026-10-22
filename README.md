@@ -162,13 +162,15 @@ public sealed class MyFontResolver : IFontResolver
 {
     public FontFaceResolution Resolve(FontRequest request)
     {
-        byte[] bytes = LoadFontBytesFromPackageOrBlob(request);
+        // Resolve identity and bytes together. Different regular/bold/italic
+        // programs need different identities; identical programs may share one.
+        (string programId, byte[] bytes) = LoadFontProgramFromPackageOrBlob(request);
 
         return new FontFaceResolution(
             request.FamilyName,
             "Resolved Family",
             new FontStyleKey(request.Bold, request.Italic),
-            new MemoryFontProgramSource("font-pack:resolved-family:regular", bytes),
+            new MemoryFontProgramSource(programId, bytes),
             IsFallback: false);
     }
 }

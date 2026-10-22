@@ -9,7 +9,7 @@ Diagnostics are emitted through `OoxPdfOptions.DiagnosticSink` and through the C
 Top-level package or dialect issues:
 
 - `OOXML_STRICT_DIALECT`: Strict OOXML (ISO 29500) content was detected; only the transitional dialect is supported and content may be missing.
-- `OOXML_MUST_UNDERSTAND`: content marked must-understand uses unsupported namespaces and was ignored. Main parts warn once per document; slides, shared masters/layouts, and DOCX story and infrastructure parts warn once per part with their part names.
+- `OOXML_MUST_UNDERSTAND`: a `mc:MustUnderstand` namespace-prefix list requires an unsupported or unresolved namespace. Conversion continues with a warning and partial compatibility handling, not full MCE conformance. Requirements use their declaration scope; unselected alternate branches do not participate. Main parts warn once per document; slides, shared masters/layouts, and DOCX story and infrastructure parts warn once per part with their part names.
 
 ## PPTX
 
@@ -58,6 +58,7 @@ Unsupported feature warnings:
 - `DOCX_UNSUPPORTED_COMMENTS`: comment markup was detected and ignored, usually in compatibility/default final output when markup printing was not requested.
 - `DOCX_UNSUPPORTED_COMPLEX_FIELD`: a complex field was malformed in a way that prevents cached-result or placeholder rendering, nested inside another field instruction, or had no supported dynamic placeholder and no cached result to render.
 - `DOCX_UNSUPPORTED_EQUATION`: Office Math content was detected and ignored.
+- `DOCX_APPROXIMATED_EQUATION`: native Office Math was painted with approximate layout; one warning per affected part. This is distinct from omitted unsupported equations.
 - `DOCX_UNSUPPORTED_EXTERNAL_IMAGE`: an externally referenced image was detected and ignored because only packaged parts render; one warning per document.
 - `DOCX_UNSUPPORTED_FLOATING_DRAWING`: floating DrawingML content was malformed or used an unsupported payload such as a chart, SmartArt, external image, or anchor positioning outside the supported image/text-box placement model.
 - `DOCX_UNSUPPORTED_FORMATTING_REVISIONS`: formatting revisions were detected outside a mode that approximates them, so they are ignored; the AllMarkup approximation is `DOCX_APPROXIMATED_FORMATTING_REVISIONS`.
