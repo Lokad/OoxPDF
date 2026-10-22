@@ -14,11 +14,6 @@ internal static class SafeXml
     internal const long DefaultMaxNodes = 2000000L;
     internal const long DefaultMaxAttributes = 2000000L;
 
-    public static XmlReaderSettings CreateReaderSettings()
-    {
-        return CreateReaderSettings(DefaultMaxCharacters);
-    }
-
     internal static XmlReaderSettings CreateReaderSettings(long maxCharacters)
     {
         return new XmlReaderSettings

@@ -145,11 +145,6 @@ internal sealed class PptxTheme
         return new PptxTheme(colors, majorLatin, majorEastAsian, majorComplexScript, minorLatin, minorEastAsian, minorComplexScript, fillStyles, lineStyles, effectStyles);
     }
 
-    public bool TryResolveColor(string schemeColor, out RgbColor color)
-    {
-        return TryResolveColor(schemeColor, PptxColorMap.Default, out color);
-    }
-
     public bool TryResolveColor(string schemeColor, PptxColorMap colorMap, out RgbColor color)
     {
         string mappedColor = colorMap.ResolveSchemeColor(schemeColor);

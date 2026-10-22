@@ -9,11 +9,6 @@ namespace Lokad.OoxPdf.Pptx;
 internal static class PptxColorResolver
 {
 
-    public static bool TryReadSolidColor(XElement? element, PptxTheme theme, out RgbColor color)
-    {
-        return TryReadSolidColorWithAlpha(element, theme, out color, out _);
-    }
-
     public static bool TryReadSolidColor(XElement? element, PptxTheme theme, PptxColorMap colorMap, out RgbColor color)
     {
         return TryReadSolidColorWithAlpha(element, theme, colorMap, out color, out _);

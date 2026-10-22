@@ -373,11 +373,6 @@ internal sealed class PdfEmbeddedFont
         return builder.ToString();
     }
 
-    public string? EncodeGlyphPositioningArray(string text)
-    {
-        return EncodeGlyphPositioningArray(text, 0d, 1d, false, true);
-    }
-
     public bool TryGetEncodedCid(ushort originalGlyph, out ushort cid)
     {
         return TryGetCid(originalGlyph, out cid);

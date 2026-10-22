@@ -475,15 +475,14 @@ internal sealed class PdfDocumentWriter
         ReadOnlyMemory<byte> fontProgram = font.FontProgramBytes;
         byte[] compressedFontProgram = Compress(fontProgram.Span, cancellationToken);
         byte[] toUnicode = Encoding.ASCII.GetBytes(font.BuildToUnicodeCMap(cancellationToken));
-        // R06: retained font resources accumulate across embedded fonts; charge the
-        // program plus ToUnicode bytes as they serialize (operation counts alone do
-        // not bound retained resource bytes).
+        // Count serialized font payload separately from coarse host admission.
         OoxConversionBudget.Current?.ChargePdfFontBytes(checked((long)fontProgram.Length + toUnicode.Length));
         writer.WriteStreamObject(objects.FontFile, FormattableString.Invariant($"/Filter /FlateDecode /Length1 {fontProgram.Length}"), compressedFontProgram);
         writer.WriteStreamObject(objects.ToUnicode, string.Empty, toUnicode);
     }
 
-    // RV01: standard-14 fallback faces carry no embeddable program, so the font object needs only the Type1 dictionary and the static WinAnsi ToUnicode map. The static descriptor/CMap bytes are writer overhead (catalog class), not retained font payload: no font-byte budget charges apply, while emitted text still counts toward content/output admission.
+    // Standard-14 faces have no embedded font program. Their dictionaries and
+    // static WinAnsi ToUnicode map count toward output, not the font-payload total.
     private static void WriteFallbackFontObjects(PdfObjectWriter writer, PdfFallbackFont font, FallbackFontObjectNumbers objects, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

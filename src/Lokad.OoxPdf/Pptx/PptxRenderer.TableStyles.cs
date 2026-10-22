@@ -2,11 +2,6 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal static class PptxTableStyleResolver
 {
-    public static PptxSceneFillStyle ReadCellFill(PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount, PptxTheme theme)
-    {
-        return ReadCellFill(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme, PptxColorMap.Default);
-    }
-
     public static PptxSceneFillStyle ReadCellFill(PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount, PptxTheme theme, PptxColorMap colorMap)
     {
         double alpha = 1d;
@@ -99,11 +94,6 @@ internal static class PptxTableStyleResolver
         }
 
         return default;
-    }
-
-    public static PptxSceneTableCellTextStyle ReadCellTextStyle(PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount, PptxTheme theme)
-    {
-        return ReadCellTextStyle(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme, PptxColorMap.Default);
     }
 
     public static PptxSceneTableCellTextStyle ReadCellTextStyle(PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount, PptxTheme theme, PptxColorMap colorMap)

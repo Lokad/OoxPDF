@@ -16,21 +16,6 @@ internal enum DocxFieldKind
 internal static class DocxFieldKindExtensions
 {
     /// <summary>
-    /// Stable spelling of a field kind. Kept as the historical PascalCase
-    /// strings so inspection snapshots stay comparable.
-    /// </summary>
-    public static string ToValueString(this DocxFieldKind kind)
-    {
-        return kind switch
-        {
-            DocxFieldKind.Page => "Page",
-            DocxFieldKind.NumPages => "NumPages",
-            DocxFieldKind.Other => "Other",
-            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown field kind.")
-        };
-    }
-
-    /// <summary>
     /// Whether the field is dynamic (page-number family): PAGE or NUMPAGES.
     /// Centralizes the predicate previously repeated at each counter site.
     /// </summary>

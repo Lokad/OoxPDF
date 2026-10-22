@@ -19,18 +19,6 @@ internal sealed partial class PptxRenderer
         this.fontResolver = new PresentationFontResolver(fontResolver);
     }
 
-    public IEnumerable<PdfPage> RenderBlankPages(PptxDocument document, CancellationToken cancellationToken)
-    {
-        for (int i = 0; i < document.Slides.Count; i++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            yield return new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints);
-            // R06.2: admit each produced page before further production, so a small
-            // page budget rejects before later slides materialize.
-            OoxConversionBudget.Current?.ChargePdfPages(1);
-        }
-    }
-
     // R06.3: yields pages progressively so the writer can spill content and retain
     // only descriptors; callers must drain inside the conversion budget scope.
     public IEnumerable<PdfPage> RenderPages(PptxDocument document, OoxPackage package, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)

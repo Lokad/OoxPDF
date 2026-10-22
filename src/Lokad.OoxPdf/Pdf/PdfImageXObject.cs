@@ -29,9 +29,6 @@ internal sealed class PdfImageXObject
 
     public byte[]? Alpha { get; }
 
-    // R06.2: retained production unit for image resources: encoded bytes plus
-    // soft-mask bytes, matching the serialized image charge unit.
-
     // R18: the identity carries full SHA-256 digests, not truncated prefixes, and
     // writer deduplication verifies byte equality on every key match (see
     // PdfDocumentWriter.DeduplicateImages). PDF names (Im1, ...) stay deterministic

@@ -2,6 +2,13 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Qualification joins reject duplicate document outcomes from distinct reports,
+  even when PDF bytes match. Select one authoritative source; repeating the same
+  report selection remains allowed. Failures first observed during test repairs
+  require a subsequent pass, never a skip; original attempts remain recorded.
+- Removes ten verified unused internal methods without changing the public API
+  or rendering rules. Workspace measurement rejects unknown arguments; diagnostic
+  guidance specifies the existing numeric severity format.
 - Binds asynchronous relative file paths before queuing, preserving the caller's
   directory through worker delays. Info-only diagnostic overflow stays
   informational; warning/error overflow retains CLI strict behavior.

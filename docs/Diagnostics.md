@@ -116,7 +116,7 @@ These warnings are document-scoped. Duplicate occurrences of the same unsupporte
 The CLI writes diagnostics JSON when `--diagnostics <file>` is provided. The JSON is an array of diagnostic entries with these fields when available:
 
 - `Id`: stable diagnostic code.
-- `Severity`: `Info`, `Warning`, or `Error`.
+- `Severity`: numeric enum value: `0` = `Info`, `1` = `Warning`, `2` = `Error`.
 - `Message`: human-readable explanation.
 - `PartName`: OOXML package part where the issue was detected.
 - `SlideIndex`: one-based slide index for slide-scoped PPTX diagnostics.

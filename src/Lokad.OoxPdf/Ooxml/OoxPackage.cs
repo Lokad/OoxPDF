@@ -51,7 +51,7 @@ internal sealed class OoxPackage
         // by length and read directly to avoid an extra full copy. Caller retains ownership.
         MemoryStream? stagedBytes = null;
         Stream archiveStream = stream;
-        // one scratch buffer is rented for the whole open call instead of
+        // one scratch buffer is allocated for the whole open call instead of
         // allocating an 81,920-byte array per retained part plus staging.
         byte[] scratch = new byte[81920];
         try
@@ -286,7 +286,7 @@ internal sealed class OoxPackage
         try
         {
             // The record hides behind at most a 65,535-byte comment; the scratch
-            // buffer rented for the whole open call fits the scan window.
+            // buffer allocated for the whole open call fits the scan window.
             long scanSize = Math.Min(length, 65_535 + EndOfCentralDirectorySize);
             long scanStart = length - scanSize;
             int scanLength = checked((int)scanSize);

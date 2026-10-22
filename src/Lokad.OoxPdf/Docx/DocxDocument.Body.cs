@@ -61,11 +61,6 @@ internal sealed record DocxImplicitParagraphElement(DocxBreakSourceKind SourceKi
     // unstyled default otherwise); Office sizes the terminal mark like unsized runs.
     public double MarkFontSizePoints { get; init; } = DocxDefaults.FontSizePoints;
 
-    public static DocxTextRun CreateParagraphMarkRun()
-    {
-        return CreateParagraphMarkRun(DocxDefaults.FontSizePoints);
-    }
-
     public static DocxTextRun CreateParagraphMarkRun(double fontSizePoints)
     {
         return new DocxTextRun(string.Empty, fontSizePoints, null, false, false, false, null, null);

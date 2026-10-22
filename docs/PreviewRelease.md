@@ -44,52 +44,10 @@ that also occurs with the preceding qualified DLL on the same machine. The
 assertion and rendering policy remain unchanged. Local failed checks and
 platform skips are reported separately from green CI.
 
-Maintenance repairs preserve diagnostic-observer exception identity/type/stack and
-observe final-summary cancellation before publication. CLI diagnostics validate
-literal path separation and publish atomically, so existing hard/symbolic links
-cannot overwrite source or old destination files. Unused luminosity-mask/decoder paths, inactive overloads, inert PPTX emission
-and legend state, and unread argument plumbing are removed. Tests target live
-implementations; useful inspectors, PNG alpha masks, vector luminosity groups
-and independently validated rendering rules remain. No additional public API
-is removed by this cleanup.
-
-File conversion captures absolute input/output paths before host callbacks, so
-working-directory changes cannot redirect input lookup or final publication.
-File-path guards resolve directory-link ancestors and use existing entries to
-protect case aliases on either platform. Provably distinct names remain allowed;
-unresolved links or case-only paths refuse conservatively. Raster validation preserves
-spaced process arguments and its external timeout; transfer checks include the
-frozen DOCX inspector's source and parent build settings. These are contract and
-tool repairs, with no additional public API removal or rendering rule.
-
-Qualification checks root build settings and binds converter/inspectors to one
-frozen runtime. Local capability selections keep explicit broad milestone sets.
-Complete raster derivatives bind PDF, DPI, tool and page identities; stale or
-incomplete derivatives cannot satisfy a hit. Missing completion records recover
-through fresh staging from the retained PDF; old partial pages stay separate.
-Office worker arguments preserve spaces and logs through success/failure/timeout.
-Affected qualification declares expected platform skips and retains all outcomes;
-unexpected skips still reject its gate. CI retains all
-frozen runtime assets. These repairs add no public API removal or rendering rule.
-Raster wrappers, cached-reference serving and the direct rasterizer refuse destinations containing PNGs;
-use a fresh output directory rather than reusing a visual run ID. Existing files
-are preserved. Kerning scans use cancellation rather than work-only fuel while
-retaining pair/coverage/class expansion bounds.
-
-All sixteen portfolio PDFs and diagnostic lists remain byte-identical to the
-accepted baseline, with matching Office page counts. Two PPTX strict pixel gates
-pass; fourteen DOCX strict gates remain failed. No thresholds changed. Shared
-resolver request caches now synchronize hits, publication and bounded eviction.
-Stream-failure documentation explicitly requires discarding incomplete output;
-file publication remains atomic. No additional public API was removed by this
-follow-up.
-
-The source, runtime, package and report identities are retained in the local
-candidate record. Preparatory builds with different compiler outputs are kept
-separate. Root transfer verifies every frozen asset and two PDF integration smokes;
-it does not rebuild or repeat the broad suite. Packaging documentation and
-symbols reuse the qualified library and PDB. No performance speedup is claimed.
-Broader features and optimization are deferred.
+Completed maintenance and compatibility changes are recorded in the
+[changelog](../CHANGELOG.md) and caller migration guide. Qualification requires
+one authoritative source per document outcome and a real pass after any observed
+test failure; a later skip cannot resolve a failed attempt.
 
 ## Remaining document differences
 
@@ -126,9 +84,3 @@ bounded caches and page staging, optional coarse host memory admission,
 deterministic cleanup, atomic file publication and PDF structural checks remain.
 Host admission is not comprehensive heap accounting. Separate Office/PDFium
 validation tools are outside the shipped library.
-
-Recent maintenance protects final input-link referents from output and diagnostics
-publication and removes wrapping fuel, unused counters and inactive helpers.
-Retired zero-valued markup corrections are removed while authored spacing,
-revision colors and nonzero balloon geometry remain. Tests and allocation tooling
-use live implementations. There is no additional public API removal.
