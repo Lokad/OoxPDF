@@ -67,12 +67,13 @@ $null=& $join -Manifest $manifest -OutputPath $positive
 $result=Get-Content -LiteralPath $positive -Raw | ConvertFrom-Json
 if ($result.passed -ne 3 -or $result.MethodAttempts -ne 4 -or $result.RuntimeAssetsUnchanged -ne 2 -or
     $result.InputsUnchanged -ne 1 -or @($result.InitialFailuresRetained)[0] -ne 'Corrected' -or
+    @($result.ObservedFailuresRetained)[0] -ne 'Corrected' -or
     ($result.tests | Where-Object name -eq 'Unchanged').SourceTestAssemblySha256 -eq $result.TestAssemblySha256) {
     throw 'Joined result lost counts, failure provenance or unchanged-test origin'
 }
 $rejections=@()
 $positiveInputs=@{}
-foreach ($path in @($manifest,(Join-Path $root 'repair.json'),(Join-Path $root 'selection.json'),
+foreach ($path in @($manifest,(Join-Path $root 'initial.json'),(Join-Path $root 'repair.json'),(Join-Path $root 'selection.json'),
     (Join-Path $repo 'artifacts/after/identity.json'))) { $positiveInputs[$path]=[IO.File]::ReadAllBytes($path) }
 function Reject([string] $Name,[string] $Pattern) {
     $path=Join-Path $root ($Name+'.json')
@@ -81,6 +82,39 @@ function Reject([string] $Name,[string] $Pattern) {
     if (!$caught -or $caught -notmatch $Pattern -or (Test-Path -LiteralPath $path)) { throw ('Missing pre-publication rejection: '+$Name+' / '+$caught) }
     $script:rejections += $Name
 }
+# A method first failing during a repair must also finish with a real pass.
+Write-Json (Join-Path $root 'repair-failed.json') @{passed=1;failed=1;skipped=0;tests=@(
+    @{name='Corrected';outcome='passed'},@{name='Neighbor';outcome='failed';detail='failure during repair'})}
+Write-Json (Join-Path $root 'repair-skipped.json') @{passed=0;failed=0;skipped=1;tests=@(
+    @{name='Neighbor';outcome='skipped';detail='cannot hide a repair failure'})}
+Write-Json (Join-Path $root 'repair-passed.json') @{passed=1;failed=0;skipped=0;tests=@(
+    @{name='Neighbor';outcome='passed'})}
+$config.Repairs=@(@{Artifact='repo/artifacts/after';Report='repair-failed.json'},
+    @{Artifact='repo/artifacts/after';Report='repair-skipped.json'})
+$config.Initial.Report='initial-repair-sequence.json'
+Write-Json $manifest $config
+foreach ($initialOutcome in @('skipped','passed')) {
+    $initial=Get-Content -LiteralPath (Join-Path $root 'initial.json') -Raw | ConvertFrom-Json
+    $initial.tests=@($initial.tests | Where-Object name -ne 'Neighbor') + @(@{name='Neighbor';outcome=$initialOutcome})
+    $initial.passed=@($initial.tests | Where-Object outcome -eq 'passed').Count
+    $initial.skipped=@($initial.tests | Where-Object outcome -eq 'skipped').Count
+    Write-Json (Join-Path $root 'initial-repair-sequence.json') $initial
+    Reject ('repair-failure-after-'+$initialOutcome+'-replaced-by-skip') 'failed check remains'
+}
+$config.Repairs=@(@{Artifact='repo/artifacts/after';Report='repair-failed.json'})
+Write-Json $manifest $config
+Reject 'terminal-repair-failure' 'failed check remains'
+$config.Repairs+=@{Artifact='repo/artifacts/after';Report='repair-passed.json'}
+Write-Json $manifest $config
+$resolvedPath=Join-Path $root 'repair-failure-resolved.json'
+$null=& $join -Manifest $manifest -OutputPath $resolvedPath
+$resolved=Get-Content -LiteralPath $resolvedPath -Raw | ConvertFrom-Json
+if ($resolved.passed -ne 3 -or $resolved.failed -ne 0 -or $resolved.skipped -ne 0 -or
+    @($resolved.InitialFailuresRetained).Count -ne 1 -or $resolved.InitialFailuresRetained[0] -ne 'Corrected' -or
+    @($resolved.ObservedFailuresRetained).Count -ne 2 -or $resolved.ObservedFailuresRetained[1] -ne 'Neighbor' -or
+    $resolved.Sources.Count -ne 3) { throw 'Resolved repair lost failures or attempt provenance' }
+foreach ($path in @($manifest,(Join-Path $root 'initial.json'))) { [IO.File]::WriteAllBytes($path,$positiveInputs[$path]) }
+$config=Get-Content -LiteralPath $manifest -Raw | ConvertFrom-Json -AsHashtable
 $config.CorrectedMethods=@('Corrected');Write-Json $manifest $config
 Reject 'undeclared-repair' 'undeclared corrected'
 $config.CorrectedMethods=@('Corrected','Neighbor');Write-Json $manifest $config

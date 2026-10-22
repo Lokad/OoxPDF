@@ -16,9 +16,18 @@ $longDirectory = Join-Path (Join-Path $inputs ('a' * 160)) ('b' * 160)
 [IO.Directory]::CreateDirectory($longDirectory) | Out-Null
 [IO.File]::WriteAllBytes((Join-Path $longDirectory 'long.bin'), [byte[]](9))
 $path = Join-Path $OutputDirectory report.json
+$misspelledReport = Join-Path $OutputDirectory misspelled.json
+$rejected = $false
+try {
+    & (Join-Path $PSScriptRoot 'MeasureWorkspaceFootprint.ps1') -Path $inputs -OutputPath $misspelledReport | Out-Null
+} catch [System.Management.Automation.ParameterBindingException] {
+    if ($_.FullyQualifiedErrorId -notmatch 'NamedParameterNotFound') { throw }
+    $rejected = $true
+}
+if (!$rejected -or (Test-Path -LiteralPath $misspelledReport)) { throw 'Unknown measurement argument was not refused before writing a report' }
 $report = & (Join-Path $PSScriptRoot 'MeasureWorkspaceFootprint.ps1') -Path $inputs -ReportPath $path
 if ($report.Bytes -ne 9 -or $report.LogicalBytes -ne 14 -or $report.SharedHardLinkBytes -ne 5) { throw 'Shared or long-path content was counted incorrectly' }
 if ($report.Files -ne 4 -or $report.Directories -ne 3 -or $report.SkippedLinks -ne 1 -or $report.Errors.Count) { throw 'Input/link/long-path traversal differs' }
 $stored = Get-Content $path -Raw | ConvertFrom-Json
 if ($stored.Bytes -ne $report.Bytes -or $stored.Root -ne $inputs) { throw 'Persisted footprint report differs' }
-Write-Output 'Unique bytes, logical bytes, hard-link aliases, directory loops and long paths passed.'
+Write-Output 'Argument refusal, unique bytes, logical bytes, hard-link aliases, directory loops and long paths passed.'

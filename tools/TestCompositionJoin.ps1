@@ -10,6 +10,7 @@ $manifest = Join-Path $root 'manifest.json'
 @(@{Id='one';Input='one.docx';Sha256=('A'*64)},@{Id='two';Input='two.docx';Sha256=('B'*64)}) |
     ConvertTo-Json | Set-Content -LiteralPath $manifest
 $sources = @()
+$rejections = @()
 foreach ($id in @('one','two')) {
     $source = Join-Path $root $id
     $run = Join-Path $source ($id+'-all-word-compatible')
@@ -34,6 +35,7 @@ function Reject([string] $Name, [string] $Expected, [string[]] $Inputs=$sources,
     catch {
         if (!$_.Exception.Message.Contains($Expected)) { throw }
         if (Test-Path -LiteralPath (Join-Path $root $Name)) { throw 'Rejected join published a partial output' }
+        $script:rejections += $Name
         return
     }
     throw ('Expected rejection: '+$Name)
@@ -76,6 +78,22 @@ try {
     Reject 'unsafe-id' 'Invalid or duplicate' $sources $badManifest
     $duplicate = Join-Path $root 'conflicting-source'
     Copy-Item -LiteralPath $sources[1] -Destination $duplicate -Recurse
+    # Equal PDF hashes cannot resolve competing classifications or provenance.
+    Reject 'identical-distinct-reports' 'Conflicting duplicate outcome' @($sources[0],$sources[1],$duplicate)
+    $duplicateReport = Join-Path $duplicate 'outcomes.json'
+    $duplicateData = Get-Content -LiteralPath $duplicateReport -Raw | ConvertFrom-Json -AsHashtable
+    $duplicateData.Rows[0].MissingExpectedText = @('content blocker')
+    $duplicateData.Rows[0].IgnoredEquationDiagnostics = 1
+    $duplicateData.Rows[0].Severity = 'Content blocker'
+    $duplicateData | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $duplicateReport
+    Reject 'equal-pdf-clear-first' 'Conflicting duplicate outcome' @($sources[0],$sources[1],$duplicate)
+    Reject 'equal-pdf-blocker-first' 'Conflicting duplicate outcome' @($sources[0],$duplicate,$sources[1])
+    # Duplicate rows within one report are equally ambiguous.
+    $sameReport = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json -AsHashtable
+    $sameReport.Rows = @($sameReport.Rows) + @($duplicateData.Rows[0])
+    $sameReport | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $report
+    Reject 'same-report-conflicting-rows' 'Conflicting duplicate outcome'
+    [IO.File]::WriteAllBytes($report, $bytes)
     $duplicatePdf = Join-Path $duplicate 'two-all-word-compatible/candidate.pdf'
     [IO.File]::WriteAllText($duplicatePdf, 'different validly pinned fake PDF')
     $duplicateReport = Join-Path $duplicate 'outcomes.json'
@@ -83,10 +101,10 @@ try {
     $duplicateData.Rows[0].PdfSha256 = (Get-FileHash -LiteralPath $duplicatePdf).Hash
     $duplicateData | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $duplicateReport
     Reject 'conflicting' 'Conflicting duplicate outcome' @($sources[0],$sources[1],$duplicate)
-    # An identical duplicate is reused once without repeating measurements.
+    # Repeating the same report selection is reused without repeating measurements.
     Join 'deduplicated' @($sources[0],$sources[0],$sources[1])
     $deduplicated = Get-Content -LiteralPath (Join-Path $root 'deduplicated/outcomes.json') -Raw | ConvertFrom-Json
-    if ($deduplicated.Rows.Count -ne 2) { throw 'Duplicate outcome was retained twice' }
+    if ($deduplicated.Rows.Count -ne 2 -or $deduplicated.SourceReports.Count -ne 2) { throw 'Duplicate source selection was retained twice' }
     # Final and review outcomes remain separate, while presentation modes are
     # retained independently of the DOCX preset.
     foreach ($source in $sources) {
@@ -119,4 +137,6 @@ try {
     if ($presentation.Rows.Count -ne 1 -or $presentation.Rows[0].Mode -ne 'presentation') { throw 'Presentation selection differs' }
 }
 finally { Remove-Item Function:\dotnet }
+[ordered]@{Rejections=$rejections;Builds=0;Conversions=0;RunnerInvocations=0} |
+    ConvertTo-Json | Set-Content -LiteralPath (Join-Path $root 'evidence.json')
 Write-Output 'Composition outcome join ownership, identity, preflight and copy-avoidance checks passed.'

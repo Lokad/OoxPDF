@@ -66,6 +66,7 @@ foreach ($artifact in $pins.Keys) {
 }
 $rows=[Collections.Generic.Dictionary[string,object]]::new([StringComparer]::Ordinal)
 $initialFailures=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+$observedFailures=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $sources=@();$methodAttempts=0
 foreach ($attempt in $attempts) {
     $reportHash=(Get-FileHash -LiteralPath $attempt.Report).Hash
@@ -76,7 +77,10 @@ foreach ($attempt in $attempts) {
         if (!$expected.Contains($test.name) -or !$seen.Add($test.name)) { throw 'Report methods differ from the exact selection or contain duplicates' }
         if ($test.outcome -notin @('passed','failed','skipped')) { throw 'Unknown test outcome' }
         if ($attempt.Repair -and !$corrected.Contains($test.name)) { throw 'Repair contains an undeclared corrected method' }
-        if (!$attempt.Repair -and $test.outcome -eq 'failed') { $null=$initialFailures.Add($test.name) }
+        if ($test.outcome -eq 'failed') {
+            $null=$observedFailures.Add($test.name)
+            if (!$attempt.Repair) { $null=$initialFailures.Add($test.name) }
+        }
         $counts[$test.outcome]++;$methodAttempts++
         $row=[ordered]@{}
         foreach ($property in $test.PSObject.Properties) { $row[$property.Name]=$property.Value }
@@ -97,7 +101,7 @@ if ($rows.Count -ne $expected.Count -or @($expected | Where-Object {!$rows.Conta
     throw 'The final exact selection is incomplete'
 }
 if (@($rows.Values | Where-Object {$_.outcome -eq 'failed'}).Count -or
-    @($initialFailures | Where-Object {$rows[$_].outcome -ne 'passed'}).Count) {
+    @($observedFailures | Where-Object {$rows[$_].outcome -ne 'passed'}).Count) {
     throw 'A failed check remains unresolved; a skip cannot replace a failure'
 }
 $result=[ordered]@{
@@ -109,6 +113,7 @@ $result=[ordered]@{
     UniqueMethods=$rows.Count;MethodAttempts=$methodAttempts
     RuntimeAssetsUnchanged=$runtime.Count;InputsUnchanged=$first.Inputs.Count
     InitialFailuresRetained=@($initialFailures | Sort-Object)
+    ObservedFailuresRetained=@($observedFailures | Sort-Object)
     CorrectedMethods=@($corrected | Sort-Object)
     Manifest=(Pin $manifestPath);Selection=(Pin $selectionPath);Tool=(Pin $PSCommandPath)
     Sources=$sources;tests=@($expected | Sort-Object | ForEach-Object {$rows[$_]})

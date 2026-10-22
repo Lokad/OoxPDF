@@ -17,6 +17,7 @@ foreach ($case in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Json))
 }
 if (!$cases.Count) { throw 'An explicit nonempty manifest is required' }
 $reports = @()
+$seenReports = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $jobs = [ordered]@{}
 $runtime = $null
 $files = @('candidate.pdf','diagnostics.json','convert.log','inspect.log',
@@ -24,6 +25,9 @@ $files = @('candidate.pdf','diagnostics.json','convert.log','inspect.log',
 foreach ($directory in $SourceDirectory) {
     $source = (Resolve-Path -LiteralPath $directory).Path
     $reportPath = Join-Path $source 'outcomes.json'
+    # Repeating a source selection is harmless. Distinct reports must not claim
+    # the same outcome: equal PDF bytes do not establish equal classifications.
+    if (!$seenReports.Add($reportPath)) { continue }
     $report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json -AsHashtable
     $used = $false
     foreach ($row in $report.Rows) {
@@ -40,8 +44,7 @@ foreach ($directory in $SourceDirectory) {
         $run = Join-Path $source $key
         if ((Get-FileHash -LiteralPath (Join-Path $run 'candidate.pdf')).Hash -ne $row.PdfSha256) { throw ('Candidate identity differs: ' + $key) }
         if ($jobs.Contains($key)) {
-            if ($jobs[$key].Row.PdfSha256 -ne $row.PdfSha256) { throw ('Conflicting duplicate outcome: ' + $key) }
-            continue
+            throw ('Conflicting duplicate outcome; select one source report: ' + $key)
         }
         $copies = @()
         foreach ($name in $files) {
