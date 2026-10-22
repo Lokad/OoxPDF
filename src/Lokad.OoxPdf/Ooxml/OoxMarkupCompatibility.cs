@@ -8,8 +8,9 @@ namespace Lokad.OoxPdf.Ooxml;
 // representation survives load, so Descendants traversals can neither duplicate
 // Choice and Fallback content nor silently keep both. The first Choice whose
 // Requires prefixes all resolve to understood namespaces wins, else the Fallback,
-// else the block is removed. Ignorable content needs no handling (unknown elements
-// are already skipped, which subsumes ProcessContent); layout/master parts stay open.
+// else the block is removed. Declared ProcessContent wrappers expose their children
+// before format readers run. Other extension content keeps its existing fallback;
+// this is a bounded subset, not a complete MCE/schema processor.
 internal static class OoxMarkupCompatibility
 {
     private static readonly HashSet<string> UnderstoodNamespaces = new(
@@ -40,24 +41,20 @@ internal static class OoxMarkupCompatibility
             return false;
         }
 
-        XNamespace compatibility = OoxNamespaces.MarkupCompatibilityNamespace;
-        foreach (XElement element in document.Descendants())
-        {
-            string? demand = (string?)element.Attribute(compatibility + "MustUnderstand");
-            if (!string.Equals(demand, "1", StringComparison.Ordinal) &&
-                !string.Equals(demand, "true", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            if (!UnderstoodNamespaces.Contains(element.Name.NamespaceName))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        // Normalization may remove the declaration's carrier or namespace scope.
+        // Retain only the diagnostic fact, resolved while that scope still exists.
+        return document.Annotation<MustUnderstandResult>()?.HasUnrecognized
+            ?? document.Descendants().Any(HasUnrecognizedMustUnderstand);
     }
+
+    private static bool HasUnrecognizedMustUnderstand(XElement element)
+    {
+        string? demand = (string?)element.Attribute(OoxNamespaces.MarkupCompatibilityNamespace + "MustUnderstand");
+        return demand is not null && demand.Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Any(prefix => !UnderstoodNamespaces.Contains(element.GetNamespaceOfPrefix(prefix)?.NamespaceName ?? string.Empty));
+    }
+
+    private sealed record MustUnderstandResult(bool HasUnrecognized);
 
     // O02: one must-understand warning per part per document. Slides warn with
     // their slide index; shared master/layout parts warn once no matter how many
@@ -83,50 +80,107 @@ internal static class OoxMarkupCompatibility
         diagnosticSink(new OoxPdfDiagnostic(
             "OOXML_MUST_UNDERSTAND",
             OoxPdfSeverity.Warning,
-            "Content marked must-understand uses unsupported namespaces and was ignored.",
+            "A must-understand declaration requires unsupported or unresolved namespaces; conversion continues with partial compatibility handling.",
             partName,
             SlideIndex: slideIndex,
             PageIndex: null,
             Feature: "must-understand",
-            Fallback: "Ignored"));
+            Fallback: "Partial compatibility"));
     }
 
-    public static void ResolveAlternateContent(XDocument? document)
+    public static void Normalize(XDocument? document, CancellationToken cancellationToken = default)
     {
         if (document?.Root is null)
         {
             return;
         }
 
-        // Reversed document order normalizes innermost blocks before their parents.
-        foreach (XElement alternate in document.Descendants(OoxNamespaces.MarkupCompatibilityNamespace + "AlternateContent").Reverse().ToArray())
+        bool unrecognized = document.Annotation<MustUnderstandResult>()?.HasUnrecognized ?? false;
+        Visit(document.Root);
+        document.RemoveAnnotations<MustUnderstandResult>();
+        document.AddAnnotation(new MustUnderstandResult(unrecognized));
+
+        void Visit(XElement element)
         {
-            ResolveAlternateContentBlock(alternate);
+            cancellationToken.ThrowIfCancellationRequested();
+            XNamespace compatibility = OoxNamespaces.MarkupCompatibilityNamespace;
+            if (element.Name == compatibility + "AlternateContent")
+            {
+                unrecognized |= HasUnrecognizedMustUnderstand(element);
+                XElement? selected = element.Elements(compatibility + "Choice").FirstOrDefault(IsUnderstoodChoice);
+                if (selected is null)
+                {
+                    selected = element.Element(compatibility + "Fallback");
+                    if (selected is null) { element.Remove(); return; }
+                    PreservePreferredChartGalleryStyle(element, selected);
+                }
+                unrecognized |= HasUnrecognizedMustUnderstand(selected);
+                VisitChildren(selected);
+                Unwrap(element, selected);
+                return;
+            }
+
+            bool ignored = IsIgnorableExtension(element, out bool processContent, cancellationToken);
+            if (ignored && !processContent) { return; }
+            unrecognized |= HasUnrecognizedMustUnderstand(element);
+            VisitChildren(element);
+            if (ignored && processContent) { Unwrap(element, element); }
+        }
+
+        void VisitChildren(XElement parent)
+        {
+            // Child normalization can replace its container; retain the next sibling
+            // without allocating a snapshot for every ordinary XML element.
+            for (XNode? child = parent.FirstNode; child is not null;)
+            {
+                XNode? next = child.NextNode;
+                if (child is XElement element) { Visit(element); }
+                child = next;
+            }
         }
     }
 
-    private static void ResolveAlternateContentBlock(XElement alternate)
+    private static bool IsIgnorableExtension(XElement element, out bool processContent, CancellationToken cancellationToken)
     {
+        processContent = false;
+        if (UnderstoodNamespaces.Contains(element.Name.NamespaceName)) { return false; }
+        bool ignorable = false;
         XNamespace compatibility = OoxNamespaces.MarkupCompatibilityNamespace;
-        foreach (XElement choice in alternate.Elements(compatibility + "Choice"))
+        // Resolve inherited declarations at their owner, before any wrapper is
+        // removed. Rebinding a prefix below that owner must not retarget its rule.
+        // The XML depth bound limits this walk; no per-element scope copies remain.
+        foreach (XElement scope in element.AncestorsAndSelf())
         {
-            if (IsUnderstoodChoice(choice))
+            cancellationToken.ThrowIfCancellationRequested();
+            if (scope.Attribute(compatibility + "Ignorable") is XAttribute ignored)
             {
-                alternate.ReplaceWith(choice.Elements().ToArray());
-                return;
+                foreach (string prefix in ignored.Value.Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+                {
+                    ignorable |= scope.GetNamespaceOfPrefix(prefix)?.NamespaceName == element.Name.NamespaceName;
+                }
             }
+            if (scope.Attribute(compatibility + "ProcessContent") is XAttribute content)
+            {
+                foreach (string name in content.Value.Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+                {
+                    int colon = name.IndexOf(':');
+                    if (colon <= 0 || colon == name.Length - 1) { continue; }
+                    processContent |= scope.GetNamespaceOfPrefix(name[..colon])?.NamespaceName == element.Name.NamespaceName &&
+                        (name[(colon + 1)..] == element.Name.LocalName || name[(colon + 1)..] == "*");
+                }
+            }
+            if (ignorable && processContent) { break; }
         }
+        return ignorable;
+    }
 
-        XElement? fallback = alternate.Element(compatibility + "Fallback");
-        if (fallback is null)
-        {
-            alternate.Remove();
-            return;
-        }
-
-        PreservePreferredChartGalleryStyle(alternate, fallback);
-
-        alternate.ReplaceWith(fallback.Elements().ToArray());
+    private static void Unwrap(XElement wrapper, XElement content)
+    {
+        XNode[] children = content.Nodes().ToArray();
+        // Detach instead of cloning so existing semantic annotations, including
+        // preferred chart-gallery styles, survive container removal.
+        foreach (XNode child in children) { child.Remove(); }
+        wrapper.ReplaceWith(children);
     }
 
     private static void PreservePreferredChartGalleryStyle(XElement alternate, XElement fallback)

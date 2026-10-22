@@ -38,12 +38,12 @@ internal sealed class PptxReader
             diagnosticSink(new OoxPdfDiagnostic(
                 "OOXML_MUST_UNDERSTAND",
                 OoxPdfSeverity.Warning,
-                "Content marked must-understand uses unsupported namespaces and was ignored.",
+                "A must-understand declaration requires unsupported or unresolved namespaces; conversion continues with partial compatibility handling.",
                 presentationPart.Name,
                 SlideIndex: null,
                 PageIndex: null,
                 Feature: "must-understand",
-                Fallback: "Ignored"));
+                Fallback: "Partial compatibility"));
         }
 
         XElement? size = document.Root?.Element(PresentationNamespace + "sldSz");

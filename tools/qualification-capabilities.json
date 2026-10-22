@@ -1,4 +1,18 @@
 {
+  "markup-compatibility": [
+    "AlternateContent",
+    "MustUnderstand",
+    "ProcessContent",
+    "CompatibilityNormalization",
+    "RejectsDeeplyNestedXml",
+    "RejectsDefaultDeepXmlNesting",
+    "RejectsXmlBeyond",
+    "RejectsMalformedXmlAsInvalidData",
+    "PortableRenderingStructuralMetadataWrappersRetainParentFrames",
+    "PortableRenderingInlineMetadataWrappersRetainParentFrames",
+    "PortableRenderingStaticSvgFramesPreserveBodyAndVectorPaint",
+    "PortableRenderingPptxPreservesCompositeChartAndText"
+  ],
   "preview-inert-pptx": [
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "PptxChartAxisTitleExternalHyperlinkEmitsUriAnnotation",

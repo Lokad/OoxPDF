@@ -182,7 +182,7 @@ internal static class OoxmlTests
             </root>
             """);
 
-        OoxMarkupCompatibility.ResolveAlternateContent(document);
+        OoxMarkupCompatibility.Normalize(document);
 
         System.Xml.Linq.XNamespace v = "urn:schemas-microsoft-com:vml";
         TestAssert.Equal("VectorShape", string.Concat(document.Descendants(v + "shape").Select(e => e.Value)));
@@ -199,7 +199,7 @@ internal static class OoxmlTests
             </root>
             """);
 
-        OoxMarkupCompatibility.ResolveAlternateContent(document);
+        OoxMarkupCompatibility.Normalize(document);
 
         System.Xml.Linq.XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
         TestAssert.Equal("ChoiceText", string.Concat(document.Descendants(w + "a").Select(e => e.Value)));
@@ -221,7 +221,7 @@ internal static class OoxmlTests
             </root>
             """);
 
-        OoxMarkupCompatibility.ResolveAlternateContent(document);
+        OoxMarkupCompatibility.Normalize(document);
 
         System.Xml.Linq.XNamespace wps = "http://schemas.microsoft.com/office/word/2010/wordprocessingShape";
         TestAssert.Equal("ChoiceBox", string.Concat(document.Descendants(wps + "wsp").Select(e => e.Value)));
@@ -237,7 +237,7 @@ internal static class OoxmlTests
             </root>
             """);
 
-        OoxMarkupCompatibility.ResolveAlternateContent(document);
+        OoxMarkupCompatibility.Normalize(document);
 
         System.Xml.Linq.XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
         TestAssert.Equal("FallbackText", string.Concat(document.Descendants(w + "a").Select(e => e.Value)));
@@ -254,7 +254,7 @@ internal static class OoxmlTests
             </root>
             """);
 
-        OoxMarkupCompatibility.ResolveAlternateContent(document);
+        OoxMarkupCompatibility.Normalize(document);
 
         System.Xml.Linq.XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
         TestAssert.Equal("OuterFallback", string.Concat(document.Descendants(w + "a").Select(e => e.Value)));
@@ -272,7 +272,7 @@ internal static class OoxmlTests
             </root>
             """);
 
-        OoxMarkupCompatibility.ResolveAlternateContent(document);
+        OoxMarkupCompatibility.Normalize(document);
 
         System.Xml.Linq.XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
         TestAssert.Equal("Keep", string.Concat(document.Descendants(w + "keep").Select(e => e.Value)));
@@ -435,7 +435,7 @@ internal static class OoxmlTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas">
                   <w:body>
                     <w:p><w:r><w:t>Hello</w:t></w:r></w:p>
-                    <wpc:canvas mc:MustUnderstand="1"/>
+                    <wpc:canvas mc:MustUnderstand="wpc"/>
                   </w:body>
                 </w:document>
                 """
@@ -471,7 +471,7 @@ internal static class OoxmlTests
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:schemas-microsoft-com:vml">
                   <w:body>
                     <w:p><w:r><w:t>Hello</w:t></w:r></w:p>
-                    <v:shape mc:MustUnderstand="1"/>
+                    <v:shape mc:MustUnderstand="v"/>
                   </w:body>
                 </w:document>
                 """
@@ -513,7 +513,7 @@ internal static class OoxmlTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main">
                   <p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst>
-                  <p14:creationId mc:MustUnderstand="1"/>
+                  <p14:creationId mc:MustUnderstand="p14"/>
                 </p:presentation>
                 """,
             ["ppt/slides/slide1.xml"] = """
@@ -572,7 +572,7 @@ internal static class OoxmlTests
             ["ppt/slides/slide2.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main">
-                  <p:cSld><p:spTree/><p14:creationId mc:MustUnderstand="1"/></p:cSld>
+                  <p:cSld><p:spTree/><p14:creationId mc:MustUnderstand="p14"/></p:cSld>
                 </p:sld>
                 """
         });
@@ -591,7 +591,7 @@ internal static class OoxmlTests
     {
         string master = PptxTests.InheritedShapePart("FF0000", 914400, 914400)
             .Replace("<p:sld ", "<p:sld xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:p14=\"http://schemas.microsoft.com/office/powerpoint/2010/main\" ")
-            .Replace("</p:cSld>", "<p14:creationId mc:MustUnderstand=\"1\"/></p:cSld>");
+            .Replace("</p:cSld>", "<p14:creationId mc:MustUnderstand=\"p14\"/></p:cSld>");
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = """
@@ -696,7 +696,7 @@ internal static class OoxmlTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas">
                   <w:p><w:r><w:t>Hi</w:t></w:r></w:p>
-                  <wpc:canvas mc:MustUnderstand="1"/>
+                  <wpc:canvas mc:MustUnderstand="wpc"/>
                 </w:hdr>
                 """
         });
@@ -741,7 +741,7 @@ internal static class OoxmlTests
             ["word/styles.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas">
-                  <wpc:canvas mc:MustUnderstand="1"/>
+                  <wpc:canvas mc:MustUnderstand="wpc"/>
                 </w:styles>
                 """
         });
@@ -786,7 +786,7 @@ internal static class OoxmlTests
             ["word/numbering.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas">
-                  <wpc:canvas mc:MustUnderstand="1"/>
+                  <wpc:canvas mc:MustUnderstand="wpc"/>
                 </w:numbering>
                 """
         });
@@ -810,7 +810,7 @@ internal static class OoxmlTests
             </root>
             """);
 
-        OoxMarkupCompatibility.ResolveAlternateContent(document);
+        OoxMarkupCompatibility.Normalize(document);
 
         System.Xml.Linq.XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
         TestAssert.Equal("FallbackOnly", string.Concat(document.Descendants(w + "a").Select(e => e.Value)));
