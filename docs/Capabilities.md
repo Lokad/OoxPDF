@@ -22,6 +22,10 @@ and [diagnostics](Diagnostics.md) before relying on a conversion.
 - Shared font resolution, TrueType embedding, glyph coverage fallback, managed
   image decoding and PDF primitives. Complex-script shaping and CFF embedding
   remain unsupported. Custom font identities must distinguish different programs.
+- The bounded PNG decoder supports 1/2/4/8-bit grayscale and indexed images,
+  plus 8-bit RGB, gray/alpha and RGBA. Palette transparency, transparent-color
+  keys and explicit alpha use the shared image path. Sixteen-bit PNG inputs
+  retain the unsupported-image fallback; complete PNG conformance is not promised.
 - Cooperative cancellation, bounded caches/page staging, optional coarse host
   memory admission and atomic file publication. These are specific safeguards,
   not whole-heap accounting; see the [operating envelope](OperatingEnvelope.md).
