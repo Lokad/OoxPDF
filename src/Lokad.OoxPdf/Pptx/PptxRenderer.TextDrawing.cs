@@ -317,7 +317,7 @@ internal sealed partial class PptxRenderer
             FontFaceResolution resolution = resolved.Value.Resolution;
             OpenTypeFont font = resolved.Value.Font;
             int[] codepoints = AddQuestionMarkForUncoveredCodepoints(group, font, fontResolver, diagnosticSink, cancellationToken);
-            PdfEmbeddedFont embedded = fontResolver.GetOrCreateSubset(resolution, font, codepoints, cancellationToken);
+            PdfEmbeddedFont embedded = fontResolver.GetOrCreateSubset(font, codepoints, cancellationToken);
             string resourceName = resourcePrefix + (CountPrefixedResourceNames(nameScope, resourcePrefix) + resources.Count + 1).ToString(CultureInfo.InvariantCulture);
             fonts[group.Key] = new RenderedFont(resourceName, embedded, resolution, first.Bold && !resolution.Bold, first.Italic && !resolution.Italic);
             resources.Add(new PdfFontResource(resourceName, embedded));

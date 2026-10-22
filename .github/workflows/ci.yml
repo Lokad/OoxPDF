@@ -60,6 +60,9 @@ jobs:
       - name: Portable picture effects (Ubuntu)
         if: runner.os == 'Linux'
         run: pwsh -NoProfile -File tools/RunDocxAffectedTests.ps1 -RunnerPath tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/pptx-picture-effects -Capability pptx-picture-blur
+      - name: Portable PPTX font identity (Ubuntu)
+        if: runner.os == 'Linux'
+        run: pwsh -NoProfile -File tools/RunDocxAffectedTests.ps1 -RunnerPath tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/pptx-font-identity -Capability pptx-font-identity
       - name: Visual manifest gate
         run: pwsh -NoProfile -File tools/ValidateVisualCases.ps1
       - name: Qualification capability catalog gate

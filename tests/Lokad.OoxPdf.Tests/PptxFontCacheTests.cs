@@ -112,9 +112,9 @@ internal static class PptxFontCacheTests
         var resolver = new PresentationFontResolver(new SingleProgramResolver(program));
         var resolved = resolver.ResolvePresentationOpenTypeFont(new FontRequest("TestFont", false, false), CancellationToken.None) ?? throw new InvalidOperationException("Expected test program resolution.");
 
-        PdfEmbeddedFont first = resolver.GetOrCreateSubset(resolved.Resolution, resolved.Font, [65, 66, 65], CancellationToken.None);
-        PdfEmbeddedFont same = resolver.GetOrCreateSubset(resolved.Resolution, resolved.Font, [66, 65], CancellationToken.None);
-        PdfEmbeddedFont other = resolver.GetOrCreateSubset(resolved.Resolution, resolved.Font, [67], CancellationToken.None);
+        PdfEmbeddedFont first = resolver.GetOrCreateSubset(resolved.Font, [65, 66, 65], CancellationToken.None);
+        PdfEmbeddedFont same = resolver.GetOrCreateSubset(resolved.Font, [66, 65], CancellationToken.None);
+        PdfEmbeddedFont other = resolver.GetOrCreateSubset(resolved.Font, [67], CancellationToken.None);
 
         TestAssert.True(ReferenceEquals(first, same), "Identical codepoint sets must share one subset regardless of order or duplicates.");
         TestAssert.True(!ReferenceEquals(first, other), "Different codepoint sets must keep distinct subsets.");
@@ -175,10 +175,77 @@ internal static class PptxFontCacheTests
             ?? throw new InvalidOperationException("Expected test program resolution.");
 
         TestAssert.True(ReferenceEquals(plain.Font, bold.Font), "Style variants of one program must load once.");
-        PdfEmbeddedFont first = resolver.GetOrCreateSubset(plain.Resolution, plain.Font, [65, 66], CancellationToken.None);
-        PdfEmbeddedFont second = resolver.GetOrCreateSubset(bold.Resolution, bold.Font, [66, 65, 66], CancellationToken.None);
+        PdfEmbeddedFont first = resolver.GetOrCreateSubset(plain.Font, [65, 66], CancellationToken.None);
+        PdfEmbeddedFont second = resolver.GetOrCreateSubset(bold.Font, [66, 65, 66], CancellationToken.None);
 
         TestAssert.True(ReferenceEquals(first, second), "Same program and codepoint set must share one subset across style variants.");
+    }
+
+    public static void PptxFallbackPreservesCaseDistinctProgramIdentities()
+    {
+        FontFaceResolution primary = FontFace("Primary", "Case:Font", TestFontBuilder.CreateTestFont());
+        FontFaceResolution fallback = FontFace("Fallback", "case:font", CreateDifferentCoverageFont());
+        var resolver = new PresentationFontResolver(new CatalogResolver(primary, fallback));
+        Type estimatorType = typeof(PptxRenderer).GetNestedType("TextAdvanceEstimator", System.Reflection.BindingFlags.NonPublic)!;
+        object estimator = Activator.CreateInstance(estimatorType, resolver, CancellationToken.None)!;
+        object? glyph = estimatorType.GetMethod("ResolveGlyphFont")!.Invoke(estimator, ["Primary", false, false, 0x100]);
+        TestAssert.NotNull(glyph);
+        TestAssert.Equal("Fallback", (string)glyph!.GetType().GetProperty("Typeface")!.GetValue(glyph)!);
+        TestAssert.True(!resolver.IsPrimaryProgram(primary, fallback), "Case-distinct opaque IDs must remain eligible.");
+    }
+
+    public static void PptxIndependentFontOwnersDoNotAliasProgramsOrSubsets()
+    {
+        FontFaceResolution primary = FontFace("Primary", "same-id", TestFontBuilder.CreateTestFont());
+        FontFaceResolution fallback = FontFace("Fallback", "same-id", CreateDifferentCoverageFont());
+        var resolver = new PresentationFontResolver(new SingleProgramResolver((MemoryFontProgramSource)primary.Source));
+        OpenTypeFont first = resolver.GetOrLoadOpenTypeFont(primary, CancellationToken.None)!;
+        OpenTypeFont second = resolver.GetOrLoadOpenTypeFont(fallback, CancellationToken.None, fromCatalog: true)!;
+        TestAssert.Equal((ushort)0, first.MapCodePoint(0x100));
+        TestAssert.True(second.MapCodePoint(0x100) != 0, "An independent catalog must load its own program despite an equal ID.");
+        TestAssert.True(!resolver.IsPrimaryProgram(primary, fallback), "Independent owners cannot exclude each other's IDs.");
+        TestAssert.True(ReferenceEquals(second, resolver.GetOrLoadOpenTypeFont(fallback, CancellationToken.None, fromCatalog: true)), "Catalog repeats must reuse their own parsed program.");
+        PdfEmbeddedFont firstSubset = resolver.GetOrCreateSubset(first, [0x100], CancellationToken.None);
+        PdfEmbeddedFont secondSubset = resolver.GetOrCreateSubset(second, [0x100], CancellationToken.None);
+        TestAssert.True(!ReferenceEquals(firstSubset, secondSubset), "Different programs must not share a subset through an equal source ID.");
+        TestAssert.True(ReferenceEquals(secondSubset, resolver.GetOrCreateSubset(second, [0x100, 0x100], CancellationToken.None)), "Repeated sets on one program must reuse the subset.");
+        using var canceled = new CancellationTokenSource();
+        canceled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => resolver.GetOrLoadOpenTypeFont(fallback, canceled.Token, fromCatalog: true));
+        TestAssert.Throws<OperationCanceledException>(() => resolver.GetOrCreateSubset(second, [0x100], canceled.Token));
+    }
+
+    public static void PptxSharedCatalogReusesPrimaryProgram()
+    {
+        FontFaceResolution primary = FontFace("Primary", "shared", TestFontBuilder.CreateTestFont());
+        var resolver = new PresentationFontResolver(new CatalogResolver(primary, primary));
+        OpenTypeFont? first = resolver.GetOrLoadOpenTypeFont(primary, CancellationToken.None);
+        TestAssert.NotNull(first);
+        TestAssert.True(ReferenceEquals(first, resolver.GetOrLoadOpenTypeFont(primary, CancellationToken.None, fromCatalog: true)), "A primary catalog has one ownership namespace.");
+        TestAssert.True(resolver.IsPrimaryProgram(primary, primary), "The same primary/catalog program is excluded from redundant fallback work.");
+    }
+
+    private static FontFaceResolution FontFace(string family, string id, byte[] bytes) =>
+        new(family, family, new FontStyleKey(), new MemoryFontProgramSource(id, bytes), false);
+
+    private static byte[] CreateDifferentCoverageFont()
+    {
+        byte[] bytes = TestFontBuilder.CreateTestFont();
+        (int cmap, _) = TestFontBuilder.GetTableRange(bytes, "cmap");
+        int format12 = cmap + (int)System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(cmap + 16, 4));
+        // Shift the first format-12 range from ASCII to U+0100..U+017F;
+        // retain valid glyph numbers, outlines and the other ranges.
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(format12 + 16, 4), 0x100);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(format12 + 20, 4), 0x17F);
+        return bytes;
+    }
+
+    private sealed class CatalogResolver(FontFaceResolution primary, FontFaceResolution fallback) : IFontResolver, IFontCatalog
+    {
+        public FontFaceResolution Resolve(FontRequest request) =>
+            string.Equals(request.FamilyName, fallback.ResolvedFamily, StringComparison.OrdinalIgnoreCase) ? fallback : primary;
+
+        public IReadOnlyList<FontFaceResolution> GetDiscoveredFonts() => [primary, fallback];
     }
 
     private sealed class SingleProgramResolver(MemoryFontProgramSource program) : IFontResolver

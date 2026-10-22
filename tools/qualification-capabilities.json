@@ -1,4 +1,20 @@
 {
+  "pptx-font-identity": [
+    "PptxEstimatorsSharingResolverReuseLoadedPrograms",
+    "PptxSlideRenderLoadsEachFontProgramOnce",
+    "PptxSharedResolverDeduplicatesIdenticalSubsets",
+    "CaseDistinctStableIdsDoNotAliasPrograms",
+    "CollectionFaceIndexesCacheSeparately",
+    "StyleVariantsShareProgramAndSubsetConsistently",
+    "PptxFallbackPreservesCaseDistinctProgramIdentities",
+    "PptxIndependentFontOwnersDoNotAliasProgramsOrSubsets",
+    "PptxSharedCatalogReusesPrimaryProgram",
+    "SubsetCacheReusesIdenticalCodepointSets",
+    "PptxCffFontSubstitutesFallbackWithDiagnostic",
+    "PptxCffSubstitutionMatchesTrueTypeRendering",
+    "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
+    "PortableRenderingPptxPreservesCompositeChartAndText"
+  ],
   "png-semantics-recovery": [
     "Png",
     "SharedDecoder",

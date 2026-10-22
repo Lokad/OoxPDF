@@ -6,12 +6,10 @@ internal sealed class PresentationFontResolver
 {
     private readonly IFontResolver primary;
     private readonly IFontCatalog fontCatalog;
-    // T01: program identity is an ordinal (StableId, FaceIndex) tuple. StableIds are
-    // opaque resolver-scoped identities and must not be case-normalized (matching the
-    // DOCX font-plan keys and the IFontProgramSource ownership contract); family-name
-    // case-insensitivity lives one layer up in FontRequestKeyComparer.
-    private readonly Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> openTypeFonts = new();
-    private readonly Dictionary<string, SubsetEntry> subsets = new(StringComparer.Ordinal);
+    // IDs are ordinal and scoped to their resolver. A separate discovery catalog
+    // must not alias the primary resolver; a primary catalog shares its cache.
+    private readonly Dictionary<(bool SeparateCatalog, string StableId, int FaceIndex), OpenTypeFont?> openTypeFonts = new();
+    private readonly Dictionary<(OpenTypeFont Font, ulong CodePointsHash), SubsetEntry> subsets = new();
 
     // RV01: per-conversion record of diagnosed missing-font families and glyph sets,
     // so per-slide and per-chart preparation reports each family once.
@@ -45,10 +43,15 @@ internal sealed class PresentationFontResolver
         return fontCatalog.GetDiscoveredFonts();
     }
 
-    internal OpenTypeFont? GetOrLoadOpenTypeFont(FontFaceResolution resolution, CancellationToken cancellationToken)
+    internal bool IsPrimaryProgram(FontFaceResolution primaryResolution, FontFaceResolution catalogResolution) =>
+        ReferenceEquals(primary, fontCatalog) &&
+        primaryResolution.FontFaceIndex == catalogResolution.FontFaceIndex &&
+        string.Equals(primaryResolution.Source.StableId, catalogResolution.Source.StableId, StringComparison.Ordinal);
+
+    internal OpenTypeFont? GetOrLoadOpenTypeFont(FontFaceResolution resolution, CancellationToken cancellationToken, bool fromCatalog = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var key = (resolution.Source.StableId, resolution.FontFaceIndex);
+        var key = (fromCatalog && !ReferenceEquals(primary, fontCatalog), resolution.Source.StableId, resolution.FontFaceIndex);
         if (openTypeFonts.TryGetValue(key, out OpenTypeFont? cached))
         {
             return cached;
@@ -63,14 +66,14 @@ internal sealed class PresentationFontResolver
     // sets, so subsetting runs once per (program, codepoint set) instead of once
     // per slide. The subsetter is a pure function of those inputs, so shared
     // instances keep identical bytes, CID maps, and resource keys (G04).
-    internal PdfEmbeddedFont GetOrCreateSubset(FontFaceResolution resolution, OpenTypeFont font, IReadOnlyList<int> codePoints, CancellationToken cancellationToken)
+    internal PdfEmbeddedFont GetOrCreateSubset(OpenTypeFont font, IReadOnlyList<int> codePoints, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         // T01: the 64-bit set hash is a lookup shortcut, not an identity proof. Stored
         // sets are compared on every hit so a hash collision can never corrupt output;
         // a mismatch falls back to a fresh uncached subset instead of poisoning the cache.
         int[] sorted = SortDeduplicate(codePoints);
-        string key = resolution.Source.StableId + "\u001f" + resolution.FontFaceIndex.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\u001f" + HashSortedCodePoints(sorted);
+        var key = (font, HashSortedCodePoints(sorted));
         if (subsets.TryGetValue(key, out SubsetEntry? cached) && cached.CodePoints.AsSpan().SequenceEqual(sorted))
         {
             return cached.Subset;
@@ -112,7 +115,7 @@ internal sealed class PresentationFontResolver
     // R15: one normalized codepoint set feeds both the lookup hash and the hit
     // equality check, so repeated subset requests sort/deduplicate once instead of
     // once for hashing and again for comparison.
-    private static string HashSortedCodePoints(int[] sorted)
+    private static ulong HashSortedCodePoints(int[] sorted)
     {
         ulong hash = 14695981039346656037ul;
         foreach (int codePoint in sorted)
@@ -121,6 +124,6 @@ internal sealed class PresentationFontResolver
             hash *= 1099511628211ul;
         }
 
-        return hash.ToString("x16", System.Globalization.CultureInfo.InvariantCulture);
+        return hash;
     }
 }

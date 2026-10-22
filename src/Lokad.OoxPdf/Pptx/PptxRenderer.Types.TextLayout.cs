@@ -363,18 +363,16 @@ internal sealed partial class PptxRenderer
                          .ThenBy(f => f.Italic == italic ? 0 : 1000)
                          .ThenBy(f => Math.Abs(f.WeightClass - (bold ? 700 : 400)))
                          .ThenBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase)
-                         .ThenBy(f => f.Source.StableId, StringComparer.OrdinalIgnoreCase)
+                         .ThenBy(f => f.Source.StableId, StringComparer.Ordinal)
                          .ThenBy(f => f.FontFaceIndex))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (primaryResolution is not null &&
-                    resolution.FontFaceIndex == primaryResolution.FontFaceIndex &&
-                    string.Equals(resolution.Source.StableId, primaryResolution.Source.StableId, StringComparison.OrdinalIgnoreCase))
+                if (primaryResolution is not null && resolver.IsPrimaryProgram(primaryResolution, resolution))
                 {
                     continue;
                 }
 
-                OpenTypeFont? font = LoadFont(resolution);
+                OpenTypeFont? font = LoadFont(resolution, fromCatalog: true);
                 if (font is not null && font.MapCodePoint(codePoint) != 0)
                 {
                     cached = new ResolvedGlyphFont(requestedFamily, resolution.FamilyName, PptxGlyphTypefaceResolutionSource.Fallback, font, bold && !resolution.Bold);
@@ -441,7 +439,7 @@ internal sealed partial class PptxRenderer
             return cached;
         }
 
-        private OpenTypeFont? LoadFont(FontFaceResolution? resolution)
+        private OpenTypeFont? LoadFont(FontFaceResolution? resolution, bool fromCatalog = false)
         {
             if (resolution is null)
             {
@@ -450,7 +448,7 @@ internal sealed partial class PptxRenderer
 
             // Share the owning resolver's program cache so per-frame estimators
             // do not reload already-loaded faces (G04).
-            OpenTypeFont? cached = resolver.GetOrLoadOpenTypeFont(resolution, cancellationToken);
+            OpenTypeFont? cached = resolver.GetOrLoadOpenTypeFont(resolution, cancellationToken, fromCatalog);
             if (cached is not null && !cached.HasTrueTypeOutlines)
             {
                 // CFF/OpenType-CFF fonts have valid metrics but no TrueType outlines,

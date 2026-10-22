@@ -137,8 +137,8 @@ internal static class PptxChartDensifyTests
         var resolver = new PresentationFontResolver(new CannedFontResolver(resolution));
         int[] codePoints = Enumerable.Range(65, 200).ToArray();
         {
-            PdfEmbeddedFont first = resolver.GetOrCreateSubset(resolution, font, codePoints, CancellationToken.None);
-            PdfEmbeddedFont second = resolver.GetOrCreateSubset(resolution, font, codePoints, CancellationToken.None);
+            PdfEmbeddedFont first = resolver.GetOrCreateSubset(font, codePoints, CancellationToken.None);
+            PdfEmbeddedFont second = resolver.GetOrCreateSubset(font, codePoints, CancellationToken.None);
             TestAssert.True(ReferenceEquals(first, second), "Identical codepoint sets must share one subset.");
         }
     }
