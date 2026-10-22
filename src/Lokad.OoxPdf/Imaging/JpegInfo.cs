@@ -1,6 +1,6 @@
 namespace Lokad.OoxPdf.Imaging;
 
-internal readonly record struct JpegInfo(int Width, int Height, int BitsPerComponent, int ComponentCount, byte FrameMarker)
+internal readonly record struct JpegInfo(int Width, int Height, int BitsPerComponent, int ComponentCount, byte FrameMarker, bool InvertedCmyk = false)
 {
     public bool IsBaselineDct => FrameMarker == 0xC0;
 
@@ -32,6 +32,8 @@ internal readonly record struct JpegInfo(int Width, int Height, int BitsPerCompo
         }
 
         int offset = 2;
+        JpegInfo? frame = null;
+        byte? adobeTransform = null;
         while (offset + 4 < bytes.Length)
         {
             while (offset < bytes.Length && bytes[offset] == 0xFF)
@@ -45,7 +47,8 @@ internal readonly record struct JpegInfo(int Width, int Height, int BitsPerCompo
             }
 
             byte marker = bytes[offset++];
-            if (marker is 0xD8 or 0xD9)
+            if (marker is 0xD9 or 0xDA) { break; }
+            if (marker == 0xD8)
             {
                 continue;
             }
@@ -59,6 +62,17 @@ internal readonly record struct JpegInfo(int Width, int Height, int BitsPerCompo
             if (length < 2 || offset + length > bytes.Length)
             {
                 break;
+            }
+
+            if (marker == 0xEE && length >= 7 && bytes.Slice(offset + 2, 5).SequenceEqual("Adobe"u8))
+            {
+                if (length < 14) { throw new InvalidDataException("JPEG Adobe marker is truncated."); }
+                byte transform = bytes[offset + 13];
+                if (adobeTransform is { } prior && prior != transform)
+                {
+                    throw new InvalidDataException("JPEG Adobe markers have conflicting color transforms.");
+                }
+                adobeTransform = transform;
             }
 
             if (marker is >= 0xC0 and <= 0xC3 or >= 0xC5 and <= 0xC7 or >= 0xC9 and <= 0xCB or >= 0xCD and <= 0xCF)
@@ -86,12 +100,19 @@ internal readonly record struct JpegInfo(int Width, int Height, int BitsPerCompo
                 {
                     throw new NotSupportedException("JPEG passthrough requires 8-bit grayscale, RGB or CMYK frame data.");
                 }
-                return new JpegInfo(width, height, bitsPerComponent, componentCount, marker);
+                frame = new JpegInfo(width, height, bitsPerComponent, componentCount, marker);
             }
 
             offset += length;
         }
 
-        throw new InvalidDataException("JPEG dimensions were not found.");
+        if (frame is not { } info) { throw new InvalidDataException("JPEG dimensions were not found."); }
+        if (info.ComponentCount == 4 && adobeTransform is not (null or 0 or 2))
+        {
+            throw new NotSupportedException("Unsupported four-component JPEG Adobe color transform.");
+        }
+        // Adobe CMYK and YCCK use inverted ink components. The PDF DCT filter
+        // handles the encoded transform; Decode maps its samples to DeviceCMYK.
+        return info with { InvertedCmyk = info.ComponentCount == 4 && adobeTransform is 0 or 2 };
     }
 }

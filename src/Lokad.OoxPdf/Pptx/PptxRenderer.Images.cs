@@ -468,7 +468,7 @@ internal sealed partial class PptxRenderer
                     Feature: "image recolor",
                     Fallback: "Original image"));
 
-                return PdfImageXObject.Jpeg(info.Width, info.Height, bytes, info.ComponentCount, info.BitsPerComponent);
+                return PdfImageXObject.Jpeg(info.Width, info.Height, bytes, info.ComponentCount, info.BitsPerComponent, info.InvertedCmyk);
             }
 
             // PNG/BMP share the common pixel decoder with the recolor map applied;

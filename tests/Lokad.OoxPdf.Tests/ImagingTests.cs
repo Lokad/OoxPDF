@@ -352,29 +352,29 @@ internal static class ImagingTests
         TestAssert.True(image.Rgb.SequenceEqual(new byte[] { 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120 }), "Stored-deflate rows must decode to identical pixels.");
     }
 
-    public static void PngTruncatedFilterByteThrowsIndexOutOfRange()
+    public static void PngTruncatedFilterByteThrowsInvalidData()
     {
         // Only the first of two rows is present: the missing filter byte must fail
-        // (not render garbage), preserving the crop-fallback contract.
+        // as invalid image data so all renderer image fallbacks can recover.
         byte[] payload = [0, 10, 20, 30, 40, 50, 60];
         byte[] png = BuildStoredPng(2, 2, 8, 2, 0, payload);
-        TestAssert.Throws<IndexOutOfRangeException>(() => PngImage.ReadOwned(png));
+        TestAssert.Throws<InvalidDataException>(() => PngImage.ReadOwned(png));
     }
 
-    public static void PngTruncatedRowSpanThrowsArgumentOutOfRange()
+    public static void PngTruncatedRowSpanThrowsInvalidData()
     {
         // The second filter byte is present but its row is short: the span copy must
-        // fail (not render garbage), preserving the crop-fallback contract.
+        // fail as invalid image data, preserving the image fallback contract.
         byte[] payload = [0, 10, 20, 30, 40, 50, 60, 0, 70, 80, 90];
         byte[] png = BuildStoredPng(2, 2, 8, 2, 0, payload);
-        TestAssert.Throws<ArgumentOutOfRangeException>(() => PngImage.ReadOwned(png));
+        TestAssert.Throws<InvalidDataException>(() => PngImage.ReadOwned(png));
     }
 
-    public static void PngInterlacedTruncatedSpanThrowsArgumentOutOfRange()
+    public static void PngInterlacedTruncatedSpanThrowsInvalidData()
     {
         byte[] payload = [0, 10, 20, 30];
         byte[] png = BuildStoredPng(1, 1, 8, 6, 1, payload);
-        TestAssert.Throws<ArgumentOutOfRangeException>(() => PngImage.ReadOwned(png));
+        TestAssert.Throws<InvalidDataException>(() => PngImage.ReadOwned(png));
     }
 
     public static void OwnedPixelsReleasePlanesOnDispose()
@@ -389,12 +389,6 @@ internal static class ImagingTests
         TestAssert.Throws<ObjectDisposedException>(() => _ = owned.Rgb);
         TestAssert.Throws<ObjectDisposedException>(() => _ = owned.Alpha);
         TestAssert.Equal(6, borrowed.Length); // Borrowed managed arrays remain valid.
-    }
-
-    public static void MalformedPngDecodeStillFails()
-    {
-        byte[] png = BuildStoredPng(2, 2, 8, 2, 0, [0, 10, 20, 30, 40, 50, 60]);
-        TestAssert.Throws<IndexOutOfRangeException>(() => PngImage.ReadOwned(png));
     }
 
     public static void PngDecodeScratchStaysProportionalToPlanes()
@@ -636,7 +630,7 @@ internal static class ImagingTests
         }
     }
 
-    private static byte[] BuildStoredPng(int width, int height, int bitDepth, int colorType, int interlace, byte[] rawRows,
+    internal static byte[] BuildStoredPng(int width, int height, int bitDepth, int colorType, int interlace, byte[] rawRows,
         byte[]? palette = null, byte[]? transparency = null, bool splitIdat = false)
     {
         var bytes = new List<byte> { 137, 80, 78, 71, 13, 10, 26, 10 };

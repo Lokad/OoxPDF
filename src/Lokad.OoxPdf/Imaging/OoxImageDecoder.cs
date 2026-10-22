@@ -32,7 +32,7 @@ internal static class OoxImageDecoder
         if (IsJpegContentType(contentType))
         {
             JpegInfo info = JpegInfo.Read(bytes);
-            return PdfImageXObject.Jpeg(info.Width, info.Height, bytes, info.ComponentCount, info.BitsPerComponent);
+            return PdfImageXObject.Jpeg(info.Width, info.Height, bytes, info.ComponentCount, info.BitsPerComponent, info.InvertedCmyk);
         }
 
         using DecodedPixels decoded = DecodePixelsOwned(contentType, bytes, cancellationToken);

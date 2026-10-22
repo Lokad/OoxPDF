@@ -197,7 +197,7 @@ internal sealed class PngImage
     {
         cancellationToken.ThrowIfCancellationRequested();
         int filter = source.ReadByte();
-        if (filter < 0) { throw new IndexOutOfRangeException("PNG pixel data is truncated."); }
+        if (filter < 0) { throw new InvalidDataException("PNG pixel data is truncated."); }
         int filled = 0;
         while (filled < current.Length)
         {
@@ -205,8 +205,7 @@ internal sealed class PngImage
             int read = source.Read(current[filled..]);
             if (read == 0)
             {
-                // Keep the existing truncated-row exception used by renderer recovery.
-                throw new ArgumentOutOfRangeException("decompressed", "PNG pixel data is truncated.");
+                throw new InvalidDataException("PNG pixel data is truncated.");
             }
             filled += read;
         }

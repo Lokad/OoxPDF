@@ -33,6 +33,10 @@ soft masks. Color spaces are device gray, RGB, or CMYK only.
 JPEG passthrough checks positive frame dimensions and consistent supported
 component metadata before publication; it does not validate the full entropy
 stream. Unsupported or malformed metadata uses the image error/omission fallback.
+Adobe four-component CMYK/YCCK samples use an inverted `/Decode` mapping; the
+JPEG filter interprets the encoded transform. Untagged four-component samples
+retain their existing mapping. This does not add ICC color management or promise
+pixel-exact Office color conversion.
 - Transparency uses ExtGState fill alpha and luminosity soft masks.
 - Gradients use RGB axial (type 2) or centered radial (type 3) shadings,
 with exponential or stitched color functions and extended endpoint colors.

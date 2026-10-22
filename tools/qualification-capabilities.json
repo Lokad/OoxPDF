@@ -1,4 +1,23 @@
 {
+  "image-interpretation-recovery": [
+    "Jpeg",
+    "PngTruncation",
+    "PngImageErrors",
+    "PngTruncated",
+    "PngInterlacedTruncated",
+    "PngStoredBlocksDecodeToIdenticalPixels",
+    "PngScanlineStreamingPreservesFormatsFiltersAndAdam7Passes",
+    "PngStreamingRejectsExtraInflatedBytesAndInvalidFilters",
+    "PngStreamingPreservesGrayscaleTransparencyAndValidatesZlibTrailer",
+    "PngStreamingObservesCancellationBetweenShortReadsAndScanlines",
+    "SharedDecoder",
+    "DocxUnsupportedPngImageEmitsDiagnostic",
+    "PptxUnsupportedPngImageEmitsDiagnostic",
+    "ImageIdentityUsesFullDigests",
+    "ImageContentEqualityIsExact",
+    "DeduplicateImages",
+    "VisualDiffForegroundRecallCoversSparseBlankAndRegionCases"
+  ],
   "jpeg-passthrough": [
     "Jpeg",
     "SharedDecoder",

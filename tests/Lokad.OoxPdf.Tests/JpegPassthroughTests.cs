@@ -50,6 +50,69 @@ internal static class JpegPassthroughTests
         TestAssert.Throws<OperationCanceledException>(() => OoxImageDecoder.Decode("image/jpeg", original, static rgb => rgb, cancelled.Token));
     }
 
+    public static void JpegCmykInterpretationFollowsAdobeMarkersAcrossFrameOrder()
+    {
+        byte[] jpeg = Convert.FromBase64String(EncodedControls[2]);
+        int adobe = jpeg.AsSpan().IndexOf("Adobe"u8);
+        int start = adobe - 4;
+        int end = start + 2 + (jpeg[start + 2] << 8 | jpeg[start + 3]);
+        byte[] marker = jpeg[start..end];
+        byte[] untagged = jpeg[..start].Concat(jpeg[end..]).ToArray();
+        TestAssert.True(JpegInfo.Read(jpeg).InvertedCmyk, "Adobe CMYK must invert ink samples.");
+        TestAssert.True(!JpegInfo.Read(untagged).InvertedCmyk, "Untagged interpretation must stay unchanged.");
+        int frame = untagged.AsSpan().IndexOf(new byte[] { 0xFF, 0xC0 });
+        int frameEnd = frame + 2 + (untagged[frame + 2] << 8 | untagged[frame + 3]);
+        byte[] reordered = untagged[..frameEnd].Concat(marker).Concat(untagged[frameEnd..]).ToArray();
+        TestAssert.True(JpegInfo.Read(reordered).InvertedCmyk, "Adobe metadata after SOF must still participate.");
+
+        // Metadata-only YCCK classification; this mutation is not a YCCK pixel fixture.
+        byte[] ycck = (byte[])jpeg.Clone();
+        ycck[adobe + 11] = 2;
+        TestAssert.True(JpegInfo.Read(ycck).InvertedCmyk, "Adobe YCCK also maps inverted ink samples.");
+        ycck[adobe + 11] = 1;
+        TestAssert.Throws<NotSupportedException>(() => JpegInfo.Read(ycck));
+        byte[] truncated = (byte[])jpeg.Clone();
+        truncated[start + 3] = 12;
+        TestAssert.Throws<InvalidDataException>(() => JpegInfo.Read(truncated));
+        TestAssert.True(!JpegInfo.Read(Convert.FromBase64String(EncodedControls[0])).InvertedCmyk, "RGB control must stay unchanged.");
+    }
+
+    public static void JpegSampleMappingParticipatesInImageIdentity()
+    {
+        byte[] jpeg = Convert.FromBase64String(EncodedControls[2]);
+        var normal = Pdf.PdfImageXObject.Jpeg(2, 1, jpeg, 4, 8);
+        var inverted = OoxImageDecoder.Decode("image/jpeg", jpeg, static rgb => rgb);
+        TestAssert.True(normal.ResourceKey != inverted.ResourceKey, "Different sample interpretation must not deduplicate.");
+        TestAssert.True(!normal.HasIdenticalContent(inverted), "Byte equality alone does not identify image interpretation.");
+        TestAssert.Equal(2, Pdf.PdfDocumentWriter.DeduplicateImages([normal, inverted], static image => image.ResourceKey, default).Count);
+    }
+
+    public static void CmykJpegMappingSurvivesDocxAndPptxCropRecolorFallbacks()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (var (pptx, effect) in new[] { (false, ""), (true, ""), (true, "crop"), (true, "recolor") })
+        {
+            var entries = pptx ? PptxEntries() : DocxEntries();
+            entries[pptx ? "ppt/media/probe.jpg" : "word/media/probe.jpg"] = Convert.FromBase64String(EncodedControls[2]);
+            if (pptx && effect.Length != 0)
+            {
+                string xml = Encoding.UTF8.GetString(entries["ppt/slides/slide1.xml"]);
+                xml = effect == "crop" ? xml.Replace("<a:stretch>", "<a:srcRect l=\"25000\" r=\"25000\"/><a:stretch>")
+                    : xml.Replace("<a:blip r:embed=\"image\"/>", "<a:blip r:embed=\"image\"><a:duotone><a:srgbClr val=\"000000\"/><a:srgbClr val=\"FFFFFF\"/></a:duotone></a:blip>");
+                entries["ppt/slides/slide1.xml"] = TestFixtures.Utf8(xml);
+            }
+            using var input = TestFixtures.CreateZipPackage(entries);
+            using var output = new MemoryStream();
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = pptx ? OoxPdfInputKind.Pptx : OoxPdfInputKind.Docx, FontResolver = resolver, DiagnosticSink = diagnostics.Add });
+            string pdf = Encoding.Latin1.GetString(output.ToArray());
+            TestAssert.Contains("/Decode [1 0 1 0 1 0 1 0]", pdf);
+            TestAssert.True(diagnostics.All(d => d.Severity != OoxPdfSeverity.Error), "Supported CMYK should retain its image through effect fallback.");
+            if (effect == "crop") TestAssert.True(diagnostics.Any(d => d.Id == "IMAGE_CROP_UNSUPPORTED_FORMAT"), "Crop fallback must be exercised.");
+            if (effect == "recolor") TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_IMAGE_RECOLOR"), "Recolor fallback must be exercised.");
+        }
+    }
+
     public static void DocxMalformedJpegReportsErrorWithoutInvalidImageDictionary()
     {
         CheckPublicConversion(pptx: false, recolor: false);
@@ -115,7 +178,7 @@ internal static class JpegPassthroughTests
         }
     }
 
-    private static Dictionary<string, byte[]> PptxEntries() => new()
+    internal static Dictionary<string, byte[]> PptxEntries() => new()
     {
             ["[Content_Types].xml"] = TestFixtures.Utf8("""<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpg" ContentType="image/jpeg"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/><Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>"""),
             ["_rels/.rels"] = TestFixtures.Utf8("""<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="r1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>"""),
@@ -125,7 +188,7 @@ internal static class JpegPassthroughTests
             ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="image" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/probe.jpg"/></Relationships>""")
     };
 
-    private static Dictionary<string, byte[]> DocxEntries() => new()
+    internal static Dictionary<string, byte[]> DocxEntries() => new()
     {
         ["[Content_Types].xml"] = TestFixtures.Utf8("""<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>"""),
         ["_rels/.rels"] = TestFixtures.Utf8("""<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="r1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>"""),

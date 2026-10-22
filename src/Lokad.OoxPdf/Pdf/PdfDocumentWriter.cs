@@ -505,8 +505,9 @@ internal sealed class PdfDocumentWriter
         // ride the same path); charge encoded bytes as they serialize.
         OoxConversionBudget.Current?.ChargePdfImageBytes(checked((long)image.Bytes.Length + (image.Alpha?.Length ?? 0)));
         string smask = objects.SoftMask is null ? string.Empty : FormattableString.Invariant($" /SMask {objects.SoftMask.Value} 0 R");
+        string decode = image.InvertedCmyk ? " /Decode [1 0 1 0 1 0 1 0]" : string.Empty;
         writer.WriteStreamObject(objects.Image, FormattableString.Invariant(
-            $"/Type /XObject /Subtype /Image /Width {image.Width} /Height {image.Height} /ColorSpace {image.ColorSpace} /BitsPerComponent {image.BitsPerComponent} /Filter {image.Filter}{smask}"), image.Bytes);
+            $"/Type /XObject /Subtype /Image /Width {image.Width} /Height {image.Height} /ColorSpace {image.ColorSpace} /BitsPerComponent {image.BitsPerComponent} /Filter {image.Filter}{decode}{smask}"), image.Bytes);
         if (image.Alpha is not null && objects.SoftMask is not null)
         {
             writer.WriteStreamObject(objects.SoftMask.Value, FormattableString.Invariant(
