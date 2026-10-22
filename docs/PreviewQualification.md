@@ -70,6 +70,32 @@ Fourteen DOCX strict gates retain typography/geometry failures. SVG Review Y
 candidate picture/link bounds agree within .000016pt. Two field/extraction flags
 remain. No thresholds or failure classifications changed.
 
+## Transfer tooling follow-up
+
+The current runtime is reused for the transfer-ownership follow-up. Root assets
+are copied into owned staging files, checked, then published by replacing the
+destination entry. Hard-link referents remain unchanged, linked asset directories
+refuse during preflight, and failure removes only owned staging files.
+
+Seven focused controls pass on Windows and Ubuntu: two successful ownership
+cases and five publication, smoke or preflight refusals. The original transfer
+tool fails the hard-link regression. A live transfer verifies all 24 existing
+assets and two identical integration PDFs; no local build, broad suite, corpus,
+Office export or raster was repeated. Both retained candidates still match their
+48 pinned asset hashes.
+
+Caller guidance now states that local font files remain unchanged while their
+sources/resolver snapshots are active. Discovery invalidation applies to newly
+created resolvers. This adds no runtime or public API change. The existing
+candidate package keeps its originally qualified guide bytes; clarified repository
+guidance will enter the next packaging milestone. No package was rebuilt.
+
+Evidence: `artifacts/preview-transfer-ownership-20261022/reuse-evidence.json` and
+its focused tool reports. [Tooling CI](https://github.com/Lokad/OoxPDF/actions/runs/39760494948)
+uses `725a616f`; library/test sources remain identical to the frozen runtime.
+The low-priority standalone enum-helper correction is deferred to a meaningful
+API change.
+
 ## Evidence and candidate
 
 Ignored evidence: `artifacts/preview-result-integrity-20261022/qualification.json`;
