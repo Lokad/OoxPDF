@@ -1,81 +1,96 @@
-# 0.2.0-preview qualification â€” 2026-10-22
+# 0.2.0-preview qualification — 2026-10-22
 
-This bounded milestone fixes malformed JPEG metadata publication and simplifies
-qualification mechanics. Publication, tagging, performance optimization and
+This bounded milestone corrects Adobe CMYK sample interpretation, restores
+consistent PNG scanline recovery, and removes conversion/native dependencies from
+six visual-metric checks. Publication, tagging, performance optimization and
 broader feature expansion remain deferred. See [scope](PreviewRelease.md),
 [migration](PublicApiChanges.md), [capabilities](Capabilities.md) and
 [document review](PreviewVisualReview.md).
 
-One production Release build at `a09de4b974705aed9dc0858b328815f065a9585a`
-was qualified on Windows and Ubuntu. A test-only stream-input correction at
-`047aebed5954be7754d34207006a8b11e52a7ca0` reused the identical library and 21
-runtime assets; only two failed Windows checks reran. The final artifact contains
-24 assets and 2,582 shared public inputs. No root library rebuild or broad replay.
+One committed Release artifact at `4d22dee69cd520ab13efda87b0ac14662221394e`
+contains 24 runtime assets and 2,582 shared public inputs. The same library was
+qualified on Windows/Ubuntu, consumed through the same package on both platforms,
+and transferred with two integration smokes. No root rebuild, local method replay
+or test-assembly repair was needed.
 
 Library SHA-256:
-`8FEDE62C27ED02FFEC97704DF45A8EC4BC497AA86C5D49458167D8952557B6E7`.
-[Windows and Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/39780521926)
-at the corrected test revision. CI builds are independent of the locally qualified DLL.
+`C15DE4B65F894D0A5DB0EEA4C09DE01E0EB8F9473B5208E43D7EBF62A34F61C8`.
+[Windows and Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/39792238334)
+at catalogue-only follow-up `5352c8b6`; compiled source is unchanged from the
+frozen artifact. CI builds are independent of the locally qualified DLL.
 
 | Gate | Result |
 |---|---|
-| Release build | Passed; two inherited nullable warnings in unchanged DOCX tests. Initial missing test namespace corrected before freezing; failed compile log retained |
-| Affected set | 49 methods: Windows 48 pass/one filesystem skip after two test-setup repairs; Ubuntu 46 pass/three filesystem/PDFium skips |
-| JPEG publication | Four real encoded controls retain bytes: baseline RGB, gray, CMYK and progressive. Malformed dimensions, precision and component tables diagnose/omit through DOCX/PPTX, including recolor. Four strict CLI probes now exit 3 with no image object; valid control PDF unchanged |
-| Windows milestone | **3,759 pass, one inherited failure, five skips**; 3,765 unique methods, 3,767 attempts across three invocations |
-| Same library on Ubuntu | **950 pass, zero failures, 49 skips**; 999 unique methods across two disjoint invocations; selection includes 15 additional capability neighbors beyond the preceding selection plus five new methods |
-| Harness and tools | Long stderr refusal completes with exit 2; four basic CLI checks are FAST. Five handwritten text cases pass with zero builds; missing CLI/inspector bindings refuse before conversion |
-| Representative documents | Nine sources/16 outcomes/32 pages; PDFs, diagnostics and semantic outcomes match the preceding candidate exactly. Each outcome converted once |
-| Independent Office gates | Reused by PDF/input identity: **two PPTX strict passes/fourteen DOCX strict failures**; no new Office exports, portfolio rasters or relaxed thresholds |
+| Release/affected checks | Build passes with two inherited nullable warnings; all 44 exact affected methods pass on both platforms, no skips |
+| Windows milestone | **3,764 pass, one inherited failure, five skips**; 3,770 unique methods in two disjoint invocations |
+| Same library on Ubuntu | **955 pass, zero failures, 49 skips**; 1,004 unique methods in two disjoint invocations |
+| CMYK interpretation | Actual Adobe CMYK painting, marker ordering and crop/recolor fallback checked; non-CMYK behavior and sample-mapping identity controls pass. Existing RGB control PDF unchanged |
+| PNG recovery | Eight retained CLI control/truncation probes follow image policy; malformed payloads exit 3 with one image Error and no image object. Container/effect, cancellation and publication checks pass |
+| Metric simplification | All six page/region recall and histogram premises pass portably using direct PNGs and prebuilt VisualDiff; removed 140-line script and its three builds/two DOCX conversions/two native rasters |
+| Representative documents | Nine sources/16 outcomes/32 pages; PDFs, diagnostics and semantic outcomes match the preceding candidate exactly; each outcome converted once |
+| Independent Office | Original portfolio retains two PPTX strict passes/fourteen DOCX strict failures through PDF/input identity; existing PowerPoint16 CMYK reference reused separately |
 | API/runtime | All 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0 |
-| Package/transfer | Same dependency-free 0.2.0-preview package passes both consumers, including loaded DLL identity, versions and admission release. All 24 root assets verified; two integration PDFs match |
+| Package/transfer | Same dependency-free 0.2.0-preview package passes both consumers; all 24 root assets/two integration PDFs match; retained artifacts preserved |
 
-## Behavior and limits
+## Behavior and remaining color differences
 
-JPEG passthrough checks positive frame dimensions, 8-bit precision and consistent
-supported component metadata before writing a PDF image dictionary. It retains
-encoded bytes and does not decode or fully validate the entropy stream. Malformed
-or unsupported metadata follows the existing `IMAGE_UNSUPPORTED_FORMAT` error
-and image-omission policy; strict CLI conversion returns 3. No public API or
-resource quota changes were introduced. Safe managed code, cancellation, bounded
-storage and atomic publication remain required.
+Adobe four-component CMYK/YCCK headers carry an inverted PDF Decode mapping.
+The header reader recognizes Adobe metadata before or after SOF and stops before
+entropy data; RGB/gray and untagged interpretation remain unchanged. Unsupported
+four-component Adobe transforms diagnose explicitly. The mapping participates in
+resource identity, including original-image crop/recolor fallback. This does not
+add a JPEG codec, ICC framework, public API or quota. Transform2 metadata is tested;
+no new YCCK pixel fixture or complete Office color-management parity is claimed.
 
-Test child processes drain both output streams concurrently and have bounded
-waits. Explicit prebuilt validation-tool bindings fail if missing. CI's text gate
-uses its frozen CLI and already built inspector instead of six extra MSBuild
-invocations; default interactive execution builds each required tool once.
+The retained solid CMYK probe previously painted nearly black: (0,10,0). It now
+paints (212,68,112), against PowerPoint's (205,70,103), using the same independent
+PDF renderer. Sample channel residual is nine levels. Native PDFium comparison
+has MAE 0.27, SSIM 0.9999896, foreground recall 1 and no pixels differing by 16
+channel levels; it passes the existing PPTX raw pixel gates. Histogram correlation
+is **0.311828 against the unchanged 0.98 support threshold**, so the support
+classification remains **needs-review**. The gross inversion is fixed; remaining
+color approximation is explicit. The 16-document portfolio totals exclude this
+separate probe, and no visual threshold was relaxed.
 
-## Inherited failures and residuals
+Incomplete PNG filter/row data now raises InvalidDataException at the decoder and
+uses `IMAGE_UNSUPPORTED_FORMAT` Error/omission consistently. This removes the
+reproduced unhandled CLI termination and generic PPTX node warning for those
+payloads. Observer failure/cancellation still preserves existing file output.
+Three decoder tests now assert the recovery contract; one exact duplicate was
+removed. Unexpected programming exceptions are not hidden by a blanket catch.
+
+## Inherited failures and deferred investigation
 
 **DocxWordCompatibleBalloonBodyWrapsLikeOfficeTitles** still fails:
 `InvalidOperationException: The second body should wrap to a second row like Office; observed Height=12.610000000000001.`
-It remains a failure; CI can skip the Office-font precondition. Two repaired
-stream-input tests had to pass; their initial failures were retained, not skipped.
-Two local Ubuntu case-distinct-path checks remain skipped on the mounted
-case-insensitive filesystem. PDFium checks require Windows; these are not passes.
+It remains a failure; CI may skip its Office-font precondition. Local Ubuntu
+filesystem/PDFium/font skips remain explicit and are not counted as passes.
 
 The fourteen DOCX strict failures include significant geometry/typography.
-SVG Review Y is 1.436035pt against 1pt; raw Word footnote annotation mismatch is
-46.794pt while candidate picture/link agree within .000016pt. Two field/extraction
-flags and historical nonportable font failures remain explicit. Chart-color and
-font/size/document-shape guards still require independent Office evidence before
-changes. The warning-only partial MCE policy and standalone enum-helper deferral
-remain documented; completed ownership/validation cleanup stays closed.
+SVG Review Y remains 1.436035pt against 1pt; raw Word footnote annotation mismatch
+is 46.794pt while candidate picture/link agree within .000016pt. Two field/extraction
+flags and historical font limitations remain. No chart/balloon/layout guard changed.
 
-## Evidence and workspace
+Transparency-group rollback demonstrably retains an output-content charge in an
+internal probe. Bounded tracing found no public document example; runtime accounting
+is unchanged and the concern remains deferred. No refund ledger, work fuel or
+ownership framework was added. Existing partial MCE and enum-helper limitations
+remain documented; completed simplification stays closed.
 
-Ignored evidence: `artifacts/preview-image-boundaries-20261022/qualification.json`;
-final runtime: `candidate-qualified/`; package:
-`artifacts/nuget/preview-020-image-boundaries-20261022/`.
-Original compile and test failures, repaired exact checks, joined reports,
-JPEG probes, tool bindings, package identities and transfer evidence are retained.
-The [preceding qualification](https://github.com/Lokad/OoxPDF/blob/2a8a99ed17cc1505ad2747a7bce54ed10c1a128d/docs/PreviewQualification.md)
-retains compatibility and independent Office comparison history.
+## Evidence and workflow
 
-Three completed cleanup inventories were compressed with round-trip hash
-verification, reclaiming **148,475,109 bytes**. Only those three originals were
-removed; useful image/BIN/TAR evidence and prior qualified candidates remain.
-Workspace measurement before this batch was 6.004 GB; the loose target is 5 GB.
-Final measurement: **5.943 GB / 885,270 files**, no errors;
-the report is retained. The workspace remains above the loose target; do not repeat already completed cleanup or
-purge retained archives by their outdated binary filenames.
+Ignored evidence: `artifacts/preview-image-paint-20261022/qualification.json`;
+frozen runtime: `candidate-final/`; package:
+`artifacts/nuget/preview-020-image-paint-20261022/`.
+Exact selections, image/reference identities, raw color metrics, package consumers
+and transfer evidence are retained. The first CI attempt found four stale PNG
+selectors after test consolidation. A manifest-only follow-up validates the entire
+capability catalogue on the same frozen assembly; no local method rerun or library
+rebuild was required. Original CI failure evidence is retained.
+
+The [preceding qualification](https://github.com/Lokad/OoxPDF/blob/6804a374/docs/PreviewQualification.md)
+retains prior cleanup and Office-comparison history. The rendering roadmap is
+preserved. Latest full workspace measurement remains **5.943 GB/885,270 files**,
+above the loose 5 GB target. This new milestone measures about **49 MB/3,723 files**;
+no repeated full walk or blind purge was performed. Reuse the worktree, fixture
+snapshot and immutable outputs.
