@@ -91,6 +91,7 @@ try {
             Write-Stage $stage
         }
         finally {
+            $operationStage = $stage
             $stage = "cleanup"
             try {
                 if ($presentation -ne $null) { $presentation.Close() }
@@ -107,6 +108,9 @@ try {
             }
 
             Write-Stage $stage
+            # A completed cleanup must not replace the stage of a pending failure.
+            # If cleanup itself throws, execution never restores the operation stage.
+            $stage = $operationStage
         }
 
         $stage = "rasterize"
@@ -144,6 +148,7 @@ try {
             Write-Stage $stage
         }
         finally {
+            $operationStage = $stage
             $stage = "cleanup"
             try {
                 if ($document -ne $null) { $document.Close($false) }
@@ -160,6 +165,7 @@ try {
             }
 
             Write-Stage $stage
+            $stage = $operationStage
         }
 
         $stage = "rasterize"

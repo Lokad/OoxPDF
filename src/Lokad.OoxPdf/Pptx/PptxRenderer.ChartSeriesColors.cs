@@ -29,43 +29,6 @@ internal sealed partial class PptxRenderer
         return valuePointCount >= PptxChartMetricRules.SingleSeriesVaryColorsSecondRegimePointThreshold;
     }
 
-    // Third-regime gate: eighteen-plus points take the dark/mid/light rows.
-
-    // Fourth-regime gate: twenty-four-plus points take the dark/0.88/raw/replay rows.
-
-    // Fifth-regime gate: thirty-plus points take the dark/0.85/0.95/fixed/palest rows.
-
-    // Sixth-regime gate: thirty-six-plus points take the dark/0.82/0.91/raw/fixed/replay rows.
-
-    // Seventh-regime gate: forty-two-plus points take the dark/mid/0.88/0.96/fixed/replay/palest rows.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     // Fifteenth-regime gate: ninety-plus points take the dark/fixed/fixed/0.80/0.85/0.90/0.94/0.98/thirteenth/fixed/twelfth/eighth/eleventh/fixed/fixed rows.
     private static bool UseFifteenthVaryColorsRegime(int valuePointCount)
     {

@@ -57,5 +57,58 @@ try {
     }
 }
 finally {if(!$sentinel.HasExited) {$sentinel.Kill();$null=$sentinel.WaitForExit(5000)};$sentinel.Dispose()}
-@{Checks=$checks;Builds=0;OfficeExports=0} | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $root 'evidence.json') -Encoding utf8
-"Reference worker: $($checks.Count) checks pass; no build or Office."
+
+# Exercise the actual worker, replacing only COM activation with managed stubs.
+# Every case fails before rasterization, so these checks never build or use Office.
+$actualWorkerSource=Get-Content (Join-Path $PSScriptRoot 'RenderReferenceWorker.ps1') -Raw
+$activationStub=@'
+function New-Object {
+    param([string] $ComObject)
+    if ($ComObject -notin @('PowerPoint.Application','Word.Application')) {throw 'Unexpected COM request'}
+    $script:failureStage=[IO.Path]::GetFileNameWithoutExtension($InputPath)
+    if ($script:failureStage -eq 'activation') {throw 'Controlled activation failure'}
+    $script:probeDocument=[pscustomobject]@{}
+    $save={param($Path,$Format)
+        if ($script:failureStage -eq 'export') {throw 'Controlled export failure'}
+        [IO.File]::WriteAllText($Path,'%PDF-control')
+    }
+    $script:probeDocument | Add-Member ScriptMethod SaveAs $save
+    $script:probeDocument | Add-Member ScriptMethod SaveAs2 $save
+    $script:probeDocument | Add-Member ScriptMethod Close {
+        if ($script:failureStage -eq 'cleanup') {throw 'Controlled cleanup failure'}
+    }
+    $documents=[pscustomobject]@{}
+    $open={
+        if ($script:failureStage -eq 'open') {throw 'Controlled open failure'}
+        return $script:probeDocument
+    }
+    $documents | Add-Member ScriptMethod Open $open
+    $documents | Add-Member ScriptMethod OpenNoRepairDialog $open
+    $application=[pscustomobject]@{Version='control';DisplayAlerts=0;Visible=$false;Presentations=$documents;Documents=$documents}
+    $application | Add-Member ScriptMethod Quit {}
+    return $application
+}
+'@
+$marker='$ErrorActionPreference = "Stop"'
+if (($actualWorkerSource.Split($marker,[StringSplitOptions]::None)).Count -ne 2) {throw 'Worker injection point changed'}
+$actualWorker=Join-Path $root 'actual worker with activation stub.ps1'
+$actualWorkerSource.Replace($marker,$marker+[Environment]::NewLine+$activationStub) | Set-Content $actualWorker -Encoding utf8
+$stageChecks=@()
+foreach($extension in @('pptx','docx')) {
+    foreach($stage in @('activation','open','export','cleanup')) {
+        $folder=Join-Path $root ('actual-'+$extension+'-'+$stage)
+        New-Item -ItemType Directory -Path $folder | Out-Null
+        $inputFile=Join-Path $folder ($stage+'.'+$extension)
+        [IO.File]::WriteAllText($inputFile,'controlled input; COM never runs')
+        $output=Join-Path $folder 'output';$errorText=$null
+        try { & (Join-Path $PSScriptRoot 'RenderReference.ps1') -InputPath $inputFile -OutputDirectory $output -WorkerScript $actualWorker -TimeoutSeconds 20 *> (Join-Path $folder 'supervisor.log') }
+        catch {$errorText=$_.Exception.Message}
+        $status=Get-Content (Join-Path $output 'reference-status.json') -Raw | ConvertFrom-Json
+        $expected=if($stage -eq 'activation') {'unavailable'} else {'export-failed'}
+        if (!$errorText -or $status.Status -ne $expected -or $status.Stage -cne $stage -or
+            $status.Error -notlike ('*Controlled '+$stage+' failure*')) {throw ('Actual worker attributed '+$extension+'/'+$stage+' incorrectly: '+($status | ConvertTo-Json -Compress))}
+        $stageChecks+=@{Format=$extension;FailureStage=$stage;ReportedStage=$status.Stage;Status=$status.Status}
+    }
+}
+@{Checks=$checks;ActualWorkerStageChecks=$stageChecks;Builds=0;OfficeExports=0} | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $root 'evidence.json') -Encoding utf8
+"Reference worker: $($checks.Count) supervision and $($stageChecks.Count) actual-worker stage checks pass; no build or Office."

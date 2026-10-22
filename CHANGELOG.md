@@ -2,6 +2,12 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Preserves PNG transparent-color keys for supported RGB and packed grayscale
+  inputs, matching equivalent full-alpha images through DOCX/PPTX and picture
+  effects. Rejects malformed fixed headers and transparency metadata through the
+  existing image-error fallback. No public API or supported bit-depth expansion.
+- Preserves original Office reference-worker failure stages when cleanup succeeds,
+  with separate cleanup-failure checks; corrects the pinned PDFium recovery hint.
 - Maps Adobe four-component JPEG ink samples correctly during PDF passthrough,
   including the original-image crop/recolor fallbacks. Untagged/RGB/gray behavior
   is retained; unresolved four-component Adobe transforms diagnose explicitly.
