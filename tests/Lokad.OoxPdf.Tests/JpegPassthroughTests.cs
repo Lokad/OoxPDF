@@ -1,4 +1,5 @@
 using System.Text;
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Imaging;
 
 namespace Lokad.OoxPdf.Tests;
