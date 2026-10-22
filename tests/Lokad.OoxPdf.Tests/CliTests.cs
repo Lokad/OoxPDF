@@ -24,6 +24,14 @@ internal static class CliTests
         TestAssert.Equal(2, result.ExitCode);
     }
 
+    public static void CliLongArgumentRefusalDrainsBothOutputStreams()
+    {
+        string argument = "--" + new string('x', 20_000);
+        CliResult result = RunCli("convert", "absent.docx", "unused.pdf", argument);
+        TestAssert.Equal(2, result.ExitCode);
+        TestAssert.Contains(argument, result.Error);
+    }
+
     public static void CliReturnsOneForConversionFailure()
     {
         string missing = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".docx");
@@ -322,9 +330,16 @@ internal static class CliTests
         }
 
         using Process process = Process.Start(start) ?? throw new InvalidOperationException("Failed to start CLI process.");
-        string output = process.StandardOutput.ReadToEnd();
-        string error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
+        Task<string> outputRead = process.StandardOutput.ReadToEndAsync();
+        Task<string> errorRead = process.StandardError.ReadToEndAsync();
+        if (!process.WaitForExit(60_000))
+        {
+            process.Kill(entireProcessTree: true);
+            process.WaitForExit();
+            throw new TimeoutException("Child process timed out.");
+        }
+        string output = outputRead.GetAwaiter().GetResult();
+        string error = errorRead.GetAwaiter().GetResult();
         return new CliResult(process.ExitCode, output, error);
     }
 
@@ -349,9 +364,16 @@ internal static class CliTests
         start.ArgumentList.Add("--nologo");
 
         using Process process = Process.Start(start) ?? throw new InvalidOperationException("Failed to build CLI project.");
-        string output = process.StandardOutput.ReadToEnd();
-        string error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
+        Task<string> outputRead = process.StandardOutput.ReadToEndAsync();
+        Task<string> errorRead = process.StandardError.ReadToEndAsync();
+        if (!process.WaitForExit(120_000))
+        {
+            process.Kill(entireProcessTree: true);
+            process.WaitForExit();
+            throw new TimeoutException("Child process timed out.");
+        }
+        string output = outputRead.GetAwaiter().GetResult();
+        string error = errorRead.GetAwaiter().GetResult();
         if (process.ExitCode != 0)
         {
             throw new InvalidOperationException($"CLI build failed with exit code {process.ExitCode}.{Environment.NewLine}{output}{Environment.NewLine}{error}");

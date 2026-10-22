@@ -34,10 +34,7 @@ internal static class ToolBudgetTests
 
     private static IReadOnlyDictionary<int, string> ReadToUnicode(string cmap)
     {
-        // Local qualification can reuse a frozen Release tool; CI keeps the
-        // existing shared tool-build path when no explicit assembly is pinned.
-        string path = Environment.GetEnvironmentVariable("OOXPDF_TEST_PDF_INSPECTOR") ?? InspectAssemblyPath.Value;
-        var assembly = System.Reflection.Assembly.LoadFrom(path);
+        var assembly = System.Reflection.Assembly.LoadFrom(InspectAssemblyPath.Value);
         var type = assembly.GetType("PdfToUnicodeMap") ?? throw new InvalidOperationException("Missing inspector CMap decoder.");
         var parse = type.GetMethod("Parse") ?? throw new InvalidOperationException("Missing inspector CMap parser.");
         return (IReadOnlyDictionary<int, string>)(parse.Invoke(null, [cmap]) ?? throw new InvalidOperationException("Missing decoded CMap."));
@@ -238,14 +235,33 @@ internal static class ToolBudgetTests
         }
 
         using Process process = Process.Start(start) ?? throw new InvalidOperationException("Failed to start tool process.");
-        string output = process.StandardOutput.ReadToEnd();
-        string error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
+        Task<string> outputRead = process.StandardOutput.ReadToEndAsync();
+        Task<string> errorRead = process.StandardError.ReadToEndAsync();
+        if (!process.WaitForExit(60_000))
+        {
+            process.Kill(entireProcessTree: true);
+            process.WaitForExit();
+            throw new TimeoutException("Child process timed out.");
+        }
+        string output = outputRead.GetAwaiter().GetResult();
+        string error = errorRead.GetAwaiter().GetResult();
         return new ToolResult(process.ExitCode, output, error);
     }
 
     private static string BuildTool(string projectPath, string dllName)
     {
+        string binding = dllName switch
+        {
+            "Lokad.OoxPdf.PdfInspect.dll" => "OOXPDF_TEST_PDF_INSPECTOR",
+            "Lokad.OoxPdf.VisualDiff.dll" => "OOXPDF_TEST_VISUAL_DIFF",
+            "Lokad.OoxPdf.PdfiumRasterizer.dll" => "OOXPDF_TEST_PDF_RASTERIZER",
+            _ => throw new InvalidOperationException("Unknown validation tool.")
+        };
+        if (Environment.GetEnvironmentVariable(binding) is { Length: > 0 } frozen)
+        {
+            string path = Path.GetFullPath(frozen);
+            return File.Exists(path) ? path : throw new InvalidOperationException("Frozen validation tool is missing.");
+        }
         string repositoryRoot = FindRepositoryRoot();
         var start = new ProcessStartInfo("dotnet")
         {
@@ -259,9 +275,16 @@ internal static class ToolBudgetTests
         start.ArgumentList.Add("--nologo");
 
         using Process process = Process.Start(start) ?? throw new InvalidOperationException("Failed to build tool project.");
-        string output = process.StandardOutput.ReadToEnd();
-        string error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
+        Task<string> outputRead = process.StandardOutput.ReadToEndAsync();
+        Task<string> errorRead = process.StandardError.ReadToEndAsync();
+        if (!process.WaitForExit(120_000))
+        {
+            process.Kill(entireProcessTree: true);
+            process.WaitForExit();
+            throw new TimeoutException("Child process timed out.");
+        }
+        string output = outputRead.GetAwaiter().GetResult();
+        string error = errorRead.GetAwaiter().GetResult();
         if (process.ExitCode != 0)
         {
             throw new InvalidOperationException($"Tool build failed with exit code {process.ExitCode}.{Environment.NewLine}{output}{Environment.NewLine}{error}");

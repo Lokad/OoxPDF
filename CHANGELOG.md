@@ -2,6 +2,13 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Rejects invalid JPEG frame metadata before PDF passthrough. Malformed dimensions,
+  precision or component tables use the existing image error/omission diagnostic;
+  baseline, progressive, grayscale and CMYK controls retain their encoded bytes.
+  No public API change or full JPEG entropy validation is introduced.
+- Bounds test child-process waits and drains both output streams concurrently.
+  Ordinary CLI exit-code checks run in the normal selection; text-content checks
+  reuse explicit prebuilt CLI/inspection tools without per-case builds.
 - Preserves supported DOCX/PPTX content inside declared ignorable ProcessContent
   wrappers. Compatibility rules resolve in their original namespace scope;
   only the selected alternate branch participates. MustUnderstand uses prefix

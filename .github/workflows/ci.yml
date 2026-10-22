@@ -23,6 +23,9 @@ jobs:
         shell: pwsh
     env:
       OOXPDF_TEST_CLI_ASSEMBLY: ${{ github.workspace }}/src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.Cli.dll
+      OOXPDF_TEST_PDF_INSPECTOR: ${{ github.workspace }}/tools/Lokad.OoxPdf.PdfInspect/bin/Release/net10.0/Lokad.OoxPdf.PdfInspect.dll
+      OOXPDF_TEST_VISUAL_DIFF: ${{ github.workspace }}/tools/Lokad.OoxPdf.VisualDiff/bin/Release/net10.0/Lokad.OoxPdf.VisualDiff.dll
+      OOXPDF_TEST_PDF_RASTERIZER: ${{ github.workspace }}/tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Release/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -72,7 +75,7 @@ jobs:
           pwsh -NoProfile -File tools/TestCliDiagnosticsPublication.ps1 -CliPath artifacts/ci-candidate/src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.Cli.dll
       - name: Text content gate
         if: runner.os == 'Windows'
-        run: pwsh -NoProfile -File tools/CheckPdfTextContent.ps1
+        run: pwsh -NoProfile -File tools/CheckPdfTextContent.ps1 -CliPath artifacts/ci-candidate/src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.Cli.dll -InspectorPath tools/Lokad.OoxPdf.PdfInspect/bin/Release/net10.0/Lokad.OoxPdf.PdfInspect.dll -SkipBuild
       - name: Raster wrapper paths and failures
         if: runner.os == 'Windows'
         run: |
