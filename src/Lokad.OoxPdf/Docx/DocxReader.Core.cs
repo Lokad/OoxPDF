@@ -71,7 +71,12 @@ internal sealed partial class DocxReader
         EmitUnsupportedFeatureDiagnostics(package, document, documentPart.Name, relationships, markupContext, featureSink, warnedMustUnderstandParts, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        XElement? sectionProperties = document.Descendants(WordprocessingNamespace + "sectPr").LastOrDefault();
+        // Current sections belong to the body or a paragraph's properties.
+        // Revision snapshots also contain sectPr, but do not own page geometry.
+        XElement? sectionProperties = document.Descendants(WordprocessingNamespace + "sectPr")
+            .LastOrDefault(section => section.Parent?.Name == WordprocessingNamespace + "body" ||
+                (section.Parent?.Name == WordprocessingNamespace + "pPr" &&
+                 section.Parent?.Parent?.Name == WordprocessingNamespace + "p"));
         XElement? pageSize = sectionProperties?.Element(WordprocessingNamespace + "pgSz");
         XElement? pageMargins = sectionProperties?.Element(WordprocessingNamespace + "pgMar");
 

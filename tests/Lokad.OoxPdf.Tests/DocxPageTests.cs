@@ -12,6 +12,42 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxPageTests
 {
+    public static void DocxCurrentSectionsKeepGeometryWhenRevisionSnapshotsFollow()
+    {
+        const string current = "<w:pgSz w:w=\"12240\" w:h=\"15840\"/><w:pgMar w:left=\"1440\" w:right=\"1440\" w:top=\"1440\" w:bottom=\"1440\"/>";
+        const string history = "<w:sectPrChange w:id=\"42\" w:author=\"Public test\"><w:sectPr><w:pgSz w:w=\"15840\" w:h=\"12240\" w:orient=\"landscape\"/><w:pgMar w:left=\"720\" w:right=\"720\"/></w:sectPr></w:sectPrChange>";
+        foreach (OoxPdfDocxMarkupMode mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
+        foreach (string owner in new[] { "body", "paragraph", "missing-size", "absent" })
+        {
+            string section = "<w:sectPr>" + (owner == "missing-size" ? "" : current) + history + "</w:sectPr>";
+            string body = owner == "paragraph"
+                ? "<w:p><w:pPr>" + section + "</w:pPr></w:p>"
+                : "<w:p/>" + (owner == "absent" ? "" : section);
+            using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>
+                    """,
+                ["_rels/.rels"] = """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>
+                    """,
+                ["word/document.xml"] = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>" + body + "</w:body></w:document>"
+            });
+            OoxPackage package = OoxPackage.Open(input, default);
+            DocxDocument document = new DocxReader().Read(package, null, default, mode);
+            TestAssert.Equal(612d, document.PageWidthPoints);
+            TestAssert.Equal(792d, document.PageHeightPoints);
+            TestAssert.Equal(72d, document.MarginLeftPoints);
+            TestAssert.Equal(owner is "absent" or "missing-size" ? "" : "12240", document.PageSettings.WidthValue ?? "");
+            TestAssert.Equal(owner != "absent", document.FinalSectionBreak is not null);
+            if (document.FinalSectionBreak is { } finalSection)
+            {
+                TestAssert.True(finalSection.Revisions.Any(revision => revision.Id == "42"),
+                    "Current section selection must preserve revision provenance for inspection.");
+            }
+        }
+    }
+
     public static void DocxSyntheticDocumentProducesOnePdfPage()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
