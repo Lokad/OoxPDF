@@ -2,6 +2,11 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Preserves charts when a date-formatted value exceeds the supported calendar:
+  that label uses the existing numeric fallback. In-range 1900/1904 formatting is
+  unchanged; exact Office tick labels outside the calendar remain approximate.
+- Reports the active Office reference operation on timeout and forwards
+  `-SkipBuild` through reference exports to the existing pinned rasterizer.
 - Handles invalid BMP header extents through normal image diagnostics instead of
   aborting DOCX/PPTX conversion. Supported pixels and the public API are unchanged.
 - Scopes validation build locking to physical checkouts, retaining shared-output

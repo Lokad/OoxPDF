@@ -25,7 +25,9 @@ param(
 
     [int] $TimeoutSeconds = 600,
 
-    [string] $WorkerScript
+    [string] $WorkerScript,
+
+    [switch] $SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -111,6 +113,7 @@ try {
     $shell = (Get-Command pwsh -ErrorAction SilentlyContinue | Select-Object -First 1)
     $shellPath = if ($null -ne $shell) { $shell.Source } else { "powershell" }
     $workerArgs = @("-NoProfile", "-File", $WorkerScript, "-InputPath", $inputFull, "-WorkDirectory", $workerWorkDir, "-Dpi", "$Dpi", "-ProgressLog", $workerProgressLog, "-StatusPath", $workerStatusPath)
+    if ($SkipBuild) { $workerArgs += "-SkipBuild" }
     Write-SupervisorLog "starting owned worker: $shellPath"
     $start = [Diagnostics.ProcessStartInfo]::new($shellPath)
     $start.UseShellExecute = $false

@@ -99,7 +99,7 @@ if ($resolution.Outcome -eq "Miss") {
         $staging = Join-Path (Get-ReferenceCacheRoot) ("_render-" + [System.Guid]::NewGuid().ToString("N"))
         New-Item -ItemType Directory -Force -Path $staging | Out-Null
         try {
-            & $renderReference -InputPath $inputFull -OutputDirectory $staging -Dpi $Dpi -TimeoutSeconds $RenderTimeoutSeconds
+            & $renderReference -InputPath $inputFull -OutputDirectory $staging -Dpi $Dpi -TimeoutSeconds $RenderTimeoutSeconds -SkipBuild:$SkipBuild
             $workerStatus = $null
             $workerStatusPath = Join-Path $staging "reference-worker-status.json"
             if (Test-Path -LiteralPath $workerStatusPath) {

@@ -4,7 +4,7 @@
 # cleanup, the supervisor terminates this (owned) process instead.
 #
 # Contract (all paths):
-#   - appends "stage:<name>" lines to -ProgressLog as stages complete,
+#   - appends "stage:<name>" lines to -ProgressLog before each operation,
 #   - always writes -StatusPath JSON: ok | export-failed | unavailable,
 #   - on success leaves reference.pdf plus DPI raster page-*.png in -WorkDirectory.
 
@@ -21,7 +21,9 @@ param(
     [string] $ProgressLog,
 
     [Parameter(Mandatory = $true)]
-    [string] $StatusPath
+    [string] $StatusPath,
+
+    [switch] $SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -73,6 +75,7 @@ try {
         $referencePdf = Join-Path $workFull "reference.pdf"
         try {
             $stage = "activation"
+            Write-Stage $stage
             try {
                 $powerPoint = New-Object -ComObject PowerPoint.Application
             }
@@ -80,19 +83,19 @@ try {
                 throw "Office COM activation failed (PowerPoint.Application): $($_.Exception.Message)"
             }
 
-            Write-Stage $stage
             $officeVersion = [string]$powerPoint.Version
             $powerPoint.DisplayAlerts = 1
             $stage = "open"
+            Write-Stage $stage
             $presentation = $powerPoint.Presentations.Open($inputFull, $true, $true, $false)
-            Write-Stage $stage
             $stage = "export"
-            $presentation.SaveAs($referencePdf, 32)
             Write-Stage $stage
+            $presentation.SaveAs($referencePdf, 32)
         }
         finally {
             $operationStage = $stage
             $stage = "cleanup"
+            Write-Stage $stage
             try {
                 if ($presentation -ne $null) { $presentation.Close() }
             }
@@ -107,14 +110,14 @@ try {
                 }
             }
 
-            Write-Stage $stage
             # A completed cleanup must not replace the stage of a pending failure.
             # If cleanup itself throws, execution never restores the operation stage.
             $stage = $operationStage
         }
 
         $stage = "rasterize"
-        & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $referencePdf -OutputDirectory $workFull -Dpi $Dpi
+        Write-Stage $stage
+        & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $referencePdf -OutputDirectory $workFull -Dpi $Dpi -SkipBuild:$SkipBuild
         $stage = "done"
         Write-Stage $stage
         Write-Status "ok" $stage $officeApp $officeVersion $exportSettings ""
@@ -129,6 +132,7 @@ try {
         $referencePdf = Join-Path $workFull "reference.pdf"
         try {
             $stage = "activation"
+            Write-Stage $stage
             try {
                 $word = New-Object -ComObject Word.Application
             }
@@ -136,20 +140,20 @@ try {
                 throw "Office COM activation failed (Word.Application): $($_.Exception.Message)"
             }
 
-            Write-Stage $stage
             $officeVersion = [string]$word.Version
             $word.Visible = $false
             $word.DisplayAlerts = 0
             $stage = "open"
+            Write-Stage $stage
             $document = $word.Documents.OpenNoRepairDialog($inputFull, $false, $true, $false)
-            Write-Stage $stage
             $stage = "export"
-            $document.SaveAs2($referencePdf, 17)
             Write-Stage $stage
+            $document.SaveAs2($referencePdf, 17)
         }
         finally {
             $operationStage = $stage
             $stage = "cleanup"
+            Write-Stage $stage
             try {
                 if ($document -ne $null) { $document.Close($false) }
             }
@@ -164,12 +168,12 @@ try {
                 }
             }
 
-            Write-Stage $stage
             $stage = $operationStage
         }
 
         $stage = "rasterize"
-        & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $referencePdf -OutputDirectory $workFull -Dpi $Dpi
+        Write-Stage $stage
+        & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $referencePdf -OutputDirectory $workFull -Dpi $Dpi -SkipBuild:$SkipBuild
         $stage = "done"
         Write-Stage $stage
         Write-Status "ok" $stage $officeApp $officeVersion $exportSettings ""

@@ -3,7 +3,8 @@
 param(
     [Parameter(Mandatory=$true)] [string] $Manifest,
     [Parameter(Mandatory=$true)] [string] $OutputDirectory,
-    [ValidateSet('Both','Final','Review')] [string] $DocxPreset = 'Both'
+    [ValidateSet('Both','Final','Review')] [string] $DocxPreset = 'Both',
+    [switch] $SkipBuild
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
@@ -70,7 +71,7 @@ foreach ($job in $jobs) {
             $settings = Assert-WordView $job.Log $view ($document.Id + '/' + $mode)
         }
         else {
-            & (Join-Path $PSScriptRoot 'RenderReference.ps1') -InputPath $inputPath -OutputDirectory $folder *> (Join-Path $folder 'export.log')
+            & (Join-Path $PSScriptRoot 'RenderReference.ps1') -InputPath $inputPath -OutputDirectory $folder -SkipBuild:$SkipBuild *> (Join-Path $folder 'export.log')
         }
         $pin = [ordered]@{Id=$document.Id;Mode=$mode;InputSha256=$document.Sha256;PdfSha256=(Get-FileHash $pdf).Hash}
         if ($job.Docx) {

@@ -52,6 +52,13 @@ runs build the default Debug CLI. `-SkipBuild` requires the selected runtime and
 validation tools to exist. Family reports pin CLI/library hashes and reject a
 runtime that changes during the batch.
 
+`RenderReference.ps1` and `ExportCompositionReferences.ps1` also accept
+`-SkipBuild` to reuse the existing rasterizer. `RenderCachedReference.ps1` forwards
+it on cache misses as well as derivative renders. Without the switch, the normal
+build-freshness check remains. PDFium pin verification runs in either mode.
+The reference progress log names the active operation before it starts, so a
+supervised timeout identifies activation, open, export, cleanup or rasterization.
+
 The harness converts the input, reuses a trusted Office PDF (or exports one when
 explicitly requested), rasterizes both PDFs through the pinned PDFium, compares
 pages and writes an assessment template. Reuse reference comparisons by exact
