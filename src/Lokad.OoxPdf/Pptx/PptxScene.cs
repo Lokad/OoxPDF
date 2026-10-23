@@ -408,6 +408,13 @@ internal sealed partial class PptxSceneBuilder
             }
 
             XElement? nonVisualProperties = ReadNonVisualProperties(child);
+            // Exclude hidden objects before their text, images, charts or group
+            // children enter resource preflight and painting.
+            if (nonVisualProperties is not null && OoxXml.ReadBool(nonVisualProperties, "hidden"))
+            {
+                continue;
+            }
+
             nodes.Add(PptxSceneNode.Create(
                 kind,
                 ReadNonVisualId(nonVisualProperties),
