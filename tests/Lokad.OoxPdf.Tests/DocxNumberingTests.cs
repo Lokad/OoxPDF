@@ -12,6 +12,51 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNumberingTests
 {
+    public static void DocxEmptyBulletLabelsKeepIndentAndMissingTextDefaults()
+    {
+        foreach (bool concreteOverride in new[] { false, true })
+        foreach (OoxPdfDocxMarkupMode mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (var marker in new[]
+        {
+            (Xml: "", Expected: "\u2022"),
+            (Xml: "<w:lvlText/>", Expected: "\u2022"),
+            (Xml: "<w:lvlText w:val=\"\"/>", Expected: ""),
+            (Xml: "<w:lvlText w:val=\"*\"/>", Expected: "*")
+        })
+        {
+            const string start = "<w:lvl w:ilvl=\"0\"><w:numFmt w:val=\"bullet\"/>";
+            const string end = "<w:suff w:val=\"tab\"/><w:pPr><w:ind w:left=\"720\" w:hanging=\"360\"/></w:pPr></w:lvl>";
+            string level = start + marker.Xml + end;
+            string abstractLevel = concreteOverride ? start + "<w:lvlText w:val=\"BASE\"/>" + end : level;
+            string overridden = concreteOverride ? "<w:lvlOverride w:ilvl=\"0\">" + level + "</w:lvlOverride>" : "";
+            using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/></Types>
+                    """,
+                ["_rels/.rels"] = """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>
+                    """,
+                ["word/_rels/document.xml.rels"] = """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdNum" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/></Relationships>
+                    """,
+                ["word/numbering.xml"] = "<w:numbering xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:abstractNum w:abstractNumId=\"0\">" + abstractLevel + "</w:abstractNum><w:num w:numId=\"1\"><w:abstractNumId w:val=\"0\"/>" + overridden + "</w:num></w:numbering>",
+                ["word/document.xml"] = """
+                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>First item</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>
+                    """
+            });
+            OoxPackage package = OoxPackage.Open(input, default);
+            DocxDocument document = new DocxReader().Read(package, null, default, mode);
+            DocxListLabel label = TestAssert.NotNull(document.Paragraphs.Single().ListLabel);
+            TestAssert.Equal(marker.Expected, label.Text);
+            TestAssert.Equal(marker.Expected, label.LevelTextValue);
+            TestAssert.Equal("1", label.NumberId);
+            TestAssert.Equal("tab", label.SuffixValue);
+            TestAssert.Equal(36d, label.Indent.LeftPoints ?? 0d);
+            TestAssert.Equal(18d, label.Indent.HangingPoints ?? 0d);
+        }
+    }
+
     public static void DocxFontPlanIncludesNumberingMarkerTypeface()
     {
         var bodyRun = new DocxTextRun("Body", 11d, null, false, false, false, null, "Body Sans")
