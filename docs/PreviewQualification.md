@@ -1,21 +1,20 @@
 # 0.2.0-preview qualification
 
-The bounded BMP recovery, build-isolation and guidance milestone is qualified.
+The bounded chart-date recovery and reference-tool milestone is qualified.
 Publication, performance optimization and broader feature expansion remain deferred.
-The frozen library was built at `e3d25ef364682c2da03323e0509d1457d1d06616`, SHA-256
-`2A30744C98E4C3F357D5326C7300A9BE56BE0189855C07D4AD1DE311382B65C5`.
-[Windows/Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/39931970399)
-at the subsequent README-only revision `6fadc899`. Production, tests and tooling
-are identical between those revisions. Package guides use the corrected README;
-the qualified DLL was not rebuilt. CI builds are independent of this artifact.
+The frozen library was built at `428416961ae3b28c52d47c68d8b79b81c9b7bf11`, SHA-256
+`378538189110D1665A351C33882605436675A4D8A608E6962B2D9CD13B8FA789`.
+[Windows/Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/39940644136)
+at the qualified source revision.
+CI builds are independent of the single artifact used for local qualification.
 
 | Gate | Result |
 |---|---|
-| Release/affected checks | One committed linked-worktree artifact; build succeeds with two inherited nullable warnings. All 18 BMP/shared-image affected methods pass on Windows and Ubuntu. |
-| Windows milestone | **3,773 pass, one inherited failure, five skips**; 3,779 exact unique methods in two disjoint invocations. |
-| Ubuntu milestone | **1,001 pass, three inherited failures, 50 skips**; 1,054 exact unique methods in two disjoint invocations. No previous pass regressed. |
-| Public BMP probes | Six conversions: valid controls return 0; invalid offsets/header extents return strict 3 with one image Error and omitted image. Both previous aborts recover normally. Valid/recovery-control PDFs retain their identities. |
-| Build isolation | Five stubbed checks pass locally on Windows and in both-platform CI: independent checkouts, shared checkout outputs, checkout aliases, failed-build old-output refusal and missing-output refusal. No real builds in those checks. |
+| Release/affected checks | One committed linked-worktree artifact; build succeeds with two inherited nullable test warnings. All 23 number-format/axis/data-label/composite-chart methods pass on Windows and Ubuntu. |
+| Windows milestone | **3,775 pass, one inherited failure, five skips**; 3,781 exact unique methods in two disjoint invocations. |
+| Ubuntu milestone | **1,005 pass, three inherited failures, 50 skips**; 1,058 exact unique methods in two disjoint invocations. No previous pass regressed. |
+| Chart composition probes | Three conversions; each retains twelve bars, four categories and three legend entries. The previously omitted date-formatted chart returns strict 0. Numeric and in-range date control PDFs are unchanged. |
+| Reference tools | Thirty managed-stub checks cover supervision, exception stages, active timeout stages and rasterizer flag forwarding. Eight view/provenance and fifteen derivative checks pass. A real pinned-rasterizer integration reuses an Office PDF with no build or Office activation. |
 | Representative documents | Nine sources/16 outcomes/32 pages; PDFs, diagnostics and semantic results match the preceding candidate. Each outcome converted once. |
 | Independent portfolio gates | Reused through PDF/input identity: two strict PPTX passes/fourteen strict DOCX failures. No new Office export, portfolio raster or relaxed threshold. |
 | API/runtime | All 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0. |
@@ -23,32 +22,27 @@ the qualified DLL was not rebuilt. CI builds are independent of this artifact.
 
 ## Conversion behavior and bounded maintenance
 
-BMP decoding now establishes that the declared DIB header fits in the available
-bytes before adding the file-header offset. A negative pixel offset or oversized
-header uses normal image-error handling rather than an unhandled indexing exception.
-This is conversion error handling. It adds no codec, full BMP validator or broad
-exception catch, and changes no public API.
+Chart date formatting now checks the representable calendar range before converting
+serial days or adding them to a date. An unrepresentable date uses the existing
+numeric fallback for that label. The chart survives; ordinary dates, both date
+systems, phantom-day/weekday behavior and numeric formatting retain their controls.
+No new formatter framework, diagnostic or public option is introduced.
 
-Direct cases cover overflow-sized headers, negative/overlapping/out-of-range
-offsets and incomplete headers. Supported bottom-up/top-down pixels, padded rows,
-extended headers and existing 32-bit behavior retain their controls. DOCX/PPTX
-image recovery, cancellation and file-publication neighbors pass. PNG and BMP
-conversion fixtures share the renamed ImageRecoveryTests helper while retaining
-the existing PNG method names and capability selections.
+Independent PowerPoint 16 output confirms all twelve bars, four categories and
+three legend entries on the retained omission probe. Exact out-of-range tick labels
+remain approximate: Office repeats a date where the candidate uses numeric fallback.
+The 72 DPI exploratory visual screen remains needs-review: MAE 1.3170 against 1.2,
+foreground recall .89705 against .90 and changed-pixel ratio .02740 against .025.
+These limits are unchanged; this screen is separate from the original manifest's
+144 DPI strict qualification. Plot/title geometry also remains approximate. Visual
+inspection found visible content and no clipping; it does not establish Office parity.
 
-The build helper keys its existing mutex by the physical checkout path, resolving
-directory links before constructing the key. Projects in one checkout continue
-to serialize because their referenced bin/obj outputs may be shared. Independent
-checkouts can proceed separately; aliases of one checkout share the lock. MSBuild
-up-to-date checking and refusal of failed/missing output remain. No scheduler,
-lock registry or replacement build framework was introduced. The stub checks
-establish ownership behavior, not a real-build throughput measurement.
-
-README now links to the existing pinned-PDFium instructions through an absolute
-repository URL, also reachable from the package. The vendored binary/version/hash
-remain unchanged. Font-download comments distinguish payload/concurrency bounds
-from accumulator/copy construction headroom. Runtime accounting, cache ownership,
-options and memory admission are unchanged; no allocation improvement is claimed.
+Reference workers write the active stage before activation, open, export, cleanup
+and rasterization. Completed cleanup still preserves the original exception stage;
+cleanup failures remain separately attributed. The supervisor continues to own only
+its worker and retains the shared Office lock. No supervision framework was added.
+Reference exports and cache misses forward `-SkipBuild` to the existing rasterizer;
+default build freshness and PDFium pin checks remain. The binary pin is unchanged.
 
 ## Inherited failures and limitations
 
@@ -81,19 +75,19 @@ rendering guard was replaced or broad rendering rewrite undertaken.
 
 ## Evidence and workflow
 
-Ignored evidence: `artifacts/preview-bmp-build-scope-20261023/qualification.json`;
+Ignored evidence: `artifacts/preview-chart-date-recovery-20261023/qualification.json`;
 artifact: `candidate-final/`; package:
-`artifacts/nuget/preview-020-bmp-build-scope-20261023/`.
-One artifact served affected tests, disjoint broader remainders, six public probes,
+`artifacts/nuget/preview-020-chart-date-recovery-20261023/`.
+One artifact served affected tests, disjoint broader remainders, three chart probes,
 sixteen representative outcomes, both package consumers and verified transfer.
-Candidate methods were not rerun. The README-only correction reused that DLL;
-the superseded CI run was cancelled and the corrected revision passed.
+Candidate methods were not rerun. Office references/comparisons and prior Linux
+failure provenance were reused without parent builds or parent method replays.
 
-The [preceding qualification](https://github.com/Lokad/OoxPDF/blob/90c72466/docs/PreviewQualification.md)
-retains font-identity, PNG and earlier independent Office evidence. Safe managed
-dependency-free execution, meaningful bounds, cancellation, coarse host admission
-and refunds, bounded caches/staging, deterministic cleanup, atomic publication and
-PDF validity remain. The preserved roadmap stays deferred.
+The [preceding qualification](https://github.com/Lokad/OoxPDF/blob/8b9e70a3/docs/PreviewQualification.md)
+retains BMP recovery, build isolation, font identity, PNG and earlier Office evidence.
+Safe managed dependency-free execution, meaningful bounds, cancellation, coarse
+host admission and refunds, bounded caches/staging, deterministic cleanup, atomic
+publication and PDF validity remain. The preserved roadmap stays deferred.
 
 The last full workspace inventory remains **5.943 GB/885,270 files**, above the
 loose 5 GB target. No new full walk or purge was performed. Qualification records
