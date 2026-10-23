@@ -16,8 +16,8 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
     // (hash-verified every time, same retry/cancellation path); concurrently active
     // conversions simply keep their already-handed-out array alive via GC.
     // R13 ownership: the resolver owns retained downloads, conversions borrow the
-    // arrays, and in-flight download memory is bounded separately by the process-wide
-    // MaxConcurrentFontDownloads throttle (each slot holds at most MaxFontFileBytes).
+    // arrays. MaxConcurrentFontDownloads separately limits concurrent downloads;
+    // MaxFontFileBytes bounds payload, not accumulator/copy construction storage.
     internal const long MaxTotalFontPackBytes = 256L * 1024L * 1024L;
     private readonly FontPackFileSource fileSource;
     private readonly IReadOnlyList<FontPackFace> faces;
@@ -261,9 +261,9 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         }
     }
 
-    // R13: process-wide bound on concurrent font downloads. Each download holds up
-    // to MaxFontFileBytes in flight, so the semaphore caps aggregate in-flight
-    // download memory separately from the retained-download total. Retries run
+    // R13: process-wide bound on concurrent font downloads. Response payloads
+    // are capped separately; accumulation and the final copy need headroom beyond
+    // payload size. This is not an exact heap ceiling. Retries run
     // inside one slot; cancellation always throws.
     internal const int MaxConcurrentFontDownloads = 4;
     private static readonly SemaphoreSlim DownloadConcurrency = new(MaxConcurrentFontDownloads, MaxConcurrentFontDownloads);

@@ -2,6 +2,11 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Handles invalid BMP header extents through normal image diagnostics instead of
+  aborting DOCX/PPTX conversion. Supported pixels and the public API are unchanged.
+- Scopes validation build locking to physical checkouts, retaining shared-output
+  serialization across aliases. Corrects pinned-PDFium setup and font-download
+  memory comments without new runtime accounting or options.
 - Keeps opaque font IDs ordinal and scoped to their owning resolver during PPTX
   fallback and program reuse. Subsets reuse the resolved immutable program rather
   than a second string identity. No public API change; cache reuse is retained.

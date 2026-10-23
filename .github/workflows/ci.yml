@@ -100,7 +100,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pwsh -NoProfile -File tools/TestWorkspaceFootprint.ps1
       - name: Qualification build workspace checks
-        run: pwsh -NoProfile -File tools/TestQualificationBuild.ps1
+        run: |
+          pwsh -NoProfile -File tools/TestQualificationBuild.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh -NoProfile -File tools/TestBuildIsolation.ps1
       - name: Qualification report reuse checks
         run: pwsh -NoProfile -File tools/TestQualificationReportJoin.ps1
       - name: Qualification transfer ownership checks

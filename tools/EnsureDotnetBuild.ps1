@@ -5,7 +5,7 @@
 # timestamps, and race concurrent writers on shared bin/obj outputs. This
 # helper delegates up-to-date tracking to MSBuild itself (dotnet build is a
 # no-op when nothing changed), serializes concurrent builds with a
-# machine-wide mutex, fails loudly (never falls back to a stale DLL), and
+# checkout-scoped mutex, fails loudly (never falls back to a stale DLL), and
 # optionally records source/binary identities for run provenance.
 
 param(
@@ -27,7 +27,19 @@ $ErrorActionPreference = "Stop"
 
 $projectFull = (Resolve-Path -LiteralPath $Project).Path
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$mutex = New-Object System.Threading.Mutex($false, "Global\OoxPdfDotnetBuild")
+# Resolve parent directory links as well as a linked checkout root, so aliases
+# still share a lock. Projects in one checkout may share referenced bin/obj trees.
+$buildRoot = [IO.Path]::GetPathRoot($repoRoot)
+foreach ($segment in ($repoRoot.Substring($buildRoot.Length) -split '[\\/]')) {
+    if (!$segment) { continue }
+    $entry = Get-Item -LiteralPath (Join-Path $buildRoot $segment) -Force
+    $target = $entry.ResolveLinkTarget($true)
+    $buildRoot = if ($null -ne $target) { $target.FullName } else { $entry.FullName }
+}
+$buildRoot = [IO.Path]::TrimEndingDirectorySeparator($buildRoot)
+if ($IsWindows) { $buildRoot = $buildRoot.ToUpperInvariant() }
+$lockKey = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($buildRoot)))
+$mutex = [Threading.Mutex]::new($false, 'Global\OoxPdfDotnetBuild-' + $lockKey)
 try {
     if (-not $mutex.WaitOne([TimeSpan]::FromMinutes(15))) {
         throw "$Description build unavailable: another build holds the lock past the deadline."
