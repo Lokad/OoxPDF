@@ -87,11 +87,67 @@ internal static class PptxChartNumberFormatsTests
         TestAssert.Equal("-5", FormatChartNumber(-5d, "m/d/yy"));
     }
 
+    public static void PptxChartNumberDatesOutsideCalendarRangeFallBackToNumeric()
+    {
+        foreach (bool date1904 in new[] { false, true })
+        {
+            DateOnly origin = date1904 ? new DateOnly(1904, 1, 1) : new DateOnly(1899, 12, 30);
+            int maximum = DateOnly.MaxValue.DayNumber - origin.DayNumber;
+            TestAssert.Equal("9999-12-31", FormatChartNumber(maximum, "yyyy-mm-dd", date1904));
+            TestAssert.Equal("9999-12-31 12:00", FormatChartNumber(maximum + 0.5d, "yyyy-mm-dd h:mm", date1904));
+            TestAssert.Equal((maximum + 1).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                FormatChartNumber(maximum + 1d, "yyyy-mm-dd", date1904));
+            TestAssert.Equal("4000000", FormatChartNumber(4000000d, "yyyy-mm-dd", date1904));
+            TestAssert.Equal("2147483647", FormatChartNumber(int.MaxValue, "yyyy-mm-dd", date1904));
+            TestAssert.Equal("-5", FormatChartNumber(-5d, "yyyy-mm-dd", date1904));
+        }
+    }
+
     public static void PptxChartNumberDateSystemsResolveSerials()
     {
         TestAssert.Equal("1/1/04", FormatChartNumber(0d, "m/d/yy", date1904: true));
         TestAssert.Equal("1/1/05", FormatChartNumber(366d, "m/d/yy", date1904: true));
         TestAssert.Equal("3/1/00", FormatChartNumber(60d, "m/d/yy", date1904: false));
+    }
+
+    public static void PptxChartDateFallbackPreservesPlotAndLabels()
+    {
+        foreach (bool date1904 in new[] { false, true })
+        {
+            var entries = new Dictionary<string, string> {
+                ["[Content_Types].xml"] = PptxTests.BasicContentTypes().Replace("</Types>", "<Override PartName=\"/ppt/charts/chart1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.drawingml.chart+xml\"/></Types>"),
+                ["_rels/.rels"] = PptxTests.PackageRelationship(),
+                ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+                ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+                ["ppt/slides/_rels/slide1.xml.rels"] = """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="chart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/></Relationships>
+                    """,
+                ["ppt/slides/slide1.xml"] = """
+                    <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><p:cSld><p:spTree>
+                    <p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="2" name="Chart"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="3657600"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="chart"/></a:graphicData></a:graphic></p:graphicFrame>
+                    </p:spTree></p:cSld></p:sld>
+                    """,
+                ["ppt/charts/chart1.xml"] = $$"""
+                    <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:date1904 val="{{(date1904 ? 1 : 0)}}"/><c:chart><c:plotArea>
+                    <c:barChart><c:barDir val="col"/><c:grouping val="clustered"/><c:ser><c:idx val="0"/><c:order val="0"/>
+                    <c:cat><c:strLit><c:ptCount val="2"/><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                    <c:val><c:numLit><c:ptCount val="2"/><c:pt idx="0"><c:v>4000000</c:v></c:pt><c:pt idx="1"><c:v>5000000</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val="10"/><c:axId val="20"/></c:barChart>
+                    <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/><c:tickLblPos val="nextTo"/></c:catAx>
+                    <c:valAx><c:axId val="20"/><c:scaling><c:max val="6000000"/><c:min val="0"/></c:scaling><c:axPos val="l"/><c:numFmt formatCode="yyyy-mm-dd" sourceLinked="0"/><c:tickLblPos val="nextTo"/><c:crossAx val="10"/><c:majorUnit val="1000000"/></c:valAx>
+                    </c:plotArea></c:chart></c:chartSpace>
+                    """
+            };
+            using var input = TestFixtures.CreateZipPackage(entries);
+            using var output = new MemoryStream();
+            var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions {
+                InputKind = OoxPdfInputKind.Pptx, FontResolver = new PortableRenderingTests.PinnedResolver(), DiagnosticSink = diagnostics.Add
+            });
+            string pdf = System.Text.Encoding.Latin1.GetString(output.ToArray());
+            TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_NODE_RENDER_FAILED"), "A date-format fallback must retain its chart.");
+            TestAssert.True(DocxTests.CountPdfTextShows(pdf) >= 9, "Date fallback must preserve category and axis labels.");
+            TestAssert.True(PptxTests.CountOccurrences(pdf, " re f") >= 3, "Date fallback must preserve the plot's bars.");
+        }
     }
 
     public static void PptxChartAxisDate1904ResolvesFromChartSpace()

@@ -1,4 +1,11 @@
 {
+  "chart-date-recovery": [
+    "PptxChartNumber",
+    "PptxChartDateFallbackPreservesPlotAndLabels",
+    "PptxChartAxisDate1904ResolvesFromChartSpace",
+    "PptxChartDataLabelDatesHonorChartSpaceDateSystem",
+    "PortableRenderingPptxPreservesCompositeChartAndText"
+  ],
   "bmp-header-recovery": [
     "Bmp",
     "SharedDecoder",

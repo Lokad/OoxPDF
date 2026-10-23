@@ -432,7 +432,7 @@ internal sealed partial class PptxRenderer
 
     // Serial date/datetime rendering for axis labels (S04). Only the 1900 and
     // 1904 systems are supported; English month/day names (locale stays open).
-    // Negative serials fall back to numeric rendering. Serial 0 renders as the
+    // Unrepresentable serials fall back to numeric rendering. Serial 0 renders as the
     // phantom January 0, and serial 60 as March 1 (the phantom Feb 29 is unrepresentable).
     private static bool TryFormatDateNumber(string section, double value, bool date1904, out string text)
     {
@@ -448,7 +448,14 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        int days = (int)Math.Floor(value);
+        double wholeDays = Math.Floor(value);
+        DateOnly origin = date1904 ? new DateOnly(1904, 1, 1) : new DateOnly(1899, 12, 30);
+        if (wholeDays < 0d || wholeDays > DateOnly.MaxValue.DayNumber - origin.DayNumber)
+        {
+            return false;
+        }
+
+        int days = (int)wholeDays;
         double fraction = value - days;
         int year;
         int month;
@@ -456,11 +463,6 @@ internal sealed partial class PptxRenderer
         DayOfWeek weekday;
         if (date1904)
         {
-            if (days < 0)
-            {
-                return false;
-            }
-
             DateOnly date = new DateOnly(1904, 1, 1).AddDays(days);
             year = date.Year;
             month = date.Month;
@@ -469,11 +471,6 @@ internal sealed partial class PptxRenderer
         }
         else
         {
-            if (days < 0)
-            {
-                return false;
-            }
-
             if (days == 0)
             {
                 // Phantom January 0 displays with day 0 (S04).
