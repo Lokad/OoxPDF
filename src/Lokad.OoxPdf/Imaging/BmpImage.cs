@@ -11,7 +11,8 @@ internal static class BmpImage
 
         int pixelOffset = I32(bytes, 10);
         int dibSize = I32(bytes, 14);
-        if (dibSize < 40 || pixelOffset < 14 + dibSize || pixelOffset >= bytes.Length)
+        if (dibSize < 40 || dibSize > bytes.Length - 14 ||
+            pixelOffset < 14 + dibSize || pixelOffset >= bytes.Length)
         {
             throw new InvalidDataException("BMP header is invalid.");
         }

@@ -278,6 +278,41 @@ internal static class ImagingTests
         TestAssert.True(image.Alpha is not null && image.Alpha.SequenceEqual(new byte[] { 255, 128, 64, 0, 255, 255, 255, 255, 255, 255, 255, 255 }), "Adam7 RGBA PNG should preserve alpha in final image order.");
     }
 
+    public static void BmpRejectsInvalidHeaderExtents()
+    {
+        foreach (var (dibSize, pixelOffset) in new[] {
+            (int.MaxValue, -1), (int.MaxValue, 54), (int.MaxValue - 13, -1),
+            (40, -1), (40, int.MinValue), (39, 54), (45, 54), (40, 53), (40, 58)
+        })
+        {
+            byte[] bmp = TestFixtures.CreateRgbBmp(1, 1, [10, 20, 30]);
+            System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(bmp.AsSpan(14, 4), dibSize);
+            System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(bmp.AsSpan(10, 4), pixelOffset);
+            TestAssert.Throws<InvalidDataException>(() => BmpImage.ReadOwned(bmp));
+        }
+    }
+
+    public static void BmpHeaderBoundsPreserveTopDownAndExtendedHeaders()
+    {
+        byte[] rgb = [255, 0, 0, 0, 0, 255];
+        byte[] bottomUp = TestFixtures.CreateRgbBmp(1, 2, rgb);
+        byte[] topDown = (byte[])bottomUp.Clone();
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(topDown.AsSpan(22, 4), -2);
+        bottomUp.AsSpan(58, 4).CopyTo(topDown.AsSpan(54, 4));
+        bottomUp.AsSpan(54, 4).CopyTo(topDown.AsSpan(58, 4));
+        byte[] extended = new byte[bottomUp.Length + 68];
+        bottomUp.AsSpan(0, 54).CopyTo(extended);
+        bottomUp.AsSpan(54).CopyTo(extended.AsSpan(122));
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(extended.AsSpan(2, 4), extended.Length);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(extended.AsSpan(10, 4), 122);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(extended.AsSpan(14, 4), 108);
+        foreach (byte[] bmp in new[] { bottomUp, topDown, extended })
+        {
+            using DecodedPixels decoded = BmpImage.ReadOwned(bmp);
+            TestAssert.True(decoded.Rgb.SequenceEqual(rgb), "Supported BMP orientation, padding and extended headers must retain their pixels.");
+        }
+    }
+
     public static void BmpImageReadsBottomUpRgbPixels()
     {
         byte[] bmp = TestFixtures.CreateRgbBmp(2, 1, [255, 0, 0, 0, 0, 255]);

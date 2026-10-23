@@ -3,8 +3,32 @@ using Lokad.OoxPdf.Diagnostics;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PngRecoveryTests
+internal static class ImageRecoveryTests
 {
+    public static void BmpHeaderErrorsUseImageRecoveryAcrossContainers()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (bool pptx in new[] { false, true })
+        foreach (int dibSize in new[] { 40, int.MaxValue })
+        {
+            byte[] bmp = TestFixtures.CreateRgbBmp(1, 1, [10, 20, 30]);
+            System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(bmp.AsSpan(14, 4), dibSize);
+            System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(bmp.AsSpan(10, 4), -1);
+            using var input = TestFixtures.CreateZipPackage(PictureEntries(pptx, "", bmp, "bmp"));
+            using var output = new MemoryStream();
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions {
+                InputKind = pptx ? OoxPdfInputKind.Pptx : OoxPdfInputKind.Docx,
+                FontResolver = resolver, DiagnosticSink = diagnostics.Add
+            });
+            string pdf = Encoding.Latin1.GetString(output.ToArray());
+            TestAssert.Contains("%PDF-", pdf);
+            TestAssert.DoesNotContain("/Subtype /Image", pdf);
+            TestAssert.Equal(1, diagnostics.Count(d => d.Id == "IMAGE_UNSUPPORTED_FORMAT" && d.Severity == OoxPdfSeverity.Error));
+            TestAssert.True(diagnostics.All(d => d.Id != "PPTX_NODE_RENDER_FAILED"), "BMP errors must use image recovery.");
+        }
+    }
+
     public static void PngTransparentKeysAndEquivalentRgbaProduceIdenticalPdfAcrossContainersAndEffects()
     {
         var pairs = new[]
@@ -102,13 +126,13 @@ internal static class PngRecoveryTests
         }
     }
 
-    private static Dictionary<string, byte[]> PictureEntries(bool pptx, string effect, byte[] image)
+    private static Dictionary<string, byte[]> PictureEntries(bool pptx, string effect, byte[] image, string extension = "png")
     {
         var entries = pptx ? JpegPassthroughTests.PptxEntries() : JpegPassthroughTests.DocxEntries();
         foreach (string name in entries.Keys.ToArray())
         {
-            string xml = Encoding.UTF8.GetString(entries[name]).Replace("image/jpeg", "image/png")
-                .Replace("Extension=\"jpg\"", "Extension=\"png\"").Replace("probe.jpg", "probe.png");
+            string xml = Encoding.UTF8.GetString(entries[name]).Replace("image/jpeg", "image/" + extension)
+                .Replace("Extension=\"jpg\"", "Extension=\"" + extension + "\"").Replace("probe.jpg", "probe." + extension);
             if (name == "ppt/slides/slide1.xml")
             {
                 if (effect == "crop") xml = xml.Replace("<a:stretch>", "<a:srcRect l=\"25000\" r=\"25000\"/><a:stretch>");
@@ -116,7 +140,7 @@ internal static class PngRecoveryTests
             }
             entries[name] = TestFixtures.Utf8(xml);
         }
-        entries[pptx ? "ppt/media/probe.png" : "word/media/probe.png"] = image;
+        entries[(pptx ? "ppt" : "word") + "/media/probe." + extension] = image;
         return entries;
     }
 }

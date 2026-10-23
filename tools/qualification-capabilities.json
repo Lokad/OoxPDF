@@ -1,4 +1,11 @@
 {
+  "bmp-header-recovery": [
+    "Bmp",
+    "SharedDecoder",
+    "PngImageErrorsPreserveFilePublicationOnObserverFailureAndCancellation",
+    "DocxUnsupportedPngImageEmitsDiagnostic",
+    "PptxUnsupportedPngImageEmitsDiagnostic"
+  ],
   "pptx-font-identity": [
     "PptxEstimatorsSharingResolverReuseLoadedPrograms",
     "PptxSlideRenderLoadsEachFontProgramOnce",
