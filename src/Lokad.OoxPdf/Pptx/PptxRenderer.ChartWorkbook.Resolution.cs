@@ -39,15 +39,7 @@ internal sealed partial class PptxRenderer
             int maxRow = Math.Max(firstRow, lastRow);
             int rangeRowCount = maxRow - minRow + 1;
             int rangeColumnCount = maxColumn - minColumn + 1;
-            long areaCells;
-            try
-            {
-                areaCells = checked((long)rangeRowCount * rangeColumnCount);
-            }
-            catch (OverflowException ex)
-            {
-                throw new OoxPdfLimitExceededException("Chart data range exceeds the maximum supported cell count.", ex);
-            }
+            long areaCells = (long)rangeRowCount * rangeColumnCount;
 
             if (areaCells > MaxChartRangeCells)
             {
@@ -56,15 +48,7 @@ internal sealed partial class PptxRenderer
 
             // the per-area limit is not sufficient; repeated or overlapping
             // areas share one union list. Charge the cumulative total before appending.
-            long cumulative;
-            try
-            {
-                cumulative = checked((long)values.Count + areaCells);
-            }
-            catch (OverflowException ex)
-            {
-                throw new OoxPdfLimitExceededException("Chart data range union exceeds the maximum supported cell count.", ex);
-            }
+            long cumulative = values.Count + areaCells;
 
             if (cumulative > MaxChartRangeCells)
             {

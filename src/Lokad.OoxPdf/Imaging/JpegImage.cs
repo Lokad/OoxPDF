@@ -325,45 +325,16 @@ internal sealed class JpegImage
         private void InitializeComponentDimensions()
         {
             cancellationToken.ThrowIfCancellationRequested();
-            int mcuUnitX;
-            int mcuUnitY;
-            try
-            {
-                mcuUnitX = checked(maxHorizontal * 8);
-                mcuUnitY = checked(maxVertical * 8);
-            }
-            catch (OverflowException ex)
-            {
-                throw new InvalidDataException("JPEG sampling factors overflow.", ex);
-            }
-            if (mcuUnitX <= 0 || mcuUnitY <= 0)
-            {
-                throw new InvalidDataException("JPEG sampling factors are invalid.");
-            }
-            int mcuColumns;
-            int mcuRows;
-            try
-            {
-                mcuColumns = checked((checked(width + mcuUnitX - 1) / mcuUnitX));
-                mcuRows = checked((checked(height + mcuUnitY - 1) / mcuUnitY));
-            }
-            catch (OverflowException ex)
-            {
-                throw new InvalidDataException("JPEG dimensions overflow.", ex);
-            }
+            // Frame dimensions are positive 16-bit values and sampling factors
+            // are validated in [1,4]. These dimension intermediates fit Int32.
+            int mcuUnitX = maxHorizontal * 8;
+            int mcuUnitY = maxVertical * 8;
+            int mcuColumns = (width + mcuUnitX - 1) / mcuUnitX;
+            int mcuRows = (height + mcuUnitY - 1) / mcuUnitY;
             foreach (Component component in components)
             {
-                int sampleWidth;
-                int sampleHeight;
-                try
-                {
-                    sampleWidth = checked(checked(mcuColumns * component.Horizontal) * 8);
-                    sampleHeight = checked(checked(mcuRows * component.Vertical) * 8);
-                }
-                catch (OverflowException ex)
-                {
-                    throw new InvalidDataException("JPEG component dimensions overflow.", ex);
-                }
+                int sampleWidth = mcuColumns * component.Horizontal * 8;
+                int sampleHeight = mcuRows * component.Vertical * 8;
                 long planeBytes = checked((long)sampleWidth * sampleHeight);
                 if (planeBytes > int.MaxValue)
                 {
