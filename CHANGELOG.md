@@ -2,6 +2,12 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Preserves explicitly empty DOCX bullet labels and their list indentation;
+  missing label text retains the existing default.
+- Removes an unreachable PPTX text fallback and unused line tally. Independent
+  XML inspection, scene layout, table cells and bounded caches remain.
+- Removes unreachable JPEG-dimension/chart-range overflow handlers while keeping
+  validated input bounds, storage checks and chart area/union limits.
 - Keeps current DOCX section dimensions and margins when tracked formatting
   history contains older page settings. Revision provenance remains inspectable.
 - Omits explicitly hidden PPTX objects before resource preflight and painting,
