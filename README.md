@@ -216,7 +216,7 @@ pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json
 
 The command writes timestamped artifacts under `artifacts/visual/<case-id>/<run-id>/`, including reference PNGs, candidate PDF and PNGs, diagnostics JSON, pixel metrics, a comparison HTML file, and an assessment template.
 
-The validation tools require Windows with Office installed for reference rendering. PDF rasterization uses the exact vendored `tools/vendor/pdfium/win-x64/bin/pdfium.dll`; follow the [pinned-binary instructions](docs/VisualValidation.md#requirements). These tools are not used by the library.
+The validation tools require Windows with Office installed for reference rendering. PDF rasterization uses the exact vendored `tools/vendor/pdfium/win-x64/bin/pdfium.dll`; follow the [pinned-binary instructions](https://github.com/Lokad/OoxPDF/blob/master/docs/VisualValidation.md#requirements). These tools are not used by the library.
 
 ## Capabilities And Limits
 
