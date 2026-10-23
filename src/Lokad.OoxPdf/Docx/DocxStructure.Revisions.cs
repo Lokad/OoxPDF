@@ -214,7 +214,6 @@ internal sealed partial record DocxStructureSnapshot
         }
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static DocxStructureTableAdjacencySnapshot ToTableAdjacencySnapshot(
         IReadOnlyList<DocxBodyElement> elements,
         DocxTable table,

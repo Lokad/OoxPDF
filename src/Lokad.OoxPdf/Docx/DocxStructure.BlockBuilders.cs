@@ -4,7 +4,6 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial record DocxStructureSnapshot
 {
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static DocxStructureBlockSnapshot FromParagraph(
         int blockIndex,
         string? previousKind,
@@ -118,7 +117,6 @@ internal sealed partial record DocxStructureSnapshot
             ManualBreakLineSpacingFactor: null);
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static DocxStructureBlockSnapshot FromTable(
         int blockIndex,
         string? previousKind,
@@ -229,31 +227,26 @@ internal sealed partial record DocxStructureSnapshot
             ManualBreakLineSpacingFactor: null);
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static DocxStructureBlockSnapshot FromPageBreak(int blockIndex, string? previousKind, string? nextKind, DocxPageBreakElement pageBreak)
     {
         return DocxStructureBlockSnapshot.ForPageBreak(blockIndex, previousKind, nextKind, pageBreak);
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static DocxStructureBlockSnapshot FromImplicitParagraph(int blockIndex, string? previousKind, string? nextKind, DocxImplicitParagraphElement implicitParagraph)
     {
         return DocxStructureBlockSnapshot.ForImplicitParagraph(blockIndex, previousKind, nextKind, implicitParagraph);
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static DocxStructureBlockSnapshot FromManualBreak(int blockIndex, string? previousKind, string? nextKind, DocxManualBreakElement manualBreak)
     {
         return DocxStructureBlockSnapshot.ForManualBreak(blockIndex, previousKind, nextKind, manualBreak);
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static DocxStructureBlockSnapshot FromSectionBreak(int blockIndex, string? previousKind, string? nextKind, DocxSectionBreakElement sectionBreak)
     {
         return DocxStructureBlockSnapshot.ForSectionBreak(blockIndex, previousKind, nextKind, CountRevisions(sectionBreak.Revisions), CountRevisions(sectionBreak.Revisions, DocxRevisionKind.Insertion), CountRevisions(sectionBreak.Revisions, DocxRevisionKind.Deletion), CountRevisions(sectionBreak.Revisions, DocxRevisionKind.MoveFrom), CountRevisions(sectionBreak.Revisions, DocxRevisionKind.MoveTo), CountOtherRevisions(sectionBreak.Revisions), sectionBreak.TypeValue, sectionBreak.ColumnCountValue, sectionBreak.ColumnEqualWidthValue, sectionBreak.ColumnSpaceValue, sectionBreak.ColumnDefinitions.Count, sectionBreak.ColumnDefinitions.Count(column => column.WidthValue is not null), sectionBreak.ColumnDefinitions.Count(column => column.SpaceValue is not null));
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static DocxStructureTableSnapshot ToTableSnapshot(DocxTable table, int tableIndex, int blockIndex)
     {
         int cellCount = table.Rows.Sum(row => row.Cells.Count);
@@ -336,7 +329,6 @@ internal sealed partial record DocxStructureSnapshot
             table.Rows.Select((row, rowIndex) => ToTableRowSnapshot(row, rowIndex)).ToArray());
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static DocxStructureTableRowSnapshot ToTableRowSnapshot(DocxTableRow row, int rowIndex)
     {
         DocxStructureTableCellSnapshot[] cells = row.Cells.Select(ToTableCellSnapshot).ToArray();
@@ -386,7 +378,6 @@ internal sealed partial record DocxStructureSnapshot
             cells);
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static DocxStructureTableCellSnapshot ToTableCellSnapshot(DocxTableCell cell, int cellIndex)
     {
         DocxParagraph[] paragraphs = DocxBlockTraversal
@@ -442,7 +433,6 @@ internal sealed partial record DocxStructureSnapshot
             cell.BodyElements.OfType<DocxTableElement>().Count());
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static DocxStructureFloatingDrawingSnapshot ToFloatingDrawingSnapshot(DocxFloatingDrawing drawing, int index)
     {
         return new DocxStructureFloatingDrawingSnapshot(

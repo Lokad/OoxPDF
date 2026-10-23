@@ -10,7 +10,6 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static double ResolveSpacingBeforePoints(DocxResolvedParagraphProperties paragraph, double lineHeight)
     {
         if (paragraph.SpacingBeforePoints is { } points)
@@ -28,7 +27,6 @@ internal sealed partial class DocxReader
             : 0d;
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static double ResolveSpacingAfterPoints(DocxResolvedParagraphProperties paragraph, double lineHeight)
     {
         if (paragraph.SpacingAfterPoints is { } points)

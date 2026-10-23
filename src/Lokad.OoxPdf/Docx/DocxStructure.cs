@@ -221,7 +221,6 @@ internal sealed partial record DocxStructureSnapshot(
             DynamicCachedResultNotRenderedFieldReferenceCount: allParagraphs.Sum(ParagraphDynamicCachedResultNotRenderedFieldReferenceCount));
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static IReadOnlyList<DocxStructureStorySnapshot> ToStorySnapshots(
         DocxDocument document,
         IReadOnlyList<DocxStructureBlockSnapshot> bodyBlocks)
@@ -286,7 +285,6 @@ internal sealed partial record DocxStructureSnapshot(
         return stories;
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static void AddStaticStories(
         List<DocxStructureStorySnapshot> stories,
         DocxStoryKind kind,
@@ -352,7 +350,6 @@ internal sealed partial record DocxStructureSnapshot(
         }
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static void AddRelatedStories(List<DocxStructureStorySnapshot> stories, IReadOnlyList<DocxRelatedStory> relatedStories)
     {
         foreach (DocxRelatedStory story in relatedStories
@@ -403,7 +400,6 @@ internal sealed partial record DocxStructureSnapshot(
         }
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static IReadOnlyList<DocxStructureInlineReferenceSnapshot> ToInlineReferenceSnapshots(DocxDocument document)
     {
             (int? Index, DocxRelatedStory? Story) ResolveInlineReferenceStory(
@@ -450,7 +446,6 @@ internal sealed partial record DocxStructureSnapshot(
         return references;
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static IReadOnlyList<DocxStructureCommentRangeSnapshot> ToCommentRangeSnapshots(DocxDocument document)
     {
         DocxRelatedStory[] relatedStories = document.RelatedStories
@@ -486,7 +481,6 @@ internal sealed partial record DocxStructureSnapshot(
         return ranges;
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static IReadOnlyList<DocxStructureCommentStoryAnchorSnapshot> ToCommentStoryAnchorSnapshots(DocxDocument document)
     {
         Dictionary<string, int> visibleInlineCounts = EnumerateParagraphs(document)
@@ -528,7 +522,6 @@ internal sealed partial record DocxStructureSnapshot(
             .ToArray();
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static IReadOnlyList<DocxStructureRevisionRangeSnapshot> ToRevisionRangeSnapshots(DocxDocument document)
     {
         var ranges = new List<DocxStructureRevisionRangeSnapshot>();
@@ -556,7 +549,6 @@ internal sealed partial record DocxStructureSnapshot(
         return LinkCrossBlockRevisionRanges(ranges);
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static IReadOnlyList<DocxStructureRevisionRangeSnapshot> LinkCrossBlockRevisionRanges(IReadOnlyList<DocxStructureRevisionRangeSnapshot> ranges)
     {
         if (ranges.Count == 0)
@@ -650,7 +642,6 @@ internal sealed partial record DocxStructureSnapshot(
         return (null, null);
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static IReadOnlyList<DocxStructureStyleUsageSnapshot> ToStyleUsages(DocxDocument document)
     {
             bool IsExactLineSpacing(DocxParagraphSpacing spacing)
@@ -717,7 +708,6 @@ internal sealed partial record DocxStructureSnapshot(
         return paragraphStyles.Concat(tableStyles).ToArray();
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static IReadOnlyList<DocxStructureListUsageSnapshot> ToListUsages(DocxDocument document)
     {
             bool HasParagraphIndentOverride(DocxParagraphIndent indent)
@@ -770,7 +760,6 @@ internal sealed partial record DocxStructureSnapshot(
             .Concat(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs));
     }
 
-    // Single caller; kept static: future Phase-1 split unit, not a local candidate.
     private static IReadOnlyList<DocxStructureFormattingRevisionPropertySnapshot> ToFormattingRevisionPropertySnapshots(IEnumerable<DocxRevisionInfo> revisions)
     {
         return revisions

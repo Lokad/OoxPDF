@@ -48,7 +48,6 @@ internal sealed partial class DocxReader
         };
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static string? ReadCharacterStyleId(XElement run)
     {
         return (string?)run
@@ -57,7 +56,6 @@ internal sealed partial class DocxReader
             ?.Attribute(WordprocessingNamespace + "val");
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static bool IsComplexFieldMarkupElement(XElement element)
     {
         return element.Name == WordprocessingNamespace + "fldChar" ||
@@ -66,7 +64,6 @@ internal sealed partial class DocxReader
 
     private sealed record DocxVmlTextBoxContent(string Text, IReadOnlyList<DocxRevisionInfo> Revisions);
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static IEnumerable<DocxVmlTextBoxContent> ReadVmlTextBoxContents(XElement run)
     {
         foreach (XElement textBox in run.Descendants(VmlNamespace + "textbox"))
@@ -82,7 +79,6 @@ internal sealed partial class DocxReader
         }
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxVmlTextBoxContent ReadTextBoxContent(XElement content)
     {
         var paragraphs = new List<string>();
@@ -103,7 +99,6 @@ internal sealed partial class DocxReader
         return new DocxVmlTextBoxContent(string.Join("\n", paragraphs), revisions);
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static bool FieldHasCachedResultText(XElement field)
     {
         return field

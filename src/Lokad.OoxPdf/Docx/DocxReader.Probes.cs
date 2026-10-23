@@ -10,7 +10,6 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
-    // Single caller; kept static: entry-point stage, not a local candidate.
     private static void EmitUnsupportedFeatureDiagnostics(
         OoxPackage package,
         XDocument document,
@@ -364,7 +363,6 @@ internal sealed partial class DocxReader
         }
     }
 
-    // Single caller; kept static: diagnostic probe in the unsupported-feature checklist.
     private static bool IsUnsupportedFloatingDrawingAnchor(XElement anchor, IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         XElement? extent = anchor.Element(WordprocessingDrawingNamespace + "extent");
@@ -384,7 +382,6 @@ internal sealed partial class DocxReader
             !IsSupportedFloatingWrap(anchor);
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool HasSupportedFloatingDrawingImage(XElement anchor, IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         string? relationshipId = ReadDrawingImageRelationshipId(anchor);
@@ -394,7 +391,6 @@ internal sealed partial class DocxReader
             relationship.ResolvedTarget is not null;
     }
 
-    // Single caller; kept static: diagnostic probe in the unsupported-feature checklist.
     private static bool HasExternalDrawingImage(XDocument document, IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         foreach (XElement blip in document.Descendants(DrawingNamespace + "blip"))
@@ -413,7 +409,6 @@ internal sealed partial class DocxReader
         return false;
     }
 
-    // Single caller; kept static: diagnostic probe in the unsupported-feature checklist.
     private static bool HasUnsupportedVml(XDocument document, IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         foreach (XElement element in document.Descendants().Where(element => element.Name.Namespace == VmlNamespace))
@@ -427,7 +422,6 @@ internal sealed partial class DocxReader
         return false;
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool IsSupportedVmlElement(XElement element, IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         return IsSupportedVmlImageElement(element, relationships) ||
@@ -435,7 +429,6 @@ internal sealed partial class DocxReader
             IsInertVmlDefinitionElement(element);
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool IsSupportedVmlImageElement(XElement element, IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         if (element.Name == VmlNamespace + "shape")
@@ -451,7 +444,6 @@ internal sealed partial class DocxReader
         return false;
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool IsSupportedVmlTextBoxElement(XElement element)
     {
         if (element.Name == VmlNamespace + "shape")
@@ -477,7 +469,6 @@ internal sealed partial class DocxReader
                 .All(element => element.Name == VmlNamespace + "textbox");
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool IsInertVmlDefinitionElement(XElement element)
     {
         return element.Name == VmlNamespace + "shapetype" ||
@@ -485,7 +476,6 @@ internal sealed partial class DocxReader
             element.Name == VmlNamespace + "path";
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool IsSupportedVmlImageShape(XElement shape, IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         return TryReadVmlImageShape(
@@ -500,7 +490,6 @@ internal sealed partial class DocxReader
                 .All(element => element.Name == VmlNamespace + "imagedata");
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool HasTextBoxContent(XElement anchor)
     {
         return anchor
@@ -508,7 +497,6 @@ internal sealed partial class DocxReader
             .Any(content => content.Elements().Any());
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool IsSupportedHorizontalAnchorPosition(XElement? position)
     {
         return IsSupportedAnchorPosition(
@@ -517,7 +505,6 @@ internal sealed partial class DocxReader
             static align => align is "left" or "center" or "right");
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool IsSupportedVerticalAnchorPosition(XElement? position)
     {
         return IsSupportedAnchorPosition(
@@ -555,7 +542,6 @@ internal sealed partial class DocxReader
             out _);
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool IsSupportedFloatingWrap(XElement anchor)
     {
         XElement? wrap = anchor.Elements()
@@ -570,7 +556,6 @@ internal sealed partial class DocxReader
             wrap.Name.LocalName.Equals("wrapTopAndBottom", StringComparison.OrdinalIgnoreCase);
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool HasPositiveEmuAttribute(XElement? element, string attributeName)
     {
         return long.TryParse(
@@ -581,7 +566,6 @@ internal sealed partial class DocxReader
             value > 0;
     }
 
-    // Single caller; kept static: diagnostic probe in the unsupported-feature checklist.
     private static bool IsUnsupportedParagraphSectionBreak(XElement sectionProperties)
     {
         string? typeValue = (string?)sectionProperties
@@ -593,7 +577,6 @@ internal sealed partial class DocxReader
             !typeValue.Equals("evenPage", StringComparison.OrdinalIgnoreCase);
     }
 
-    // Single caller; kept static: diagnostic probe in the unsupported-feature checklist.
     private static bool HasUnsupportedMultiColumnSection(XDocument document)
     {
             bool IsMultiColumnDeclaration(XElement columns)
@@ -621,7 +604,6 @@ internal sealed partial class DocxReader
     }
 
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool IsSupportedExplicitFinalSectionColumnFlow(XDocument document, IReadOnlyList<XElement> multiColumnDeclarations)
     {
         XElement? body = document.Root?.Element(WordprocessingNamespace + "body");
@@ -670,7 +652,6 @@ internal sealed partial class DocxReader
         return visibleOwner is null;
     }
 
-    // Single caller; kept static: diagnostic probe in the unsupported-feature checklist.
     private static bool HasUnsupportedTableBorderStyle(XDocument document)
     {
         return document
@@ -680,7 +661,6 @@ internal sealed partial class DocxReader
                 IsUnsupportedVisibleBorderStyle((string?)element.Attribute(WordprocessingNamespace + "val")));
     }
 
-    // Single caller; kept static: diagnostic probe in the unsupported-feature checklist.
     private static bool HasUnsupportedTableCellTextDirection(XDocument document)
     {
         return document
@@ -688,14 +668,12 @@ internal sealed partial class DocxReader
             .Any(IsUnsupportedTableCellTextDirection);
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool IsUnsupportedTableCellTextDirection(XElement textDirection)
     {
         string? value = (string?)textDirection.Attribute(WordprocessingNamespace + "val");
         return value is not null && !value.Equals("lrTb", StringComparison.OrdinalIgnoreCase);
     }
 
-    // Single caller; kept static: diagnostic probe in the unsupported-feature checklist.
     private static bool HasUnsupportedTrackedChanges(XDocument document)
     {
             bool IsSupportedVisibleInlineContainerChild(XElement element)
@@ -737,7 +715,6 @@ internal sealed partial class DocxReader
                 container.Elements().Any(child => !IsSupportedVisibleInlineContainerChild(child))));
     }
 
-    // Single caller; kept static: diagnostic probe in the unsupported-feature checklist.
     private static bool HasFormattingTrackedChanges(XDocument document)
     {
         XName[] formattingRevisionElements =
@@ -752,7 +729,6 @@ internal sealed partial class DocxReader
         return formattingRevisionElements.Any(name => document.Descendants(name).Any());
     }
 
-    // Single caller; kept static: diagnostic probe in the unsupported-feature checklist.
     private static bool HasUnsupportedComplexFields(XDocument document)
     {
             bool IsSupportedComplexFieldRunChild(XElement element)
@@ -851,7 +827,6 @@ internal sealed partial class DocxReader
         return false;
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool ProcessComplexFieldRunChild(
         XElement child,
         List<DocxComplexFieldScanState> fields)
@@ -928,7 +903,6 @@ internal sealed partial class DocxReader
         return false;
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool IsTableBorderContainer(XElement? element)
     {
         return element is not null &&
@@ -937,7 +911,6 @@ internal sealed partial class DocxReader
                 element.Name.LocalName.Equals("tcBorders", StringComparison.OrdinalIgnoreCase));
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool IsUnsupportedVisibleBorderStyle(string? value)
     {
         if (string.IsNullOrWhiteSpace(value) ||
@@ -950,7 +923,6 @@ internal sealed partial class DocxReader
         return !IsSupportedVisibleBorderStyle(value);
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool IsSupportedVisibleBorderStyle(string value)
     {
         return value.Equals("single", StringComparison.OrdinalIgnoreCase) ||

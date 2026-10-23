@@ -10,7 +10,6 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
-    // Single caller; kept static: entry-point stage, not a local candidate.
     private static IReadOnlyList<DocxBodyElement> ReadBodyElements(
         XDocument document,
         DocxStyleSet styles,
@@ -202,7 +201,6 @@ internal sealed partial class DocxReader
         return output;
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxParagraph MergeParagraphsAcrossDeletedMark(DocxParagraph first, DocxParagraph second)
     {
             int MaxSourceRunIndex(DocxParagraph paragraph)
@@ -255,19 +253,16 @@ internal sealed partial class DocxReader
         return textOffset is null ? null : textOffset + offset;
     }
 
-    // Single caller; kept static: index-shift family kept together.
     private static DocxTextRun ShiftRun(DocxTextRun run, int sourceRunOffset)
     {
         return run with { SourceRunIndex = ShiftSourceRunIndex(run.SourceRunIndex, sourceRunOffset) };
     }
 
-    // Single caller; kept static: index-shift family kept together.
     private static DocxInlineReference ShiftInlineReference(DocxInlineReference reference, int sourceRunOffset)
     {
         return reference with { SourceRunIndex = ShiftSourceRunIndex(reference.SourceRunIndex, sourceRunOffset) };
     }
 
-    // Single caller; kept static: index-shift family kept together.
     private static DocxCommentRange ShiftCommentRange(DocxCommentRange range, int sourceRunOffset, int textOffset)
     {
         return range with
@@ -281,7 +276,6 @@ internal sealed partial class DocxReader
         };
     }
 
-    // Single caller; kept static: index-shift family kept together.
     private static DocxRevisionRange ShiftRevisionRange(DocxRevisionRange range, int sourceRunOffset, int textOffset)
     {
         return range with
@@ -293,7 +287,6 @@ internal sealed partial class DocxReader
         };
     }
 
-    // Single caller; kept static: index-shift family kept together.
     private static DocxFieldReference ShiftFieldReference(DocxFieldReference field, int sourceRunOffset, int textRunOffset)
     {
         return field with
@@ -303,7 +296,6 @@ internal sealed partial class DocxReader
         };
     }
 
-    // Single caller; kept static: index-shift family kept together.
     private static DocxHyperlinkSpan ShiftHyperlink(DocxHyperlinkSpan hyperlink, int sourceRunOffset, int textRunOffset)
     {
         return hyperlink with
@@ -313,7 +305,6 @@ internal sealed partial class DocxReader
         };
     }
 
-    // Single caller; kept static: index-shift family kept together.
     private static DocxBookmarkAnchor ShiftBookmarkAnchor(DocxBookmarkAnchor anchor, int sourceRunOffset, int textRunOffset)
     {
         return anchor with
@@ -427,7 +418,6 @@ internal sealed partial class DocxReader
         return parts;
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static bool TrySplitRunBreakContainer(
         XElement child,
         List<XElement> paragraphChildren,
@@ -515,7 +505,6 @@ internal sealed partial class DocxReader
         AddContainerPart(ownerChildren, sourceContainer, containerChildren);
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static void AddContainerPart(List<XElement> paragraphChildren, XElement sourceContainer, List<XElement> containerChildren)
     {
         if (containerChildren.Count == 0)
@@ -595,7 +584,6 @@ internal sealed partial class DocxReader
             element.Elements().All(child => IsBreakOnlyInlineElement(child, isBreak, markupMode));
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static bool IsIgnorableBreakOnlyContainerChild(XElement element)
     {
         return element.Name == WordprocessingNamespace + "bookmarkStart" ||

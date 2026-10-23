@@ -185,7 +185,6 @@ internal sealed partial class DocxReader
         return drawings;
     }
 
-    // Single caller; kept static: entry-point stage, not a local candidate.
     private static IReadOnlyList<DocxParagraph> SelectDefaultHeaderFooterParagraphs(IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType)
     {
         return paragraphsByType.TryGetValue("default", out IReadOnlyList<DocxParagraph>? paragraphs)
@@ -224,7 +223,6 @@ internal sealed partial class DocxReader
             .ToArray();
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static IReadOnlyList<DocxRelatedStory> ReadCommentStories(
         OoxPackage package,
         string documentPartName,
@@ -369,7 +367,6 @@ internal sealed partial class DocxReader
         internal static readonly AutomaticNoteStoryMarker Instance = new();
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxRelatedStory ReadRelatedStory(
         DocxRelatedStoryKind kind,
         string partName,
@@ -475,7 +472,6 @@ internal sealed partial class DocxReader
         }
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static IReadOnlyDictionary<string, DocxCommentThreadMetadata> ReadCommentThreadMetadata(
         OoxPackage package,
         string documentPartName,
@@ -508,7 +504,6 @@ internal sealed partial class DocxReader
         return metadataByParagraphId;
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static IReadOnlyList<DocxRelatedStory> ResolveCommentThreadParents(IReadOnlyList<DocxRelatedStory> stories)
     {
         Dictionary<string, string> commentIdByParagraphId = stories

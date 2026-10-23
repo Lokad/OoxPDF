@@ -49,7 +49,6 @@ internal sealed partial class DocxReader
         };
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static IReadOnlyList<DocxSectionColumn> ReadSectionColumns(XElement? columns)
     {
         return columns
@@ -141,7 +140,6 @@ internal sealed partial class DocxReader
         return NormalizeDeletedParagraphMarkElements(bodyElements, markupMode);
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static IReadOnlyList<DocxInlineImage> ReadInlineImages(
         XElement run,
         OoxPackage package,
@@ -203,7 +201,6 @@ internal sealed partial class DocxReader
         return positions;
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     // Inline DrawingML textboxes retain the same drawing order as pictures.
     // Layout can consume the measured frame or keep the existing block fallback.
     private static IReadOnlyList<DocxInlineTextBox> ReadInlineTextBoxes(
@@ -373,7 +370,6 @@ internal sealed partial class DocxReader
         }
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxInlineImage? ReadVmlInlineImage(
         XElement shape,
         OoxPackage package,
@@ -434,7 +430,6 @@ internal sealed partial class DocxReader
         return true;
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool TryReadVmlShapeSizePoints(XElement shape, out double widthPoints, out double heightPoints)
     {
         widthPoints = 0d;
@@ -491,7 +486,6 @@ internal sealed partial class DocxReader
         return true;
     }
 
-    // Single caller; kept static: probe-chain link in the unsupported-feature checklist.
     private static bool TryParseVmlLengthPoints(string value, out double points)
     {
         points = 0d;

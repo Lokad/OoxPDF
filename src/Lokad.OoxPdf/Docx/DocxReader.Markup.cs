@@ -96,7 +96,6 @@ internal sealed partial class DocxReader
         }
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static bool IsRevisionMarkerElement(XElement element)
     {
         return element.Name == WordprocessingNamespace + "moveFromRangeStart" ||
@@ -140,7 +139,6 @@ internal sealed partial class DocxReader
         return false;
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxRevisionKind? RevisionKind(XElement element)
     {
         if (element.Parent?.Name == WordprocessingNamespace + "tcPr")
@@ -266,7 +264,7 @@ internal sealed partial class DocxReader
         return revisions;
     }
 
-    // Single caller; kept static: semantic-void property-change comparison.
+    // Semantic-void property-change comparison.
     private static bool IsSemanticallyVoidPropertyChange(XElement properties, XElement change, DocxRevisionInfo revision)
     {
         if (revision.PropertyChangeFamily is null || revision.PropertyElementNames.Count == 0)
@@ -298,7 +296,7 @@ internal sealed partial class DocxReader
         return OoxPropertyElementsEqual(originalProperties, properties, excludeChangeMarkers: true);
     }
 
-    // Single caller; kept static: structural OOXML property comparison ignoring
+    // Structural OOXML property comparison ignoring
     // namespace-declaration spelling and insignificant whitespace, so a recorded
     // original that only re-serializes the current properties compares void.
     private static bool OoxPropertyElementsEqual(XElement original, XElement current, bool excludeChangeMarkers)
@@ -361,7 +359,7 @@ internal sealed partial class DocxReader
         return true;
     }
 
-    // Single caller; kept static: significant OOXML content (elements plus
+    // Significant OOXML content (elements plus
     // non-whitespace text; comments and processing instructions never decide voidness).
     private static IEnumerable<XNode> SignificantOoxContent(XElement element)
     {
@@ -411,7 +409,6 @@ internal sealed partial class DocxReader
         return element.Name == WordprocessingNamespace + "sectPrChange" ? DocxRevisionPropertyFamily.Section : null;
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static IReadOnlyList<string> ReadRevisionPropertyElementNames(XElement element)
     {
         if (RevisionPropertyChangeFamily(element) is null)
@@ -464,7 +461,6 @@ internal sealed partial class DocxReader
             : [primary, .. secondary];
     }
 
-    // Single caller; kept static: index-finder trio kept together.
     private static DocxRevisionInfo? FindInheritedRevision(XElement element, OoxPdfDocxMarkupMode markupMode)
     {
         XElement? revisionContainer = element.Ancestors().FirstOrDefault(IsRevisionContainer);
@@ -480,7 +476,6 @@ internal sealed partial class DocxReader
             .Any(ancestor => IsRevisionContainer(ancestor) && !IsIncludedRevisionContainer(ancestor, markupMode));
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxResolvedRunProperties ApplyMarkupRevisionStyle(
         DocxResolvedRunProperties run,
         DocxRevisionInfo? revision,

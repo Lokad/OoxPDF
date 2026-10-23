@@ -267,7 +267,6 @@ internal sealed partial class DocxReader
         return true;
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static double? ReadDxaWidth(XElement? width)
     {
         string? type = (string?)width?.Attribute(WordprocessingNamespace + "type");
@@ -279,7 +278,6 @@ internal sealed partial class DocxReader
         return ReadTwipsAttribute(width, WordprocessingNamespace + "w");
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     internal const int MaxTableGridSpan = 1024;
 
     internal const int MaxInferredGridColumns = 1024;
@@ -310,7 +308,6 @@ internal sealed partial class DocxReader
         return normalized;
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static IReadOnlyList<DocxBodyElement> ReadTableCellBodyElements(
         XElement cell,
         DocxStyleSet styles,
@@ -429,21 +426,18 @@ internal sealed partial class DocxReader
     }
 
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxTableCellMargins ReadTableCellMargins(XElement? cellProperties)
     {
         XElement? margins = cellProperties?.Element(WordprocessingNamespace + "tcMar");
         return ReadCellMargins(margins);
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxTableCellMargins ReadTableStyleCellMargins(XElement? tableProperties)
     {
         XElement? margins = tableProperties?.Element(WordprocessingNamespace + "tblCellMar");
         return ReadCellMargins(margins);
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxTableCellMargins ReadTablePropertyExceptionCellMargins(XElement row)
     {
         XElement? margins = row
@@ -472,7 +466,6 @@ internal sealed partial class DocxReader
             ReadMarginValue(margins, "left"));
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static bool HasAnyTableCellMargin(DocxTableCellMargins margins)
     {
         return margins.TopValue is not null ||
@@ -494,19 +487,16 @@ internal sealed partial class DocxReader
     }
 
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static IReadOnlyList<DocxTableCellBorder> ReadTableCellBorders(XElement? cellProperties)
     {
         return ReadBorderElements(cellProperties?.Element(WordprocessingNamespace + "tcBorders"));
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static IReadOnlyList<DocxTableCellBorder> ReadTableBorders(XElement? tableProperties)
     {
         return ReadBorderElements(tableProperties?.Element(WordprocessingNamespace + "tblBorders"));
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxTableLook ReadTableLook(XElement? tableProperties)
     {
         XElement? look = tableProperties?.Element(WordprocessingNamespace + "tblLook");
@@ -531,7 +521,6 @@ internal sealed partial class DocxReader
             (string?)look.Attribute(WordprocessingNamespace + "noVBand"));
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxTableCellConditionalFormat? ReadTableCellConditionalFormat(XElement? cellProperties)
     {
         XElement? conditional = cellProperties?.Element(WordprocessingNamespace + "cnfStyle");
@@ -586,7 +575,6 @@ internal sealed partial class DocxReader
             .ToArray();
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static IReadOnlyList<DocxTableCellBorder> ResolveTableCellBorders(
         IReadOnlyList<DocxTableCellBorder> directBorders,
         IReadOnlyList<DocxTableCellBorder> styleBorders,
@@ -609,7 +597,6 @@ internal sealed partial class DocxReader
             .ToArray();
     }
 
-    // Single caller; kept static: border-resolution cluster kept together.
     private static IEnumerable<DocxTableCellBorder> ResolveTableBordersForCell(
         IReadOnlyList<DocxTableCellBorder> tableBorders,
         int rowIndex,
@@ -646,7 +633,6 @@ internal sealed partial class DocxReader
         }
     }
 
-    // Single caller; kept static: border-resolution cluster kept together.
     private static void AddBorders(Dictionary<string, DocxTableCellBorder> target, IEnumerable<DocxTableCellBorder> borders)
     {
         foreach (DocxTableCellBorder border in borders)
@@ -655,13 +641,11 @@ internal sealed partial class DocxReader
         }
     }
 
-    // Single caller; kept static: border-resolution cluster kept together.
     private static DocxTableCellBorder? FindBorder(IReadOnlyList<DocxTableCellBorder> borders, string edge)
     {
         return borders.FirstOrDefault(border => string.Equals(border.Edge, edge, StringComparison.OrdinalIgnoreCase));
     }
 
-    // Single caller; kept static: border-resolution cluster kept together.
     private static bool IsCanonicalCellBorderEdge(string edge)
     {
         return edge.Equals("top", StringComparison.OrdinalIgnoreCase) ||
@@ -670,7 +654,6 @@ internal sealed partial class DocxReader
             edge.Equals("right", StringComparison.OrdinalIgnoreCase);
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static double? ReadTableRowHeight(XElement? height)
     {
         if (height?.Attribute(WordprocessingNamespace + "val") is not { } value)

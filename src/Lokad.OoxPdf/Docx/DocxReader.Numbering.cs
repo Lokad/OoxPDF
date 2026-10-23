@@ -10,7 +10,6 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static string FormatNoteReferenceNumber(int value, string? format)
     {
         return format switch
@@ -46,7 +45,6 @@ internal sealed partial class DocxReader
         return OoxNumbering.ToRomanUpper(value);
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxListLabel? CreateListLabel(XElement? paragraphProperties, DocxNumberingSet numbering, DocxNumberingCounters counters, DocxStyleSet styles, string? paragraphStyleId, DocxTableCellStyle? tableCellStyle, DocxResolvedRunProperties paragraphMarkRun,
         bool trackOriginal, bool? originalIncluded, DocxRevisionInfo? markInsertion)
     {
@@ -155,7 +153,6 @@ internal sealed partial class DocxReader
 
     private const double WordListLabelFallbackMaxPoints = 12d;
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxTextRunStyle ResolveListLabelStyle(DocxTextRunStyle levelStyle, XElement? paragraphProperties, DocxStyleSet styles, string? paragraphStyleId, DocxTableCellStyle? tableCellStyle, DocxResolvedRunProperties paragraphMarkRun)
     {
         // Independent Word controls: the level owns explicit typeface/weight/slant;
@@ -216,7 +213,6 @@ internal sealed partial class DocxReader
         return levelStyle with { FontSize = WordListLabelFallbackMaxPoints };
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static string ResolveNumberingLevelText(string text, string groupId, IReadOnlyDictionary<(string GroupId, int Level), int> counters)
     {
         string resolved = text;
@@ -235,7 +231,6 @@ internal sealed partial class DocxReader
         return resolved;
     }
 
-    // Single caller; kept static: entry-point stage, not a local candidate.
     private static DocxNumberingSet LoadNumbering(OoxPackage package, string documentPartName, DocxFontCatalog fontCatalog, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink, HashSet<string> warnedParts)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -325,7 +320,6 @@ internal sealed partial class DocxReader
         return new DocxNumberingSet(numToAbstract, levels, startOverrides, levelOverrides);
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxNumberingLevel ReadNumberingLevel(XElement level, int levelIndex, DocxFontCatalog fontCatalog)
     {
         int start = level.Element(WordprocessingNamespace + "start")?.Attribute(WordprocessingNamespace + "val") is { } startValue
@@ -339,13 +333,11 @@ internal sealed partial class DocxReader
         return new DocxNumberingLevel(format, ResolveNumberingSymbolText(text, style, fontCatalog), suffix, start, ReadNumberingIndent(level), style);
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static string ResolveNumberingSymbolText(string text, DocxTextRunStyle style, DocxFontCatalog fontCatalog)
     {
         return UsesSymbolCharset(style, fontCatalog) ? MapSymbolCharsetText(text) : text;
     }
 
-    // Single caller; kept static: charset-probe pair kept together.
     private static bool UsesSymbolCharset(DocxTextRunStyle style, DocxFontCatalog fontCatalog)
     {
         string? family = FirstNonEmpty(style.Fonts.Ascii, style.Fonts.HighAnsi, style.FontFamily, style.Fonts.ComplexScript);
@@ -360,7 +352,6 @@ internal sealed partial class DocxReader
             (charset.Equals("02", StringComparison.OrdinalIgnoreCase) || charset.Equals("2", StringComparison.OrdinalIgnoreCase));
     }
 
-    // Single caller; kept static: charset-probe pair kept together.
     private static string MapSymbolCharsetText(string text)
     {
         Span<char> mapped = text.Length <= 256
@@ -390,7 +381,6 @@ internal sealed partial class DocxReader
 
     private sealed record DocxNumberingLevel(string Format, string Text, string Suffix, int Start, DocxNumberingIndent Indent, DocxTextRunStyle Style);
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxNumberingIndent ReadNumberingIndent(XElement level)
     {
         XElement? indent = level

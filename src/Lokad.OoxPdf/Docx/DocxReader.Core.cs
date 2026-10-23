@@ -207,7 +207,6 @@ internal sealed partial class DocxReader
         };
     }
 
-    // Single caller; kept static: entry-point stage, not a local candidate.
     private static OoxPdfDocxMarkupMode ResolveRevisionFilteringMarkupMode(
         OoxPdfDocxMarkupMode markupMode,
         DocxDocumentSettings settings)
@@ -221,7 +220,6 @@ internal sealed partial class DocxReader
         return markupMode;
     }
 
-    // Single caller; kept static: entry-point stage, not a local candidate.
     private static DocxDocumentSettings ReadDocumentSettings(XDocument? settings, CancellationToken cancellationToken)
     {
             DocxRevisionViewSettings ReadRevisionViewSettings(XElement? revisionView)
@@ -305,7 +303,6 @@ internal sealed partial class DocxReader
             (string?)numberRestart?.Attribute(WordprocessingNamespace + "val"));
     }
 
-    // Single caller; kept static: entry-point stage, not a local candidate.
     private static DocxCommentAnchorInventory ReadCommentAnchorInventory(XDocument document, OoxPdfDocxMarkupMode markupMode)
     {
             bool IsCommentAnchorElement(XElement element)
@@ -392,7 +389,6 @@ internal sealed partial class DocxReader
         return drawings;
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static DocxFloatingDrawing ReadFloatingDrawing(
         XElement anchor,
         OoxPackage package,
@@ -472,7 +468,7 @@ internal sealed partial class DocxReader
         };
     }
 
-    // Single caller; kept static: resolved outline color hex (RRGGBB) for frame stroking.
+    // Resolved outline color hex (RRGGBB) for frame stroking.
     // Solid srgb colors resolve verbatim; presets resolve through the shared table.
     // Scheme/system colors and transforms stay out (null keeps legacy borderless
     // rendering) until separately probed.
@@ -499,7 +495,6 @@ internal sealed partial class DocxReader
         return null;
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static IReadOnlyList<DocxBodyElement> ReadTextBoxBodyElements(
         XElement anchor,
         DocxStyleSet styles,
@@ -536,7 +531,6 @@ internal sealed partial class DocxReader
     }
 
 
-    // Single caller; kept static: index-finder trio kept together.
     private static int? FindSourceParagraphIndex(XElement element, IReadOnlyList<XElement> paragraphs)
     {
         XElement? paragraph = element.Ancestors(WordprocessingNamespace + "p").FirstOrDefault();
@@ -556,7 +550,6 @@ internal sealed partial class DocxReader
         return null;
     }
 
-    // Single caller; kept static: index-finder trio kept together.
     private static int? FindSourceBlockIndex(XElement element, IReadOnlyList<XElement> bodyBlocks)
     {
         XElement? bodyChild = element
@@ -682,7 +675,6 @@ internal sealed partial class DocxReader
         };
     }
 
-    // Single caller; kept static: entry-point stage, not a local candidate.
     private static (double Width, double Height) NormalizePageSize(double width, double height)
     {
         if (Math.Abs(width - 595d) < 0.01d && Math.Abs(height - 842d) < 0.01d)
@@ -709,7 +701,6 @@ internal sealed partial class DocxReader
         return related;
     }
 
-    // Single caller; kept static: diagnostic probe in the unsupported-feature checklist.
     private static string ResolveRelatedPartNameOrDefault(OoxPackage package, string documentPartName, string relationshipType, string contentType, CancellationToken cancellationToken)
     {
         return FindRelatedPart(package, documentPartName, relationshipType, contentType, cancellationToken)?.Name ?? documentPartName;
@@ -725,7 +716,6 @@ internal sealed partial class DocxReader
             : package.GetPart(relationship.ResolvedTarget);
     }
 
-    // Single caller; kept static: entry-point stage, not a local candidate.
     private static DocxFontCatalog LoadFontCatalog(OoxPackage package, string documentPartName, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, HashSet<string>? warnedParts = null)
     {
         XDocument? fontTable = LoadRelatedXmlPart(package, documentPartName, FontTableRelationshipType, FontTableContentType, out _, cancellationToken, diagnosticSink, warnedParts);
@@ -733,7 +723,6 @@ internal sealed partial class DocxReader
         return new DocxFontCatalog(ReadFontTableEntries(fontTable), ReadThemeFonts(theme));
     }
 
-    // Single caller; kept static: font-catalog assembly pair kept together.
     private static IReadOnlyList<DocxFontTableEntry> ReadFontTableEntries(XDocument? fontTable)
     {
         if (fontTable is null)
@@ -754,7 +743,6 @@ internal sealed partial class DocxReader
             .ToArray();
     }
 
-    // Single caller; kept static: font-catalog assembly pair kept together.
     private static DocxThemeFonts ReadThemeFonts(XDocument? theme)
     {
         if (theme is null)

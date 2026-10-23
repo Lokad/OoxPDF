@@ -1517,7 +1517,6 @@ internal sealed partial class DocxReader
         }
     }
 
-    // Single caller; kept static: used once by its pipeline stage; kept for navigability.
     private static void AddResolvedTextRuns(List<DocxTextRun> runs, string text, DocxResolvedRunProperties resolvedRun, DocxRunStyleResolution styleResolution, int sourceRunIndex, int sourceTextOffsetInRun, DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo>? revisions, DocxFieldKind? fieldKind = null)
     {
         var segment = new StringBuilder();
