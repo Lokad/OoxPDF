@@ -1,41 +1,48 @@
 # 0.2.0-preview qualification
 
-The bounded active-content milestone is qualified.
+The bounded empty-label and verified-deletion milestone is qualified.
 Publication, performance optimization and broader feature expansion remain deferred.
-The frozen library was built at `313b9a89e16b410eff438eaf51298564cc4a6144`, SHA-256
-`BE1EA4A9EC08F009ADC0A0C41972190F0BA111F7B830DDE918103F152619DCC1`.
-[Windows/Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/39986201510)
+The frozen library was built at `47143072133afc83e6acbad975375a31f5327ae2`, SHA-256
+`80ECB9563FC068496395125F320E3525FC2248E2F84D26F078E5A7CBAC7D45A4`.
+[Windows/Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/39990448543)
 at the qualified source. CI builds are independent of this artifact.
 
 | Gate | Result |
 |---|---|
-| Release/affected checks | One committed artifact. Windows: 24 exact methods pass. Ubuntu: 23 pass, one existing Arial-precondition skip. New section and visibility regressions pass on both hosts. Two inherited nullable test warnings remain. |
-| Windows milestone | **3,780 pass, one inherited failure, five skips**; 3,786 unique methods in two disjoint invocations. |
-| Ubuntu milestone | **1,041 pass, four inherited failures, 61 skips**; 1,106 unique methods in two disjoint invocations. No previous pass regressed. |
-| Current DOCX sections | The historical-properties variant now produces the same portrait PDF as its current-properties control, matching retained Word 16 page geometry. Missing settings, paragraph sections and revision provenance remain covered in all markup modes. |
-| Hidden PPTX objects | Hidden text, image/font resources and links are omitted; the hidden-shape 144 DPI raster matches the retained PowerPoint reference exactly. Absent/false/true flags, groups, pictures, table frames and all three scene sources are covered. Visible-control PDF remains identical. |
-| Ellipsis guidance | Horizontal shape text still emits its marker. The guide distinguishes this from live diagnosed fallbacks; no diagnostic or public option was removed. |
+| Release/affected checks | One committed artifact. Windows: 68 exact methods pass. Ubuntu: 63 pass, five existing Arial-precondition skips. The new empty-label regression and redirected XML agreement checks pass on both hosts. Two inherited nullable test warnings remain. |
+| Windows milestone | **3,781 pass, one inherited failure, five skips**; 3,787 unique methods in two disjoint invocations. |
+| Ubuntu milestone | **1,091 pass, four inherited failures, 66 skips**; 1,161 unique methods in two disjoint invocations. No previous pass regressed. |
+| Empty DOCX labels | The authored-empty label retains its list and 108pt body indent without invented bullet ink. Three ordinary/null controls retain exact PDFs. Independent Word 16 references are reused. |
+| Numeric visual screen | Full-page 144 DPI MAE .00098488, changed ratio .00003146, SSIM .99930075, recall 1. All retained numeric limits pass; this is a probe screen, not a formal manifest/agent-rating claim. |
+| Verified deletions | 110 production lines removed/12 added. Obsolete XML fallback/selector, unused line tally and five unreachable overflow handlers are gone; no replacement framework or public API. Independent XML tests now exercise live layout/flatten/remap. |
 | Representative documents | Nine sources/16 outcomes/32 pages retain exact PDFs, diagnostics and semantic results. Each outcome converted once. |
-| Independent portfolio gates | Reused by input/PDF identity: two strict PPTX passes/fourteen strict DOCX failures. Thresholds are unchanged. Prior clipping/date/color residuals remain explicit below. |
+| Independent portfolio gates | Reused by input/PDF identity: two strict PPTX passes/fourteen strict DOCX failures. Existing thresholds and prior residuals are unchanged. |
 | API/runtime | All 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0. |
-| Package/transfer | Same dependency-free package and consumer source pass Windows/Ubuntu. Packed guide bytes/local links match. All 24 root assets and two integration PDFs match, without root build or suite replay. |
+| Package/transfer | Same dependency-free package and consumer source pass Windows/Ubuntu. Packed guide bytes/local links match. All 24 root assets and two integration PDFs match without root rebuild or suite replay. |
 
 ## Conversion behavior and bounded maintenance
 
-Section selection follows current body/paragraph ownership rather than accepting
-the last sectPr anywhere in the XML tree. Revision snapshots remain inspectable;
-formatting revision support is still approximate, including in Original view.
-No new revision/layout framework or document-shape guard was introduced.
+ReadNumberingLevel already supplies missing-value defaults. CreateListLabel now
+preserves an explicitly empty bullet string along with its list identity, suffix,
+indent and concrete-level override. Word 16 agrees: the missing marker is not
+replaced with a visible bullet. The separate null-flag controls preserve their
+previous behavior in both converters; no new null-flag policy was introduced.
 
-PPTX scene construction excludes explicitly hidden objects before their text,
-images, charts or descendants enter resource preflight and painting. Existing
-placeholder inheritance, hidden-slide exclusion and master-shape suppression are
-preserved. Raw unsupported-feature diagnostic policy was not rewritten.
+Shape-only scene dispatch no longer retains an unreachable XML fallback. Its
+selector and unused line tally were removed. Useful independent XML inspectors,
+scene-fed XML frame geometry, table-cell layout, placeholder/group handling,
+Mongolian remapping and bounded span memoization remain. The implementation audit
+corrected the review's missed reflection references in three test helpers. Those
+tests now invoke the live independent XML operations on their original fixtures;
+comparison assertions and canned-font controls remain. No production-only test
+wrapper or relocated cloning fallback was added.
 
-Five frozen probes reuse independent Word/PowerPoint 16 references. No Office
-export or portfolio raster/comparison was repeated. The ambiguous historical-header
-exploration proves no separate header defect and was excluded from this milestone.
-No newly dead helper was verified, so this change adds no speculative deletion.
+JPEG frame/sampling bounds establish that dimension intermediates fit Int32;
+chart-range Int32 operands widened before multiplication fit Int64. Five
+unreachable exception translations were removed. Header/sampling/pixel checks,
+plane-size rejection, checked buffer construction, real area/union/area-count
+limits, capacity checks and cancellation remain. No general arithmetic sweep,
+resource redesign, measured speedup or performance project is claimed.
 
 ## Inherited failures and limitations
 
@@ -88,27 +95,24 @@ the existing annotation policy is preserved pending independent qualification.
 
 ## Evidence and workflow
 
-Ignored evidence: `artifacts/preview-active-content-20261023/qualification.json`;
+Ignored evidence: `artifacts/preview-empty-label-cleanup-20261023/qualification.json`;
 artifact: `candidate-final/`; package:
-`artifacts/nuget/preview-020-active-content-20261023/`.
-One artifact served focused tests, disjoint broader remainders, five original
-probes, sixteen portfolio outcomes, both consumers and verified transfer. No
-qualified method replay, root rebuild or parent rebuild was needed.
+`artifacts/nuget/preview-020-empty-label-cleanup-20261023/`.
+One artifact serves the exact affected set, disjoint broader remainders, four
+original probes, sixteen portfolio outcomes and both package consumers. Office
+references, comparisons, unchanged 715-case/12-family manifest validation and
+parent failure evidence are reused. No qualified method replay, parent build,
+root build, new Office export or portfolio comparison replay is needed.
 
-The initial portfolio invocation incorrectly selected the DOCX inspector for a
-PDF. That failed invocation is retained. Its successful first conversion was
-reused with the PDF inspector; remaining outcomes were measured and joined with
-existing commands. No conversion was repeated and no timing is claimed for that
-reused outcome. This is an orchestration correction, not a library failure.
+The reflected-caller census correction is retained in the review erratum and
+current PLAN; the original review is preserved. The old function-call-only search
+was insufficient to rule out test consumers. The production dead-path conclusion
+remains valid, with independent test coverage preserved through live operations.
 
-Unchanged 715-case/12-family manifest validation, existing Office comparisons and
-parent evidence for the inherited failures were reused. The
-[preceding qualification](https://github.com/Lokad/OoxPDF/blob/5beb7cb3/docs/PreviewQualification.md)
-retains clipping/comparator work, earlier maintenance and unresolved visual gates.
-Safe managed dependency-free execution, cancellation, meaningful bounds, coarse
-host admission/refunds, bounded caches/staging, cleanup, atomic publication and
-PDF validity remain. The preserved roadmap stays deferred.
-
-The last full workspace inventory remains **5.943 GB/885,270 files**, above the
-loose 5 GB target. No full walk or broad purge was repeated; the milestone records
-its own footprint and reuses shared inputs/worktree.
+The [preceding qualification](https://github.com/Lokad/OoxPDF/blob/45594781/docs/PreviewQualification.md)
+retains current-section/hidden-object fixes, earlier maintenance and unresolved
+visual gates. Safe managed dependency-free execution, cooperative cancellation,
+meaningful bounds, coarse host admission/refunds, bounded caches/staging,
+deterministic cleanup, atomic publication and PDF validity remain. The roadmap
+stays deferred. The last full workspace inventory is **5.943 GB/885,270 files**;
+no full walk or broad purge was repeated. Only this milestone is measured.
