@@ -69,7 +69,7 @@ function Build-CaseMap($report) {
 }
 
 function To-FiniteDouble($value) {
-    if ($null -eq $value -or $value -eq "") {
+    if ($null -eq $value -or [string]$value -eq "") {
         return $null
     }
 
@@ -87,12 +87,17 @@ function To-FiniteDouble($value) {
     return $number
 }
 
-function Get-CaseCompletenessError($case) {
+function Get-CaseCompletenessError($case, $baselineCase = $null) {
     if ($case.passed -ne $true) {
         return $null
     }
 
-    foreach ($field in @("minStructuralSimilarity", "minForegroundColorHistogramCorrelation", "maxMeanAbsoluteError", "maxChangedPixelRatioAtThreshold16")) {
+    $fields = @("minStructuralSimilarity", "minForegroundColorHistogramCorrelation", "maxMeanAbsoluteError", "maxChangedPixelRatioAtThreshold16")
+    $requiresRecall = $null -ne (To-FiniteDouble $case.requiredForegroundRecall) -or
+        ($null -ne (To-FiniteDouble $baselineCase.requiredForegroundRecall) -and
+         $null -ne (To-FiniteDouble $baselineCase.minForegroundRecall))
+    if ($requiresRecall) { $fields += 'minForegroundRecall' }
+    foreach ($field in $fields) {
         if ($null -eq (To-FiniteDouble $case.$field)) {
             return ("passed case '{0}' is missing finite metric '{1}': incomplete measurement." -f [string]$case.id, $field)
         }
@@ -152,7 +157,7 @@ foreach ($id in $baselineMap.Keys | Sort-Object) {
     }
 
     $beforeError = Get-CaseCompletenessError $before
-    $afterError = Get-CaseCompletenessError $after
+    $afterError = Get-CaseCompletenessError $after $before
     if ($null -ne $afterError) {
         $incomplete += ("current: " + $afterError)
     }
@@ -243,9 +248,8 @@ foreach ($id in $baselineMap.Keys | Sort-Object) {
         }
     }
 
-    # Foreground recall is newer than archived reports: a missing value on
-    # either side is skipped (not a regression); only a finite drop beyond
-    # the limit fails. Null means the metric did not apply (empty reference).
+    # Legacy/inapplicable recall can be absent. Required current or previously
+    # measured required recall has already been checked for completeness above.
     $beforeRecall = To-FiniteDouble $before.minForegroundRecall
     $afterRecall = To-FiniteDouble $after.minForegroundRecall
     if ($null -ne $beforeRecall -and $null -ne $afterRecall -and ($beforeRecall - $afterRecall -gt $MaxForegroundRecallDrop)) {

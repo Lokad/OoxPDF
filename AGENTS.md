@@ -30,6 +30,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 ## Tools
 
 - `tools/TestRasterizePdfPaths.ps1`: check spaced paths, failure/timeout and stale raster refusal with an existing tool; never builds.
+- `tools/TestVisualReportComparison.ps1`: check zero/finite metrics, required recall and legacy reports; never builds or renders.
 - `tools/TestReferenceDerivative.ps1`, `TestReferenceWorkerPaths.ps1`, `TestAffectedTestReporting.ps1`: focused cache/worker/report mechanics without builds or Office.
 - `tools/TestCliDiagnosticsPublication.ps1`: check frozen library/CLI publication through directory aliases and separate file links; never builds.
 - `tools/BuildQualificationArtifact.ps1`: build/freeze an explicit committed linked worktree and revision; absolute projects prevent accidental root builds. Reuse the frozen artifact for qualification and transfer.

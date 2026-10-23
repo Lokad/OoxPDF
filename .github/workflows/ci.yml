@@ -121,6 +121,8 @@ jobs:
         run: pwsh -NoProfile -File tools/TestMarkupAnnotations.ps1
       - name: Graphics comparison adversarial checks
         run: pwsh -NoProfile -File tools/TestGraphicsOperationComparison.ps1
+      - name: Visual report comparison checks
+        run: pwsh -NoProfile -File tools/TestVisualReportComparison.ps1
       - name: Flow comparison adversarial checks
         run: pwsh -NoProfile -File tools/TestFlowComparison.ps1
       - name: Emission comparison adversarial checks
