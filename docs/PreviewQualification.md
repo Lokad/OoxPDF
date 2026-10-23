@@ -1,45 +1,44 @@
 # 0.2.0-preview qualification
 
-The bounded source-semantics and audit-comment cleanup milestone is qualified.
+The bounded horizontal-clipping and report-comparison milestone is qualified.
 Publication, performance optimization and broader feature expansion remain deferred.
-The frozen library was built at `f3cfe0c84399bcaecd116f07708d715e5844386b`, SHA-256
-`E38DDD9C13C34DAD6F04EAD1C291C7AD37DEB1679FFF826897D0E66E94A69BA1`.
-[Windows/Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/39959854800)
-at the qualified source revision.
-CI builds are independent of the one artifact used for local qualification.
+The frozen library was built at `939bf0ec6945b263b5e5f7e5b7d08b0e7252c65f`, SHA-256
+`9ED49C37F44DAE55BE8D48A40EAFECB9328197F5E05E0A0DAC35BDC2E910E45D`.
+[Windows/Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/39970681309)
+at the qualified source revision. CI builds are independent of this artifact.
 
 | Gate | Result |
 |---|---|
-| Release/affected checks | One committed linked-worktree artifact; build succeeds with two inherited nullable test warnings. All 24 specific break/field/container and PPTX navigation methods pass on Windows and Ubuntu. |
-| Windows milestone | **3,776 pass, one inherited failure, five skips**; 3,782 exact unique methods in two disjoint invocations. |
-| Ubuntu milestone | **1,020 pass, three inherited failures, 50 skips**; 1,073 exact unique methods in two disjoint invocations. No previous pass regressed. |
-| Source transformations | Seven conversions return strict 0 without diagnostics. Explicit/omitted DOCX break forms in Default/Review and mixed-case PPTX targets match their prior equivalent control PDFs exactly. |
-| Independent Office evidence | Retained Word 16 references preserve the same two lines/origins; candidate deltas stay within the existing .1pt line-start/.75pt grouping tolerances. PowerPoint 16 retains the page-2 link for both target spellings. Input/reference hashes are verified. No new Office export, raster or pixel-parity claim. |
-| Comment cleanup | 129 audit qualifiers removed across 14 files: 125 comments deleted, four semantic descriptions retained. Non-comment bytes remain identical in this separate commit; no live helper deleted. |
-| Representative documents | Nine sources/16 outcomes/32 pages; PDFs, diagnostics and semantic results match the preceding candidate. Each outcome converted once. |
-| Independent portfolio gates | Reused through PDF/input identity: two strict PPTX passes/fourteen strict DOCX failures. No new Office export, portfolio raster or relaxed threshold. |
+| Release/affected checks | One corrected, committed artifact serves qualification. Two inherited nullable test warnings remain. Windows: all 16 affected methods pass. Ubuntu: five pass, one inherited font-dependent failure, ten explicit Arial-precondition skips. The new portable regression passes on both hosts. |
+| Windows milestone | **3,777 pass, one inherited failure, five skips**; 3,783 exact unique methods in two disjoint invocations. |
+| Ubuntu milestone | **1,025 pass, four inherited failures, 60 skips**; 1,089 exact unique methods in two disjoint invocations. No previous pass regressed. |
+| Horizontal clipping | Three frozen conversions; narrow-frame ink beyond the source right edge falls from 643 pixels to zero, matching retained PowerPoint 16 bounds. Wide/vertical controls preserve non-clip geometry; the vertical control PDF is identical. No new Office export. |
+| Report comparison | Seventeen focused controls pass locally and in both-platform CI. Actual retained perfect VisualDiff reports pass with numeric/string zeros. Required absent/null/nonnumeric/nonfinite recall is rejected; finite-drop and unrequired legacy/inapplicable behavior remain. No rerender or replacement gate framework. |
+| Representative documents | Nine sources/16 outcomes/32 pages remain byte-identical, including diagnostics and semantic results. Each outcome converted once. |
+| Independent portfolio gates | Reused by PDF/input identity: two strict PPTX passes/fourteen strict DOCX failures. Thresholds are unchanged; the new narrow-frame screen has its own retained recall residual. |
 | API/runtime | All 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0. |
-| Package/transfer | Same dependency-free 0.2.0-preview package and consumer source pass Windows/Ubuntu. Packed guides match their recorded source and local links resolve. All 24 root assets and two integration PDFs match; no root build or suite replay. |
+| Package/transfer | Same dependency-free package and consumer source pass Windows/Ubuntu. Packed guide bytes/local links match. All 24 root assets and two smoke PDFs match, without root build or suite replay. |
 
 ## Conversion behavior and bounded maintenance
 
-The shared DOCX text reader recognizes explicit `textWrapping` alongside its
-omitted default. They retain a line break instead of joining adjacent words.
-Page/column handling and existing floating/clear fallbacks remain. Regression
-controls also split the source runs and add a content-control wrapper in both
-markup modes. No layout correction or font/size/document-shape guard was added.
+Horizontal clipping is read through the existing text-body property path and feeds
+one shared horizontal-clip decision for shape/cell frame construction. Explicit
+horizontal clipping can constrain the shape while vertical overflow remains allowed.
+Mandatory table-cell clipping, independently qualified vertical/preset/column rules
+and transformed clips retain their existing behavior. No font/width-specific guard,
+new public option or renderer framework was added.
 
-PPTX internal slide destinations use the same case-insensitive part identity
-already used by package lookups. Relative, absolute and mixed-case target forms
-select the same page; genuinely missing targets still diagnose and omit the link.
-Relationship IDs, bookmarks and opaque font program IDs retain their distinct
-identity contracts. No global normalization layer or public API was introduced.
+The corrected regression covers absent/overflow/clip horizontal settings with
+no-wrap/wrap in shapes and cells. Cell clipping remains mandatory. Clipped emission
+now retains the same visible fragments as Office on the narrow probe; its extracted
+text naturally differs from the earlier unbounded emission. Annotation eligibility
+was not generalized from that comparison.
 
-Source cleanup removes review-era eligibility notes, including obsolete
-single-use and future-refactoring claims. Useful semantic comments and live
-helpers remain, including method-group consumers. The cleanup changes no runtime
-mechanism, cache, ownership layer or resource contract. Four separate counter-family
-symmetry comments remain outside the enumerated audit qualifiers.
+The comparator keeps finite numeric zero separate from empty/missing values.
+Passed cases require finite recall when the current case requires it or when
+previously measured required recall would otherwise disappear. Wholly unrequired
+legacy/inapplicable recall remains compatible. No invented zero score or weakened
+visual threshold is used.
 
 ## Inherited failures and limitations
 
@@ -47,7 +46,7 @@ symmetry comments remain outside the enumerated audit qualifiers.
 `InvalidOperationException: The second body should wrap to a second row like Office; observed Height=12.610000000000001.`
 CI may skip its Office-font precondition. It is not counted as a local pass.
 
-The three inherited Linux failures remain:
+The three previously recorded Linux chart-link failures remain:
 
 - `PptxChartTitleExternalHyperlinkEmitsUriAnnotation`
 - `PptxChartAxisTitleExternalHyperlinkEmitsUriAnnotation`
@@ -75,24 +74,47 @@ text. The preceding 72 DPI screen remains needs-review (MAE 1.3170 > 1.2,
 recall .89705 < .90, changed ratio .02740 > .025); it was separate from the
 manifest's 144 DPI gate. That completed change is not reopened here.
 
+The newly exercised Linux method
+`PptxTextFrameVerticalClipDropsLinesWithBaselineOutsideClip` fails with
+`InvalidOperationException: Expected first clipped line to remain visible.`
+It reproduces identically on the prior qualified artifact. Default Windows-font
+glyph inspection is unavailable on this host. The failure remains recorded; it
+was not changed into a skip. Ten additional affected methods explicitly skip
+when Arial is absent. The new pinned-font clipping regression passes on both hosts.
+
+The narrow clip probe still fails its 72 DPI exploratory foreground-recall limit:
+.8948106592 against .90 (MAE .03772714; changed-pixel ratio .00073110). The explicit
+horizontal overpaint is removed; remaining glyph/underline differences are retained
+as needs-review. This screen is separate from the source manifest's 144 DPI gate.
+Candidate overflow-line link annotations also differ from both Office controls;
+the existing annotation policy is preserved pending independent qualification.
+
 ## Evidence and workflow
 
-Ignored evidence: `artifacts/preview-source-semantics-20261023/qualification.json`;
+Ignored evidence: `artifacts/preview-horizontal-clip-20261023/qualification.json`;
 artifact: `candidate-final/`; package:
-`artifacts/nuget/preview-020-source-semantics-20261023/`.
-One artifact served affected tests, disjoint broader remainders, seven source
-probes, sixteen representative outcomes, both package consumers and verified
-transfer. Candidate methods were not rerun. Office references/comparisons, unchanged
-715-case/12-family manifest validation and prior Linux failure provenance are
-reused without parent builds or parent method replays.
+`artifacts/nuget/preview-020-horizontal-clip-20261023/`.
+One corrected artifact served focused tests, disjoint broader remainders, three
+clip probes, sixteen portfolio outcomes, both consumers and verified transfer.
+The initial unqualified build/CI failure is retained: the regression initially
+assumed table cells allow vertical overflow. A test-only correction preserved their
+existing mandatory clip before local qualification. No qualified candidate method
+was replayed. A probe inspection assertion was corrected by reinspection without
+reconversion. One new Linux failure required one parent method on an existing
+artifact; no parent build or wider parent replay occurred.
 
-The [preceding qualification](https://github.com/Lokad/OoxPDF/blob/2241af51/docs/PreviewQualification.md)
-retains chart-date recovery, reference-tool checks, BMP recovery, build isolation,
-font identity, PNG and earlier Office evidence. Safe managed dependency-free
-execution, meaningful bounds, cancellation, coarse host admission/refunds,
-bounded caches/staging, cleanup, atomic publication and PDF validity remain.
-The preserved roadmap stays deferred.
+Office references/comparisons, unchanged 715-case/12-family manifest validation
+and prior Linux chart-link provenance were reused. The unused preflight compiled
+files remain ignored: automatic approval review rejected their optional removal
+with “blocked by policy.” Inputs, logs and failure evidence are retained.
+
+The [preceding qualification](https://github.com/Lokad/OoxPDF/blob/817dea56/docs/PreviewQualification.md)
+retains equivalent DOCX breaks/PPTX targets, audit-comment cleanup, chart-date and
+reference-tool work, BMP recovery, fonts/images and earlier Office evidence.
+Safe managed dependency-free execution, cancellation, meaningful bounds, coarse
+host admission/refunds, bounded caches/staging, cleanup, atomic publication and
+PDF validity remain. The preserved roadmap stays deferred.
 
 The last full workspace inventory remains **5.943 GB/885,270 files**, above the
-loose 5 GB target. No new full walk or purge was performed. Qualification records
-the small milestone footprint separately; shared inputs and the worktree are reused.
+loose 5 GB target. No full walk or broad purge was repeated; the milestone records
+its own footprint and reuses shared inputs/worktree.
