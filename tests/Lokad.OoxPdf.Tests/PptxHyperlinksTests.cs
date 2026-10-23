@@ -137,7 +137,7 @@ internal static class PptxHyperlinksTests
 
     public static void PptxShapeInternalSlideHyperlinkEmitsDestination()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        var entries = new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -196,16 +196,29 @@ internal static class PptxHyperlinksTests
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>
                 """
-        });
+        };
 
-        (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input);
+        foreach (string target in new[] { "slide2.xml", "SLIDE2.XML", "./slide2.xml", "./SLIDE2.XML", "/ppt/slides/SLIDE2.XML", "missing.xml" })
+        {
+            var variant = new Dictionary<string, string>(entries);
+            variant["ppt/slides/_rels/slide1.xml.rels"] = entries["ppt/slides/_rels/slide1.xml.rels"]
+                .Replace("Target=\"slide2.xml\"", $"Target=\"{target}\"", StringComparison.Ordinal);
+            string input = TestFixtures.WriteTempPackage(".pptx", variant);
+            (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input);
 
-        TestAssert.Equal(2, pages.Count);
-        PdfLinkAnnotation annotation = pages[0].Annotations.Single();
-        TestAssert.True(annotation.Uri is null, "An internal slide hyperlink should not carry a URI target.");
-        TestAssert.True(annotation.Destination is { PageIndex: 1 }, "An internal slide hyperlink should target the second page.");
-        TestAssert.Equal(0, pages[1].Annotations.Count);
-        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_HYPERLINK" && d.Id != "PPTX_UNSUPPORTED_HYPERLINK_ACTION"), "A resolvable internal slide hyperlink should not emit hyperlink diagnostics.");
+            TestAssert.Equal(2, pages.Count);
+            TestAssert.Equal(0, pages[1].Annotations.Count);
+            if (target == "missing.xml")
+            {
+                TestAssert.Equal(0, pages[0].Annotations.Count);
+                TestAssert.Equal(1, diagnostics.Count(d => d.Id == "PPTX_UNSUPPORTED_HYPERLINK"));
+                continue;
+            }
+            PdfLinkAnnotation annotation = pages[0].Annotations.Single();
+            TestAssert.True(annotation.Uri is null, "An internal slide hyperlink should not carry a URI target.");
+            TestAssert.True(annotation.Destination is { PageIndex: 1 }, "Equivalent package targets should select the second page.");
+            TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_HYPERLINK" && d.Id != "PPTX_UNSUPPORTED_HYPERLINK_ACTION"), "A resolvable internal slide hyperlink should not emit hyperlink diagnostics.");
+        }
     }
 
     public static void PptxShapeHyperlinkActionWithoutTargetEmitsDiagnostic()

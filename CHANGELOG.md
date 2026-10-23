@@ -2,6 +2,9 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Preserves explicit DOCX text-wrapping breaks and resolves internal PPTX links
+  using case-insensitive package-part identity, matching their equivalent source
+  forms in Office. Relationship IDs and font identities retain their existing rules.
 - Preserves charts when a date-formatted value exceeds the supported calendar:
   that label uses the existing numeric fallback. In-range 1900/1904 formatting is
   unchanged; exact Office tick labels outside the calendar remain approximate.

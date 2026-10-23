@@ -180,7 +180,7 @@ internal sealed partial class PptxRenderer
             int pageIndex = -1;
             for (int i = 0; i < context.Document.Slides.Count; i++)
             {
-                if (string.Equals(context.Document.Slides[i].PartName, relationship.ResolvedTarget, StringComparison.Ordinal))
+                if (string.Equals(context.Document.Slides[i].PartName, relationship.ResolvedTarget, StringComparison.OrdinalIgnoreCase))
                 {
                     pageIndex = i;
                     break;

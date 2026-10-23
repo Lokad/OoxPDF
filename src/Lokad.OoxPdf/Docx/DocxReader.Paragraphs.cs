@@ -1668,7 +1668,7 @@ internal sealed partial class DocxReader
         }
 
         if (child.Name == WordprocessingNamespace + "br" &&
-            string.IsNullOrEmpty((string?)child.Attribute(WordprocessingNamespace + "type")))
+            ((string?)child.Attribute(WordprocessingNamespace + "type") is null or "" or "textWrapping"))
         {
             return "\n";
         }

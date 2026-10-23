@@ -27,6 +27,39 @@ internal static class DocxCoreTests
         }
     }
 
+    public static void DocxReaderExplicitTextWrappingBreakPreservesSourceMeaning()
+    {
+        var entries = new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>
+                """,
+            ["_rels/.rels"] = """
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="document" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>
+                """,
+            ["word/document.xml"] = """
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+                  <w:p><w:r><w:t>Alpha</w:t><w:br/><w:t>Beta</w:t></w:r></w:p>
+                  <w:p><w:r><w:t>Alpha</w:t><w:br w:type="textWrapping"/><w:t>Beta</w:t></w:r></w:p>
+                  <w:p><w:r><w:t>Alpha</w:t><w:cr/><w:t>Beta</w:t></w:r></w:p>
+                  <w:p><w:sdt><w:sdtPr><w:tag w:val="line-break"/></w:sdtPr><w:sdtContent>
+                    <w:r><w:t>Alpha</w:t></w:r><w:r><w:br w:type="textWrapping"/></w:r><w:r><w:t>Beta</w:t></w:r>
+                  </w:sdtContent></w:sdt></w:p>
+                </w:body></w:document>
+                """
+        };
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            using var input = TestFixtures.CreateZipPackage(entries);
+            var document = new DocxReader().Read(OoxPackage.Open(input, default), null, default, markupMode: mode);
+            TestAssert.Equal(4, document.Paragraphs.Count);
+            foreach (var paragraph in document.Paragraphs)
+            {
+                TestAssert.Equal("Alpha\nBeta", string.Concat(paragraph.Runs.Select(run => run.Text)));
+            }
+        }
+    }
+
     public static void DocxReaderTextWhitespaceMatchesOffice()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
