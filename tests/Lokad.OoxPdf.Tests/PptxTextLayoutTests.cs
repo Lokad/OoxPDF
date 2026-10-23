@@ -53,7 +53,16 @@ internal static class PptxTextLayoutTests
             PptxDocument document = new PptxReader().Read(package, default);
             PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPages(document, package, null, default).Single();
             bool hasHorizontalClip = page.Content.Contains("72 0 40 540 re W* n", StringComparison.Ordinal);
-            TestAssert.Equal(horizontal == "clip", hasHorizontalClip);
+            if (tableCell)
+            {
+                TestAssert.True(Regex.Matches(page.Content, @"(?m)^72 [-\d.]+ 40 ([-\d.]+) re W\* n\r?$")
+                    .Any(match => double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) is > 0d and < 540d),
+                    "Table cells retain their mandatory local clip in every overflow mode.");
+            }
+            else
+            {
+                TestAssert.Equal(horizontal == "clip", hasHorizontalClip);
+            }
             TestAssert.True(DocxTests.CountPdfTextShows(page.Content) > 0, "Horizontal clipping must retain the visible text.");
         }
     }
