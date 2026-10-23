@@ -922,8 +922,6 @@ internal sealed partial class PptxRenderer
         var estimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
         PptxTextFlowFrame fedFlow = BuildTextFlowFrame(fedFrame, document, estimator);
         PptxTextFrameLayout fedLayout = BuildTextFrameLayout(fedFlow, document, estimator, allowWrapping: true);
-        int f01Lines = 0;
-        foreach (var pg in fedLayout.Paragraphs) { f01Lines += pg.Lines.Count; }
         return RemapMongolianVerticalSpans(FlattenTextLayoutToSpans(new PptxTextLayoutModel(new[] { fedLayout }), fontResolver), node.Source);
     }
     private static PptxParagraphBulletModel BuildParagraphBulletModel(XElement? paragraphProperties, PptxTheme theme, PptxColorMap colorMap)

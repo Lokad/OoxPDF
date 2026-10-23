@@ -370,57 +370,7 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<PptxPositionedTextSpan> ComputeTextSpansForSceneNode(PptxSceneNode node, PptxRenderContext context, PptxColorMap colorMap, bool includePlaceholders)
     {
-        // R14-deeper: shape text resolves spans from retained scene inputs; the
-        // XML path stays for tables, which carry no scene text model.
-        if (UseSceneFedTextSpans(node))
-        {
-            return BuildSceneFedTextSpans(node, context.Document, context.Theme, colorMap, context.SlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver, context.CancellationToken);
-        }
-
-        return ReadTextSpansForShape(node.Source, context.Document, context.Theme, colorMap, context.SlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver, context.CancellationToken);
-    }
-
-    private static bool UseSceneFedTextSpans(PptxSceneNode node)
-    {
-        if (node.Kind != PptxSceneNodeKind.Shape || node.TextBody is null)
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForShape(
-        XElement shape,
-        PptxDocument document,
-        PptxTheme theme,
-        PptxColorMap colorMap,
-        int slideNumber,
-        bool includePlaceholders,
-        IReadOnlyList<XDocument> placeholderSources,
-        PresentationFontResolver? fontResolver,
-        CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        XElement current = new(shape);
-        foreach (XElement group in shape.Ancestors(PresentationNamespace + "grpSp"))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var groupCopy = new XElement(PresentationNamespace + "grpSp");
-            if (group.Element(PresentationNamespace + "grpSpPr") is { } properties)
-            {
-                groupCopy.Add(new XElement(properties));
-            }
-
-            groupCopy.Add(current);
-            current = groupCopy;
-        }
-
-        var slide = new XDocument(
-            new XElement(PresentationNamespace + "sld",
-                new XElement(PresentationNamespace + "cSld",
-                    new XElement(PresentationNamespace + "spTree", current))));
-        return RemapMongolianVerticalSpans(FlattenTextLayoutToSpans(BuildTextLayoutModel(slide, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken), fontResolver), shape);
+        return BuildSceneFedTextSpans(node, context.Document, context.Theme, colorMap, context.SlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver, context.CancellationToken);
     }
 
     // Mongolian vertical Latin runs as a horizontal left-to-right row of clockwise-spun glyphs

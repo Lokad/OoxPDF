@@ -1,5 +1,3 @@
-using System.Reflection;
-using System.Xml.Linq;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pptx;
@@ -339,10 +337,7 @@ internal static class PptxNumberingTests
             PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
             PptxSceneNode node = scene.Slides[0].SlideNodes[0];
             var resolver = new PresentationFontResolver(new NumberingFontResolver());
-            MethodInfo method = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
-                .Single(m => m.Name == "ReadTextSpansForShape" && m.GetParameters().Length == 9);
-            var xml = (IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>)method.Invoke(null,
-                [node.Source, document, scene.Theme, scene.Slides[0].SlideColorMap, 1, false, Array.Empty<XDocument>(), resolver, CancellationToken.None])!;
+            var xml = PptxSceneTextAgreementTests.ReadXmlSpans(node, document, scene, resolver: resolver);
             var fed = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Theme, scene.Slides[0].SlideColorMap, 1, false, [], resolver, CancellationToken.None);
             TestAssert.Equal(xml.Count, fed.Count);
             for (int i = 0; i < xml.Count; i++)
