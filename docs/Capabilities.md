@@ -79,8 +79,10 @@ Approximate or restricted:
   markers and point-count color regimes remain implemented. Classic/composed
   gallery roles, minor-stroke defaults, automatic tick fitting and chart color
   parity are incomplete. Existing independent Office thresholds still apply.
-- Ellipsis overflow clips locally without drawing the ellipsis marker. Complex
-  effects and typography may be simplified or omitted with diagnostics.
+- Horizontal shape text renders an ellipsis marker when vertical overflow hides
+  later lines. Non-horizontal text and chart-title contexts retain diagnosed
+  clipping fallbacks. Complex effects and typography may be simplified or omitted
+  with diagnostics.
 
 Unsupported: stock/surface/3D charts, SmartArt, live OLE, macros/ActiveX,
 audio/video, animation/transitions, unrestricted custom effects, bidirectional

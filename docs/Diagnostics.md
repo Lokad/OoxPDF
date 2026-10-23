@@ -31,7 +31,7 @@ Unsupported feature warnings:
 - `PPTX_UNSUPPORTED_GRADIENT_FILL`: an unsupported gradient fill was detected and ignored.
 - `PPTX_UNSUPPORTED_PATTERN_FILL`: an unsupported pattern fill was detected and ignored.
 - `PPTX_UNSUPPORTED_TEXT_ORIENTATION`: an unrecognized text orientation was detected and ignored (horz, vert, vert270, eaVert, mongolianVert, and the wordArt variants render).
-- `PPTX_UNSUPPORTED_TEXT_OVERFLOW`: text vertical overflow uses ellipsis; local clipping was applied but the ellipsis marker is not rendered.
+- `PPTX_UNSUPPORTED_TEXT_OVERFLOW`: an unsupported ellipsis context (such as non-horizontal text or chart titles) uses local clipping without a marker. Ordinary horizontal shape text renders the marker without this diagnostic.
 - `PPTX_UNSUPPORTED_PICTURE_FILL`: an unsupported picture fill was detected and ignored.
 - `PPTX_UNSUPPORTED_IMAGE_TILE`: a tiled image fill was detected and ignored.
 - `PPTX_UNSUPPORTED_IMAGE_RECOLOR`: an unsupported image recolor was detected.

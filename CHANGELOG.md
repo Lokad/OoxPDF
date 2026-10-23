@@ -2,6 +2,12 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Keeps current DOCX section dimensions and margins when tracked formatting
+  history contains older page settings. Revision provenance remains inspectable.
+- Omits explicitly hidden PPTX objects before resource preflight and painting,
+  including their interactive links and hidden group descendants.
+- Corrects ellipsis guidance: horizontal shape text renders a marker; unsupported
+  contexts retain their diagnosed clipping fallback.
 - Honors horizontal PPTX text clipping through existing shape/cell frame bounds,
   including when vertical overflow remains allowed. Existing annotation policy and
   qualified vertical/preset/column behavior remain; general overflow parity is approximate.
