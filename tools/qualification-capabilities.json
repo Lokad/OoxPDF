@@ -1,4 +1,22 @@
 {
+  "horizontal-text-clipping": [
+    "PptxHorizontalClipPreservesVerticalOverflowInShapesAndCells",
+    "PptxSyntheticTextBoxOverflowColumnsUseSlideClip",
+    "PptxSyntheticTextManualBreaksStayInActiveOverflowColumn",
+    "PptxTextFrameVerticalClipDropsLinesWithBaselineOutsideClip",
+    "PptxSyntheticTextBoxAllowsVerticalOverflowByDefault",
+    "PptxSyntheticTextBoxOverflowKeepsOffSlidePdfStructure",
+    "PptxSyntheticNoAutoFitTextBoxUsesSlideWidthTextClip",
+    "PptxSyntheticShapeAutoFitTextBoxUsesSlideWidthTextClip",
+    "PptxSyntheticPlainShapeTextUsesSlideWidthTextClip",
+    "PptxChartRotatedTextClipMapsIntoTransformedSpace",
+    "PptxSyntheticTextBoxClipIntersectsSlideBounds",
+    "PptxSyntheticTextClipDropsLineWithBaselineOutsideClip",
+    "PptxSyntheticBodyPrRotationOverridesShapeTextTransform",
+    "PptxSyntheticFlippedRotatedTextBoxKeepsTextReadable",
+    "PptxSyntheticTableTextFrameModelPreservesCellPropertySources",
+    "TableCellTextMatchesShapeText"
+  ],
   "source-semantics": [
     "DocxReaderExplicitTextWrappingBreakPreservesSourceMeaning",
     "DocxReaderTextWhitespaceMatchesOffice",

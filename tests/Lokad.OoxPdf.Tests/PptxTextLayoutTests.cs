@@ -16,6 +16,48 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxTextLayoutTests
 {
+    public static void PptxHorizontalClipPreservesVerticalOverflowInShapesAndCells()
+    {
+        foreach (bool tableCell in new[] { false, true })
+        foreach (string wrap in new[] { "none", "square" })
+        foreach (string? horizontal in new string?[] { null, "overflow", "clip" })
+        {
+            string attribute = horizontal is null ? "" : $"horzOverflow=\"{horizontal}\"";
+            string body = $$"""
+                <a:txBody><a:bodyPr {{attribute}} vertOverflow="overflow" wrap="{{wrap}}" lIns="0" rIns="0" tIns="0" bIns="0"><a:noAutofit/></a:bodyPr><a:lstStyle/>
+                <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Portable"/></a:rPr><a:t>ABCDEFGH</a:t></a:r></a:p></a:txBody>
+                """;
+            string frame = tableCell
+                ? $$"""
+                    <p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="2" name="Table"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+                    <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="508000" cy="304800"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+                    <a:tbl><a:tblPr/><a:tblGrid><a:gridCol w="508000"/></a:tblGrid><a:tr h="304800"><a:tc>{{body}}<a:tcPr marL="0" marR="0" marT="0" marB="0"/></a:tc></a:tr></a:tbl>
+                    </a:graphicData></a:graphic></p:graphicFrame>
+                    """
+                : $$"""
+                    <p:sp><p:nvSpPr><p:cNvPr id="2" name="Text"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="508000" cy="304800"/></a:xfrm></p:spPr>
+                    {{body.Replace("a:txBody", "p:txBody", StringComparison.Ordinal)}}</p:sp>
+                    """;
+            using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+                ["_rels/.rels"] = PptxTests.PackageRelationship(),
+                ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+                ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+                ["ppt/slides/slide1.xml"] = $$"""
+                    <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree>{{frame}}</p:spTree></p:cSld></p:sld>
+                    """
+            });
+            OoxPackage package = OoxPackage.Open(input, default);
+            PptxDocument document = new PptxReader().Read(package, default);
+            PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPages(document, package, null, default).Single();
+            bool hasHorizontalClip = page.Content.Contains("72 0 40 540 re W* n", StringComparison.Ordinal);
+            TestAssert.Equal(horizontal == "clip", hasHorizontalClip);
+            TestAssert.True(DocxTests.CountPdfTextShows(page.Content) > 0, "Horizontal clipping must retain the visible text.");
+        }
+    }
+
     public static void PptxSyntheticTextBoxHonorsVerticalAnchor()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

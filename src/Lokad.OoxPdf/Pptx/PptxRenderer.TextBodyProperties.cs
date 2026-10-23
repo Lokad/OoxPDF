@@ -23,6 +23,7 @@ internal sealed partial class PptxRenderer
         (string? anchorCenter, PptxTextBodyPropertySource anchorCenterSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "anchorCtr", inherit: true);
         (string? wrap, PptxTextBodyPropertySource wrapSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "wrap", inherit: true);
         (string? verticalOverflow, PptxTextBodyPropertySource verticalOverflowSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "vertOverflow", inherit: true);
+        (string? horizontalOverflow, _) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "horzOverflow", inherit: true);
         (string? compatibleLineSpacing, PptxTextBodyPropertySource compatibleLineSpacingSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "compatLnSpc", inherit: true);
         (string? rotation, PptxTextBodyPropertySource rotationSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "rot", inherit: true);
         return new PptxTextBodyProperties(
@@ -65,7 +66,11 @@ internal sealed partial class PptxRenderer
             ParseTextBodyRotationDegrees(rotation),
             rotation,
             rotationSource,
-            ExplicitWrapWidth: null) { AutofitMode = ParseTextAutofitMode(autofitMode) };
+            ExplicitWrapWidth: null)
+        {
+            AutofitMode = ParseTextAutofitMode(autofitMode),
+            ClipsHorizontalOverflow = string.Equals(horizontalOverflow, "clip", StringComparison.OrdinalIgnoreCase)
+        };
 
         static PptxTextBodyPropertySource MergeTextBodyPropertySources(
             PptxTextBodyPropertySource first,

@@ -2,6 +2,11 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Honors horizontal PPTX text clipping through existing shape/cell frame bounds,
+  including when vertical overflow remains allowed. Existing annotation policy and
+  qualified vertical/preset/column behavior remain; general overflow parity is approximate.
+- Preserves finite zero in visual-report comparisons and rejects missing required
+  foreground-recall evidence while retaining unrequired legacy/inapplicable reports.
 - Preserves explicit DOCX text-wrapping breaks and resolves internal PPTX links
   using case-insensitive package-part identity, matching their equivalent source
   forms in Office. Relationship IDs and font identities retain their existing rules.

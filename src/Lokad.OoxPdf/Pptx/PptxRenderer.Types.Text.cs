@@ -300,6 +300,8 @@ internal sealed partial class PptxRenderer
         double? ExplicitWrapWidth)
     {
         public PptxTextAutofitMode AutofitMode { get; init; } = PptxTextAutofitMode.Absent;
+        public bool ClipsHorizontalOverflow { get; init; }
+        public bool ClipsTextHorizontally => ClipsHorizontalOverflow || ClipsTextVerticalOverflow(VerticalOverflow);
     }
 
     internal enum PptxTextBodyPropertySource
