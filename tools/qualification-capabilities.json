@@ -1,5 +1,8 @@
 {
   "numeric-identity-emission": [
+    "PptxSyntheticBoldCambriaCenteredTextUsesOfficeTightenedAdvance",
+    "PptxNumberedAutofitFramesEmitOfficeCharacterSpacingTextState",
+    "PptxNumberedNoAutofitFramesEmitOfficeCharacterSpacingTextState",
     "DocxNumericNumberingIdsResolveAliasesAndKeepDistinctSequences",
     "DocxNumericNoteIdsKeepStoriesAndNavigationAcrossAliasSpellings",
     "DocxReaderPreservesNumberingFormatTokens",

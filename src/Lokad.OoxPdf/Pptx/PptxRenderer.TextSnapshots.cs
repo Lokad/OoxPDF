@@ -19,9 +19,42 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        return ReadSceneShapeTextSpans(context, context.SceneSlide.ShowMasterShapes)
-            .Concat(ReadSceneTableTextSpans(context, context.SceneSlide.ShowMasterShapes))
-            .ToArray();
+        var spans = new List<PptxPositionedTextSpan>();
+        int nextFrameIndex = 0;
+        // Painting coalesces each node separately. Cached node spans have local
+        // frame indexes, so assign distinct inspection indexes before combining
+        // them. Keep shape/table ordering aligned with font preflight.
+        foreach (bool shapes in new[] { true, false })
+        {
+            if (context.SceneSlide.ShowMasterShapes)
+                Add(context.SceneSlide.MasterNodes, context.MasterColorMap, false, shapes, GroupTransform.Identity);
+            Add(context.SceneSlide.LayoutNodes, context.LayoutColorMap, false, shapes, GroupTransform.Identity);
+            Add(context.SceneSlide.SlideNodes, context.SlideColorMap, true, shapes, GroupTransform.Identity);
+        }
+        return spans;
+
+        void Add(IReadOnlyList<PptxSceneNode> nodes, PptxColorMap colorMap, bool placeholders, bool shapes, GroupTransform transform)
+        {
+            foreach (PptxSceneNode node in nodes)
+            {
+                if (node.Kind == PptxSceneNodeKind.Group)
+                {
+                    Add(node.Children, colorMap, placeholders, shapes, transform.Combine(ToGroupTransform(node.GroupTransform)));
+                    continue;
+                }
+                if (node.Kind != (shapes ? PptxSceneNodeKind.Shape : PptxSceneNodeKind.Table)) continue;
+                var frame = new List<PptxPositionedTextSpan>();
+                if (shapes) AddSceneShapeTextSpans([node], context, frame, colorMap, placeholders);
+                else AddSceneTableTextSpans([node], context, frame, transform, colorMap);
+                int frameCount = 0;
+                foreach (PptxPositionedTextSpan span in frame)
+                {
+                    spans.Add(span with { FrameIndex = nextFrameIndex + span.FrameIndex });
+                    frameCount = Math.Max(frameCount, span.FrameIndex + 1);
+                }
+                nextFrameIndex += frameCount;
+            }
+        }
     }
 
     internal static PptxTextLayoutSnapshot InspectTextLayout(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null)
