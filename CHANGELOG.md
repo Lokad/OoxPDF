@@ -2,6 +2,11 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Matches numeric DOCX note and numbering IDs by decimal value, preserving
+  content and list indentation across equivalent spellings such as `1`/`01`.
+  Opaque identifiers retain their existing rules.
+- Makes PPTX glyph emission inspection honor scene visibility and master-shape
+  admission. Independent raw XML layout inspection remains available.
 - Preserves explicitly empty DOCX bullet labels and their list indentation;
   missing label text retains the existing default.
 - Removes an unreachable PPTX text fallback and unused line tally. Independent
