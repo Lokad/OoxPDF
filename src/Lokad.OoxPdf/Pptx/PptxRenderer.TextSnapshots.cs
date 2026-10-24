@@ -19,10 +19,8 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        return context.InheritedSources
-            .SelectMany(source => ReadTextSpans(context, source, includePlaceholders: false, placeholderSources: []))
-            .Concat(ReadTextSpans(context, context.SlideSource, includePlaceholders: true, context.InheritedXml))
-            .Concat(ReadSceneTableTextSpans(context))
+        return ReadSceneShapeTextSpans(context, context.SceneSlide.ShowMasterShapes)
+            .Concat(ReadSceneTableTextSpans(context, context.SceneSlide.ShowMasterShapes))
             .ToArray();
     }
 

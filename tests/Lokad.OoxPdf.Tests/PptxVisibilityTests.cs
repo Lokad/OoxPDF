@@ -20,7 +20,7 @@ internal static class PptxVisibilityTests
             string flag = hidden.Length == 0 ? "" : " hidden=\"" + hidden + "\"";
             const string link = "<a:hlinkClick r:id=\"rIdLink\"/>";
             const string transform = "<a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"2743200\" cy=\"914400\"/></a:xfrm>";
-            const string text = "<a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz=\"1200\"><a:latin typeface=\"Portable test\"/></a:rPr><a:t>Visible text</a:t></a:r></a:p>";
+            const string text = "<a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz=\"1200\"><a:latin typeface=\"Arial\"/></a:rPr><a:t>Visible text</a:t></a:r></a:p>";
             string shape = "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Text\"" + (kind == "shape" ? flag : "") + ">" + link + "</p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>" + transform + "<a:prstGeom prst=\"rect\"/><a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill></p:spPr><p:txBody>" + text + "</p:txBody></p:sp>";
             string node = kind switch
             {
@@ -46,6 +46,41 @@ internal static class PptxVisibilityTests
             TestAssert.Equal(visible && kind == "picture" ? 1 : 0, page.Images.Count);
             TestAssert.Equal(visible && kind != "picture", page.Fonts.Count > 0);
             TestAssert.Equal(visible && kind is "shape" or "group", page.Content.Contains("1 0 0 rg", StringComparison.Ordinal));
+            if (!visible)
+            {
+                TestAssert.Equal(0, PptxRenderer.InspectTextGlyphRuns(document, package, 0).Count);
+                if (kind is "shape" or "group")
+                    TestAssert.Equal(1, PptxRenderer.InspectTextLayout(document, package, 0).Frames.Count);
+            }
+        }
+    }
+
+    public static void PptxGlyphEmissionInspectionUsesSceneVisibilityAndMasterAdmission()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial)) TestAssert.Skip("Glyph emission inspection requires the installed Arial control.");
+        foreach (bool showMaster in new[] { false, true })
+        foreach (bool hidden in new[] { false, true })
+        {
+            string input = WriteMasterShapePackage(showMaster ? "1" : "0", withText: true);
+            if (hidden)
+            {
+                using var zip = System.IO.Compression.ZipFile.Open(input, System.IO.Compression.ZipArchiveMode.Update);
+                var entry = zip.GetEntry("ppt/slides/slide1.xml")!;
+                string xml;
+                using (var reader = new StreamReader(entry.Open())) { xml = reader.ReadToEnd(); }
+                entry.Delete();
+                using var writer = new StreamWriter(zip.CreateEntry("ppt/slides/slide1.xml").Open());
+                writer.Write(xml.Replace("<p:sp>", "<p:sp><p:nvSpPr><p:cNvPr id=\"9\" name=\"Hidden\" hidden=\"1\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>", StringComparison.Ordinal));
+            }
+            using FileStream stream = File.OpenRead(input);
+            OoxPackage package = OoxPackage.Open(stream, default);
+            PptxDocument document = new PptxReader().Read(package, default);
+            string emitted = string.Concat(PptxRenderer.InspectTextGlyphRuns(document, package, 0).Select(run => run.Text));
+            TestAssert.Equal(showMaster, emitted.Contains("Master text", StringComparison.Ordinal));
+            TestAssert.Equal(!hidden, emitted.Contains("Slide text", StringComparison.Ordinal));
+            TestAssert.True(emitted.Contains("Layout text", StringComparison.Ordinal), "Admitted layout text remains in emission inspection.");
+            TestAssert.Equal(3, PptxRenderer.InspectTextLayout(document, package, 0).Frames.Count);
         }
     }
 
@@ -248,7 +283,7 @@ internal static class PptxVisibilityTests
         });
     }
 
-    private static string WriteMasterShapePackage(string? showMasterSp)
+    private static string WriteMasterShapePackage(string? showMasterSp, bool withText = false)
     {
         string slide = PptxTests.InheritedShapePart("0000FF", 2743200, 2743200);
         if (showMasterSp is not null)
@@ -284,10 +319,14 @@ internal static class PptxVisibilityTests
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
                 </Relationships>
                 """,
-            ["ppt/slideMasters/slideMaster1.xml"] = PptxTests.InheritedShapePart("FF0000", 914400, 914400),
-            ["ppt/slideLayouts/slideLayout1.xml"] = PptxTests.InheritedShapePart("00FF00", 1828800, 1828800),
-            ["ppt/slides/slide1.xml"] = slide
+            ["ppt/slideMasters/slideMaster1.xml"] = AddText(PptxTests.InheritedShapePart("FF0000", 914400, 914400), "Master text"),
+            ["ppt/slideLayouts/slideLayout1.xml"] = AddText(PptxTests.InheritedShapePart("00FF00", 1828800, 1828800), "Layout text"),
+            ["ppt/slides/slide1.xml"] = AddText(slide, "Slide text")
         });
+
+        string AddText(string xml, string text) => withText
+            ? xml.Replace("</p:spPr>", "</p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz=\"1200\"><a:latin typeface=\"Arial\"/></a:rPr><a:t>" + text + "</a:t></a:r></a:p></p:txBody>", StringComparison.Ordinal)
+            : xml;
     }
 }
 

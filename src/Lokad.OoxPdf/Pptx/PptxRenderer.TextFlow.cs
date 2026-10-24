@@ -52,16 +52,6 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpans(
-        PptxRenderContext context,
-        PptxRenderSource source,
-        bool includePlaceholders,
-        IReadOnlyList<XDocument> placeholderSources)
-    {
-        context.CancellationToken.ThrowIfCancellationRequested();
-        return FlattenTextLayoutToSpans(BuildTextLayoutModel(context, source, includePlaceholders, placeholderSources), context.FontResolver);
-    }
-
     private static PptxTextLayoutModel BuildTextLayoutModel(
         PptxRenderContext context,
         PptxRenderSource source,
