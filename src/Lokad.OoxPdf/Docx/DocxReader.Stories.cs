@@ -286,14 +286,14 @@ internal sealed partial class DocxReader
         HashSet<string> registeredSeparators = (settings?.Root?
             .Element(WordprocessingNamespace + (storyElementName + "Pr"))?
             .Elements(WordprocessingNamespace + storyElementName)
-            .Select(reference => (string?)reference.Attribute(WordprocessingNamespace + "id"))
+            .Select(reference => NormalizeDecimalId((string?)reference.Attribute(WordprocessingNamespace + "id")))
             .OfType<string>() ?? []).ToHashSet(StringComparer.Ordinal);
         foreach (XElement storyElement in partXml.Root?.Elements(WordprocessingNamespace + storyElementName) ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
                 (string?)storyElement.Attribute(WordprocessingNamespace + "type") is null or "normal" &&
-                (string?)storyElement.Attribute(WordprocessingNamespace + "id") is { } id &&
+                NormalizeDecimalId((string?)storyElement.Attribute(WordprocessingNamespace + "id")) is { } id &&
                 noteLabels is not null && noteLabels.TryGetValue((kind, id), out string? label))
             {
                 // This XML belongs to the current story read. Replace only explicit
@@ -310,7 +310,7 @@ internal sealed partial class DocxReader
             XElement effectiveStory = storyElement;
             bool usesDefaultSeparator = kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
                 (string?)storyElement.Attribute(WordprocessingNamespace + "type") is "separator" or "continuationSeparator" &&
-                (string?)storyElement.Attribute(WordprocessingNamespace + "id") is { } separatorId &&
+                NormalizeDecimalId((string?)storyElement.Attribute(WordprocessingNamespace + "id")) is { } separatorId &&
                 !registeredSeparators.Contains(separatorId);
             if (usesDefaultSeparator)
             {
@@ -418,10 +418,15 @@ internal sealed partial class DocxReader
         int sourceEquationCount = 0;
         foreach (XElement equation in story.Descendants(MathNamespace + "oMath"))
         { cancellationToken.ThrowIfCancellationRequested(); sourceEquationCount++; }
+        string? storyId = (string?)story.Attribute(WordprocessingNamespace + "id");
+        if (kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
+        {
+            storyId = NormalizeDecimalId(storyId);
+        }
         return new DocxRelatedStory(
             kind,
             partName,
-            (string?)story.Attribute(WordprocessingNamespace + "id"),
+            storyId,
             bodyElements,
             [],
             [],

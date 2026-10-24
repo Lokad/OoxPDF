@@ -12,6 +12,49 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNumberingTests
 {
+    public static void DocxNumericNumberingIdsResolveAliasesAndKeepDistinctSequences()
+    {
+        foreach (string numberId in new[] { "1", "01" })
+        foreach (string referenceId in new[] { "1", "001" })
+        foreach (string abstractId in new[] { "7", "007" })
+        foreach (string abstractReference in new[] { "7", "0007" })
+        {
+            using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/></Types>
+                    """,
+                ["_rels/.rels"] = """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>
+                    """,
+                ["word/_rels/document.xml.rels"] = """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="01" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/></Relationships>
+                    """,
+                ["word/numbering.xml"] = $$"""
+                    <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                      <w:abstractNum w:abstractNumId="{{abstractId}}"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/></w:lvl></w:abstractNum>
+                      <w:abstractNum w:abstractNumId="8"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/></w:lvl></w:abstractNum>
+                      <w:num w:numId="{{numberId}}"><w:abstractNumId w:val="{{abstractReference}}"/><w:lvlOverride w:ilvl="0"><w:startOverride w:val="3"/><w:lvl w:ilvl="0"><w:numFmt w:val="decimal"/><w:lvlText w:val="%1)"/></w:lvl></w:lvlOverride></w:num>
+                      <w:num w:numId="2"><w:abstractNumId w:val="8"/></w:num>
+                    </w:numbering>
+                    """,
+                ["word/document.xml"] = $$"""
+                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+                      <w:p><w:pPr><w:numPr><w:numId w:val="{{referenceId}}"/></w:numPr></w:pPr><w:r><w:t>First</w:t></w:r></w:p>
+                      <w:p><w:pPr><w:numPr><w:numId w:val="{{numberId}}"/></w:numPr></w:pPr><w:r><w:t>Second</w:t></w:r></w:p>
+                      <w:p><w:pPr><w:numPr><w:numId w:val="2"/></w:numPr></w:pPr><w:r><w:t>Distinct</w:t></w:r></w:p>
+                    </w:body></w:document>
+                    """
+            });
+            OoxPackage package = OoxPackage.Open(input, default);
+            DocxDocument document = new DocxReader().Read(package, null, default, OoxPdfDocxMarkupMode.Final);
+            TestAssert.True(document.Paragraphs.Select(p => p.ListLabel?.Text).SequenceEqual(new[] { "3)", "4)", "1." }),
+                "Decimal identity must match both sides, retain overrides and keep distinct lists separate.");
+            TestAssert.True(document.Paragraphs.Select(p => p.ListLabel?.NumberId).SequenceEqual(new[] { "1", "1", "2" }),
+                "Numbering exposes canonical numeric identities.");
+        }
+    }
+
     public static void DocxEmptyBulletLabelsKeepIndentAndMissingTextDefaults()
     {
         foreach (bool concreteOverride in new[] { false, true })

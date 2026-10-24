@@ -49,9 +49,9 @@ internal sealed partial class DocxReader
         bool trackOriginal, bool? originalIncluded, DocxRevisionInfo? markInsertion)
     {
         XElement? numberingProperties = paragraphProperties?.Element(WordprocessingNamespace + "numPr");
-        string? numId = (string?)numberingProperties?
+        string? numId = NormalizeDecimalId((string?)numberingProperties?
             .Element(WordprocessingNamespace + "numId")
-            ?.Attribute(WordprocessingNamespace + "val");
+            ?.Attribute(WordprocessingNamespace + "val"));
         int level = numberingProperties?
             .Element(WordprocessingNamespace + "ilvl")
             ?.Attribute(WordprocessingNamespace + "val") is { } levelAttribute
@@ -252,7 +252,7 @@ internal sealed partial class DocxReader
         foreach (XElement abstractNum in numberingXml.Root?.Elements(WordprocessingNamespace + "abstractNum") ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string? abstractId = (string?)abstractNum.Attribute(WordprocessingNamespace + "abstractNumId");
+            string? abstractId = NormalizeDecimalId((string?)abstractNum.Attribute(WordprocessingNamespace + "abstractNumId"));
             if (abstractId is null)
             {
                 continue;
@@ -285,8 +285,8 @@ internal sealed partial class DocxReader
         foreach (XElement num in numberingXml.Root?.Elements(WordprocessingNamespace + "num") ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string? numId = (string?)num.Attribute(WordprocessingNamespace + "numId");
-            string? abstractId = (string?)num.Element(WordprocessingNamespace + "abstractNumId")?.Attribute(WordprocessingNamespace + "val");
+            string? numId = NormalizeDecimalId((string?)num.Attribute(WordprocessingNamespace + "numId"));
+            string? abstractId = NormalizeDecimalId((string?)num.Element(WordprocessingNamespace + "abstractNumId")?.Attribute(WordprocessingNamespace + "val"));
             if (numId is not null && abstractId is not null)
             {
                 numToAbstract[numId] = canonicalAbstractIds.GetValueOrDefault(abstractId, abstractId);

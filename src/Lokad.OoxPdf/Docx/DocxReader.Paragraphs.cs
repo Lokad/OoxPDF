@@ -1380,9 +1380,14 @@ internal sealed partial class DocxReader
             ? (string?)child.Attribute(WordprocessingNamespace + "customMarkFollows")
             : null;
         string? displayText = ResolveInlineReferenceDisplayText(kind, customMarkFollows);
+        string? referenceId = (string?)child.Attribute(WordprocessingNamespace + "id");
+        if (kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
+        {
+            referenceId = NormalizeDecimalId(referenceId);
+        }
         inlineReferences.Add(new DocxInlineReference(
             kind,
-            (string?)child.Attribute(WordprocessingNamespace + "id"),
+            referenceId,
             customMarkFollows,
             displayText,
             currentSourceRunIndex,

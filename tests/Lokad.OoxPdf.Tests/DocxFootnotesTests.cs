@@ -14,6 +14,60 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxFootnotesTests
 {
+    public static void DocxNumericNoteIdsKeepStoriesAndNavigationAcrossAliasSpellings()
+    {
+        XNamespace word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        foreach (string fixture in new[] { "note-nav-two-footnotes", "note-nav-mixed-notes" })
+        foreach (OoxPdfDocxMarkupMode mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string seed = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", fixture + ".docx"));
+            var original = new Dictionary<string, byte[]>();
+            using (ZipArchive zip = ZipFile.OpenRead(seed))
+            foreach (ZipArchiveEntry entry in zip.Entries)
+            {
+                using Stream source = entry.Open();
+                using var bytes = new MemoryStream();
+                source.CopyTo(bytes); original[entry.FullName] = bytes.ToArray();
+            }
+            // Include a repeated reference; aliases must preserve its existing
+            // label/navigation behavior as well as the distinct notes.
+            XDocument body = XDocument.Parse(Encoding.UTF8.GetString(original["word/document.xml"]));
+            XElement first = body.Descendants(word + "footnoteReference").First();
+            first.Parent!.AddAfterSelf(new XElement(first.Parent!));
+            original["word/document.xml"] = Encoding.UTF8.GetBytes(body.ToString());
+            using var baselineInput = TestFixtures.CreateZipPackage(original);
+            DocxDocument baseline = new DocxReader().Read(OoxPackage.Open(baselineInput, default), null, default, mode);
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            PdfPage[] baselinePages = renderer.RenderBlankPages(baseline, null, default).ToArray();
+            foreach (var spelling in new[] { (Declarations: false, References: true), (Declarations: true, References: false), (Declarations: true, References: true) })
+            {
+                var parts = new Dictionary<string, byte[]>(original);
+                foreach (string name in new[] { "word/document.xml", "word/settings.xml", "word/footnotes.xml", "word/endnotes.xml" })
+                {
+                    if (!parts.TryGetValue(name, out byte[]? content)) continue;
+                    XDocument xml = XDocument.Parse(Encoding.UTF8.GetString(content));
+                    foreach (XElement element in xml.Descendants())
+                    {
+                        bool reference = element.Name == word + "footnoteReference" || element.Name == word + "endnoteReference" ||
+                            (name == "word/settings.xml" && (element.Name == word + "footnote" || element.Name == word + "endnote"));
+                        bool declaration = name is "word/footnotes.xml" or "word/endnotes.xml" &&
+                            (element.Name == word + "footnote" || element.Name == word + "endnote");
+                        if (((spelling.References && reference) || (spelling.Declarations && declaration)) && element.Attribute(word + "id") is { } id)
+                            id.Value = id.Value.StartsWith('-') ? "-0" + id.Value[1..] : "0" + id.Value;
+                    }
+                    parts[name] = Encoding.UTF8.GetBytes(xml.ToString());
+                }
+                using var input = TestFixtures.CreateZipPackage(parts);
+                DocxDocument candidate = new DocxReader().Read(OoxPackage.Open(input, default), null, default, mode);
+                TestAssert.True(candidate.RelatedStories.Select(s => (s.Kind, s.Id, s.Type)).SequenceEqual(baseline.RelatedStories.Select(s => (s.Kind, s.Id, s.Type))),
+                    "Numeric aliases must retain distinct notes and reserved-story identities.");
+                PdfPage[] pages = renderer.RenderBlankPages(candidate, null, default).ToArray();
+                TestAssert.True(pages.Select(p => p.Content).SequenceEqual(baselinePages.Select(p => p.Content)), "Numeric aliases must retain every painted note.");
+                TestAssert.True(pages.SelectMany(p => p.Annotations).SequenceEqual(baselinePages.SelectMany(p => p.Annotations)), "Numeric aliases must preserve navigation destinations.");
+            }
+        }
+    }
+
     public static void DocxScaledFootnoteExactAdvanceMatchesIndependentOffice()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("The Word control uses installed Arial metrics.");

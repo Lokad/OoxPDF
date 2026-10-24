@@ -26,6 +26,25 @@ internal sealed partial class DocxReader
     // explicit/inherited line tokens resolve before either fallback.
     private const double WordImplicitNormalAutoLineSpacingFactor = 278d / 240d;
 
+    // Used only for numeric note/numbering identities. Opaque OOXML identifiers
+    // retain their own comparison rules; malformed decimal spellings stay intact.
+    private static string? NormalizeDecimalId(string? value)
+    {
+        if (value is null) return null;
+        ReadOnlySpan<char> number = value.AsSpan().Trim();
+        int first = !number.IsEmpty && number[0] is '+' or '-' ? 1 : 0;
+        if (first == number.Length) return value;
+        for (int index = first; index < number.Length; index++)
+        {
+            if (number[index] is < '0' or > '9') return value;
+        }
+        bool negative = number[0] == '-';
+        while (first < number.Length - 1 && number[first] == '0') first++;
+        ReadOnlySpan<char> digits = number[first..];
+        if (digits.Length == 1 && digits[0] == '0') return "0";
+        return negative ? "-" + digits.ToString() : digits.ToString();
+    }
+
 
     private sealed class DocxComplexFieldState
     {
