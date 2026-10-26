@@ -1,6 +1,12 @@
 {
   "docx-story-ownership": [
     "DocxStoryOwnership",
+    "PortableRenderingInlineBoxMathKeepsSourceContentAndResources",
+    "PortableRenderingOwnedBoxParagraphsRetainSourceContent",
+    "PortableRenderingPlainBoxChildrenRetainMixedContent",
+    "DocxInlineBoxMathKeepsIndependentContentAcrossContainers",
+    "DocxOwnedBoxParagraphsMatchIndependentWordFramesAndFollowingText",
+    "DocxPlainBoxChildFramesPreserveIndependentContentAndGeometry",
     "DocxOptionalParts",
     "DocxSectionNavigation",
     "DocxUnsupportedChartInHeaderIsDiagnosed",

@@ -1103,10 +1103,8 @@
         }
       ],
       "WordImageCount": 1,
-      "IgnoredEquationDiagnostics": 1,
-      "IgnoredEquationParts": [
-        "/word/header1.xml"
-      ],
+      "IgnoredEquationDiagnostics": 0,
+      "IgnoredEquationParts": [],
       "ExpectedText": [
         "Summary:",
         "share the same input series.",
@@ -1254,10 +1252,8 @@
         }
       ],
       "WordImageCount": 1,
-      "IgnoredEquationDiagnostics": 1,
-      "IgnoredEquationParts": [
-        "/word/header1.xml"
-      ],
+      "IgnoredEquationDiagnostics": 0,
+      "IgnoredEquationParts": [],
       "ExpectedText": [
         "Summary:",
         "share the same input series.",
