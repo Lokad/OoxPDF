@@ -1531,7 +1531,7 @@ internal sealed partial class DocxReader
         {
             DocxFontSlot slot = DocxScriptClassifier.FontSlot(rune.Value);
             if (currentSlot is not null && currentSlot.Value != slot &&
-                !DocxFontResolver.SameTypefaceSelection(resolvedRun, currentSlot.Value, slot))
+                !DocxFontResolver.SameTypefaceSelection(resolvedRun.Fonts, resolvedRun.FontFamily, currentSlot.Value, slot))
             {
                 string segmentText = segment.ToString();
                 AddResolvedTextRun(runs, segmentText, resolvedRun, styleResolution, currentSlot.Value == DocxFontSlot.ComplexScript, sourceRunIndex, segmentSourceOffset, revision, revisions, fieldKind);

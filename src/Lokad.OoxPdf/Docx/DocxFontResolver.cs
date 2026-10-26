@@ -16,13 +16,13 @@ internal static class DocxFontResolver
         return new DocxTypefaceCandidates(primary, alternate, ResolveThemeTypeface(themeToken, catalog.ThemeFonts));
     }
 
-    public static bool SameTypefaceSelection(DocxResolvedRunProperties properties, DocxFontSlot left, DocxFontSlot right)
+    public static bool SameTypefaceSelection(DocxRunFonts fonts, string? fontFamily, DocxFontSlot left, DocxFontSlot right)
     {
         // Complex-script fragments also own their bold/italic overrides. Other
         // slots need no artificial boundary when their declared choices agree.
         if ((left == DocxFontSlot.ComplexScript) != (right == DocxFontSlot.ComplexScript)) return false;
-        var a = SelectSlot(properties.Fonts, properties.FontFamily, left);
-        var b = SelectSlot(properties.Fonts, properties.FontFamily, right);
+        var a = SelectSlot(fonts, fontFamily, left);
+        var b = SelectSlot(fonts, fontFamily, right);
         return string.Equals(a.Family, b.Family, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(a.Theme, b.Theme, StringComparison.Ordinal);
     }
