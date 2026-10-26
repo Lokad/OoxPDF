@@ -211,7 +211,7 @@ internal sealed partial class DocxRenderer
         foreach (DocxResolvedRunTypeface resolved in plan.Runs)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (string.IsNullOrEmpty(resolved.Run.Text) ||
+            if (resolved.Run.EffectiveProperties.Hidden || string.IsNullOrEmpty(resolved.Run.Text) ||
                 !runResources.TryGetValue(resolved.Run, out DocxRunFontResource? resource))
             {
                 continue;

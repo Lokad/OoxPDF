@@ -430,7 +430,8 @@ internal sealed partial class PptxRenderer
             {
                 cached = resolver.Resolve(new FontRequest(familyName, bold, italic));
             }
-            catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException)
+            catch (Exception ex) when (ex is not OoxPdfLimitExceededException &&
+                (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException))
             {
                 cached = null;
             }

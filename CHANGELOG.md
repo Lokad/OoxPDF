@@ -2,6 +2,10 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Propagates fatal font-resolution limit failures during PPTX measurement;
+  ordinary font-I/O recovery remains available and cancellation still aborts.
+- Omits missing-glyph warnings for hidden DOCX text, matching layout visibility;
+  visible missing glyphs retain their warning and CLI strict-exit behavior.
 - Resolves supported English/localized installed-font family aliases to the same
   program and collection face, preserving canonical names and style ranking.
 - Uses declared DOCX Ascii/HighAnsi/EastAsia font choices for text fragments;

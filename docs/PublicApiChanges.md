@@ -11,6 +11,13 @@ DOCX Ascii/HighAnsi/EastAsia choices now apply to text fragments, with source
 offsets and revision/link ownership preserved. Equivalent declared choices stay
 together. These rendering repairs add no public option or shaping support.
 
+PPTX font measurement now propagates a custom resolver's
+`OoxPdfLimitExceededException` as a conversion failure, consistent with DOCX and
+the fatal-limit contract. Ordinary font-I/O recovery remains available. Missing-
+glyph diagnostics now exclude effectively hidden DOCX text, while visible missing
+glyphs retain their warning and CLI strict status. Source metadata remains present;
+these corrections add no public declarations or options.
+
 - Removed `OoxPdfOptions.Deterministic`. It never changed conversion behavior.
   Remove the initializer; stable inputs/options still produce deterministic PDF
   bytes, and `FixedCreationDate` still controls optional document dates.

@@ -17,6 +17,7 @@ internal static class TestCatalog
         .. FromType("docx-page", typeof(DocxMixedWrappedFootnoteTests)),
         .. FromType("fonts", typeof(FontProgramCacheTests)),
         .. FromType("fonts", typeof(FontFamilyAliasTests)),
+        .. FromType("rendering-portable", typeof(FontRecoveryTests)),
         .. FromType("rendering-portable", typeof(DocxFontSlotTests)),
         .. FromType("fonts", typeof(FontResolverConcurrencyTests)),
         .. FromType("fonts", typeof(MathFontTests)),
