@@ -1,47 +1,49 @@
 # 0.2.0-preview qualification
 
-The bounded numeric-identity/emission-inspection milestone is qualified.
-Publication, performance optimization and broader feature expansion remain deferred.
-The accepted library was built at `a7b329bb83ec36dfe6c2210a65081441c7f4f5c3`, SHA-256
-`4674BA9A91F2560D779EB4DFDE6D9B028605C3C3A48D90F4C0B24A1D7D6D0D7D`.
-[Windows/Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/40097454937)
-at the accepted source. CI builds are independent of the frozen artifact.
+The bounded font-semantics milestone is qualified. Publication, performance
+optimization and broader feature expansion remain deferred. The accepted library
+was built at `f84afdf2b887286a7211725d0e7123f916939880`, SHA-256
+`F4F90E77E06608231F3D496171C18849B2818F1098138A6FC51FBCA2F05E849D`.
+The final harness is `137bf996aff304f54bb633991d413db4d1f4718d`; production source
+and all 21 runtime assets are identical across its test-only repair.
+[Windows/Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/40306968987)
+at the final source. CI builds are independent of the local frozen artifact.
 
 | Gate | Result |
 |---|---|
-| Release/affected checks | One corrected artifact serves final qualification. All 32 affected methods pass on Windows. Ubuntu: 26 pass, three inherited native-font failures, three explicit font-precondition skips. New numeric-ID tests pass both hosts. Two inherited nullable test warnings remain. |
-| Windows milestone | **3,784 pass, one inherited failure, five skips**; 3,790 unique methods in two disjoint invocations. |
-| Ubuntu milestone | **1,101 pass, seven inherited failures, 69 skips**; 1,177 unique methods in two disjoint invocations. No previously qualified pass regressed. |
-| DOCX identity | Padded note/numbering references now produce byte-identical PDFs to canonical references, restoring the complete note, marker and 36pt indentation. Canonical controls remain identical to pre-fix PDFs. Declaration/reference aliases, distinct/repeated notes, reserved stories, overrides and navigation are covered. |
-| Emission inspection | Hidden text reports zero glyph runs while raw XML retains its frame. Visible output stays identical. Existing frame/character-spacing checks pass unchanged after preserving each node's frame identity. Actual glyph-runs.json from the existing tool bound to the qualified DLL confirms visible=2, hidden=0. |
-| Representative documents | Nine sources/16 outcomes/32 pages retain exact PDFs, diagnostics and semantic results. Each accepted outcome converted once. |
-| Independent portfolio gates | Reused by input/PDF identity: two strict PPTX passes/fourteen strict DOCX failures. Existing thresholds remain fixed; the note screen has its own retained recall failure. |
+| Release/affected checks | One accepted library artifact. All 36 affected methods pass Windows; Ubuntu has 33 pass/three explicit Calibri/Symbol precondition skips. Seven new portable tests pass both hosts. Two inherited nullable test warnings remain. |
+| Windows milestone | **3,791 pass, one inherited failure, five skips**; 3,797 unique methods. |
+| Ubuntu milestone | **1,118 pass, seven inherited failures, 69 skips**; 1,194 unique methods. No prior pass regressed. |
+| Original font probes | Eight strict conversions, no diagnostics, all Word text retained. Four joined/split or English/localized pairs produce byte-identical PDFs. The English family name no longer replaces the ideograph with a question mark. |
+| Independent geometry | The mixed-text run-boundary X shift is zero, previously 7.7109375pt. Word residuals remain X -.091003pt/Y -.900024pt. Font-slot choices match the retained Arial/MS Gothic and Arial/Courier New controls. No formal pixel-parity claim. |
+| Representative documents | Nine sources/16 outcomes/32 pages have exact prior PDFs, diagnostics and semantic results. Each outcome converted once; no new Office exports or rasterizations. |
+| Independent portfolio gates | Reused by identity: two strict PPTX passes/fourteen strict DOCX failures. Existing visual thresholds remain fixed; the retained note screen has its own recall failure. |
 | API/runtime | All 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0. |
-| Package/transfer | Same dependency-free package and consumer source pass Windows/Ubuntu. Packed guide bytes/local links match. All 24 root assets and two integration PDFs match without root rebuild or suite replay. |
+| Package/transfer | Same dependency-free package and consumer source pass Windows/Ubuntu. All 24 root assets and two integration PDFs match without root rebuild or suite replay. |
 
 ## Conversion behavior and bounded maintenance
 
-The reader uses one decimal-value key rule for demonstrated note and numbering
-identities on both declaration and reference sides. Numbering overrides and NSID
-ownership remain. Styles, relationship/font identities, comments and bookmark
-policy retain their existing rules. No broad identity framework or public option
-was introduced. Parsed note/numbering identities are canonical decimal keys;
-original package XML remains unchanged apart from existing story-marker handling.
+Discovery indexes supported Windows family-name records as aliases for one
+canonical face and owned file source. Canonical names, style ranking and catalog
+face counts remain stable; aliases retain requested spelling. Portable tests cover
+multilingual names, collection face indexes, shared ownership and style selection.
 
-Glyph emission inspection now uses admitted scene inputs and master visibility.
-Per-node frame identities stay distinct when spans are combined, matching the
-painting/coalescing boundary. Shape/table font-preflight ordering and cached
-geometry remain. The independent raw XML layout view is preserved; extra source
-frames are intentionally separate from emitted glyphs. No rendering/layout guard,
-font/size-specific rule or resource quota was added.
+The existing DOCX run splitter now follows declared Ascii/HighAnsi/EastAsia and
+complex-script font choices. Equivalent choices remain together; complex-script
+bold/italic overrides retain their boundary. Measurement and emission consume the
+same fragments, preserving UTF-16 source offsets, links, bookmarks and revisions.
+Body, cell, header and footer rendering are covered without font/size-specific
+exceptions or general shaping support. Two obsolete whole-text scans were removed;
+the typeface resolver was renamed without a forwarding wrapper.
 
-The initially frozen 84276217 artifact failed three existing Windows inspection
-checks and CI 40096178265: node-local frame indexes collided after admission was
-shared. Its failed evidence and package remain separate. Correction a7b329bb
-preserves node boundaries; the three checks join the 32-method selection with
-unchanged assertions. Painting/preflight and the raw XML inspection implementation
-remain unchanged. This was an inspection regression, not a rendering fix or a
-reason to relax independently validated Office checks.
+Two early compilation attempts failed before running tests; their logs remain.
+The first broad runs then exposed three metadata tests whose record equality
+compared the new alias arrays by reference. The repaired assertions compare all
+scalar fields and ordered alias contents. Only those three tests reran per host,
+against the exact same library. Reviewed joins verify 21 runtime assets and 2,582
+public inputs; all other accepted checks are reused. Initial failed reports and
+[initial CI](https://github.com/Lokad/OoxPDF/actions/runs/40305747865) remain separate.
+No rendering assertion or Office threshold was relaxed.
 
 ## Inherited failures and limitations
 
@@ -112,45 +114,17 @@ no threshold change or formal manifest/agent-rating pass is claimed.
 
 ## Evidence and workflow
 
-Ignored accepted evidence: `artifacts/preview-numeric-identity-final-20261024/qualification.json`;
-artifact: `candidate-final/`; package:
-`artifacts/nuget/preview-020-numeric-identity-final-20261024/`.
-The rejected attempt remains under `artifacts/preview-numeric-identity-20261024/`.
-One corrected artifact serves final tests, six original probes, sixteen portfolio
-outcomes, both consumers and verified transfer. Each accepted exact method ran
-once across the affected set and disjoint remainder; the changed revision was
-qualified separately after the initial regression. No root or parent rebuild.
+Ignored evidence: `artifacts/preview-font-semantics-20261026/qualification.json`;
+final artifact: `candidate-qualified/`; original production build:
+`candidate-accepted/`. Package:
+`artifacts/nuget/preview-020-font-semantics-20261026/`.
+Eight original font probes and sixteen portfolio outcomes each converted once.
+Existing Office references, unchanged comparisons and 715-case/12-family manifest
+validation are reused. The [preceding qualification](https://github.com/Lokad/OoxPDF/blob/2182bc44/docs/PreviewQualification.md)
+retains earlier maintenance and unresolved gates.
 
-Retained Word/PowerPoint references and unchanged comparisons/715-case/12-family
-manifest validation were reused. The existing PPTX inspector executable was
-bound to the exact accepted DLL in an owned directory; no tool build was needed.
-The [preceding qualification](https://github.com/Lokad/OoxPDF/blob/e875a130/docs/PreviewQualification.md)
-retains earlier maintenance and unresolved visual gates. Safe managed dependency-
-free execution, cancellation, meaningful bounds, coarse admission/refunds,
-bounded caches/staging, cleanup, atomic publication and PDF validity remain.
-The preserved roadmap stays deferred. The infrequent workspace check records
-**6.696 GB/929,543 files**, zero errors, above the loose 5 GB target. The accepted
-milestone is about 54 MB; useful failed-attempt evidence remains separate. Preserve
-inputs/evidence and use verified stale-artifact maintenance rather than blanket
-deletion. The loose cap remains a maintenance guideline.
-
-## Comparison-evidence maintenance (2026-10-26)
-
-Tools revision `d69a41dc` validates reused page measurements during batch preflight
-and derives failure flags from the current limits, using the same calculation for
-fresh comparisons. Cached failure summaries and limit values cannot erase a
-measured failure. Incomplete metrics refuse reuse; legitimate blank-reference,
-pagination and dimension outcomes retain their distinct meanings.
-
-All 40 focused orchestration checks pass with both relative and absolute Windows
-output roots. The original pinned Word-note comparison still fails recall
-.9771410174 < .99 after a cached summary is cleared; empty measurements refuse
-before output mutation. The original review evidence remains unchanged.
-The [tools workflow](https://github.com/Lokad/OoxPDF/actions/runs/40297758954)
-exercises a relative output root on Windows and Ubuntu.
-
-The library/package and all 24 frozen/root assets are unchanged. The qualification,
-consumer results, representative documents and inherited failures above are reused;
-no local library rebuild, broad-suite replay, conversion, Office export or native
-rasterization was needed. Ignored evidence:
-`artifacts/preview-comparison-evidence-20261026/`. Publication remains deferred.
+Safe managed dependency-free execution, cancellation, meaningful bounds, coarse
+admission/refunds, bounded caches/staging, cleanup, atomic publication and PDF
+validity remain. The preserved roadmap stays deferred. One infrequent workspace
+check records **6.778 GB/935,126 files**, zero errors, above the loose 5 GB target.
+Preserve inputs/useful evidence and use verified stale-artifact maintenance.
