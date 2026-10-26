@@ -1,57 +1,47 @@
 # 0.2.0-preview qualification
 
-The subsequent public-contract clarification changes comments and caller guidance
-only. Compiler token comparison verifies the four C# files have unchanged executable
-tokens; all 24 qualified/root runtime assets match. Eight existing stream/resource
-checks pass in one focused invocation. Updated package guidance uses the identical
-qualified DLL. The preceding Windows/Ubuntu, Office, corpus and CI results below
-are reused; no rendering build, broader replay or new visual comparison is required.
-Evidence: `artifacts/preview-public-contracts-20261026/qualification.json`;
-package: `artifacts/nuget/preview-020-public-contracts-20261026/`.
-
-The bounded section-selection/navigation milestone is qualified.
-Publication, performance optimization and broader expansion remain deferred.
-Library build source is `01b1c35f`; final test-only source is
-`5e24a67802a48af00bc1e0bd6888334cf3f0b6f3`. The qualified library SHA-256 is
-`CB3CCD69138BCF95AA6FDAD34546E2809A20B64BD39315C254F31B8669F017DC`.
-[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40321051391)
-passed at the final test source. CI builds are independent of the local artifact.
+The bounded optional-part ownership/workbook cleanup milestone is qualified. Publication, performance optimization and expansion remain deferred.
+Library build source is `3468ededc4f456f22e59a4d357511d0ed48be548`; final
+harness source is `b64617b2ca626e24f48b747fe6aa54b0c48a3a91`. Library SHA-256:
+`24BB3DB079F639BAB2248302C914DF787235370B9780BE5016643BA08FA9B8B0`.
+[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40342363065)
+passed at the final harness source. CI builds are independent of the frozen runtime.
 
 | Gate | Result |
 |---|---|
-| Release/affected checks | One accepted corrected library artifact; 36 affected methods pass Windows, 33 pass/three declared installed-font skips on Ubuntu. Six new portable methods pass both hosts. Two inherited nullable test warnings remain. |
-| Windows milestone | **3,802 pass, one inherited failure, five skips**; 3,808 unique methods, 3,810 method attempts across three invocations, including two failed harness checks repaired without replaying passes. |
-| Ubuntu milestone | **1,152 pass, seven inherited failures, 72 skips**; 1,231 unique methods, 1,233 attempts. No prior pass regressed. |
-| Original review controls | Six original sources reuse pinned Word Final exports. Later-section first headers and paragraph-end GoTo links now survive. Four control PDFs remain byte-identical; restored end destination residual X .248pt/Y .48602pt. |
-| Independent neighbor | New four-page Word Final control confirms first header/footer selection at section start, default continuation and undefined even-story suppression. Matched text origins across all seven sources differ at most X .02401pt/Y .07996pt; font sizes agree. This is not a raster parity claim. |
+| Release/affected checks | One accepted committed linked-worktree library artifact. Initial 44 methods: 44 pass Windows; 41 pass/three declared installed-font skips Ubuntu. Refined 50-method capability coverage also includes six neighboring checks exercised by broader qualification/fixture repair. All four new portable methods pass both hosts. |
+| Windows milestone | **3,806 pass, one inherited failure, five skips**; 3,812 unique methods/3,817 attempts in three invocations. Five failed fixture checks were repaired; no successful method was replayed. |
+| Ubuntu milestone | **1,177 pass, seven inherited failures, 73 skips**; 1,257 unique/1,259 attempts. Two fixture failures repaired; four newly selected line-spacing methods pass once. No prior pass regressed. |
+| Original Office controls | Six pinned Word Final controls agree on active formatting/header content. Unreferenced styles now keep 12pt black text and unreferenced settings preserve the second-page default header. Four unaffected PDFs are byte-identical. No new Office export/rasterization. |
+| Workbook cleanup | Eight internal constructor adapters, three exclusive conversion helpers and nine unused DOCX content-type constants removed. The canonical workbook constructor, static initialization, live reader/range/provenance and caches remain. Fourteen reflected test entry sites now use the live reader. |
 | Representative documents | Nine sources/16 outcomes/32 pages retain exact prior PDFs, diagnostics and semantic results. Each outcome converted once. |
-| Independent portfolio gates | Reused by identity: two strict PPTX passes/fourteen strict DOCX failures. Existing visual thresholds and note/clip recall failures remain unchanged. |
-| API/runtime | All 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0. |
-| Package/transfer | Same dependency-free package and consumer source pass Windows/Ubuntu. All 24 root assets, a corrected two-section DOCX and representative PPTX match without root rebuild or suite replay. |
+| Independent visual gates | Reused by identity: two strict PPTX passes/fourteen strict DOCX failures. All prior visual thresholds and residuals remain; manifest validation is not fidelity evidence. |
+| API/runtime | 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0. |
+| Package/transfer | Same dependency-free package and consumer source pass Windows/Ubuntu. All 24 runtime assets and two integration PDFs match after transfer, without a root build or broad suite replay. |
 
 ## Conversion behavior and bounded maintenance
 
-DOCX page records retain their owning section's first physical page. Shared
-header/footer and floating-story selection, static-frame mapping and eligibility
-consume that provenance; continuation templates and the existing caches retain it.
-Default/even parity and page-field numbering rules are unchanged. This does not
-add full continuous-section or page-number-restart support.
+Optional DOCX configuration and related stories follow their owning document
+relationship. Missing, external, dangling or unselected payloads retain the
+existing empty/default handling. Styles and numbering use the existing shared
+XML loader and MustUnderstand warning deduplication. Main-document/presentation
+content-type repair lookup is preserved. Caller guidance explains the correction
+for handcrafted packages that relied on unreferenced parts.
 
-A bookmark after its final text item/run resolves to that source endpoint. The
-same-run fallback cannot grab an earlier wrapped fragment before the requested
-offset. Hidden trailing text does not own the destination. Ordinary prose keeps
-its existing run-based layout rather than opting into inline-object layout for
-metadata. Terminal non-text object anchors retain their existing placement rules.
+Workbook cleanup removes internal test adapters and their exclusive dictionary
+conversion paths. Test data passes through the live reader using the existing
+workbook package fixture helper. No compatibility chain was relocated into the
+library, no builder framework added, and no chart color/layout rule changed.
 
-The first compiled attempt fixed section headers but did not handle terminal
-bookmarks on the legacy prose path; its outputs remain as an unqualified attempt.
-The corrected library is built once and reused throughout accepted qualification.
-A fixture-path repair and two endpoint-assertion repairs affect tests only. The
-tracked report join verifies 21 unchanged runtime assets and 2,589 public inputs.
-Only the two failed endpoint checks are repeated on the accepted library; broader
-sets are disjoint from the affected selection. No accepted pass is replayed.
-One malformed generated validation input was rejected by Word; it is retained
-separately and contributes no rendering or reference-pass evidence.
+An initial comment edit accidentally removed a live chart-render/finally block;
+the compiler rejected it before freezing. The original block is restored. That
+failed build is retained separately. The accepted corrected library is built
+once and reused. Broader qualification exposed five malformed test cases: two
+missing owning relationships and one shared spacing fixture lacking the rels
+content-type registration. Their relationships/manifest are repaired with all
+assertions retained. A tracked join verifies 21 unchanged runtime assets and
+2,596 public inputs. Only failed checks are repeated; newly selected Linux
+spacing checks run once. The superseded CI run was cancelled to save quota.
 
 ## Inherited failures and limitations
 
@@ -122,21 +112,18 @@ no threshold change or formal manifest/agent-rating pass is claimed.
 
 ## Evidence and workflow
 
-Ignored evidence: `artifacts/preview-section-navigation-20261026/qualification.json`;
-artifact: `candidate-qualified-final/`. Package:
-`artifacts/nuget/preview-020-section-navigation-20261026/`.
-Exact method sets, failed attempts, reviewed report joins, isolated temporary
-folders and runtime/input hashes are retained. Original Word references and
-identical portfolio comparisons are reused. The unchanged 715-case/12-family
-manifest validation is reused, not counted as Office fidelity. The
-[preceding qualification](https://github.com/Lokad/OoxPDF/blob/16019acf/docs/PreviewQualification.md)
-retains font-failure/diagnostic controls and earlier maintenance evidence.
+Ignored evidence: `artifacts/preview-part-ownership-20261026/qualification.json`;
+artifact: `candidate-qualified/`. Package:
+`artifacts/nuget/preview-020-part-ownership-20261026/`.
+Exact sets, raw failed reports, reviewed fixture joins, isolated temporary folders,
+constructor/caller census and original input/Office pins are retained. The
+unchanged 715-case/12-family manifest validation and identical portfolio comparisons
+are reused. The [preceding qualification](https://github.com/Lokad/OoxPDF/blob/fdb9d738/docs/PreviewQualification.md)
+retains section/navigation and public-contract maintenance with its evidence.
 
 Safe managed dependency-free execution, cancellation, meaningful bounds, coarse
-admission/refunds, bounded caches/staging, cleanup, atomic publication and PDF
-validity remain. No helper deletion, API removal, quota or framework was added.
-The preserved roadmap stays deferred. The latest full workspace measurement,
-before this batch, is **6.778 GB/935,126 files**, zero errors (2026-10-26), above
-the loose 5 GB target. The milestone and its new shared input snapshot are measured
-separately; no repeat full scan or unverified deletion was needed. Preserve useful
-evidence and use infrequent stale-artifact maintenance.
+host admission/refunds, bounded caches/staging, cleanup, atomic publication and
+PDF validity remain. The roadmap stays deferred. The latest full workspace check
+is 6.778 GB/935,126 files before the preceding batches (2026-10-26), above the loose
+5 GB target. Measure this milestone and its shared input snapshot separately;
+preserve useful evidence and avoid an unnecessary full scan or blanket deletion.
