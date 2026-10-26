@@ -162,10 +162,13 @@ internal sealed partial class OpenTypeFont
     // reads as Load, so malformed files are accepted/rejected identically; kern-only
     // defects surface at first full load through the existing fallback instead.
     internal readonly record struct FontDiscoveryHeaders(
-        string FamilyName,
+        IReadOnlyList<string> FamilyNames,
         ushort WeightClass,
         double ItalicAngle,
-        bool HasMathTable);
+        bool HasMathTable)
+    {
+        public string FamilyName => FamilyNames[0];
+    }
 
     // discovery parses only the table directory plus the full extents of
     // head, hhea, maxp, name, OS/2, post, cmap, and hmtx. The multi-megabyte outline
@@ -374,7 +377,7 @@ internal sealed partial class OpenTypeFont
         {
             throw new InvalidDataException("Font has zero units-per-em.");
         }
-        string familyName = ReadFamilyName(bytes, tables);
+        IReadOnlyList<string> familyNames = ReadFamilyNames(bytes, tables);
         Os2Metrics os2 = ReadOs2(bytes, tables);
         PostMetrics post = ReadPost(bytes, tables);
         // Parsed and discarded: keeps malformed-file rejection identical to Load
@@ -383,7 +386,7 @@ internal sealed partial class OpenTypeFont
         ReadGlyphCount(bytes, tables);
         ReadCmap(bytes, tables);
         ReadAdvances(bytes, tables);
-        return new FontDiscoveryHeaders(familyName, os2.WeightClass, post.ItalicAngle, tables.ContainsKey("MATH"));
+        return new FontDiscoveryHeaders(familyNames, os2.WeightClass, post.ItalicAngle, tables.ContainsKey("MATH"));
         }
         catch (InvalidDataException)
         {
@@ -1017,11 +1020,16 @@ internal sealed partial class OpenTypeFont
     }
 
     private static string ReadFamilyName(byte[] bytes, Dictionary<string, TableRecord> tables)
+        => ReadFamilyNames(bytes, tables)[0];
+
+    private static IReadOnlyList<string> ReadFamilyNames(byte[] bytes, Dictionary<string, TableRecord> tables)
     {
         TableRecord name = Required(tables, "name");
         ushort count = U16(bytes, name.Offset + 2);
         ushort stringOffset = U16(bytes, name.Offset + 4);
         string? fallback = null;
+        string? canonical = null;
+        var names = new List<string>();
 
         for (int i = 0; i < count; i++)
         {
@@ -1039,15 +1047,18 @@ internal sealed partial class OpenTypeFont
             string value = platform == 3
                 ? Encoding.BigEndianUnicode.GetString(bytes, valueOffset, length)
                 : Encoding.ASCII.GetString(bytes, valueOffset, length);
-            if (platform == 3)
-            {
-                return value.TrimEnd('\0');
-            }
-
-            fallback ??= value.TrimEnd('\0');
+            value = value.TrimEnd('\0');
+            if (platform == 3) { canonical ??= value; }
+            else { fallback ??= value; }
+            if (platform == 3 && !string.IsNullOrWhiteSpace(value) && !names.Contains(value, StringComparer.OrdinalIgnoreCase)) { names.Add(value); }
         }
 
-        return fallback ?? "Unknown";
+        // Keep the existing canonical name and catalog ordering. Other language
+        // records are lookup aliases for that same program/face, not extra faces.
+        canonical ??= fallback ?? "Unknown";
+        names.RemoveAll(name => string.Equals(name, canonical, StringComparison.OrdinalIgnoreCase));
+        names.Insert(0, canonical);
+        return names.ToArray();
     }
 
     private static CmapFormat? ReadCmap(byte[] bytes, Dictionary<string, TableRecord> tables)

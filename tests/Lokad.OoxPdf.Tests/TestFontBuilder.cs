@@ -35,6 +35,9 @@ internal static class TestFontBuilder
         return Assemble(scalerTag: new string(new[] { (char)0, (char)1, (char)0, (char)0 }), includeOutlines: true);
     }
 
+    public static byte[] CreateFontWithFamilyNames(params (ushort Language, string Name)[] familyNames)
+        => ReplaceTable(CreateTestFont(), "name", BuildName(familyNames));
+
     public static byte[] CreateMathFont(byte[] mathTable, byte[]? scriptStyles = null) =>
         Assemble(scalerTag: new string(new[] { (char)0, (char)1, (char)0, (char)0 }), includeOutlines: true, mathTable: mathTable, scriptStyles: scriptStyles);
 
@@ -240,26 +243,28 @@ internal static class TestFontBuilder
     }
 
     private static byte[] BuildName(string familyName)
+        => BuildName(new[] { ((ushort)0x0409, familyName) });
+
+    private static byte[] BuildName(IReadOnlyList<(ushort Language, string Name)> familyNames)
     {
-        byte[] storage = System.Text.Encoding.BigEndianUnicode.GetBytes(familyName);
-        byte[] name = new byte[6 + 12 + storage.Length];
-        name[2] = 0;
-        name[3] = 1;
-        name[4] = 0;
-        name[5] = 18;
-        name[6] = 0;
-        name[7] = 3;
-        name[8] = 0;
-        name[9] = 1;
-        name[10] = 0x04;
-        name[11] = 0x09;
-        name[12] = 0;
-        name[13] = 1;
-        name[14] = (byte)(storage.Length >> 8);
-        name[15] = (byte)storage.Length;
-        name[16] = 0;
-        name[17] = 0;
-        storage.CopyTo(name, 18);
+        byte[][] strings = familyNames.Select(value => System.Text.Encoding.BigEndianUnicode.GetBytes(value.Name)).ToArray();
+        int storageStart = 6 + 12 * familyNames.Count;
+        byte[] name = new byte[storageStart + strings.Sum(value => value.Length)];
+        void Write16(int offset, int value) => System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(name.AsSpan(offset, 2), checked((ushort)value));
+        Write16(2, familyNames.Count);
+        Write16(4, storageStart);
+        int storageOffset = 0;
+        for (int index=0; index < familyNames.Count; index++) {
+            int record = 6 + index * 12;
+            Write16(record, 3);
+            Write16(record+2, 1);
+            Write16(record+4, familyNames[index].Language);
+            Write16(record+6, 1);
+            Write16(record+8, strings[index].Length);
+            Write16(record+10, storageOffset);
+            strings[index].CopyTo(name, storageStart + storageOffset);
+            storageOffset += strings[index].Length;
+        }
         return name;
     }
 
@@ -563,9 +568,10 @@ internal static class TestFontBuilder
         return output.ToArray();
     }
 
-    public static byte[] CreateCollection(string firstFamily, string secondFamily)
+    public static byte[] CreateCollection(string firstFamily, string secondFamily, IReadOnlyList<(ushort Language, string Name)>? firstFamilyNames = null)
     {
         byte[] first = Assemble(scalerTag: new string(new[] { (char)0, (char)1, (char)0, (char)0 }), includeOutlines: true, familyName: firstFamily);
+        if (firstFamilyNames is not null) first = ReplaceTable(first, "name", BuildName(firstFamilyNames));
         byte[] secondName = BuildName(secondFamily);
         var entries = GetDirectoryEntries(first);
         int tableCount = entries.Count;

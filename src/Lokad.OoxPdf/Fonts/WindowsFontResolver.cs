@@ -75,6 +75,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
             DiscoverySnapshot Discover()
             {
                 var fonts = new List<FontFaceResolution>();
+                var aliases = new Dictionary<string, List<FontFaceResolution>>(StringComparer.OrdinalIgnoreCase);
                 var sourcesByPath = new Dictionary<string, FileFontProgramSource>(StringComparer.OrdinalIgnoreCase);
                 var retention = new FontProgramCache(MaxSnapshotRetainedBytes, StringComparer.OrdinalIgnoreCase);
                 foreach (string fontsDirectory in fontDirectories.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
@@ -125,7 +126,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                                 }
                                 if (!string.IsNullOrWhiteSpace(headers.FamilyName))
                                 {
-                                    fonts.Add(new FontFaceResolution(
+                                    var face = new FontFaceResolution(
                                         headers.FamilyName,
                                         headers.FamilyName,
                                         new FontStyleKey(
@@ -135,7 +136,15 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                                             FaceIndex: faceIndex,
                                             HasMathTable: headers.HasMathTable),
                                         source,
-                                        IsFallback: false));
+                                        IsFallback: false);
+                                    fonts.Add(face);
+                                    foreach (string family in headers.FamilyNames) {
+                                        if (!aliases.TryGetValue(family, out List<FontFaceResolution>? familyFaces)) {
+                                            familyFaces = new();
+                                            aliases.Add(family, familyFaces);
+                                        }
+                                        familyFaces.Add(face);
+                                    }
                                 }
                         }
                         }
@@ -149,11 +158,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                 FontFaceResolution[] faces = fonts
                     .OrderBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase)
                     .ToArray();
-                var byFamily = new Dictionary<string, FontFaceResolution[]>(StringComparer.OrdinalIgnoreCase);
-                foreach (IGrouping<string, FontFaceResolution> group in faces.GroupBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase))
-                {
-                    byFamily[group.Key] = group.ToArray();
-                }
+                var byFamily = aliases.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray(), StringComparer.OrdinalIgnoreCase);
 
                 return new DiscoverySnapshot(faces, byFamily, faces.Where(f => !f.HasMathTable).ToArray());
             }
@@ -343,10 +348,10 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
 
     private static FontFaceResolution RepopulateRequestedFamily(FontFaceResolution cached, FontRequest request)
     {
-        // Fallback results bake in the first-seen request spelling; re-stamp the current
-        // spelling so shared resolvers report deterministically per request. Exact hits
-        // already carry discovery spelling and return allocation-free.
-        return cached.IsFallback && !string.Equals(cached.RequestedFamily, request.FamilyName, StringComparison.Ordinal)
+        // Fallback and alias requests keep caller spelling. Canonical exact matches
+        // retain discovery spelling and return allocation-free.
+        return (cached.IsFallback || !string.Equals(cached.ResolvedFamily, request.FamilyName, StringComparison.OrdinalIgnoreCase)) &&
+            !string.Equals(cached.RequestedFamily, request.FamilyName, StringComparison.Ordinal)
             ? cached with { RequestedFamily = request.FamilyName }
             : cached;
     }
