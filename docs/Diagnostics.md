@@ -134,15 +134,15 @@ Exit codes:
 
 ## Output bounds and host admission
 
-`OoxPdfOptions.ConversionLimits` bounds output, not cumulative work or total
-managed memory. The current defaults are:
+`OoxPdfOptions.ConversionLimits` bounds PDF output and resource payloads, not
+cumulative work or total managed memory. The current defaults are:
 
 | Limit | Default |
 |---|---|
 | `MaxPagesPerConversion` | 10,000 pages |
 | `MaxPdfContentBytesPerConversion` | 1 GiB encoded page/group content |
 | `MaxOutputBytesPerConversion` | 2 GiB serialized PDF |
-| `MaxPdfFontBytesPerConversion` | 256 MiB serialized font/ToUnicode data |
+| `MaxPdfFontBytesPerConversion` | 256 MiB uncompressed embedded-font/ToUnicode payloads before PDF stream compression |
 | `MaxPdfImageBytesPerConversion` | 512 MiB serialized images/masks |
 | `MaxResidentPageContentBytesPerConversion` | 64 MiB resident page/group payload |
 
@@ -162,8 +162,14 @@ Page/group content beyond the resident window spills into a delete-on-close
 file. Informational `PDF_PAGE_CONTENT_SPILLED` is emitted once on escalation.
 With `ReportResourceUsage`, `CONVERSION_RESOURCE_SUMMARY` reports `pages`,
 `pdfPages`, `pdfContentBytes`, `pdfOutputBytes`, `pdfFontBytes`, `pdfImageBytes`
-and `pageContentSpilledBytes`. These are output/spill totals, not live-memory
-measurements. Informational diagnostics do not affect CLI `--strict` exit codes.
+and `pageContentSpilledBytes`. These combine physical PDF output bytes with
+resource payload and spill totals, rather than measuring live memory.
+`pdfFontBytes` and its limit count uncompressed embedded-font programs and ToUnicode
+data before PDF stream compression; PDF dictionaries and Standard-14 ToUnicode
+maps are excluded. This total can exceed the complete PDF's size. Use
+`pdfOutputBytes`/`MaxOutputBytesPerConversion` for the complete serialized PDF.
+Informational diagnostics do not affect CLI `--strict` exit codes. Existing
+diagnostic IDs, numeric fields and message format are unchanged.
 
 The summary is emitted before serialization for stream output and after staging
 but before atomic publication for file output. Writer-stage totals are zero in

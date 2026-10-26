@@ -19,8 +19,9 @@ namespace Lokad.OoxPdf;
 /// overload for the same inputs.</item>
 /// <item>File paths are resolved against the working directory at invocation,
 /// including asynchronous calls that wait in the thread pool.</item>
-/// <item>Caller-owned streams are never closed or disposed. Input is read sequentially
-/// and output needs only forward writes; non-seekable host streams are supported.
+/// <item>Caller-owned streams are never closed or disposed. Seekable input may be
+/// randomly accessed; non-seekable input is read forward through bounded staging.
+/// Output needs only forward writes; non-seekable host streams are supported.
 /// File outputs publish atomically: any failure, including cancellation, leaves a
 /// pre-existing destination untouched and removes only the staging file. Observer callbacks
 /// (<see cref="OoxPdfOptions.DiagnosticSink"/>) run before publication, so a throwing observer fails

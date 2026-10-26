@@ -60,14 +60,24 @@ streams, resolvers and their bounded caches remain caller-owned and outside this
 conversion lease. Existing bounded shared font caches also remain a shared
 baseline; account for them in host pool capacity. A null option keeps ordinary conversion without host admission.
 
-Page/output/serialized content/font/image limits and the bounded page-content
-staging window remain. `ReportResourceUsage` still emits an informational
+Page, PDF output and resource payload limits, plus the bounded page-content
+staging window, remain. `ReportResourceUsage` still emits an informational
 `CONVERSION_RESOURCE_SUMMARY`; it now reports only `pages`, `pdfPages`,
 `pdfContentBytes`, `pdfOutputBytes`, `pdfFontBytes`, `pdfImageBytes` and
 `pageContentSpilledBytes`. Remove dependencies on retired work/retained/peak
-fields. These totals describe output and spilling, not managed-heap consumption.
+fields. These totals combine serialized PDF output with resource payload and spill
+counts, rather than measuring managed-heap consumption. `pdfFontBytes` and
+`MaxPdfFontBytesPerConversion` count uncompressed embedded-font programs and
+ToUnicode data before PDF stream compression, excluding PDF dictionaries and
+Standard-14 ToUnicode maps. Use `pdfOutputBytes`/`MaxOutputBytesPerConversion` for
+the complete serialized PDF size. These definitions clarify existing counting;
+values, limits, diagnostic IDs/fields/message and refusal behavior are unchanged.
 
 ## Stream failures and shared resolvers
+
+Seekable input may be randomly accessed. Forward-only input is supported through
+bounded, cancellation-aware staging; PDF output requires only forward writes.
+The direct seekable-input path avoids copying the compressed archive.
 
 Caller-owned streams remain open on failure. Cancellation, an output limit or
 an I/O failure during emission can leave an incomplete PDF prefix in the output;

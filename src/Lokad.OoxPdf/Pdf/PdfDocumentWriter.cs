@@ -475,7 +475,8 @@ internal sealed class PdfDocumentWriter
         ReadOnlyMemory<byte> fontProgram = font.FontProgramBytes;
         byte[] compressedFontProgram = Compress(fontProgram.Span, cancellationToken);
         byte[] toUnicode = Encoding.ASCII.GetBytes(font.BuildToUnicodeCMap(cancellationToken));
-        // Count serialized font payload separately from coarse host admission.
+        // Count uncompressed font/ToUnicode payloads before PDF stream compression;
+        // dictionaries count toward total output, separately from host admission.
         OoxConversionBudget.Current?.ChargePdfFontBytes(checked((long)fontProgram.Length + toUnicode.Length));
         writer.WriteStreamObject(objects.FontFile, FormattableString.Invariant($"/Filter /FlateDecode /Length1 {fontProgram.Length}"), compressedFontProgram);
         writer.WriteStreamObject(objects.ToUnicode, string.Empty, toUnicode);

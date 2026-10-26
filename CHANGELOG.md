@@ -2,6 +2,9 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Clarifies existing stream access and font-payload counting contracts: seekable
+  inputs may use random access, while font limits/totals count uncompressed data
+  before PDF stream compression. Runtime behavior and diagnostics are unchanged.
 - Selects DOCX first-page headers and footers using their owning section, while
   preserving default/even selection and undefined-variant suppression.
 - Preserves incoming links to paragraph-end text bookmarks, including wrapped

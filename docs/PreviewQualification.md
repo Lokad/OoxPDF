@@ -1,5 +1,14 @@
 # 0.2.0-preview qualification
 
+The subsequent public-contract clarification changes comments and caller guidance
+only. Compiler token comparison verifies the four C# files have unchanged executable
+tokens; all 24 qualified/root runtime assets match. Eight existing stream/resource
+checks pass in one focused invocation. Updated package guidance uses the identical
+qualified DLL. The preceding Windows/Ubuntu, Office, corpus and CI results below
+are reused; no rendering build, broader replay or new visual comparison is required.
+Evidence: `artifacts/preview-public-contracts-20261026/qualification.json`;
+package: `artifacts/nuget/preview-020-public-contracts-20261026/`.
+
 The bounded section-selection/navigation milestone is qualified.
 Publication, performance optimization and broader expansion remain deferred.
 Library build source is `01b1c35f`; final test-only source is

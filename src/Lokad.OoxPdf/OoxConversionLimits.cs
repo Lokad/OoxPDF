@@ -1,8 +1,8 @@
 namespace Lokad.OoxPdf;
 
 /// <summary>
-/// Output bounds and the resident page-content staging window. These are not
-/// memory accounting or work quotas. Use host-supplied MemoryAdmission and
+/// PDF output and resource payload bounds, plus the resident page-content staging
+/// window. These are not memory accounting or work quotas. Use host-supplied MemoryAdmission and
 /// cooperative cancellation for shared-process admission and execution control.
 /// Archive, XML and image bounds apply independently.
 /// </summary>
@@ -17,7 +17,12 @@ public sealed class OoxConversionLimits
     /// <summary>Maximum output bytes per conversion (default 2147483648).</summary>
     public long MaxOutputBytesPerConversion { get; init; } = 2_147_483_648;
 
-    /// <summary>Maximum serialized font bytes per conversion (default 268435456).</summary>
+    /// <summary>
+    /// Maximum uncompressed embedded-font program and ToUnicode payload bytes per
+    /// conversion, before PDF stream compression (default 268435456). Excludes PDF
+    /// dictionaries and Standard-14 font ToUnicode maps. Use MaxOutputBytesPerConversion
+    /// to bound the complete serialized PDF.
+    /// </summary>
     public long MaxPdfFontBytesPerConversion { get; init; } = 268_435_456;
 
     /// <summary>Maximum serialized image bytes per conversion (default 536870912).</summary>
