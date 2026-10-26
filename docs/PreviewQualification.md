@@ -1,44 +1,48 @@
 # 0.2.0-preview qualification
 
-The bounded font-failure/diagnostic milestone is qualified. Publication,
-performance optimization and broader expansion remain deferred. The accepted
-library and harness source is `f0cc85784833d9ca58cae8255e9081b7624006ba`, SHA-256
-`0A769DC8AAA40B01D0654BCFB8577723019CDCA94E6160D0247B4BB59A06345C`.
-[Windows/Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/40314971817)
-at the accepted source. CI builds are independent of the local frozen artifact.
+The bounded section-selection/navigation milestone is qualified.
+Publication, performance optimization and broader expansion remain deferred.
+Library build source is `01b1c35f`; final test-only source is
+`5e24a67802a48af00bc1e0bd6888334cf3f0b6f3`. The qualified library SHA-256 is
+`CB3CCD69138BCF95AA6FDAD34546E2809A20B64BD39315C254F31B8669F017DC`.
+[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40321051391)
+passed at the final test source. CI builds are independent of the local artifact.
 
 | Gate | Result |
 |---|---|
-| Release/affected checks | One committed linked-worktree artifact; all 27 affected methods pass both platforms. Five new portable methods cover fatal limits, ordinary font-I/O recovery, cancellation and effective visibility. Two inherited nullable test warnings remain. |
-| Windows milestone | **3,796 pass, one inherited failure, five skips**; 3,802 unique methods in two disjoint invocations. |
-| Ubuntu milestone | **1,123 pass, seven inherited failures, 69 skips**; 1,199 unique methods. No prior pass regressed. |
-| Original failure probes | Six public-API controls: PPTX/DOCX limit refusals and PPTX cancellation preserve the original exception and destination. Ordinary I/O recovery and successful controls retain identical PDFs. |
-| Hidden-text diagnostics | Four original CLI probes: hidden missing glyphs now return strict exit 0; visible missing glyphs still warn/return 3. All four PDF hashes are unchanged, including the hidden case's existing font data. |
-| Representative documents | Nine sources/16 outcomes/32 pages have exact prior PDFs, diagnostics and semantic results. Each outcome converted once; no new Office exports or rasterizations. |
-| Independent portfolio gates | Reused by identity: two strict PPTX passes/fourteen strict DOCX failures. Existing visual thresholds and the retained note recall failure remain unchanged. |
+| Release/affected checks | One accepted corrected library artifact; 36 affected methods pass Windows, 33 pass/three declared installed-font skips on Ubuntu. Six new portable methods pass both hosts. Two inherited nullable test warnings remain. |
+| Windows milestone | **3,802 pass, one inherited failure, five skips**; 3,808 unique methods, 3,810 method attempts across three invocations, including two failed harness checks repaired without replaying passes. |
+| Ubuntu milestone | **1,152 pass, seven inherited failures, 72 skips**; 1,231 unique methods, 1,233 attempts. No prior pass regressed. |
+| Original review controls | Six original sources reuse pinned Word Final exports. Later-section first headers and paragraph-end GoTo links now survive. Four control PDFs remain byte-identical; restored end destination residual X .248pt/Y .48602pt. |
+| Independent neighbor | New four-page Word Final control confirms first header/footer selection at section start, default continuation and undefined even-story suppression. Matched text origins across all seven sources differ at most X .02401pt/Y .07996pt; font sizes agree. This is not a raster parity claim. |
+| Representative documents | Nine sources/16 outcomes/32 pages retain exact prior PDFs, diagnostics and semantic results. Each outcome converted once. |
+| Independent portfolio gates | Reused by identity: two strict PPTX passes/fourteen strict DOCX failures. Existing visual thresholds and note/clip recall failures remain unchanged. |
 | API/runtime | All 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0. |
-| Package/transfer | Same dependency-free package and consumer source pass Windows/Ubuntu. All 24 root assets, a corrected hidden-text strict DOCX and a representative PPTX match without root rebuild or suite replay. |
+| Package/transfer | Same dependency-free package and consumer source pass Windows/Ubuntu. All 24 root assets, a corrected two-section DOCX and representative PPTX match without root rebuild or suite replay. |
 
 ## Conversion behavior and bounded maintenance
 
-PPTX font measurement excludes OoxPdfLimitExceededException from ordinary font-I/O
-recovery, following the existing fatal-limit policy. A custom resolver's refusal
-now aborts conversion rather than becoming a successful PDF publication. File and
-stream tests preserve exception identity, destinations and caller-owned streams;
-cancellation and ordinary I/O fallback retain their previous behavior.
+DOCX page records retain their owning section's first physical page. Shared
+header/footer and floating-story selection, static-frame mapping and eligibility
+consume that provenance; continuation templates and the existing caches retain it.
+Default/even parity and page-field numbering rules are unchanged. This does not
+add full continuous-section or page-number-restart support.
 
-DOCX missing-glyph reporting uses the same effective Hidden flag as inline layout.
-It keeps warnings for visible missing characters and explicit vanish=false, while
-hidden text retains source metadata without claiming that an invisible character
-paints a question mark. Final/AllMarkup controls pass. Font preparation, source
-inspectors, paragraph struts, bounded caches and recovery ownership remain; no
-writer, quota, callback or resource-admission framework was added.
+A bookmark after its final text item/run resolves to that source endpoint. The
+same-run fallback cannot grab an earlier wrapped fragment before the requested
+offset. Hidden trailing text does not own the destination. Ordinary prose keeps
+its existing run-based layout rather than opting into inline-object layout for
+metadata. Terminal non-text object anchors retain their existing placement rules.
 
-One successful Release build serves the affected set, disjoint broader remainders,
-ten original review probes, package consumers and verified transfer. No failed
-build, harness repair, parent build or accepted-method replay was required. The
-original failed review outputs remain separate. The missing-glyph correction
-changes diagnostics rather than PDF bytes; it does not optimize retained font data.
+The first compiled attempt fixed section headers but did not handle terminal
+bookmarks on the legacy prose path; its outputs remain as an unqualified attempt.
+The corrected library is built once and reused throughout accepted qualification.
+A fixture-path repair and two endpoint-assertion repairs affect tests only. The
+tracked report join verifies 21 unchanged runtime assets and 2,589 public inputs.
+Only the two failed endpoint checks are repeated on the accepted library; broader
+sets are disjoint from the affected selection. No accepted pass is replayed.
+One malformed generated validation input was rejected by Word; it is retained
+separately and contributes no rendering or reference-pass evidence.
 
 ## Inherited failures and limitations
 
@@ -109,18 +113,21 @@ no threshold change or formal manifest/agent-rating pass is claimed.
 
 ## Evidence and workflow
 
-Ignored evidence: `artifacts/preview-font-recovery-20261026/qualification.json`;
-artifact: `candidate-final/`. Package:
-`artifacts/nuget/preview-020-font-recovery-20261026/`.
-The exact method selections, isolated temporary directories and source/runtime
-hashes are retained. Existing Office references, unchanged comparisons and the
-715-case/12-family manifest validation are reused. The
-[preceding qualification](https://github.com/Lokad/OoxPDF/blob/d2f5d6d8/docs/PreviewQualification.md)
-retains the font-alias/font-slot controls, earlier maintenance and residual gates.
+Ignored evidence: `artifacts/preview-section-navigation-20261026/qualification.json`;
+artifact: `candidate-qualified-final/`. Package:
+`artifacts/nuget/preview-020-section-navigation-20261026/`.
+Exact method sets, failed attempts, reviewed report joins, isolated temporary
+folders and runtime/input hashes are retained. Original Word references and
+identical portfolio comparisons are reused. The unchanged 715-case/12-family
+manifest validation is reused, not counted as Office fidelity. The
+[preceding qualification](https://github.com/Lokad/OoxPDF/blob/16019acf/docs/PreviewQualification.md)
+retains font-failure/diagnostic controls and earlier maintenance evidence.
 
 Safe managed dependency-free execution, cancellation, meaningful bounds, coarse
 admission/refunds, bounded caches/staging, cleanup, atomic publication and PDF
-validity remain. The preserved roadmap stays deferred. The latest full workspace
-check remains **6.778 GB/935,126 files**, zero errors (2026-10-26), above the loose
-5 GB target. This small batch is measured separately; no repeat full scan or
-unverified deletion was needed. Preserve inputs and useful evidence.
+validity remain. No helper deletion, API removal, quota or framework was added.
+The preserved roadmap stays deferred. The latest full workspace measurement,
+before this batch, is **6.778 GB/935,126 files**, zero errors (2026-10-26), above
+the loose 5 GB target. The milestone and its new shared input snapshot are measured
+separately; no repeat full scan or unverified deletion was needed. Preserve useful
+evidence and use infrequent stale-artifact maintenance.
