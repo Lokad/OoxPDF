@@ -300,8 +300,6 @@ internal static partial class OoxLimitsTests
 
     private static object ChartWorkbookWithCells()
     {
-        Type workbookType = typeof(PptxRenderer).GetNestedType("ChartWorkbookData", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Expected chart workbook data type.");
         var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
         {
             ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -309,7 +307,7 @@ internal static partial class OoxLimitsTests
                 ["A1"] = "5",
             },
         };
-        return Activator.CreateInstance(workbookType, [sheets]) ?? throw new InvalidOperationException("Expected workbook instance.");
+        return PptxChartRangeTests.ReadWorkbookCells(sheets);
     }
 
     private static string DocxContentTypes()

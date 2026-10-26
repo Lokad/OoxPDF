@@ -551,43 +551,6 @@ internal sealed partial class PptxRenderer
                 : sheetName;
         }
 
-        private static IReadOnlyDictionary<string, ChartWorksheetData> ConvertWorkbookSheets(
-            IReadOnlyDictionary<string, Dictionary<string, string>> sheets)
-        {
-            var converted = new Dictionary<string, ChartWorksheetData>(StringComparer.OrdinalIgnoreCase);
-            foreach (KeyValuePair<string, Dictionary<string, string>> sheet in sheets)
-            {
-                var cells = new Dictionary<string, ChartWorkbookCell>(StringComparer.OrdinalIgnoreCase);
-                foreach (KeyValuePair<string, string> cell in sheet.Value)
-                {
-                    cells[cell.Key] = new ChartWorkbookCell(cell.Value, cell.Value, true, true, null, 0, false, false, false, null, string.Empty, ReadWorkbookCellValueKind(null, cell.Value, true), string.Empty, string.Empty, new Dictionary<string, string>());
-                }
-
-                converted[sheet.Key] = new ChartWorksheetData(cells, new HashSet<int>(), new HashSet<int>());
-            }
-
-            return converted;
-        }
-
-        private static ChartWorkbookSheet[] ConvertWorkbookSheetRecords(IReadOnlyDictionary<string, ChartWorksheetData> sheets)
-        {
-            return sheets.Keys
-                .Select((name, index) => new ChartWorkbookSheet(name, string.Empty, string.Empty, string.Empty, index, string.Empty))
-                .ToArray();
-        }
-
-        private static IReadOnlyDictionary<string, ChartWorksheetData> ConvertWorkbookSheets(
-            IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets)
-        {
-            var converted = new Dictionary<string, ChartWorksheetData>(StringComparer.OrdinalIgnoreCase);
-            foreach (KeyValuePair<string, Dictionary<string, ChartWorkbookCell>> sheet in sheets)
-            {
-                converted[sheet.Key] = new ChartWorksheetData(sheet.Value, new HashSet<int>(), new HashSet<int>());
-            }
-
-            return converted;
-        }
-
         private static bool TryParseRange(string? formula, out string sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow)
         {
             sheetName = string.Empty;

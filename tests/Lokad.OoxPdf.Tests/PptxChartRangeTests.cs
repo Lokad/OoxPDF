@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pptx;
 
@@ -62,9 +63,6 @@ internal static class PptxChartRangeTests
 
     private static object CreateWorkbook()
     {
-        Type workbookType = typeof(PptxRenderer).GetNestedType(
-            "ChartWorkbookData",
-            BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart workbook data type.");
         var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
         {
             ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -73,7 +71,7 @@ internal static class PptxChartRangeTests
                 ["A2"] = "6",
             },
         };
-        return Activator.CreateInstance(workbookType, [sheets]) ?? throw new InvalidOperationException("Expected workbook instance.");
+        return PptxChartRangeTests.ReadWorkbookCells(sheets);
     }
 
     private static int ReadCellCount(object workbook, string formula)
@@ -249,7 +247,30 @@ internal static class PptxChartRangeTests
             sharedStringsBody, null);
     }
 
-    private static object ReadWorkbookPackage(string sheetsFragment, string workbookRelsFragment, IReadOnlyDictionary<string, string> sheetBodies, string? sharedStringsBody, string? stylesBody = null)
+    internal static object ReadWorkbookCells(IReadOnlyDictionary<string, Dictionary<string, string>> sheets, bool date1904 = false)
+    {
+        XNamespace spreadsheet = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+        XNamespace officeRels = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+        XNamespace packageRels = "http://schemas.openxmlformats.org/package/2006/relationships";
+        var sheetList = new XElement(spreadsheet+"sheets");
+        var relationships = new List<XElement>();
+        var bodies = new Dictionary<string, string>();
+        foreach (var sheet in sheets)
+        {
+            int index = bodies.Count+1;
+            string id = "rId"+index;
+            sheetList.Add(new XElement(spreadsheet+"sheet", new XAttribute("name", sheet.Key),
+                new XAttribute("sheetId", index), new XAttribute(officeRels+"id", id)));
+            relationships.Add(new XElement(packageRels+"Relationship", new XAttribute("Id", id),
+                new XAttribute("Type", officeRels.NamespaceName+"/worksheet"), new XAttribute("Target", "worksheets/sheet"+index+".xml")));
+            bodies["xl/worksheets/sheet"+index+".xml"] = new XElement(spreadsheet+"sheetData", sheet.Value.Select(cell =>
+                new XElement(spreadsheet+"row", new XAttribute("r", new string(cell.Key.Where(char.IsDigit).ToArray())),
+                    new XElement(spreadsheet+"c", new XAttribute("r", cell.Key), new XElement(spreadsheet+"v", cell.Value))))).ToString();
+        }
+        return ReadWorkbookPackage(sheetList.ToString(), string.Concat(relationships), bodies, null, date1904: date1904);
+    }
+
+    private static object ReadWorkbookPackage(string sheetsFragment, string workbookRelsFragment, IReadOnlyDictionary<string, string> sheetBodies, string? sharedStringsBody, string? stylesBody = null, bool date1904 = false)
     {
         const string spreadsheet = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
         const string officeRels = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -274,7 +295,7 @@ internal static class PptxChartRangeTests
             ["xl/workbook.xml"] =
                 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                 "<workbook xmlns=\"" + spreadsheet + "\" xmlns:r=\"" + officeRels + "\">" +
-                sheetsFragment + "</workbook>",
+                (date1904 ? "<workbookPr date1904=\"1\"/>" : "") + sheetsFragment + "</workbook>",
             ["xl/_rels/workbook.xml.rels"] =
                 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                 "<Relationships xmlns=\"" + packageRels + "\">" +

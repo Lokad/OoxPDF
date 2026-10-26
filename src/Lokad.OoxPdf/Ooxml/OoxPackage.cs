@@ -14,13 +14,9 @@ internal sealed class OoxPackage
 
     private readonly Dictionary<string, OoxPart> parts;
 
-    // conversion-local immutable parse indexes. Shared masters, layouts, and
-    // relationship parts were reparsed per slide (and visibility discovery reparsed
-    // slides the scene later parsed again). Each unique part now parses once; every
-    // consumer shares the resulting DOM/dictionary. Entries are immutable parse results:
-    // downstream code only reads them (chart cache hydration is idempotent and
-    // deterministic) or works on explicit copies. Single-owner affinity: the package
-    // serves one conversion on one thread; these caches are not synchronized.
+    // Conversion-local parse caches for LoadXml/relationship consumers. Callers
+    // read the shared DOMs or work on detached copies. One conversion owns the
+    // package on one thread; these caches need no shared synchronization.
     private readonly Dictionary<string, XDocument> xmlCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IReadOnlyDictionary<string, OoxRelationship>> relationshipCache = new(StringComparer.OrdinalIgnoreCase);
 

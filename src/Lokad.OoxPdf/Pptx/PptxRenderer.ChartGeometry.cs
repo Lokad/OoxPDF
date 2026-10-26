@@ -64,11 +64,6 @@ internal sealed partial class PptxRenderer
             plotVisibleOnly);
     }
 
-    // D01: reference-cache hydration used to serve the deleted XML-only render retry
-    // (workbook present without a scene chart - an unconstructible state). Its helpers
-    // went with it; workbook range reading itself stays live via ReadWorkbookNumberPoints.
-    // "Chart cache hydration" in the finding refers to this removed path.
-
     private static ChartFrameBox GetChartFrameBox(PptxDocument document, ShapeBounds bounds)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);

@@ -199,8 +199,7 @@ internal static class PptxChartDensifyTests
         {
             ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["A1"] = "5" },
         };
-        object workbook = Activator.CreateInstance(workbookType, [sheets])
-            ?? throw new InvalidOperationException("Expected workbook instance.");
+        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
         MethodInfo memo = workbookType.GetMethod("GetOrAddCategoryLabels", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException("Expected label memo.");
         Type factoryType = memo.GetParameters()[3].ParameterType;
@@ -242,8 +241,7 @@ internal static class PptxChartDensifyTests
         {
             ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["A1"] = "5" },
         };
-        object workbook = Activator.CreateInstance(workbookType, [sheets])
-            ?? throw new InvalidOperationException("Expected workbook instance.");
+        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
         MethodInfo memo = workbookType.GetMethod("GetOrAddSeriesNames", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException("Expected series-name memo.");
         IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> arrayA = [];
@@ -290,8 +288,7 @@ internal static class PptxChartDensifyTests
         {
             ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["A1"] = "5" },
         };
-        object workbook = Activator.CreateInstance(workbookType, [sheets])
-            ?? throw new InvalidOperationException("Expected workbook instance.");
+        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
         MethodInfo memo = workbookType.GetMethod("GetOrAddSeriesVectors", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException("Expected series-vectors memo.");
         IReadOnlyList<PptxRenderer.ChartIndexedNumberVector> arrayA = [];
@@ -325,8 +322,7 @@ internal static class PptxChartDensifyTests
         {
             ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["A1"] = "5" },
         };
-        object workbook = Activator.CreateInstance(workbookType, [sheets])
-            ?? throw new InvalidOperationException("Expected workbook instance.");
+        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
         MethodInfo memo = workbookType.GetMethod("GetOrAddValueExtents", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException("Expected extent memo.");
         PptxRenderer.ChartValueExtents extentsA = new(0d, 10d);
@@ -362,8 +358,7 @@ internal static class PptxChartDensifyTests
         {
             ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["A1"] = "5" },
         };
-        object workbook = Activator.CreateInstance(workbookType, [sheets])
-            ?? throw new InvalidOperationException("Expected workbook instance.");
+        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
         MethodInfo memo = workbookType.GetMethod("GetOrAddLineValueExtents", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException("Expected line extent memo.");
         PptxRenderer.ChartValueExtents extentsA = new(0d, 10d);

@@ -2,6 +2,10 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Selects optional DOCX configuration/stories by their owning relationships;
+  unrelated styles/settings no longer change formatting or suppress headers.
+- Removes internal workbook test-construction adapters and exclusive conversion
+  helpers; tests use the live workbook reader. Typed models and caches remain.
 - Clarifies existing stream access and font-payload counting contracts: seekable
   inputs may use random access, while font limits/totals count uncompressed data
   before PDF stream compression. Runtime behavior and diagnostics are unchanged.

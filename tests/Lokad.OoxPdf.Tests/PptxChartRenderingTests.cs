@@ -929,7 +929,7 @@ internal static class PptxChartRenderingTests
                 ["B4"] = "1.4"
             }
         };
-        object workbook = Activator.CreateInstance(workbookType, [sheets]) ?? throw new InvalidOperationException("Expected workbook instance.");
+        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
         var readNumberVector = typeof(PptxRenderer)
             .GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
             .Single(method => method.Name == "ReadChartNumberVector" && method.GetParameters().Length == 3);
@@ -1007,10 +1007,10 @@ internal static class PptxChartRenderingTests
                 ["B4"] = "1.4"
             }
         };
-        object workbook = Activator.CreateInstance(workbookType, [sheets]) ?? throw new InvalidOperationException("Expected workbook instance.");
+        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
         System.Reflection.PropertyInfo date1904Property = workbookType.GetProperty("Date1904") ?? throw new InvalidOperationException("Expected workbook date1904 property.");
         TestAssert.True((bool?)date1904Property.GetValue(workbook) == false, "Expected workbook date1904 metadata to default to false.");
-        object date1904Workbook = Activator.CreateInstance(workbookType, [sheets, true]) ?? throw new InvalidOperationException("Expected date1904 workbook instance.");
+        object date1904Workbook = PptxChartRangeTests.ReadWorkbookCells(sheets, true);
         TestAssert.True((bool?)date1904Property.GetValue(date1904Workbook) == true, "Expected workbook date1904 metadata to survive construction.");
         using MemoryStream embeddedWorkbookStream = new(PptxTests.EmbeddedChartWorkbook());
         OoxPackage embeddedWorkbookPackage = OoxPackage.Open(embeddedWorkbookStream, CancellationToken.None);
@@ -1086,7 +1086,7 @@ internal static class PptxChartRenderingTests
                 ["A2"] = "5"
             }
         };
-        object commaSheetWorkbook = Activator.CreateInstance(workbookType, [commaSheetSheets]) ?? throw new InvalidOperationException("Expected quoted comma-sheet workbook instance.");
+        object commaSheetWorkbook = PptxChartRangeTests.ReadWorkbookCells(commaSheetSheets);
         Array commaSheetUnionCells = (Array)(readRangeCells.Invoke(commaSheetWorkbook, ["'Q,1'!$A$1:$A$1,$A$2:$A$2"]) ?? throw new InvalidOperationException("Expected quoted comma-sheet multi-area range cells."));
         object firstCommaSheetUnionCell = commaSheetUnionCells.GetValue(0) ?? throw new InvalidOperationException("Expected first quoted comma-sheet multi-area range cell.");
         object secondCommaSheetUnionCell = commaSheetUnionCells.GetValue(1) ?? throw new InvalidOperationException("Expected second quoted comma-sheet multi-area range cell.");
@@ -1309,7 +1309,7 @@ internal static class PptxChartRenderingTests
                 ["B3"] = "3.4"
             }
         };
-        object workbook = Activator.CreateInstance(workbookType, [sheets]) ?? throw new InvalidOperationException("Expected workbook instance.");
+        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
         var source = new PptxSceneChartDataSource(
             "Sheet1!$B$2:$B$3",
             PptxSceneChartDataSourceReferenceKind.NumberReference,
@@ -1519,7 +1519,7 @@ internal static class PptxChartRenderingTests
                 ["B1"] = "Workbook Name"
             }
         };
-        object workbook = Activator.CreateInstance(workbookType, [sheets]) ?? throw new InvalidOperationException("Expected workbook instance.");
+        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
         System.Reflection.MethodInfo readNameRecords = typeof(PptxRenderer).GetMethod(
             "ReadSceneOrXmlChartSeriesNameRecords",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series-name record reader.");
@@ -3737,7 +3737,7 @@ internal static class PptxChartRenderingTests
                 ["B4"] = "1.4"
             }
         };
-        object workbook = Activator.CreateInstance(workbookType, [sheets]) ?? throw new InvalidOperationException("Expected workbook instance.");
+        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
         System.Reflection.MethodInfo readExplosions = typeof(PptxRenderer).GetMethod(
             "ReadSceneOrXmlChartPointExplosions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected point-explosion helper.");

@@ -110,27 +110,8 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        // one bounded workbook model per embedded part, shared by every chart
-        // frame of this conversion through the render context cache. The per-frame range
-        // memo on the shared model is cleared below so nothing accumulates across frames.
-        ChartWorkbookData? chartWorkbook = GetOrCreateChartWorkbook(context.WorkbookCache, sceneChart?.ExternalData ?? default, context.CancellationToken);
-        context.CancellationToken.ThrowIfCancellationRequested();
-
-        try
-        {
-            RenderChartFrameWithWorkbook(context, graphics, fonts, bounds.Value, chartPartName, resolvedChartXml, resolvedChartPalette, sceneChart, chartWorkbook, linkAnnotations, reportedHyperlinkIds);
-        }
-        finally
-        {
-            chartWorkbook?.ClearRangeMemo();
-        }
-    }
-
-    // one bounded workbook model per embedded part, shared by every chart
-    // frame of this conversion. The cache holds boxed models (the workbook type stays
-    // private to the renderer); the per-conversion instance rides on the render context
-    // (like the image cache) and dies with the conversion. Each model is already capped
-    // (workbook totals, range unions) and the key space is bounded by package entries.
+        // One bounded model per embedded workbook, shared by chart frames for this
+    // conversion. Inspection can disable sharing with a null cache.
     private static ChartWorkbookData? GetOrCreateChartWorkbook(
         Dictionary<string, ChartWorkbookData?>? cache,
         PptxSceneChartExternalData externalData,
@@ -148,9 +129,9 @@ internal sealed partial class PptxRenderer
         }
 
         string key = externalData.TargetPartName ?? externalData.Resource.PartName;
-        if (cache.TryGetValue(key, out ChartWorkbookData? boxed))
+        if (cache.TryGetValue(key, out ChartWorkbookData? cached))
         {
-            return boxed;
+            return cached;
         }
 
         ChartWorkbookData? model = ReadEmbeddedChartWorkbookData(externalData, cancellationToken);
@@ -183,10 +164,6 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        // D01: the XML-only retry used to live here (workbook present without a scene
-        // chart), but that state is unconstructible - a non-null workbook requires defined
-        // external data, which requires a non-null scene chart. The branch is deleted
-        // rather than kept as a second interpretation path.
         bool HasSupportedSceneChartWithoutRenderableCachedValues()
         {
             bool IsSupportedNativeChartPlot(PptxSceneChartPlotKind kind)

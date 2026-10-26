@@ -248,7 +248,7 @@ internal sealed partial class PptxRenderer
         string TableLastColumnName,
         int? TableLastColumnId);
 
-    // R16: internal so the render-context workbook cache carries the model type; members stay as-is.
+    // Conversion-owned workbook model shared by chart frames.
     internal sealed partial class ChartWorkbookData
     {
         private readonly IReadOnlyDictionary<string, ChartWorksheetData> sheets;
@@ -258,75 +258,6 @@ internal sealed partial class PptxRenderer
         private readonly IReadOnlyList<ChartWorkbookSheet> sheetRecords;
         private readonly IReadOnlyDictionary<string, ChartWorkbookTable> tables;
         private readonly ChartWorkbookCalculationProperties calculation;
-
-        public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, string>> sheets)
-            : this(sheets, date1904: false)
-        {
-        }
-
-        public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, string>> sheets, bool date1904)
-        {
-            this.sheets = ConvertWorkbookSheets(sheets);
-            styles = ChartWorkbookStyles.Empty;
-            definedNames = new Dictionary<string, string>();
-            definedNameRecords = [];
-            sheetRecords = ConvertWorkbookSheetRecords(this.sheets);
-            tables = new Dictionary<string, ChartWorkbookTable>();
-            calculation = default;
-            Date1904 = date1904;
-        }
-
-        public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets, bool date1904)
-            : this(sheets, date1904, ChartWorkbookStyles.Empty)
-        {
-        }
-
-        public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets, bool date1904, ChartWorkbookStyles styles)
-            : this(ConvertWorkbookSheets(sheets), date1904, styles, new Dictionary<string, string>())
-        {
-        }
-
-        public ChartWorkbookData(
-            IReadOnlyDictionary<string, ChartWorksheetData> sheets,
-            bool date1904,
-            ChartWorkbookStyles styles,
-            IReadOnlyDictionary<string, string> definedNames)
-            : this(sheets, date1904, styles, definedNames, new Dictionary<string, ChartWorkbookTable>())
-        {
-        }
-
-        public ChartWorkbookData(
-            IReadOnlyDictionary<string, ChartWorksheetData> sheets,
-            bool date1904,
-            ChartWorkbookStyles styles,
-            IReadOnlyDictionary<string, string> definedNames,
-            IReadOnlyDictionary<string, ChartWorkbookTable> tables)
-            : this(sheets, date1904, styles, definedNames, tables, default)
-        {
-        }
-
-        public ChartWorkbookData(
-            IReadOnlyDictionary<string, ChartWorksheetData> sheets,
-            bool date1904,
-            ChartWorkbookStyles styles,
-            IReadOnlyDictionary<string, string> definedNames,
-            IReadOnlyDictionary<string, ChartWorkbookTable> tables,
-            ChartWorkbookCalculationProperties calculation)
-            : this(sheets, date1904, styles, definedNames, tables, calculation, [])
-        {
-        }
-
-        public ChartWorkbookData(
-            IReadOnlyDictionary<string, ChartWorksheetData> sheets,
-            bool date1904,
-            ChartWorkbookStyles styles,
-            IReadOnlyDictionary<string, string> definedNames,
-            IReadOnlyDictionary<string, ChartWorkbookTable> tables,
-            ChartWorkbookCalculationProperties calculation,
-            IReadOnlyList<ChartWorkbookDefinedName> definedNameRecords)
-            : this(sheets, date1904, styles, definedNames, tables, calculation, definedNameRecords, ConvertWorkbookSheetRecords(sheets))
-        {
-        }
 
         public ChartWorkbookData(
             IReadOnlyDictionary<string, ChartWorksheetData> sheets,
