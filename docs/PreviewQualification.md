@@ -1,49 +1,44 @@
 # 0.2.0-preview qualification
 
-The bounded font-semantics milestone is qualified. Publication, performance
-optimization and broader feature expansion remain deferred. The accepted library
-was built at `f84afdf2b887286a7211725d0e7123f916939880`, SHA-256
-`F4F90E77E06608231F3D496171C18849B2818F1098138A6FC51FBCA2F05E849D`.
-The final harness is `137bf996aff304f54bb633991d413db4d1f4718d`; production source
-and all 21 runtime assets are identical across its test-only repair.
-[Windows/Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/40306968987)
-at the final source. CI builds are independent of the local frozen artifact.
+The bounded font-failure/diagnostic milestone is qualified. Publication,
+performance optimization and broader expansion remain deferred. The accepted
+library and harness source is `f0cc85784833d9ca58cae8255e9081b7624006ba`, SHA-256
+`0A769DC8AAA40B01D0654BCFB8577723019CDCA94E6160D0247B4BB59A06345C`.
+[Windows/Ubuntu CI passed](https://github.com/Lokad/OoxPDF/actions/runs/40314971817)
+at the accepted source. CI builds are independent of the local frozen artifact.
 
 | Gate | Result |
 |---|---|
-| Release/affected checks | One accepted library artifact. All 36 affected methods pass Windows; Ubuntu has 33 pass/three explicit Calibri/Symbol precondition skips. Seven new portable tests pass both hosts. Two inherited nullable test warnings remain. |
-| Windows milestone | **3,791 pass, one inherited failure, five skips**; 3,797 unique methods. |
-| Ubuntu milestone | **1,118 pass, seven inherited failures, 69 skips**; 1,194 unique methods. No prior pass regressed. |
-| Original font probes | Eight strict conversions, no diagnostics, all Word text retained. Four joined/split or English/localized pairs produce byte-identical PDFs. The English family name no longer replaces the ideograph with a question mark. |
-| Independent geometry | The mixed-text run-boundary X shift is zero, previously 7.7109375pt. Word residuals remain X -.091003pt/Y -.900024pt. Font-slot choices match the retained Arial/MS Gothic and Arial/Courier New controls. No formal pixel-parity claim. |
+| Release/affected checks | One committed linked-worktree artifact; all 27 affected methods pass both platforms. Five new portable methods cover fatal limits, ordinary font-I/O recovery, cancellation and effective visibility. Two inherited nullable test warnings remain. |
+| Windows milestone | **3,796 pass, one inherited failure, five skips**; 3,802 unique methods in two disjoint invocations. |
+| Ubuntu milestone | **1,123 pass, seven inherited failures, 69 skips**; 1,199 unique methods. No prior pass regressed. |
+| Original failure probes | Six public-API controls: PPTX/DOCX limit refusals and PPTX cancellation preserve the original exception and destination. Ordinary I/O recovery and successful controls retain identical PDFs. |
+| Hidden-text diagnostics | Four original CLI probes: hidden missing glyphs now return strict exit 0; visible missing glyphs still warn/return 3. All four PDF hashes are unchanged, including the hidden case's existing font data. |
 | Representative documents | Nine sources/16 outcomes/32 pages have exact prior PDFs, diagnostics and semantic results. Each outcome converted once; no new Office exports or rasterizations. |
-| Independent portfolio gates | Reused by identity: two strict PPTX passes/fourteen strict DOCX failures. Existing visual thresholds remain fixed; the retained note screen has its own recall failure. |
+| Independent portfolio gates | Reused by identity: two strict PPTX passes/fourteen strict DOCX failures. Existing visual thresholds and the retained note recall failure remain unchanged. |
 | API/runtime | All 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0. |
-| Package/transfer | Same dependency-free package and consumer source pass Windows/Ubuntu. All 24 root assets and two integration PDFs match without root rebuild or suite replay. |
+| Package/transfer | Same dependency-free package and consumer source pass Windows/Ubuntu. All 24 root assets, a corrected hidden-text strict DOCX and a representative PPTX match without root rebuild or suite replay. |
 
 ## Conversion behavior and bounded maintenance
 
-Discovery indexes supported Windows family-name records as aliases for one
-canonical face and owned file source. Canonical names, style ranking and catalog
-face counts remain stable; aliases retain requested spelling. Portable tests cover
-multilingual names, collection face indexes, shared ownership and style selection.
+PPTX font measurement excludes OoxPdfLimitExceededException from ordinary font-I/O
+recovery, following the existing fatal-limit policy. A custom resolver's refusal
+now aborts conversion rather than becoming a successful PDF publication. File and
+stream tests preserve exception identity, destinations and caller-owned streams;
+cancellation and ordinary I/O fallback retain their previous behavior.
 
-The existing DOCX run splitter now follows declared Ascii/HighAnsi/EastAsia and
-complex-script font choices. Equivalent choices remain together; complex-script
-bold/italic overrides retain their boundary. Measurement and emission consume the
-same fragments, preserving UTF-16 source offsets, links, bookmarks and revisions.
-Body, cell, header and footer rendering are covered without font/size-specific
-exceptions or general shaping support. Two obsolete whole-text scans were removed;
-the typeface resolver was renamed without a forwarding wrapper.
+DOCX missing-glyph reporting uses the same effective Hidden flag as inline layout.
+It keeps warnings for visible missing characters and explicit vanish=false, while
+hidden text retains source metadata without claiming that an invisible character
+paints a question mark. Final/AllMarkup controls pass. Font preparation, source
+inspectors, paragraph struts, bounded caches and recovery ownership remain; no
+writer, quota, callback or resource-admission framework was added.
 
-Two early compilation attempts failed before running tests; their logs remain.
-The first broad runs then exposed three metadata tests whose record equality
-compared the new alias arrays by reference. The repaired assertions compare all
-scalar fields and ordered alias contents. Only those three tests reran per host,
-against the exact same library. Reviewed joins verify 21 runtime assets and 2,582
-public inputs; all other accepted checks are reused. Initial failed reports and
-[initial CI](https://github.com/Lokad/OoxPDF/actions/runs/40305747865) remain separate.
-No rendering assertion or Office threshold was relaxed.
+One successful Release build serves the affected set, disjoint broader remainders,
+ten original review probes, package consumers and verified transfer. No failed
+build, harness repair, parent build or accepted-method replay was required. The
+original failed review outputs remain separate. The missing-glyph correction
+changes diagnostics rather than PDF bytes; it does not optimize retained font data.
 
 ## Inherited failures and limitations
 
@@ -114,17 +109,18 @@ no threshold change or formal manifest/agent-rating pass is claimed.
 
 ## Evidence and workflow
 
-Ignored evidence: `artifacts/preview-font-semantics-20261026/qualification.json`;
-final artifact: `candidate-qualified/`; original production build:
-`candidate-accepted/`. Package:
-`artifacts/nuget/preview-020-font-semantics-20261026/`.
-Eight original font probes and sixteen portfolio outcomes each converted once.
-Existing Office references, unchanged comparisons and 715-case/12-family manifest
-validation are reused. The [preceding qualification](https://github.com/Lokad/OoxPDF/blob/2182bc44/docs/PreviewQualification.md)
-retains earlier maintenance and unresolved gates.
+Ignored evidence: `artifacts/preview-font-recovery-20261026/qualification.json`;
+artifact: `candidate-final/`. Package:
+`artifacts/nuget/preview-020-font-recovery-20261026/`.
+The exact method selections, isolated temporary directories and source/runtime
+hashes are retained. Existing Office references, unchanged comparisons and the
+715-case/12-family manifest validation are reused. The
+[preceding qualification](https://github.com/Lokad/OoxPDF/blob/d2f5d6d8/docs/PreviewQualification.md)
+retains the font-alias/font-slot controls, earlier maintenance and residual gates.
 
 Safe managed dependency-free execution, cancellation, meaningful bounds, coarse
 admission/refunds, bounded caches/staging, cleanup, atomic publication and PDF
-validity remain. The preserved roadmap stays deferred. One infrequent workspace
-check records **6.778 GB/935,126 files**, zero errors, above the loose 5 GB target.
-Preserve inputs/useful evidence and use verified stale-artifact maintenance.
+validity remain. The preserved roadmap stays deferred. The latest full workspace
+check remains **6.778 GB/935,126 files**, zero errors (2026-10-26), above the loose
+5 GB target. This small batch is measured separately; no repeat full scan or
+unverified deletion was needed. Preserve inputs and useful evidence.
