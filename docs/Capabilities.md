@@ -189,6 +189,7 @@ Each row links an unsupported family to its detection diagnostic, fallback, and 
 | PPTX OLE objects | `PPTX_UNSUPPORTED_OLE_OBJECT` Warning | Ignored | `PptxUnsupportedFeaturesEmitDiagnostics` (pptx-core) |
 | PPTX audio, video, animation, transitions | matching `PPTX_UNSUPPORTED_*` Warning | Ignored | `PptxUnsupportedFeaturesEmitDiagnostics` (pptx-core) |
 | PPTX missing image parts | `IMAGE_MISSING_PART` Error | Ignored, conversion continues | `PptxMissingImagePartDiagnosesErrorAndContinues` (pptx-images) |
+| DOCX missing picture assets | `IMAGE_MISSING_PART` Error | Retain supported picture frame, omit pixels | DocxImageRecoveryTests (rendering-portable) |
 | Undecodable images | `IMAGE_UNSUPPORTED_FORMAT` Error | Ignored | DocxImagesTests, ImagingTests, PptxImagesTests |
 | Cropped-image decode | `IMAGE_CROP_UNSUPPORTED_FORMAT` Warning | PDF clipping | PptxImagesTests |
 | SVG pictures | `SVG_UNSUPPORTED_CONTENT` Error/Warning | Ignored / Partial / RasterImage | PPTX SVG diagnostics; DOCX native/preview fallback and viewport tests |
