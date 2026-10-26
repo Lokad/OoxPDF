@@ -16,6 +16,7 @@ $runId = [guid]::NewGuid().ToString('N')
 $scratch = Join-Path $repoRoot ("artifacts/workflow-test-" + $runId)
 $cacheRoot = [IO.Path]::GetFullPath((Get-ReferenceCacheRoot))
 $ownedCacheEntries = [Collections.Generic.List[string]]::new()
+$race1 = $null; $race2 = $null; $sentinel = $null
 function New-OwnedCacheEntry([string] $Key) {
     $path = [IO.Path]::GetFullPath((Join-Path $cacheRoot $Key))
     if (!$path.StartsWith($cacheRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or
@@ -303,6 +304,13 @@ if ($script:failures.Count -ne 0) {
 
 Write-Host "All reference workflow checks passed."
 } finally {
+    # Publishers must stop before their owned entries can be removed on failure.
+    foreach ($process in @($race1, $race2, $sentinel)) {
+        if ($null -ne $process -and !$process.HasExited) {
+            $process.Kill($true)
+            $process.WaitForExit()
+        }
+    }
     # Only this run's preflighted identities are disposable; retain real references.
     foreach ($path in $ownedCacheEntries) {
         if (![IO.Path]::GetFullPath($path).StartsWith($cacheRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {

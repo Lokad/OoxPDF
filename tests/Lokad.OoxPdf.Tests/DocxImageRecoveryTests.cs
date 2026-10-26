@@ -45,6 +45,8 @@ internal static class DocxImageRecoveryTests
             "CompositionProbes/justified-linked-image-cell.docx" })
         {
             var present = Render(Case(source), mode);
+            var pictureTargets = DocxBlockTraversal.EnumerateSourceParagraphs(DocxTests.ReadDocx(Case(source), mode))
+                .SelectMany(p => p.Images).Select(image => image.ClickTarget).Where(target => target is not null).ToHashSet();
             TestAssert.True(present.Pages.Sum(page => page.Images.Count) > 0, "Control must paint its picture.");
             Mutate(Case(source), parts => {
                 foreach (string name in parts.Keys.Where(name => name.StartsWith("word/media/") && name.EndsWith(".png")).ToArray())
@@ -54,7 +56,9 @@ internal static class DocxImageRecoveryTests
                 SameTextGeometry(present.Pages, missing.Pages);
                 TestAssert.Equal(0, missing.Pages.Sum(page => page.Images.Count));
                 TestAssert.Equal(1, missing.Diagnostics.Count(d => d.Id == "IMAGE_MISSING_PART"));
-                TestAssert.Equal(0, missing.Pages.Sum(page => page.Annotations.Count));
+                TestAssert.Equal(string.Join("\n", present.Pages.SelectMany(page => page.Annotations)
+                    .Where(link => !pictureTargets.Contains(link.Uri)).Select(link => link.Uri)),
+                    string.Join("\n", missing.Pages.SelectMany(page => page.Annotations).Select(link => link.Uri)));
             });
         }
     }
