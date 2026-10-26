@@ -5,16 +5,23 @@
 # mechanics (structure, hashing, atomicity), never as fidelity references.
 
 param(
-    [int] $RenderTimeoutSeconds = 600
+    [string] $CliPath
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $repoRoot "tools/ReferenceCache.ps1")
 
-$scratch = Join-Path $repoRoot "artifacts/workflow-test"
-if (Test-Path -LiteralPath $scratch) {
-    Remove-Item -LiteralPath $scratch -Recurse -Force
+$runId = [guid]::NewGuid().ToString('N')
+$scratch = Join-Path $repoRoot ("artifacts/workflow-test-" + $runId)
+$cacheRoot = [IO.Path]::GetFullPath((Get-ReferenceCacheRoot))
+$ownedCacheEntries = [Collections.Generic.List[string]]::new()
+function New-OwnedCacheEntry([string] $Key) {
+    $path = [IO.Path]::GetFullPath((Join-Path $cacheRoot $Key))
+    if (!$path.StartsWith($cacheRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or
+        (Test-Path -LiteralPath $path)) { throw 'Test cache identity must be fresh and inside the reference cache' }
+    $ownedCacheEntries.Add($path)
+    return $path
 }
 
 New-Item -ItemType Directory -Force -Path $scratch | Out-Null
@@ -31,7 +38,7 @@ function Assert-True([bool] $Condition, [string] $Message) {
 
 function New-ScratchDocx([string] $Name) {
     # Per-run unique bytes so cache identities never collide across runs.
-    $Name = [System.IO.Path]::GetFileNameWithoutExtension($Name) + "-p$PID" + [System.IO.Path]::GetExtension($Name)
+    $Name = [System.IO.Path]::GetFileNameWithoutExtension($Name) + "-p$PID-$runId" + [System.IO.Path]::GetExtension($Name)
     $source = Join-Path $repoRoot "tests/Lokad.OoxPdf.Tests/Cases/docx-blank.docx"
     $dest = Join-Path $scratch $Name
     Copy-Item -LiteralPath $source -Destination $dest -Force
@@ -52,12 +59,18 @@ function New-FakeWorker([string] $Name, [string[]] $BodyLines) {
     return $path
 }
 
+try {
 # T03: the shared build gate records identities instead of trusting mtimes.
+if (!$CliPath) {
 $cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll"
 & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Project (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj") -OutputDll $cliDll -Description "CLI" -RecordPath (Join-Path $scratch "cli-build-info.json")
 $buildInfo = Get-Content -Raw -LiteralPath (Join-Path $scratch "cli-build-info.json") | ConvertFrom-Json
 Assert-True ((Test-Path -LiteralPath $cliDll) -and $buildInfo.OutputSha256 -eq (Get-FileHash -LiteralPath $cliDll -Algorithm SHA256).Hash.ToLowerInvariant()) "T03 shared build records the real CLI binary hash"
 Assert-True (-not [string]::IsNullOrWhiteSpace([string]$buildInfo.GitCommit)) "T03 shared build records the source commit"
+} else {
+    $cliDll = (Resolve-Path -LiteralPath $CliPath).Path
+    Write-Host ("Using frozen CLI {0}; SHA256={1}; no build-gate replay." -f $cliDll, (Get-FileHash $cliDll).Hash)
+}
 
 # A real (locally rendered, non-Office) PDF stands in for Office exports below.
 $standinDocx = New-ScratchDocx "standin.docx"
@@ -78,6 +91,7 @@ catch {
 Assert-True $missed "R02 cache miss throws an actionable populate command"
 
 # R02: trusted import publishes a verified v2 entry.
+$entryDir = New-OwnedCacheEntry (Get-ReferenceIdentityKey $missDocx "")
 & (Join-Path $repoRoot "tools/ImportOfficeReferenceCache.ps1") -InputPath $missDocx -ReferencePdf $standinPdf -Dpi 144 -CaseId "workflow-test" | Out-Null
 $identityKey = Get-ReferenceIdentityKey $missDocx ""
 $entryDir = Join-Path (Get-ReferenceCacheRoot) $identityKey
@@ -134,7 +148,8 @@ Assert-True $corruptFailed "R02 corrupt entry throws instead of serving"
 # R02: pre-v2 flat entries are adopted, not orphaned.
 $legacyDocx = New-ScratchDocx "legacy.docx"
 $legacyKey = Get-ReferenceCacheKey $legacyDocx 144 ""
-$legacyDir = Join-Path (Get-ReferenceCacheRoot) $legacyKey
+$legacyDir = New-OwnedCacheEntry $legacyKey
+$null = New-OwnedCacheEntry (Get-ReferenceIdentityKey $legacyDocx "")
 New-Item -ItemType Directory -Force -Path $legacyDir | Out-Null
 Copy-Item -LiteralPath $standinPdf -Destination (Join-Path $legacyDir "reference.pdf") -Force
 Copy-Item -LiteralPath (Join-Path $scratch "hit-out/page-001.png") -Destination (Join-Path $legacyDir "page-001.png") -Force
@@ -145,6 +160,7 @@ Assert-True ((Test-Path -LiteralPath (Join-Path $scratch "legacy-out/reference.p
 
 # R02: concurrent publishers converge on one valid entry.
 $raceDocx = New-ScratchDocx "race.docx"
+$null = New-OwnedCacheEntry (Get-ReferenceIdentityKey $raceDocx "")
 $raceScript = Join-Path $scratch "race-import.ps1"
 Set-Content -LiteralPath $raceScript -Value ("& '" + (Join-Path $repoRoot "tools/ImportOfficeReferenceCache.ps1") + "' -InputPath '" + $raceDocx + "' -ReferencePdf '" + $standinPdf + "' -Dpi 144 -Force") -NoNewline
 $race1 = Start-Process -FilePath "pwsh" -ArgumentList @("-NoProfile", "-File", $raceScript) -PassThru -WindowStyle Hidden
@@ -236,7 +252,7 @@ Assert-True (($earlyTimedOut) -and (($sw3.Elapsed.TotalSeconds -ge 8) -and ($sw3
 # R02: an entry directory without a completion marker is a miss, not a hit.
 $incompleteDocx = New-ScratchDocx "incomplete.docx"
 $incompleteKey = Get-ReferenceIdentityKey $incompleteDocx ""
-New-Item -ItemType Directory -Force -Path (Join-Path (Get-ReferenceCacheRoot) $incompleteKey) | Out-Null
+New-Item -ItemType Directory -Force -Path (New-OwnedCacheEntry $incompleteKey) | Out-Null
 Set-Content -LiteralPath (Join-Path (Join-Path (Get-ReferenceCacheRoot) $incompleteKey) "junk.txt") -Value "partial" -NoNewline
 $incompleteMissed = $false
 try {
@@ -259,6 +275,7 @@ $markupCaseId = "workflow-markup-all-$PID"
     docxMarkup = "all"
     docxMarkupGeometry = "preserve"
 } | ConvertTo-Json | Set-Content -LiteralPath $markupCase -Encoding UTF8
+$null = New-OwnedCacheEntry (Get-ReferenceIdentityKey $markupDocx "docxMarkup=all;docxMarkupGeometry=preserve")
 & (Join-Path $repoRoot "tools/ImportDocxMarkupReferenceCache.ps1") -Case $markupCase -ReferencePdf $standinPdf -Dpi 144 -Force | Out-Null
 $markupManifest = Get-Content -Raw -LiteralPath $markupCase | ConvertFrom-Json
 $markupInput = (Resolve-Path -LiteralPath (Join-Path (Split-Path -Parent $markupCase) $markupManifest.input)).Path
@@ -285,3 +302,16 @@ if ($script:failures.Count -ne 0) {
 }
 
 Write-Host "All reference workflow checks passed."
+} finally {
+    # Only this run's preflighted identities are disposable; retain real references.
+    foreach ($path in $ownedCacheEntries) {
+        if (![IO.Path]::GetFullPath($path).StartsWith($cacheRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Refusing cleanup outside the reference cache'
+        }
+        if (Test-Path -LiteralPath $path) {
+            $entry = Get-Item -LiteralPath $path -Force
+            if ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Refusing linked test cache entry' }
+            Remove-Item -LiteralPath $path -Recurse -Force
+        }
+    }
+}
