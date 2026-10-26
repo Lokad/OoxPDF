@@ -1,0 +1,148 @@
+[
+  {
+    "Id": "single-title",
+    "File": "section-nav-single-title.docx",
+    "InputSha256": "A702F12A55D281D5EB78970CBCD4B902E6D4BEEBE15A6F71D43889AAF43C25E5",
+    "WordPdfSha256": "8249A858CF4CCC76AFAC70B8D2420489391523D09E5B3657D8A1B33BDACA5ADE",
+    "Pages": [
+      {
+        "Text": "SECOND SECTION FIRST \nSECTION TWO \n",
+        "Links": []
+      }
+    ]
+  },
+  {
+    "Id": "two-title",
+    "File": "section-nav-two-title.docx",
+    "InputSha256": "4F83EE5F291AA015F662C45796D84F14E645621F178C611CC37EF32E936F0A3B",
+    "WordPdfSha256": "02EF3B93D7C857108114460F23193E1022A303BE7FF40E551F3600A77B5566A9",
+    "Pages": [
+      {
+        "Text": "FIRST SECTION DEFAULT \nSECTION ONE\n",
+        "Links": []
+      },
+      {
+        "Text": "SECOND SECTION FIRST \nSECTION TWO \n",
+        "Links": []
+      }
+    ]
+  },
+  {
+    "Id": "two-default",
+    "File": "section-nav-two-default.docx",
+    "InputSha256": "615CB29ED62BD98AA733BCCEC9B5127FBE12C0D3C50AACD16100D20F45E8BE3E",
+    "WordPdfSha256": "82F088728BF92F79F4CB3482656DFF65AC7A2A3E83C30580C2DAF943A370BD84",
+    "Pages": [
+      {
+        "Text": "FIRST SECTION DEFAULT \nSECTION ONE\n",
+        "Links": []
+      },
+      {
+        "Text": "SECOND SECTION DEFAULT \nSECTION TWO \n",
+        "Links": []
+      }
+    ]
+  },
+  {
+    "Id": "bookmark-before",
+    "File": "section-nav-bookmark-before.docx",
+    "InputSha256": "8B07AD21FA920196B16F9A94B357D7964D674EFA7FDEB06B453EE5F64EBF2227",
+    "WordPdfSha256": "C4378461D5B982B2963E8D9AC65A157F0C48050024233BD1664DFCDCAD15DD15",
+    "Pages": [
+      {
+        "Text": "Jump to target \n \n",
+        "Links": [
+          {
+            "kind": 1,
+            "xref": 4,
+            "from": [
+              69.75,
+              72.0,
+              163.74000549316406,
+              98.6500244140625
+            ],
+            "page": 1,
+            "to": [
+              69.0,
+              72.0
+            ],
+            "zoom": 0.0,
+            "id": ""
+          }
+        ]
+      },
+      {
+        "Text": "TARGET PARAGRAPH \n",
+        "Links": []
+      }
+    ]
+  },
+  {
+    "Id": "bookmark-after",
+    "File": "section-nav-bookmark-after.docx",
+    "InputSha256": "87C733C512ECC2C80B573B9AB4F2F899DF6484B59DD5F0F3551774E901F352A6",
+    "WordPdfSha256": "0EE9891515296B5EFF88E9198EE58C37747C84EBB6EBE8DF40022C3E814FDEC7",
+    "Pages": [
+      {
+        "Text": "Jump to target \n \n",
+        "Links": [
+          {
+            "kind": 1,
+            "xref": 4,
+            "from": [
+              69.75,
+              72.0,
+              163.74000549316406,
+              98.6500244140625
+            ],
+            "page": 1,
+            "to": [
+              215.0,
+              72.0
+            ],
+            "zoom": 0.0,
+            "id": ""
+          }
+        ]
+      },
+      {
+        "Text": "TARGET PARAGRAPH \n",
+        "Links": []
+      }
+    ]
+  },
+  {
+    "Id": "bookmark-empty",
+    "File": "section-nav-bookmark-empty.docx",
+    "InputSha256": "0150198F4C4DB7642D6260B257872569BB73ADAB987CB08092CFD09FEA083570",
+    "WordPdfSha256": "FD54C9529DC0E60F116A1A3395C7D63EFC12CC3D14991DC58F400BEC71E4E068",
+    "Pages": [
+      {
+        "Text": "Jump to target \n \n",
+        "Links": [
+          {
+            "kind": 1,
+            "xref": 4,
+            "from": [
+              69.75,
+              72.0,
+              163.74000549316406,
+              98.6500244140625
+            ],
+            "page": 1,
+            "to": [
+              69.0,
+              72.0
+            ],
+            "zoom": 0.0,
+            "id": ""
+          }
+        ]
+      },
+      {
+        "Text": " \nTARGET PARAGRAPH \n",
+        "Links": []
+      }
+    ]
+  }
+]

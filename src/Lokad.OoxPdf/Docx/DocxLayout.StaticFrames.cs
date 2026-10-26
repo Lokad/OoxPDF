@@ -20,7 +20,7 @@ internal sealed partial class DocxLayoutEngine
             IsNaturalStaticStory(SelectStaticHeaderFooter(
                 isHeader ? page.PageSettings.FooterBodyElementsByType : page.PageSettings.HeaderBodyElementsByType,
                 isHeader ? page.PageSettings.FooterParagraphsByType : page.PageSettings.HeaderParagraphsByType,
-                page.PageSettings, pageNumber), width / scale, mathEquations, token);
+                page.PageSettings, pageNumber, page.SectionFirstPageNumber), width / scale, mathEquations, token);
         if (!canMap)
         {
             var layout = CreateStaticStoryLayout(story, x, width, startY, isHeader, pageNumber, pageCount,

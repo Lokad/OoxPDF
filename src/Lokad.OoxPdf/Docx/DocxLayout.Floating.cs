@@ -565,11 +565,11 @@ internal sealed partial class DocxLayoutEngine
             DocxSelectedStaticDrawings selectedHeader = SelectStaticHeaderFooterDrawings(
                 page.PageSettings.HeaderFloatingDrawingsByType,
                 page.PageSettings,
-                pageNumber);
+                pageNumber, page.SectionFirstPageNumber);
             DocxSelectedStaticDrawings selectedFooter = SelectStaticHeaderFooterDrawings(
                 page.PageSettings.FooterFloatingDrawingsByType,
                 page.PageSettings,
-                pageNumber);
+                pageNumber, page.SectionFirstPageNumber);
             layouts.AddRange(CreateStaticFloatingDrawingLayouts(selectedHeader, DocxStoryId.Header(selectedHeader.VariantType), page, pageIndex, pages.Count, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken));
             layouts.AddRange(CreateStaticFloatingDrawingLayouts(selectedFooter, DocxStoryId.Footer(selectedFooter.VariantType), page, pageIndex, pages.Count, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken));
         }

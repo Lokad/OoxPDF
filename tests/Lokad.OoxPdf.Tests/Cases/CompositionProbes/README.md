@@ -45,3 +45,11 @@ footnotes and endnotes; restarted/custom/unowned markers keep their fallback.
 `math-endnotes-office-markers.json` pins independent Word marker raise/font ratios.
 Single/repeated formulas, bookmarks, run splitting, wider Roman starts and adjoining
 text within the marker run must preserve both content and the note destination.
+
+`section-nav-*.docx` are six public section-header and source-boundary navigation
+controls. `section-nav-office.json` records independent Word Final page text and
+GoTo destinations with input/reference hashes. Later sections select their own
+first-page header; before/after/empty paragraph bookmarks retain incoming links.
+Portable tests preserve these content/navigation outcomes with a synthetic face;
+they do not claim native-font geometry or pixel parity. Wrapped/hidden-text and
+undefined first/even variants are focused mutations of the same inputs.

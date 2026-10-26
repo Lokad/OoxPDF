@@ -42,7 +42,7 @@ internal sealed partial class DocxLayoutEngine
             header ? templatePage.PageSettings.HeaderBodyElementsByType : templatePage.PageSettings.FooterBodyElementsByType,
             header ? templatePage.PageSettings.HeaderParagraphsByType : templatePage.PageSettings.FooterParagraphsByType,
             templatePage.PageSettings,
-            pageNumber);
+            pageNumber, templatePage.SectionFirstPageNumber);
         DocxStaticStoryLayoutResult layout = CreatePageStaticStoryLayout(
             templatePage, selectedStory,
             templatePage.MarginLeft,
@@ -163,12 +163,12 @@ internal sealed partial class DocxLayoutEngine
                 page.PageSettings.HeaderBodyElementsByType,
                 page.PageSettings.HeaderParagraphsByType,
                 page.PageSettings,
-                pageNumber);
+                pageNumber, page.SectionFirstPageNumber);
             DocxSelectedStaticStory selectedFooter = SelectStaticHeaderFooter(
                 page.PageSettings.FooterBodyElementsByType,
                 page.PageSettings.FooterParagraphsByType,
                 page.PageSettings,
-                pageNumber);
+                pageNumber, page.SectionFirstPageNumber);
             DocxStaticStoryLayoutResult headerLayout = CreatePageStaticStoryLayout(
                     page, selectedHeader,
                     page.MarginLeft,

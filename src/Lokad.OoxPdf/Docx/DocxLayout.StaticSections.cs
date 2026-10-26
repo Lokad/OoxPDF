@@ -10,20 +10,21 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    internal static string GetStaticStoryVariant(DocxPageSettings settings, int pageNumber) =>
-        settings.TitlePage == true && pageNumber == 1 ? "first" :
+    internal static string GetStaticStoryVariant(DocxPageSettings settings, int pageNumber, int sectionFirstPageNumber = 1) =>
+        settings.TitlePage == true && pageNumber == sectionFirstPageNumber ? "first" :
         settings.EvenAndOddHeaders == true && pageNumber % 2 == 0 ? "even" : "default";
 
     private static DocxSelectedStaticStory SelectStaticHeaderFooter(
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
         DocxPageSettings settings,
-        int pageNumber)
+        int pageNumber,
+        int sectionFirstPageNumber = 1)
     {
         // Office A/B (w52 title-page plus w53 even-pages probes, Word-COM rendered):
         // a selected-but-undefined first/even story renders empty on its pages; Word
         // does not fall back to the default story there.
-        string variant = GetStaticStoryVariant(settings, pageNumber);
+        string variant = GetStaticStoryVariant(settings, pageNumber, sectionFirstPageNumber);
         return DocxBlockTraversal.TryGetStaticStoryBodyElements(variant, bodyElementsByType, paragraphsByType, out IReadOnlyList<DocxBodyElement>? selected)
             ? new DocxSelectedStaticStory(selected, variant)
             : new DocxSelectedStaticStory([], null);
@@ -34,11 +35,12 @@ internal sealed partial class DocxLayoutEngine
     private static DocxSelectedStaticDrawings SelectStaticHeaderFooterDrawings(
         IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> drawingsByType,
         DocxPageSettings settings,
-        int pageNumber)
+        int pageNumber,
+        int sectionFirstPageNumber)
     {
         // Same no-fallback rule as text stories above (mechanism consistency; floating
         // drawings in undefined first/even stories are unprobed on their own).
-        string variant = GetStaticStoryVariant(settings, pageNumber);
+        string variant = GetStaticStoryVariant(settings, pageNumber, sectionFirstPageNumber);
         return drawingsByType.TryGetValue(variant, out IReadOnlyList<DocxFloatingDrawing>? selected)
             ? new DocxSelectedStaticDrawings(selected, variant)
             : new DocxSelectedStaticDrawings([], null);

@@ -25,6 +25,8 @@ internal sealed record DocxLayoutPage(
     IReadOnlyList<DocxPlacedRelatedStoryLayout> PlacedRelatedStories,
     IReadOnlyList<DocxLayoutItem> Items)
 {
+    // Physical page on which this section begins; continuation templates retain it.
+    public int SectionFirstPageNumber { get; init; } = 1;
     public IReadOnlyList<DocxInlineTextBoxLayout> StaticInlineTextBoxes { get; init; } = [];
     // The scaled review lane keeps this authored edge when the body mirrors.
     public double? MarkupLaneDesignBodyEnd { get; init; }

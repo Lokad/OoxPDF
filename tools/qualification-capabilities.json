@@ -1,4 +1,28 @@
 {
+  "section-navigation": [
+    "DocxSectionNavigation",
+    "DocxParagraphEndBookmarks",
+    "DocxLayoutStageOwnsSelectedStaticHeaderFooterLines",
+    "DocxLayoutStageAddsStaticHeaderAfterEndnoteContinuationPages",
+    "DocxLayoutStageSelectsStaticHeaderBodyElements",
+    "DocxLayoutStageResolvesStaticHeaderFloatingTextBoxNumPagesFieldFromPageCount",
+    "DocxLayoutStageSummarizesSelectedStaticHeaderFooterVariants",
+    "DocxLayoutStageOwnsStaticHeaderInlineImages",
+    "DocxReaderPreservesHeaderFloatingDrawingsByVariant",
+    "DocxSyntheticSectionHeaders",
+    "DocxTitlePageSuppressesDefaultHeaderWithoutFirstStory",
+    "DocxEvenPagesSuppressDefaultHeaderWithoutEvenStory",
+    "DocxBookmarkViewport",
+    "DocxRendererEmitsInternalHyperlinkDestinationsFromBookmarks",
+    "DocxRendererUsesSourceRunIndexesForBookmarkDestinations",
+    "DocxRendererUsesSourceTextOffsetsForBookmarkDestinations",
+    "DocxReaderPreservesBookmarkAnchors",
+    "PortableRenderingMathBookmarksPreserveFourStoryDestinations",
+    "PortableRenderingMixedMathBookmarksPreserveEightStoryDestinations",
+    "DocxMinimumBookmarks",
+    "DocxHeaderFootnoteFrames",
+    "DocxSimpleSectionPagination"
+  ],
   "font-recovery": [
     "FontResolutionLimitsPreserveFilePublication",
     "FontResolutionLimitsLeaveStreamsEmptyAndOpen",

@@ -1348,7 +1348,7 @@ internal sealed partial class DocxRenderer
                             }
                         }
 
-                        if (!TryResolveBookmarkDestinationSegment(segments, bookmark, out DocxTextEmissionSegment? target, out double targetX))
+                        if (!TryResolveBookmarkDestinationSegment(segments, paragraph, bookmark, out DocxTextEmissionSegment? target, out double targetX))
                         {
                             continue;
                         }
@@ -1670,6 +1670,7 @@ internal sealed partial class DocxRenderer
 
     private static bool TryResolveBookmarkDestinationSegment(
         IReadOnlyList<DocxTextEmissionSegment> segments,
+        DocxParagraph paragraph,
         DocxBookmarkAnchor bookmark,
         [NotNullWhen(true)] out DocxTextEmissionSegment? target,
         out double targetX)
@@ -1678,6 +1679,25 @@ internal sealed partial class DocxRenderer
         targetX = 0d;
         int sourceRunIndex = bookmark.SourceRunIndex;
         int sourceOffset = Math.Max(0, bookmark.TextOffset);
+        // A bookmark after the final item has no following source run. Bind a
+        // trailing text boundary to its retained source endpoint instead; hidden
+        // neighbors do not own a painted destination. Other terminal object kinds
+        // keep their existing placement rules.
+        if (paragraph.InlineContent is { } items && bookmark.InlineItemIndex == items.Count)
+        {
+            for (int index = items.Count - 1; index >= 0; index--)
+            {
+                if (items[index] is DocxInlineText { Run.EffectiveProperties.Hidden: true } or
+                    DocxInlineTab { Run.EffectiveProperties.Hidden: true } or
+                    DocxInlineBreak { Run.EffectiveProperties.Hidden: true }) continue;
+                if (items[index] is DocxInlineText text)
+                {
+                    sourceRunIndex = text.Run.SourceRunIndex;
+                    sourceOffset = text.Run.SourceTextOffsetInRun + text.Start + text.Length;
+                }
+                break;
+            }
+        }
         foreach (DocxTextEmissionSegment segment in segments)
         {
             if (segment.SourceTextRunIndex != sourceRunIndex)
@@ -1699,7 +1719,8 @@ internal sealed partial class DocxRenderer
             return true;
         }
 
-        DocxTextEmissionSegment? fallback = segments.FirstOrDefault(segment => segment.SourceTextRunIndex >= sourceRunIndex);
+        // An earlier wrapped piece of the same run cannot resolve a later offset.
+        DocxTextEmissionSegment? fallback = segments.FirstOrDefault(segment => segment.SourceTextRunIndex > sourceRunIndex);
         if (fallback is null)
         {
             return false;

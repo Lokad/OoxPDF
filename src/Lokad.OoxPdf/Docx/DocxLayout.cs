@@ -316,9 +316,9 @@ internal sealed partial class DocxLayoutEngine
         var storyLookupByWidth = new Dictionary<double, Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>>();
         var keepLookaheadYielded = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
         var footnotePlacedLinesAtLastYield = new Dictionary<(DocxRelatedStoryKind Kind, string Id), int>();
-        var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int), DocxStaticStoryLayoutResult?>();
-        var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int), (double Body, double Note, double? Physical)>();
-        var plainFootnoteFooterFrames = new Dictionary<(DocxPageSettings, double, double, double, double, double, double, int), DocxLayoutPage?>();
+        var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int, int), DocxStaticStoryLayoutResult?>();
+        var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int, int), (double Body, double Note, double? Physical)>();
+        var plainFootnoteFooterFrames = new Dictionary<(DocxPageSettings, double, double, double, double, double, double, int, int), DocxLayoutPage?>();
         double? bodyFirstBaselineMemo = null;
         double bodyFirstSourceOffsetMemo = 0d;
         bool bodyFirstBaselineComputed = false;
@@ -326,6 +326,7 @@ internal sealed partial class DocxLayoutEngine
             (Math.Abs(paragraphSpacingScale - 1d) < 0.000001d ||
              Math.Abs(paragraphSpacingScale - WordCompatibleAllMarkupParagraphSpacingScale) < 0.000001d);
         int currentSectionStartIndex = 0;
+        int sectionFirstPageNumber = 1;
 
         IReadOnlyDictionary<int, DocxEffectiveSectionSettings> sectionSettingsByElementIndex = BuildEffectiveSectionSettings(document, out DocxEffectiveSectionSettings finalSectionSettings);
         DocxEffectiveSectionSettings activeSectionSettings = FindSectionSettingsAtOrAfter(document.BodyElements, 0, sectionSettingsByElementIndex) ?? finalSectionSettings;
@@ -408,7 +409,8 @@ internal sealed partial class DocxLayoutEngine
                 [],
                 currentItems.ToArray())
             {
-                MarkupLaneDesignBodyEnd = page.MarkupLaneDesignBodyEnd
+                MarkupLaneDesignBodyEnd = page.MarkupLaneDesignBodyEnd,
+                SectionFirstPageNumber = sectionFirstPageNumber
             });
             PlaceInFlightFootnotesOnCompletingPage();
             if (completeFootnoteAdmission is not null)
@@ -477,12 +479,13 @@ internal sealed partial class DocxLayoutEngine
         DocxLayoutPage? GetCurrentPlainFootnoteFooterFrame()
         {
             var key = (page.PageSettings, page.Width, page.Height, page.MarginLeft, page.MarginRight,
-                page.MarginTop, page.MarginBottom, page.ColumnFrames.Count);
+                page.MarginTop, page.MarginBottom, page.ColumnFrames.Count, sectionFirstPageNumber);
             if (!plainFootnoteFooterFrames.TryGetValue(key, out DocxLayoutPage? frame))
             {
                 var candidate = new DocxLayoutPage(page.Width, page.Height, page.MarginLeft, page.MarginRight,
                     page.MarkupMarginReservePoints, page.MarginTop, page.MarginBottom, page.PageSettings,
-                    page.SectionProperties, page.ColumnFrames, [], [], [], [], []);
+                    page.SectionProperties, page.ColumnFrames, [], [], [], [], [])
+                { SectionFirstPageNumber = sectionFirstPageNumber };
                 frame = CanUsePlainFootnoteStaticFrame(document, candidate, unscaledTextMeasurer ?? textMeasurer,
                     paragraphSpacingScale, cancellationToken) ? candidate : null;
                 plainFootnoteFooterFrames[key] = frame;
@@ -1125,6 +1128,7 @@ internal sealed partial class DocxLayoutEngine
 
         void ApplySectionAfterBreak(int elementIndex)
         {
+            sectionFirstPageNumber = pages.Count + 1;
             activeSectionSettings = FindSectionSettingsAtOrAfter(document.BodyElements, elementIndex + 1, sectionSettingsByElementIndex) ?? finalSectionSettings;
             page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pages.Count + 1);
             activeColumnIndex = 0;
@@ -2094,7 +2098,7 @@ internal sealed partial class DocxLayoutEngine
 
         DocxStaticStoryLayoutResult? GetContinuationHeader(DocxLayoutPage templatePage, int pageNumber, int pageCount)
         {
-            var headerKey = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount);
+            var headerKey = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount, templatePage.SectionFirstPageNumber);
             if (!continuationHeaderByPage.TryGetValue(headerKey, out DocxStaticStoryLayoutResult? headerLayout))
             {
                 headerLayout = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: true, mathEquations: mathEquations,
@@ -2165,7 +2169,7 @@ internal sealed partial class DocxLayoutEngine
         (double Body, double Note, double? Physical) ResolveFooterBounds(DocxLayoutPage templatePage, int pageNumber, int pageCount)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var key = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount);
+            var key = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount, templatePage.SectionFirstPageNumber);
             if (!continuationFooterTopByPage.TryGetValue(key, out var bounds))
             {
                 var footer = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer,
