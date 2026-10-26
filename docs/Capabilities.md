@@ -90,6 +90,9 @@ layout and general OpenType shaping. Static fallback diagnostics are listed belo
 
 ## DOCX
 
+- Optional styles, settings, numbering, fonts/themes and related stories follow
+  the document's owning relationships. Unreferenced package parts retain the
+  corresponding empty/default behavior rather than configuring active content.
 Supported within the following constraints:
 
 - Body paragraphs/runs, common run/paragraph/document defaults and styles,

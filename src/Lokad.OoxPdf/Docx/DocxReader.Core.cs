@@ -45,7 +45,7 @@ internal sealed partial class DocxReader
             .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
         var warnedMustUnderstandParts = new HashSet<string>(StringComparer.Ordinal);
-        XDocument? settings = LoadRelatedXmlPart(package, documentPart.Name, SettingsRelationshipType, SettingsContentType, out _, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
+        XDocument? settings = LoadRelatedXmlPart(package, documentPart.Name, SettingsRelationshipType, out _, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
         DocxDocumentSettings documentSettings = ReadDocumentSettings(settings, cancellationToken);
         OoxPdfDocxMarkupMode revisionFilteringMarkupMode = ResolveRevisionFilteringMarkupMode(markupMode, documentSettings);
         DocxMarkupContext markupContext = DocxMarkupContext.FromMode(markupMode).ApplyDocumentSettings(documentSettings);
@@ -690,10 +690,10 @@ internal sealed partial class DocxReader
         return (width, height);
     }
 
-    private static XDocument? LoadRelatedXmlPart(OoxPackage package, string documentPartName, string relationshipType, string contentType, out string? relatedPartName, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, HashSet<string>? warnedParts = null)
+    private static XDocument? LoadRelatedXmlPart(OoxPackage package, string documentPartName, string relationshipType, out string? relatedPartName, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, HashSet<string>? warnedParts = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        OoxPart? part = FindRelatedPart(package, documentPartName, relationshipType, contentType, cancellationToken);
+        OoxPart? part = FindRelatedPart(package, documentPartName, relationshipType, cancellationToken);
         relatedPartName = part?.Name;
         if (part is null)
         {
@@ -706,25 +706,25 @@ internal sealed partial class DocxReader
         return related;
     }
 
-    private static string ResolveRelatedPartNameOrDefault(OoxPackage package, string documentPartName, string relationshipType, string contentType, CancellationToken cancellationToken)
+    private static string ResolveRelatedPartNameOrDefault(OoxPackage package, string documentPartName, string relationshipType, CancellationToken cancellationToken)
     {
-        return FindRelatedPart(package, documentPartName, relationshipType, contentType, cancellationToken)?.Name ?? documentPartName;
+        return FindRelatedPart(package, documentPartName, relationshipType, cancellationToken)?.Name ?? documentPartName;
     }
 
-    private static OoxPart? FindRelatedPart(OoxPackage package, string documentPartName, string relationshipType, string contentType, CancellationToken cancellationToken)
+    private static OoxPart? FindRelatedPart(OoxPackage package, string documentPartName, string relationshipType, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxRelationship? relationship = package.GetRelationships(documentPartName, cancellationToken)
             .FirstOrDefault(r => !r.IsExternal && r.Type == relationshipType && r.ResolvedTarget is not null);
-        return relationship?.ResolvedTarget is null
-            ? package.Parts.FirstOrDefault(p => p.ContentType == contentType)
-            : package.GetPart(relationship.ResolvedTarget);
+        // Optional parts belong to this document through relationships. A
+        // matching but unreferenced package payload does not configure the story.
+        return relationship?.ResolvedTarget is null ? null : package.GetPart(relationship.ResolvedTarget);
     }
 
     private static DocxFontCatalog LoadFontCatalog(OoxPackage package, string documentPartName, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, HashSet<string>? warnedParts = null)
     {
-        XDocument? fontTable = LoadRelatedXmlPart(package, documentPartName, FontTableRelationshipType, FontTableContentType, out _, cancellationToken, diagnosticSink, warnedParts);
-        XDocument? theme = LoadRelatedXmlPart(package, documentPartName, ThemeRelationshipType, ThemeContentType, out _, cancellationToken, diagnosticSink, warnedParts);
+        XDocument? fontTable = LoadRelatedXmlPart(package, documentPartName, FontTableRelationshipType, out _, cancellationToken, diagnosticSink, warnedParts);
+        XDocument? theme = LoadRelatedXmlPart(package, documentPartName, ThemeRelationshipType, out _, cancellationToken, diagnosticSink, warnedParts);
         return new DocxFontCatalog(ReadFontTableEntries(fontTable), ReadThemeFonts(theme));
     }
 

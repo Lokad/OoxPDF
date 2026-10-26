@@ -53,3 +53,8 @@ first-page header; before/after/empty paragraph bookmarks retain incoming links.
 Portable tests preserve these content/navigation outcomes with a synthetic face;
 they do not claim native-font geometry or pixel parity. Wrapped/hidden-text and
 undefined first/even variants are focused mutations of the same inputs.
+
+`optional-part-*.docx` and `optional-parts-office.json` retain six independent
+Word Final controls for absent, linked and unreferenced styles/settings. Unlinked
+styles retain default formatting; unlinked even-page settings preserve the default
+second-page header. The main-document XML is identical within each control family.

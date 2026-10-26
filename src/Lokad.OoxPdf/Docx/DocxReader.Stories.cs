@@ -218,8 +218,8 @@ internal sealed partial class DocxReader
             }
         }
         return ReadCommentStories(package, documentPartName, styles, numbering, markupMode, cancellationToken, diagnosticSink, warnedParts)
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, FootnotesContentType, DocxRelatedStoryKind.Footnote, "footnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteLabels, settings))
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, EndnotesContentType, DocxRelatedStoryKind.Endnote, "endnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteLabels, settings))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, DocxRelatedStoryKind.Footnote, "footnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteLabels, settings))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, DocxRelatedStoryKind.Endnote, "endnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteLabels, settings))
             .ToArray();
     }
 
@@ -241,7 +241,6 @@ internal sealed partial class DocxReader
             styles,
             numbering,
             CommentsRelationshipType,
-            CommentsContentType,
             DocxRelatedStoryKind.Comment,
             "comment",
             markupMode,
@@ -258,7 +257,6 @@ internal sealed partial class DocxReader
         DocxStyleSet styles,
         DocxNumberingSet numbering,
         string relationshipType,
-        string contentType,
         DocxRelatedStoryKind kind,
         string storyElementName,
         OoxPdfDocxMarkupMode markupMode,
@@ -270,7 +268,7 @@ internal sealed partial class DocxReader
         XDocument? settings = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        OoxPart? part = FindRelatedPart(package, documentPartName, relationshipType, contentType, cancellationToken);
+        OoxPart? part = FindRelatedPart(package, documentPartName, relationshipType, cancellationToken);
         if (part is null)
         {
             return [];
@@ -483,7 +481,7 @@ internal sealed partial class DocxReader
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        OoxPart? part = FindRelatedPart(package, documentPartName, CommentsExtendedRelationshipType, CommentsExtendedContentType, cancellationToken);
+        OoxPart? part = FindRelatedPart(package, documentPartName, CommentsExtendedRelationshipType, cancellationToken);
         if (part is null)
         {
             return new Dictionary<string, DocxCommentThreadMetadata>(StringComparer.OrdinalIgnoreCase);

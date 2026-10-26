@@ -12,20 +12,9 @@ internal sealed partial class DocxReader
 {
     private static DocxStyleSet LoadStyles(OoxPackage package, string documentPartName, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink, HashSet<string> warnedParts)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        OoxRelationship? styleRelationship = package.GetRelationships(documentPartName, cancellationToken)
-            .FirstOrDefault(r => !r.IsExternal && r.Type == StylesRelationshipType && r.ResolvedTarget is not null);
-        OoxPart? stylesPart = styleRelationship?.ResolvedTarget is null
-            ? package.Parts.FirstOrDefault(p => p.ContentType == StylesContentType)
-            : package.GetPart(styleRelationship.ResolvedTarget);
-        if (stylesPart is null)
-        {
-            return DocxStyleSet.Empty;
-        }
-
-        using Stream stream = stylesPart.OpenRead();
-        XDocument stylesXml = SafeXml.Load(stream, cancellationToken);
-        OoxMarkupCompatibility.WarnMustUnderstandOnce(stylesXml, stylesPart.Name, diagnosticSink, warnedParts);
+        XDocument? stylesXml = LoadRelatedXmlPart(package, documentPartName, StylesRelationshipType,
+            out _, cancellationToken, diagnosticSink, warnedParts);
+        if (stylesXml is null) return DocxStyleSet.Empty;
         XElement? runDefaultOwner = stylesXml
             .Root?
             .Element(WordprocessingNamespace + "docDefaults")

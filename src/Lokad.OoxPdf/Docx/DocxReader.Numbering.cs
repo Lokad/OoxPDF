@@ -232,20 +232,9 @@ internal sealed partial class DocxReader
 
     private static DocxNumberingSet LoadNumbering(OoxPackage package, string documentPartName, DocxFontCatalog fontCatalog, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink, HashSet<string> warnedParts)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        OoxRelationship? numberingRelationship = package.GetRelationships(documentPartName, cancellationToken)
-            .FirstOrDefault(r => !r.IsExternal && r.Type == NumberingRelationshipType && r.ResolvedTarget is not null);
-        OoxPart? numberingPart = numberingRelationship?.ResolvedTarget is null
-            ? package.Parts.FirstOrDefault(p => p.ContentType == NumberingContentType)
-            : package.GetPart(numberingRelationship.ResolvedTarget);
-        if (numberingPart is null)
-        {
-            return DocxNumberingSet.Empty;
-        }
-
-        using Stream stream = numberingPart.OpenRead();
-        XDocument numberingXml = SafeXml.Load(stream, cancellationToken);
-        OoxMarkupCompatibility.WarnMustUnderstandOnce(numberingXml, numberingPart.Name, diagnosticSink, warnedParts);
+        XDocument? numberingXml = LoadRelatedXmlPart(package, documentPartName, NumberingRelationshipType,
+            out _, cancellationToken, diagnosticSink, warnedParts);
+        if (numberingXml is null) return DocxNumberingSet.Empty;
         var levels = new Dictionary<(string AbstractId, int Level), DocxNumberingLevel>();
         var canonicalAbstractIds = new Dictionary<string, string>(StringComparer.Ordinal);
         var firstDefinitionByNsid = new Dictionary<uint, string>();
