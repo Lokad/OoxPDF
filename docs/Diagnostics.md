@@ -99,7 +99,7 @@ These warnings are document-scoped. Duplicate occurrences of the same unsupporte
 
 ## Images and SVG
 
-- `IMAGE_MISSING_PART`: error, a referenced image part was missing, so the image was ignored and conversion continued without it.
+- `IMAGE_MISSING_PART`: error, a referenced image part could not be resolved. Its pixels are omitted; supported DOCX picture frames retain their occupied space. Conversion continues with the diagnostic; CLI `--strict` returns failure.
 - `IMAGE_UNSUPPORTED_FORMAT`: error, image bytes could not be decoded or the content type is unsupported, so the image was ignored.
 - `IMAGE_CROP_UNSUPPORTED_FORMAT`: a cropped image could not be decoded for Office-style embedding, so PDF clipping is used instead.
 - `SVG_UNSUPPORTED_CONTENT`: unparsable SVG pictures and unusable viewBoxes are errors with the picture ignored; unsupported elements, path commands, gradients, and paint are warnings with the affected content partially omitted. One diagnostic per construct kind.

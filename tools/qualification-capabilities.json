@@ -1,4 +1,18 @@
 {
+  "docx-image-recovery": [
+    "DocxMissingPicture",
+    "DocxStaticStoryInlineImagesShareTheTextBaseline",
+    "DocxStaticStoryDeclaredFramesClipInlineImages",
+    "DocxFooterInlineImageReservesItsVisibleHeight",
+    "DocxSvg",
+    "DocxPictureCrop",
+    "DocxPictureFlip",
+    "DocxPictureRotation",
+    "DocxSyntheticVmlInlinePngRendersImageXObject",
+    "DocxStaticPictureLinks",
+    "DocxInlineCompositionOrderedPictureTranslationKeepsClipsAndFallbacks",
+    "DocxReaderReadsFloatingTextBoxContentInsets"
+  ],
   "part-ownership-workbook": [
     "DocxOptionalParts",
     "DocxSectionNavigation",

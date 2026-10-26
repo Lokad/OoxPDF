@@ -1,5 +1,10 @@
 # Migrating to 0.2.0-preview
 
+Missing DOCX picture assets now report `IMAGE_MISSING_PART` (Error) while retaining
+their authored layout space. CLI `--strict` consequently returns exit code 3 for
+these incomplete packages. No public declarations or options changed; callers
+should inspect diagnostics when accepting conversions with omitted picture pixels.
+
 These intentional changes from 0.1.5 require recompiling callers. Package and
 informational version are `0.2.0-preview`; assembly/file version is `0.2.0.0`.
 See [preview scope and qualification](PreviewRelease.md). Publication is deferred.

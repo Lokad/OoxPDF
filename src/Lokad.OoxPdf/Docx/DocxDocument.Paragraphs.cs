@@ -688,7 +688,8 @@ internal sealed record DocxRunFonts(
     }
 }
 
-internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, string ContentType, byte[] Bytes, string? PartName)
+// Missing bytes retain the authored frame; painting reports the unresolved asset.
+internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, string ContentType, byte[]? Bytes, string? PartName)
 {
     public string? ClickTarget { get; init; }
     // Owning w:r properties for review decoration; an image-only run has no text.

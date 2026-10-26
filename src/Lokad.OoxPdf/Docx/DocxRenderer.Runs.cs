@@ -804,15 +804,23 @@ internal sealed partial class DocxRenderer
 
         // D02: shared content-image dispatch (unknown types throw with the same
         // message the explicit branch below used to emit); diagnostics stay local.
-        PdfImageXObject? imageResource;
-        try
+        PdfImageXObject? imageResource = null;
+        if (image.Bytes is null)
         {
-            imageResource = OoxImageDecoder.Decode(image.ContentType, image.Bytes, static rgb => rgb, cancellationToken);
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic("IMAGE_MISSING_PART", OoxPdfSeverity.Error,
+                "Referenced image part could not be resolved; its occupied frame was retained.", image.PartName,
+                PageIndex: pageIndex, Feature: "image", Fallback: "Empty frame"));
         }
-        catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
+        else
         {
-            EmitImageDiagnostic(diagnosticSink, image, pageIndex, ex.Message);
-            imageResource = null;
+            try
+            {
+                imageResource = OoxImageDecoder.Decode(image.ContentType, image.Bytes, static rgb => rgb, cancellationToken);
+            }
+            catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
+            {
+                EmitImageDiagnostic(diagnosticSink, image, pageIndex, ex.Message);
+            }
         }
 
         if (cacheKey is not null)

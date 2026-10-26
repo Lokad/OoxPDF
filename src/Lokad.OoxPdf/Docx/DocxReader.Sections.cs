@@ -281,14 +281,13 @@ internal sealed partial class DocxReader
         {
             return null;
         }
-        OoxPart? previewPart = ResolvePart(ReadDrawingImageRelationshipId(drawing, cancellationToken));
-        OoxPart? vectorPart = ResolvePart(ReadDrawingSvgRelationshipId(drawing, cancellationToken));
+        string? previewId = ReadDrawingImageRelationshipId(drawing, cancellationToken);
+        string? vectorId = ReadDrawingSvgRelationshipId(drawing, cancellationToken);
+        if (previewId is null && vectorId is null) return null;
+        OoxPart? previewPart = ResolvePart(previewId);
+        OoxPart? vectorPart = ResolvePart(vectorId);
         bool useVector = vectorPart?.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase) == true;
         OoxPart? imagePart = useVector ? vectorPart : previewPart;
-        if (imagePart is null)
-        {
-            return null;
-        }
         double width = OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(extent, "cx", "DOCX"));
         double height = OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(extent, "cy", "DOCX"));
         XElement? sourceRectangle = EnumerateDrawingOwnedElements(drawing, DrawingNamespace + "blip", cancellationToken).FirstOrDefault()
@@ -314,7 +313,8 @@ internal sealed partial class DocxReader
                 !previewPart.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase) ? Create(previewPart) : null
         };
 
-        DocxInlineImage Create(OoxPart part) => new(width, height, part.ContentType, part.Bytes, part.Name)
+        DocxInlineImage Create(OoxPart? part) => new(width, height, part?.ContentType ?? string.Empty, part?.Bytes,
+            part?.Name ?? (relationships.TryGetValue(previewId ?? vectorId!, out var relationship) ? relationship.ResolvedTarget : null))
         {
             Revisions = RevisionList(revision), Crop = crop, ClickTarget = clickTarget,
             FlipHorizontal = OoxXml.ParseOptionalBool(pictureTransform, "flipH"),
@@ -389,17 +389,12 @@ internal sealed partial class DocxReader
         }
 
         OoxPart? imagePart = package.GetPart(relationship.ResolvedTarget);
-        if (imagePart is null)
-        {
-            return null;
-        }
-
         return new DocxInlineImage(
             widthPoints,
             heightPoints,
-            imagePart.ContentType,
-            imagePart.Bytes,
-            imagePart.Name)
+            imagePart?.ContentType ?? string.Empty,
+            imagePart?.Bytes,
+            relationship.ResolvedTarget)
         {
             Revisions = RevisionList(revision)
         };
