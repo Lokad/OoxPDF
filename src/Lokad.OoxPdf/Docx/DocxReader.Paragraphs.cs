@@ -1525,26 +1525,27 @@ internal sealed partial class DocxReader
     private static void AddResolvedTextRuns(List<DocxTextRun> runs, string text, DocxResolvedRunProperties resolvedRun, DocxRunStyleResolution styleResolution, int sourceRunIndex, int sourceTextOffsetInRun, DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo>? revisions, DocxFieldKind? fieldKind = null)
     {
         var segment = new StringBuilder();
-        bool? currentComplexScript = null;
+        DocxFontSlot? currentSlot = null;
         int segmentSourceOffset = sourceTextOffsetInRun;
         foreach (Rune rune in text.EnumerateRunes())
         {
-            bool complexScript = DocxScriptClassifier.IsComplexScriptRune(rune.Value);
-            if (currentComplexScript is not null && currentComplexScript.Value != complexScript)
+            DocxFontSlot slot = DocxScriptClassifier.FontSlot(rune.Value);
+            if (currentSlot is not null && currentSlot.Value != slot &&
+                !DocxFontResolver.SameTypefaceSelection(resolvedRun, currentSlot.Value, slot))
             {
                 string segmentText = segment.ToString();
-                AddResolvedTextRun(runs, segmentText, resolvedRun, styleResolution, currentComplexScript.Value, sourceRunIndex, segmentSourceOffset, revision, revisions, fieldKind);
+                AddResolvedTextRun(runs, segmentText, resolvedRun, styleResolution, currentSlot.Value == DocxFontSlot.ComplexScript, sourceRunIndex, segmentSourceOffset, revision, revisions, fieldKind);
                 segmentSourceOffset += segmentText.Length;
                 segment.Clear();
             }
 
             segment.Append(rune);
-            currentComplexScript = complexScript;
+            currentSlot = slot;
         }
 
-        if (segment.Length != 0 && currentComplexScript is not null)
+        if (segment.Length != 0 && currentSlot is not null)
         {
-            AddResolvedTextRun(runs, segment.ToString(), resolvedRun, styleResolution, currentComplexScript.Value, sourceRunIndex, segmentSourceOffset, revision, revisions, fieldKind);
+            AddResolvedTextRun(runs, segment.ToString(), resolvedRun, styleResolution, currentSlot.Value == DocxFontSlot.ComplexScript, sourceRunIndex, segmentSourceOffset, revision, revisions, fieldKind);
         }
     }
 

@@ -664,7 +664,7 @@ internal static class DocxCoreTests
                 ComplexScriptTheme: null)
         };
 
-        DocxTypefaceCandidates candidates = DocxFontResolver.ResolveLatinTypeface(run, catalog);
+        DocxTypefaceCandidates candidates = DocxFontResolver.ResolveTypeface(run, catalog);
 
         TestAssert.Equal("Corporate Sans", candidates.Primary ?? string.Empty);
         TestAssert.Equal("Aptos", candidates.Alternate ?? string.Empty);
@@ -693,7 +693,7 @@ internal static class DocxCoreTests
                 ComplexScriptTheme: null)
         };
 
-        DocxTypefaceCandidates candidates = DocxFontResolver.ResolveLatinTypeface(run, catalog);
+        DocxTypefaceCandidates candidates = DocxFontResolver.ResolveTypeface(run, catalog);
 
         TestAssert.Equal("Corporate East", candidates.Primary ?? string.Empty);
         TestAssert.Equal("Installed East", candidates.Alternate ?? string.Empty);

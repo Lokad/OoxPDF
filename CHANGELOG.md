@@ -2,6 +2,10 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Resolves supported English/localized installed-font family aliases to the same
+  program and collection face, preserving canonical names and style ranking.
+- Uses declared DOCX Ascii/HighAnsi/EastAsia font choices for text fragments;
+  unchanged-format run boundaries no longer determine the mixed text's font.
 - Matches numeric DOCX note and numbering IDs by decimal value, preserving
   content and list indentation across equivalent spellings such as `1`/`01`.
   Opaque identifiers retain their existing rules.

@@ -2,6 +2,8 @@ using System.Text;
 
 namespace Lokad.OoxPdf.Docx;
 
+internal enum DocxFontSlot { Ascii, HighAnsi, EastAsia, ComplexScript }
+
 internal static class DocxScriptClassifier
 {
     // Plain-line corrections are qualified for printable ASCII and letters
@@ -20,30 +22,20 @@ internal static class DocxScriptClassifier
         return true;
     }
 
-    public static bool IsComplexScriptText(string text)
+    public static DocxFontSlot FontSlot(int codePoint)
     {
-        foreach (Rune rune in text.EnumerateRunes())
-        {
-            if (IsComplexScriptRune(rune.Value))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        if (IsComplexScriptRune(codePoint)) return DocxFontSlot.ComplexScript;
+        if (IsEastAsianRune(codePoint)) return DocxFontSlot.EastAsia;
+        return codePoint <= 0x7F ? DocxFontSlot.Ascii : DocxFontSlot.HighAnsi;
     }
 
-    public static bool IsEastAsianText(string text)
+    public static DocxFontSlot FontSlot(string text)
     {
         foreach (Rune rune in text.EnumerateRunes())
         {
-            if (IsEastAsianRune(rune.Value))
-            {
-                return true;
-            }
+            return FontSlot(rune.Value);
         }
-
-        return false;
+        return DocxFontSlot.Ascii;
     }
 
     public static bool IsComplexScriptRune(int codePoint)

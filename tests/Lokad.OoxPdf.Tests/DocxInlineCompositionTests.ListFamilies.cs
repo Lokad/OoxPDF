@@ -35,7 +35,7 @@ internal static partial class DocxInlineCompositionTests
                 var expected = labels.Single(value => value.GetProperty("Text").GetString() == label.Text);
                 var run = DocxLayoutEngine.CreateListLabelRun(label, paragraph.Runs.FirstOrDefault(), 11d);
                 TestAssert.Equal(expected.GetProperty("Family").GetString(),
-                    DocxFontResolver.ResolveLatinTypeface(run, document.FontCatalog).Primary);
+                    DocxFontResolver.ResolveTypeface(run, document.FontCatalog).Primary);
             }
             var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
                 : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, default).Single();

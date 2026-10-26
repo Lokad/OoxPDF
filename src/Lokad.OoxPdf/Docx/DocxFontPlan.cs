@@ -42,7 +42,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxEffectiveRunProperties effective = run.EffectiveProperties;
-            DocxTypefaceCandidates candidates = DocxFontResolver.ResolveLatinTypeface(run, fontCatalog);
+            DocxTypefaceCandidates candidates = DocxFontResolver.ResolveTypeface(run, fontCatalog);
             IReadOnlyList<string> DistinctFamilies(params string?[] families)
             {
                 return families

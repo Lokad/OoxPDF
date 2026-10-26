@@ -4,6 +4,13 @@ These intentional changes from 0.1.5 require recompiling callers. Package and
 informational version are `0.2.0-preview`; assembly/file version is `0.2.0.0`.
 See [preview scope and qualification](PreviewRelease.md). Publication is deferred.
 
+Installed-font discovery also matches supported English/localized family-name
+records for the same face. Canonical resolved names, program identities and
+collection face indexes remain stable; alias requests retain their requested name.
+DOCX Ascii/HighAnsi/EastAsia choices now apply to text fragments, with source
+offsets and revision/link ownership preserved. Equivalent declared choices stay
+together. These rendering repairs add no public option or shaping support.
+
 - Removed `OoxPdfOptions.Deterministic`. It never changed conversion behavior.
   Remove the initializer; stable inputs/options still produce deterministic PDF
   bytes, and `FixedCreationDate` still controls optional document dates.
