@@ -1698,6 +1698,18 @@ internal sealed partial class DocxRenderer
                 break;
             }
         }
+        else if (paragraph.InlineContent is null && bookmark.TextRunIndex == paragraph.Runs.Count &&
+            paragraph.Images.Count == 0 && paragraph.Equations.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
+        {
+            // Ordinary prose retains its run-based layout. Do not opt it into
+            // inline-object layout merely to resolve non-rendering metadata.
+            DocxTextRun? last = paragraph.Runs.LastOrDefault(run => !run.EffectiveProperties.Hidden && run.Text.Length != 0);
+            if (last is not null)
+            {
+                sourceRunIndex = last.SourceRunIndex;
+                sourceOffset = last.SourceTextOffsetInRun + last.Text.Length;
+            }
+        }
         foreach (DocxTextEmissionSegment segment in segments)
         {
             if (segment.SourceTextRunIndex != sourceRunIndex)
