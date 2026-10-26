@@ -110,7 +110,23 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        // One bounded model per embedded workbook, shared by chart frames for this
+        // one bounded workbook model per embedded part, shared by every chart
+        // frame of this conversion through the render context cache. The per-frame range
+        // memo on the shared model is cleared below so nothing accumulates across frames.
+        ChartWorkbookData? chartWorkbook = GetOrCreateChartWorkbook(context.WorkbookCache, sceneChart?.ExternalData ?? default, context.CancellationToken);
+        context.CancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            RenderChartFrameWithWorkbook(context, graphics, fonts, bounds.Value, chartPartName, resolvedChartXml, resolvedChartPalette, sceneChart, chartWorkbook, linkAnnotations, reportedHyperlinkIds);
+        }
+        finally
+        {
+            chartWorkbook?.ClearRangeMemo();
+        }
+    }
+
+    // One bounded model per embedded workbook, shared by chart frames for this
     // conversion. Inspection can disable sharing with a null cache.
     private static ChartWorkbookData? GetOrCreateChartWorkbook(
         Dictionary<string, ChartWorkbookData?>? cache,
