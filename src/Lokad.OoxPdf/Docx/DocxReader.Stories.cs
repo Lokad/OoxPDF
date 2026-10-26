@@ -74,6 +74,23 @@ internal sealed partial class DocxReader
         OoxMarkupCompatibility.WarnMustUnderstandOnce(parsed.Xml, partName, diagnosticSink, warnedParts);
     }
 
+    private static IEnumerable<(XElement Reference, OoxRelationship Relationship)> EnumerateReferencedStaticStories(
+        XContainer referenceRoot,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        string relationshipType,
+        string referenceElementName,
+        CancellationToken cancellationToken)
+    {
+        foreach (XElement reference in referenceRoot.Descendants(WordprocessingNamespace + referenceElementName))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string? id = (string?)reference.Attribute(RelationshipsNamespace + "id");
+            if (id is not null && relationships.TryGetValue(id, out OoxRelationship? relationship) &&
+                !relationship.IsExternal && relationship.Type == relationshipType && relationship.ResolvedTarget is not null)
+                yield return (reference, relationship);
+        }
+    }
+
     private static IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> ReadReferencedHeaderFooterBodyElementsByType(
         XContainer referenceRoot,
         OoxPackage package,
@@ -89,16 +106,10 @@ internal sealed partial class DocxReader
         HashSet<string>? warnedParts = null)
     {
         var bodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
-        foreach (XElement reference in referenceRoot.Descendants(WordprocessingNamespace + referenceElementName))
+        foreach (var (reference, relationship) in EnumerateReferencedStaticStories(
+            referenceRoot, relationships, relationshipType, referenceElementName, cancellationToken))
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            string? relationshipId = (string?)reference.Attribute(RelationshipsNamespace + "id");
-            if (relationshipId is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.Type != relationshipType || relationship.ResolvedTarget is null)
-            {
-                continue;
-            }
-
-            OoxPart? part = package.GetPart(relationship.ResolvedTarget);
+            OoxPart? part = package.GetPart(relationship.ResolvedTarget!);
             if (part is null)
             {
                 continue;
@@ -153,16 +164,10 @@ internal sealed partial class DocxReader
         HashSet<string>? warnedParts = null)
     {
         var drawings = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase);
-        foreach (XElement reference in referenceRoot.Descendants(WordprocessingNamespace + referenceElementName))
+        foreach (var (reference, relationship) in EnumerateReferencedStaticStories(
+            referenceRoot, relationships, relationshipType, referenceElementName, cancellationToken))
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            string? relationshipId = (string?)reference.Attribute(RelationshipsNamespace + "id");
-            if (relationshipId is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.Type != relationshipType || relationship.ResolvedTarget is null)
-            {
-                continue;
-            }
-
-            OoxPart? part = package.GetPart(relationship.ResolvedTarget);
+            OoxPart? part = package.GetPart(relationship.ResolvedTarget!);
             if (part is null)
             {
                 continue;
@@ -274,8 +279,7 @@ internal sealed partial class DocxReader
             return [];
         }
 
-        using Stream stream = part.OpenRead();
-        XDocument partXml = SafeXml.Load(stream, cancellationToken);
+        XDocument partXml = package.LoadXml(part, cancellationToken);
         OoxMarkupCompatibility.WarnMustUnderstandOnce(partXml, part.Name, diagnosticSink, warnedParts);
         IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(part.Name, cancellationToken)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
@@ -286,17 +290,19 @@ internal sealed partial class DocxReader
             .Elements(WordprocessingNamespace + storyElementName)
             .Select(reference => NormalizeDecimalId((string?)reference.Attribute(WordprocessingNamespace + "id")))
             .OfType<string>() ?? []).ToHashSet(StringComparer.Ordinal);
-        foreach (XElement storyElement in partXml.Root?.Elements(WordprocessingNamespace + storyElementName) ?? [])
+        foreach (XElement sourceStory in partXml.Root?.Elements(WordprocessingNamespace + storyElementName) ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
+            XElement storyElement = sourceStory;
             if (kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
                 (string?)storyElement.Attribute(WordprocessingNamespace + "type") is null or "normal" &&
                 NormalizeDecimalId((string?)storyElement.Attribute(WordprocessingNamespace + "id")) is { } id &&
                 noteLabels is not null && noteLabels.TryGetValue((kind, id), out string? label))
             {
-                // This XML belongs to the current story read. Replace only explicit
+                // Cached XML stays read-only. Detach this note before replacing explicit
                 // automatic marks, retaining run properties and source child positions.
                 // Numbering comes from the filtered main story, including table cells.
+                storyElement = new XElement(sourceStory);
                 foreach (XElement mark in storyElement.Descendants(WordprocessingNamespace + (storyElementName + "Ref")).ToArray())
                 {
                     cancellationToken.ThrowIfCancellationRequested();

@@ -2,6 +2,10 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Keeps DOCX rendering diagnostics scoped to selected header/footer stories;
+  unused template payloads no longer cause false strict failures. Shared related
+  XML loading uses the existing package cache, with note edits on detached XML.
+
 - Selects optional DOCX configuration/stories by their owning relationships;
   unrelated styles/settings no longer change formatting or suppress headers.
 - Removes internal workbook test-construction adapters and exclusive conversion

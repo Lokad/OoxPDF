@@ -700,8 +700,7 @@ internal sealed partial class DocxReader
             return null;
         }
 
-        using Stream stream = part.OpenRead();
-        XDocument related = SafeXml.Load(stream, cancellationToken);
+        XDocument related = package.LoadXml(part, cancellationToken);
         OoxMarkupCompatibility.WarnMustUnderstandOnce(related, part.Name, diagnosticSink, warnedParts);
         return related;
     }

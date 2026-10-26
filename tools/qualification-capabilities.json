@@ -1,4 +1,19 @@
 {
+  "docx-story-ownership": [
+    "DocxStoryOwnership",
+    "DocxOptionalParts",
+    "DocxSectionNavigation",
+    "DocxUnsupportedChartInHeaderIsDiagnosed",
+    "DocxMarkupModesFilterStaticAndRelatedStoryRevisions",
+    "MustUnderstandUnknownNamespaceWarnsForHeaderPart",
+    "MustUnderstandUnknownNamespaceWarnsForStylesPart",
+    "MustUnderstandUnknownNamespaceWarnsForNumberingPart",
+    "DocxComplexFieldWithCachedResultDoesNotEmitUnsupportedDiagnostic",
+    "DocxNestedComplexFieldsUseCachedResultsAndInspectionCounters",
+    "DocxSectionNoteNumbers",
+    "PortableRenderingSectionNoteMathPreservesContentAndDestinations",
+    "DocxStaticStoryInlineImagesShareTheTextBaseline"
+  ],
   "docx-image-recovery": [
     "DocxMissingPicture",
     "DocxStaticStoryInlineImagesShareTheTextBaseline",

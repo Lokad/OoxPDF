@@ -289,7 +289,7 @@ internal sealed partial class DocxReader
         }
         // Related-story payloads render through their own stories, so probe them too.
         // Relationship-dependent checks stay body-only; their story variants remain open.
-        foreach ((string storyPartName, XDocument storyDocument) in LoadProbeStoryDocuments(package, relationships, cancellationToken))
+        foreach ((string storyPartName, XDocument storyDocument) in LoadProbeStoryDocuments(package, document, relationships, cancellationToken))
         {
             EmitStaticPayloadDiagnostics(storyDocument, storyPartName);
 
@@ -297,69 +297,36 @@ internal sealed partial class DocxReader
     }
 
 
-    // RV09: related-story probe documents for static-payload diagnostics. Headers,
-    // footers, footnotes, endnotes, and comments render, so their payloads diagnose.
+    // Static stories use the same source references as their live readers. Notes
+    // and comments retain their existing part-level diagnostics.
     // Parts that fail to load are skipped here; their story readers diagnose load
     // failures independently when the stories render.
     private static IEnumerable<(string PartName, XDocument Document)> LoadProbeStoryDocuments(
         OoxPackage package,
+        XDocument document,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         CancellationToken cancellationToken)
     {
-        string[] storyRelationshipTypes =
-        [
-            HeaderRelationshipType,
-            FooterRelationshipType,
-            FootnotesRelationshipType,
-            EndnotesRelationshipType,
-            CommentsRelationshipType
-        ];
-        foreach (OoxRelationship relationship in relationships.Values)
+        var stories = EnumerateReferencedStaticStories(document, relationships, HeaderRelationshipType, "headerReference", cancellationToken)
+            .Concat(EnumerateReferencedStaticStories(document, relationships, FooterRelationshipType, "footerReference", cancellationToken))
+            .Select(story => story.Relationship)
+            .Concat(relationships.Values.Where(relationship => relationship.Type is
+                FootnotesRelationshipType or EndnotesRelationshipType or CommentsRelationshipType));
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (OoxRelationship relationship in stories)
         {
-            if (relationship.IsExternal || relationship.ResolvedTarget is null)
-            {
-                continue;
-            }
-
-            bool isStory = false;
-            foreach (string storyType in storyRelationshipTypes)
-            {
-                if (relationship.Type == storyType)
-                {
-                    isStory = true;
-                    break;
-                }
-            }
-
-            if (!isStory)
-            {
-                continue;
-            }
-
             cancellationToken.ThrowIfCancellationRequested();
-            if (TryLoadProbeStoryDocument(package, relationship.ResolvedTarget, cancellationToken) is { } storyDocument)
+            if (relationship.IsExternal || relationship.ResolvedTarget is not { } target || !seen.Add(target))
             {
-                yield return (relationship.ResolvedTarget, storyDocument);
-            }
-        }
-    }
-
-    private static XDocument? TryLoadProbeStoryDocument(OoxPackage package, string partName, CancellationToken cancellationToken)
-    {
-        try
-        {
-            OoxPart? part = package.GetPart(partName);
-            if (part is null)
-            {
-                return null;
+                continue;
             }
 
-            using Stream stream = part.OpenRead();
-            return SafeXml.Load(stream, cancellationToken);
-        }
-        catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
-        {
-            return null;
+            OoxPart? part = package.GetPart(target);
+            if (part is null) continue;
+            XDocument storyDocument;
+            try { storyDocument = package.LoadXml(part, cancellationToken); }
+            catch (InvalidDataException) { continue; }
+            yield return (target, storyDocument);
         }
     }
 

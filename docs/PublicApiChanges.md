@@ -1,5 +1,10 @@
 # Migrating to 0.2.0-preview
 
+Unselected DOCX header/footer parts no longer produce rendering-fallback warnings
+merely because a document relationship exists. Actual story references select
+their diagnostic scope; selected unsupported content still warns. This corrects
+false CLI strict failures without changing public declarations or picture handling.
+
 Missing DOCX picture assets now report `IMAGE_MISSING_PART` (Error) while retaining
 their authored layout space. CLI `--strict` consequently returns exit code 3 for
 these incomplete packages. No public declarations or options changed; callers
