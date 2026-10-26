@@ -93,6 +93,9 @@ layout and general OpenType shaping. Static fallback diagnostics are listed belo
 - Optional styles, settings, numbering, fonts/themes and related stories follow
   the document's owning relationships. Unreferenced package parts retain the
   corresponding empty/default behavior rather than configuring active content.
+- Header/footer rendering diagnostics follow the same typed internal story
+  references as their readers. A relationship alone does not select a story;
+  selected unsupported payloads and package-level warnings remain diagnosed.
 Supported within the following constraints:
 
 - Body paragraphs/runs, common run/paragraph/document defaults and styles,
