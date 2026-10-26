@@ -124,7 +124,8 @@ internal static class DocxSectionNavigationTests
     }
 
     private static readonly OoxPdfDocxMarkupMode[] Modes = [OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup];
-    private static string Case(string id) => Path.Combine(AppContext.BaseDirectory, "Cases", "CompositionProbes", "section-nav-"+id+".docx");
+    private static string Case(string id) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
+        "..", "..", "..", "Cases", "CompositionProbes", "section-nav-"+id+".docx"));
     private static string Text(PdfPage page) => DocxPageFootnoteNumberingTests.DecodeText(page);
     private static DocxRenderer Renderer(OoxPdfDocxMarkupMode mode) => new(new TestFaceFontResolver(), mode,
         mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
