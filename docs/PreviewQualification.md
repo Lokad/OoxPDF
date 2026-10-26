@@ -133,3 +133,24 @@ The preserved roadmap stays deferred. The infrequent workspace check records
 milestone is about 54 MB; useful failed-attempt evidence remains separate. Preserve
 inputs/evidence and use verified stale-artifact maintenance rather than blanket
 deletion. The loose cap remains a maintenance guideline.
+
+## Comparison-evidence maintenance (2026-10-26)
+
+Tools revision `d69a41dc` validates reused page measurements during batch preflight
+and derives failure flags from the current limits, using the same calculation for
+fresh comparisons. Cached failure summaries and limit values cannot erase a
+measured failure. Incomplete metrics refuse reuse; legitimate blank-reference,
+pagination and dimension outcomes retain their distinct meanings.
+
+All 40 focused orchestration checks pass with both relative and absolute Windows
+output roots. The original pinned Word-note comparison still fails recall
+.9771410174 < .99 after a cached summary is cleared; empty measurements refuse
+before output mutation. The original review evidence remains unchanged.
+The [tools workflow](https://github.com/Lokad/OoxPDF/actions/runs/40297758954)
+exercises a relative output root on Windows and Ubuntu.
+
+The library/package and all 24 frozen/root assets are unchanged. The qualification,
+consumer results, representative documents and inherited failures above are reused;
+no local library rebuild, broad-suite replay, conversion, Office export or native
+rasterization was needed. Ignored evidence:
+`artifacts/preview-comparison-evidence-20261026/`. Publication remains deferred.

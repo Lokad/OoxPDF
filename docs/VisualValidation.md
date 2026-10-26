@@ -64,6 +64,15 @@ explicitly requested), rasterizes both PDFs through the pinned PDFium, compares
 pages and writes an assessment template. Reuse reference comparisons by exact
 input/options/PDF identity. Do not duplicate frozen and root qualification.
 
+`CompareCompositionPortfolio.ps1` reuses complete page measurements after matching
+PDF and threshold-source identities. It derives failures from those measurements
+and the current limits; cached `Failures` and `Thresholds` are not authoritative.
+Missing fields, invalid numbers, broken page sequences and disagreement with the
+candidate's `InspectedPages` count refuse reuse during batch preflight. VisualDiff's
+null recall for a blank reference is inapplicable; incompatible dimensions and
+missing pages retain their dimension/pagination failures. Keep incomplete attempts
+as evidence and select a complete comparison or perform a fresh comparison.
+
 Outputs are timestamped under:
 
 ```text
