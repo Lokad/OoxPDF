@@ -23,6 +23,53 @@ $thresholdHashes = @{
     docx=(Get-FileHash $docxThresholdSource).Hash
     pptx=(Get-FileHash $pptxThresholdSource).Hash
 }
+function Get-ComparisonFailures([object[]] $Metrics, $Limits, $Outcome, [string] $Id) {
+    $incomplete = 'Comparison page metrics incomplete: ' + $Id
+    if (!$Metrics.Count) { throw $incomplete }
+    $failures = @(); $candidatePages = 0; $referencePages = 0
+    for ($index=0; $index -lt $Metrics.Count; $index++) {
+        $page = $Metrics[$index]
+        foreach ($field in @('Page','ReferenceFile','CandidateFile','DimensionsMatch',
+            'MeanAbsoluteError','ChangedPixelRatioAtThreshold16','ForegroundRecall','StructuralSimilarity')) {
+            if ($null -eq $page -or $field -notin $page.PSObject.Properties.Name) { throw ($incomplete + ': ' + $field) }
+        }
+        if (($page.Page -isnot [int] -and $page.Page -isnot [long]) -or $page.Page -ne $index+1 -or
+            $page.DimensionsMatch -isnot [bool]) { throw $incomplete }
+        $expectedFile = 'page-{0:000}.png' -f ($index+1)
+        foreach ($field in @('ReferenceFile','CandidateFile')) {
+            if ($null -ne $page.$field -and $page.$field -cne $expectedFile) { throw ($incomplete + ': ' + $field) }
+        }
+        if ($page.ReferenceFile) {
+            $referencePages++
+            if ($referencePages -ne $index+1) { throw $incomplete }
+        }
+        if ($page.CandidateFile) {
+            $candidatePages++
+            if ($candidatePages -ne $index+1) { throw $incomplete }
+        }
+        if (!$page.ReferenceFile -and !$page.CandidateFile) { throw $incomplete }
+        if (!$page.ReferenceFile -or !$page.CandidateFile) { $failures += 'Pagination'; continue }
+        if (!$page.DimensionsMatch) { $failures += 'Dimensions' }
+        foreach ($field in @('MeanAbsoluteError','ChangedPixelRatioAtThreshold16','ForegroundRecall','StructuralSimilarity')) {
+            $value = $page.$field
+            # VisualDiff emits null pixel metrics for incompatible dimensions,
+            # and null recall when the reference has no foreground pixels.
+            if ($null -eq $value) {
+                if ($page.DimensionsMatch -and $field -ne 'ForegroundRecall') { throw ($incomplete + ': ' + $field) }
+            }
+            elseif ($value -isnot [ValueType] -or $value -is [bool] -or ![double]::IsFinite([double]$value)) {
+                throw ($incomplete + ': ' + $field)
+            }
+        }
+        if ($null -ne $page.MeanAbsoluteError -and $page.MeanAbsoluteError -gt $Limits.maxMeanAbsoluteError) { $failures += 'MeanAbsoluteError' }
+        if ($null -ne $page.ChangedPixelRatioAtThreshold16 -and $page.ChangedPixelRatioAtThreshold16 -gt $Limits.maxChangedPixelRatioAtThreshold16) { $failures += 'ChangedPixels' }
+        if ($null -ne $page.ForegroundRecall -and $page.ForegroundRecall -lt $Limits.minForegroundRecall) { $failures += 'ForegroundRecall' }
+        if ($null -ne $page.StructuralSimilarity -and $Limits.minStructuralSimilarity -and $page.StructuralSimilarity -lt $Limits.minStructuralSimilarity) { $failures += 'StructuralSimilarity' }
+    }
+    if (!$candidatePages -or !$referencePages -or
+        ($null -ne $Outcome.InspectedPages -and $candidatePages -ne $Outcome.InspectedPages)) { throw $incomplete }
+    return @($failures | Sort-Object -Unique)
+}
 $cached = @(foreach ($directory in $ReuseComparisonDirectory) {
     $path = Join-Path (Resolve-Path -LiteralPath $directory).Path 'office-comparisons.json'
     $report = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
@@ -79,11 +126,15 @@ $jobs = @(foreach ($row in $outcomes.Rows) {
         $_.Row.Id -eq $row.Id -and $_.Row.Mode -eq $row.Mode -and
         $_.Row.CandidatePdfSha256 -eq $row.PdfSha256 -and $_.Row.ReferencePdfSha256 -eq $referenceHash
     } | Select-Object -First 1)
+    $limits = if ($row.Mode -eq 'presentation') {$thresholds.pptx} else {$thresholds.docx}
+    $reuseFailures = @(if ($reuse.Count) {
+        Get-ComparisonFailures -Metrics @($reuse[0].Row.Metrics) -Limits $limits -Outcome $row -Id $id
+    })
     $diff = Join-Path $run 'office-diff'
     if (!$reuse.Count -and (Test-Path -LiteralPath $diff)) { throw ('Comparison already exists: ' + $id) }
     [pscustomobject]@{Row=$row;Id=$id;Run=$run;Source=$source;Pdf=$pdf;
         ReferencePdf=$referencePdf;ReferenceHash=$referenceHash;Identity=$selected.Identity;IdentityHash=$selected.IdentityHash;
-        ExportLog=$selected.ExportLog;ExportLogHash=$selected.ExportLogHash;Reuse=$reuse;Diff=$diff}
+        ExportLog=$selected.ExportLog;ExportLogHash=$selected.ExportLogHash;Reuse=$reuse;ReuseFailures=$reuseFailures;Limits=$limits;Diff=$diff}
 })
 # Match the reference cache's PDF/DPI/tool/page-hash convention. Legacy raster
 # folders stay untouched: only derivatives completed by this command may be reused.
@@ -147,7 +198,7 @@ foreach ($job in $jobs) {
         $rows += [ordered]@{Id=$row.Id;Mode=$row.Mode;HeldOut=$row.HeldOut;
             CandidatePdfSha256=$row.PdfSha256;ReferencePdfSha256=$referenceHash;
             ReferenceSourceDirectory=$source;ReferenceIdentitySha256=$job.IdentityHash;ReferenceExportLogSha256=$job.ExportLogHash;
-            Failures=$prior.Failures;Metrics=$prior.Metrics;Thresholds=$prior.Thresholds;
+            Failures=$job.ReuseFailures;Metrics=$prior.Metrics;Thresholds=$job.Limits;
             ContentSeverity=$row.Severity;ReusedComparison=$reuse[0].Path;
             ReusedComparisonSha256=(Get-FileHash $reuse[0].Path).Hash}
         Write-Output ($id + ': reused identical PDFs and threshold sources')
@@ -158,16 +209,8 @@ foreach ($job in $jobs) {
     dotnet $VisualDiffPath $referenceRaster $candidateRaster $diff *> (Join-Path $run 'office-diff.log')
     if ($LASTEXITCODE -ne 0) { throw ('Visual comparison failed: ' + $id) }
     $metrics = @(Get-Content (Join-Path $diff 'metrics.json') -Raw | ConvertFrom-Json)
-    $limits = if ($row.Mode -eq 'presentation') {$thresholds.pptx} else {$thresholds.docx}
-    $failures = @()
-    foreach ($page in $metrics) {
-        if (!$page.ReferenceFile -or !$page.CandidateFile) { $failures += 'Pagination'; continue }
-        if (!$page.DimensionsMatch) { $failures += 'Dimensions' }
-        if ($page.MeanAbsoluteError -gt $limits.maxMeanAbsoluteError) { $failures += 'MeanAbsoluteError' }
-        if ($page.ChangedPixelRatioAtThreshold16 -gt $limits.maxChangedPixelRatioAtThreshold16) { $failures += 'ChangedPixels' }
-        if ($page.ForegroundRecall -lt $limits.minForegroundRecall) { $failures += 'ForegroundRecall' }
-        if ($limits.minStructuralSimilarity -and $page.StructuralSimilarity -lt $limits.minStructuralSimilarity) { $failures += 'StructuralSimilarity' }
-    }
+    $limits = $job.Limits
+    $failures = @(Get-ComparisonFailures -Metrics $metrics -Limits $limits -Outcome $row -Id $id)
     $rows += [ordered]@{Id=$row.Id;Mode=$row.Mode;HeldOut=$row.HeldOut;CandidatePdfSha256=$row.PdfSha256;ReferencePdfSha256=$referenceHash;ReferenceSourceDirectory=$source;ReferenceIdentitySha256=$job.IdentityHash;ReferenceExportLogSha256=$job.ExportLogHash;Failures=@($failures | Sort-Object -Unique);Metrics=$metrics;Thresholds=$limits;ContentSeverity=$row.Severity}
     if ((Get-FileHash -LiteralPath $pdf).Hash -ne $row.PdfSha256 -or
         (Get-FileHash -LiteralPath $referencePdf).Hash -ne $referenceHash) { throw ('Comparison input changed: ' + $id) }

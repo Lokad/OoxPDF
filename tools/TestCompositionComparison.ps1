@@ -8,6 +8,7 @@ $ErrorActionPreference = 'Stop'
 if (!$OutputDirectory) {
     $OutputDirectory = Join-Path (Split-Path $PSScriptRoot) ('artifacts/comparison-test-' + [Guid]::NewGuid().ToString('N'))
 }
+$OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'Use a fresh test directory' }
 $repo = Join-Path $OutputDirectory 'repository'
 $tools = Join-Path $repo 'tools'
@@ -59,7 +60,7 @@ function New-Case([string] $Name, [string] $Fault) {
             $pin | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $source 'source-identity.json')
         }
         [pscustomobject]@{Id=$id;Mode='final-preserve';HeldOut=$false;
-            InputSha256=('0' * 64);PdfSha256=(Get-FileHash -LiteralPath $pdf).Hash;Severity='Test fixture'}
+            InputSha256=('0' * 64);PdfSha256=(Get-FileHash -LiteralPath $pdf).Hash;InspectedPages=1;Severity='Test fixture'}
     })
     if ($Fault -eq 'candidate-hash') { $rows[1].PdfSha256 = '0' * 64 }
     if ($Fault -eq 'existing-comparison') {
@@ -110,7 +111,10 @@ function New-ReuseCache($case) {
                 $path = Join-Path $case.ReferenceDirectory $relative
                 if (Test-Path -LiteralPath $path) { $path } else { Join-Path $case.SecondReferenceDirectory $relative }
             )).Hash;
-            Failures=@('ForegroundRecall');Metrics=@(@{ForegroundRecall=.5});Thresholds=@{minForegroundRecall=.99}}
+            Failures=@('ForegroundRecall');Metrics=@(@{
+                Page=1;ReferenceFile='page-001.png';CandidateFile='page-001.png';DimensionsMatch=$true;
+                MeanAbsoluteError=0;ChangedPixelRatioAtThreshold16=0;ForegroundRecall=.5;StructuralSimilarity=1
+            });Thresholds=@{minForegroundRecall=.99}}
     })
     @{DocxThresholdSourceSha256=(Get-FileHash (Join-Path $repo ('visual-cases/cases/'+$thresholdNames[0]+'/case.json'))).Hash;
         PptxThresholdSourceSha256=(Get-FileHash (Join-Path $repo ('visual-cases/cases/'+$thresholdNames[1]+'/case.json'))).Hash;
@@ -128,6 +132,103 @@ if ($report.Rows.Count -ne 2 -or @($report.Rows | Where-Object {
     throw 'Identical comparisons must reuse retained failures without rendering'
 }
 $passed += 'identity-reuse'
+foreach ($fault in @('empty-metrics','missing-metric','null-error','nonfinite-metric','boolean-metric',
+    'missing-page-index','duplicate-page','truncated-pages','wrong-file','nonboolean-dimensions','neither-file')) {
+    $case = New-Case $fault 'legacy'
+    $cache = New-ReuseCache $case
+    $path = Join-Path $cache 'office-comparisons.json'
+    $prior = Get-Content $path -Raw | ConvertFrom-Json -AsHashtable
+    $metric = $prior.Rows[1].Metrics[0]
+    switch ($fault) {
+        'empty-metrics' { $prior.Rows[1].Metrics=@() }
+        'missing-metric' { $metric.Remove('ForegroundRecall') }
+        'null-error' { $metric.MeanAbsoluteError=$null }
+        'nonfinite-metric' { $metric.ForegroundRecall=[double]::NaN }
+        'boolean-metric' { $metric.MeanAbsoluteError=$false }
+        'missing-page-index' { $metric.Remove('Page') }
+        'duplicate-page' { $prior.Rows[1].Metrics=@($metric,$metric) }
+        'truncated-pages' {
+            $outcomesPath=Join-Path $case.CandidateDirectory 'outcomes.json'
+            $outcomes=Get-Content $outcomesPath -Raw | ConvertFrom-Json
+            $outcomes.Rows[1].InspectedPages=2
+            $outcomes | ConvertTo-Json -Depth 6 | Set-Content $outcomesPath
+        }
+        'wrong-file' { $metric.ReferenceFile='page-002.png' }
+        'nonboolean-dimensions' { $metric.DimensionsMatch='true' }
+        'neither-file' { $metric.ReferenceFile=$null;$metric.CandidateFile=$null }
+    }
+    $prior.Rows[1].Failures=@()
+    $prior | ConvertTo-Json -Depth 10 | Set-Content $path
+    $before=Snapshot $case.Directory;$rejected=$false
+    try {
+        & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
+            -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
+    }
+    catch {
+        if ($_.Exception.Message -notlike 'Comparison page metrics incomplete: second-final-preserve*') { throw }
+        $rejected=$true
+    }
+    if (!$rejected -or (Snapshot $case.Directory) -ne $before) {
+        throw ('Incomplete metrics must refuse before mutations: '+$fault)
+    }
+    $passed+=$fault
+}
+foreach ($control in @('cleared-summary','obsolete-failure','blank-reference','dimension-mismatch',
+    'near-dimensions-with-recall-failure','reference-extra-page','candidate-extra-page','threshold-boundary')) {
+    $case=New-Case $control 'legacy'
+    $cache=New-ReuseCache $case
+    $path=Join-Path $cache 'office-comparisons.json'
+    $prior=Get-Content $path -Raw | ConvertFrom-Json -AsHashtable
+    $metric=$prior.Rows[1].Metrics[0]
+    $expectedFailures=@()
+    $prior.Rows[1].Failures=@()
+    $prior.Rows[1].Thresholds=@{minForegroundRecall=0}
+    switch ($control) {
+        'cleared-summary' { $expectedFailures=@('ForegroundRecall') }
+        'obsolete-failure' { $prior.Rows[1].Failures=@('MeanAbsoluteError');$metric.ForegroundRecall=1 }
+        'blank-reference' { $metric.ForegroundRecall=$null }
+        'dimension-mismatch' {
+            $metric.DimensionsMatch=$false
+            foreach ($field in @('MeanAbsoluteError','ChangedPixelRatioAtThreshold16','ForegroundRecall','StructuralSimilarity')) { $metric[$field]=$null }
+            $expectedFailures=@('Dimensions')
+        }
+        'near-dimensions-with-recall-failure' { $metric.DimensionsMatch=$false;$expectedFailures=@('Dimensions','ForegroundRecall') }
+        {$_ -in @('reference-extra-page','candidate-extra-page')} {
+            $metric.ForegroundRecall=1
+            $extra=@{Page=2;DimensionsMatch=$false;ReferenceFile='page-002.png';CandidateFile='page-002.png';
+                MeanAbsoluteError=$null;ChangedPixelRatioAtThreshold16=$null;ForegroundRecall=$null;StructuralSimilarity=$null}
+            if ($control -eq 'reference-extra-page') { $extra.CandidateFile=$null }
+            else {
+                $extra.ReferenceFile=$null
+                $outcomesPath=Join-Path $case.CandidateDirectory 'outcomes.json'
+                $outcomes=Get-Content $outcomesPath -Raw | ConvertFrom-Json
+                $outcomes.Rows[1].InspectedPages=2
+                $outcomes | ConvertTo-Json -Depth 6 | Set-Content $outcomesPath
+            }
+            $prior.Rows[1].Metrics=@($metric,$extra)
+            $expectedFailures=@('Pagination')
+        }
+        'threshold-boundary' {
+            $limits=Get-Content (Join-Path $repo ('visual-cases/cases/'+$thresholdNames[0]+'/case.json')) -Raw | ConvertFrom-Json
+            $metric.MeanAbsoluteError=$limits.expected.maxMeanAbsoluteError
+            $metric.ChangedPixelRatioAtThreshold16=$limits.expected.maxChangedPixelRatioAtThreshold16
+            $metric.ForegroundRecall=$limits.expected.minForegroundRecall
+            $metric.StructuralSimilarity=$limits.expected.minStructuralSimilarity
+        }
+    }
+    $prior | ConvertTo-Json -Depth 10 | Set-Content $path
+    $before=Snapshot $case.ReferenceDirectory
+    & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
+        -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
+    $result=Get-Content (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
+    $actual=$result.Rows[1]
+    if ((@($actual.Failures) -join ',') -cne ($expectedFailures -join ',') -or !$actual.ReusedComparison -or
+        $actual.Thresholds.minForegroundRecall -ne .99 -or (Snapshot $case.ReferenceDirectory) -ne $before -or
+        @(Get-ChildItem -LiteralPath $case.Directory -Recurse -Filter '*.called').Count) {
+        throw ('Reuse must derive current failures without rendering: '+$control)
+    }
+    $passed+=$control
+}
 foreach ($fault in @('multi-missing-pin','multi-source','multi-mode','multi-reference-hash','multi-log','multi-conflict')) {
     $case = New-Case $fault $fault
     if ($fault -eq 'multi-conflict') {
@@ -196,7 +297,8 @@ function dotnet {
     New-Item -ItemType Directory -Path $diff | Out-Null
     $names=@(@((Get-ChildItem $reference -Filter 'page-*.png').Name)+@((Get-ChildItem $candidate -Filter 'page-*.png').Name) | Sort-Object -Unique)
     $metrics=@(foreach ($name in $names) {
-        @{ReferenceFile=$(if (Test-Path (Join-Path $reference $name)) {$name} else {$null});
+        @{Page=[int]([IO.Path]::GetFileNameWithoutExtension($name).Substring(5));
+          ReferenceFile=$(if (Test-Path (Join-Path $reference $name)) {$name} else {$null});
           CandidateFile=$(if (Test-Path (Join-Path $candidate $name)) {$name} else {$null});
           DimensionsMatch=$true;MeanAbsoluteError=0;ChangedPixelRatioAtThreshold16=0;ForegroundRecall=1;StructuralSimilarity=1}
     })
@@ -253,6 +355,7 @@ try {
     Add-Content (Join-Path $run 'candidate.pdf') 'two pages'
     $outcomes=Get-Content (Join-Path $case.CandidateDirectory 'outcomes.json') -Raw | ConvertFrom-Json
     $outcomes.Rows[0].PdfSha256=(Get-FileHash (Join-Path $run 'candidate.pdf')).Hash
+    $outcomes.Rows[0].InspectedPages=2
     $outcomes | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $case.CandidateDirectory 'outcomes.json')
     New-Item -ItemType Directory -Path (Join-Path $run 'raster') | Out-Null
     Set-Content (Join-Path $run 'raster/page-001.png') 'stale one-page legacy raster'

@@ -135,7 +135,7 @@ jobs:
         run: |
           pwsh -NoProfile -File tools/TestCompositionMeasurement.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          pwsh -NoProfile -File tools/TestCompositionComparison.ps1
+          pwsh -NoProfile -File tools/TestCompositionComparison.ps1 -OutputDirectory artifacts/ci-tests/composition-comparison
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pwsh -NoProfile -File tools/TestCompositionJoin.ps1
       - name: Composition reference view checks
