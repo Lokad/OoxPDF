@@ -115,7 +115,8 @@ internal static class DocxSectionNavigationTests
         if (expectMultiplePages) TestAssert.True(pages.Length > 2, "The target must wrap across pages.");
         PdfLinkDestination destination = pages[0].Annotations.Single().Destination!.Value;
         TestAssert.Equal(pages.Length-1, destination.PageIndex);
-        var lastLine = renderer.InspectTextEmission(document).Lines.Last(line => line.SourceParagraphIndex == 2);
+        var lastLine = renderer.InspectTextEmission(document).Lines.Last(line => line.ContainerStoryKind == "Body" &&
+            line.Segments.Any(segment => !segment.IsTerminalLineSpace && segment.TextLength > 0));
         var lastSegment = lastLine.Segments.Last(segment => !segment.IsTerminalLineSpace && segment.TextLength > 0);
         TestAssert.True(Math.Abs(destination.Left!.Value - (lastSegment.X+lastSegment.Width-3d*lastSegment.FontSize/14d)) < .02d,
             "The end bookmark must use the final emitted endpoint and existing viewport context.");

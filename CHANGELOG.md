@@ -2,6 +2,10 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Selects DOCX first-page headers and footers using their owning section, while
+  preserving default/even selection and undefined-variant suppression.
+- Preserves incoming links to paragraph-end text bookmarks, including wrapped
+  targets and hidden trailing runs, without changing prose layout.
 - Propagates fatal font-resolution limit failures during PPTX measurement;
   ordinary font-I/O recovery remains available and cancellation still aborts.
 - Omits missing-glyph warnings for hidden DOCX text, matching layout visibility;
