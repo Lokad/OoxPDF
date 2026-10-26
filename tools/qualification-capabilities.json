@@ -32,7 +32,10 @@
     "RangeBeyondCellBudgetThrows",
     "WorksheetCells",
     "WorkbookSheetsBeyondBudgetThrow",
-    "WorkbookCellFormatsBeyondBudgetThrow"
+    "WorkbookCellFormatsBeyondBudgetThrow",
+    "MustUnderstandUnknownNamespaceWarnsForStylesPart",
+    "MustUnderstandUnknownNamespaceWarnsForNumberingPart",
+    "DocxLineSpacingInheritance"
   ],
   "section-navigation": [
     "DocxSectionNavigation",

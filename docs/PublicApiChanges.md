@@ -73,6 +73,15 @@ Standard-14 ToUnicode maps. Use `pdfOutputBytes`/`MaxOutputBytesPerConversion` f
 the complete serialized PDF size. These definitions clarify existing counting;
 values, limits, diagnostic IDs/fields/message and refusal behavior are unchanged.
 
+## Optional DOCX parts
+
+Optional styles, settings, numbering, fonts/themes and related stories now follow
+the main document's owning relationships. A typed but unreferenced part does not
+configure active content. Handcrafted packages that relied on the previous global
+content-type fallback should add the appropriate internal relationship. Missing
+or unusable optional relationships retain the corresponding empty/default behavior.
+Main-document/presentation repair lookup and the public API are unchanged.
+
 ## Stream failures and shared resolvers
 
 Seekable input may be randomly accessed. Forward-only input is supported through
