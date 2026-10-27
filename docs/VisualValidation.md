@@ -2,6 +2,12 @@
 
 Visual validation exists because a valid PDF structure does not prove visual fidelity. The harness renders an Office-produced reference, renders the candidate PDF with PDFium, compares PNG pages, and creates files that an agent or contributor can inspect.
 
+Graphics-operation comparisons preserve PDF page identity in both indexed and
+nearest-bounds modes. Reordering within a page can match; moving paint to another
+page fails. Selected records require finite bounds and positive page numbers.
+When text-hash comparison is enabled, both hashes must be present. Missing
+comparison evidence is a failed check, even when other geometry happens to agree.
+
 ## Requirements
 
 - Windows with Microsoft Office installed.

@@ -64,6 +64,22 @@ function Select-Ops($items) {
         $selected = @($selected | Where-Object { $selectedOperators -contains (OperationSourceOperator $_) })
     }
 
+    foreach ($op in $selected) {
+        foreach ($name in @('PageNumber', 'MinX', 'MinY', 'MaxX', 'MaxY')) {
+            $value = $op.$name
+            if ($null -eq $value -or [string]::IsNullOrWhiteSpace([string]$value) -or ![double]::IsFinite([double]$value)) {
+                throw ('Graphics operation requires finite ' + $name)
+            }
+        }
+        $page = [double]$op.PageNumber
+        if ($page -lt 1 -or $page -gt [int]::MaxValue -or [Math]::Floor($page) -ne $page) {
+            throw 'Graphics operation requires a positive integer PageNumber'
+        }
+        if ($MatchTextHash -and [string]::IsNullOrWhiteSpace([string]$op.TextHash)) {
+            throw 'TextHash is required when MatchTextHash is enabled'
+        }
+    }
+
     if ($PageNumber -gt 0) {
         $selected = @($selected | Where-Object { [int]$_.PageNumber -eq $PageNumber })
     }
@@ -189,6 +205,7 @@ if ($MatchByBounds) {
         $cand = $candidateOps[$candidateIndex]
         for ($referenceIndex = 0; $referenceIndex -lt $referenceOps.Count; $referenceIndex++) {
             $ref = $referenceOps[$referenceIndex]
+            if ($ref.PageNumber -ne $cand.PageNumber) { continue }
             $kindPenalty = if ([string]$cand.Kind -eq [string]$ref.Kind) { 0d } else { 1000000d }
             $operatorPenalty = if (-not $MatchOperator -or (OperationSourceOperator $cand) -eq (OperationSourceOperator $ref)) { 0d } else { 100000d }
             $segmentPenalty = if (-not $MatchSegmentCount -or [int]$cand.SegmentCount -eq [int]$ref.SegmentCount) { 0d } else { 10000d }
@@ -198,7 +215,7 @@ if ($MatchByBounds) {
                     (IntValue $cand.CurveCount) -eq (IntValue $ref.CurveCount) -and
                     (IntValue $cand.CloseCount) -eq (IntValue $ref.CloseCount))) { 0d } else { 1000d }
             $fillColorPenalty = if (-not $MatchFillColor -or (ColorEqual $cand.FillColor $ref.FillColor)) { 0d } else { 10000000d }
-            $textHashPenalty = if (-not $MatchTextHash -or (-not (HasValue $cand.TextHash)) -or (-not (HasValue $ref.TextHash)) -or [string]$cand.TextHash -eq [string]$ref.TextHash) { 0d } else { 10000000d }
+            $textHashPenalty = if (-not $MatchTextHash -or [string]$cand.TextHash -eq [string]$ref.TextHash) { 0d } else { 10000000d }
             $score = $kindPenalty +
                 $operatorPenalty +
                 $segmentPenalty +
@@ -268,6 +285,8 @@ foreach ($pair in $pairs) {
         $rows.Add([pscustomobject]@{
             Index = $pair.Index
             Status = "missing"
+            RefPage = if ($null -eq $ref) { $null } else { $ref.PageNumber }
+            CandPage = if ($null -eq $cand) { $null } else { $cand.PageNumber }
             RefKind = if ($null -eq $ref) { $null } else { $ref.Kind }
             CandKind = if ($null -eq $cand) { $null } else { $cand.Kind }
             DeltaMinX = $null
@@ -309,7 +328,8 @@ foreach ($pair in $pairs) {
     $fillColorOk = (-not $MatchFillColor) -or (ColorEqual $ref.FillColor $cand.FillColor)
     $lineCapOk = (-not $MatchLineCap) -or (IntValue $ref.LineCap) -eq (IntValue $cand.LineCap)
     $lineJoinOk = (-not $MatchLineJoin) -or (IntValue $ref.LineJoin) -eq (IntValue $cand.LineJoin)
-    $textHashOk = (-not $MatchTextHash) -or (-not (HasValue $ref.TextHash)) -or (-not (HasValue $cand.TextHash)) -or [string]$ref.TextHash -eq [string]$cand.TextHash
+    $textHashOk = (-not $MatchTextHash) -or [string]$ref.TextHash -eq [string]$cand.TextHash
+    $pageOk = $ref.PageNumber -eq $cand.PageNumber
     $pathGeometryAvailable = (HasValue $ref.PathCenterX) -and (HasValue $cand.PathCenterX) -and
         (HasValue $ref.PathCenterY) -and (HasValue $cand.PathCenterY) -and
         (HasValue $ref.PathRadius) -and (HasValue $cand.PathRadius)
@@ -333,7 +353,7 @@ foreach ($pair in $pairs) {
         [Math]::Abs($deltaPathRadius) -le $pathGeometryToleranceForKind -and
         ((-not $pathMinRadiusRelevant) -or ($pathMinRadiusAvailable -and [Math]::Abs($deltaPathMinRadius) -le $pathGeometryToleranceForKind)) -and
         ((-not $pathMaxRadiusRelevant) -or ($pathMaxRadiusAvailable -and [Math]::Abs($deltaPathMaxRadius) -le $pathGeometryToleranceForKind)))
-    $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk -and $pathOperatorsOk -and $pathCommandCoordinatesOk -and $strokeColorOk -and $fillColorOk -and $lineCapOk -and $lineJoinOk -and $textHashOk -and $pathGeometryOk) { "ok" } else { "delta" }
+    $status = if ($pageOk -and $boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk -and $pathOperatorsOk -and $pathCommandCoordinatesOk -and $strokeColorOk -and $fillColorOk -and $lineCapOk -and $lineJoinOk -and $textHashOk -and $pathGeometryOk) { "ok" } else { "delta" }
     if ($status -ne "ok") {
         $failures++
     }
@@ -341,6 +361,9 @@ foreach ($pair in $pairs) {
     $rows.Add([pscustomobject]@{
         Index = $pair.Index
         Status = $status
+        RefPage = $ref.PageNumber
+        CandPage = $cand.PageNumber
+        PageOk = $pageOk
         RefKind = $ref.Kind
         CandKind = $cand.Kind
         RefOp = OperationSourceOperator $ref
