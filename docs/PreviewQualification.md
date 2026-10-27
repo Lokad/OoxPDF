@@ -107,9 +107,9 @@ the existing annotation policy is preserved pending independent qualification.
 Three newly exercised Ubuntu inspection methods also reproduce on the preceding
 qualified artifact without its native Windows font catalog:
 
-- `PptxTextGlyphRunInspectionReportsInterGlyphAdjustmentAggregates` â€” `InvalidOperationException: Sequence contains no matching element`.
-- `PptxNumberedAutofitFramesEmitOfficeCharacterSpacingTextState` â€” `InvalidOperationException: Expected 3, got 0.`
-- `PptxNumberedNoAutofitFramesEmitOfficeCharacterSpacingTextState` â€” `InvalidOperationException: Expected 3, got 0.`
+- `PptxTextGlyphRunInspectionReportsInterGlyphAdjustmentAggregates` — `InvalidOperationException: Sequence contains no matching element`.
+- `PptxNumberedAutofitFramesEmitOfficeCharacterSpacingTextState` — `InvalidOperationException: Expected 3, got 0.`
+- `PptxNumberedNoAutofitFramesEmitOfficeCharacterSpacingTextState` — `InvalidOperationException: Expected 3, got 0.`
 
 They bring the explicit Ubuntu inventory to seven failures. Three exact parent
 methods were run, with no parent build; candidate failures were not replaced by
