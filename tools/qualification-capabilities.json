@@ -1,4 +1,14 @@
 {
+  "pptx-slide-membership": [
+    "PptxSlideMembership",
+    "PptxHiddenSlidesAreSkipped",
+    "PptxLinksToHiddenSlidesAreDiagnosed",
+    "PptxSyntheticTwoSlidesProducesTwoPdfPages",
+    "PptxRunInternalSlideHyperlinkEmitsDestination",
+    "PptxShapeInternalSlideHyperlinkEmitsDestination",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "FilePublicationFailureCleansStaging"
+  ],
   "docx-story-ownership": [
     "DocxStoryOwnership",
     "PortableRenderingInlineBoxMathKeepsSourceContentAndResources",

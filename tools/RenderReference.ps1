@@ -40,6 +40,10 @@ if ([string]::IsNullOrWhiteSpace($WorkerScript)) {
 $inputFull = (Resolve-Path -LiteralPath $InputPath).Path
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $outputFull = (Resolve-Path -LiteralPath $OutputDirectory).Path
+$workerSnapshotPath = Join-Path $outputFull 'reference-worker-status.json'
+if (Test-Path -LiteralPath $workerSnapshotPath) {
+    Remove-Item -LiteralPath $workerSnapshotPath -Force
+}
 $statusPath = Join-Path $outputFull "reference-status.json"
 $supervisorLog = Join-Path $outputFull "reference-supervisor.log"
 $workerLog = Join-Path $outputFull "reference-worker.log"
@@ -167,6 +171,11 @@ try {
             $log = Join-Path $workerWorkDir ('worker-' + $name + '.log')
             if (Test-Path -LiteralPath $log) { Copy-Item -LiteralPath $log -Destination (Join-Path $outputFull ('reference-worker-' + $name + '.log')) -Force }
         }
+        # Retain raw status even on failure/timeout, before the owned work directory
+        # is removed. The supervisor status remains the authoritative run outcome.
+        if (Test-Path -LiteralPath $workerStatusPath) {
+            Copy-Item -LiteralPath $workerStatusPath -Destination $workerSnapshotPath -Force
+        }
     }
 
     Copy-Item -LiteralPath $workerProgressLog -Destination $progressLog -Force -ErrorAction SilentlyContinue
@@ -189,7 +198,6 @@ try {
         Copy-Item -LiteralPath $item.FullName -Destination (Join-Path $outputFull $item.Name) -Recurse -Force
     }
 
-    Copy-Item -LiteralPath $workerStatusPath -Destination (Join-Path $outputFull "reference-worker-status.json") -Force
     Write-OutputStatus "ok" "done" "" $false
     Write-SupervisorLog "success"
 }

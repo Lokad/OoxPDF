@@ -55,9 +55,8 @@ internal sealed class PptxReader
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
 
         var slides = new List<PptxSlide>();
-        IEnumerable<XElement> slideIds = document.Root?
-            .Element(PresentationNamespace + "sldIdLst")?
-            .Elements(PresentationNamespace + "sldId") ?? [];
+        XElement? slideList = document.Root?.Element(PresentationNamespace + "sldIdLst");
+        IEnumerable<XElement> slideIds = slideList?.Elements(PresentationNamespace + "sldId") ?? [];
 
         foreach (XElement slideId in slideIds)
         {
@@ -73,7 +72,9 @@ internal sealed class PptxReader
             }
         }
 
-        if (slides.Count == 0)
+        // Recover missing ordering metadata, never an explicitly empty or fully
+        // hidden list: relationships alone do not make an unlisted slide printable.
+        if (slideList is null)
         {
             foreach (OoxRelationship relationship in relationships.Values)
             {

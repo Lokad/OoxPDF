@@ -14,13 +14,20 @@ Add-Content -LiteralPath $ProgressLog -Value 'stage:export'
 'fake worker stdout'; [Console]::Error.WriteLine('fake worker stderr')
 $mode=[IO.Path]::GetFileNameWithoutExtension($InputPath)
 if ($mode -eq 'hang') {Start-Sleep -Seconds 60}
+if ($mode -eq 'no-status') {exit 1}
+if ($mode -in @('export-failed','failed-reused','hang-with-status')) {
+    @{Status='export-failed';Stage='export';Error='Synthetic current export failure';OfficeVersion='CURRENT-'+$mode} | ConvertTo-Json | Set-Content $StatusPath -Encoding utf8
+    if ($mode -eq 'hang-with-status') {Start-Sleep -Seconds 60}
+    exit 1
+}
 if ($mode -eq 'unavailable') {
-    @{Status='unavailable';Stage='activation';Error='Synthetic activation failure'} | ConvertTo-Json | Set-Content $StatusPath -Encoding utf8
+    @{Status='unavailable';Stage='activation';Error='Synthetic activation failure';OfficeVersion='CURRENT-'+$mode} | ConvertTo-Json | Set-Content $StatusPath -Encoding utf8
     exit 1
 }
 @{InputPath=$InputPath;WorkDirectory=$WorkDirectory;Dpi=$Dpi;ProgressLog=$ProgressLog;StatusPath=$StatusPath;SkipBuild=[bool]$SkipBuild} | ConvertTo-Json | Set-Content (Join-Path $WorkDirectory 'arguments.json') -Encoding utf8
 Copy-Item -LiteralPath $InputPath -Destination (Join-Path $WorkDirectory 'reference.pdf')
-@{Status='ok';Stage='done';Error=''} | ConvertTo-Json | Set-Content $StatusPath -Encoding utf8
+if ($mode -eq 'bad-pdf') {Remove-Item -LiteralPath (Join-Path $WorkDirectory 'reference.pdf')}
+@{Status='ok';Stage='done';Error='';OfficeVersion='CURRENT-'+$mode} | ConvertTo-Json | Set-Content $StatusPath -Encoding utf8
 '@ | Set-Content $worker -Encoding utf8
 $spacedWorker=Join-Path $root 'worker with spaces.ps1'
 Copy-Item $worker $spacedWorker
@@ -30,19 +37,35 @@ $sentinelStart.UseShellExecute=$false;$sentinelStart.CreateNoWindow=$true
 foreach($arg in @('-NoProfile','-Command','Start-Sleep -Seconds 60')) {$sentinelStart.ArgumentList.Add($arg)}
 $sentinel=[Diagnostics.Process]::Start($sentinelStart)
 try {
-    foreach($id in @('plain','spaced-input','spaced-output','spaced-worker','all-spaced','prebuilt','unavailable','hang')) {
+    foreach($id in @('plain','spaced-input','spaced-output','spaced-worker','all-spaced','prebuilt','unavailable','hang','export-failed','failed-reused','no-status','hang-with-status','bad-pdf')) {
         $inputName=if($id -in @('spaced-input','all-spaced')) {'input ''quoted'' é.pdf'} else {$id+'.pdf'}
         $inputFile=Join-Path $root $inputName
         [IO.File]::WriteAllText($inputFile,'%PDF-Synthetic supervisor probe, not a fidelity reference')
         $output=Join-Path $root $(if($id -in @('spaced-output','all-spaced')) {$id+' output with spaces'} else {$id+'-output'})
         $selected=if($id -in @('spaced-worker','all-spaced')) {$spacedWorker} else {$worker}
-        $timeout=if($id -eq 'hang') {2} else {20}
+        $timeout=if($id -in @('hang','hang-with-status')) {2} else {20}
+        New-Item -ItemType Directory -Path $output | Out-Null
+        $retained=Join-Path $output 'retained-evidence.txt'
+        [IO.File]::WriteAllText($retained,'independent evidence survives')
+        $snapshot=Join-Path $output 'reference-worker-status.json'
+        if ($id -ne 'export-failed') {
+            @{Status='ok';OfficeVersion='OLD-RUN'} | ConvertTo-Json | Set-Content $snapshot
+        }
         $errorText=$null
         try { & (Join-Path $PSScriptRoot 'RenderReference.ps1') -InputPath $inputFile -OutputDirectory $output -WorkerScript $selected -Dpi 123 -TimeoutSeconds $timeout -SkipBuild:($id -eq 'prebuilt') *> (Join-Path $root ($id+'.log')) }
         catch {$errorText=$_.Exception.Message}
         $status=Get-Content (Join-Path $output 'reference-status.json') -Raw | ConvertFrom-Json
-        $expected=if($id -eq 'hang') {'timeout'} elseif($id -eq 'unavailable') {'unavailable'} else {'ok'}
+        $expected=if($id -in @('hang','hang-with-status')) {'timeout'} elseif($id -eq 'unavailable') {'unavailable'} elseif($id -in @('export-failed','failed-reused','no-status','bad-pdf')) {'export-failed'} else {'ok'}
         if($status.Status -ne $expected -or (($expected -eq 'ok') -eq ($null -ne $errorText))) {throw ($id+': unexpected supervisor outcome '+$errorText)}
+        if ($id -in @('hang','no-status')) {
+            if (Test-Path -LiteralPath $snapshot) {throw ($id+': stale worker metadata survived')}
+        } else {
+            $raw=Get-Content -LiteralPath $snapshot -Raw | ConvertFrom-Json
+            if ($raw.OfficeVersion -cne ('CURRENT-'+[IO.Path]::GetFileNameWithoutExtension($inputFile))) {throw ($id+': current worker metadata was lost')}
+            $rawExpected=if($id -in @('export-failed','failed-reused','hang-with-status')) {'export-failed'} elseif($id -eq 'unavailable') {'unavailable'} else {'ok'}
+            if ($raw.Status -ne $rawExpected) {throw ($id+': raw worker status was changed')}
+        }
+        if ([IO.File]::ReadAllText($retained) -cne 'independent evidence survives' -or @(Get-ChildItem -LiteralPath $output -Directory -Filter '_worker-*').Count) {throw ($id+': evidence retention/owned cleanup failed')}
         if($expected -eq 'ok') {
             $actual=Get-Content (Join-Path $output 'arguments.json') -Raw | ConvertFrom-Json
             if($actual.InputPath -cne $inputFile -or $actual.Dpi -ne 123 -or $actual.SkipBuild -ne ($id -eq 'prebuilt') -or
@@ -53,7 +76,7 @@ try {
             if([IO.File]::ReadAllText((Join-Path $output ('reference-worker-'+$name+'.log'))) -notlike ('*fake worker '+$name+'*')) {throw 'Worker log was lost'}
         }
         if($sentinel.HasExited) {throw 'Supervisor terminated an unrelated owned control process'}
-        $checks+=@{Id=$id;Status=$status.Status;Error=$errorText}
+        $checks+=@{Id=$id;Status=$status.Status;Error=$errorText;CurrentWorkerMetadata=(Test-Path -LiteralPath $snapshot);UnrelatedEvidenceRetained=$true;OwnedWorkerDirectoryRemoved=$true}
     }
 }
 finally {if(!$sentinel.HasExited) {$sentinel.Kill();$null=$sentinel.WaitForExit(5000)};$sentinel.Dispose()}

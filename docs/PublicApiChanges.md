@@ -1,5 +1,10 @@
 # Migrating to 0.2.0-preview
 
+An explicit PPTX slide list now defines membership even when it yields no visible
+slides. Unlisted slide relationships cannot turn an all-hidden, empty or unresolved
+list into output. The existing no-page failure remains; relationship-based repair
+is retained when the list is absent. No public declarations or options changed.
+
 Unselected DOCX header/footer parts no longer produce rendering-fallback warnings
 merely because a document relationship exists. Actual story references select
 their diagnostic scope; selected unsupported content still warns. This corrects

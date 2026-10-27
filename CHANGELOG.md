@@ -2,6 +2,12 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Keeps an explicit PPTX slide list authoritative when hidden-slide filtering
+  leaves no visible pages; unlisted slide relationships no longer become output.
+  Missing-list repair and the existing no-page failure remain.
+- Preserves current reference-worker failure metadata and removes stale prior-run
+  status, while keeping the supervisor result authoritative.
+
 - Keeps DOCX rendering diagnostics scoped to selected header/footer stories;
   unused template payloads no longer cause false strict failures. Shared related
   XML loading uses the existing package cache, with note edits on detached XML.
