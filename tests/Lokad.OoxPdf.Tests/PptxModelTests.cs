@@ -1047,22 +1047,13 @@ internal static class PptxModelTests
         TestAssert.Equal(PptxSceneTextRunKind.Text, textBody.Paragraphs[0].Runs[0].Kind);
         TestAssert.Equal(PptxSceneTextRunKind.Break, textBody.Paragraphs[0].Runs[1].Kind);
         TestAssert.Equal(PptxSceneTextRunKind.Field, textBody.Paragraphs[0].Runs[2].Kind);
-        TestAssert.Equal(1, textBody.Paragraphs[0].ResolvedStyle.Level);
-        TestAssert.Equal("ctr", textBody.Paragraphs[0].ResolvedStyle.Alignment);
-        TestAssert.Equal(26d, textBody.Paragraphs[0].ResolvedStyle.FontSize);
-        TestAssert.True(textBody.Paragraphs[0].ResolvedStyle.Bold, "Expected master body style bold setting to survive the scene style cascade.");
-        TestAssert.True(textBody.Paragraphs[0].ResolvedStyle.Italic, "Expected layout placeholder default run style to override inherited italic setting.");
-        TestAssert.Equal("Arial", textBody.Paragraphs[0].ResolvedStyle.Typeface ?? string.Empty);
-        TestAssert.Equal(new RgbColor(17, 17, 17), textBody.Paragraphs[0].ResolvedStyle.Color);
-        TestAssert.Equal(26d, textBody.Paragraphs[0].Runs[0].ResolvedStyle.FontSize);
-        TestAssert.True(textBody.Paragraphs[0].Runs[0].ResolvedStyle.Underline, "Expected run underline in resolved scene style.");
-        TestAssert.True(textBody.Paragraphs[0].Runs[0].ResolvedStyle.Strike, "Expected master defaultTextStyle to participate in resolved scene style.");
-        TestAssert.Equal(new RgbColor(255, 255, 0), textBody.Paragraphs[0].Runs[0].ResolvedStyle.Highlight ?? default);
 
         PptxTextGlyphRunSnapshot[] glyphHelloRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
             .Where(run => run.FrameIndex == 0 && run.ParagraphIndex == 0 && run.SourceRunIndex == 0)
             .ToArray();
         TestAssert.Equal("Hello", string.Concat(glyphHelloRuns.Select(run => run.Text)));
+        TestAssert.True(glyphHelloRuns.All(run => run.Bold && run.Italic && run.Strike),
+            "Live glyph styles retain master bold/strike and the layout italic override.");
         TestAssert.True(glyphHelloRuns.Length != 0 && glyphHelloRuns.All(run => run.Underline),
             "The live glyph inspector retains underline on every emitted source segment.");
         TestAssert.True(glyphHelloRuns.All(run => run.HighlightColor == new RgbColor(255, 255, 0)),
@@ -1526,12 +1517,6 @@ internal static class PptxModelTests
         TestAssert.Equal("Tahoma", frame.Paragraphs[0].Runs[2].Typeface);
         TestAssert.Equal("MinorComplexScript", frame.Paragraphs[0].Runs[2].TypefaceSource);
 
-        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-        PptxSceneTextParagraph sceneParagraph = scene.Slides[0].SlideNodes[0].TextBody!.Paragraphs[0];
-        TestAssert.Equal("Microsoft YaHei", sceneParagraph.Runs[0].ResolvedStyle.Typeface ?? string.Empty);
-        TestAssert.Equal(PptxThemeTypefaceSource.MajorEastAsian, sceneParagraph.Runs[0].ResolvedStyle.TypefaceSource);
-        TestAssert.Equal("Tahoma", sceneParagraph.Runs[2].ResolvedStyle.Typeface ?? string.Empty);
-        TestAssert.Equal(PptxThemeTypefaceSource.MinorComplexScript, sceneParagraph.Runs[2].ResolvedStyle.TypefaceSource);
     }
 
     public static void PptxJustifiedTextLayoutDistributesWrappedLines()
@@ -2294,7 +2279,7 @@ internal static class PptxModelTests
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneNode node = scene.Slides[0].SlideNodes[0];
-        PptxSceneRunStyle style = node.TextBody!.Paragraphs[0].Runs[0].ResolvedStyle;
+        var style = PptxSceneTextAgreementTests.ReadXmlSpans(node, document, scene).First().SourceRun!.Style;
 
         TestAssert.Equal(new RgbColor(17, 34, 51), style.Color);
         TestAssert.Equal(new RgbColor(17, 34, 51), node.Shape!.Fill.Color);

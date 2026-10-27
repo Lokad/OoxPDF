@@ -13,9 +13,7 @@ internal static class PptxSceneTextAgreementTests
 {
     public static void SceneParagraphRetainsCascadeDefaults()
     {
-        // R14-deeper: the scene builder resolves the placeholder/master default chain once
-        // per paragraph; the migration reuses these retained defaults instead of re-walking
-        // the chain in the renderer.
+        // Source cascade metadata stays available; only the live renderer resolves styles.
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
@@ -49,12 +47,13 @@ internal static class PptxSceneTextAgreementTests
         PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
 
         PptxSceneTextParagraph styled = TestAssert.NotNull(scene.Slides[0].SlideNodes[0].TextBody).Paragraphs[0];
-        XElement styledDefaults = TestAssert.NotNull(styled.DefaultParagraphProperties, "Expected the shape lstStyle level defaults to be retained for the migration.");
-        TestAssert.Equal("1600", styledDefaults.Elements().FirstOrDefault(e => e.Name.LocalName == "defRPr")?.Attribute("sz")?.Value ?? string.Empty);
-        TestAssert.Equal("1600", styled.DefaultRunProperties?.Attribute("sz")?.Value ?? string.Empty);
-
+        XElement styledDefaults = TestAssert.NotNull(styled.CascadeLayers[0].Source);
+        TestAssert.Equal("1600", styledDefaults.Element(OoxNamespaces.DrawingNamespace + "defRPr")?.Attribute("sz")?.Value ?? string.Empty);
         PptxSceneTextParagraph bare = TestAssert.NotNull(scene.Slides[0].SlideNodes[1].TextBody).Paragraphs[0];
-        TestAssert.True(bare.DefaultParagraphProperties is null, "Expected no retained defaults without any level overrides.");
+        TestAssert.True(bare.CascadeLayers.All(layer => layer.Source is null), "Bare paragraphs have no inherited style source.");
+        var frames = PptxRenderer.InspectTextFrameModels(document, package, 0);
+        TestAssert.Equal(16d, frames[0].Paragraphs[0].Runs[0].FontSize);
+        TestAssert.Equal(18d, frames[1].Paragraphs[0].Runs[0].FontSize);
     }
 
     public static void SceneCascadeLayersMatchRendererSnapshot()
@@ -293,58 +292,6 @@ internal static class PptxSceneTextAgreementTests
         }
     }
 
-    public static void TableCellParagraphsApplyStyleText()
-    {
-        // R14-deeper: cell runs without direct formatting inherit the table style
-        // text color and bold through the shared scene readers.
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
-            ["_rels/.rels"] = PptxTests.PackageRelationship(),
-            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
-            ["ppt/slides/slide1.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <p:cSld><p:spTree>
-                    <p:sp><p:nvSpPr><p:cNvPr id="2" name="Defaults"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                      <p:txBody>
-                        <a:bodyPr/><a:lstStyle><a:lvl1pPr><a:defRPr sz="1600"/></a:lvl1pPr></a:lstStyle>
-                        <a:p><a:r><a:rPr><a:latin typeface="Arial"/></a:rPr><a:t>Styled</a:t></a:r></a:p>
-                      </p:txBody>
-                    </p:sp>
-                    <p:sp><p:nvSpPr><p:cNvPr id="3" name="Plain"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="1828800"/><a:ext cx="4572000" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                      <p:txBody>
-                        <a:bodyPr/><a:lstStyle/>
-                        <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>Bare</a:t></a:r></a:p>
-                      </p:txBody>
-                    </p:sp>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """
-        });
-
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
-        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
-        var cellBody = new XElement(a + "txBody",
-            new XElement(a + "lstStyle"),
-            new XElement(a + "p",
-                new XElement(a + "r",
-                    new XElement(a + "rPr"),
-                    new XElement(a + "t", "Cell"))));
-        var styleText = new PptxSceneTableCellTextStyle(new RgbColor(17, 34, 51), true);
-        IReadOnlyList<PptxSceneTextParagraph> cellParagraphs = PptxSceneBuilder.ReadTableCellParagraphs(
-            cellBody, styleText, new List<XDocument>(), scene.Theme, PptxColorMap.Default);
-        PptxSceneTextParagraph cellParagraph = cellParagraphs.Single();
-        PptxSceneTextRun cellRun = cellParagraph.Runs.Single();
-        TestAssert.Equal(new RgbColor(17, 34, 51), cellRun.ResolvedStyle.Color);
-        TestAssert.True(cellRun.ResolvedStyle.Bold, "Expected the unstyled cell run to inherit the table style bold.");
-    }
-
     public static void TableCellSpansPreserveSourceContentAndDeclaredFrame()
     {
         // Check content against its source and placement against the supplied
@@ -421,10 +368,7 @@ internal static class PptxSceneTextAgreementTests
 
     public static void PlainShapeRunTextAndStyleAgree()
     {
-        // R14: first scene-fed-layout agreement gate. Plain-shape run text and core
-        // styles must resolve identically in the scene model and the renderer spans
-        // (the spans path re-clones node.Source today; the scene TextBody is the
-        // migration target).
+        // Source text and live rendering retain the declared formatting.
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
@@ -476,22 +420,21 @@ internal static class PptxSceneTextAgreementTests
         for (int i = 0; i < sceneRuns.Length; i++)
         {
             TestAssert.Equal(sceneRuns[i].Text, chunks[i].Text.ToString());
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.FontSize, chunks[i].Model.Style.FontSize);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Bold, chunks[i].Model.Style.Bold);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Italic, chunks[i].Model.Style.Italic);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Underline, chunks[i].Model.Style.Underline);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Strike, chunks[i].Model.Style.Strike);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Color, chunks[i].Model.Style.Color);
         }
+        TestAssert.Equal(18d, chunks[0].Model.Style.NominalFontSize);
+        TestAssert.True(chunks[0].Model.Style.Bold, "Alpha is explicitly bold.");
+        TestAssert.Equal(new RgbColor(0x11,0x22,0x33), chunks[0].Model.Style.Color);
+        TestAssert.Equal(12d, chunks[1].Model.Style.NominalFontSize);
+        TestAssert.True(chunks[1].Model.Style.Italic, "Beta is explicitly italic.");
+        TestAssert.Equal(new RgbColor(0x44,0x55,0x66), chunks[1].Model.Style.Color);
+        TestAssert.Equal(14d, chunks[2].Model.Style.NominalFontSize);
+        TestAssert.True(chunks[2].Model.Style.Underline && chunks[2].Model.Style.Strike, "Gamma retains both decorations.");
+        TestAssert.Equal(new RgbColor(0x77,0x88,0x99), chunks[2].Model.Style.Color);
     }
 
     public static void PlainShapeFullRunStyleAgrees()
     {
-        // R14: full run-style agreement gate. Every scene run-style field must
-        // resolve identically in the renderer run models: caps, spacing, baseline,
-        // highlight, explicit and fallback typefaces, underline/strike variants,
-        // and fill alpha. This widens the migration-safe surface to the whole
-        // PptxSceneRunStyle record.
+        // Source text and live rendering retain the declared formatting.
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
@@ -534,30 +477,24 @@ internal static class PptxSceneTextAgreementTests
         for (int i = 0; i < sceneRuns.Length; i++)
         {
             TestAssert.Equal(sceneRuns[i].Text, spanRuns[i].Text);
-            // Size agrees at the nominal level: raised/lowered runs render scaled
-            // (superscript/subscript rule), so emission FontSize differs by design.
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.FontSize, spanRuns[i].Style.NominalFontSize);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Color, spanRuns[i].Style.Color);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Alpha, spanRuns[i].Style.Alpha);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Typeface, spanRuns[i].Style.Typeface);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.TypefaceSource, spanRuns[i].Style.TypefaceSource);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Bold, spanRuns[i].Style.Bold);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Italic, spanRuns[i].Style.Italic);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Underline, spanRuns[i].Style.Underline);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.UnderlineValue, spanRuns[i].Style.UnderlineValue);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Strike, spanRuns[i].Style.Strike);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.StrikeValue, spanRuns[i].Style.StrikeValue);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.CapsValue, spanRuns[i].Style.CapsValue);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.BaselineOffset, spanRuns[i].Style.BaselineOffset);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Highlight, spanRuns[i].Style.Highlight);
+            TestAssert.Equal(18d, spanRuns[i].Style.NominalFontSize);
+            TestAssert.Equal(new RgbColor(0x11,0x22,0x33), spanRuns[i].Style.Color);
         }
+        TestAssert.Equal("allCaps", spanRuns[0].Style.CapsValue);
+        TestAssert.Equal(2d, spanRuns[0].Style.CharacterSpacing);
+        TestAssert.Equal(5.4d, spanRuns[1].Style.BaselineOffset);
+        TestAssert.True(spanRuns[1].Style.Underline, "B retains double underline.");
+        TestAssert.Equal("dbl", spanRuns[1].Style.UnderlineValue);
+        TestAssert.True(spanRuns[2].Style.Strike, "C retains double strike.");
+        TestAssert.Equal("dblStrike", spanRuns[2].Style.StrikeValue);
+        TestAssert.Equal("Arial", spanRuns[2].Style.Typeface);
+        TestAssert.Equal(new RgbColor(255,255,0), spanRuns[3].Style.Highlight ?? default);
+        TestAssert.Equal(0.5d, spanRuns[4].Style.Alpha);
     }
 
     public static void BreakRunsAgreeBetweenSceneAndSpans()
     {
-        // R14: break-run agreement probe. The scene model carries an explicit Break
-        // run; the spans encode it as a line boundary (breaks emit no span), so the
-        // gate pins text runs plus the forced line break at the same position.
+        // Source text and live rendering retain the declared formatting.
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
@@ -610,8 +547,7 @@ internal static class PptxSceneTextAgreementTests
 
     public static void FieldRunsAgreeBetweenSceneAndSpans()
     {
-        // R14: field-run agreement probe. Slide-number fields must resolve to the
-        // same text and style in the scene model and the renderer spans.
+        // Source text and live rendering retain the declared formatting.
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
@@ -664,16 +600,14 @@ internal static class PptxSceneTextAgreementTests
         for (int i = 0; i < sceneRuns.Length; i++)
         {
             TestAssert.Equal(sceneRuns[i].Text, chunks[i].Text.ToString());
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.FontSize, chunks[i].Model.Style.FontSize);
-            TestAssert.Equal(sceneRuns[i].ResolvedStyle.Color, chunks[i].Model.Style.Color);
+            TestAssert.Equal(18d, chunks[i].Model.Style.NominalFontSize);
+            TestAssert.Equal(new RgbColor(0,0,0), chunks[i].Model.Style.Color);
         }
     }
 
     public static void ParagraphAlignmentAgreesBetweenSceneAndSpans()
     {
-        // R14: paragraph-level agreement probe. Explicit paragraph alignment must
-        // resolve identically in the scene model and the renderer line layout
-        // (alignment applies at line level; fragments stay fragment-relative).
+        // Source text and live rendering retain the declared formatting.
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
@@ -700,43 +634,17 @@ internal static class PptxSceneTextAgreementTests
         PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         PptxSceneNode node = scene.Slides[0].SlideNodes[0];
         PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
-        string[] sceneAlignments = body.Paragraphs
-            .Select(paragraph => paragraph.ResolvedStyle.Alignment)
-            .ToArray();
-        TestAssert.Equal(2, sceneAlignments.Length);
-
+        TestAssert.Equal(2, body.Paragraphs.Count);
         PptxTextParagraphLayoutSnapshot[] layoutParagraphs = PptxRenderer.InspectTextLayout(document, package, 0)
-            .Frames.SelectMany(frame => frame.Paragraphs)
-            .ToArray();
-        TestAssert.Equal(sceneAlignments.Length, layoutParagraphs.Length);
-        // The scene preserves the raw alignment token while layout lines carry the
-        // resolved name; the gate bridges them through the production parser so both
-        // pipelines must interpret the token identically.
-        MethodInfo parse = typeof(PptxRenderer).GetMethod("ParseAlignment", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Expected alignment parser.");
-        for (int i = 0; i < sceneAlignments.Length; i++)
-        {
-            string lineAlignment = layoutParagraphs[i].Lines[0].Alignment;
-            object? parsed;
-            try
-            {
-                parsed = parse.Invoke(null, [sceneAlignments[i]]);
-            }
-            catch (TargetInvocationException ex)
-            {
-                throw ex.InnerException ?? ex;
-            }
-
-            TestAssert.Equal(parsed?.ToString(), lineAlignment);
-        }
+            .Frames.SelectMany(frame => frame.Paragraphs).ToArray();
+        TestAssert.Equal(2, layoutParagraphs.Length);
+        TestAssert.Equal("Center", layoutParagraphs[0].Lines[0].Alignment);
+        TestAssert.Equal("Right", layoutParagraphs[1].Lines[0].Alignment);
     }
 
     public static void PlaceholderTextAgreesBetweenSceneAndSpans()
     {
-        // R14: placeholder-text agreement probe. An unmatched body placeholder keeps
-        // its own txBody text and inherits the master bodyStyle size on both pipelines.
-        // (Fixtures must use p:ph: real Office files never contain a:ph, and the
-        // placeholder readers only recognize the presentationml namespace.)
+        // Source text and live rendering retain the declared formatting.
         string slide = """
             <?xml version="1.0" encoding="UTF-8"?>
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
@@ -828,17 +736,14 @@ internal static class PptxSceneTextAgreementTests
         string spanText = string.Concat(spanRuns.Select(run => run.Text));
         TestAssert.Equal("BodyText", sceneText);
         TestAssert.Equal(sceneText, spanText);
-        TestAssert.Equal(25d, sceneRuns[0].ResolvedStyle.FontSize);
+
         TestAssert.Equal(25d, spanRuns[0].Style.FontSize);
-        TestAssert.Equal(sceneRuns[0].ResolvedStyle.Color, spanRuns[0].Style.Color);
-        TestAssert.Equal(new RgbColor(0xAA, 0xBB, 0xCC), sceneRuns[0].ResolvedStyle.Color);
+        TestAssert.Equal(new RgbColor(0xAA, 0xBB, 0xCC), spanRuns[0].Style.Color);
     }
 
     public static void MatchedPlaceholderInheritanceAgrees()
     {
-        // R14: matched-placeholder inheritance probe. With a layout body placeholder
-        // present, the slide placeholder run inherits the layout lstStyle size through
-        // the placeholder chain on both pipelines (layout beats master txStyles).
+        // Source text and live rendering retain the declared formatting.
         string slide = """
             <?xml version="1.0" encoding="UTF-8"?>
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
@@ -934,19 +839,13 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.Equal(1, spanRuns.Length);
         TestAssert.Equal("MatchedBody", spanRuns[0].Text);
         TestAssert.Equal(sceneRuns[0].Text, spanRuns[0].Text);
-        double sceneSize = sceneRuns[0].ResolvedStyle.FontSize;
         double spanSize = spanRuns[0].Style.FontSize;
-        TestAssert.Equal(26d, sceneSize);
         TestAssert.Equal(26d, spanSize);
     }
 
     public static void HyperlinkRunAgreesBetweenSceneAndSpans()
     {
-        // R14: hyperlink agreement probe. A linked run resolves the hyperlink
-        // color and underline on both pipelines, and the renderer run model carries
-        // the click id. The scene model records no click identity (only its color and
-        // underline effects), so a scene-fed migration must add click id/action to
-        // PptxSceneRunStyle to preserve link emission.
+        // Source text and live rendering retain the declared formatting.
         string slideRels = """
             <?xml version="1.0" encoding="UTF-8"?>
             <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -997,14 +896,13 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.True(spanRuns[0].Style.HasHyperlinkClick, "Expected the linked run to carry a hyperlink click.");
         TestAssert.Equal("rIdLink", spanRuns[0].Style.HyperlinkClickId);
         TestAssert.True(!spanRuns[1].Style.HasHyperlinkClick, "Expected the plain run to carry no hyperlink click.");
-        TestAssert.Equal(sceneRuns[0].ResolvedStyle.Color, spanRuns[0].Style.Color);
-        TestAssert.Equal(sceneRuns[0].ResolvedStyle.Underline, spanRuns[0].Style.Underline);
+        TestAssert.True(spanRuns[0].Style.Underline, "Hyperlinks receive the default underline.");
+        TestAssert.Equal(PptxRenderer.PptxRunTextColorSource.ThemeHyperlink, spanRuns[0].Style.ColorSource);
     }
 
     public static void UnstyledRunsInheritParagraphDefaults()
     {
-        // R14: paragraph-default agreement probe. Runs without direct formatting
-        // inherit the paragraph defRPr size and color identically on both pipelines.
+        // Source text and live rendering retain the declared formatting.
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
@@ -1035,7 +933,6 @@ internal static class PptxSceneTextAgreementTests
             .Where(run => run.Kind == PptxSceneTextRunKind.Text)
             .ToArray();
         TestAssert.Equal(1, sceneRuns.Length);
-        TestAssert.Equal(20d, sceneRuns[0].ResolvedStyle.FontSize);
 
         IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadXmlSpans(node, document, scene);
         PptxRenderer.PptxTextRunModel[] spanRuns = positioned
@@ -1047,13 +944,12 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.Equal(1, spanRuns.Length);
         TestAssert.Equal("Bare", spanRuns[0].Text);
         TestAssert.Equal(20d, spanRuns[0].Style.NominalFontSize);
-        TestAssert.Equal(sceneRuns[0].ResolvedStyle.Color, spanRuns[0].Style.Color);
+        TestAssert.Equal(new RgbColor(0x99,0x33,0x66), spanRuns[0].Style.Color);
     }
 
     public static void UnstyledRunsInheritShapeListStyle()
     {
-        // R14: list-style agreement probe. Paragraphs without properties inherit
-        // the shape lstStyle level defaults identically on both pipelines.
+        // Source text and live rendering retain the declared formatting.
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
@@ -1084,7 +980,6 @@ internal static class PptxSceneTextAgreementTests
             .Where(run => run.Kind == PptxSceneTextRunKind.Text)
             .ToArray();
         TestAssert.Equal(1, sceneRuns.Length);
-        TestAssert.Equal(22d, sceneRuns[0].ResolvedStyle.FontSize);
 
         IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadXmlSpans(node, document, scene);
         PptxRenderer.PptxTextRunModel[] spanRuns = positioned
@@ -1096,14 +991,12 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.Equal(1, spanRuns.Length);
         TestAssert.Equal("Styled", spanRuns[0].Text);
         TestAssert.Equal(22d, spanRuns[0].Style.NominalFontSize);
-        TestAssert.Equal(sceneRuns[0].ResolvedStyle.Color, spanRuns[0].Style.Color);
+        TestAssert.Equal(new RgbColor(0x33,0x44,0x55), spanRuns[0].Style.Color);
     }
 
     public static void UnstyledRunsInheritMasterDefaultStyle()
     {
-        // R14: default-style agreement probe. With no shape, inherited, txStyles,
-        // or paragraph defaults anywhere, runs inherit the master defaultTextStyle
-        // identically on both pipelines.
+        // Source text and live rendering retain the declared formatting.
         string slideRels = """
             <?xml version="1.0" encoding="UTF-8"?>
             <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -1172,7 +1065,6 @@ internal static class PptxSceneTextAgreementTests
             .Where(run => run.Kind == PptxSceneTextRunKind.Text)
             .ToArray();
         TestAssert.Equal(1, sceneRuns.Length);
-        TestAssert.Equal(23d, sceneRuns[0].ResolvedStyle.FontSize);
 
         IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadXmlSpans(node, document, scene);
         PptxRenderer.PptxTextRunModel[] spanRuns = positioned
@@ -1184,16 +1076,12 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.Equal(1, spanRuns.Length);
         TestAssert.Equal("Defaulted", spanRuns[0].Text);
         TestAssert.Equal(23d, spanRuns[0].Style.NominalFontSize);
-        TestAssert.Equal(sceneRuns[0].ResolvedStyle.Color, spanRuns[0].Style.Color);
+        TestAssert.Equal(new RgbColor(0x11,0x22,0x33), spanRuns[0].Style.Color);
     }
 
     public static void TableCellTextMatchesShapeText()
     {
-        // R14: table/shape consistency probe. Identical paragraph XML in a shape
-        // and in table cells must resolve to the same run text and core styles on
-        // both pipelines, pinning that the table path adds no phantom styling over
-        // the shared readers (table cells carry unresolved XML, so this gates the
-        // renderer cascade against the scene-resolved shape).
+        // Source text and live rendering retain the declared formatting.
         string bodyPara1 = """<a:p><a:r><a:rPr sz="1600" b="1"><a:solidFill><a:srgbClr val="334455"/></a:solidFill></a:rPr><a:t>One</a:t></a:r></a:p>""";
         string bodyPara2 = """<a:p><a:r><a:rPr sz="1600" i="1"><a:solidFill><a:srgbClr val="334455"/></a:solidFill></a:rPr><a:t>Two</a:t></a:r></a:p>""";
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1279,21 +1167,20 @@ internal static class PptxSceneTextAgreementTests
             .Distinct()
             .ToArray();
         TestAssert.Equal(2, cellRuns.Length);
+        var shapeModels = ReadXmlSpans(shapeNode, document, scene).Select(span => span.SourceRun!).Distinct().ToArray();
         for (int i = 0; i < shapeRuns.Length; i++)
         {
             TestAssert.Equal(shapeRuns[i].Text, cellRuns[i].Text);
-            TestAssert.Equal(shapeRuns[i].ResolvedStyle.FontSize, cellRuns[i].Style.NominalFontSize);
-            TestAssert.Equal(shapeRuns[i].ResolvedStyle.Color, cellRuns[i].Style.Color);
-            TestAssert.Equal(shapeRuns[i].ResolvedStyle.Bold, cellRuns[i].Style.Bold);
-            TestAssert.Equal(shapeRuns[i].ResolvedStyle.Italic, cellRuns[i].Style.Italic);
+            TestAssert.Equal(shapeModels[i].Style.NominalFontSize, cellRuns[i].Style.NominalFontSize);
+            TestAssert.Equal(shapeModels[i].Style.Color, cellRuns[i].Style.Color);
+            TestAssert.Equal(shapeModels[i].Style.Bold, cellRuns[i].Style.Bold);
+            TestAssert.Equal(shapeModels[i].Style.Italic, cellRuns[i].Style.Italic);
         }
     }
 
     public static void GroupedShapeTextAgreesBetweenSceneAndSpans()
     {
-        // R14: grouped-shape agreement probe. Text in a grouped shape resolves
-        // run text and core styles identically on both pipelines through the group
-        // transform chain.
+        // Source text and live rendering retain the declared formatting.
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
@@ -1341,15 +1228,14 @@ internal static class PptxSceneTextAgreementTests
             .ToArray();
         TestAssert.Equal(1, spanRuns.Length);
         TestAssert.Equal("Grouped", spanRuns[0].Text);
-        TestAssert.Equal(sceneRuns[0].ResolvedStyle.FontSize, spanRuns[0].Style.NominalFontSize);
-        TestAssert.Equal(sceneRuns[0].ResolvedStyle.Color, spanRuns[0].Style.Color);
-        TestAssert.Equal(sceneRuns[0].ResolvedStyle.Bold, spanRuns[0].Style.Bold);
+        TestAssert.Equal(18d, spanRuns[0].Style.NominalFontSize);
+        TestAssert.Equal(new RgbColor(0x33,0x44,0x55), spanRuns[0].Style.Color);
+        TestAssert.True(spanRuns[0].Style.Bold, "The grouped run is explicitly bold.");
     }
 
     public static void TableStyleTextAgreesBetweenSceneAndSpans()
     {
-        // R14: table-style agreement probe. Unstyled header-row runs under a table
-        // style resolve the scene cell StyleText and the renderer run styles identically.
+        // Source text and live rendering retain the declared formatting.
         string theme = """
             <?xml version="1.0" encoding="UTF-8"?>
             <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="TableTheme">
@@ -1460,8 +1346,7 @@ internal static class PptxSceneTextAgreementTests
 
     public static void SchemeColorRunsAgreeBetweenSceneAndSpans()
     {
-        // R14: scheme-color agreement probe. Runs colored by theme scheme
-        // references resolve identically on both pipelines through the slide color map.
+        // Source text and live rendering retain the declared formatting.
         string theme = """
             <?xml version="1.0" encoding="UTF-8"?>
             <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="SchemeTheme">
@@ -1523,8 +1408,6 @@ internal static class PptxSceneTextAgreementTests
             .Where(run => run.Kind == PptxSceneTextRunKind.Text)
             .ToArray();
         TestAssert.Equal(2, sceneRuns.Length);
-        TestAssert.Equal(new RgbColor(0x33, 0x66, 0x99), sceneRuns[0].ResolvedStyle.Color);
-        TestAssert.Equal(new RgbColor(0x11, 0x11, 0x11), sceneRuns[1].ResolvedStyle.Color);
 
         IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadXmlSpans(node, document, scene);
         PptxRenderer.PptxTextRunModel[] spanRuns = positioned
@@ -1536,8 +1419,8 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.Equal(2, spanRuns.Length);
         TestAssert.Equal("Acc", spanRuns[0].Text);
         TestAssert.Equal("Dark", spanRuns[1].Text);
-        TestAssert.Equal(sceneRuns[0].ResolvedStyle.Color, spanRuns[0].Style.Color);
-        TestAssert.Equal(sceneRuns[1].ResolvedStyle.Color, spanRuns[1].Style.Color);
+        TestAssert.Equal(new RgbColor(0x33,0x66,0x99), spanRuns[0].Style.Color);
+        TestAssert.Equal(new RgbColor(0x11,0x11,0x11), spanRuns[1].Style.Color);
     }
 
 

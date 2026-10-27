@@ -90,10 +90,7 @@ internal sealed record PptxSceneTextParagraph(
     XElement? Properties,
     XElement? EndParagraphProperties,
     int Level,
-    PptxSceneParagraphStyle ResolvedStyle,
     IReadOnlyList<PptxSceneTextRun> Runs,
-    XElement? DefaultParagraphProperties,
-    XElement? DefaultRunProperties,
     IReadOnlyList<PptxSceneCascadeLayer> CascadeLayers,
     XElement? Source);
 
@@ -101,37 +98,7 @@ internal sealed record PptxSceneTextRun(
     PptxSceneTextRunKind Kind,
     string Text,
     XElement? Properties,
-    PptxSceneRunStyle ResolvedStyle,
     XElement Source);
-
-internal sealed record PptxSceneParagraphStyle(
-    int Level,
-    string Alignment,
-    double FontSize,
-    RgbColor Color,
-    double Alpha,
-    string? Typeface,
-    PptxThemeTypefaceSource TypefaceSource,
-    bool Bold,
-    bool Italic,
-    double CharacterSpacing);
-
-internal sealed record PptxSceneRunStyle(
-    double FontSize,
-    RgbColor Color,
-    double Alpha,
-    string? Typeface,
-    PptxThemeTypefaceSource TypefaceSource,
-    bool Bold,
-    bool Italic,
-    bool Underline,
-    string? UnderlineValue,
-    bool Strike,
-    string? StrikeValue,
-    string? CapsValue,
-    double CharacterSpacing,
-    double BaselineOffset,
-    RgbColor? Highlight);
 
 internal enum PptxSceneTextRunKind
 {

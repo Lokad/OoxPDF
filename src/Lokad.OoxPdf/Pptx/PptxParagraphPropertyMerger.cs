@@ -22,33 +22,6 @@ internal static class PptxParagraphPropertyMerger
         return merged;
     }
 
-    public static XElement? MergeSceneDefaultProperties(params XElement?[] sources)
-    {
-        XElement? merged = null;
-        foreach (XElement source in sources.Reverse().Where(source => source is not null).Cast<XElement>())
-        {
-            merged ??= new XElement(source.Name);
-            foreach (XAttribute attribute in source.Attributes())
-            {
-                merged.SetAttributeValue(attribute.Name, attribute.Value);
-            }
-
-            foreach (XElement child in source.Elements())
-            {
-                XElement? existing = merged.Element(child.Name);
-                if (existing is null)
-                {
-                    merged.Add(new XElement(child));
-                    continue;
-                }
-
-                OverlaySceneChildElement(existing, child);
-            }
-        }
-
-        return merged;
-    }
-
     private static XElement OverlayRendererParagraphProperties(XName defaultRunPropertiesName, XElement primary, XElement fallback)
     {
         XElement merged = new(primary);
@@ -139,23 +112,4 @@ internal static class PptxParagraphPropertyMerger
         }
     }
 
-    private static void OverlaySceneChildElement(XElement target, XElement source)
-    {
-        foreach (XAttribute attribute in source.Attributes())
-        {
-            target.SetAttributeValue(attribute.Name, attribute.Value);
-        }
-
-        foreach (XElement child in source.Elements())
-        {
-            XElement? existing = target.Element(child.Name);
-            if (existing is null)
-            {
-                target.Add(new XElement(child));
-                continue;
-            }
-
-            existing.ReplaceWith(new XElement(child));
-        }
-    }
 }

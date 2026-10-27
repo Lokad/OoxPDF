@@ -424,7 +424,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadHyperlinkClick(nonVisualProperties),
                 ReadBounds(child),
                 kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme, colorMap, package, relationships) : null,
-                ReadTextBody(child, placeholderSources, theme, colorMap),
+                ReadTextBody(child, placeholderSources),
                 kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme, colorMap, package, relationships) : null,
                 kind == PptxSceneNodeKind.Table ? ReadTable(child, theme, colorMap) : null,
                 kind == PptxSceneNodeKind.Chart ? ReadChart(child, package, theme, colorMap, relationships, cancellationToken) : null,

@@ -470,7 +470,7 @@ internal sealed partial class PptxRenderer
     internal static IReadOnlyList<PptxPositionedTextSpan> BuildSceneFedTableCellTextSpans(PptxTableCellTextFrame tableFrame, PptxRenderContext context)
     {
         PptxTextFrameModel frameModel = BuildTextFrameModel(tableFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken);
-        IReadOnlyList<PptxSceneTextParagraph> cellParagraphs = PptxSceneBuilder.ReadTableCellParagraphs(tableFrame.TextBody, tableFrame.TextStyle, context.InheritedXml, context.Theme, tableFrame.ColorMap);
+        IReadOnlyList<PptxSceneTextParagraph> cellParagraphs = PptxSceneBuilder.ReadTableCellParagraphs(tableFrame.TextBody, context.InheritedXml);
         IReadOnlyList<PptxTextParagraphModel> fedParagraphs = BuildSceneFedParagraphModels(cellParagraphs, frameModel, context.Theme, tableFrame.ColorMap, context.SlideNumber, shapeFontColor: null, tableFrame.TextStyle);
         var fedFrame = frameModel with { Paragraphs = fedParagraphs };
         PptxTextFrameLayout layout = BuildTextFrameLayout(fedFrame, context.Document, new TextAdvanceEstimator(context.FontResolver, context.CancellationToken));

@@ -21,12 +21,6 @@ internal static class PptxTableDefaultTests
     public static void PptxTableParagraphDefaultsMatchIndependentOfficeControls()
     {
         foreach (var control in Controls)
-            CheckScene(Case(control.Id), control.Bold, control.Color);
-    }
-
-    public static void PptxTableParagraphDefaultsReachPortablePainting()
-    {
-        foreach (var control in Controls)
             CheckPaint(Case(control.Id), control.Bold, control.Color);
     }
 
@@ -36,11 +30,11 @@ internal static class PptxTableDefaultTests
             XElement properties = xml.Descendants(A+"tc").First().Descendants(A+"rPr").First();
             properties.SetAttributeValue("b", "1");
             properties.AddFirst(new XElement(A+"solidFill", new XElement(A+"srgbClr", new XAttribute("val", "0000FF"))));
-        }, path => { CheckScene(path, true, new(0,0,255)); CheckPaint(path, true, new(0,0,255)); });
+        }, path => { CheckPaint(path, true, new(0,0,255)); });
         WithSlide("inherited", xml => {
             XElement paragraph = xml.Descendants(A+"tc").First().Descendants(A+"p").First();
             paragraph.AddFirst(new XElement(A+"pPr", new XElement(A+"defRPr")));
-        }, path => { CheckScene(path, true, new(255,255,255)); CheckPaint(path, true, new(255,255,255)); });
+        }, path => { CheckPaint(path, true, new(255,255,255)); });
     }
 
     public static void PptxTableParagraphDefaultsKeepSourceXmlAndCancellation()
@@ -58,21 +52,6 @@ internal static class PptxTableDefaultTests
         cancelled.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPages(document, package, null, cancelled.Token).ToArray());
         TestAssert.Equal(before, xml.ToString(SaveOptions.DisableFormatting));
-    }
-
-    private static void CheckScene(string path, bool bold, RgbColor color)
-    {
-        using var input = File.OpenRead(path);
-        OoxPackage package = OoxPackage.Open(input, default);
-        PptxDocument document = new PptxReader().Read(package, default);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package, default);
-        PptxSceneNode node = scene.Slides[0].SlideNodes.Single(node => node.Table is not null);
-        PptxSceneTableCell cell = node.Table!.Rows[0].Cells[0];
-        var paragraphs = PptxSceneBuilder.ReadTableCellParagraphs(cell.TextBody!, cell.StyleText, [], scene.Theme, scene.Slides[0].SlideColorMap);
-        PptxSceneTextRun run = paragraphs.Single().Runs.Single();
-        TestAssert.Equal("Head", run.Text);
-        TestAssert.Equal(bold, run.ResolvedStyle.Bold);
-        TestAssert.Equal(color, run.ResolvedStyle.Color);
     }
 
     private static void CheckPaint(string path, bool bold, RgbColor color)
