@@ -97,6 +97,7 @@ internal static class PptxSlideMembershipTests
     {
         string path = Path.Combine(Path.GetTempPath(), "slide-membership-" + Guid.NewGuid().ToString("N") + ".pptx");
         File.Copy(Case(id), path);
+        File.SetAttributes(path, FileAttributes.Normal);
         try
         {
             using (var archive = ZipFile.Open(path, ZipArchiveMode.Update))
