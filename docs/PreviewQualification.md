@@ -1,54 +1,45 @@
 # 0.2.0-preview qualification
 
-The bounded selected-story diagnostics/XML-ownership milestone is qualified.
-Publication, performance optimization and expansion remain deferred. Library and
-test executables were built once at `d7185ac8ca5c846af99df2c505be6d8b77b0e5e0`.
-Final expectation/input source: `a66c70c2d953382f3fc72abbc21265bde0f744b0`.
-Library SHA-256: `5E1FB6CC9B3556783D629DB36E5BCECD75D28E14C458752938F7342C9C770637`.
-[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40360554766)
-passes at the final source. CI builds are independent of the frozen runtime.
+The bounded PPTX slide-membership/reference-metadata milestone is qualified. Publication, performance optimization and expansion remain deferred.
+The library was built once at `db235b9b59b20a843341b1b258884386f30af305`.
+Final harness source: `1020e018a664457113373731ef73f95930d7b0a4`.
+Library SHA-256: `81F4A70CBD3F63C8A1871EC2CD13153BEDCCF09D0501C569A0E1DD983894542A`.
+[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40480830373)
+passes at the final harness source. CI builds are independent of the frozen runtime.
 
 | Gate | Result |
 |---|---|
-| Release/affected checks | One committed linked-worktree build, no library/test rebuild. Initial 29 exact methods pass both hosts. Refined 35-method capability: Windows 35 pass; Ubuntu 32 pass/three declared Windows-font skips. All five new portable methods pass both hosts. |
-| Windows milestone | **3,815 pass, one inherited failure, five skips**; 3,821 unique methods/3,827 attempts in three invocations. Only six failed expectation checks repeated. |
-| Ubuntu milestone | **1,219 pass, seven inherited failures, 77 skips**; 1,303 unique methods/1,306 attempts. Three failed expectation checks repeated; three newly selected native-font methods skip in one extra exact-set invocation. No prior failure becomes a skip. |
-| Original Office controls | Five pinned Word Final inputs retain identical candidate PDFs. The unselected uncached header now stays quiet/strict 0; a selected unsupported field still warns/strict 3. No new Office export/rasterization. |
-| XML ownership | The live related-part helper and package cache share one DOM. Note marker edits detach only the note being changed; cached source XML remains unchanged across reads. Bounds, cancellation and MustUnderstand deduplication pass. No measured speedup or heap benefit claimed. |
-| Representative documents | Nine sources/16 outcomes/32 pages retain exact prior PDFs, diagnostics and semantic results. Each outcome converted once. |
-| Independent visual gates | Reused by identity: two strict PPTX passes/fourteen strict DOCX failures. All thresholds/residuals remain; manifest validation is not fidelity evidence. Six unresolved history-control PDFs/diagnostics are unchanged across both candidate presets. |
+| Release/affected checks | One committed linked-worktree library build. Eleven exact affected methods pass on both hosts. A read-only temporary-fixture repair rebuilds only the test harness; only its two failed methods repeat per host. All 21 other runtime assets and 2,608 public inputs are identical. |
+| Windows milestone | **3,819 pass, one inherited failure, five skips**; 3,825 unique methods/3,827 attempts in three invocations. No prior passing method regresses. |
+| Ubuntu milestone | **1,224 pass, seven inherited failures, 77 skips**; 1,308 unique methods/1,310 attempts in three invocations. Inherited failures retain their outcomes/messages. |
+| Independent PowerPoint controls | Two visible-list controls retain byte-identical PDFs. Both all-hidden controls fail without PDF, matching PowerPoint's refusal to export them. Four pinned inputs; no new Office export/rasterization. |
+| Reference-worker mechanics | 13 supervision, eight exception-stage, ten timeout-stage and four raster-forwarding checks pass. Current raw metadata survives failure/timeout; no-status runs clear stale metadata. Unrelated evidence and process ownership remain intact. No Office/build. |
+| Representative documents | Nine sources/16 outcomes/32 pages retain exact previous PDFs, diagnostics and semantic results. Each outcome converted once. |
+| Independent visual gates | Reused by PDF identity: two strict PPTX passes/fourteen strict DOCX failures. Thresholds and residuals remain unchanged; 715 validated manifests/12 families are integrity evidence, not a fidelity pass count. |
 | API/runtime | 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0. |
-| Package/transfer | Same dependency-free package and consumer source pass Windows/Ubuntu. All 24 runtime assets and two integration PDFs match after transfer; no root library build or broad suite replay. |
+| Package/transfer | Same package and consumer source pass Windows/Ubuntu. All 24 runtime assets and two integration PDFs match after transfer; no root library build or suite replay. |
 
 ## Conversion behavior and bounded maintenance
 
-Header/footer diagnostics now resolve the same typed internal source references
-as the text and drawing readers. An unused relationship alone no longer makes an
-uncached field a rendering fallback. Selected unsupported content and deliberate
-package-level warnings remain. Notes/comments retain their existing part-level
-probing; referenced-but-page-inactive variants remain outside this correction.
+An explicit PPTX slide list now remains authoritative after hidden slides are
+filtered. Relationships alone cannot make an unlisted slide printable. An absent
+list still permits existing relationship-based recovery; normal ordering, hidden
+slide links and presentation-part discovery retain their behavior. Explicit empty,
+unresolved and all-hidden lists produce the existing no-page failure. Cancellation
+and failed conversion preserve file publication. No blank-page policy, new option,
+public API declaration or rendering guard is introduced.
 
-The related XML loader, probe and normal story reader use the existing per-package
-DOM owner. The obsolete raw probe loader and its file-I/O recovery arms are removed;
-malformed XML recovery remains. Style/numbering readers consume immutable source
-XML. Automatic note labels are applied to a detached note element. Cached DOMs can
-remain live through the reader stage; DOCX passes the resulting typed model to
-layout. There is no new cache, accounting layer or performance claim. Production
-source is 28 lines smaller. No layout/history guard is replaced.
+The reference supervisor clears its generated worker-status snapshot at the start
+of a run and copies the current raw status before owned worker cleanup, including
+failure and timeout paths when status exists. The supervisor status remains the
+run outcome; for example, raw success can accompany supervisor PDF-verification
+failure. Unrelated reference output is preserved. This fixes evidence loss/staleness;
+no false cache import or fidelity pass was demonstrated.
 
-Broader checks found candidate-specific gold fields expecting ignored-equation
-warnings from an unused header in one mixed-source fixture. Six rows across three
-files now expect zero such warnings. Office geometry, glyph/image/text values,
-input hashes and all executable test assertions are unchanged. Every one of the
-24 runtime asset hashes remains identical; 2,601 other public inputs are unchanged.
-Only six Windows/three Ubuntu failed methods are repeated. All raw failures remain.
-The original CI attempt failed these stale expectations; the final CI passes.
-
-The tracked report join requires identical inputs, so it was not used for this
-expectation-only input change. The bounded retained audit verifies all runtime
-assets/inputs and permits only the six documented diagnostic field pairs. This
-adds no general join framework or validation exception. Committed LF formatting
-is preserved. No library or test executable was rebuilt after the data correction.
+The initial two fixture-mutation checks copied immutable inputs with their read-only
+flag. Only their temporary copies are made writable. Original failure reports and
+both frozen harnesses remain; the tracked report join verifies unchanged production
+source, runtime assets, inputs and exact affected coverage. No passing check repeats.
 
 ## Inherited failures and limitations
 
@@ -119,22 +110,19 @@ no threshold change or formal manifest/agent-rating pass is claimed.
 
 ## Evidence and workflow
 
-Ignored evidence: artifacts/preview-story-ownership-20261026/qualification.json.
-It binds original/final input snapshots, exact method reports, the reviewed gold
-field delta, original Office controls, XML ownership probe/audit, identical portfolio,
-same-package consumers, transfer and green CI. The actual failed and qualified
-artifacts remain. An unused intermediate runtime/snapshot was purged after identity
-verification; its manifest and committed history remain.
-The [preceding qualification](https://github.com/Lokad/OoxPDF/blob/56871caf/docs/PreviewQualification.md)
-records missing-picture recovery and reference-test cleanup.
+Ignored evidence: artifacts/preview-slide-membership-20261027/qualification.json.
+It binds both frozen harnesses, original/repair/exact reports, independent slide
+controls, worker checks, unchanged portfolio, same-package consumers, transfer and
+CI. The original failed harness attempts remain. The
+[preceding qualification](https://github.com/Lokad/OoxPDF/blob/e3917998/docs/PreviewQualification.md)
+records selected-story diagnostics and shared XML ownership; that cleanup stays complete.
 
 Safe managed dependency-free execution, cancellation, meaningful bounds, coarse
 host admission/refunds, bounded caches/staging, deterministic cleanup, atomic
-publication and PDF validity remain. The section-history header probe is unresolved:
-Word shows both current/historical text in one synthetic input. Its schema and
-normalization scope is not established; this milestone preserves that behavior.
+publication and PDF validity remain. The section-history header probe remains
+unresolved; no schema/normalization or layout guard is replaced by this milestone.
 
 The last full workspace check remains 6.778 GB/935,126 files before recent batches
-(2026-10-26), above the loose 5 GB target. This milestone is about 65.5 MB plus
-47.4 MB of retained initial/final input snapshots. The unused intermediate freeze's
-2,630 files were removed. No full rescan or blanket deletion was needed.
+(2026-10-26), above the loose 5 GB target. This milestone is about 55 MB plus one
+23.8 MB shared input snapshot. Both actual harness artifacts and useful evidence
+remain. No full rescan, duplicate input snapshot or blanket deletion was needed.
