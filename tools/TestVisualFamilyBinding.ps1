@@ -11,7 +11,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'CheckVisualFamily.ps1') -Destin
 $buildLog = Join-Path $repo 'builds.jsonl'
 $caseLog = Join-Path $repo 'cases.jsonl'
 @'
-param($Project, $OutputDll, $Description)
+param($Project, $OutputDll, $Description, $RecordPath)
 @{Project=$Project;Description=$Description} | ConvertTo-Json -Compress | Add-Content (Join-Path (Split-Path $PSScriptRoot) 'builds.jsonl')
 New-Item -ItemType Directory -Path (Split-Path $OutputDll) -Force | Out-Null
 [IO.File]::WriteAllText($OutputDll, 'fake CLI or validation tool')
@@ -61,7 +61,115 @@ $defaultCli = $cases[-1].CliPath
 & $script -Family probe -SkipBuild | Out-Null
 $cases = @(Get-Content $caseLog | ConvertFrom-Json)
 if (@(Get-Content $buildLog).Count -ne 5 -or $cases.Count -ne 8 -or $cases[-1].CliPath -ne $defaultCli) { throw 'Prebuilt default binding failed' }
+# Every inspection capability prepares the tool once for both cases. False font
+# flags leave raster-only families free of unused inspection builds.
+$inspectionKeys=@('maxTextOperationPositionDelta','maxTextLineStartDelta','maxGraphicsOperationBoundsDelta',
+    'maxChartGraphicsStructureBoundsDelta','maxChartGraphicsStructureBoundsDeltaByKind',
+    'maxChartTextStructurePositionDelta','maxChartTextStructurePositionDeltaByKind',
+    'candidateFontsMustBeEmbedded','candidateFontsMustHaveToUnicode','candidateFontsMustBeSubset')
+foreach($key in $inspectionKeys) {
+    foreach($id in @('probe-a','probe-b')) {
+        $expected=@{}; $expected[$key]=if($key.StartsWith('candidateFonts')) {$true} else {0}
+        @{id=$id;kind='docx';tags=@('approximate');expected=$expected} | ConvertTo-Json -Depth 4 |
+            Set-Content (Join-Path $repo "visual-cases/cases/$id/case.json")
+    }
+    $before=@(Get-Content $buildLog).Count
+    & $script -Family probe -CliPath $frozenCli | Out-Null
+    $added=@(Get-Content $buildLog | Select-Object -Skip $before | ConvertFrom-Json)
+    if($added.Count -ne 3 -or @($added | Where-Object Description -eq 'PDF inspect').Count -ne 1) {throw ('Inspection tool was not prepared exactly once: '+$key)}
+}
+$before=@(Get-Content $buildLog).Count
+& $script -Family probe -CliPath $frozenCli -SkipBuild | Out-Null
+if(@(Get-Content $buildLog).Count -ne $before) {throw 'An inspecting prebuilt family requested a build'}
+$inspector=Join-Path $repo 'tools/Lokad.OoxPdf.PdfInspect/bin/Debug/net10.0/Lokad.OoxPdf.PdfInspect.dll'
+if(!$inspector.StartsWith($repo+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) {throw 'Unexpected synthetic inspector path'}
+Remove-Item -LiteralPath $inspector
+$caseCount=@(Get-Content $caseLog).Count
+$failure=$null
+try { & $script -Family probe -CliPath $frozenCli -SkipBuild | Out-Null } catch {$failure=$_.Exception.Message}
+if($failure -notlike '*PDF inspector is missing*' -or @(Get-Content $buildLog).Count -ne $before -or @(Get-Content $caseLog).Count -ne $caseCount) {throw 'Missing prebuilt inspector did not fail before cases/builds'}
+[IO.File]::WriteAllText($inspector,'prebuilt synthetic PDF inspector')
+foreach($id in @('probe-a','probe-b')) {
+    @{id=$id;kind='docx';tags=@('approximate');expected=@{candidateFontsMustBeEmbedded=$false}} | ConvertTo-Json -Depth 4 |
+        Set-Content (Join-Path $repo "visual-cases/cases/$id/case.json")
+}
+& $script -Family probe -CliPath $frozenCli | Out-Null
+if(@(Get-Content $buildLog).Count -ne $before+2) {throw 'A false font flag caused an unused inspection build'}
+
+# Cross the real case -> inspector boundary. Only native executions and Office/
+# raster helpers are stubbed. The real scripts decide preparation and forwarding.
+foreach($name in @('CheckVisualCase.ps1','InspectPdf.ps1','JsonArray.ps1','CompareMath.ps1','ComparePdfTextLineStarts.ps1')) {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination (Join-Path $repo 'tools') -Force
+}
+@'
+param($InputPath,$OutputDirectory,$Dpi,$CaseId,[switch]$SkipBuild)
+[IO.File]::WriteAllText((Join-Path $OutputDirectory 'reference.pdf'),'%PDF-fake reference')
+[IO.File]::WriteAllText((Join-Path $OutputDirectory 'page-001.png'),'synthetic raster')
+'@ | Set-Content (Join-Path $repo 'tools/RenderCachedReference.ps1')
+@'
+param($InputPdf,$OutputDirectory,$Dpi,[switch]$SkipBuild)
+[IO.File]::WriteAllText((Join-Path $OutputDirectory 'page-001.png'),'synthetic raster')
+'@ | Set-Content (Join-Path $repo 'tools/RasterizePdf.ps1')
+foreach($id in @('probe-a','probe-b')) {
+    $directory=Join-Path $repo "visual-cases/cases/$id"
+    [IO.File]::WriteAllText((Join-Path $directory 'input.docx'),'synthetic orchestration input')
+    @{id=$id;kind='docx';input='input.docx';tags=@('approximate');expected=@{
+        maxTextLineStartDelta=0.15;maxTextLineStartYDelta=0.5;candidateFontsMustBeEmbedded=$true}} | ConvertTo-Json -Depth 4 |
+        Set-Content (Join-Path $directory 'case.json')
+}
+$inspectionLog=Join-Path $repo 'inspection-calls.jsonl'
+function dotnet {
+    $values=@($args)
+    if($values[0] -like '*Lokad.OoxPdf.Cli.dll') {
+        [IO.File]::WriteAllText($values[3],'%PDF-fake candidate')
+        [IO.File]::WriteAllText($values[5],'[]')
+    } elseif($values[0] -like '*Lokad.OoxPdf.VisualDiff.dll') {
+        '[{"Page":1,"DimensionsMatch":true,"MeanAbsoluteError":0}]' | Set-Content (Join-Path $values[3] 'metrics.json')
+    } elseif($values[0] -like '*Lokad.OoxPdf.PdfInspect.dll') {
+        $output=$values[2]
+        $baseline=if($values[1] -like '*output.pdf' -and $output -like '*real-y-shift*') {500} else {700}
+        @(@{PageNumber=1;X=72;Y=$baseline;DecodedText='Visible content'}) | ConvertTo-Json -AsArray | Set-Content (Join-Path $output 'text-operations.json')
+        '[{"PageNumber":1,"ResourceName":"F1","Embedded":true,"HasToUnicode":true,"IsSubset":true}]' | Set-Content (Join-Path $output 'font-resources.json')
+        @{Inspector=$values[0];InspectorSha256=(Get-FileHash $values[0]).Hash;Output=$output} | ConvertTo-Json -Compress |
+            Add-Content $inspectionLog
+    } else {throw 'Unexpected native execution request'}
+    $global:LASTEXITCODE=0
+}
+$realCase=Join-Path $repo 'tools/CheckVisualCase.ps1'
+$realManifest=Join-Path $repo 'visual-cases/cases/probe-a/case.json'
+try {
+    $before=@(Get-Content $buildLog).Count
+    & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-prebuilt' | Out-Null
+    if(@(Get-Content $buildLog).Count -ne $before) {throw 'Real prebuilt case requested a build'}
+    & $realCase -Case $realManifest -CliPath $frozenCli -RunId 'real-prepare-once' | Out-Null
+    $added=@(Get-Content $buildLog | Select-Object -Skip $before | ConvertFrom-Json)
+    if($added.Count -ne 2 -or @($added | Where-Object Description -eq 'PDF inspect').Count -ne 1) {throw 'Real direct case did not prepare inspector once'}
+    $before=@(Get-Content $buildLog).Count
+    & $script -Family probe -CliPath $frozenCli | Out-Null
+    $added=@(Get-Content $buildLog | Select-Object -Skip $before | ConvertFrom-Json)
+    if($added.Count -ne 3 -or @($added | Where-Object Description -eq 'PDF inspect').Count -ne 1) {throw 'Real family repeated per-case inspector builds'}
+    $before=@(Get-Content $buildLog).Count
+    & $script -Family probe -CliPath $frozenCli -SkipBuild | Out-Null
+    if(@(Get-Content $buildLog).Count -ne $before) {throw 'Real prebuilt family requested a build'}
+    $failure=$null
+    try { & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-y-shift' | Out-Null } catch {$failure=$_.Exception.Message}
+    if($failure -ne 'PDF text line-start gate failed.' -or @(Get-Content $buildLog).Count -ne $before) {throw 'The real case did not enforce its manifest Y bound without building'}
+    Remove-Item -LiteralPath $inspector
+    $failure=$null
+    try { & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-missing-tool' | Out-Null } catch {$failure=$_.Exception.Message}
+    if($failure -notlike '*PDF inspect DLL is missing*' -or @(Get-Content $buildLog).Count -ne $before) {throw 'Real missing-tool case requested a build or ignored refusal'}
+}
+finally {Remove-Item Function:/dotnet}
+$inspections=@(Get-Content (Join-Path $repo 'inspection-calls.jsonl') | ConvertFrom-Json)
+if($inspections.Count -ne 20) {throw 'Real inspection coverage is incomplete'}
+foreach($inspection in $inspections) {
+    $record=Get-Content (Join-Path $inspection.Output 'pdf-inspect-build-info.json') -Raw | ConvertFrom-Json
+    if($record.BuildRequested -ne $false -or $record.OutputSha256 -ne $inspection.InspectorSha256) {throw 'Inspector provenance or explicit prebuilt binding was lost'}
+}
 [ordered]@{Checks=@('List without runtime','Frozen CLI forwarding','Validation-only builds','Runtime identity',
-    'Skip all builds','Default builds once','Prebuilt default CLI');LibraryBuilds=0;LibraryExecutions=0} |
+    'Skip all builds','Default builds once','Prebuilt default CLI','All ten inspection capabilities',
+    'No unused inspector','Missing prebuilt tool preflight','Real case/inspector forwarding',
+    'Real once-only preparation','Real family reuse','Real missing-tool refusal','Manifest Y bound forwarding','Inspector provenance');
+    InspectionCapabilities=$inspectionKeys.Count;RealInspectionCalls=$inspections.Count;LibraryBuilds=0;LibraryExecutions=0;OfficeExports=0} |
     ConvertTo-Json | Set-Content (Join-Path $OutputDirectory 'evidence.json')
-Write-Output 'Seven visual-family binding checks passed; no real build, library execution or Office export.'
+Write-Output 'Visual-family and real case/inspector binding checks pass; no actual build, library execution or Office export.'

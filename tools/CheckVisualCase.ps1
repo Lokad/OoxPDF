@@ -14,6 +14,9 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$pdfInspectorPrepared = $false
+$pdfInspectorProject = Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/Lokad.OoxPdf.PdfInspect.csproj'
+$pdfInspectorDll = Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/bin/Debug/net10.0/Lokad.OoxPdf.PdfInspect.dll'
 $caseFull = (Resolve-Path -LiteralPath $Case).Path
 $caseDirectory = Split-Path -Parent $caseFull
 $manifest = Get-Content -Raw -LiteralPath $caseFull | ConvertFrom-Json
@@ -40,6 +43,13 @@ function Invoke-RepoBuild([string] $Project, [string] $OutputDll, [string] $Desc
     }
 
     & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") @params
+}
+function Invoke-PdfInspection([string] $InputPdf, [string] $OutputDirectory) {
+    if (!$script:pdfInspectorPrepared) {
+        Invoke-RepoBuild $pdfInspectorProject $pdfInspectorDll 'PDF inspect' (Join-Path $buildInfoDir 'pdf-inspect.json')
+        $script:pdfInspectorPrepared = $true
+    }
+    & (Join-Path $PSScriptRoot 'InspectPdf.ps1') -InputPdf $InputPdf -OutputDirectory $OutputDirectory -InspectorPath $pdfInspectorDll -SkipBuild
 }
 . (Join-Path $PSScriptRoot "JsonArray.ps1")
 
@@ -184,10 +194,10 @@ if ($manifest.expected.maxTextOperationPositionDelta -ne $null) {
     $candidateTextInspect = Join-Path $textInspectRoot "candidate"
     New-Item -ItemType Directory -Force -Path $referenceTextInspect, $candidateTextInspect | Out-Null
 
-    & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+    Invoke-PdfInspection `
         -InputPdf (Join-Path $referenceDir "reference.pdf") `
         -OutputDirectory $referenceTextInspect
-    & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+    Invoke-PdfInspection `
         -InputPdf $candidatePdf `
         -OutputDirectory $candidateTextInspect
 
@@ -243,13 +253,13 @@ if ($manifest.expected.maxTextLineStartDelta -ne $null) {
     $referenceTextOperations = Join-Path $referenceTextInspect "text-operations.json"
     $candidateTextOperations = Join-Path $candidateTextInspect "text-operations.json"
     if (-not (Test-Path -LiteralPath $referenceTextOperations)) {
-        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+        Invoke-PdfInspection `
             -InputPdf (Join-Path $referenceDir "reference.pdf") `
             -OutputDirectory $referenceTextInspect
     }
 
     if (-not (Test-Path -LiteralPath $candidateTextOperations)) {
-        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+        Invoke-PdfInspection `
             -InputPdf $candidatePdf `
             -OutputDirectory $candidateTextInspect
     }
@@ -266,39 +276,25 @@ if ($manifest.expected.maxTextLineStartDelta -ne $null) {
         0.75
     }
 
+    $lineStartArgs = @{
+        Reference = $referenceTextOperations
+        Candidate = $candidateTextOperations
+        StartTolerance = $lineStartTolerance
+        LineTolerance = $lineYTolerance
+    }
+    if ($manifest.expected.maxTextLineStartYDelta -ne $null) {
+        $lineStartArgs.BaselineTolerance = $lineYTolerance
+    }
     if ($manifest.expected.matchTextLineStartsByPosition -eq $true) {
-        $lineStartArgs = @{
-            Reference = $referenceTextOperations
-            Candidate = $candidateTextOperations
-            StartTolerance = $lineStartTolerance
-            LineTolerance = $lineYTolerance
-            MatchByPosition = $true
-        }
-        if ($manifest.expected.compareFirstTextLineStartOnly -eq $true) {
-            $lineStartArgs.FirstStartOnly = $true
-        }
-        if ($manifest.expected.ignoreWhitespaceOnlyTextLineStartOperations -eq $true) {
-            $lineStartArgs.IgnoreWhitespaceOnlyOperations = $true
-        }
-
-        & (Join-Path $PSScriptRoot "ComparePdfTextLineStarts.ps1") @lineStartArgs
+        $lineStartArgs.MatchByPosition = $true
     }
-    else {
-        $lineStartArgs = @{
-            Reference = $referenceTextOperations
-            Candidate = $candidateTextOperations
-            StartTolerance = $lineStartTolerance
-            LineTolerance = $lineYTolerance
-        }
-        if ($manifest.expected.compareFirstTextLineStartOnly -eq $true) {
-            $lineStartArgs.FirstStartOnly = $true
-        }
-        if ($manifest.expected.ignoreWhitespaceOnlyTextLineStartOperations -eq $true) {
-            $lineStartArgs.IgnoreWhitespaceOnlyOperations = $true
-        }
-
-        & (Join-Path $PSScriptRoot "ComparePdfTextLineStarts.ps1") @lineStartArgs
+    if ($manifest.expected.compareFirstTextLineStartOnly -eq $true) {
+        $lineStartArgs.FirstStartOnly = $true
     }
+    if ($manifest.expected.ignoreWhitespaceOnlyTextLineStartOperations -eq $true) {
+        $lineStartArgs.IgnoreWhitespaceOnlyOperations = $true
+    }
+    & (Join-Path $PSScriptRoot "ComparePdfTextLineStarts.ps1") @lineStartArgs
     if ($LASTEXITCODE -ne 0) {
         throw "PDF text line-start gate failed."
     }
@@ -313,13 +309,13 @@ if ($manifest.expected.maxGraphicsOperationBoundsDelta -ne $null) {
     $referenceGraphicsOperations = Join-Path $referenceGraphicsInspect "graphics-operations.json"
     $candidateGraphicsOperations = Join-Path $candidateGraphicsInspect "graphics-operations.json"
     if (-not (Test-Path -LiteralPath $referenceGraphicsOperations)) {
-        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+        Invoke-PdfInspection `
             -InputPdf (Join-Path $referenceDir "reference.pdf") `
             -OutputDirectory $referenceGraphicsInspect
     }
 
     if (-not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
-        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+        Invoke-PdfInspection `
             -InputPdf $candidatePdf `
             -OutputDirectory $candidateGraphicsInspect
     }
@@ -385,13 +381,13 @@ if ($hasChartGraphicsStructureGlobalBoundsTolerance -or $hasChartGraphicsStructu
     $referenceGraphicsOperations = Join-Path $referenceGraphicsInspect "graphics-operations.json"
     $candidateGraphicsOperations = Join-Path $candidateGraphicsInspect "graphics-operations.json"
     if (-not (Test-Path -LiteralPath $referenceGraphicsOperations)) {
-        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+        Invoke-PdfInspection `
             -InputPdf (Join-Path $referenceDir "reference.pdf") `
             -OutputDirectory $referenceGraphicsInspect
     }
 
     if (-not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
-        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+        Invoke-PdfInspection `
             -InputPdf $candidatePdf `
             -OutputDirectory $candidateGraphicsInspect
     }
@@ -591,13 +587,13 @@ if ($hasChartTextGlobalTolerance -or $hasChartTextKindTolerances) {
     $referenceTextOperations = Join-Path $referenceTextInspect "text-operations.json"
     $candidateTextOperations = Join-Path $candidateTextInspect "text-operations.json"
     if (-not (Test-Path -LiteralPath $referenceTextOperations)) {
-        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+        Invoke-PdfInspection `
             -InputPdf (Join-Path $referenceDir "reference.pdf") `
             -OutputDirectory $referenceTextInspect
     }
 
     if (-not (Test-Path -LiteralPath $candidateTextOperations)) {
-        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+        Invoke-PdfInspection `
             -InputPdf $candidatePdf `
             -OutputDirectory $candidateTextInspect
     }
@@ -609,13 +605,13 @@ if ($hasChartTextGlobalTolerance -or $hasChartTextKindTolerances) {
     $referenceGraphicsOperations = Join-Path $referenceGraphicsInspect "graphics-operations.json"
     $candidateGraphicsOperations = Join-Path $candidateGraphicsInspect "graphics-operations.json"
     if (-not (Test-Path -LiteralPath $referenceGraphicsOperations)) {
-        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+        Invoke-PdfInspection `
             -InputPdf (Join-Path $referenceDir "reference.pdf") `
             -OutputDirectory $referenceGraphicsInspect
     }
 
     if (-not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
-        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+        Invoke-PdfInspection `
             -InputPdf $candidatePdf `
             -OutputDirectory $candidateGraphicsInspect
     }
@@ -748,7 +744,7 @@ if ($requiresCandidateFontInspection) {
 
     $candidateFontResources = Join-Path $candidateFontInspect "font-resources.json"
     if (-not (Test-Path -LiteralPath $candidateFontResources)) {
-        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+        Invoke-PdfInspection `
             -InputPdf $candidatePdf `
             -OutputDirectory $candidateFontInspect
     }

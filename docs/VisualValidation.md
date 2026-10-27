@@ -52,6 +52,17 @@ runs build the default Debug CLI. `-SkipBuild` requires the selected runtime and
 validation tools to exist. Family reports pin CLI/library hashes and reject a
 runtime that changes during the batch.
 
+PDF inspection follows the same build intent: a family prepares the inspector
+once only when a selected text, graphics, chart or font gate needs it. Direct
+cases prepare it once on first use; `-SkipBuild` requires the prebuilt inspector
+and never invokes MSBuild. Each inspection records its actual tool hash.
+
+For line-start gates, `maxTextLineStartDelta` bounds X. An explicit
+`maxTextLineStartYDelta` also bounds matched baselines in Y; it is passed to the
+helper as `BaselineTolerance`, separately from operation grouping. X-only gates
+keep their existing meaning. Nonfinite coordinates or tolerances fail the gate.
+Run `pwsh tools/TestTextLineStarts.ps1` for focused controls without builds or Office.
+
 `RenderReference.ps1` and `ExportCompositionReferences.ps1` also accept
 `-SkipBuild` to reuse the existing rasterizer. `RenderCachedReference.ps1` forwards
 it on cache misses as well as derivative renders. Without the switch, the normal

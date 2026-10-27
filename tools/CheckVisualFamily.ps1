@@ -280,6 +280,32 @@ if (!$SkipBuild) {
 & (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Project (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj") -OutputDll (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/net10.0/Lokad.OoxPdf.VisualDiff.dll") -Description "VisualDiff"
 & (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Project (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj") -OutputDll (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll") -Description "PDFium rasterizer"
 }
+# Only inspection gates need this tool. Cases consume it prebuilt, just like the
+# rasterizer and VisualDiff, rather than invoking MSBuild for each inspected PDF.
+$needsPdfInspection = $false
+$inspectionThresholds = @('maxTextOperationPositionDelta', 'maxTextLineStartDelta',
+    'maxGraphicsOperationBoundsDelta', 'maxChartGraphicsStructureBoundsDelta',
+    'maxChartGraphicsStructureBoundsDeltaByKind', 'maxChartTextStructurePositionDelta',
+    'maxChartTextStructurePositionDeltaByKind')
+foreach ($case in $cases) {
+    $expected = (Get-Content -LiteralPath (Join-Path $case.FullName 'case.json') -Raw | ConvertFrom-Json).expected
+    foreach ($key in $inspectionThresholds) {
+        if ($null -ne $expected.$key) { $needsPdfInspection = $true }
+    }
+    if ($expected.candidateFontsMustBeEmbedded -eq $true -or
+        $expected.candidateFontsMustHaveToUnicode -eq $true -or $expected.candidateFontsMustBeSubset -eq $true) {
+        $needsPdfInspection = $true
+    }
+}
+if ($needsPdfInspection) {
+    $inspector = Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/bin/Debug/net10.0/Lokad.OoxPdf.PdfInspect.dll'
+    if (!$SkipBuild) {
+        & (Join-Path $PSScriptRoot 'EnsureDotnetBuild.ps1') -Project (Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/Lokad.OoxPdf.PdfInspect.csproj') -OutputDll $inspector -Description 'PDF inspect'
+    }
+    elseif (!(Test-Path -LiteralPath $inspector -PathType Leaf)) {
+        throw ('PDF inspector is missing and -SkipBuild was requested: ' + $inspector)
+    }
+}
 $rows = @()
 foreach ($case in $cases) {
     $manifest = Join-Path $case.FullName "case.json"

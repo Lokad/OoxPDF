@@ -7,9 +7,12 @@ param(
     [Parameter(Mandatory = $true)]
     [string] $Candidate,
 
+    # Group nearby operations into lines; this does not assert line placement.
     [double] $LineTolerance = 0.75,
 
     [double] $StartTolerance = 0.1,
+
+    [Nullable[double]] $BaselineTolerance,
 
     [switch] $MatchByPosition,
 
@@ -22,9 +25,21 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+foreach ($tolerance in @($LineTolerance, $StartTolerance) + @($BaselineTolerance | Where-Object { $null -ne $_ })) {
+    if (-not [double]::IsFinite($tolerance) -or $tolerance -lt 0) {
+        throw 'Line-start tolerances must be finite and non-negative.'
+    }
+}
+
 . (Join-Path $PSScriptRoot "JsonArray.ps1")
 
 function New-LineGroups($operations) {
+    foreach ($op in $operations) {
+        if ($null -eq $op.X -or $null -eq $op.Y -or
+            -not [double]::IsFinite([double]$op.X) -or -not [double]::IsFinite([double]$op.Y)) {
+            throw 'Text line-start coordinates must be present and finite.'
+        }
+    }
     $ordered = @($operations | Sort-Object -Property @{ Expression = { [int]$_.PageNumber }; Descending = $false }, @{ Expression = { [double]$_.Y }; Descending = $true }, @{ Expression = { [double]$_.X }; Descending = $false })
     $groups = New-Object System.Collections.Generic.List[object]
 
@@ -66,7 +81,7 @@ function New-LineGroups($operations) {
         [pscustomobject]@{
             Index = $index++
             Page = [int]$line.Page
-            Y = [Math]::Round([double]$line.Y, 6)
+            Y = [double]$line.Y
             Count = $starts.Count
             Starts = $starts
             Texts = @($orderedOps | ForEach-Object { TextContent $_ })
@@ -171,6 +186,7 @@ foreach ($pair in $pairs) {
             RefCount = if ($null -eq $ref) { $null } else { $ref.Count }
             CandCount = if ($null -eq $cand) { $null } else { $cand.Count }
             MaxDeltaX = $null
+            MaxDeltaY = $null
             RefStarts = if ($null -eq $ref) { $null } else { ($ref.Starts | ForEach-Object { [Math]::Round($_, 6) }) -join ", " }
             CandStarts = if ($null -eq $cand) { $null } else { ($cand.Starts | ForEach-Object { [Math]::Round($_, 6) }) -join ", " }
             RefText = if ($ShowText) { Format-LineText $ref } else { $null }
@@ -187,12 +203,16 @@ foreach ($pair in $pairs) {
             [Math]::Abs((Delta -left ([double]$ref.Starts[$i]) -right ([double]$cand.Starts[$i]))))
     }
 
+    $deltaY = [Math]::Abs([double]$cand.Y - [double]$ref.Y)
     $status = "ok"
     if ($ref.Page -ne $cand.Page) {
         $status = "page"
     }
     elseif (-not $FirstStartOnly -and $ref.Count -ne $cand.Count) {
         $status = "count"
+    }
+    elseif ($null -ne $BaselineTolerance -and $deltaY -gt $BaselineTolerance) {
+        $status = "y-delta"
     }
     elseif ($maxDelta -gt $StartTolerance) {
         $status = "delta"
@@ -212,6 +232,7 @@ foreach ($pair in $pairs) {
         RefCount = $ref.Count
         CandCount = $cand.Count
         MaxDeltaX = [Math]::Round($maxDelta, 6)
+        MaxDeltaY = [Math]::Round($deltaY, 6)
         RefStarts = ($ref.Starts | ForEach-Object { [Math]::Round($_, 6) }) -join ", "
         CandStarts = ($cand.Starts | ForEach-Object { [Math]::Round($_, 6) }) -join ", "
         RefText = if ($ShowText) { Format-LineText $ref } else { $null }
@@ -221,7 +242,7 @@ foreach ($pair in $pairs) {
 
 if ($ShowText) {
     $rows |
-        Select-Object Line, Status, RefPage, CandPage, RefY, CandY, RefCount, CandCount, MaxDeltaX, RefStarts, CandStarts |
+        Select-Object Line, Status, RefPage, CandPage, RefY, CandY, RefCount, CandCount, MaxDeltaX, MaxDeltaY, RefStarts, CandStarts |
         Format-Table -AutoSize
     foreach ($row in $rows) {
         Write-Host "Line $($row.Line) reference text: $($row.RefText)"
@@ -230,7 +251,7 @@ if ($ShowText) {
 }
 else {
     $rows |
-        Select-Object Line, Status, RefPage, CandPage, RefY, CandY, RefCount, CandCount, MaxDeltaX, RefStarts, CandStarts |
+        Select-Object Line, Status, RefPage, CandPage, RefY, CandY, RefCount, CandCount, MaxDeltaX, MaxDeltaY, RefStarts, CandStarts |
         Format-Table -AutoSize
 }
 Write-Host "Text line starts: reference=$($referenceLines.Count), candidate=$($candidateLines.Count), deltas=$failures"
