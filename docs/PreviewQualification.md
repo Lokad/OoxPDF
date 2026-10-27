@@ -1,50 +1,53 @@
 # 0.2.0-preview qualification
 
-The bounded table-paragraph-default/image-identity milestone is qualified. Publication, performance optimization and expansion remain deferred.
-The library was built once at `79a6e2c715976946b73df60bef28570c377b7b68`.
-Final harness source: `48a7dc064cf37408270ee25d2ba01e17f6bd9d15`; catalog repair: `4a8d2841`.
-Library SHA-256: `1828BCE4B5E87637A8A35A1A1B98C751C52A6941E0EEE896614F7073C94B23B7`.
-[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40493687709)
-passes at the catalog repair source. CI builds are independent of the frozen runtime.
-The superseded source run failed only a stale renamed-test catalog entry; complete
-catalog selection now resolves against the unchanged frozen runner.
+The bounded picture-recovery/graphics-gate milestone is qualified.
+Publication, performance optimization and expansion remain deferred.
+The library was built once at `304cf03e92f60fe901190b85bdfef4685416d575`.
+Final harness source: `9e940f42b6df842a8abb3fc65ceb93f88bdfab73`.
+Library SHA-256: `550407F3BB5338DD365A92E75BF975BA3B451A990D332D2E4DD5A34DE820B324`.
+[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40506944038)
+passes at the final harness source. Both jobs pass the graphics comparison and
+capability-catalog gates. CI builds are independent of the frozen runtime.
 
 | Gate | Result |
 |---|---|
-| Release/affected checks | One committed linked-worktree library build. Twenty-two affected methods: Windows 22 pass; Ubuntu 14 pass/eight Windows-font skips. Two harness-only assertion repairs repeat only the failed painting method per host. All 21 other runtime assets and 2,613 public inputs remain identical. |
-| Windows milestone | **3,823 pass, one inherited failure, five skips**; 3,829 unique methods/3,831 attempts in four invocations. No prior passing method regresses. |
-| Ubuntu milestone | **1,228 pass, seven inherited failures, 85 skips**; 1,320 unique methods/1,322 attempts. Eight additional skips are explicit native-font preconditions; no inherited failure becomes a skip. |
-| Independent PowerPoint controls | All five valid controls agree on bold/color. Three paragraph-default mismatches are corrected. Inherited-style/direct-run PDFs remain byte-identical. Reused Office PDFs; no new Office export/rasterization. The malformed initial run control remains excluded. |
-| Neighboring tables | Three fixtures retain exact parent PDFs/diagnostics, including explicit wrapping and font fragmentation. No parent build or raster replay. |
-| Image identity | One production/five test selector arguments removed. Existing complete identities, content guard, stable deduplication, CMYK distinctions and cancellation remain; no replacement hook or public API change. |
-| Representative documents | Nine sources/16 outcomes/32 pages retain exact prior PDFs, diagnostics and semantic results. Each current outcome converted once. |
-| Independent visual gates | Reused by PDF identity: two strict PPTX passes/fourteen strict DOCX failures. Thresholds/residuals remain. Integrity validation of 715 manifests/12 families remains separate from fidelity evidence. |
+| Release/affected checks | One committed linked-worktree library build. Twenty-four affected methods: Windows 24 pass; Ubuntu 16 pass/eight existing native-font skips. One harness-only repair repeats only the failed stream-input method per host. All 21 other assets and 2,613 public inputs remain identical. |
+| Windows milestone | **3,826 pass, one inherited failure, five skips**; 3,832 unique methods/3,833 attempts in three invocations. No prior passing method regresses. |
+| Ubuntu milestone | **1,232 pass, seven inherited failures, 85 skips**; 1,324 unique methods/1,325 attempts. New recovery and source-frame checks pass; no inherited failure becomes a skip. |
+| Picture recovery | Three frozen CLI controls retain exact prior PDFs. Present pictures remain strict exit 0; missing relationship and missing part now both report errors/exit 3 with distinct codes. Source part/slide metadata, original observer failure, cancellation and atomic publication checks pass. |
+| Graphics comparison | Forty-five direct Windows controls pass, including page moves, page-local reordering, filtering, zero/nonfinite/missing geometry and explicit/optional hashes. Three real moved-page modes correctly fail using retained PDF inspections. Local Ubuntu has no PowerShell; its script gate is covered by CI. Existing chart classifier checks pass. |
+| Table cleanup | One forwarding shim removed; the old table XML-versus-scene self-comparison becomes source-content/declared-frame assertions with a pinned font. Other independent XML agreement tests remain. Five table PDFs are unchanged and agree with existing independent PowerPoint bold/color controls. No new Office export/rasterization. |
+| Representative documents | Nine sources/16 outcomes/32 pages retain exact previous PDFs, diagnostics and semantic results. Each current outcome converted once. Reuse two strict PPTX passes/fourteen strict DOCX failures; thresholds/residuals remain. Prior 715-manifest/12-family integrity validation is separate from fidelity and is reused with unchanged inputs. |
 | API/runtime | 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0. |
-| Package/transfer | Same package and consumer source pass Windows/Ubuntu. All 24 runtime assets and two integration PDFs match after transfer; no root library build or suite replay. |
+| Package/transfer | Same package/consumer source pass Windows and Ubuntu. All 24 assets and two integration PDFs match after transfer; no root library build or suite replay. |
 
 ## Conversion behavior and bounded cleanup
 
-Authored table paragraph defaults now suppress only the lower-priority table
-fallback for bold and fill. Scene parsing and rendering share this rule through
-existing raw/cascade ownership. Explicit false clears bold; direct run formatting
-still wins. Inherited theme/master defaults cannot suppress styled headers.
-No font/size/style-GUID-specific correction or renderer rewrite is introduced.
+PPTX pictures without a resolvable embedded image relationship emit
+`IMAGE_MISSING_RELATIONSHIP` with the source story part and slide. Missing target
+parts retain `IMAGE_MISSING_PART`; graceful conversion and existing pixel output
+remain. Caller diagnostics and CLI strict status now expose the omission.
 
-Image deduplication computes its existing ResourceKey directly. Full digests,
-byte equality and cancellation remain. The stale-identity test mutates an already
-exposed model array; it demonstrates guard behavior, not a live corruption path.
-No ownership layer, cache redesign or measured performance claim follows.
+Graphics matching stays within each PDF page and reports both page numbers.
+Selected records require finite bounds and positive integer page numbers;
+explicit text-hash matching requires both hashes. Zero geometry and disabled
+optional hash checks remain valid. These are direct checks in the existing
+comparator, without another PDF parser, schema framework or renderer rewrite.
 
-The initial portable painting assertion counted background color, then unrelated
-body bold. Both failed reports/artifacts remain. The final test scopes its checks
-to the header text object. Only that failed method repeats twice per host; passing
-methods and broader remainders run once. Library bytes never change during those
-harness repairs. A remaining catalog entry for the intentionally renamed identity
-test was corrected without rebuilding the library or runner.
+The first stream regression omitted its required InputKind option. That failed
+attempt remains in both platforms' reports. One test-only repair adds Pptx and
+reruns only the failed method per host. Passing methods and disjoint broader
+remainders run once; the library is never rebuilt. The superseded CI run was
+cancelled after the harness repair to avoid duplicate CI work.
+
+Prior table-default and image-identity cleanup remains complete. The last
+[qualification record](https://github.com/Lokad/OoxPDF/blob/c54c67ba/docs/PreviewQualification.md)
+retains its independent controls and original runtime/harness identities.
+No visual thresholds or rendering guards are generalized by this milestone.
 
 ## Retained review-36 line-gate residuals
 
-These earlier screens were not replayed for this bounded table correction.
+These earlier screens were not replayed for this bounded recovery/tooling correction.
 Calibri wrapping and compact before-spacing retain their 0.25pt Y failures
 (about 0.26-0.28pt). Font-table alternate wrapping retains X failures about
 1.21pt/64.86pt; the boundary-invariance PPTX retains two operation-count mismatches.
@@ -104,9 +107,9 @@ the existing annotation policy is preserved pending independent qualification.
 Three newly exercised Ubuntu inspection methods also reproduce on the preceding
 qualified artifact without its native Windows font catalog:
 
-- `PptxTextGlyphRunInspectionReportsInterGlyphAdjustmentAggregates` — `InvalidOperationException: Sequence contains no matching element`.
-- `PptxNumberedAutofitFramesEmitOfficeCharacterSpacingTextState` — `InvalidOperationException: Expected 3, got 0.`
-- `PptxNumberedNoAutofitFramesEmitOfficeCharacterSpacingTextState` — `InvalidOperationException: Expected 3, got 0.`
+- `PptxTextGlyphRunInspectionReportsInterGlyphAdjustmentAggregates` â€” `InvalidOperationException: Sequence contains no matching element`.
+- `PptxNumberedAutofitFramesEmitOfficeCharacterSpacingTextState` â€” `InvalidOperationException: Expected 3, got 0.`
+- `PptxNumberedNoAutofitFramesEmitOfficeCharacterSpacingTextState` â€” `InvalidOperationException: Expected 3, got 0.`
 
 They bring the explicit Ubuntu inventory to seven failures. Three exact parent
 methods were run, with no parent build; candidate failures were not replaced by
@@ -121,18 +124,20 @@ no threshold change or formal manifest/agent-rating pass is claimed.
 
 ## Evidence and workflow
 
-Ignored evidence: artifacts/preview-table-defaults-20261027/qualification.json.
-It binds the original and repaired harnesses, exact method reports, five valid
-Office controls, neighboring table identity, unchanged portfolio, same-package
-consumers, transfer, catalog repair and CI. The preceding library qualification
-remains in Git history and artifacts/preview-slide-membership-20261027/.
+Ignored evidence: artifacts/preview-picture-gates-20261027/qualification.json.
+It binds the original/repaired harnesses, exact method reports, three picture
+controls, five independent Office table controls, real PDF comparison probes,
+unchanged portfolio, same-package consumers, transfer, catalog and CI. Prior
+qualified artifacts/references remain available; publication is deferred.
 
+Package: artifacts/nuget/preview-020-picture-gates-20261027/Lokad.OoxPdf.0.2.0-preview.nupkg.
+SHA-256: `FDE4156A75A31648C1E2ED27AAD6B10136D15C0B7A2E7DADD1AFCCD5E63D0A7A`.
 Safe managed dependency-free execution, cancellation, meaningful bounds, coarse
 host admission/refunds, bounded caches/staging, deterministic cleanup, atomic
 publication and PDF validity remain. Unresolved layout/history/chart guards are
-preserved. No publication, performance work or broader feature expansion.
+preserved. No performance work or broader feature expansion.
 
 The last full footprint remains 6.778 GB/935,126 files before recent batches,
-above the loose 5 GB target. This milestone is about 82 MB plus one shared 24 MB
-input snapshot. Used failed/qualified artifacts and evidence remain; no duplicate
-input snapshot, full rescan or blanket deletion was needed.
+above the loose 5 GB target. This milestone is about 66 MB and reuses the existing
+shared public-input snapshot. Failed/qualified artifacts and useful evidence
+remain; no duplicate input snapshot or full workspace rescan.
