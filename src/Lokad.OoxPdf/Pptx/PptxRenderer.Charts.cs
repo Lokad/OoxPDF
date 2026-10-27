@@ -17,8 +17,6 @@ internal sealed partial class PptxRenderer
     private const string SpreadsheetStylesRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles";
     private const string SpreadsheetTableRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/table";
     private const string WorkbookContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml";
-    private const string SharedStringsContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml";
-    private const string SpreadsheetStylesContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml";
     private const double ChartLineDefaultStrokeWidth = 2.25d;
     private const double ChartSeriesInheritedStrokeWidth = 3d;
     private const double ChartFilledSeriesInheritedStrokeWidth = 0.75d;

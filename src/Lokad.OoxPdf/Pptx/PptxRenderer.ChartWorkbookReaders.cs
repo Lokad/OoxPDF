@@ -133,7 +133,6 @@ internal sealed partial class PptxRenderer
             .Where(relationship => !relationship.IsExternal && relationship.Type == SharedStringsRelationshipType && relationship.ResolvedTarget is not null)
             .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget ?? string.Empty))
             .FirstOrDefault(part => part is not null);
-        sharedStringsPart ??= workbookPackage.Parts.FirstOrDefault(part => part.ContentType == SharedStringsContentType);
         if (sharedStringsPart is null)
         {
             return [];
@@ -238,7 +237,6 @@ internal sealed partial class PptxRenderer
             .Where(relationship => !relationship.IsExternal && relationship.Type == SpreadsheetStylesRelationshipType && relationship.ResolvedTarget is not null)
             .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget ?? string.Empty))
             .FirstOrDefault(part => part is not null);
-        stylesPart ??= workbookPackage.Parts.FirstOrDefault(part => part.ContentType == SpreadsheetStylesContentType);
         if (stylesPart is null)
         {
             return ChartWorkbookStyles.Empty;

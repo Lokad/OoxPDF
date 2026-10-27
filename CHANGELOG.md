@@ -2,6 +2,12 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Keeps cached PPTX charts independent of unreferenced workbook styles/shared
+  strings. Related metadata and its existing bounds remain active.
+- Classifies chart graphics and text within each PDF page, preserving page-owned
+  plot boxes and region identities before comparison. Single-page rules and
+  tolerances remain unchanged.
+
 - Diagnoses unresolved PPTX picture relationships instead of silently omitting
   the image with a clean strict exit. Missing target parts retain their existing
   diagnostic; valid pictures and file publication behavior stay unchanged.

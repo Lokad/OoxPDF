@@ -1,4 +1,15 @@
 {
+  "pptx-workbook-part-ownership": [
+    "PptxWorkbookOptionalParts",
+    "PptxChartWorkbookParsingPreservesRangeMetadata",
+    "PptxChartRawVectorsPreserveWorkbookSidecarPoints",
+    "PptxChartIndexedVectorsPreserveWorkbookSidecarPoints",
+    "PptxChartSeriesNamesPreserveWorkbookSidecarPoints",
+    "WorkbookSharedStringsBeyondBudgetThrow",
+    "WorkbookCellFormatsBeyondBudgetThrow",
+    "ChartWorkbookSharedAcrossFrames",
+    "CancelledRangeExpansionObservesCancellation"
+  ],
   "pptx-picture-recovery": [
     "PptxPictureRecovery",
     "PptxMissingImagePartDiagnosesErrorAndContinues",

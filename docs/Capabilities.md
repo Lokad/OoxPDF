@@ -53,6 +53,8 @@ Supported within the following constraints:
   Axes/data labels share number formatting, including dates, numeric sections,
   scaling, fractions and supported accounting/currency forms. Unsupported syntax,
   formula-only data without cached values and unsupported chart kinds are diagnosed.
+  Optional workbook styles and shared strings follow that workbook's own
+  relationships; unreferenced parts do not affect cached chart rendering.
 - Failed slide nodes rewind partial paint/annotations and report a diagnostic;
   neighboring nodes may still render. Inspect diagnostic severity and fallback.
 
