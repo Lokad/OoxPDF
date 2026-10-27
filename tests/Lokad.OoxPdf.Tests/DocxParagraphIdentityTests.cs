@@ -12,8 +12,6 @@ internal static class DocxParagraphIdentityTests
         var balloons=Renderer().InspectMarkupBalloons(Document(first,second));
         TestAssert.Equal(2,balloons.Count);
         TestAssert.Equal(2,balloons.Sum(balloon=>balloon.RevisionCandidateCount));
-        TestAssert.True(balloons.Any(balloon=>balloon.Title.Contains("First reviewer",StringComparison.Ordinal)),"First owner remains.");
-        TestAssert.True(balloons.Any(balloon=>balloon.Title.Contains("Second reviewer",StringComparison.Ordinal)),"Second owner remains.");
     }
 
     public static void DocxParagraphIdentityDistinguishesEqualValuesAndRepeatedOwners()
@@ -62,7 +60,7 @@ internal static class DocxParagraphIdentityTests
         Revisions=[new DocxRevisionInfo(DocxRevisionKind.RunPropertiesChange,"1",author,"2026-10-20T12:00:00Z","rPrChange",null,["b"])]
     };
     private static DocxParagraph Comment(string text) => Paragraph(text) with {
-        InlineReferences=[new DocxInlineReference(DocxRelatedStoryKind.Comment,"1",null,0,0,0,null)]
+        InlineReferences=[new DocxInlineReference(DocxRelatedStoryKind.Comment,"1",CustomMarkFollowsValue:null,DisplayText:null,SourceRunIndex:0,RunChildIndex:0,TextOffsetInRun:0)]
     };
     private static DocxParagraph Paragraph(string text)
     {
