@@ -15,7 +15,7 @@ internal static class PptxPictureRecoveryTests
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 using var input = File.OpenRead(path);
                 using var output = new MemoryStream();
-                OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+                OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, DiagnosticSink = diagnostics.Add });
                 string pdf = System.Text.Encoding.Latin1.GetString(output.ToArray());
                 if (variant == "present")
                 {
