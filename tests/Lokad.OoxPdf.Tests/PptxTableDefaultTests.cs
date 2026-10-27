@@ -83,8 +83,9 @@ internal static class PptxTableDefaultTests
         PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPages(document, package, null, default).Single();
         // The pinned face is regular; requested bold is painted with PDF fill+stroke.
         TestAssert.Equal(bold, page.Content.Contains("2 Tr", StringComparison.Ordinal));
-        string fill = color == new RgbColor(0,0,255) ? "0 0 1 rg" : "1 0 0 rg";
-        TestAssert.Equal(color != new RgbColor(255,255,255), page.Content.Contains(fill, StringComparison.Ordinal));
+        string fill = color == new RgbColor(255,255,255) ? "1 g"
+            : color == new RgbColor(0,0,255) ? "0 0 1 rg" : "1 0 0 rg";
+        TestAssert.Contains("BT" + Environment.NewLine + fill + Environment.NewLine, page.Content);
         TestAssert.True(page.Fonts.Count > 0, "Supported cell text retains its font resources.");
     }
 
