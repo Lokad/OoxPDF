@@ -158,6 +158,18 @@ $compareLog = Join-Path $scratch 'moved-page-two-comparison.log'
     -Kinds AxisPairPlotBoxCandidate -MatchByBounds *> $compareLog
 $comparisonExit = $LASTEXITCODE
 if ($comparisonExit -ne 1) { throw 'Moved page-2 chart must fail the classified axis-pair comparison' }
+
+# Exercise the live summary key without running its artifact-discovery workflow.
+$summaryTokens = $null; $summaryErrors = $null
+$summaryAst = [Management.Automation.Language.Parser]::ParseFile((Join-Path $repoRoot 'tools/SummarizeChartStructureDeltas.ps1'), [ref]$summaryTokens, [ref]$summaryErrors)
+if ($summaryErrors.Count) { throw 'Chart summary script must parse' }
+$regionFunction = $summaryAst.Find({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Get-RegionValue'}, $true)
+. ([scriptblock]::Create($regionFunction.Extent.Text))
+$firstRegion = [pscustomobject]@{PageNumber=1;RegionIndex=0}
+$secondRegion = [pscustomobject]@{PageNumber=2;RegionIndex=0}
+if ((Get-RegionValue $firstRegion) -eq (Get-RegionValue $secondRegion)) { throw 'Region summaries must distinguish pages' }
+if ((Get-RegionValue $firstRegion) -ne (Get-RegionValue $firstRegion.PSObject.Copy())) { throw 'Repeated page/region identity must remain stable' }
+if ((Get-RegionValue ([pscustomobject]@{PageNumber=1})) -eq (Get-RegionValue ([pscustomobject]@{PageNumber=2}))) { throw 'Unassigned regions still belong to their page' }
 [ordered]@{Invocations=@($invocations.ToArray());MovedPageComparisonExit=$comparisonExit;Failures=@($failures)} |
     ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $scratch 'checks.json') -Encoding utf8
 if ($failures.Count -ne 0) {

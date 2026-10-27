@@ -11,6 +11,8 @@ comparison evidence is a failed check, even when other geometry happens to agree
 Chart classifiers derive plot boxes and classify text within each PDF page
 before joining their reports. Region indexes belong to their page; use
 PageNumber together with RegionIndex when identifying a chart region.
+The optional `SummarizeChartStructureDeltas.ps1 -ByRegion` display uses
+`PageNumber/RegionIndex` for its region key, including page-owned unassigned items.
 
 ## Requirements
 

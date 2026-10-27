@@ -1,4 +1,5 @@
 # Summarizes chart graphics-structure deltas per case/kind.
+# With ByRegion, the displayed region identity is PageNumber/RegionIndex.
 
 param(
     [string[]] $Case = @(),
@@ -145,11 +146,12 @@ function Format-Bounds($item) {
 }
 
 function Get-RegionValue($item) {
-    if ($null -eq $item -or -not ($item.PSObject.Properties.Name -contains "RegionIndex") -or $null -eq $item.RegionIndex) {
+    if ($null -eq $item) {
         return ""
     }
 
-    return [string]$item.RegionIndex
+    $region = if ($item.PSObject.Properties.Name -contains "RegionIndex") { [string]$item.RegionIndex } else { "" }
+    return ('{0}/{1}' -f $item.PageNumber, $region)
 }
 
 function Make-SummaryKey([string]$kind, [string]$regionIndex) {
