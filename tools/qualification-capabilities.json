@@ -1,4 +1,23 @@
 {
+  "pptx-source-slide-numbers": [
+      "PptxSlideNumbers",
+      "PptxSlideMembership",
+      "PptxHiddenSlidesAreSkipped",
+      "PptxLinksToHiddenSlidesAreDiagnosed",
+      "FieldRunsAgreeBetweenSceneAndSpans",
+      "SceneFedSpansMatchXmlPathForLinksAndFields"
+  ],
+  "docx-paragraph-reference-identity": [
+      "DocxParagraphIdentity",
+      "DocxMarkupBalloonLayoutSelectsSideStacksAnchorsAndHandlesOverflow",
+      "DocxMarkupBalloonLayoutOverfullLaneAccountsEveryCandidate",
+      "DocxMarkupBalloonLayoutGroupsNearbyRevisionAnchors",
+      "DocxMarkupBalloonLayoutPrioritizesCommentsOverNearbyRevisions",
+      "DocxWordCompatibleAllMarkupKeepsBodyCommentBalloonAlongsideFloatingTextBoxComment",
+      "DocxWordCompatibleAllMarkupSkipsInlineTextBoxCommentBalloons",
+      "DocxWordCompatibleAllMarkupSkipsStaticFloatingTextBoxCommentBalloons",
+      "DocxWordCompatibleAllMarkupSkipsTableCellInlineTextBoxCommentBalloons"
+  ],
   "pptx-admitted-content-style": [
       "PptxDiagnosticAdmission",
       "PptxLiveStylesHonorNoFill",

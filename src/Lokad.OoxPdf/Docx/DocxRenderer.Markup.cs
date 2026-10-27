@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lokad.OoxPdf.Diagnostics;
@@ -619,8 +618,8 @@ internal sealed partial class DocxRenderer
             MarkupCommentStoryIndex storyIndex = markupContext.CommentStoryIndex ?? MarkupCommentStoryIndex.Build(relatedStories);
             IReadOnlyDictionary<string, DocxRelatedStoryLayout> commentStories = storyIndex.CommentStories;
             IReadOnlyDictionary<string, DocxRelatedStoryLayout[]> commentRepliesByParentId = storyIndex.CommentRepliesByParentId;
-            var renderedComments = new HashSet<string>(StringComparer.Ordinal);
-            var renderedRevisions = new HashSet<int>();
+            var renderedComments = new Dictionary<DocxParagraph, HashSet<string>>(ReferenceEqualityComparer.Instance);
+            var renderedRevisions = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
             var renderedTableRevisions = new HashSet<string>(StringComparer.Ordinal);
             var renderedTableRowRevisions = new HashSet<string>(StringComparer.Ordinal);
             var renderedTableCellRevisions = new HashSet<string>(StringComparer.Ordinal);
@@ -634,7 +633,7 @@ internal sealed partial class DocxRenderer
             // (keyed by paragraph reference identity, the same idiom as the
             // rendered-comments key below). Revision candidates keep the legacy path
             // (unprobed).
-            HashSet<int> textBoxParagraphs = UsesWordCompatibleAllMarkupTextProfile(markupContext)
+            HashSet<DocxParagraph> textBoxParagraphs = UsesWordCompatibleAllMarkupTextProfile(markupContext)
                 ? floatingDrawings
                     .SelectMany(EnumerateFloatingDrawingTextBoxTextLines)
                     .Select(line => line.SourceParagraph)
@@ -643,8 +642,7 @@ internal sealed partial class DocxRenderer
                     .Concat(EnumerateTableRowTextBoxLines(page).Select(line => line.SourceParagraph))
                     .Concat(EnumerateStaticTextBoxLines(page).Select(line => line.SourceParagraph))
                     .OfType<DocxParagraph>()
-                    .Select(RuntimeHelpers.GetHashCode)
-                    .ToHashSet()
+                    .ToHashSet<DocxParagraph>(ReferenceEqualityComparer.Instance)
                 : [];
             int sequence = 0;
             foreach (DocxTextLineLayout line in anchorTextLines)
@@ -656,12 +654,16 @@ internal sealed partial class DocxRenderer
 
                 if (markupContext.RendersCommentBalloons &&
                     markupContext.IsCommentMarkupVisible(paragraph) &&
-                    !textBoxParagraphs.Contains(RuntimeHelpers.GetHashCode(paragraph)))
+                    !textBoxParagraphs.Contains(paragraph))
                 {
                     foreach (DocxInlineReference reference in paragraph.InlineReferences.Where(reference => reference.Kind == DocxRelatedStoryKind.Comment))
                     {
-                        string key = RuntimeHelpers.GetHashCode(paragraph).ToString(CultureInfo.InvariantCulture) + ":" + (reference.Id ?? string.Empty);
-                        if (!renderedComments.Add(key))
+                        if (!renderedComments.TryGetValue(paragraph, out HashSet<string>? comments))
+                        {
+                            comments = new HashSet<string>(StringComparer.Ordinal);
+                            renderedComments.Add(paragraph, comments);
+                        }
+                        if (!comments.Add(reference.Id ?? string.Empty))
                         {
                             continue;
                         }
@@ -729,8 +731,7 @@ internal sealed partial class DocxRenderer
 
                 if (ShouldRenderRevisionBalloon(markupContext, paragraph.Revisions))
                 {
-                    int key = RuntimeHelpers.GetHashCode(paragraph);
-                    if (!renderedRevisions.Add(key))
+                    if (!renderedRevisions.Add(paragraph))
                     {
                         continue;
                     }

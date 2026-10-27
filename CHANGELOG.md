@@ -2,6 +2,14 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Evaluates PPTX slide-number fields from the authored sequence and numbering
+  origin, preserving hidden-slide gaps independently of output-page indexes.
+- Uses paragraph reference identity for DOCX review balloons and textbox comment
+  suppression; colliding runtime hashes no longer merge distinct owners.
+- Keeps PPTX shape diagnostics aligned with painting admission and removes
+  unused scene style snapshots. Fresh chart summaries inspect all pages and
+  identify the unverified coverage of reused reports.
+
 - Keeps cached PPTX charts independent of unreferenced workbook styles/shared
   strings. Related metadata and its existing bounds remain active.
 - Classifies chart graphics and text within each PDF page, preserving page-owned
