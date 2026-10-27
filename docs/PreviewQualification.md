@@ -1,49 +1,37 @@
 # 0.2.0-preview qualification
 
-The bounded workbook/page-ownership milestone is qualified. Publication,
-performance optimization and expansion remain deferred.
-The library and harness were built once at
-`5bcd061e2258e5a9b1f2295bfd58ddf850d83cb9`.
-Library SHA-256: `5178EB96E5B3EA4CD99AB3E7551E564D3371A60C013F1D0251C6C32FF8C1E685`.
-[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40517500300)
-passes at the tool-only caller follow-up source. Both jobs pass the chart
-classifier and capability-catalog gates. CI builds are independent of the frozen runtime.
+The bounded admitted-content/style-authority milestone is qualified.
+Publication, performance optimization and feature expansion remain deferred.
+Library/CLI build: `5120449747b3947d6e5064816ba40555a24ac522`.
+Test-only repair: `3284b7fdb0f4b19de2eb448e31040bf8065cde22`.
+Library SHA-256: `A5FF10BAC4A5EA19C1CA1AAD4FF3C63B1137CE29F54DC5E99E6A3683B97FE0A0`.
+The final tool-only follow-up leaves all production source and frozen assets
+unchanged. [Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40533386646)
+passes at that tool-only follow-up. CI builds are separate from the frozen runtime.
 
 | Gate | Result |
 |---|---|
-| Release/affected checks | One committed linked-worktree build; 12 affected methods pass on Windows and Ubuntu without skips or repairs. No method repeats. |
-| Windows milestone | **3,830 pass, one inherited failure, five skips**; 3,836 unique methods in two disjoint invocations. No prior passing method regresses. |
-| Ubuntu milestone | **1,237 pass, seven inherited failures, 85 skips**; 1,329 unique methods in two disjoint invocations. All four new portable methods pass; no inherited failure becomes a skip. |
-| Workbook ownership | Two content-type scans and their two unused constants removed. Present/absent/orphan/referenced/alternate-target metadata controls, visibility/date/format semantics, cancellation and existing style/shared-string bounds pass. Referenced malformed metadata still fails; no broad malformed-workbook recovery. |
-| Independent Office control | The exact Office-accepted orphan-style input now retains the entire chart, no diagnostic and the identical supported-control PDF. Both native controls agree with Office content tokens; pinned Office control/orphan page rasters are identical. A linked-metadata neighbor retains its previous PDF/diagnostics. No new Office export or rasterization. |
-| Classifier ownership | Eighteen Windows classifier invocations pass page composition/reordering/filter/absent-own-plot controls. All six retained single-page outputs remain byte-identical. Both real PDF pages keep an axis pair, and the page-2 200-point move fails its classified gate. Existing PDF inspections are reused. |
-| Region-summary caller | ByRegion keys now display PageNumber/RegionIndex, preserving distinct page-owned unassigned regions too. Three focused helper checks pass without replaying classifiers or rebuilding the library. The existing CI classifier step covers the same helper. |
-| Representative documents | Nine sources/16 outcomes/32 pages retain exact prior PDFs, diagnostics and semantic results. Each current outcome converted once. Reuse two strict PPTX passes/fourteen strict DOCX failures; thresholds/residuals remain. These reused pixel gates do not use the changed classifiers. |
-| API/runtime | 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0. |
-| Package/transfer | Same package/consumer source pass Windows and Ubuntu. All 24 assets and two integration PDFs match after transfer; no root library build or suite replay. Existing shared 2,613-input snapshot is reused. |
+| Release/affected checks | One committed linked-worktree library build; 37 affected methods per host. All four new portable checks pass. One test-only rebuild corrects two fixture expectations; only those failed methods repeat. The 21 runtime assets and 2,613 public inputs stay identical. |
+| Windows milestone | **3,833 pass, one inherited failure, five skips**; 3,839 unique methods. No prior pass regresses. |
+| Ubuntu milestone | **1,243 pass, eight inherited failures, 85 skips**; 1,336 unique methods. The newly selected native inspector failure reproduces on the preceding artifact. No failure becomes a skip. |
+| Diagnostic admission | Suppressed master features and unpainted master/layout placeholders follow the same admission rule as painting. Admitted warnings identify their owning part; inheritance and MustUnderstand remain. Three native controls retain exact PDFs; the suppressed callout now strict-exits 0, while admitted unsupported content remains strict-exit 3. |
+| Style cleanup | Unused paragraph/run resolved-style records, exclusive calculations and scene-only merging removed. Structural source/cascade metadata and useful inspectors remain. Live noFill, formatting and table precedence pass; five Office-backed table PDFs remain identical. No painting defect or measured speedup is inferred from removing redundant state. |
+| Optional chart summary | Fresh probes inspect all pages with an explicit prebuilt inspector. Reported pages and unverified reused coverage are visible. Independent one/two-page controls retain the 200-point page-two move and preserve single-page behavior. Tests assert live summary objects/JSON rather than terminal formatting. Both CI jobs pass this check. |
+| Representative documents | Nine sources/16 outcomes/32 pages retain exact prior PDFs, diagnostics and semantics. Each outcome converts once. Reuse two strict PPTX passes/fourteen strict DOCX failures; thresholds/residuals remain. No Office export/raster replay. |
+| API/runtime | 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0. No caller migration change. |
+| Package/transfer | Same package and consumer source pass Windows and Ubuntu. All 24 assets and two integration PDFs match after transfer; no root library build or suite replay. Existing public-input snapshot reused. |
 
-## Conversion behavior and bounded cleanup
+Two duplicate scene-oracle methods are retired. Their meaningful table precedence
+behavior remains covered by live painting and independent Office controls. New
+assertions initially misstated two fixtures: a theme-free hyperlink uses black
+fallback, and the master declares 556677. The correction changes only tests;
+both failed attempts remain in evidence. Newly selected native-font failure is
+retained separately. A later CI-only tool failure came from a formatted-output
+assertion; its repair reads semantic records and changes no qualified runtime.
 
-Optional embedded-workbook styles and shared strings now follow that workbook's
-relationships. Unrelated leftovers no longer activate metadata parsing or erase
-an otherwise supported cached chart. Related style/string/date/visibility data,
-its input bounds and cancellation stay active. The established workbook model,
-range caches and useful inspectors remain; no new quota or ownership framework.
-
-Chart graphics/text classifiers operate on one page at a time before joining
-reports. Each page owns its plot boxes, evidence and region indexes. Existing
-single-page heuristics and tolerances are unchanged. Region summaries qualify
-keys by page/index; their default view remains a document-level kind rollup.
-
-The source changes are in scoped commits. A tool-only caller follow-up at
-`7f70882956a8d99cf05abc7739d774c13d5d6143` leaves all production/test source and
-frozen runtime assets unchanged. Only its three new summary checks run locally;
-the completed classifier/library qualification is reused. CI independently builds
-and checks the final source. No harness repair or extra library build was needed.
-
-The preceding [qualification record](https://github.com/Lokad/OoxPDF/blob/25f560fb/docs/PreviewQualification.md)
-retains its runtime identities, inherited results and picture/table controls.
-No new chart-color, document-shape or font-specific rendering guard is introduced.
+The preceding [qualification record](https://github.com/Lokad/OoxPDF/blob/a320bb244e260cb3d105525a890d0726162b5a4a/docs/PreviewQualification.md)
+retains workbook/page-ownership results and prior runtime identities. No live
+chart-color/font/size/document-shape rendering guard was replaced.
 
 ## Retained review-36 line-gate residuals
 
@@ -122,21 +110,29 @@ Both canonical control PDFs are identical to their pre-fix versions, so this is
 existing typography/geometry residual, not an ID-fix regression. Keep needs-review;
 no threshold change or formal manifest/agent-rating pass is claimed.
 
+The newly selected Ubuntu `PptxSceneBuilderBuildsResolvedNodeLists` also fails
+with `InvalidOperationException: Expected Hello, got .` before the changed style
+assertions: the glyph inspector cannot resolve its default Windows fonts. One
+exact method on the preceding qualified artifact reproduces that first failure,
+without a parent build. This brings the current Ubuntu inventory to **eight**
+inherited failures. Its Windows check passes, as do all new portable checks.
+The failure remains recorded and is not replaced with a skip.
+
 ## Evidence and workflow
 
-Ignored evidence: artifacts/preview-chart-ownership-20261027/qualification.json.
-It binds the frozen build, exact disjoint method reports, Office-backed chart
-controls, unchanged neighbor/portfolio, classifier baselines and moved-page
-negative control, same-package consumers, transfer, caller checks, catalog and CI.
+Ignored evidence: artifacts/preview-admitted-content-20261027/qualification.json.
+It binds the initial and test-repaired frozen identities, exact method attempts,
+Office-backed master/table controls, unchanged portfolio, summary coverage,
+same-package consumers, managed/API checks, transfer, catalog and CI. The initial
+tool CI failure and repaired check remain separate; broader suites are not replayed.
 
-Package: artifacts/nuget/preview-020-chart-ownership-20261027/Lokad.OoxPdf.0.2.0-preview.nupkg.
-SHA-256: `61E7E1E4AFF78AFD4AE6C554466B2142865CFB78D81DE7AF60E94398D9E6175A`.
+Package: artifacts/nuget/preview-020-admitted-content-20261027/Lokad.OoxPdf.0.2.0-preview.nupkg.
+SHA-256: `0BD94E2B16F03D9B397992193670D149E534F4D9C843C2D9A45496EC76E1AB5F`.
 Safe managed dependency-free execution, cancellation, meaningful bounds, coarse
 host admission/refunds, bounded caches/staging, deterministic cleanup, atomic
-publication and PDF validity remain. Unresolved layout/history/chart guards are
-preserved. Publication, performance work and broader expansion remain deferred.
+publication and PDF validity remain. Publication, performance and expansion deferred.
 
 The last full footprint remains 6.778 GB/935,126 files before recent batches,
-above the loose 5 GB target. This milestone is about 50 MB and reuses the existing
-public-input snapshot. Useful artifacts and evidence remain; no duplicate input
-snapshot, full workspace rescan or blanket deletion.
+above the loose 5 GB target. footprint.json measures only this small milestone;
+it reuses the shared public-input snapshot. No full workspace rescan, duplicate
+input snapshot or blanket deletion was needed.
