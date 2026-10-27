@@ -41,6 +41,29 @@ flag. Only their temporary copies are made writable. Original failure reports an
 both frozen harnesses remain; the tracked report join verifies unchanged production
 source, runtime assets, inputs and exact affected coverage. No passing check repeats.
 
+## Tooling follow-up: baseline gates and build intent
+
+The review-36 tooling fixes at `a262db9c` reuse the qualified library, all 24
+runtime assets, source/input tree and package unchanged. There is no new local
+library/test/tool build, broad suite, portfolio or package qualification.
+Eighty-three focused line-start controls pass. The existing family-binding command
+now covers the real case/inspector boundary, ten inspection capabilities and twenty
+stubbed execution calls. The official PPTX whitespace case's automatic gates pass with actual
+prebuilt tools; its candidate PDF matches the focused comparison and both inspection
+records say BuildRequested=false. Neighboring text/markup and manifest checks pass.
+
+An explicit maxTextLineStartYDelta now enforces Y separately from line grouping;
+X-only cases retain their meaning. Ten affected line-start gates report six passes
+and four failures. Calibri wrapping and compact before-spacing newly fail their
+existing 0.25pt limits (about 0.26-0.28pt baseline differences). Font-table alternate
+wrapping retains X failures about 1.21pt/64.86pt; the boundary-invariance PPTX retains
+two operation-count mismatches. These results preserve thresholds and do not claim
+overall visual fidelity. Nine Office references are reused; one uncached X-only
+neighbor needed a PowerPoint 16 export. No renderer change or fitted correction.
+Evidence: artifacts/preview-qualification-gates-20261027/qualification.json.
+[Tooling CI](https://github.com/Lokad/OoxPDF/actions/runs/40486283787) passes on
+Windows and Ubuntu. Publication remains deferred.
+
 ## Inherited failures and limitations
 
 **DocxWordCompatibleBalloonBodyWrapsLikeOfficeTitles** retains its local failure:
