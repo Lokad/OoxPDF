@@ -81,11 +81,17 @@ internal static class PptxTableDefaultTests
         OoxPackage package = OoxPackage.Open(input, default);
         PptxDocument document = new PptxReader().Read(package, default);
         PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPages(document, package, null, default).Single();
-        // The pinned face is regular; requested bold is painted with PDF fill+stroke.
-        TestAssert.Equal(bold, page.Content.Contains("2 Tr", StringComparison.Ordinal));
+        // The first text object paints the header; the body has its own bold
+        // inherited formatting. The pinned face paints requested bold with stroke.
+        int start = page.Content.IndexOf("BT" + Environment.NewLine, StringComparison.Ordinal);
+        TestAssert.True(start >= 0, "Expected the header text object.");
+        int end = page.Content.IndexOf(Environment.NewLine + "ET", start, StringComparison.Ordinal);
+        TestAssert.True(end > start, "Expected a complete header text object.");
+        string header = page.Content[start..end];
+        TestAssert.Equal(bold, header.Contains("2 Tr", StringComparison.Ordinal));
         string fill = color == new RgbColor(255,255,255) ? "1 g"
             : color == new RgbColor(0,0,255) ? "0 0 1 rg" : "1 0 0 rg";
-        TestAssert.Contains("BT" + Environment.NewLine + fill + Environment.NewLine, page.Content);
+        TestAssert.Contains("BT" + Environment.NewLine + fill + Environment.NewLine, header);
         TestAssert.True(page.Fonts.Count > 0, "Supported cell text retains its font resources.");
     }
 
