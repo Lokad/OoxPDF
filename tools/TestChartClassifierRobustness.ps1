@@ -2,14 +2,16 @@
 # classify identically (deterministic sorted output) while a duplicated op
 # yields exactly one extra structure. Synthetic operations keep this gate
 # independent of previous renders, Office/COM, and the reference cache.
+[CmdletBinding()]
+param([string] $OutputDirectory)
 
 $ErrorActionPreference = "Stop"
+$PSNativeCommandUseErrorActionPreference = $false
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$scratch = Join-Path $repoRoot "artifacts/chart-classifier-probe"
-if (Test-Path -LiteralPath $scratch) {
-    Remove-Item -LiteralPath $scratch -Recurse -Force
-}
-New-Item -ItemType Directory -Force -Path $scratch | Out-Null
+if (!$OutputDirectory) { $OutputDirectory = Join-Path $repoRoot ('artifacts/chart-classifier-probe-' + [guid]::NewGuid().ToString('N')) }
+if (Test-Path -LiteralPath $OutputDirectory) { throw 'Use a fresh classifier test directory' }
+$scratch = (New-Item -ItemType Directory -Path $OutputDirectory).FullName
+$invocations = [Collections.Generic.List[object]]::new()
 
 $failures = @()
 function Invoke-Classifier([string] $Tool, [string] $Name, [object[]] $Ops, [string[]] $ExtraArgs = @()) {
@@ -20,6 +22,7 @@ function Invoke-Classifier([string] $Tool, [string] $Name, [object[]] $Ops, [str
     $toolArgs = @("-NoProfile", "-File", (Join-Path $repoRoot $Tool), "-InputPath", $inPath, "-Output", $outPath) + $ExtraArgs
     & pwsh @toolArgs > (Join-Path $scratch ($Name + "-out.txt"))
     if ($LASTEXITCODE -ne 0) { throw ("Classifier case " + $Name + " exited " + $LASTEXITCODE) }
+    $invocations.Add([pscustomobject]@{Id=$Name;Tool=$Tool;InputSha256=(Get-FileHash $inPath).Hash;OutputSha256=(Get-FileHash $outPath).Hash})
     return Get-Content -Raw -LiteralPath $outPath | ConvertFrom-Json
 }
 
@@ -103,7 +106,61 @@ $textDupe = Invoke-Classifier $textTool "text-dupe" ($textList + $textList[0]) $
 Compare-JsonFile "text-reorder" (Join-Path $scratch "text-reorder-out.json") (Join-Path $scratch "text-base-out.json")
 Assert-OneExtraBlock "text-dupe" $textBase $textDupe
 
+function Assert-Rows([string] $Name, [object[]] $Expected, [object[]] $Actual) {
+    $left = @($Expected | Sort-Object PageNumber, Kind, MinY, MinX, MaxY, MaxX | ForEach-Object { $_ | ConvertTo-Json -Compress -Depth 6 }) -join "`n"
+    $right = @($Actual | Sort-Object PageNumber, Kind, MinY, MinX, MaxY, MaxX | ForEach-Object { $_ | ConvertTo-Json -Compress -Depth 6 }) -join "`n"
+    if ($left -cne $right) { throw ($Name + ': adding another page changed page-owned classification') }
+    Write-Host ('PASS: ' + $Name + ' retains independent page results')
+}
+function On-Page($Items, [int] $Page, [double] $Shift = 0) {
+    foreach ($item in $Items) {
+        $copy = $item.PSObject.Copy()
+        $copy.PageNumber = $Page
+        foreach ($name in @('MinX','MinY','MaxX','MaxY','X','Y')) {
+            if ($null -ne $copy.PSObject.Properties[$name]) { $copy.$name = [double]$copy.$name + $Shift }
+        }
+        $copy
+    }
+}
+$pageTwoGraphics = @(On-Page $gfxList 2 400)
+$gfxTwo = Invoke-Classifier $gfxTool 'gfx-page-two' $pageTwoGraphics
+$joinedGraphics = @($gfxList) + $pageTwoGraphics
+$gfxJoined = Invoke-Classifier $gfxTool 'gfx-joined' $joinedGraphics
+Assert-Rows 'graphics composition' (@($gfxBase) + @($gfxTwo)) $gfxJoined
+Invoke-Classifier $gfxTool 'gfx-joined-reordered' $joinedGraphics[($joinedGraphics.Count-1)..0] | Out-Null
+Compare-JsonFile 'graphics page reordering' (Join-Path $scratch 'gfx-joined-out.json') (Join-Path $scratch 'gfx-joined-reordered-out.json')
+Invoke-Classifier $gfxTool 'gfx-explicit-one' $joinedGraphics @('-PageNumber','1') | Out-Null
+Invoke-Classifier $gfxTool 'gfx-explicit-two' $joinedGraphics @('-PageNumber','2') | Out-Null
+Compare-JsonFile 'graphics page-1 filter' (Join-Path $scratch 'gfx-base-out.json') (Join-Path $scratch 'gfx-explicit-one-out.json')
+Compare-JsonFile 'graphics page-2 filter' (Join-Path $scratch 'gfx-page-two-out.json') (Join-Path $scratch 'gfx-explicit-two-out.json')
+$identicalPageTwo = @(On-Page $gfxList 2)
+$repeated = Invoke-Classifier $gfxTool 'gfx-repeated-geometry' (@($gfxList) + $identicalPageTwo)
+Assert-Rows 'identical geometry on different pages' (@($gfxBase) + @(On-Page $gfxBase 2)) $repeated
+
+$pageTwoText = @(On-Page $textList 2 400)
+$textTwo = Invoke-Classifier $textTool 'text-page-two' $pageTwoText @('-ChartStructures',(Join-Path $scratch 'gfx-page-two-out.json'))
+$joinedText = @($textList) + $pageTwoText
+$joinedTextArgs = @('-ChartStructures',(Join-Path $scratch 'gfx-joined-out.json'))
+$textJoined = Invoke-Classifier $textTool 'text-joined' $joinedText $joinedTextArgs
+Assert-Rows 'text composition' (@($textBase) + @($textTwo)) $textJoined
+Invoke-Classifier $textTool 'text-joined-reordered' $joinedText[($joinedText.Count-1)..0] $joinedTextArgs | Out-Null
+Compare-JsonFile 'text page reordering' (Join-Path $scratch 'text-joined-out.json') (Join-Path $scratch 'text-joined-reordered-out.json')
+Invoke-Classifier $textTool 'text-explicit-two' $joinedText ($joinedTextArgs + @('-PageNumber','2')) | Out-Null
+Compare-JsonFile 'text page-2 filter' (Join-Path $scratch 'text-page-two-out.json') (Join-Path $scratch 'text-explicit-two-out.json')
+$withoutPlot = Invoke-Classifier $textTool 'text-without-own-plot' @(On-Page @($textList[0]) 3) $joinedTextArgs
+Assert-Kinds 'text does not borrow another page plot' @($withoutPlot) @('ChartText')
+
+$moved = @($gfxList) + @(On-Page $gfxList 2 600)
+Invoke-Classifier $gfxTool 'gfx-moved-page-two' $moved | Out-Null
+$compareLog = Join-Path $scratch 'moved-page-two-comparison.log'
+& pwsh -NoProfile -File (Join-Path $repoRoot 'tools/ComparePdfGraphicsOperations.ps1') `
+    -Reference (Join-Path $scratch 'gfx-joined-out.json') -Candidate (Join-Path $scratch 'gfx-moved-page-two-out.json') `
+    -Kinds AxisPairPlotBoxCandidate -MatchByBounds *> $compareLog
+$comparisonExit = $LASTEXITCODE
+if ($comparisonExit -ne 1) { throw 'Moved page-2 chart must fail the classified axis-pair comparison' }
+[ordered]@{Invocations=@($invocations.ToArray());MovedPageComparisonExit=$comparisonExit;Failures=@($failures)} |
+    ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $scratch 'checks.json') -Encoding utf8
 if ($failures.Count -ne 0) {
     throw ("Chart classifier adversarial checks failed: " + ($failures -join "; "))
 }
-Write-Host "Chart classifier adversarial checks passed (6 cases)."
+Write-Host ("Chart classifier checks passed ({0} invocations and moved-page refusal)." -f $invocations.Count)

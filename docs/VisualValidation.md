@@ -8,6 +8,10 @@ page fails. Selected records require finite bounds and positive page numbers.
 When text-hash comparison is enabled, both hashes must be present. Missing
 comparison evidence is a failed check, even when other geometry happens to agree.
 
+Chart classifiers derive plot boxes and classify text within each PDF page
+before joining their reports. Region indexes belong to their page; use
+PageNumber together with RegionIndex when identifying a chart region.
+
 ## Requirements
 
 - Windows with Microsoft Office installed.

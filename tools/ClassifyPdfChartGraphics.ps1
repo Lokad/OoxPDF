@@ -689,140 +689,71 @@ function Add-LegendSwatchTextProximityStructures($structures, $textOps) {
     }
 }
 
-$ops = Read-JsonArray $InputPath
+$allOps = Read-JsonArray $InputPath
 if ($PageNumber -gt 0) {
-    $ops = @($ops | Where-Object { [int]$_.PageNumber -eq $PageNumber })
+    $allOps = @($allOps | Where-Object { [int]$_.PageNumber -eq $PageNumber })
 }
-$textOps = Read-JsonArrayIfExists $TextOperations
+$allTextOps = Read-JsonArrayIfExists $TextOperations
 if ($PageNumber -gt 0) {
-    $textOps = @($textOps | Where-Object { [int]$_.PageNumber -eq $PageNumber })
+    $allTextOps = @($allTextOps | Where-Object { [int]$_.PageNumber -eq $PageNumber })
 }
 
-$structures = New-Object System.Collections.Generic.List[object]
+# Derived geometry and region indexes belong to one PDF page.
+$allStructures = New-Object System.Collections.Generic.List[object]
+foreach ($pageGroup in @($allOps | Group-Object -Property PageNumber)) {
+    $ops = @($pageGroup.Group)
+    $pageNumberValue = $ops[0].PageNumber
+    $textOps = @($allTextOps | Where-Object { $_.PageNumber -eq $pageNumberValue })
+    $structures = New-Object System.Collections.Generic.List[object]
 
-foreach ($op in $ops) {
-    $width = Width $op
-    $height = Height $op
-    if ($op.Kind -eq "Clip" -and $width -gt 0 -and $height -gt 0) {
-        $structures.Add((New-Structure "ClipBox" $op))
-    }
+    foreach ($op in $ops) {
+        $width = Width $op
+        $height = Height $op
+        if ($op.Kind -eq "Clip" -and $width -gt 0 -and $height -gt 0) {
+            $structures.Add((New-Structure "ClipBox" $op))
+        }
 
-    if ($op.Kind -eq "Stroke" -and $height -le $LineTolerance -and $width -ge $MinLineLength) {
-        $structures.Add((New-Structure "HorizontalLine" $op))
-    }
-    elseif ($op.Kind -eq "Stroke" -and $width -le $LineTolerance -and $height -ge $MinLineLength) {
-        $structures.Add((New-Structure "VerticalLine" $op))
-    }
-    elseif ($op.Kind -eq "Stroke" -and $width -gt $LineTolerance -and $height -gt $LineTolerance -and
-        $width -ge $MarkerMinSize -and $height -ge $MarkerMinSize -and
-        $width -le $MarkerMaxSize -and $height -le $MarkerMaxSize) {
-        $structures.Add((New-Structure "StrokeMarkerCandidate" $op))
-    }
-    elseif ($op.Kind -eq "Stroke" -and
-        (IntValue $op.MoveCount) -eq 1 -and
-        (IntValue $op.LineCount) -ge 1 -and
-        (IntValue $op.LineCount) -le 2 -and
-        (IntValue $op.CurveCount) -eq 0 -and
-        (IntValue $op.CloseCount) -eq 0 -and
-        $width -gt $LineTolerance -and
-        $height -gt $LineTolerance -and
-        ($width -ge $MinLineLength -or $height -ge $MinLineLength)) {
-        $structures.Add((New-Structure "DataLabelLeaderLineCandidate" $op))
-    }
-
-    if (($op.Kind -eq "Fill" -or $op.Kind -eq "FillStroke") -and $width -gt 0 -and $height -gt 0) {
-        if ($width -ge $MarkerMinSize -and $height -ge $MarkerMinSize -and
+        if ($op.Kind -eq "Stroke" -and $height -le $LineTolerance -and $width -ge $MinLineLength) {
+            $structures.Add((New-Structure "HorizontalLine" $op))
+        }
+        elseif ($op.Kind -eq "Stroke" -and $width -le $LineTolerance -and $height -ge $MinLineLength) {
+            $structures.Add((New-Structure "VerticalLine" $op))
+        }
+        elseif ($op.Kind -eq "Stroke" -and $width -gt $LineTolerance -and $height -gt $LineTolerance -and
+            $width -ge $MarkerMinSize -and $height -ge $MarkerMinSize -and
             $width -le $MarkerMaxSize -and $height -le $MarkerMaxSize) {
-            $structures.Add((New-Structure "MarkerCandidate" $op))
+            $structures.Add((New-Structure "StrokeMarkerCandidate" $op))
         }
-        elseif ($width -gt $MarkerMaxSize -or $height -gt $MarkerMaxSize) {
-            $structures.Add((New-Structure "FilledRegion" $op))
+        elseif ($op.Kind -eq "Stroke" -and
+            (IntValue $op.MoveCount) -eq 1 -and
+            (IntValue $op.LineCount) -ge 1 -and
+            (IntValue $op.LineCount) -le 2 -and
+            (IntValue $op.CurveCount) -eq 0 -and
+            (IntValue $op.CloseCount) -eq 0 -and
+            $width -gt $LineTolerance -and
+            $height -gt $LineTolerance -and
+            ($width -ge $MinLineLength -or $height -ge $MinLineLength)) {
+            $structures.Add((New-Structure "DataLabelLeaderLineCandidate" $op))
+        }
+
+        if (($op.Kind -eq "Fill" -or $op.Kind -eq "FillStroke") -and $width -gt 0 -and $height -gt 0) {
+            if ($width -ge $MarkerMinSize -and $height -ge $MarkerMinSize -and
+                $width -le $MarkerMaxSize -and $height -le $MarkerMaxSize) {
+                $structures.Add((New-Structure "MarkerCandidate" $op))
+            }
+            elseif ($width -gt $MarkerMaxSize -or $height -gt $MarkerMaxSize) {
+                $structures.Add((New-Structure "FilledRegion" $op))
+            }
         }
     }
-}
 
-$horizontalLines = @($structures | Where-Object { $_.Kind -eq "HorizontalLine" })
-if ($horizontalLines.Count -ge 2) {
-    $bounds = Get-UnionBounds $horizontalLines
-    $page = if ($PageNumber -gt 0) { $PageNumber } else { $horizontalLines[0].PageNumber }
-    $structures.Add((New-DerivedStructure "PlotBoxCandidate" $page "HorizontalLineBounds" $horizontalLines.Count $bounds.MinX $bounds.MinY $bounds.MaxX $bounds.MaxY))
-}
-
-foreach ($op in $ops) {
-    $segmentCount = if ($null -ne $op.SegmentCount) { [int]$op.SegmentCount } else { 0 }
-    if ($op.Kind -ne "Stroke" -or $segmentCount -lt 2) {
-        continue
+    $horizontalLines = @($structures | Where-Object { $_.Kind -eq "HorizontalLine" })
+    if ($horizontalLines.Count -ge 2) {
+        $bounds = Get-UnionBounds $horizontalLines
+        $page = if ($PageNumber -gt 0) { $PageNumber } else { $horizontalLines[0].PageNumber }
+        $structures.Add((New-DerivedStructure "PlotBoxCandidate" $page "HorizontalLineBounds" $horizontalLines.Count $bounds.MinX $bounds.MinY $bounds.MaxX $bounds.MaxY))
     }
 
-    $width = Width $op
-    $height = Height $op
-    if ($width -lt $MinLineLength -or $height -le $LineTolerance) {
-        continue
-    }
-
-    $matchingBaseline = @($horizontalLines | Where-Object {
-        (Is-Near ([double]$_.MinX) ([double]$op.MinX) $GridlineBoundsTolerance) -and
-        (Is-Near ([double]$_.MaxX) ([double]$op.MaxX) $GridlineBoundsTolerance) -and
-        ([double]$_.CenterY -lt [double]$op.MinY)
-    } | Sort-Object -Property CenterY -Descending | Select-Object -First 1)
-    if ($matchingBaseline.Count -eq 0) {
-        continue
-    }
-
-    $baseline = $matchingBaseline[0]
-    $page = if ($PageNumber -gt 0) { $PageNumber } else { $op.PageNumber }
-    $structures.Add((New-DerivedStructure "GridlineAxisPlotBoxCandidate" $page "HorizontalGridlineAndAxisBounds" ($segmentCount + 1) $op.MinX $baseline.MinY $op.MaxX $op.MaxY))
-}
-
-$verticalLines = @($structures | Where-Object { $_.Kind -eq "VerticalLine" })
-if ($horizontalLines.Count -ge 1 -and $verticalLines.Count -ge 1) {
-    $leftAxis = @($verticalLines | Sort-Object -Property MinX | Select-Object -First 1)[0]
-    $topAxis = @($horizontalLines | Sort-Object -Property MinY | Select-Object -First 1)[0]
-    $minX = [double]$leftAxis.MinX
-    $minY = [double]$topAxis.MinY
-    $maxX = [double]$topAxis.MaxX
-    $maxY = [double]$leftAxis.MaxY
-    if ($maxX -gt $minX -and $maxY -gt $minY -and (Is-ReasonableAxisPairBounds $minX $minY $maxX $maxY)) {
-        $page = if ($PageNumber -gt 0) { $PageNumber } else { $leftAxis.PageNumber }
-        $structures.Add((New-DerivedStructure "AxisPairPlotBoxCandidate" $page "AxisLinePairBounds" 2 $minX $minY $maxX $maxY))
-    }
-    elseif ((Is-Near ([double]$topAxis.MinY) ([double]$leftAxis.MaxY) $GridlineBoundsTolerance) -and
-        $maxX -gt $minX -and [double]$leftAxis.MaxY -gt [double]$leftAxis.MinY -and
-        (Is-ReasonableAxisPairBounds $minX ([double]$leftAxis.MinY) $maxX ([double]$topAxis.MinY))) {
-        $page = if ($PageNumber -gt 0) { $PageNumber } else { $leftAxis.PageNumber }
-        $structures.Add((New-DerivedStructure "AxisPairPlotBoxCandidate" $page "AxisLinePairBounds" 2 $minX $leftAxis.MinY $maxX $topAxis.MinY))
-    }
-
-    $crossingAxis = @($horizontalLines | Where-Object {
-        (Is-Near ([double]$_.MinX) ([double]$leftAxis.MinX) $GridlineBoundsTolerance) -and
-        ([double]$_.CenterY -gt ([double]$leftAxis.MinY + $GridlineBoundsTolerance)) -and
-        ([double]$_.CenterY -lt ([double]$leftAxis.MaxY - $GridlineBoundsTolerance)) -and
-        ([double]$_.MaxX -gt [double]$leftAxis.MinX)
-    } | Sort-Object -Property Width -Descending | Select-Object -First 1)
-    if ($crossingAxis.Count -gt 0) {
-        $axis = $crossingAxis[0]
-        $page = if ($PageNumber -gt 0) { $PageNumber } else { $leftAxis.PageNumber }
-        $structures.Add((New-DerivedStructure "CrossingAxisPlotBoxCandidate" $page "CrossingAxisLinePairBounds" 2 $leftAxis.MinX $leftAxis.MinY $axis.MaxX $leftAxis.MaxY))
-    }
-}
-
-$axisPairPlotBox = @($structures | Where-Object { $_.Kind -eq "AxisPairPlotBoxCandidate" } | Select-Object -First 1)
-$gridlineAxisPlotBox = @($structures | Where-Object { $_.Kind -eq "GridlineAxisPlotBoxCandidate" } | Select-Object -First 1)
-$crossingAxisPlotBox = @($structures | Where-Object { $_.Kind -eq "CrossingAxisPlotBoxCandidate" } | Select-Object -First 1)
-$plotBoxForGridlines = if ($gridlineAxisPlotBox.Count -gt 0) {
-    $gridlineAxisPlotBox[0]
-}
-elseif ($crossingAxisPlotBox.Count -gt 0) {
-    $crossingAxisPlotBox[0]
-}
-elseif ($axisPairPlotBox.Count -gt 0) {
-    $axisPairPlotBox[0]
-}
-else {
-    @($structures | Where-Object { $_.Kind -eq "PlotBoxCandidate" } | Select-Object -First 1)[0]
-}
-
-if ($null -ne $plotBoxForGridlines) {
     foreach ($op in $ops) {
         $segmentCount = if ($null -ne $op.SegmentCount) { [int]$op.SegmentCount } else { 0 }
         if ($op.Kind -ne "Stroke" -or $segmentCount -lt 2) {
@@ -831,184 +762,261 @@ if ($null -ne $plotBoxForGridlines) {
 
         $width = Width $op
         $height = Height $op
-        $spansPlotWidth = (Is-Near ([double]$op.MinX) ([double]$plotBoxForGridlines.MinX) $GridlineBoundsTolerance) -and
-            (Is-Near ([double]$op.MaxX) ([double]$plotBoxForGridlines.MaxX) $GridlineBoundsTolerance)
-        $insideVerticalRange = ([double]$op.MinY -gt ([double]$plotBoxForGridlines.MinY + $GridlineBoundsTolerance)) -and
-            ([double]$op.MaxY -le ([double]$plotBoxForGridlines.MaxY + $GridlineBoundsTolerance))
-        if ($width -ge $MinLineLength -and $height -gt $LineTolerance -and $spansPlotWidth -and $insideVerticalRange) {
-            $structures.Add((New-Structure "HorizontalGridlineGroupCandidate" $op))
+        if ($width -lt $MinLineLength -or $height -le $LineTolerance) {
             continue
         }
 
-        $spansPlotHeight = (Is-Near ([double]$op.MinY) ([double]$plotBoxForGridlines.MinY) $GridlineBoundsTolerance) -and
-            (Is-Near ([double]$op.MaxY) ([double]$plotBoxForGridlines.MaxY) $GridlineBoundsTolerance)
-        $insideHorizontalRange = ([double]$op.MinX -gt ([double]$plotBoxForGridlines.MinX + $GridlineBoundsTolerance)) -and
-            ([double]$op.MaxX -le ([double]$plotBoxForGridlines.MaxX + $GridlineBoundsTolerance))
-        if ($height -ge $MinLineLength -and $width -gt $LineTolerance -and $spansPlotHeight -and $insideHorizontalRange) {
-            $structures.Add((New-Structure "VerticalGridlineGroupCandidate" $op))
+        $matchingBaseline = @($horizontalLines | Where-Object {
+            (Is-Near ([double]$_.MinX) ([double]$op.MinX) $GridlineBoundsTolerance) -and
+            (Is-Near ([double]$_.MaxX) ([double]$op.MaxX) $GridlineBoundsTolerance) -and
+            ([double]$_.CenterY -lt [double]$op.MinY)
+        } | Sort-Object -Property CenterY -Descending | Select-Object -First 1)
+        if ($matchingBaseline.Count -eq 0) {
+            continue
+        }
+
+        $baseline = $matchingBaseline[0]
+        $page = if ($PageNumber -gt 0) { $PageNumber } else { $op.PageNumber }
+        $structures.Add((New-DerivedStructure "GridlineAxisPlotBoxCandidate" $page "HorizontalGridlineAndAxisBounds" ($segmentCount + 1) $op.MinX $baseline.MinY $op.MaxX $op.MaxY))
+    }
+
+    $verticalLines = @($structures | Where-Object { $_.Kind -eq "VerticalLine" })
+    if ($horizontalLines.Count -ge 1 -and $verticalLines.Count -ge 1) {
+        $leftAxis = @($verticalLines | Sort-Object -Property MinX | Select-Object -First 1)[0]
+        $topAxis = @($horizontalLines | Sort-Object -Property MinY | Select-Object -First 1)[0]
+        $minX = [double]$leftAxis.MinX
+        $minY = [double]$topAxis.MinY
+        $maxX = [double]$topAxis.MaxX
+        $maxY = [double]$leftAxis.MaxY
+        if ($maxX -gt $minX -and $maxY -gt $minY -and (Is-ReasonableAxisPairBounds $minX $minY $maxX $maxY)) {
+            $page = if ($PageNumber -gt 0) { $PageNumber } else { $leftAxis.PageNumber }
+            $structures.Add((New-DerivedStructure "AxisPairPlotBoxCandidate" $page "AxisLinePairBounds" 2 $minX $minY $maxX $maxY))
+        }
+        elseif ((Is-Near ([double]$topAxis.MinY) ([double]$leftAxis.MaxY) $GridlineBoundsTolerance) -and
+            $maxX -gt $minX -and [double]$leftAxis.MaxY -gt [double]$leftAxis.MinY -and
+            (Is-ReasonableAxisPairBounds $minX ([double]$leftAxis.MinY) $maxX ([double]$topAxis.MinY))) {
+            $page = if ($PageNumber -gt 0) { $PageNumber } else { $leftAxis.PageNumber }
+            $structures.Add((New-DerivedStructure "AxisPairPlotBoxCandidate" $page "AxisLinePairBounds" 2 $minX $leftAxis.MinY $maxX $topAxis.MinY))
+        }
+
+        $crossingAxis = @($horizontalLines | Where-Object {
+            (Is-Near ([double]$_.MinX) ([double]$leftAxis.MinX) $GridlineBoundsTolerance) -and
+            ([double]$_.CenterY -gt ([double]$leftAxis.MinY + $GridlineBoundsTolerance)) -and
+            ([double]$_.CenterY -lt ([double]$leftAxis.MaxY - $GridlineBoundsTolerance)) -and
+            ([double]$_.MaxX -gt [double]$leftAxis.MinX)
+        } | Sort-Object -Property Width -Descending | Select-Object -First 1)
+        if ($crossingAxis.Count -gt 0) {
+            $axis = $crossingAxis[0]
+            $page = if ($PageNumber -gt 0) { $PageNumber } else { $leftAxis.PageNumber }
+            $structures.Add((New-DerivedStructure "CrossingAxisPlotBoxCandidate" $page "CrossingAxisLinePairBounds" 2 $leftAxis.MinX $leftAxis.MinY $axis.MaxX $leftAxis.MaxY))
         }
     }
 
-    foreach ($line in $horizontalLines) {
-        $spansPlotWidth = (Is-Near ([double]$line.MinX) ([double]$plotBoxForGridlines.MinX) $GridlineBoundsTolerance) -and
-            (Is-Near ([double]$line.MaxX) ([double]$plotBoxForGridlines.MaxX) $GridlineBoundsTolerance)
-        $isInsidePlot = Is-InsideOpenInterval ([double]$line.CenterY) ([double]$plotBoxForGridlines.MinY) ([double]$plotBoxForGridlines.MaxY) $GridlineBoundsTolerance
-        if ($spansPlotWidth -and $isInsidePlot) {
-            $structures.Add((Copy-StructureAsKind "HorizontalGridlineCandidate" $line))
-        }
+    $axisPairPlotBox = @($structures | Where-Object { $_.Kind -eq "AxisPairPlotBoxCandidate" } | Select-Object -First 1)
+    $gridlineAxisPlotBox = @($structures | Where-Object { $_.Kind -eq "GridlineAxisPlotBoxCandidate" } | Select-Object -First 1)
+    $crossingAxisPlotBox = @($structures | Where-Object { $_.Kind -eq "CrossingAxisPlotBoxCandidate" } | Select-Object -First 1)
+    $plotBoxForGridlines = if ($gridlineAxisPlotBox.Count -gt 0) {
+        $gridlineAxisPlotBox[0]
     }
-
-    foreach ($line in $verticalLines) {
-        $spansPlotHeight = (Is-Near ([double]$line.MinY) ([double]$plotBoxForGridlines.MinY) $GridlineBoundsTolerance) -and
-            (Is-Near ([double]$line.MaxY) ([double]$plotBoxForGridlines.MaxY) $GridlineBoundsTolerance)
-        $isInsidePlot = Is-InsideOpenInterval ([double]$line.CenterX) ([double]$plotBoxForGridlines.MinX) ([double]$plotBoxForGridlines.MaxX) $GridlineBoundsTolerance
-        if ($spansPlotHeight -and $isInsidePlot) {
-            $structures.Add((Copy-StructureAsKind "VerticalGridlineCandidate" $line))
-        }
+    elseif ($crossingAxisPlotBox.Count -gt 0) {
+        $crossingAxisPlotBox[0]
     }
-}
-
-if ($null -ne $plotBoxForGridlines) {
-    $structureSnapshot = [object[]]$structures.ToArray()
-    foreach ($structure in $structureSnapshot) {
-        if ((Is-LegendSwatchShape $structure) -and (Is-OutsideBox $structure $plotBoxForGridlines $GridlineBoundsTolerance)) {
-            $structures.Add((Copy-StructureAsKind "LegendSwatchCandidate" $structure))
-        }
-    }
-}
-
-if ($null -eq $plotBoxForGridlines) {
-    foreach ($op in $ops) {
-        $segmentCount = if ($null -ne $op.SegmentCount) { [int]$op.SegmentCount } else { 0 }
-        $moveCount = IntValue $op.MoveCount
-        $lineCount = IntValue $op.LineCount
-        $curveCount = IntValue $op.CurveCount
-        $width = Width $op
-        $height = Height $op
-        if ($op.Kind -eq "Stroke" -and $segmentCount -ge 6 -and $moveCount -ge 3 -and
-            $lineCount -ge 3 -and $curveCount -eq 0 -and $width -gt 40d -and $height -gt 40d) {
-            $kind = if ($segmentCount -ge 10) { "RadarRingGridGroupCandidate" } else { "RadarSpokeGroupCandidate" }
-            $structures.Add((New-Structure $kind $op))
-        }
-    }
-}
-
-$clipBoxes = @($structures | Where-Object { $_.Kind -eq "ClipBox" })
-if ($clipBoxes.Count -gt 0) {
-    $nonPageClipBoxes = @($clipBoxes | Where-Object {
-        $_.Width -gt 40 -and $_.Height -gt 40 -and
-        -not ([Math]::Abs([double]$_.MinX) -le 0.01 -and [Math]::Abs([double]$_.MinY) -le 0.01)
-    })
-    if ($nonPageClipBoxes.Count -gt 0) {
-        $clipGroups = @($nonPageClipBoxes |
-            Group-Object -Property MinX, MinY, MaxX, MaxY)
-        $dominantGroup = $null
-        if ($clipGroups.Count -gt 0 -and $null -ne $plotBoxForGridlines) {
-            $dominantGroup = $clipGroups |
-                Sort-Object -Property @{
-                    Expression = {
-                        $clip = @($_.Group)[0]
-                        BoundsDistance $clip $plotBoxForGridlines
-                    }
-                }, @{
-                    Expression = { -[int]$_.Count }
-                } |
-                Select-Object -First 1
-
-            $nearestClip = @($dominantGroup.Group)[0]
-            if ((BoundsDistance $nearestClip $plotBoxForGridlines) -gt 10d) {
-                $dominantGroup = $null
-            }
-        }
-
-        if ($null -eq $dominantGroup -and $null -eq $plotBoxForGridlines) {
-            $axisAlignedGroup = $clipGroups |
-                Where-Object {
-                    $clip = @($_.Group)[0]
-                    foreach ($line in $horizontalLines) {
-                        if ((Is-Near ([double]$clip.MinX) ([double]$line.MinX) $GridlineBoundsTolerance) -and
-                            (Is-Near ([double]$clip.MaxX) ([double]$line.MaxX) $GridlineBoundsTolerance)) {
-                            return $true
-                        }
-                    }
-
-                    return $false
-                } |
-                Sort-Object -Property @{
-                    Expression = { -[int]$_.Count }
-                }, @{
-                    Expression = {
-                        $clip = @($_.Group)[0]
-                        -((Width $clip) * (Height $clip))
-                    }
-                } |
-                Select-Object -First 1
-            if ($null -ne $axisAlignedGroup) {
-                $dominantGroup = $axisAlignedGroup
-            }
-        }
-
-        if ($null -eq $dominantGroup -and $null -eq $plotBoxForGridlines) {
-            $dominantGroup = $nonPageClipBoxes |
-                Group-Object -Property MinX, MinY, MaxX, MaxY |
-                Sort-Object -Property @{
-                    Expression = {
-                        $clip = @($_.Group)[0]
-                        -((Width $clip) * (Height $clip))
-                    }
-                }, @{
-                    Expression = { -[int]$_.Count }
-                } |
-                Select-Object -First 1
-        }
-
-        if ($null -ne $dominantGroup) {
-            $clip = @($dominantGroup.Group)[0]
-            $structures.Add((New-DerivedStructure "PlotAreaClipBoxCandidate" $clip.PageNumber "DominantClipBox" $dominantGroup.Count $clip.MinX $clip.MinY $clip.MaxX $clip.MaxY))
-        }
-    }
-}
-
-$polarRegions = @($structures | Where-Object {
-    $_.Kind -eq "FilledRegion" -and $_.Width -gt $MarkerMaxSize -and $_.Height -gt $MarkerMaxSize
-})
-if ($polarRegions.Count -gt 1) {
-    $pageLikeClipBoxes = @($clipBoxes | Where-Object {
-        [double]$_.Width -gt 400d -and [double]$_.Height -gt 300d
-    })
-    $nonPageRegions = if ($pageLikeClipBoxes.Count -gt 0) {
-        $largestPageWidth = ($pageLikeClipBoxes | Measure-Object -Property Width -Maximum).Maximum
-        $largestPageHeight = ($pageLikeClipBoxes | Measure-Object -Property Height -Maximum).Maximum
-        @($polarRegions | Where-Object {
-            -not ([double]$_.Width -ge ([double]$largestPageWidth * 0.8d) -and [double]$_.Height -ge ([double]$largestPageHeight * 0.8d))
-        })
+    elseif ($axisPairPlotBox.Count -gt 0) {
+        $axisPairPlotBox[0]
     }
     else {
-        $polarRegions
+        @($structures | Where-Object { $_.Kind -eq "PlotBoxCandidate" } | Select-Object -First 1)[0]
     }
 
-    if ($nonPageRegions.Count -ge 2 -and $null -eq $plotBoxForGridlines) {
-        $bounds = Get-UnionBounds $nonPageRegions
-        $width = [double]$bounds.MaxX - [double]$bounds.MinX
-        $height = [double]$bounds.MaxY - [double]$bounds.MinY
-        $aspect = $width / [Math]::Max(1d, $height)
-        if ($aspect -ge 0.74d -and $aspect -le 1.35d) {
-            foreach ($region in $nonPageRegions) {
-                $structures.Add((Copy-StructureAsKind "PolarSliceCandidate" $region))
+    if ($null -ne $plotBoxForGridlines) {
+        foreach ($op in $ops) {
+            $segmentCount = if ($null -ne $op.SegmentCount) { [int]$op.SegmentCount } else { 0 }
+            if ($op.Kind -ne "Stroke" -or $segmentCount -lt 2) {
+                continue
             }
 
-            $page = if ($PageNumber -gt 0) { $PageNumber } else { $nonPageRegions[0].PageNumber }
-            $structures.Add((New-PolarPlotBoxStructure $page "FilledRegionUnion" $nonPageRegions.Count $bounds.MinX $bounds.MinY $bounds.MaxX $bounds.MaxY))
+            $width = Width $op
+            $height = Height $op
+            $spansPlotWidth = (Is-Near ([double]$op.MinX) ([double]$plotBoxForGridlines.MinX) $GridlineBoundsTolerance) -and
+                (Is-Near ([double]$op.MaxX) ([double]$plotBoxForGridlines.MaxX) $GridlineBoundsTolerance)
+            $insideVerticalRange = ([double]$op.MinY -gt ([double]$plotBoxForGridlines.MinY + $GridlineBoundsTolerance)) -and
+                ([double]$op.MaxY -le ([double]$plotBoxForGridlines.MaxY + $GridlineBoundsTolerance))
+            if ($width -ge $MinLineLength -and $height -gt $LineTolerance -and $spansPlotWidth -and $insideVerticalRange) {
+                $structures.Add((New-Structure "HorizontalGridlineGroupCandidate" $op))
+                continue
+            }
+
+            $spansPlotHeight = (Is-Near ([double]$op.MinY) ([double]$plotBoxForGridlines.MinY) $GridlineBoundsTolerance) -and
+                (Is-Near ([double]$op.MaxY) ([double]$plotBoxForGridlines.MaxY) $GridlineBoundsTolerance)
+            $insideHorizontalRange = ([double]$op.MinX -gt ([double]$plotBoxForGridlines.MinX + $GridlineBoundsTolerance)) -and
+                ([double]$op.MaxX -le ([double]$plotBoxForGridlines.MaxX + $GridlineBoundsTolerance))
+            if ($height -ge $MinLineLength -and $width -gt $LineTolerance -and $spansPlotHeight -and $insideHorizontalRange) {
+                $structures.Add((New-Structure "VerticalGridlineGroupCandidate" $op))
+            }
+        }
+
+        foreach ($line in $horizontalLines) {
+            $spansPlotWidth = (Is-Near ([double]$line.MinX) ([double]$plotBoxForGridlines.MinX) $GridlineBoundsTolerance) -and
+                (Is-Near ([double]$line.MaxX) ([double]$plotBoxForGridlines.MaxX) $GridlineBoundsTolerance)
+            $isInsidePlot = Is-InsideOpenInterval ([double]$line.CenterY) ([double]$plotBoxForGridlines.MinY) ([double]$plotBoxForGridlines.MaxY) $GridlineBoundsTolerance
+            if ($spansPlotWidth -and $isInsidePlot) {
+                $structures.Add((Copy-StructureAsKind "HorizontalGridlineCandidate" $line))
+            }
+        }
+
+        foreach ($line in $verticalLines) {
+            $spansPlotHeight = (Is-Near ([double]$line.MinY) ([double]$plotBoxForGridlines.MinY) $GridlineBoundsTolerance) -and
+                (Is-Near ([double]$line.MaxY) ([double]$plotBoxForGridlines.MaxY) $GridlineBoundsTolerance)
+            $isInsidePlot = Is-InsideOpenInterval ([double]$line.CenterX) ([double]$plotBoxForGridlines.MinX) ([double]$plotBoxForGridlines.MaxX) $GridlineBoundsTolerance
+            if ($spansPlotHeight -and $isInsidePlot) {
+                $structures.Add((Copy-StructureAsKind "VerticalGridlineCandidate" $line))
+            }
         }
     }
+
+    if ($null -ne $plotBoxForGridlines) {
+        $structureSnapshot = [object[]]$structures.ToArray()
+        foreach ($structure in $structureSnapshot) {
+            if ((Is-LegendSwatchShape $structure) -and (Is-OutsideBox $structure $plotBoxForGridlines $GridlineBoundsTolerance)) {
+                $structures.Add((Copy-StructureAsKind "LegendSwatchCandidate" $structure))
+            }
+        }
+    }
+
+    if ($null -eq $plotBoxForGridlines) {
+        foreach ($op in $ops) {
+            $segmentCount = if ($null -ne $op.SegmentCount) { [int]$op.SegmentCount } else { 0 }
+            $moveCount = IntValue $op.MoveCount
+            $lineCount = IntValue $op.LineCount
+            $curveCount = IntValue $op.CurveCount
+            $width = Width $op
+            $height = Height $op
+            if ($op.Kind -eq "Stroke" -and $segmentCount -ge 6 -and $moveCount -ge 3 -and
+                $lineCount -ge 3 -and $curveCount -eq 0 -and $width -gt 40d -and $height -gt 40d) {
+                $kind = if ($segmentCount -ge 10) { "RadarRingGridGroupCandidate" } else { "RadarSpokeGroupCandidate" }
+                $structures.Add((New-Structure $kind $op))
+            }
+        }
+    }
+
+    $clipBoxes = @($structures | Where-Object { $_.Kind -eq "ClipBox" })
+    if ($clipBoxes.Count -gt 0) {
+        $nonPageClipBoxes = @($clipBoxes | Where-Object {
+            $_.Width -gt 40 -and $_.Height -gt 40 -and
+            -not ([Math]::Abs([double]$_.MinX) -le 0.01 -and [Math]::Abs([double]$_.MinY) -le 0.01)
+        })
+        if ($nonPageClipBoxes.Count -gt 0) {
+            $clipGroups = @($nonPageClipBoxes |
+                Group-Object -Property MinX, MinY, MaxX, MaxY)
+            $dominantGroup = $null
+            if ($clipGroups.Count -gt 0 -and $null -ne $plotBoxForGridlines) {
+                $dominantGroup = $clipGroups |
+                    Sort-Object -Property @{
+                        Expression = {
+                            $clip = @($_.Group)[0]
+                            BoundsDistance $clip $plotBoxForGridlines
+                        }
+                    }, @{
+                        Expression = { -[int]$_.Count }
+                    } |
+                    Select-Object -First 1
+
+                $nearestClip = @($dominantGroup.Group)[0]
+                if ((BoundsDistance $nearestClip $plotBoxForGridlines) -gt 10d) {
+                    $dominantGroup = $null
+                }
+            }
+
+            if ($null -eq $dominantGroup -and $null -eq $plotBoxForGridlines) {
+                $axisAlignedGroup = $clipGroups |
+                    Where-Object {
+                        $clip = @($_.Group)[0]
+                        foreach ($line in $horizontalLines) {
+                            if ((Is-Near ([double]$clip.MinX) ([double]$line.MinX) $GridlineBoundsTolerance) -and
+                                (Is-Near ([double]$clip.MaxX) ([double]$line.MaxX) $GridlineBoundsTolerance)) {
+                                return $true
+                            }
+                        }
+
+                        return $false
+                    } |
+                    Sort-Object -Property @{
+                        Expression = { -[int]$_.Count }
+                    }, @{
+                        Expression = {
+                            $clip = @($_.Group)[0]
+                            -((Width $clip) * (Height $clip))
+                        }
+                    } |
+                    Select-Object -First 1
+                if ($null -ne $axisAlignedGroup) {
+                    $dominantGroup = $axisAlignedGroup
+                }
+            }
+
+            if ($null -eq $dominantGroup -and $null -eq $plotBoxForGridlines) {
+                $dominantGroup = $nonPageClipBoxes |
+                    Group-Object -Property MinX, MinY, MaxX, MaxY |
+                    Sort-Object -Property @{
+                        Expression = {
+                            $clip = @($_.Group)[0]
+                            -((Width $clip) * (Height $clip))
+                        }
+                    }, @{
+                        Expression = { -[int]$_.Count }
+                    } |
+                    Select-Object -First 1
+            }
+
+            if ($null -ne $dominantGroup) {
+                $clip = @($dominantGroup.Group)[0]
+                $structures.Add((New-DerivedStructure "PlotAreaClipBoxCandidate" $clip.PageNumber "DominantClipBox" $dominantGroup.Count $clip.MinX $clip.MinY $clip.MaxX $clip.MaxY))
+            }
+        }
+    }
+
+    $polarRegions = @($structures | Where-Object {
+        $_.Kind -eq "FilledRegion" -and $_.Width -gt $MarkerMaxSize -and $_.Height -gt $MarkerMaxSize
+    })
+    if ($polarRegions.Count -gt 1) {
+        $pageLikeClipBoxes = @($clipBoxes | Where-Object {
+            [double]$_.Width -gt 400d -and [double]$_.Height -gt 300d
+        })
+        $nonPageRegions = if ($pageLikeClipBoxes.Count -gt 0) {
+            $largestPageWidth = ($pageLikeClipBoxes | Measure-Object -Property Width -Maximum).Maximum
+            $largestPageHeight = ($pageLikeClipBoxes | Measure-Object -Property Height -Maximum).Maximum
+            @($polarRegions | Where-Object {
+                -not ([double]$_.Width -ge ([double]$largestPageWidth * 0.8d) -and [double]$_.Height -ge ([double]$largestPageHeight * 0.8d))
+            })
+        }
+        else {
+            $polarRegions
+        }
+
+        if ($nonPageRegions.Count -ge 2 -and $null -eq $plotBoxForGridlines) {
+            $bounds = Get-UnionBounds $nonPageRegions
+            $width = [double]$bounds.MaxX - [double]$bounds.MinX
+            $height = [double]$bounds.MaxY - [double]$bounds.MinY
+            $aspect = $width / [Math]::Max(1d, $height)
+            if ($aspect -ge 0.74d -and $aspect -le 1.35d) {
+                foreach ($region in $nonPageRegions) {
+                    $structures.Add((Copy-StructureAsKind "PolarSliceCandidate" $region))
+                }
+
+                $page = if ($PageNumber -gt 0) { $PageNumber } else { $nonPageRegions[0].PageNumber }
+                $structures.Add((New-PolarPlotBoxStructure $page "FilledRegionUnion" $nonPageRegions.Count $bounds.MinX $bounds.MinY $bounds.MaxX $bounds.MaxY))
+            }
+        }
+    }
+
+    Assign-RegionIndexes ([object[]]$structures.ToArray())
+    Reclassify-InPlotSeriesLines $structures $GridlineBoundsTolerance
+    Add-LegendSwatchTextProximityStructures $structures $textOps
+    Add-DataLabelLegendKeyStructures $structures $textOps
+    $allStructures.AddRange([object[]]$structures.ToArray())
 }
 
-Assign-RegionIndexes ([object[]]$structures.ToArray())
-Reclassify-InPlotSeriesLines $structures $GridlineBoundsTolerance
-Add-LegendSwatchTextProximityStructures $structures $textOps
-Add-DataLabelLegendKeyStructures $structures $textOps
-
-$ordered = @($structures | Sort-Object -Property PageNumber, Kind, MinY, MinX, MaxY, MaxX)
+$ordered = @($allStructures | Sort-Object -Property PageNumber, Kind, MinY, MinX, MaxY, MaxX)
 $ordered | Format-Table -AutoSize
 Write-Host "Chart graphics structures: $($ordered.Count)"
 

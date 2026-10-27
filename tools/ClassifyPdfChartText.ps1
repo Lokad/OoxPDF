@@ -489,64 +489,69 @@ function Classify-Text($op, $plotBox, $structures, $polarNumericLabels, [double]
     return "OuterChartText"
 }
 
-$textOps = Read-JsonArray $InputPath
+$allTextOps = Read-JsonArray $InputPath
 if ($PageNumber -gt 0) {
-    $textOps = @($textOps | Where-Object { [int]$_.PageNumber -eq $PageNumber })
+    $allTextOps = @($allTextOps | Where-Object { [int]$_.PageNumber -eq $PageNumber })
 }
 
-$structures = Read-JsonArrayIfExists $ChartStructures
+$allStructures = Read-JsonArrayIfExists $ChartStructures
 if ($PageNumber -gt 0) {
-    $structures = @($structures | Where-Object { [int]$_.PageNumber -eq $PageNumber })
+    $allStructures = @($allStructures | Where-Object { [int]$_.PageNumber -eq $PageNumber })
 }
 
-$plotBoxes = Find-PlotBoxes $structures
-$plotBox = if ($plotBoxes.Count -gt 0) { $plotBoxes[0] } else { Find-PlotBox $structures }
-$isPolarChart = Is-PolarChart $plotBox $structures
-$polarNumericLabels = if ($isPolarChart) {
-    @($textOps | Where-Object { Is-NumericText (TextValue $_) })
-}
-else {
-    @()
-}
 $classified = New-Object System.Collections.Generic.List[object]
-foreach ($op in $textOps) {
-    $text = TextValue $op
-    if ([string]::IsNullOrWhiteSpace($text)) {
-        continue
+foreach ($pageGroup in @($allTextOps | Group-Object -Property PageNumber)) {
+    $textOps = @($pageGroup.Group)
+    $pageNumberValue = $textOps[0].PageNumber
+    $structures = @($allStructures | Where-Object { $_.PageNumber -eq $pageNumberValue })
+    $plotBoxes = Find-PlotBoxes $structures
+    $plotBox = if ($plotBoxes.Count -gt 0) { $plotBoxes[0] } else { Find-PlotBox $structures }
+    $isPolarChart = Is-PolarChart $plotBox $structures
+    $polarNumericLabels = if ($isPolarChart) {
+        @($textOps | Where-Object { Is-NumericText (TextValue $_) })
     }
+    else {
+        @()
+    }
+    foreach ($op in $textOps) {
+        $text = TextValue $op
+        if ([string]::IsNullOrWhiteSpace($text)) {
+            continue
+        }
 
-    $x = TextX $op
-    $y = TextY $op
-    $fontSize = if ($op.FontSize -ne $null) { [double]$op.FontSize } else { 0d }
-    $textPlotBox = Find-NearestPlotBox $op $plotBoxes
-    if ($null -eq $textPlotBox) {
-        $textPlotBox = $plotBox
+        $x = TextX $op
+        $y = TextY $op
+        $fontSize = if ($op.FontSize -ne $null) { [double]$op.FontSize } else { 0d }
+        $textPlotBox = Find-NearestPlotBox $op $plotBoxes
+        if ($null -eq $textPlotBox) {
+            $textPlotBox = $plotBox
+        }
+        $classified.Add([pscustomobject]@{
+            Kind = Classify-Text $op $textPlotBox $structures $polarNumericLabels $PlotTolerance
+            RegionIndex = if ($null -eq $textPlotBox -or $textPlotBox.RegionIndex -eq $null) { $null } else { $textPlotBox.RegionIndex }
+            PageNumber = $op.PageNumber
+            SourceKind = "Text"
+            SourceOperator = $op.Operator
+            TextLength = $text.Length
+            TextHash = StableTextHash $text
+            MinX = Round $x
+            MinY = Round $y
+            MaxX = Round $x
+            MaxY = Round $y
+            Width = 0d
+            Height = 0d
+            CenterX = Round $x
+            CenterY = Round $y
+            LineWidth = 0d
+            Font = $op.Font
+            FontSize = Round $fontSize
+            CharacterSpacing = if ($op.CharacterSpacing -ne $null) { Round ([double]$op.CharacterSpacing) } else { 0d }
+            MatrixA = if ($op.EffectiveA -ne $null) { Round ([double]$op.EffectiveA) } else { 0d }
+            MatrixB = if ($op.EffectiveB -ne $null) { Round ([double]$op.EffectiveB) } else { 0d }
+            MatrixC = if ($op.EffectiveC -ne $null) { Round ([double]$op.EffectiveC) } else { 0d }
+            MatrixD = if ($op.EffectiveD -ne $null) { Round ([double]$op.EffectiveD) } else { 0d }
+        })
     }
-    $classified.Add([pscustomobject]@{
-        Kind = Classify-Text $op $textPlotBox $structures $polarNumericLabels $PlotTolerance
-        RegionIndex = if ($null -eq $textPlotBox -or $textPlotBox.RegionIndex -eq $null) { $null } else { $textPlotBox.RegionIndex }
-        PageNumber = $op.PageNumber
-        SourceKind = "Text"
-        SourceOperator = $op.Operator
-        TextLength = $text.Length
-        TextHash = StableTextHash $text
-        MinX = Round $x
-        MinY = Round $y
-        MaxX = Round $x
-        MaxY = Round $y
-        Width = 0d
-        Height = 0d
-        CenterX = Round $x
-        CenterY = Round $y
-        LineWidth = 0d
-        Font = $op.Font
-        FontSize = Round $fontSize
-        CharacterSpacing = if ($op.CharacterSpacing -ne $null) { Round ([double]$op.CharacterSpacing) } else { 0d }
-        MatrixA = if ($op.EffectiveA -ne $null) { Round ([double]$op.EffectiveA) } else { 0d }
-        MatrixB = if ($op.EffectiveB -ne $null) { Round ([double]$op.EffectiveB) } else { 0d }
-        MatrixC = if ($op.EffectiveC -ne $null) { Round ([double]$op.EffectiveC) } else { 0d }
-        MatrixD = if ($op.EffectiveD -ne $null) { Round ([double]$op.EffectiveD) } else { 0d }
-    })
 }
 
 $ordered = @($classified | Sort-Object -Property PageNumber, Kind, MinY, MinX, TextLength)
