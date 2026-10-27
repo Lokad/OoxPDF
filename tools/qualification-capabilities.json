@@ -8982,7 +8982,7 @@
     "CoverageExpansionBeyondCapThrows",
     "DeduplicateImagesKeepsDistinctContent",
     "DeduplicateImagesObservesCancellation",
-    "DeduplicateImagesRejectsForcedKeyCollision",
+    "DeduplicateImagesRejectsStaleContentIdentity",
     "DenseNumberPointIndexPreservesSparseProvenance",
     "DenseNumberValueViewPreservesSparseSlots",
     "DenseNumberValueViewAllocationPerSlotIsCompact",
