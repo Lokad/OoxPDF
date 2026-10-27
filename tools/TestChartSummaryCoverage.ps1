@@ -11,6 +11,16 @@ $summary=Join-Path $PSScriptRoot 'SummarizeChartStructureDeltas.ps1'
 if (!$OutputDirectory) { $OutputDirectory=Join-Path (Split-Path -Parent $PSScriptRoot) ('artifacts/chart-summary-'+[guid]::NewGuid().ToString('N')) }
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'Use a fresh chart-summary test directory' }
 $scratch=(New-Item -ItemType Directory -Path $OutputDirectory).FullName
+# Check semantic summary records, independently of terminal formatting/color.
+. (Join-Path $PSScriptRoot 'CompareMath.ps1')
+$tokens=$null; $parseErrors=$null
+$ast=[Management.Automation.Language.Parser]::ParseFile($summary,[ref]$tokens,[ref]$parseErrors)
+if($parseErrors.Count){throw 'Chart summary script must parse'}
+foreach($functionName in @('Get-RegionValue','BoundsDelta','SignedDelta','Format-Bounds','Summarize-Kind')) {
+    $definition=$ast.Find({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $functionName},$true)
+    . ([scriptblock]::Create($definition.Extent.Text))
+}
+$ByRegion=$true
 
 function Write-ControlPdf([string] $Path, [int] $Pages, [bool] $Moved) {
     $kids=@(for($i=0;$i -lt $Pages;$i++){ ('{0} 0 R' -f (3+2*$i)) }) -join ' '
@@ -55,17 +65,20 @@ try {
         if($LASTEXITCODE -ne 0){throw ('Fresh summary failed: '+$log)}
         $text=Get-Content -LiteralPath $log -Raw
         if($text -notmatch 'freshly inspected all PDF pages'){throw 'Fresh coverage must be explicit'}
-        if($pages -eq 2 -and $text -notmatch 'MaxBoundsDelta\s*:\s*200'){throw 'Summary omitted the page-two move'}
-        if($pages -eq 1 -and $text -match 'MaxBoundsDelta\s*:\s*[1-9]'){throw 'Identical single-page control changed'}
+        $probeGraphics=@{}
         $hashes=@(foreach($side in @('reference','candidate')) {
             $probe=Join-Path $run.FullName ('probe-'+$side)
             $build=Get-Content -LiteralPath (Join-Path $probe 'pdf-inspect-build-info.json') -Raw | ConvertFrom-Json
             if($build.BuildRequested -ne $false -or $build.OutputSha256 -ne $inspectorHash){throw 'Inspector identity or no-build binding changed'}
             $graphics=Join-Path $probe 'chart-graphics-structures.json'
-            $axes=@(Get-Content -LiteralPath $graphics -Raw | ConvertFrom-Json | Where-Object Kind -eq 'AxisPairPlotBoxCandidate')
+            $probeGraphics[$side]=@(Get-Content -LiteralPath $graphics -Raw | ConvertFrom-Json)
+            $axes=@($probeGraphics[$side] | Where-Object Kind -eq 'AxisPairPlotBoxCandidate')
             if(($axes.PageNumber -join ',') -ne ((1..$pages) -join ',')){throw 'Expected an independent axis pair on every page'}
             @{Path=$graphics;Sha256=(Get-FileHash -LiteralPath $graphics).Hash}
         })
+        $row=Summarize-Kind 'AxisPairPlotBoxCandidate' ($pages.ToString()+'/0') $probeGraphics.reference $probeGraphics.candidate 'GRAPHICS'
+        $expected=if($pages -eq 1){0}else{200}
+        if($row.ReferenceCount -ne 1 -or $row.CandidateCount -ne 1 -or $row.MaxBoundsDelta -ne $expected){throw 'Summary must retain the selected page geometry'}
         $reuseLog=Join-Path $scratch ($pages.ToString()+'-reuse.log')
         & pwsh -NoProfile -File $summary -Case $id -ByRegion -SkipProbe -InspectorPath $inspector -SkipBuild *> $reuseLog
         if($LASTEXITCODE -ne 0 -or (Get-Content -LiteralPath $reuseLog -Raw) -notmatch 'reused reports; PDF page coverage is unverified'){throw 'Reused coverage must not imply a fresh full-document check'}
