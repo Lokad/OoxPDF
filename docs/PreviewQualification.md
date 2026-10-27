@@ -1,68 +1,56 @@
 # 0.2.0-preview qualification
 
-The bounded PPTX slide-membership/reference-metadata milestone is qualified. Publication, performance optimization and expansion remain deferred.
-The library was built once at `db235b9b59b20a843341b1b258884386f30af305`.
-Final harness source: `1020e018a664457113373731ef73f95930d7b0a4`.
-Library SHA-256: `81F4A70CBD3F63C8A1871EC2CD13153BEDCCF09D0501C569A0E1DD983894542A`.
-[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40480830373)
-passes at the final harness source. CI builds are independent of the frozen runtime.
+The bounded table-paragraph-default/image-identity milestone is qualified. Publication, performance optimization and expansion remain deferred.
+The library was built once at `79a6e2c715976946b73df60bef28570c377b7b68`.
+Final harness source: `48a7dc064cf37408270ee25d2ba01e17f6bd9d15`; catalog repair: `4a8d2841`.
+Library SHA-256: `1828BCE4B5E87637A8A35A1A1B98C751C52A6941E0EEE896614F7073C94B23B7`.
+[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40493687709)
+passes at the catalog repair source. CI builds are independent of the frozen runtime.
+The superseded source run failed only a stale renamed-test catalog entry; complete
+catalog selection now resolves against the unchanged frozen runner.
 
 | Gate | Result |
 |---|---|
-| Release/affected checks | One committed linked-worktree library build. Eleven exact affected methods pass on both hosts. A read-only temporary-fixture repair rebuilds only the test harness; only its two failed methods repeat per host. All 21 other runtime assets and 2,608 public inputs are identical. |
-| Windows milestone | **3,819 pass, one inherited failure, five skips**; 3,825 unique methods/3,827 attempts in three invocations. No prior passing method regresses. |
-| Ubuntu milestone | **1,224 pass, seven inherited failures, 77 skips**; 1,308 unique methods/1,310 attempts in three invocations. Inherited failures retain their outcomes/messages. |
-| Independent PowerPoint controls | Two visible-list controls retain byte-identical PDFs. Both all-hidden controls fail without PDF, matching PowerPoint's refusal to export them. Four pinned inputs; no new Office export/rasterization. |
-| Reference-worker mechanics | 13 supervision, eight exception-stage, ten timeout-stage and four raster-forwarding checks pass. Current raw metadata survives failure/timeout; no-status runs clear stale metadata. Unrelated evidence and process ownership remain intact. No Office/build. |
-| Representative documents | Nine sources/16 outcomes/32 pages retain exact previous PDFs, diagnostics and semantic results. Each outcome converted once. |
-| Independent visual gates | Reused by PDF identity: two strict PPTX passes/fourteen strict DOCX failures. Thresholds and residuals remain unchanged; 715 validated manifests/12 families are integrity evidence, not a fidelity pass count. |
+| Release/affected checks | One committed linked-worktree library build. Twenty-two affected methods: Windows 22 pass; Ubuntu 14 pass/eight Windows-font skips. Two harness-only assertion repairs repeat only the failed painting method per host. All 21 other runtime assets and 2,613 public inputs remain identical. |
+| Windows milestone | **3,823 pass, one inherited failure, five skips**; 3,829 unique methods/3,831 attempts in four invocations. No prior passing method regresses. |
+| Ubuntu milestone | **1,228 pass, seven inherited failures, 85 skips**; 1,320 unique methods/1,322 attempts. Eight additional skips are explicit native-font preconditions; no inherited failure becomes a skip. |
+| Independent PowerPoint controls | All five valid controls agree on bold/color. Three paragraph-default mismatches are corrected. Inherited-style/direct-run PDFs remain byte-identical. Reused Office PDFs; no new Office export/rasterization. The malformed initial run control remains excluded. |
+| Neighboring tables | Three fixtures retain exact parent PDFs/diagnostics, including explicit wrapping and font fragmentation. No parent build or raster replay. |
+| Image identity | One production/five test selector arguments removed. Existing complete identities, content guard, stable deduplication, CMYK distinctions and cancellation remain; no replacement hook or public API change. |
+| Representative documents | Nine sources/16 outcomes/32 pages retain exact prior PDFs, diagnostics and semantic results. Each current outcome converted once. |
+| Independent visual gates | Reused by PDF identity: two strict PPTX passes/fourteen strict DOCX failures. Thresholds/residuals remain. Integrity validation of 715 manifests/12 families remains separate from fidelity evidence. |
 | API/runtime | 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0. |
 | Package/transfer | Same package and consumer source pass Windows/Ubuntu. All 24 runtime assets and two integration PDFs match after transfer; no root library build or suite replay. |
 
-## Conversion behavior and bounded maintenance
+## Conversion behavior and bounded cleanup
 
-An explicit PPTX slide list now remains authoritative after hidden slides are
-filtered. Relationships alone cannot make an unlisted slide printable. An absent
-list still permits existing relationship-based recovery; normal ordering, hidden
-slide links and presentation-part discovery retain their behavior. Explicit empty,
-unresolved and all-hidden lists produce the existing no-page failure. Cancellation
-and failed conversion preserve file publication. No blank-page policy, new option,
-public API declaration or rendering guard is introduced.
+Authored table paragraph defaults now suppress only the lower-priority table
+fallback for bold and fill. Scene parsing and rendering share this rule through
+existing raw/cascade ownership. Explicit false clears bold; direct run formatting
+still wins. Inherited theme/master defaults cannot suppress styled headers.
+No font/size/style-GUID-specific correction or renderer rewrite is introduced.
 
-The reference supervisor clears its generated worker-status snapshot at the start
-of a run and copies the current raw status before owned worker cleanup, including
-failure and timeout paths when status exists. The supervisor status remains the
-run outcome; for example, raw success can accompany supervisor PDF-verification
-failure. Unrelated reference output is preserved. This fixes evidence loss/staleness;
-no false cache import or fidelity pass was demonstrated.
+Image deduplication computes its existing ResourceKey directly. Full digests,
+byte equality and cancellation remain. The stale-identity test mutates an already
+exposed model array; it demonstrates guard behavior, not a live corruption path.
+No ownership layer, cache redesign or measured performance claim follows.
 
-The initial two fixture-mutation checks copied immutable inputs with their read-only
-flag. Only their temporary copies are made writable. Original failure reports and
-both frozen harnesses remain; the tracked report join verifies unchanged production
-source, runtime assets, inputs and exact affected coverage. No passing check repeats.
+The initial portable painting assertion counted background color, then unrelated
+body bold. Both failed reports/artifacts remain. The final test scopes its checks
+to the header text object. Only that failed method repeats twice per host; passing
+methods and broader remainders run once. Library bytes never change during those
+harness repairs. A remaining catalog entry for the intentionally renamed identity
+test was corrected without rebuilding the library or runner.
 
-## Tooling follow-up: baseline gates and build intent
+## Retained review-36 line-gate residuals
 
-The review-36 tooling fixes at `a262db9c` reuse the qualified library, all 24
-runtime assets, source/input tree and package unchanged. There is no new local
-library/test/tool build, broad suite, portfolio or package qualification.
-Eighty-three focused line-start controls pass. The existing family-binding command
-now covers the real case/inspector boundary, ten inspection capabilities and twenty
-stubbed execution calls. The official PPTX whitespace case's automatic gates pass with actual
-prebuilt tools; its candidate PDF matches the focused comparison and both inspection
-records say BuildRequested=false. Neighboring text/markup and manifest checks pass.
-
-An explicit maxTextLineStartYDelta now enforces Y separately from line grouping;
-X-only cases retain their meaning. Ten affected line-start gates report six passes
-and four failures. Calibri wrapping and compact before-spacing newly fail their
-existing 0.25pt limits (about 0.26-0.28pt baseline differences). Font-table alternate
-wrapping retains X failures about 1.21pt/64.86pt; the boundary-invariance PPTX retains
-two operation-count mismatches. These results preserve thresholds and do not claim
-overall visual fidelity. Nine Office references are reused; one uncached X-only
-neighbor needed a PowerPoint 16 export. No renderer change or fitted correction.
-Evidence: artifacts/preview-qualification-gates-20261027/qualification.json.
-[Tooling CI](https://github.com/Lokad/OoxPDF/actions/runs/40486283787) passes on
-Windows and Ubuntu. Publication remains deferred.
+These earlier screens were not replayed for this bounded table correction.
+Calibri wrapping and compact before-spacing retain their 0.25pt Y failures
+(about 0.26-0.28pt). Font-table alternate wrapping retains X failures about
+1.21pt/64.86pt; the boundary-invariance PPTX retains two operation-count mismatches.
+No thresholds change, overall visual pass or cosmetic reclassification is claimed.
+The [preceding tooling qualification](https://github.com/Lokad/OoxPDF/blob/86fbdfb5/docs/PreviewQualification.md)
+retains its inputs, independent references and raw results.
 
 ## Inherited failures and limitations
 
@@ -133,19 +121,18 @@ no threshold change or formal manifest/agent-rating pass is claimed.
 
 ## Evidence and workflow
 
-Ignored evidence: artifacts/preview-slide-membership-20261027/qualification.json.
-It binds both frozen harnesses, original/repair/exact reports, independent slide
-controls, worker checks, unchanged portfolio, same-package consumers, transfer and
-CI. The original failed harness attempts remain. The
-[preceding qualification](https://github.com/Lokad/OoxPDF/blob/e3917998/docs/PreviewQualification.md)
-records selected-story diagnostics and shared XML ownership; that cleanup stays complete.
+Ignored evidence: artifacts/preview-table-defaults-20261027/qualification.json.
+It binds the original and repaired harnesses, exact method reports, five valid
+Office controls, neighboring table identity, unchanged portfolio, same-package
+consumers, transfer, catalog repair and CI. The preceding library qualification
+remains in Git history and artifacts/preview-slide-membership-20261027/.
 
 Safe managed dependency-free execution, cancellation, meaningful bounds, coarse
 host admission/refunds, bounded caches/staging, deterministic cleanup, atomic
-publication and PDF validity remain. The section-history header probe remains
-unresolved; no schema/normalization or layout guard is replaced by this milestone.
+publication and PDF validity remain. Unresolved layout/history/chart guards are
+preserved. No publication, performance work or broader feature expansion.
 
-The last full workspace check remains 6.778 GB/935,126 files before recent batches
-(2026-10-26), above the loose 5 GB target. This milestone is about 55 MB plus one
-23.8 MB shared input snapshot. Both actual harness artifacts and useful evidence
-remain. No full rescan, duplicate input snapshot or blanket deletion was needed.
+The last full footprint remains 6.778 GB/935,126 files before recent batches,
+above the loose 5 GB target. This milestone is about 82 MB plus one shared 24 MB
+input snapshot. Used failed/qualified artifacts and evidence remain; no duplicate
+input snapshot, full rescan or blanket deletion was needed.
