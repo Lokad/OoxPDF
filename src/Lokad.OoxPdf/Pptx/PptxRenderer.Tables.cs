@@ -655,7 +655,7 @@ internal sealed partial class PptxRenderer
         }
 
         textFrames.Add(tableTextFrame);
-        spans.AddRange(ReadTextSpansForTableCellTextFrame(tableTextFrame, context));
+        spans.AddRange(BuildSceneFedTableCellTextSpans(tableTextFrame, context));
     }
 
     private static PptxTableCellTextFrame? BuildTableCellTextFrame(PptxSceneTableCell sceneCell, int rowIndex, int columnIndex, int rowSpan, int columnSpan, double declaredRowHeight, double declaredRowSpanHeight, double declaredTableHeight, double tableHeightSlackFactor, double x, double y, double width, double height, PptxColorMap colorMap, PptxSceneTableCellTextStyle tableStyleTextStyle)

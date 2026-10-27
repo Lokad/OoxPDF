@@ -1,4 +1,22 @@
 {
+  "pptx-picture-recovery": [
+    "PptxPictureRecovery",
+    "PptxMissingImagePartDiagnosesErrorAndContinues",
+    "RecoverableDiagnosticExceptions",
+    "DiagnosticCancellationPreservesCallerToken",
+    "DiagnosticCallbacksCanRunNestedConversionsWithoutAffectingRecovery",
+    "FilePublicationFailureCleansStaging"
+  ],
+  "pptx-table-source-frame": [
+    "TableCellSpansPreserveSourceContentAndDeclaredFrame",
+    "PptxTableParagraphDefaults",
+    "TableCellParagraphsApplyStyleText",
+    "TableStyleTextAgreesBetweenSceneAndSpans",
+    "PptxSyntheticTableStyle",
+    "PptxSyntheticTableWrapsCellTextToColumnWidth",
+    "PptxSyntheticCenteredTableCellUsesOfficeWrapSlack",
+    "PptxSyntheticTableCentersTextByContentHeight"
+  ],
   "pptx-table-paragraph-defaults": [
     "PptxTableParagraphDefaults",
     "TableCellParagraphsApplyStyleText",
@@ -204,7 +222,7 @@
     "PptxTextGlyphRunInspectionReportsInterGlyphAdjustmentAggregates",
     "SceneFedSpansMatchXmlPathForPlainShape",
     "SceneFedSpansMatchXmlPathForGroupedShape",
-    "SceneFedSpansMatchXmlPathForTableCells",
+    "TableCellSpansPreserveSourceContentAndDeclaredFrame",
     "PptxIndependentFontOwnersDoNotAliasProgramsOrSubsets",
     "PptxHiddenObjectsLeaveNoPaintResourcesOrLinks",
     "PptxGlyphEmissionInspectionUsesSceneVisibilityAndMasterAdmission",
@@ -246,7 +264,7 @@
     "SceneFedSpansMatchXmlPathForLinksAndFields",
     "SceneFedSpansMatchXmlPathForGroupedShape",
     "TableCellParagraphsApplyStyleText",
-    "SceneFedSpansMatchXmlPathForTableCells",
+    "TableCellSpansPreserveSourceContentAndDeclaredFrame",
     "PlainShapeRunTextAndStyleAgree",
     "PlainShapeFullRunStyleAgrees",
     "BreakRunsAgreeBetweenSceneAndSpans",

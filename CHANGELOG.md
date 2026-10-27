@@ -2,6 +2,13 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Diagnoses unresolved PPTX picture relationships instead of silently omitting
+  the image with a clean strict exit. Missing target parts retain their existing
+  diagnostic; valid pictures and file publication behavior stay unchanged.
+- Keeps graphics comparisons within their PDF pages and refuses missing required
+  geometry or explicitly requested text hashes. Removes a table text forwarding
+  shim and replaces its obsolete self-comparison with source-content/frame checks.
+
 - Honors explicit PPTX table paragraph-default bold and color ahead of table
   styling, retaining inherited styling and direct run overrides. Removes the
   internal test-only image-key selector while preserving exact deduplication checks.

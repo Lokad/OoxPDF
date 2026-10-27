@@ -99,6 +99,7 @@ These warnings are document-scoped. Duplicate occurrences of the same unsupporte
 
 ## Images and SVG
 
+- `IMAGE_MISSING_RELATIONSHIP`: error, a PPTX picture's image relationship could not resolve to an embedded target. The image is omitted and conversion continues; CLI `--strict` returns 3. The source story part and slide identify the failed reference.
 - `IMAGE_MISSING_PART`: error, a referenced image part could not be resolved. Its pixels are omitted; supported DOCX picture frames retain their occupied space. Conversion continues with the diagnostic; CLI `--strict` returns failure.
 - `IMAGE_UNSUPPORTED_FORMAT`: error, image bytes could not be decoded or the content type is unsupported, so the image was ignored.
 - `IMAGE_CROP_UNSUPPORTED_FORMAT`: a cropped image could not be decoded for Office-style embedding, so PDF clipping is used instead.

@@ -16,10 +16,21 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         GroupTransform transform,
         List<PdfImageResource> images,
-        ref int index)
+        ref int index,
+        string? sourcePartName)
     {
         if (picture.Picture is null || picture.Bounds is null)
         {
+            return;
+        }
+
+        if (picture.Picture.TargetPartName is null)
+        {
+            context.DiagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "IMAGE_MISSING_RELATIONSHIP", OoxPdfSeverity.Error,
+                "Picture image relationship could not be resolved and the image was ignored.",
+                sourcePartName ?? context.SlidePartName, SlideIndex: context.SlideNumber,
+                Feature: "image", Fallback: "Ignored"));
             return;
         }
 
@@ -54,7 +65,7 @@ internal sealed partial class PptxRenderer
         List<PdfImageResource> images,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int index,
-        string? targetPartName,
+        string targetPartName,
         PptxSceneImageResource? imageResource,
         ShapeBounds rawBounds,
         CropRect crop,
@@ -67,11 +78,6 @@ internal sealed partial class PptxRenderer
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (targetPartName is null)
-        {
-            return;
-        }
-
         if (imageResource is null)
         {
             diagnosticSink?.Invoke(new OoxPdfDiagnostic(

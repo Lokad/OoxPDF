@@ -250,7 +250,8 @@ internal sealed partial class PptxRenderer
                     graphics,
                     transform,
                     images,
-                    ref imageIndex);
+                    ref imageIndex,
+                    sourcePartName);
                 AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds);
                 break;
             case PptxSceneNodeKind.Table:

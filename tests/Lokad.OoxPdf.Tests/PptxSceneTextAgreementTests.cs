@@ -5,6 +5,7 @@ using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -344,10 +345,10 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.True(cellRun.ResolvedStyle.Bold, "Expected the unstyled cell run to inherit the table style bold.");
     }
 
-    public static void SceneFedSpansMatchXmlPathForTableCells()
+    public static void TableCellSpansPreserveSourceContentAndDeclaredFrame()
     {
-        // R14-deeper: table cells resolve paragraphs through the shared scene readers
-        // with table style text; fed spans must match the XML path exactly.
+        // Check content against its source and placement against the supplied
+        // cell frame. Independent Office style controls live in PptxTableDefaultTests.
         string input = Path.Combine(Directory.GetCurrentDirectory(), "tests", "Lokad.OoxPdf.Tests", "Cases", "pptx-ladder-10-table-style-text.pptx");
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
@@ -355,8 +356,6 @@ internal static class PptxSceneTextAgreementTests
         PptxScene scene = new PptxSceneBuilder().Build(document, package, CancellationToken.None);
         MethodInfo frameMethod = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
             .Single(candidate => candidate.Name == "BuildTableCellTextFrame" && candidate.GetParameters().Length == 15);
-        MethodInfo spansMethod = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
-            .Single(candidate => candidate.Name == "ReadTextSpansForTableCellTextFrame" && candidate.GetParameters().Length == 2);
         MethodInfo contextMethod = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
             .Single(candidate => candidate.Name == "TryLoadRenderContext" && candidate.GetParameters().Length == 7);
         object? context;
@@ -370,6 +369,10 @@ internal static class PptxSceneTextAgreementTests
         }
 
         TestAssert.True(context is PptxRenderContext, "Expected a render context for the table fixture.");
+        var portableContext = ((PptxRenderContext)context!) with
+        {
+            FontResolver = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver())
+        };
         int comparedSpans = 0;
         foreach (PptxSceneNode node in scene.Slides[0].SlideNodes)
         {
@@ -400,24 +403,16 @@ internal static class PptxSceneTextAgreementTests
                     continue;
                 }
 
-                IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans;
-                try
+                IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> spans = PptxRenderer.BuildSceneFedTableCellTextSpans(tableFrame, portableContext);
+                string sourceText = string.Concat(tableFrame.TextBody.Descendants(DrawingNamespace + "t").Select(text => text.Value));
+                TestAssert.Equal(sourceText, string.Concat(spans.Select(span => span.Run.Text)));
+                comparedSpans += spans.Count;
+                foreach (var span in spans)
                 {
-                    xmlSpans = (IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>)spansMethod.Invoke(null, new object?[] { tableFrame, context })!;
-                }
-                catch (TargetInvocationException ex)
-                {
-                    throw ex.InnerException ?? ex;
-                }
-                IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTableCellTextSpans(tableFrame, (PptxRenderContext)context!);
-                comparedSpans += xmlSpans.Count;
-                TestAssert.Equal(xmlSpans.Count, fedSpans.Count);
-                for (int index = 0; index < xmlSpans.Count; index++)
-                {
-                    TestAssert.Equal(xmlSpans[index].Run.Text, fedSpans[index].Run.Text);
-                    TestAssert.Equal(xmlSpans[index].Run.X, fedSpans[index].Run.X);
-                    TestAssert.Equal(xmlSpans[index].Run.Y, fedSpans[index].Run.Y);
-                    TestAssert.Equal(xmlSpans[index].Run.FontSize, fedSpans[index].Run.FontSize);
+                    TestAssert.True(span.Run.X >= 72d && span.Run.X + span.Run.Width <= 272d,
+                        "Cell text must stay inside the supplied horizontal frame.");
+                    TestAssert.True(span.Run.Y >= 72d && span.Run.Y <= 172d,
+                        "Cell baselines must stay inside the supplied vertical frame.");
                 }
             }
         }

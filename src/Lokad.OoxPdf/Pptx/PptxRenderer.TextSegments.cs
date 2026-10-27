@@ -376,7 +376,7 @@ internal sealed partial class PptxRenderer
     // Mongolian vertical Latin runs as a horizontal left-to-right row of clockwise-spun glyphs
     // (Office emits per-run 0 -1 1 0 text matrices). The layout engine stacks vertical text downward
     // under a shared pivot, so remap those spans to per-run clockwise matrices here. Tables never
-    // reach this path (table cells use ReadTextSpansForTableCellTextFrame below).
+    // reach this path (table cells use BuildSceneFedTableCellTextSpans below).
     // Single-sample calibration on pptx-ladder-04-vertical-text-port: row starts at shape X plus
     // 6.15pt with a self-calibrating pitch (median nonzero run-Y step, 28.8pt on the fixture).
     private const double MongolianVerticalRowStartInset = 6.15d;
@@ -475,12 +475,6 @@ internal sealed partial class PptxRenderer
         var fedFrame = frameModel with { Paragraphs = fedParagraphs };
         PptxTextFrameLayout layout = BuildTextFrameLayout(fedFrame, context.Document, new TextAdvanceEstimator(context.FontResolver, context.CancellationToken));
         return FlattenTextLayoutToSpans(new PptxTextLayoutModel(new[] { layout }), context.FontResolver);
-    }
-
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForTableCellTextFrame(PptxTableCellTextFrame tableFrame, PptxRenderContext context)
-    {
-        // R14-deeper: table cells resolve paragraphs through the shared scene readers.
-        return BuildSceneFedTableCellTextSpans(tableFrame, context);
     }
 
     private static IReadOnlyList<XElement> FindInheritedPlaceholderShapes(XElement shape, IReadOnlyList<XDocument> placeholderSources)
