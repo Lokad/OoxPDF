@@ -98,6 +98,26 @@ internal sealed partial class PptxRenderer
         return pruned ?? resources;
     }
 
+    private static bool ShouldRenderSceneNode(PptxSceneNode node, bool renderPlaceholders)
+    {
+        return node.Kind != PptxSceneNodeKind.Shape || renderPlaceholders || !node.IsPlaceholder;
+    }
+
+    private static IEnumerable<PptxSceneNode> EnumerateRenderedSceneNodes(IReadOnlyList<PptxSceneNode> nodes, bool renderPlaceholders)
+    {
+        foreach (PptxSceneNode node in nodes)
+        {
+            if (!ShouldRenderSceneNode(node, renderPlaceholders))
+                continue;
+            yield return node;
+            if (node.Kind == PptxSceneNodeKind.Group)
+            {
+                foreach (PptxSceneNode child in EnumerateRenderedSceneNodes(node.Children, renderPlaceholders))
+                    yield return child;
+            }
+        }
+    }
+
     private static void RenderOrderedSceneNodes(
         IReadOnlyList<PptxSceneNode> nodes,
         PptxRenderContext context,
@@ -193,7 +213,7 @@ internal sealed partial class PptxRenderer
         switch (node.Kind)
         {
             case PptxSceneNodeKind.Shape:
-                if (renderPlaceholders || !node.IsPlaceholder)
+                if (ShouldRenderSceneNode(node, renderPlaceholders))
                 {
                     if (HasDrawableShape())
                     {

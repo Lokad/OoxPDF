@@ -37,7 +37,7 @@ internal sealed partial class PptxRenderer
         {
             if (node.Kind == PptxSceneNodeKind.Shape)
             {
-                if (renderPlaceholders || !node.IsPlaceholder)
+                if (ShouldRenderSceneNode(node, renderPlaceholders))
                 {
                     textSpans.AddRange(ReadTextSpansForSceneNode(node, context, colorMap, renderPlaceholders));
                 }
