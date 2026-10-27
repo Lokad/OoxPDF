@@ -272,9 +272,9 @@ internal sealed partial class PptxRenderer
             element.Name == DrawingNamespace + "fld";
     }
 
-    private static string ReadTextElementText(XElement element, int slideNumber)
+    private static string ReadTextElementText(XElement element, long slideNumber)
     {
-        if (slideNumber > 0 &&
+        if (slideNumber >= 0 &&
             element.Name == DrawingNamespace + "fld" &&
             string.Equals((string?)element.Attribute("type"), "slidenum", StringComparison.OrdinalIgnoreCase))
         {

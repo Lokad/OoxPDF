@@ -49,6 +49,8 @@ internal sealed class PptxReader
         XElement? size = document.Root?.Element(PresentationNamespace + "sldSz");
         double width = size is null ? 720d : OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(size, "cx", "PPTX"));
         double height = size is null ? 540d : OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(size, "cy", "PPTX"));
+        long firstSlideNumber = OoxXml.ReadOptionalLong(document.Root, "firstSlideNum", 1);
+        if (firstSlideNumber is < 0 or > uint.MaxValue) firstSlideNumber = 1;
 
         IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(presentationPart.Name, cancellationToken)
             .Where(r => !r.IsExternal && r.Type == SlideRelationshipType && r.ResolvedTarget is not null)
@@ -58,16 +60,18 @@ internal sealed class PptxReader
         XElement? slideList = document.Root?.Element(PresentationNamespace + "sldIdLst");
         IEnumerable<XElement> slideIds = slideList?.Elements(PresentationNamespace + "sldId") ?? [];
 
+        int sourceIndex = -1;
         foreach (XElement slideId in slideIds)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            sourceIndex++;
             string? relationshipId = (string?)slideId.Attribute(RelationshipsNamespace + "id");
             if (relationshipId is not null && relationships.TryGetValue(relationshipId, out OoxRelationship? relationship))
             {
                 string target = relationship.ResolvedTarget ?? throw new InvalidDataException("Slide relationship has no resolved target part.");
                 if (!IsHiddenSlide(package, target, cancellationToken))
                 {
-                    slides.Add(new PptxSlide(target, slides.Count));
+                    slides.Add(new PptxSlide(target, slides.Count) { SourceIndex = sourceIndex });
                 }
             }
         }
@@ -79,15 +83,16 @@ internal sealed class PptxReader
             foreach (OoxRelationship relationship in relationships.Values)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                sourceIndex++;
                 string target = relationship.ResolvedTarget ?? throw new InvalidDataException("Slide relationship has no resolved target part.");
                 if (!IsHiddenSlide(package, target, cancellationToken))
                 {
-                    slides.Add(new PptxSlide(target, slides.Count));
+                    slides.Add(new PptxSlide(target, slides.Count) { SourceIndex = sourceIndex });
                 }
             }
         }
 
-        return new PptxDocument(presentationPart.Name, slides, width, height);
+        return new PptxDocument(presentationPart.Name, slides, width, height) { FirstSlideNumber = firstSlideNumber };
 
         OoxPart FindPresentationPart()
         {

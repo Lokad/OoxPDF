@@ -370,7 +370,7 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<PptxPositionedTextSpan> ComputeTextSpansForSceneNode(PptxSceneNode node, PptxRenderContext context, PptxColorMap colorMap, bool includePlaceholders)
     {
-        return BuildSceneFedTextSpans(node, context.Document, context.Theme, colorMap, context.SlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver, context.CancellationToken);
+        return BuildSceneFedTextSpans(node, context.Document, context.Theme, colorMap, context.DisplayedSlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver, context.CancellationToken);
     }
 
     // Mongolian vertical Latin runs as a horizontal left-to-right row of clockwise-spun glyphs
@@ -469,9 +469,9 @@ internal sealed partial class PptxRenderer
     // the frame geometry and downstream layout stay on the existing path.
     internal static IReadOnlyList<PptxPositionedTextSpan> BuildSceneFedTableCellTextSpans(PptxTableCellTextFrame tableFrame, PptxRenderContext context)
     {
-        PptxTextFrameModel frameModel = BuildTextFrameModel(tableFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken);
+        PptxTextFrameModel frameModel = BuildTextFrameModel(tableFrame, context.Document, context.Theme, context.DisplayedSlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken);
         IReadOnlyList<PptxSceneTextParagraph> cellParagraphs = PptxSceneBuilder.ReadTableCellParagraphs(tableFrame.TextBody, context.InheritedXml);
-        IReadOnlyList<PptxTextParagraphModel> fedParagraphs = BuildSceneFedParagraphModels(cellParagraphs, frameModel, context.Theme, tableFrame.ColorMap, context.SlideNumber, shapeFontColor: null, tableFrame.TextStyle);
+        IReadOnlyList<PptxTextParagraphModel> fedParagraphs = BuildSceneFedParagraphModels(cellParagraphs, frameModel, context.Theme, tableFrame.ColorMap, context.DisplayedSlideNumber, shapeFontColor: null, tableFrame.TextStyle);
         var fedFrame = frameModel with { Paragraphs = fedParagraphs };
         PptxTextFrameLayout layout = BuildTextFrameLayout(fedFrame, context.Document, new TextAdvanceEstimator(context.FontResolver, context.CancellationToken));
         return FlattenTextLayoutToSpans(new PptxTextLayoutModel(new[] { layout }), context.FontResolver);

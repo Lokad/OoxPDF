@@ -35,7 +35,7 @@ internal sealed partial class PptxRenderer
         }
 
         return ReadSceneTableTextFrames(context)
-            .Select(tableFrame => BuildTextFrameModel(tableFrame, document, context.Theme, context.SlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken))
+            .Select(tableFrame => BuildTextFrameModel(tableFrame, document, context.Theme, context.DisplayedSlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken))
             .Select(ToSnapshot)
             .ToArray();
     }
@@ -192,7 +192,7 @@ internal sealed partial class PptxRenderer
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return BuildTextFrameModels(source.Xml, context.Document, context.Theme, source.ColorMap, context.SlideNumber, includePlaceholders, placeholderSources, context.FontResolver, context.CancellationToken);
+        return BuildTextFrameModels(source.Xml, context.Document, context.Theme, source.ColorMap, context.DisplayedSlideNumber, includePlaceholders, placeholderSources, context.FontResolver, context.CancellationToken);
     }
 
     private static IReadOnlyList<PptxTextFrameModel> BuildTextFrameModels(
@@ -200,7 +200,7 @@ internal sealed partial class PptxRenderer
         PptxDocument document,
         PptxTheme theme,
         PptxColorMap colorMap,
-        int slideNumber,
+        long slideNumber,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources,
         PresentationFontResolver? fontResolver = null,
@@ -224,7 +224,7 @@ internal sealed partial class PptxRenderer
         PptxDocument document,
         PptxTheme theme,
         PptxColorMap colorMap,
-        int slideNumber,
+        long slideNumber,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources,
         PresentationFontResolver? fontResolver = null,
@@ -443,7 +443,7 @@ internal sealed partial class PptxRenderer
         PptxTableCellTextFrame tableFrame,
         PptxDocument document,
         PptxTheme theme,
-        int slideNumber,
+        long slideNumber,
         IReadOnlyList<XDocument> placeholderSources,
         PresentationFontResolver? fontResolver = null,
         CancellationToken cancellationToken = default)
@@ -615,7 +615,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<XDocument> placeholderSources,
         PptxTheme theme,
         PptxColorMap colorMap,
-        int slideNumber,
+        long slideNumber,
         double fontScale,
         double lineSpacingScale,
         bool compatibleLineSpacing,
@@ -755,7 +755,7 @@ internal sealed partial class PptxRenderer
         PptxTextFrameModel frameModel,
         PptxTheme theme,
         PptxColorMap colorMap,
-        int slideNumber,
+        long slideNumber,
         RgbColor? shapeFontColor,
         PptxSceneTableCellTextStyle tableStyleTextStyle)
     {
@@ -815,7 +815,7 @@ internal sealed partial class PptxRenderer
         PptxTheme theme,
         PptxColorMap colorMap,
         double fontScale,
-        int slideNumber,
+        long slideNumber,
         PptxSceneTableCellTextStyle tableStyleTextStyle,
         bool disableZeroKerning = false)
     {
@@ -876,7 +876,7 @@ internal sealed partial class PptxRenderer
         PptxDocument document,
         PptxTheme theme,
         PptxColorMap colorMap,
-        int slideNumber,
+        long slideNumber,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources,
         PresentationFontResolver? fontResolver,

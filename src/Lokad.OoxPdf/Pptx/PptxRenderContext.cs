@@ -41,6 +41,10 @@ internal sealed record PptxRenderContext(
 
     public int SlideNumber => Slide.Index + 1;
 
+    // Displayed fields follow the authored sequence, independently of the
+    // compacted page index used by diagnostics and navigation.
+    public long DisplayedSlideNumber => Document.FirstSlideNumber + (Slide.SourceIndex ?? Slide.Index);
+
     public XDocument SlideXml => SlideSource.Xml;
 
     public string SlidePartName => SlideSource.PartName ?? SceneSlide.PartName;

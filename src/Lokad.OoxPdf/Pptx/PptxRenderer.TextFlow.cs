@@ -58,7 +58,7 @@ internal sealed partial class PptxRenderer
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return BuildTextLayoutModel(source.Xml, context.Document, context.Theme, source.ColorMap, context.SlideNumber, includePlaceholders, placeholderSources, context.FontResolver, context.CancellationToken);
+        return BuildTextLayoutModel(source.Xml, context.Document, context.Theme, source.ColorMap, context.DisplayedSlideNumber, includePlaceholders, placeholderSources, context.FontResolver, context.CancellationToken);
     }
 
     private static PptxTextLayoutModel BuildTextLayoutModel(
@@ -66,7 +66,7 @@ internal sealed partial class PptxRenderer
         PptxDocument document,
         PptxTheme theme,
         PptxColorMap colorMap,
-        int slideNumber,
+        long slideNumber,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources,
         PresentationFontResolver? fontResolver,
@@ -166,7 +166,7 @@ internal sealed partial class PptxRenderer
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return BuildTextFlowModel(source.Xml, context.Document, context.Theme, source.ColorMap, context.SlideNumber, includePlaceholders, placeholderSources);
+        return BuildTextFlowModel(source.Xml, context.Document, context.Theme, source.ColorMap, context.DisplayedSlideNumber, includePlaceholders, placeholderSources);
     }
 
     private static PptxTextFlowModel BuildTextFlowModel(
@@ -174,7 +174,7 @@ internal sealed partial class PptxRenderer
         PptxDocument document,
         PptxTheme theme,
         PptxColorMap colorMap,
-        int slideNumber,
+        long slideNumber,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
