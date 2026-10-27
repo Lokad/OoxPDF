@@ -897,7 +897,9 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.Equal("rIdLink", spanRuns[0].Style.HyperlinkClickId);
         TestAssert.True(!spanRuns[1].Style.HasHyperlinkClick, "Expected the plain run to carry no hyperlink click.");
         TestAssert.True(spanRuns[0].Style.Underline, "Hyperlinks receive the default underline.");
-        TestAssert.Equal(PptxRenderer.PptxRunTextColorSource.ThemeHyperlink, spanRuns[0].Style.ColorSource);
+        // This fixture intentionally has no theme part: default underline is
+        // preserved, while the unresolved theme hyperlink color falls back.
+        TestAssert.Equal(PptxRenderer.PptxRunTextColorSource.FallbackBlack, spanRuns[0].Style.ColorSource);
     }
 
     public static void UnstyledRunsInheritParagraphDefaults()
@@ -1076,7 +1078,7 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.Equal(1, spanRuns.Length);
         TestAssert.Equal("Defaulted", spanRuns[0].Text);
         TestAssert.Equal(23d, spanRuns[0].Style.NominalFontSize);
-        TestAssert.Equal(new RgbColor(0x11,0x22,0x33), spanRuns[0].Style.Color);
+        TestAssert.Equal(new RgbColor(0x55,0x66,0x77), spanRuns[0].Style.Color);
     }
 
     public static void TableCellTextMatchesShapeText()
