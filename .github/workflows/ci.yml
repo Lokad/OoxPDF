@@ -144,7 +144,10 @@ jobs:
       - name: Composition reference view checks
         run: pwsh -NoProfile -File tools/TestCompositionReferences.ps1
       - name: Chart classifier adversarial checks
-        run: pwsh -NoProfile -File tools/TestChartClassifierRobustness.ps1
+        run: |
+          pwsh -NoProfile -File tools/TestChartClassifierRobustness.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh -NoProfile -File tools/TestChartSummaryCoverage.ps1 -InspectorPath tools/Lokad.OoxPdf.PdfInspect/bin/Release/net10.0/Lokad.OoxPdf.PdfInspect.dll
       - name: Portable VisualDiff metric probe
         if: runner.os == 'Linux'
         run: dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -- --test VisualDiffForegroundRecallCoversSparseBlankAndRegionCases --report artifacts/ci-tests/visual-metrics.json

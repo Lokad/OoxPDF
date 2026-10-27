@@ -13,6 +13,10 @@ before joining their reports. Region indexes belong to their page; use
 PageNumber together with RegionIndex when identifying a chart region.
 The optional `SummarizeChartStructureDeltas.ps1 -ByRegion` display uses
 `PageNumber/RegionIndex` for its region key, including page-owned unassigned items.
+Fresh summary probes inspect every page. Existing reports retain their reported
+pages and are labeled as having unverified PDF coverage; empty pages may have no
+structures. Use `-InspectorPath <qualified.dll> -SkipBuild` to bind a frozen
+inspector without building. These optional summaries are exploratory reports.
 
 ## Requirements
 

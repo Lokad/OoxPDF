@@ -12,7 +12,11 @@ param(
 
     [switch] $ByRegion,
 
-    [string[]] $Kind = @()
+    [string[]] $Kind = @(),
+
+    [string] $InspectorPath,
+
+    [switch] $SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -89,10 +93,12 @@ function Ensure-Probe($runPath, $side) {
     $chartGraphics = Join-Path $output "chart-graphics-structures.json"
     $chartText = Join-Path $output "chart-text-structures.json"
     if ((Test-Path -LiteralPath $chartGraphics) -and (Test-Path -LiteralPath $chartText)) {
+        Write-Host ("Probe {0}: reused reports; PDF page coverage is unverified." -f $side)
         return
     }
 
     if ($SkipProbe) {
+        Write-Host ("Probe {0}: skipped; no complete report pair." -f $side)
         return
     }
 
@@ -107,9 +113,13 @@ function Ensure-Probe($runPath, $side) {
         return
     }
 
-    & (Join-Path $PSScriptRoot "InspectPdf.ps1") -InputPdf $pdf -OutputDirectory $output -Page 1 *> $null
-    & (Join-Path $PSScriptRoot "ClassifyPdfChartGraphics.ps1") -InputPath $graphics -Output $chartGraphics -PageNumber 1 *> $null
-    & (Join-Path $PSScriptRoot "ClassifyPdfChartText.ps1") -InputPath $text -ChartStructures $chartGraphics -Output $chartText -PageNumber 1 *> $null
+    $inspection = @{}
+    if ($InspectorPath) { $inspection.InspectorPath = $InspectorPath }
+    if ($SkipBuild) { $inspection.SkipBuild = $true }
+    & (Join-Path $PSScriptRoot "InspectPdf.ps1") -InputPdf $pdf -OutputDirectory $output @inspection *> $null
+    & (Join-Path $PSScriptRoot "ClassifyPdfChartGraphics.ps1") -InputPath $graphics -Output $chartGraphics *> $null
+    & (Join-Path $PSScriptRoot "ClassifyPdfChartText.ps1") -InputPath $text -ChartStructures $chartGraphics -Output $chartText *> $null
+    Write-Host ("Probe {0}: freshly inspected all PDF pages." -f $side)
 }
 
 . (Join-Path $PSScriptRoot "CompareMath.ps1")
@@ -282,6 +292,9 @@ foreach ($caseFile in $caseFiles) {
         [pscustomobject]@{ Name = "TEXT"; File = "chart-text-structures.json" })) {
         $referenceItems = Read-JsonArrayIfExists (Join-Path $run.FullName "probe-reference/$($set.File)")
         $candidateItems = Read-JsonArrayIfExists (Join-Path $run.FullName "probe-candidate/$($set.File)")
+        Write-Host ("{0} report pages: reference=[{1}] candidate=[{2}]" -f $set.Name,
+            (@($referenceItems.PageNumber | Sort-Object -Unique) -join ','),
+            (@($candidateItems.PageNumber | Sort-Object -Unique) -join ','))
         $keys = if ($ByRegion) {
             @(
                 foreach ($item in @($referenceItems + $candidateItems)) {
