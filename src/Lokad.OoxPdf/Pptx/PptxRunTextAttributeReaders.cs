@@ -3,13 +3,22 @@ using System.Xml.Linq;
 
 namespace Lokad.OoxPdf.Pptx;
 
-// R14: one shared run-attribute interpretation for scene building and rendering.
-// These seven readers were character-identical private copies in PptxSceneBuilder
-// and PptxRenderer; both sides now call this single implementation, so run-level
-// text interpretation cannot drift between layout and inspection. Raw source stays
-// provenance: callers keep the original elements for everything else.
+// Shared run-attribute interpretation for scene building and rendering. Raw source
+// stays provenance: callers keep the original elements for everything else.
 internal static class PptxRunTextAttributeReaders
 {
+    internal static PptxSceneTableCellTextStyle BelowParagraphDefaults(
+        PptxSceneTableCellTextStyle tableStyle, XElement? paragraphDefaults)
+    {
+        // Only authored paragraph defaults outrank the table style. Merged
+        // theme/master defaults remain below it; an explicit false clears bold.
+        return tableStyle with
+        {
+            Color = HasRunTextFill(paragraphDefaults) ? null : tableStyle.Color,
+            Bold = paragraphDefaults?.Attribute("b") is null && tableStyle.Bold
+        };
+    }
+
     internal static double ReadFontSize(XElement? runProperties, XElement? defaultRunProperties)
     {
         return (runProperties?.Attribute("sz") ?? defaultRunProperties?.Attribute("sz")) is { } size

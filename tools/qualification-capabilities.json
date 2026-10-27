@@ -1,4 +1,19 @@
 {
+  "pptx-table-paragraph-defaults": [
+    "PptxTableParagraphDefaults",
+    "TableCellParagraphsApplyStyleText",
+    "TableStyleTextAgreesBetweenSceneAndSpans",
+    "PptxSyntheticTableStyle",
+    "PptxSyntheticTableWrapsCellTextToColumnWidth",
+    "PptxSyntheticCenteredTableCellUsesOfficeWrapSlack",
+    "PptxSyntheticTableCentersTextByContentHeight",
+    "PptxSyntheticTableTextFrameModelPreservesCellPropertySources",
+    "ImageIdentityUsesFullDigests",
+    "ImageContentEqualityIsExact",
+    "DeduplicateImages",
+    "JpegSampleMappingParticipatesInImageIdentity",
+    "JpegPassthroughKeepsSupportedFramesAndBytes"
+  ],
   "pptx-slide-membership": [
     "PptxSlideMembership",
     "PptxHiddenSlidesAreSkipped",

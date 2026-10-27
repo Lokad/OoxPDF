@@ -9,18 +9,16 @@ namespace Lokad.OoxPdf.Pdf;
 internal sealed class PdfDocumentWriter
 {
     // R18: image deduplication groups by the full content identity and verifies byte
-    // equality on every key match. A same-key content mismatch (only reachable through
-    // a full-digest collision) fails loudly instead of silently emitting one image
-    // under two names. The keySelector seam lets tests force collisions that SHA-256
-    // makes unconstructible in production.
-    internal static List<PdfImageXObject> DeduplicateImages(IEnumerable<PdfImageXObject> images, Func<PdfImageXObject, string> keySelector, CancellationToken cancellationToken)
+    // equality on every key match. A same-key content mismatch, including a stale
+    // cached identity, fails loudly instead of emitting distinct content as one image.
+    internal static List<PdfImageXObject> DeduplicateImages(IEnumerable<PdfImageXObject> images, CancellationToken cancellationToken)
     {
         var byKey = new Dictionary<string, PdfImageXObject>(StringComparer.Ordinal);
         var deduped = new List<PdfImageXObject>();
         foreach (PdfImageXObject image in images)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string key = keySelector(image);
+            string key = image.ResourceKey;
             if (!byKey.TryGetValue(key, out PdfImageXObject? existing))
             {
                 byKey[key] = image;
@@ -783,7 +781,6 @@ internal sealed class PdfDocumentWriter
             .SelectMany(p => p.Images
                 .Select(i => i.Image)
                 .Concat(p.Patterns.SelectMany(pattern => pattern.Pattern.Images.Select(image => image.Image)))),
-            static image => image.ResourceKey,
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         List<PdfShading> shadings = pages

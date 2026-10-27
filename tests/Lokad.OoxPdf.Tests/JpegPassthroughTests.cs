@@ -84,7 +84,7 @@ internal static class JpegPassthroughTests
         var inverted = OoxImageDecoder.Decode("image/jpeg", jpeg, static rgb => rgb);
         TestAssert.True(normal.ResourceKey != inverted.ResourceKey, "Different sample interpretation must not deduplicate.");
         TestAssert.True(!normal.HasIdenticalContent(inverted), "Byte equality alone does not identify image interpretation.");
-        TestAssert.Equal(2, Pdf.PdfDocumentWriter.DeduplicateImages([normal, inverted], static image => image.ResourceKey, default).Count);
+        TestAssert.Equal(2, Pdf.PdfDocumentWriter.DeduplicateImages([normal, inverted], default).Count);
     }
 
     public static void CmykJpegMappingSurvivesDocxAndPptxCropRecolorFallbacks()

@@ -1,5 +1,10 @@
 # Migrating to 0.2.0-preview
 
+PPTX table paragraph-default bold and color now override table styling, including
+an explicit `b="0"`. Direct run formatting and inherited table defaults retain
+their precedence. Image deduplication uses its existing fixed identity policy;
+removing its internal test hook changes no public declaration or option.
+
 An explicit PPTX slide list now defines membership even when it yields no visible
 slides. Unlisted slide relationships cannot turn an all-hidden, empty or unresolved
 list into output. The existing no-page failure remains; relationship-based repair

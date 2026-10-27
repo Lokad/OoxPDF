@@ -62,6 +62,7 @@ internal sealed partial class PptxSceneBuilder
         PptxSceneTableCellTextStyle tableStyle = default)
     {
         XElement? properties = paragraph.Element(DrawingNamespace + "pPr");
+        tableStyle = BelowParagraphDefaults(tableStyle, properties?.Element(DrawingNamespace + "defRPr"));
         int level = properties?.Attribute("lvl") is { } levelAttribute
             ? int.Parse(levelAttribute.Value, CultureInfo.InvariantCulture)
             : 0;

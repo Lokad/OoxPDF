@@ -40,21 +40,21 @@ internal static class PdfIdentityTests
         PdfImageXObject first = PdfImageXObject.Jpeg(2, 1, [1, 2, 3], 3, 8);
         PdfImageXObject second = PdfImageXObject.Jpeg(2, 1, [1, 2, 4], 3, 8);
         PdfImageXObject duplicate = PdfImageXObject.Jpeg(2, 1, [1, 2, 3], 3, 8);
-        List<PdfImageXObject> deduped = PdfDocumentWriter.DeduplicateImages([first, second, duplicate], static image => image.ResourceKey, CancellationToken.None);
+        List<PdfImageXObject> deduped = PdfDocumentWriter.DeduplicateImages([first, second, duplicate], CancellationToken.None);
         TestAssert.Equal(2, deduped.Count);
         TestAssert.True(ReferenceEquals(first, deduped[0]), "Deduplication must keep the first identical instance.");
         TestAssert.True(ReferenceEquals(second, deduped[1]), "Distinct content must survive deduplication in order.");
     }
 
-    public static void DeduplicateImagesRejectsForcedKeyCollision()
+    public static void DeduplicateImagesRejectsStaleContentIdentity()
     {
         PdfImageXObject first = PdfImageXObject.Jpeg(2, 1, [1, 2, 3], 3, 8);
-        PdfImageXObject second = PdfImageXObject.Jpeg(2, 1, [1, 2, 4], 3, 8);
-        TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.DeduplicateImages([first, second], static _ => "collision", CancellationToken.None));
-        List<PdfImageXObject> deduped = PdfDocumentWriter.DeduplicateImages(
-            [first, PdfImageXObject.Jpeg(2, 1, [1, 2, 3], 3, 8)],
-            static _ => "collision",
-            CancellationToken.None);
+        PdfImageXObject second = PdfImageXObject.Jpeg(2, 1, [1, 2, 3], 3, 8);
+        string identity = first.ResourceKey;
+        first.Bytes[2] = 4; // Model-only invariant check; no live conversion mutation is claimed.
+        TestAssert.Equal(identity, second.ResourceKey);
+        TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.DeduplicateImages([first, second], CancellationToken.None));
+        List<PdfImageXObject> deduped = PdfDocumentWriter.DeduplicateImages([second, PdfImageXObject.Jpeg(2, 1, [1, 2, 3], 3, 8)], CancellationToken.None);
         TestAssert.Equal(1, deduped.Count);
     }
 
@@ -63,6 +63,6 @@ internal static class PdfIdentityTests
         PdfImageXObject image = PdfImageXObject.Jpeg(2, 1, [1, 2, 3], 3, 8);
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
-        TestAssert.Throws<OperationCanceledException>(() => PdfDocumentWriter.DeduplicateImages([image], static i => i.ResourceKey, cancelled.Token));
+        TestAssert.Throws<OperationCanceledException>(() => PdfDocumentWriter.DeduplicateImages([image], cancelled.Token));
     }
 }

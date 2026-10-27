@@ -2,6 +2,10 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Honors explicit PPTX table paragraph-default bold and color ahead of table
+  styling, retaining inherited styling and direct run overrides. Removes the
+  internal test-only image-key selector while preserving exact deduplication checks.
+
 - Keeps an explicit PPTX slide list authoritative when hidden-slide filtering
   leaves no visible pages; unlisted slide relationships no longer become output.
   Missing-list repair and the existing no-page failure remain.

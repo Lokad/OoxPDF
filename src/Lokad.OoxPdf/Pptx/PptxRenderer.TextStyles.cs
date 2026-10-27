@@ -69,6 +69,8 @@ internal sealed partial class PptxRenderer
         PptxSceneTableCellTextStyle tableStyleTextStyle,
         bool disableZeroKerning = false)
     {
+        tableStyleTextStyle = BelowParagraphDefaults(tableStyleTextStyle, cascade.Layers
+            .FirstOrDefault(layer => layer.Kind == PptxRunStyleLayerKind.ParagraphPropertiesDefaultRunProperties)?.Source);
         return ResolveRunTextStyle(
             cascade.DirectProperties,
             cascade.ResolvedDefaultProperties,
