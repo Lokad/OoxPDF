@@ -13,6 +13,10 @@ Top-level package or dialect issues:
 
 ## PPTX
 
+Drawing-owned diagnostics follow rendered visibility, including hidden owners
+and groups. Slide timing/transitions and part-level compatibility checks retain
+their independent scope.
+
 Unsupported feature warnings:
 
 - `PPTX_UNSUPPORTED_ANIMATION`: slide timing or animation content was detected and ignored.
