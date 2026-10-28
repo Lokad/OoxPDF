@@ -1,46 +1,40 @@
 # 0.2.0-preview qualification
 
-The bounded master-theme/hidden-picture milestone is qualified. Publication,
-performance optimization and broader expansion remain deferred. One linked-worktree
-Release library compilation at `1da2ed01b938b341413f7f94beb429640a6ff787`; final test-only repair/frozen source
-`22f3a24c00ee407bd8f7ba084d0b6ba077ce2968`. Library SHA-256:
-`EAC6A31D9F48340C4AF6B558A3FAE507D143D665B9ABE1E0F361D40F7F4CAC0C`.
-[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40676688524) passes. CI builds are separate from the qualified runtime.
+The bounded diagnostic-provenance/dead-state milestone is qualified. Publication,
+performance optimization and feature expansion remain deferred. One linked-worktree
+Release library compilation/frozen source: `bc85828093870587b65c3d938894deaf6ba5042e`.
+Library SHA-256: `7B2EDB6A081DA18EC1F62B9585FA73E9C44C2D0559B62D9AC3DF3F0D8BA8CA13`.
+[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40687441247) passes, including both hosts' PowerShell orchestration.
+CI builds are separate from this immutable runtime.
 
 | Gate | Result |
 |---|---|
-| Release/affected checks | All eight new portable methods pass each host. Windows 35 affected passes; Ubuntu 34 passes/one missing-Cambria-Math skip. One invalid optional-model assertion was removed with identical library/runtime/inputs; only that failed method reruns. Broader sets are disjoint. |
-| Windows milestone | **3,859 pass, one inherited failure, five skips**; 3,865 unique methods, 3,866 attempts across three invocations. No prior pass regresses. |
-| Ubuntu milestone | **1,285 pass, eight inherited failures, 86 skips**; 1,379 unique methods, 1,380 attempts. Native-font failures remain failures. Newly selected DocxInlineCompositionHiddenRunPreservesMathGeometry requires installed Cambria Math and passes on Windows. |
-| Master themes | Two independent PowerPoint controls agree in accent fill and rectangle geometry. Scene/inspection/paint share the actual master-owned theme, with one model per theme part; global scene theme removed. Portable background/font/shared-master/fallback neighbors pass; no new Office multi-theme chart/font parity claim. |
-| Hidden inline pictures | Three accepted Word controls agree in visible image count. Hidden picture and link are suppressed; paragraph/source ownership survives. Following text is -.027pt from Word. Ordinary/docPr-hidden control PDFs stay identical, including their existing -2.286pt offset. Style inheritance/false overrides, computed fields, revisions, cells/static stories, cancellation and publication pass. |
-| Parent negatives | Both regressions fail on the preceding library: missing expected blue fill; expected zero images, got one. One two-method run, no parent build or missing-input retry. |
-| Affected visuals | Corporate-theme and DOCX-image cases pass unchanged 144 DPI metric, page/dimension/diagnostic and rating gates (4/5, 5/5). Cached Office references reused; no new Office export or threshold change. |
-| Representative documents | Nine sources/16 outcomes/32 pages retain exact prior PDFs, diagnostics and semantics. Convert each once; reuse two strict PPTX passes/fourteen strict DOCX failures. No portfolio Office/raster replay. |
-| API/runtime | 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false. Assembly/file 0.2.0.0; informational 0.2.0-preview plus library build revision. No caller migration change. |
-| Package/transfer | One package and identical consumer source pass Windows/Ubuntu, including admission/refunds, metadata and caller docs. 24 assets/two smoke PDFs match after transfer. No root build or broad replay. One new 2,625-input snapshot reused for the harness repair. |
+| Diagnostic reuse | Saved diagnostic arrays and cached sidecars must agree before reuse work; copied/source bytes remain pinned through inspection. Fourteen invalid-cache scenarios reject before output/work; four late changes reject before completed report publication. Matching empty/nonempty arrays and equivalent JSON remain reusable. No replacement evidence framework or new report schema. |
+| Independent negative/control | The preceding script fails the cleared-warning regression. One real reinspection on the preceding qualified runtime retains all four warnings; cleared/added review copies reject before output. No conversion or library build for this script correction. Original accepted evidence stays unchanged. |
+| Internal scene cleanup | Remove the unused Document member and constructor argument only. The builder's live input, slide themes, models and useful inspectors remain. No public API change, rendering rule or measured memory/performance claim. |
+| Focused frozen checks | 47 exact scene/theme/inspection methods in one invocation per host: **47 Windows pass; 46 Ubuntu pass/one inherited failure; zero skips**. Every selected outcome/detail matches the preceding artifact. No new test merely asserting property removal. |
+| Broader current-source gate | Both-platform CI passes its established broader, package, portable and script checks. Local full DOCX/broad suites were not repeated for this mechanical change. Local Ubuntu has no pwsh; the Linux script gate runs in CI, while local Linux .NET checks still run on the frozen DLL. |
+| Independent rendering evidence | Two PPTX/DOCX smoke PDFs are byte-identical to the preceding candidate, with strict exits 0 and no diagnostics. Reuse their pinned Office-control comparisons by identity. No new Office export, portfolio conversion batch, raster replay or threshold change. Other retained visual failures remain failures. |
+| API/runtime | 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false. Assembly/file 0.2.0.0; informational 0.2.0-preview plus the build revision. No caller migration change. |
+| Package/transfer | One package and the same consumer source pass Windows/Ubuntu, including admission/refunds, metadata and caller docs. 24 assets/two smoke PDFs match after transfer. No root build or suite replay. Existing 2,625-input snapshot reused; no added input tree. |
 
-The failed source-index assertion assumed every paragraph had the optional ordered
-inline representation. The source-index, computed-field and rendering assertions
-remain; no production behavior changed for the repair. BuildProjectReferences=false
-and the report join verify 21 unchanged runtime assets and all 2,625 public inputs.
-Original failed attempts remain; successful methods are not repeated. Two existing
-nullable warnings remain unrelated test code.
+The first fake late-copy test needed absolute-path normalization in its shim;
+that attempt remains alongside the corrected result. JoinCompositionPortfolio
+continues preserving original row classifications and pinned copies; revised
+reinspection verifies the same diagnostic association for joined inputs.
 
-The candidate's following-text shift is 50.541pt versus Word's 52.800pt. Retain the
-relative 2.259pt residual and the unchanged visible-control offset; do not fit a
-spacing correction. The earlier .024pt PowerPoint follow-text size detail remains.
-Common inline image admission follows its run; independent anchored/VML/equation
-and multi-theme chart/font Office comparisons remain outside this milestone.
-
-The [preceding qualification record](https://github.com/Lokad/OoxPDF/blob/a17988092a5804e2b8343975b66dc2f1d189c23d/docs/PreviewQualification.md)
-retains bullet-choice/visible-diagnostic evidence and earlier identities. Earlier
-cleanup stays complete; chart-color and document-shape guards are unchanged.
-715 manifests validate; that count is separate from Office visual passes.
+The [preceding full qualification](https://github.com/Lokad/OoxPDF/blob/67622308f01c545dc322d5a51fda6718ea6caf95/docs/PreviewQualification.md)
+retains **3,859 Windows passes/one inherited failure/five skips** and **1,285
+Ubuntu passes/eight inherited failures/86 skips** on its own frozen runtime.
+These are historical counts, not a claim that those full local sets ran on this
+DLL. Its 16 portfolio outcomes/32 pages, two strict PPTX passes/fourteen strict
+DOCX visual failures and earlier rendering residuals remain recorded. Earlier
+cleanup and theme/hidden-picture corrections stay complete; chart-color and
+document-shape guards are unchanged. No new Office-fidelity pass count.
 
 ## Retained review-36 line-gate residuals
 
-These earlier line-start screens were not replayed for this theme/hidden-picture correction.
+These earlier line-start screens were not replayed for this maintenance milestone.
 Calibri wrapping and compact before-spacing retain their 0.25pt Y failures
 (about 0.26-0.28pt). Font-table alternate wrapping retains X failures about
 1.21pt/64.86pt; the boundary-invariance PPTX retains two operation-count mismatches.
@@ -125,21 +119,18 @@ The failure remains recorded and is not replaced with a skip.
 
 ## Evidence and workflow
 
-Ignored evidence: artifacts/preview-theme-visibility-20261028/qualification.json.
-It binds initial/final harness identities, exact joined/disjoint test sets, pinned
-Office controls, parent negatives, unchanged portfolio, visual gates, managed/API
-checks, consumers, transfer, catalog and CI. No new validation framework.
+Ignored evidence: artifacts/preview-diagnostic-provenance-20261028/qualification.json.
+It binds script regressions/refusals, the retained original failed attempt,
+one real cached reinspection, exact scene sets and inherited result, immutable
+runtime, smoke identities, managed/API checks, consumers, transfer and CI.
 
-Package: artifacts\nuget\preview-020-theme-visibility-20261028\Lokad.OoxPdf.0.2.0-preview.nupkg.
-SHA-256: `C6F508638CB8238D6F40E7044833FE5A5B32D263E4F9AEC70EAE68395B7A6017`.
-Safe managed dependency-free execution, cancellation, meaningful bounds, coarse
-host admission/refunds, bounded caches/staging, deterministic cleanup, atomic
-publication and PDF validity remain. Publication/performance/expansion deferred.
+Package: artifacts/nuget/preview-020-diagnostic-provenance-20261028/Lokad.OoxPdf.0.2.0-preview.nupkg.
+SHA-256: `44DB2CA434A586D589B41E9BA4750C487152E05515EA65FB08504B77165B333E`.
+Safe managed dependency-free execution, meaningful input bounds, cancellation,
+coarse host admission/refunds, bounded caches/staging, deterministic cleanup,
+atomic publication and PDF validity remain. Publication stays deferred.
 
-Last full footprint, 2026-10-28: 8.162 GB/1,013,013 files; zero errors, before a
-bounded removal of 15 obsolete bin/obj directories from two clean inactive
-worktrees (248 files, 96.6 MB logical bytes). Inputs, probe evidence, Git and
-qualified artifacts remain. Hard links prevent inferring physical savings from
-that logical count; the workspace remains above the loose 5 GB target.
-footprint.json measures this milestone only; the shared input tree is pinned once
-and reused for the repair. Preserve useful inputs/evidence during maintenance.
+The last full workspace measurement remains 8.162 GB/1,013,013 files before the
+preceding bounded obsolete-build cleanup, above the loose 5 GB target. This slice
+reuses the shared input tree and performs no full rescan or cleanup; footprint.json
+measures this milestone only. Preserve useful inputs/evidence and Git history.
