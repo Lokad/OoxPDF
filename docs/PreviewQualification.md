@@ -1,47 +1,46 @@
 # 0.2.0-preview qualification
 
-The bounded bullet-choice/visible-diagnostic milestone is qualified. Publication,
-performance optimization and feature expansion remain deferred. One linked-worktree
-Release library compilation at `6b694b869dfdd5e0b0eef03efd82064ee12c3c80`; final test-only repair/frozen source
-`4bd471cf599378abfa523c06cac6a644b406eeb5`. Library SHA-256:
-`C467FF01A677F717410810717F8F8527848A4466787834602F0EA96B38B0E188`.
-[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40668569967) passes.
-CI builds are separate from this qualified immutable runtime.
+The bounded master-theme/hidden-picture milestone is qualified. Publication,
+performance optimization and broader expansion remain deferred. One linked-worktree
+Release library compilation at `1da2ed01b938b341413f7f94beb429640a6ff787`; final test-only repair/frozen source
+`22f3a24c00ee407bd8f7ba084d0b6ba077ce2968`. Library SHA-256:
+`EAC6A31D9F48340C4AF6B558A3FAE507D143D665B9ABE1E0F361D40F7F4CAC0C`.
+[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40676688524) passes. CI builds are separate from the qualified runtime.
 
 | Gate | Result |
 |---|---|
-| Release/affected checks | 36 affected methods pass on each host; all six new portable methods pass both. One failed compound-test setup was repaired with identical library/runtime/inputs. Keep 35 initial passes per host; no positive method replays. Broader sets are disjoint. |
-| Windows milestone | **3,851 pass, one inherited failure, five skips**; 3,857 unique methods, 3,858 attempts across initial/one-method repair/broader runs. No prior pass regresses. |
-| Ubuntu milestone | **1,273 pass, eight inherited failures, 85 skips**; 1,366 unique methods, 1,367 attempts. Pinned portable checks pass; native-font failures remain failures. |
-| Bullet choices | Eight independent PowerPoint controls agree in nominal size, font family and RGB. Origins stay within the existing one-point criterion; the .024pt PowerPoint follow-text size residual is retained. Shape/table/placeholder and numbering neighbors pass. No fitted rule or style framework. |
-| Visible diagnostics | Hidden video/audio/OLE/unknown-frame owners and groups do not warn; visible unsupported content retains warnings. Required background/orphan/global/compatibility diagnostics, cancellation and atomic publication pass. Four review PDFs retain exact paint; only hidden strict exits/diagnostics change. |
-| Parent negatives | The two new regressions fail on the preceding library (Expected 24, got 12; Expected 0, got 1) in one exact two-method run. Candidate methods pass. No parent build or missing-input retry. |
-| Affected visuals | Existing bullet-style and bullet-size-percent cases pass unchanged 144 DPI numeric, page/dimension/diagnostic and minimum-rating gates; reviewed at 4/5. Their PDFs remain identical to the parent. Cached Office PDFs are reused; missing raster derivatives are generated offline. |
-| Representative documents | Nine sources/16 outcomes/32 pages retain exact prior PDFs, diagnostics and semantics. Each outcome converts once; reuse two strict PPTX passes/fourteen strict DOCX failures. No portfolio Office/raster replay or threshold change. |
-| API/runtime | 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0, informational version 0.2.0-preview plus the library build revision. No new caller migration change. |
-| Package/transfer | One package and the same consumer source pass Windows/Ubuntu, including admission/refunds, metadata and caller docs. All 24 assets and two smoke PDFs match after transfer. No root build or broad-suite replay. One new 2,618-input tree includes the public PPTX control and PowerPoint gold. |
+| Release/affected checks | All eight new portable methods pass each host. Windows 35 affected passes; Ubuntu 34 passes/one missing-Cambria-Math skip. One invalid optional-model assertion was removed with identical library/runtime/inputs; only that failed method reruns. Broader sets are disjoint. |
+| Windows milestone | **3,859 pass, one inherited failure, five skips**; 3,865 unique methods, 3,866 attempts across three invocations. No prior pass regresses. |
+| Ubuntu milestone | **1,285 pass, eight inherited failures, 86 skips**; 1,379 unique methods, 1,380 attempts. Native-font failures remain failures. Newly selected DocxInlineCompositionHiddenRunPreservesMathGeometry requires installed Cambria Math and passes on Windows. |
+| Master themes | Two independent PowerPoint controls agree in accent fill and rectangle geometry. Scene/inspection/paint share the actual master-owned theme, with one model per theme part; global scene theme removed. Portable background/font/shared-master/fallback neighbors pass; no new Office multi-theme chart/font parity claim. |
+| Hidden inline pictures | Three accepted Word controls agree in visible image count. Hidden picture and link are suppressed; paragraph/source ownership survives. Following text is -.027pt from Word. Ordinary/docPr-hidden control PDFs stay identical, including their existing -2.286pt offset. Style inheritance/false overrides, computed fields, revisions, cells/static stories, cancellation and publication pass. |
+| Parent negatives | Both regressions fail on the preceding library: missing expected blue fill; expected zero images, got one. One two-method run, no parent build or missing-input retry. |
+| Affected visuals | Corporate-theme and DOCX-image cases pass unchanged 144 DPI metric, page/dimension/diagnostic and rating gates (4/5, 5/5). Cached Office references reused; no new Office export or threshold change. |
+| Representative documents | Nine sources/16 outcomes/32 pages retain exact prior PDFs, diagnostics and semantics. Convert each once; reuse two strict PPTX passes/fourteen strict DOCX failures. No portfolio Office/raster replay. |
+| API/runtime | 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false. Assembly/file 0.2.0.0; informational 0.2.0-preview plus library build revision. No caller migration change. |
+| Package/transfer | One package and identical consumer source pass Windows/Ubuntu, including admission/refunds, metadata and caller docs. 24 assets/two smoke PDFs match after transfer. No root build or broad replay. One new 2,625-input snapshot reused for the harness repair. |
 
-The initial compound bullet test passed an eight-shape document to a helper
-whose contract requires one selected shape. That precondition failed on both
-hosts before the assertions. The test now uses the existing active per-node
-rendering path. Only that method was rebuilt/rerun, with BuildProjectReferences=false
-and an unchanged library DLL. The join tool checks all 21 non-test runtime
-assets and 2,618 inputs; original failed attempts and the 35 retained passes
-remain evidence. The two existing nullable warnings are unrelated test code.
+The failed source-index assertion assumed every paragraph had the optional ordered
+inline representation. The source-index, computed-field and rendering assertions
+remain; no production behavior changed for the repair. BuildProjectReferences=false
+and the report join verify 21 unchanged runtime assets and all 2,625 public inputs.
+Original failed attempts remain; successful methods are not repeated. Two existing
+nullable warnings remain unrelated test code.
 
-The retained .024pt follow-text size detail is separate from the corrected
-12pt choice error. No positional correction or broader pixel-parity claim was
-introduced. Hidden-media diagnostics now follow the same owner/ancestor policy
-as scene admission, while global/part-level warnings retain their distinct scope.
+The candidate's following-text shift is 50.541pt versus Word's 52.800pt. Retain the
+relative 2.259pt residual and the unchanged visible-control offset; do not fit a
+spacing correction. The earlier .024pt PowerPoint follow-text size detail remains.
+Common inline image admission follows its run; independent anchored/VML/equation
+and multi-theme chart/font Office comparisons remain outside this milestone.
 
-The preceding [qualification record](https://github.com/Lokad/OoxPDF/blob/45371dd7fad764c1d3826f9d185f7eb2fc15112d/docs/PreviewQualification.md)
-retains locked-field/workbook cleanup evidence and earlier runtime identities.
-Those fixes remain complete. Chart-color and document-shape guards are unchanged.
+The [preceding qualification record](https://github.com/Lokad/OoxPDF/blob/a17988092a5804e2b8343975b66dc2f1d189c23d/docs/PreviewQualification.md)
+retains bullet-choice/visible-diagnostic evidence and earlier identities. Earlier
+cleanup stays complete; chart-color and document-shape guards are unchanged.
 715 manifests validate; that count is separate from Office visual passes.
 
 ## Retained review-36 line-gate residuals
 
-These earlier line-start screens were not replayed for this bullet/visibility correction.
+These earlier line-start screens were not replayed for this theme/hidden-picture correction.
 Calibri wrapping and compact before-spacing retain their 0.25pt Y failures
 (about 0.26-0.28pt). Font-table alternate wrapping retains X failures about
 1.21pt/64.86pt; the boundary-invariance PPTX retains two operation-count mismatches.
@@ -126,18 +125,21 @@ The failure remains recorded and is not replaced with a skip.
 
 ## Evidence and workflow
 
-Ignored evidence: artifacts/preview-bullet-media-20261028/qualification.json.
-It binds the initial/final harness identities and joined reports, exact broader
-sets, independent PowerPoint controls, parent negatives, unchanged portfolio,
-affected visual gates, managed/API checks, consumers, transfer, catalog and CI.
+Ignored evidence: artifacts/preview-theme-visibility-20261028/qualification.json.
+It binds initial/final harness identities, exact joined/disjoint test sets, pinned
+Office controls, parent negatives, unchanged portfolio, visual gates, managed/API
+checks, consumers, transfer, catalog and CI. No new validation framework.
 
-Package: artifacts/nuget/preview-020-bullet-media-20261028/Lokad.OoxPdf.0.2.0-preview.nupkg.
-SHA-256: `AA306EB595584DD995B802C4CC3694326AA89A7DABE3BD6ADC7FD7343DFF8C08`.
+Package: artifacts\nuget\preview-020-theme-visibility-20261028\Lokad.OoxPdf.0.2.0-preview.nupkg.
+SHA-256: `C6F508638CB8238D6F40E7044833FE5A5B32D263E4F9AEC70EAE68395B7A6017`.
 Safe managed dependency-free execution, cancellation, meaningful bounds, coarse
 host admission/refunds, bounded caches/staging, deterministic cleanup, atomic
 publication and PDF validity remain. Publication/performance/expansion deferred.
 
-The last full footprint remains 6.778 GB/935,126 files before recent batches,
-above the loose 5 GB target. footprint.json measures this milestone only; its
-new input tree is pinned once and reused for the harness repair. No full rescan
-or under-cap workspace claim is made.
+Last full footprint, 2026-10-28: 8.162 GB/1,013,013 files; zero errors, before a
+bounded removal of 15 obsolete bin/obj directories from two clean inactive
+worktrees (248 files, 96.6 MB logical bytes). Inputs, probe evidence, Git and
+qualified artifacts remain. Hard links prevent inferring physical savings from
+that logical count; the workspace remains above the loose 5 GB target.
+footprint.json measures this milestone only; the shared input tree is pinned once
+and reused for the repair. Preserve useful inputs/evidence during maintenance.
