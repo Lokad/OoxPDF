@@ -27,8 +27,7 @@ internal sealed partial class PptxRenderer
         string CellType,
         ChartWorkbookCellValueKind ValueKind,
         string Formula,
-        string FormulaType,
-        IReadOnlyDictionary<string, string> FormulaAttributes);
+        string FormulaType);
 
     private readonly record struct ChartWorkbookSharedString(
         string Text,
@@ -86,26 +85,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartWorkbookTableColumn> Columns,
         int HeaderRowCount,
         int TotalsRowCount,
-        bool TotalsRowShown,
-        string AutoFilterReference,
-        IReadOnlyList<int> FilterColumnIds,
-        IReadOnlyList<ChartWorkbookTableFilterColumn> FilterColumns);
-
-    internal readonly record struct ChartWorkbookTableFilterColumn(
-        int? ColumnId,
-        bool? HiddenButton,
-        bool? ShowButton,
-        string FilterKind,
-        IReadOnlyList<string> FilterValues,
-        string DynamicFilterType,
-        string Top10Value,
-        bool? Top10Percent,
-        bool? Top10Top,
-        IReadOnlyList<ChartWorkbookTableCustomFilter> CustomFilters);
-
-    internal readonly record struct ChartWorkbookTableCustomFilter(
-        string Operator,
-        string Value);
+        bool TotalsRowShown);
 
     internal readonly record struct ChartWorkbookTableColumn(
         int? Id,
@@ -122,12 +102,6 @@ internal sealed partial class PptxRenderer
         bool OnlyTotals,
         bool WholeTable);
 
-    internal readonly record struct ChartWorkbookCalculationProperties(
-        string CalculationMode,
-        string CalculationId,
-        bool FullCalculationOnLoad,
-        bool ForceFullCalculation);
-
     internal readonly record struct ChartWorkbookDefinedName(
         string Name,
         string Formula,
@@ -136,11 +110,8 @@ internal sealed partial class PptxRenderer
 
     internal readonly record struct ChartWorkbookSheet(
         string Name,
-        string SheetId,
         string RelationshipId,
-        string State,
-        int Index,
-        string TargetPartName);
+        int Index);
 
     internal sealed class ChartWorkbookStyles
     {
@@ -216,7 +187,6 @@ internal sealed partial class PptxRenderer
         ChartWorkbookCellValueKind ValueKind,
         string Formula,
         string FormulaType,
-        IReadOnlyDictionary<string, string> FormulaAttributes,
         int? StyleNumberFormatId,
         string StyleNumberFormatCode,
         bool? StyleAppliesNumberFormat,
@@ -255,9 +225,7 @@ internal sealed partial class PptxRenderer
         private readonly ChartWorkbookStyles styles;
         private readonly IReadOnlyDictionary<string, string> definedNames;
         private readonly IReadOnlyList<ChartWorkbookDefinedName> definedNameRecords;
-        private readonly IReadOnlyList<ChartWorkbookSheet> sheetRecords;
         private readonly IReadOnlyDictionary<string, ChartWorkbookTable> tables;
-        private readonly ChartWorkbookCalculationProperties calculation;
 
         public ChartWorkbookData(
             IReadOnlyDictionary<string, ChartWorksheetData> sheets,
@@ -265,17 +233,13 @@ internal sealed partial class PptxRenderer
             ChartWorkbookStyles styles,
             IReadOnlyDictionary<string, string> definedNames,
             IReadOnlyDictionary<string, ChartWorkbookTable> tables,
-            ChartWorkbookCalculationProperties calculation,
-            IReadOnlyList<ChartWorkbookDefinedName> definedNameRecords,
-            IReadOnlyList<ChartWorkbookSheet> sheetRecords)
+            IReadOnlyList<ChartWorkbookDefinedName> definedNameRecords)
         {
             this.sheets = sheets;
             this.styles = styles;
             this.definedNames = definedNames;
             this.definedNameRecords = definedNameRecords;
-            this.sheetRecords = sheetRecords;
             this.tables = tables;
-            this.calculation = calculation;
             Date1904 = date1904;
         }
 
@@ -283,13 +247,7 @@ internal sealed partial class PptxRenderer
 
         public IReadOnlyDictionary<string, string> DefinedNames => definedNames;
 
-        public IReadOnlyList<ChartWorkbookDefinedName> DefinedNameRecords => definedNameRecords;
-
-        public IReadOnlyList<ChartWorkbookSheet> Sheets => sheetRecords;
-
         public IReadOnlyDictionary<string, ChartWorkbookTable> Tables => tables;
-
-        public ChartWorkbookCalculationProperties Calculation => calculation;
 
 
         // numeric/category/title/label paths expand the same ranges repeatedly

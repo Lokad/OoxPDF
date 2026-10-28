@@ -695,10 +695,4 @@ internal sealed partial class PptxRenderer
         return OoxBoolean.IsTrue(value);
     }
 
-    private static bool? ReadOoxmlBooleanAttribute(XElement? element, string name)
-    {
-        return element?.Attribute(name) is { } attribute
-            ? IsOoxmlTrue(attribute.Value)
-            : null;
-    }
 }

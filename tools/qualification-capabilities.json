@@ -1,4 +1,19 @@
 {
+  "pptx-workbook-cached-content": [
+      "PptxWorkbookOptionalParts",
+      "PptxChartWorkbookParsingPreservesRangeMetadata",
+      "PptxChartRawVectorsPreserveWorkbookSidecarPoints",
+      "PptxChartIndexedVectorsPreserveWorkbookSidecarPoints",
+      "PptxChartSeriesNamesPreserveWorkbookSidecarPoints",
+      "PptxChartEmbeddedWorkbookFormulaOnlyReferencesReportMissingCachedData",
+      "SmallRangeReadsCells",
+      "RangeAtCellBudgetBoundaryPasses",
+      "RangeBeyondCellBudgetThrows",
+      "WorkbookSharedStringsBeyondBudgetThrow",
+      "WorkbookDefinedNamesBeyondBudgetThrow",
+      "WorkbookSheetsBeyondBudgetThrow",
+      "WorkbookCellFormatsBeyondBudgetThrow"
+  ],
   "docx-locked-page-fields": [
       "DocxLockedFields",
       "DocxDynamicFieldFormat",

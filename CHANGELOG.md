@@ -2,6 +2,12 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Preserves locked DOCX PAGE/NUMPAGES results, including empty results, while
+  unlocked fields and independently locked nested fields retain their own behavior.
+- Removes unused chart-workbook calculation/filter metadata and per-cell formula
+  attribute dictionaries. Cached values, number formats, range resolution and
+  worksheet visibility remain active; the public API is unchanged.
+
 - Evaluates PPTX slide-number fields from the authored sequence and numbering
   origin, preserving hidden-slide gaps independently of output-page indexes.
 - Uses paragraph reference identity for DOCX review balloons and textbox comment

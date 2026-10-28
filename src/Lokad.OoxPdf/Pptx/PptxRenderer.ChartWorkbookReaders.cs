@@ -47,14 +47,13 @@ internal sealed partial class PptxRenderer
             .GetRelationships(workbookPart.Name, cancellationToken)
             .Where(relationship => !relationship.IsExternal && relationship.ResolvedTarget is not null)
             .ToDictionary(relationship => relationship.Id, StringComparer.Ordinal);
-        ChartWorkbookSheet[] workbookSheets = ReadWorkbookSheetRecords(workbookXml, workbookRelationships);
+        ChartWorkbookSheet[] workbookSheets = ReadWorkbookSheetRecords(workbookXml);
         if (workbookSheets.Length > MaxWorkbookSheets)
         {
             throw new OoxPdfLimitExceededException("Chart workbook declares more sheets than the maximum supported count.");
         }
         ChartWorkbookDefinedName[] definedNameRecords = ReadWorkbookDefinedNameRecords(workbookXml, workbookSheets);
         IReadOnlyDictionary<string, string> definedNames = ReadWorkbookDefinedNames(definedNameRecords);
-        ChartWorkbookCalculationProperties calculation = ReadWorkbookCalculationProperties(workbookXml);
         var tables = new Dictionary<string, ChartWorkbookTable>(StringComparer.OrdinalIgnoreCase);
         var sheets = new Dictionary<string, ChartWorksheetData>(StringComparer.OrdinalIgnoreCase);
 
@@ -101,7 +100,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        ChartWorkbookData? model = sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles, definedNames, tables, calculation, definedNameRecords, workbookSheets);
+        ChartWorkbookData? model = sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles, definedNames, tables, definedNameRecords);
         return model;
     }
 
@@ -111,18 +110,6 @@ internal sealed partial class PptxRenderer
             .Root?
             .Element(SpreadsheetNamespace + "workbookPr")
             ?.Attribute("date1904"));
-    }
-
-    private static ChartWorkbookCalculationProperties ReadWorkbookCalculationProperties(XDocument workbookXml)
-    {
-        XElement? calculation = workbookXml.Root?.Element(SpreadsheetNamespace + "calcPr");
-        return calculation is null
-            ? default
-            : new ChartWorkbookCalculationProperties(
-                (string?)calculation.Attribute("calcMode") ?? string.Empty,
-                (string?)calculation.Attribute("calcId") ?? string.Empty,
-                IsOoxmlTrue((string?)calculation.Attribute("fullCalcOnLoad")),
-                IsOoxmlTrue((string?)calculation.Attribute("forceFullCalc")));
     }
 
     private static ChartWorkbookSharedString[] ReadWorkbookSharedStrings(OoxPackage workbookPackage, OoxPart workbookPart, CancellationToken cancellationToken)
@@ -166,9 +153,7 @@ internal sealed partial class PptxRenderer
             textElements.Any(text => string.Equals((string?)text.Attribute(XNamespace.Xml + "space"), "preserve", StringComparison.Ordinal)));
     }
 
-    private static ChartWorkbookSheet[] ReadWorkbookSheetRecords(
-        XDocument workbookXml,
-        IReadOnlyDictionary<string, OoxRelationship> workbookRelationships)
+    private static ChartWorkbookSheet[] ReadWorkbookSheetRecords(XDocument workbookXml)
     {
         return workbookXml.Root?
             .Element(SpreadsheetNamespace + "sheets")
@@ -176,14 +161,10 @@ internal sealed partial class PptxRenderer
             .Select((sheet, index) =>
             {
                 string relationshipId = ((string?)sheet.Attribute(RelationshipsNamespace + "id") ?? string.Empty).Trim();
-                workbookRelationships.TryGetValue(relationshipId, out OoxRelationship? relationship);
                 return new ChartWorkbookSheet(
                     ((string?)sheet.Attribute("name") ?? string.Empty).Trim(),
-                    ((string?)sheet.Attribute("sheetId") ?? string.Empty).Trim(),
                     relationshipId,
-                    ((string?)sheet.Attribute("state") ?? string.Empty).Trim(),
-                    index,
-                    relationship?.ResolvedTarget ?? string.Empty);
+                    index);
             })
             .ToArray() ?? [];
     }
@@ -547,18 +528,10 @@ internal sealed partial class PptxRenderer
                 cellType ?? string.Empty,
                 ReadWorkbookCellValueKind(cellType, value, hasValue),
                 formula?.Value ?? string.Empty,
-                (string?)formula?.Attribute("t") ?? string.Empty,
-                ReadWorkbookFormulaAttributes(formula));
+                (string?)formula?.Attribute("t") ?? string.Empty);
         }
 
         return new ChartWorksheetData(cells, hiddenRows, hiddenColumns);
-    }
-
-    private static IReadOnlyDictionary<string, string> ReadWorkbookFormulaAttributes(XElement? formula)
-    {
-        return formula?.Attributes()
-            .ToDictionary(attribute => attribute.Name.LocalName, attribute => attribute.Value, StringComparer.Ordinal) ??
-            new Dictionary<string, string>();
     }
 
     private static ChartWorkbookCellValueKind ReadWorkbookCellValueKind(string? cellType, string value, bool hasValue)
@@ -636,16 +609,6 @@ internal sealed partial class PptxRenderer
 
             string[] columnNames = columns.Select(column => column.Name).ToArray();
 
-            XElement? autoFilter = tableElement.Element(SpreadsheetNamespace + "autoFilter");
-            string autoFilterReference = (string?)autoFilter?.Attribute("ref") ?? string.Empty;
-            ChartWorkbookTableFilterColumn[] filterColumns = autoFilter?
-                .Elements(SpreadsheetNamespace + "filterColumn")
-                .Select(ReadWorkbookTableFilterColumn)
-                .ToArray() ?? [];
-            int[] filterColumnIds = filterColumns
-                .Select(column => column.ColumnId)
-                .OfType<int>()
-                .ToArray();
             int headerRowCount = ReadSpreadsheetIntegerAttribute(tableElement, "headerRowCount") ?? 1;
             int totalsRowCount = ReadSpreadsheetIntegerAttribute(tableElement, "totalsRowCount") ?? 0;
             bool totalsRowShown = IsOoxmlTrue((string?)tableElement.Attribute("totalsRowShown"));
@@ -662,39 +625,10 @@ internal sealed partial class PptxRenderer
                 columns,
                 headerRowCount,
                 totalsRowCount,
-                totalsRowShown,
-                autoFilterReference,
-                filterColumnIds,
-                filterColumns));
+                totalsRowShown));
         }
 
         return tables;
-    }
-
-    private static ChartWorkbookTableFilterColumn ReadWorkbookTableFilterColumn(XElement column)
-    {
-        XElement? filters = column.Element(SpreadsheetNamespace + "filters");
-        XElement? customFilters = column.Element(SpreadsheetNamespace + "customFilters");
-        XElement? dynamicFilter = column.Element(SpreadsheetNamespace + "dynamicFilter");
-        XElement? top10 = column.Element(SpreadsheetNamespace + "top10");
-        string filterKind = column.Elements().FirstOrDefault()?.Name.LocalName ?? string.Empty;
-        return new ChartWorkbookTableFilterColumn(
-            ReadSpreadsheetIntegerAttribute(column, "colId"),
-            ReadOoxmlBooleanAttribute(column, "hiddenButton"),
-            ReadOoxmlBooleanAttribute(column, "showButton"),
-            filterKind,
-            filters?.Elements(SpreadsheetNamespace + "filter")
-                .Select(filter => (string?)filter.Attribute("val") ?? string.Empty)
-                .ToArray() ?? [],
-            (string?)dynamicFilter?.Attribute("type") ?? string.Empty,
-            (string?)top10?.Attribute("val") ?? string.Empty,
-            ReadOoxmlBooleanAttribute(top10, "percent"),
-            ReadOoxmlBooleanAttribute(top10, "top"),
-            customFilters?.Elements(SpreadsheetNamespace + "customFilter")
-                .Select(filter => new ChartWorkbookTableCustomFilter(
-                    (string?)filter.Attribute("operator") ?? string.Empty,
-                    (string?)filter.Attribute("val") ?? string.Empty))
-                .ToArray() ?? []);
     }
 
     private static bool TryParseTableReference(string reference, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow)

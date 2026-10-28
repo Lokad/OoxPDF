@@ -126,7 +126,9 @@ Supported within the following constraints:
   and annotations. Complex/continued/page-dependent note compositions and arbitrary
   nested stories retain explicit fallbacks and documented geometry residuals.
 - Simple/complex fields with stored results, including supported nested cached
-  fields and bounded dynamic placeholders. This does not evaluate general Word
+  fields and bounded dynamic placeholders. Locked PAGE/NUMPAGES fields preserve
+  their stored results, including empty results; nested fields own their locks.
+  This does not evaluate general Word
   fields, live cross-document data or arbitrary aligned/wrapping field layouts.
 - Final, Original, SimpleMarkup and AllMarkup views, with preserved-layout and
   Word-compatible review geometry kept distinct. Public defaults are Final with

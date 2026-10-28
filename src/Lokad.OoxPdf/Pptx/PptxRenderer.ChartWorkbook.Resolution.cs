@@ -17,7 +17,6 @@ internal sealed partial class PptxRenderer
 
         internal const int MaxChartRangeAreas = 256;
 
-        private static readonly IReadOnlyDictionary<string, string> EmptyFormulaAttributes = new Dictionary<string, string>();
 
         private void AddRangeAreaCells(
             List<ChartWorkbookRangeCell> values,
@@ -142,7 +141,6 @@ internal sealed partial class PptxRenderer
                         hasCell ? cell.ValueKind : ChartWorkbookCellValueKind.Blank,
                         hasCell ? cell.Formula : string.Empty,
                         hasCell ? cell.FormulaType : string.Empty,
-                        hasCell ? cell.FormulaAttributes : EmptyFormulaAttributes,
                         format.NumberFormatId,
                         format.NumberFormatCode,
                         format.ApplyNumberFormat,
