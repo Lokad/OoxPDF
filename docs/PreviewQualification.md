@@ -1,44 +1,46 @@
 # 0.2.0-preview qualification
 
-The bounded source-numbering/paragraph-identity milestone is qualified.
-Publication, performance optimization and feature expansion remain deferred.
-Library build: `aa199ac843b50f2f88cf5237cb94c28830b83146`.
-Frozen source after test compilation repair: `7c61a2b3335cfa426aaf4ad267993d49973dac8b`.
-Library SHA-256: `CC4AC58A64E3F65133CD7BC42B3E98F7ED4C63EBBD3B69C308B1E68420DBB4FE`.
-[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40541741903)
-passes. CI builds are separate from this qualified immutable runtime.
+The bounded locked-field/workbook cleanup is qualified. Publication, performance
+optimization and feature expansion remain deferred. One successful linked-worktree
+Release library compilation; frozen source: `466d374db1579e14a12f97e1b6b7f04bde524c53`.
+Library SHA-256: `427DE0A6301B357AFCFF7AD0A99F5F8650189C57B72C2A127EBC36D8ACC4BA49`.
+[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40656921323) passes.
+CI builds are separate from this qualified immutable runtime.
 
 | Gate | Result |
 |---|---|
-| Release/affected checks | One linked-worktree library build. Four test compilation errors corrected before the first freeze; subsequent test/CLI/inspector builds use that DLL without building references. 24 affected methods pass on Windows, 16 on Ubuntu; all eight new portable methods pass. No qualification method repeats. |
-| Windows milestone | **3,841 pass, one inherited failure, five skips**; 3,847 unique methods in two disjoint runs. No prior pass regresses. |
-| Ubuntu milestone | **1,251 pass, eight inherited failures, 85 skips**; 1,344 unique methods in two disjoint runs. Default-Windows-font neighbors qualify on Windows; the new cases use pinned portable fonts. No failure becomes a skip. |
-| Slide numbering | Four independent PowerPoint controls agree in full PDF text, including hidden-slide gaps and firstSlideNum=10. Ordinary control stays byte-identical. Fields in shapes/master/layout/table cells and output diagnostic/navigation indexes pass. Existing order/absence policies and cancellation remain. |
-| Paragraph identity | Four portable tests preserve colliding/equal-value distinct owners, deduplicate wrapped same-owner lines, scope comment IDs correctly and separate body/textbox comments. The same collision regression fails on the preceding library (Expected 2, got 1), without a parent build. |
-| Representative documents | Nine sources/16 outcomes/32 pages retain exact prior PDFs, diagnostics and semantics; each outcome converts once. Reuse two strict PPTX passes/fourteen strict DOCX failures. Ordinary field and dense-review neighbors are identical. No Office export/raster replay or threshold change. |
-| API/runtime | 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0. No new caller migration change. |
-| Package/transfer | Same package and consumer source pass Windows/Ubuntu. Updated release notes are included. All 24 assets and two integration PDFs match after transfer; no root build or broad-suite replay. Existing 2,613-input snapshot reused. |
+| Release/affected checks | 31 affected methods pass on Windows, 30 on Ubuntu. All four new portable methods pass both hosts. Exact affected and broader sets are disjoint; no qualification method repeats. Two existing nullable warnings remain in unrelated test source. |
+| Windows milestone | **3,845 pass, one inherited failure, five skips**; 3,851 unique methods in two runs. No prior pass regresses. |
+| Ubuntu milestone | **1,261 pass, eight inherited failures, 85 skips**; 1,354 unique methods in two runs. Native-font geometry qualifies on Windows; new rendering tests use pinned portable fonts. No failure becomes a skip. |
+| Locked fields | Simple/complex PAGE and NUMPAGES retain locked values 99/88 while unlocked counters remain 1. Empty results, split instructions, stored formatting, independent nested locks and body/cell/header/footer placement pass. Two serialized PDFs match independent Word text. The same main regression fails on the previous library with one exact negative attempt and no parent build. |
+| Workbook cleanup | Removes unused calculation/filter types and readers, formula-attribute dictionaries, retained sheet metadata and test-only accessors. Mixed tests keep cached content, styles/dates, scoped names, table ranges and visibility checks. Cached-chart and unlocked header-field PDFs/diagnostics are unchanged. No performance gain was measured. |
+| Representative documents | Nine sources/16 outcomes/32 pages retain exact prior PDFs, diagnostics and semantics. Reuse two strict PPTX passes/fourteen strict DOCX failures. All 16 convert once; no Office portfolio/raster replay or threshold change. |
+| API/runtime | 247 public declarations unchanged; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false; assembly/file version 0.2.0.0 and informational version 0.2.0-preview plus the frozen revision. No new caller migration change. |
+| Package/transfer | One package and the same consumer source pass Windows/Ubuntu, including admission/refunds, version and caller-document checks. All 24 assets and two integration PDFs match after transfer. No root build or broad-suite replay. One new 2,616-input tree includes the two control documents and Word gold. |
 
-The internal hash-collision counterexample is now covered through the full
-renderer inspector. It does not establish a natural public-file allocation
-sequence or failure frequency. The original placement probe and parent negative
-control remain evidence. Parent setup initially omitted its pinned font; that
-failed attempt is retained, followed by the correct one-method reproduction with
-an independent font copy. Production code has no test hook or forced-hash path.
+Locked fields reuse stored-result handling; nested fields keep independent locks.
+An empty locked result remains empty. General unlocked REF evaluation remains
+outside the converter's stored-result scope: an exploratory Office control
+evaluated it, and that probe is retained outside this gate. The final nested
+control locks both the outer REF and inner PAGE. The review's Word reference is
+reused; two small additional edge exports establish the empty/nested contract.
+These are content checks, not new typography or pixel-parity claims.
 
-Source numbering is distinct from output indexing. Hidden slides keep their
-place in the authored number sequence, while output diagnostics and links keep
-their prior page identities. UInt32 origins are stored/evaluated with sufficient
-range; absent/invalid origins keep a default of one. No general field evaluator,
-new rendering guard or layout rewrite is introduced.
+The first portfolio attempt stopped after one conversion because the wrong
+inspector was supplied. Its PDF/diagnostics/log were retained; fifteen additional
+conversions formed a pinned raw batch, and the existing reuse workflow inspected
+all sixteen using the pinned PDF inspector. No conversion was repeated. The
+first conversion's elapsed time is unavailable; no performance claim uses it.
 
-The preceding [qualification record](https://github.com/Lokad/OoxPDF/blob/18172127cf2d13abc597d1a8d3d83dbcb0f2221f/docs/PreviewQualification.md)
-retains admitted-content/style cleanup results and prior runtime identities.
-That cleanup and its independent Office controls remain complete.
+The preceding [qualification record](https://github.com/Lokad/OoxPDF/blob/53c611ffe507955b94f9fe1414053a71fc275840/docs/PreviewQualification.md)
+retains source-numbering and paragraph-identity evidence. That cleanup and all
+earlier accepted fixes remain complete. Chart-color and document-shape guards
+were not changed. Manifest validation covers 715 cases; it is not an Office
+fidelity pass count.
 
 ## Retained review-36 line-gate residuals
 
-These earlier line-start screens were not replayed for this chart ownership correction.
+These earlier line-start screens were not replayed for this field/workbook correction.
 Calibri wrapping and compact before-spacing retain their 0.25pt Y failures
 (about 0.26-0.28pt). Font-table alternate wrapping retains X failures about
 1.21pt/64.86pt; the boundary-invariance PPTX retains two operation-count mismatches.
@@ -113,7 +115,7 @@ Both canonical control PDFs are identical to their pre-fix versions, so this is
 existing typography/geometry residual, not an ID-fix regression. Keep needs-review;
 no threshold change or formal manifest/agent-rating pass is claimed.
 
-The newly selected Ubuntu `PptxSceneBuilderBuildsResolvedNodeLists` also fails
+The previously selected Ubuntu `PptxSceneBuilderBuildsResolvedNodeLists` also fails
 with `InvalidOperationException: Expected Hello, got .` before the changed style
 assertions: the glyph inspector cannot resolve its default Windows fonts. One
 exact method on the preceding qualified artifact reproduces that first failure,
@@ -123,18 +125,18 @@ The failure remains recorded and is not replaced with a skip.
 
 ## Evidence and workflow
 
-Ignored evidence: artifacts/preview-source-identity-20261027/qualification.json.
-It binds the build/frozen identity, exact disjoint method reports, four pinned
-Office numbering controls, parent collision test, unchanged portfolio/neighbors,
-managed/API checks, same-package consumers, transfer, catalog and CI. No library
-or positive-check replay followed the pre-freeze test compilation correction.
+Ignored evidence: artifacts/preview-locked-fields-20261028/qualification.json.
+It binds the frozen source/runtime, disjoint host reports, pinned Word controls,
+parent negative, unchanged portfolio/neighbors, managed/API checks, package
+consumers, transfer, manifest validation and CI. Failed setup evidence is retained.
 
-Package: artifacts/nuget/preview-020-source-identity-20261027/Lokad.OoxPdf.0.2.0-preview.nupkg.
-SHA-256: `7608CDE2AADE9A5EAD7AA9F084C53D41D02A25A4399A9914E553B6E4BEB9CBC4`.
+Package: artifacts/nuget/preview-020-locked-fields-20261028/Lokad.OoxPdf.0.2.0-preview.nupkg.
+SHA-256: `118B788DAE312CCE4410C015A5D76431371297A01774981B52689246A761AFE3`.
 Safe managed dependency-free execution, cancellation, meaningful bounds, coarse
 host admission/refunds, bounded caches/staging, deterministic cleanup, atomic
 publication and PDF validity remain. Publication/performance/expansion deferred.
 
 The last full footprint remains 6.778 GB/935,126 files before recent batches,
-above the loose 5 GB target. footprint.json measures this milestone only; the
-shared input snapshot is reused. No full rescan or blanket deletion was needed.
+above the loose 5 GB target. footprint.json measures this milestone only. A new
+input tree is pinned once for its added controls; no full rescan or under-cap
+workspace claim is made.

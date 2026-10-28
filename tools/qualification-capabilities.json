@@ -17,6 +17,7 @@
   "docx-locked-page-fields": [
       "DocxLockedFields",
       "DocxDynamicFieldFormat",
+      "PortableRenderingDynamicFieldFormatsRetainValuesAndGlyphSizes",
       "DocxReaderPreservesFieldReferencesStructurally",
       "DocxReaderPreservesDynamicFieldReferencesInsideNoteStories",
       "DocxNestedComplexFieldsUseCachedResultsAndInspectionCounters",
