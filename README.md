@@ -1,262 +1,68 @@
 # Lokad.OoxPdf
 
-The **0.2.0-preview** candidate is prepared; publication is deferred. Read the
-[preview scope and limitations](docs/PreviewRelease.md) and
-[caller migration notes](docs/PublicApiChanges.md).
+Convert `.pptx` presentations and `.docx` documents to PDF in **.NET 10**.
+The library is safe managed code with no runtime dependencies, Office automation
+or native libraries. Office and PDFium are used only by separate validation tools.
 
-`Lokad.OoxPdf` is a dependency-free .NET OOXML-to-PDF renderer for `.pptx` and `.docx` files. The library reads Office Open XML packages directly, builds static PDF pages, and does not call Microsoft Office, PDFium, PowerShell, external executables, or third-party packages at runtime.
+The next release is **0.2.0**, currently unreleased. Read the
+[changelog](CHANGELOG.md), [migration guide](docs/PublicApiChanges.md) and
+[supported scope and limitations](docs/PreviewRelease.md).
 
-The current renderer is intended for corporate decks and documents. PPTX rendering is the more mature path; DOCX rendering supports text, page setup, headers and footers, images, tables, numbering, and diagnostics, with layout coverage still being expanded bottom-up.
-
-Release notes are tracked in [CHANGELOG.md](CHANGELOG.md).
-
-## Runtime Model
-
-The converter runtime is pure managed .NET:
-
-- no Office automation;
-- no PDFium;
-- no PowerShell scripts;
-- no native image, font, browser, or PDF libraries;
-- no NuGet package dependencies in `src/Lokad.OoxPdf`.
-
-The runtime inputs are the OOXML file or stream, the output PDF path or stream, options, diagnostics callbacks, and resolved font programs. Validation tools under `tools/` use Office and PDFium, but those tools are not part of library conversion.
-
-Rendering follows this broad pipeline:
-
-```text
-OOXML package -> typed document/scene model -> layout -> PDF pages/resources
-```
-
-Font handling follows a storage-neutral pipeline:
-
-```text
-FontRequest -> FontFaceResolution -> IFontProgramSource -> OpenTypeFont -> embedded PDF font
-```
-
-## Fonts And Portability
-
-OOXPDF embeds resolved OpenType font programs in generated PDFs when a font source is available. Font access is intentionally not hard-wired to the filesystem: an `IFontResolver` returns a `FontFaceResolution`, and that resolution carries an `IFontProgramSource`.
-
-An `IFontProgramSource` can be backed by files, memory, blob storage, memory-mapped files, embedded resources, or another deployment-specific source:
-
-```csharp
-public interface IFontProgramSource
-{
-    string StableId { get; }
-    ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct = default);
-}
-```
-
-The built-in `WindowsFontResolver` is a file-backed resolver for local Windows font directories. For deterministic Linux operation, `OoxPdfFontPackResolver` can load a packaged font manifest over HTTP(S) and lazily download only the font programs that conversion actually uses:
+## Usage
 
 ```csharp
 using Lokad.OoxPdf;
-using Lokad.OoxPdf.Fonts;
 
-using var httpClient = new HttpClient();
-IFontResolver fontResolver = await OoxPdfFontPackResolver.CreateHttpAsync(
-    "office-compatible-v1",
-    new Uri("https://example.test/ooxpdf-fonts/"),
-    httpClient,
-    cancellation.Token);
-
-await OoxPdfConverter.ConvertAsync(
-    "input.pptx",
-    "output.pdf",
-    new OoxPdfOptions { FontResolver = fontResolver },
-    cancellation.Token);
-```
-
-Each pack is served from `<source>/<packId>/manifest.json`. Font files are addressed by relative paths in the manifest, and each file is checked against its declared byte size and SHA-256 hash before use:
-
-```json
+OoxPdfConverter.Convert("input.docx", "output.pdf", new OoxPdfOptions
 {
-  "packId": "office-compatible-v1",
-  "files": [
-    {
-      "relativePath": "files/aptos.ttf",
-      "byteSize": 131072,
-      "sha256": "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"
-    }
-  ],
-  "families": [
-    {
-      "requestedFamily": "Aptos",
-      "resolvedFamily": "Aptos",
-      "relativeFontFile": "files/aptos.ttf",
-      "weight": 400,
-      "italic": false,
-      "faceIndex": 0,
-      "hasMathTable": false
-    }
-  ],
-  "fallbacks": [
-    { "family": "Aptos" }
-  ]
-}
+    DiagnosticSink = diagnostic => Console.Error.WriteLine(
+        $"{diagnostic.Id}: {diagnostic.Message}")
+});
 ```
 
-Without resolved font programs, conversion may still produce a PDF, but typography, wrapping, glyph coverage, and visual fidelity are degraded.
+The same API accepts `.pptx`. Unsupported content may be simplified or omitted;
+inspect diagnostics when accepting a conversion. Complex layout, typography and
+charts remain approximate rather than pixel-identical to Office.
 
-## Library Usage
+File and stream overloads support cooperative cancellation. File output publishes
+atomically; caller-owned streams stay open. Discard partial output after a
+failure. Stream input requires an explicit `OoxPdfOptions.InputKind`.
 
-```csharp
-using Lokad.OoxPdf;
-using Lokad.OoxPdf.Diagnostics;
+## Fonts
 
-var diagnostics = new List<OoxPdfDiagnostic>();
+The default resolver reads installed Windows fonts. For Linux or a portable
+deployment, supply `OoxPdfOptions.FontResolver` with packaged or custom fonts.
+Missing fonts affect glyph coverage, wrapping and pagination. See
+[font setup and HTTP font packs](https://github.com/Lokad/OoxPDF/blob/master/docs/Fonts.md).
 
-OoxPdfConverter.Convert(
-    "input.docx",
-    "output.pdf",
-    new OoxPdfOptions
-    {
-        DiagnosticSink = diagnostics.Add,
-        DocxMarkupMode = OoxPdfDocxMarkupMode.Final
-    });
-```
+## CLI
 
-Conversion is cooperatively cancellable. Use the async API when the host already has an async request
-lifetime, or the token-aware synchronous overload when the caller is synchronous:
-
-```csharp
-using var cancellation = new CancellationTokenSource();
-
-await OoxPdfConverter.ConvertAsync(
-    "input.docx",
-    "output.pdf",
-    cancellation.Token);
-```
-
-The same token is passed through package loading, OOXML reading, rendering, font loading, and PDF writing.
-Custom `IFontProgramSource.GetBytesAsync(CancellationToken)` implementations should observe the token.
-
-Use `OoxPdfInputKind.Pptx` or `OoxPdfInputKind.Docx` in `OoxPdfOptions.InputKind` to override extension-based detection.
-
-Stream conversion avoids materializing temporary input and output files. Seekable input may be randomly accessed; forward-only input uses bounded, cancellation-aware staging. PDF output requires only forward writes. Page-content staging may still spill to a bounded temporary file when a page exceeds the resident window (see OoxConversionLimits); the spill is cleaned up on completion. For stream input, `InputKind` must be `Pptx` or `Docx` because there is no filename extension to inspect. The converter leaves caller-owned streams open. If conversion fails, including cancellation or an output limit, the output stream may contain an incomplete PDF prefix; discard that output before retrying. File overloads instead publish atomically and preserve an existing destination on failure:
-
-```csharp
-using var input = new MemoryStream(ooxmlBytes, writable: false);
-using var output = new MemoryStream();
-
-await OoxPdfConverter.ConvertAsync(
-    input,
-    output,
-    new OoxPdfOptions
-    {
-        InputKind = OoxPdfInputKind.Pptx
-    },
-    cancellation.Token);
-
-byte[] pdfBytes = output.ToArray();
-```
-
-Advanced deployments can provide their own font resolver:
-
-```csharp
-using Lokad.OoxPdf;
-using Lokad.OoxPdf.Fonts;
-
-public sealed class MyFontResolver : IFontResolver
-{
-    public FontFaceResolution Resolve(FontRequest request)
-    {
-        // Resolve identity and bytes together. Different regular/bold/italic
-        // programs need different identities; identical programs may share one.
-        (string programId, byte[] bytes) = LoadFontProgramFromPackageOrBlob(request);
-
-        return new FontFaceResolution(
-            request.FamilyName,
-            "Resolved Family",
-            new FontStyleKey(request.Bold, request.Italic),
-            new MemoryFontProgramSource(programId, bytes),
-            IsFallback: false);
-    }
-}
-
-OoxPdfConverter.Convert(
-    "input.pptx",
-    "output.pdf",
-    new OoxPdfOptions
-    {
-        FontResolver = new MyFontResolver()
-    });
-```
-
-## CLI Usage
+From a checkout with the .NET 10 SDK:
 
 ```powershell
-dotnet build src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj
-dotnet src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll convert input.pptx output.pdf --diagnostics diagnostics.json
-dotnet src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll convert input.docx output.pdf --docx-markup all --diagnostics diagnostics.json
+dotnet run --project src/Lokad.OoxPdf.Cli -- convert input.docx output.pdf --diagnostics diagnostics.json --strict
 ```
 
-Add `--strict` to make the command return exit code `3` when conversion succeeds but warnings or errors were emitted.
+With `--strict`, exit code `3` means the PDF was produced with warnings or errors.
+See [diagnostics and exit codes](https://github.com/Lokad/OoxPDF/blob/master/docs/Diagnostics.md)
+and [DOCX markup modes](https://github.com/Lokad/OoxPDF/blob/master/docs/DocxMarkupModes.md).
 
-File conversion and CLI diagnostics reject case-only aliases of their input or
-output. Distinct spellings are allowed when existing directory entries establish
-separation. Unresolved case-only paths, including two uncreated outputs, refuse
-conservatively; choose names that differ beyond case.
+## Documentation
 
-Exit codes:
-
-- `0`: conversion succeeded without strict-mode warnings or errors.
-- `1`: conversion failed.
-- `2`: invalid CLI arguments or unsupported input selection.
-- `3`: conversion succeeded, but `--strict` saw diagnostics with warning or error severity.
-
-## Visual Validation
-
-Visual validation compares an Office-rendered reference against the candidate PDF rasterized with PDFium:
-
-```powershell
-pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json
-```
-
-The command writes timestamped artifacts under `artifacts/visual/<case-id>/<run-id>/`, including reference PNGs, candidate PDF and PNGs, diagnostics JSON, pixel metrics, a comparison HTML file, and an assessment template.
-
-The validation tools require Windows with Office installed for reference rendering. PDF rasterization uses the exact vendored `tools/vendor/pdfium/win-x64/bin/pdfium.dll`; follow the [pinned-binary instructions](https://github.com/Lokad/OoxPDF/blob/master/docs/VisualValidation.md#requirements). These tools are not used by the library.
-
-## Capabilities And Limits
-
-See [docs/Capabilities.md](https://github.com/Lokad/OoxPDF/blob/master/docs/Capabilities.md) for the supported, partial, approximated, and unsupported PPTX/DOCX feature set.
-
-See [docs/Diagnostics.md](https://github.com/Lokad/OoxPDF/blob/master/docs/Diagnostics.md) for diagnostic code conventions and emitted unsupported-feature warnings.
-
-See [docs/DocxMarkupModes.md](https://github.com/Lokad/OoxPDF/blob/master/docs/DocxMarkupModes.md) for DOCX final/original/simple/all markup mode semantics, CLI usage, and current approximations.
-
-See [docs/RenderingModel.md](https://github.com/Lokad/OoxPDF/blob/master/docs/RenderingModel.md) for the package, layout, page, and PDF writer architecture.
-
-See [docs/OperatingEnvelope.md](https://github.com/Lokad/OoxPDF/blob/master/docs/OperatingEnvelope.md) for measured memory and
-concurrency workloads, reproduction steps, and the limits of those measurements.
-
-See [docs/PrivateValidation.md](https://github.com/Lokad/OoxPDF/blob/master/docs/PrivateValidation.md) for local-only validation of documents that must not be versioned or made public.
+- [Capabilities and fallbacks](https://github.com/Lokad/OoxPDF/blob/master/docs/Capabilities.md)
+- [Rendering architecture](https://github.com/Lokad/OoxPDF/blob/master/docs/RenderingModel.md)
+- [Resource limits and hosting](https://github.com/Lokad/OoxPDF/blob/master/docs/OperatingEnvelope.md)
+- [Qualification results and known failures](https://github.com/Lokad/OoxPDF/blob/master/docs/PreviewQualification.md)
+- [Visual validation](https://github.com/Lokad/OoxPDF/blob/master/docs/VisualValidation.md) and [private documents](https://github.com/Lokad/OoxPDF/blob/master/docs/PrivateValidation.md)
 
 ## Development
 
 ```powershell
-dotnet restore Lokad.OoxPdf.slnx
-dotnet build Lokad.OoxPdf.slnx
-dotnet run --project tests/Lokad.OoxPdf.Tests -- --skip-slow
-dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --no-restore
+dotnet build Lokad.OoxPdf.slnx -c Release
+dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -- --skip-slow
+dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj -c Release --no-build
 ```
 
-Packages are written to `artifacts/nuget/`.
-
-Use `--test <name>` for a name filter or `--test-set <file.json>` for a JSON
-array of exact method names. Unknown arguments, missing values and repeated
-options fail before tests run. Exact sets cannot be combined with `--group` or `--test`.
-
-CI runs on Windows and Ubuntu. Both build the full solution and run the visual
-manifest, allocation, package, comparison, tokenizer, and chart-classifier gates.
-Windows runs the full console suite (excluding slow tests), the text-content
-gate, and the PDFium visual probe. Ubuntu intentionally runs the portable `api`,
-`ooxml`, `pdf`, `imaging`, `fonts`, and `rendering-portable` console groups; tests requiring installed
-Windows fonts skip when those fonts are absent. Its package smoke test supplies
-DejaVu Sans through a custom font resolver and checks font embedding. Console
-test reports are uploaded separately for each operating system.
-Package smoke tests use a fresh local feed and isolated restore directory, then
-verify that the consumer loaded the exact library DLL from the newly packed package.
-
-`src/Lokad.OoxPdf` is the NuGet library and must remain free of package references. Office automation and PDFium are isolated under `tools/` for validation only.
+Packages go to ignored `artifacts/nuget/`. CI runs on Windows and Ubuntu.
+See [AGENTS.md](https://github.com/Lokad/OoxPDF/blob/master/AGENTS.md) for focused
+test selection and reuse of qualified build artifacts.
