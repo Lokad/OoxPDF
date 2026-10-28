@@ -1,0 +1,76 @@
+{
+  "Rows": [
+    {
+      "Id": "background-inheritance",
+      "File": "pptx-inheritance-background-inheritance.pptx",
+      "InputSha256": "53D68389658022C5438A3FECD9BB4EFCFF75FC69563E6E154E9BA87F5D34B894",
+      "ReferencePdfSha256": "215AC8675AF4CEB27CFFDBFBA7C6D93A62A956A8C716FE90C8E33EFBC8F70947",
+      "OfficeApp": "PowerPoint",
+      "OfficeVersion": "16.0",
+      "MasterRectangles": [
+        1,
+        1
+      ],
+      "BackgroundCornerRgb": [
+        [
+          129,
+          129,
+          255
+        ],
+        [
+          0,
+          0,
+          255
+        ]
+      ]
+    },
+    {
+      "Id": "layout-master-suppression",
+      "File": "pptx-inheritance-layout-master-suppression.pptx",
+      "InputSha256": "E2E7D9372419304B9F9F8E08EE0E391B16CE62AE19E0B4C06C4A6E74EC4315DD",
+      "ReferencePdfSha256": "DD6E5F37EA3D993E430FBBBAAA0722D72AC4CAB9841625410C345BC3FC35A0E4",
+      "OfficeApp": "PowerPoint",
+      "OfficeVersion": "16.0",
+      "MasterRectangles": [
+        0,
+        1
+      ],
+      "BackgroundCornerRgb": [
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          255,
+          255,
+          255
+        ]
+      ]
+    },
+    {
+      "Id": "layout-master-override",
+      "File": "pptx-inheritance-layout-master-override.pptx",
+      "InputSha256": "771E64765A177AFF031A58AB6BEED60DE328465E29659D3F8AA60808C9831C48",
+      "ReferencePdfSha256": "2BA4CFCFFE32E8EAF1FEBC53048851734DFE7EFA062CE69297B5463B7E88C8DD",
+      "OfficeApp": "PowerPoint",
+      "OfficeVersion": "16.0",
+      "MasterRectangles": [
+        0,
+        0
+      ],
+      "BackgroundCornerRgb": [
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          255,
+          255,
+          255
+        ]
+      ]
+    }
+  ]
+}

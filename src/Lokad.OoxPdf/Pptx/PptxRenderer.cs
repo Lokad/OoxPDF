@@ -58,13 +58,7 @@ internal sealed partial class PptxRenderer
             var tableFrameMemo = new Dictionary<PptxTableFrameMemoKey, TableFrameLayout?>(PptxTableFrameMemoKeyComparer.Instance);
             PptxRenderContext context = CreateRenderContext(document, slide, slideXml, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache, textSpanMemo, tableFrameMemo);
 
-            bool masterBackgroundPainted = RenderBackground(context, context.SceneSlide.MasterBackground, graphics, defaultWhenMissing: false);
-            bool layoutBackgroundPainted = RenderBackground(context, context.SceneSlide.LayoutBackground, graphics, defaultWhenMissing: false);
-            bool slideBackgroundPainted = RenderBackground(context, context.SceneSlide.SlideBackground, graphics, defaultWhenMissing: false);
-            if (!masterBackgroundPainted && !layoutBackgroundPainted && !slideBackgroundPainted)
-            {
-                RenderBackground(context, context.SceneSlide.SlideBackground, graphics, defaultWhenMissing: true);
-            }
+            RenderBackground(context, graphics);
             cancellationToken.ThrowIfCancellationRequested();
             var orderedImages = new List<PdfImageResource>();
             var linkAnnotations = new List<PdfLinkAnnotation>();

@@ -1,4 +1,15 @@
 {
+  "pptx-inheritance": [
+      "PptxInheritance",
+      "PptxMasterThemes",
+      "PptxDiagnosticAdmission",
+      "PptxVisibleDiagnostics",
+      "PptxHiddenObjects",
+      "PptxHiddenMasterShapesStayUnpainted",
+      "PptxShownMasterShapesPaintByDefault",
+      "PptxExplicitShownMasterShapesPaint",
+      "PptxGlyphEmissionInspectionUsesSceneVisibilityAndMasterAdmission"
+  ],
   "pptx-master-themes": [
       "PptxMasterThemes",
       "PptxSyntheticTheme",

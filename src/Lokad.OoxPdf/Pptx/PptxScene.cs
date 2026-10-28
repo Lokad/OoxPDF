@@ -297,7 +297,7 @@ internal sealed partial class PptxSceneBuilder
                 HasSlideTransition(slideXml),
                 HasSlideTiming(slideXml),
                 HasSlideOleObject(slideXml),
-                ReadShowMasterShapes(slideXml),
+                ReadShowMasterShapes(slideXml, layoutXml),
                 masterXml is null ? [] : ReadNodes(masterXml, [], theme, masterColorMap, package, masterRelationships, cancellationToken),
                 layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme, layoutColorMap, package, layoutRelationships, cancellationToken),
                 ReadNodes(slideXml, slideSources, theme, slideColorMap, package, slideRelationships, cancellationToken)));
@@ -336,10 +336,12 @@ internal sealed partial class PptxSceneBuilder
             return slideXml.Descendants(PresentationNamespace + "timing").Any();
         }
 
-        // Unprefixed p:sld flag verified against PowerPoint-saved output: absent means show.
-        bool ReadShowMasterShapes(XDocument slideXml)
+        // Both owners must allow master artwork. PowerPoint keeps a layout's
+        // suppression even when the slide explicitly allows it; absent means show.
+        bool ReadShowMasterShapes(XDocument slideXml, XDocument? layoutXml)
         {
-            return !OoxBoolean.IsOff((string?)slideXml.Root?.Attribute("showMasterSp"));
+            return !OoxBoolean.IsOff((string?)slideXml.Root?.Attribute("showMasterSp")) &&
+                !OoxBoolean.IsOff((string?)layoutXml?.Root?.Attribute("showMasterSp"));
         }
 
         bool HasSlideTransition(XDocument slideXml)

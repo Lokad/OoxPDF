@@ -2,6 +2,11 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Selects one inherited PPTX solid background before painting, so transparent
+  slide/layout overrides do not reveal overridden master backgrounds.
+- Honors master-artwork suppression from both slide and layout through shared
+  text/resource admission, painting, links and feature diagnostics.
+
 - Qualification reinspection rejects inconsistent cached diagnostic sidecars,
   preserving known warnings and content classifications without reconversion.
 - Removes an unused internal PPTX scene document reference; public API and

@@ -34,8 +34,9 @@ and [diagnostics](Diagnostics.md) before relying on a conversion.
 
 Supported within the following constraints:
 
-- Slide order/size, hidden-slide exclusion and per-slide master-shape suppression;
-  common inherited backgrounds, shapes, theme colors and Latin theme fonts
+- Slide order/size, hidden-slide exclusion and master-artwork suppression by
+  both slide and layout. Solid backgrounds select one slide/layout/master owner,
+  including authored opacity. Common inherited shapes, theme colors and Latin theme fonts
   resolved from each slide's master. Missing master themes retain the existing
   presentation/first-master fallback; theme-override expansion remains unsupported.
 - Common solid shapes, paths, straight lines, rotation/flips and nested group

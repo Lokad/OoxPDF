@@ -33,34 +33,30 @@ internal sealed partial class PptxRenderer
     private const int OfficeGlowRasterMaxPixelsPerSide = 2048;
     private const double OfficeOuterShadowRasterExtentFactor = 1.25d;
 
-    private static bool RenderBackground(PptxRenderContext context, PptxSceneBackground background, PdfGraphicsBuilder graphics, bool defaultWhenMissing)
+    private static void RenderBackground(PptxRenderContext context, PdfGraphicsBuilder graphics)
     {
+        // Backgrounds are inherited alternatives, not composited source layers.
+        // A transparent override must not reveal the overridden master/layout.
+        PptxSceneSlide slide = context.SceneSlide;
+        PptxSceneBackground background = slide.SlideBackground.HasFill ? slide.SlideBackground
+            : slide.LayoutBackground.HasFill ? slide.LayoutBackground : slide.MasterBackground;
+        graphics.SaveState();
+        ClipSlideBoundsEvenOdd(context.Document, graphics);
         if (background.HasFill)
         {
-            graphics.SaveState();
-            ClipSlideBoundsEvenOdd(context.Document, graphics);
             if (background.Alpha < 0.999d)
             {
                 graphics.SetAlpha(background.Alpha, 1d);
             }
 
             graphics.SetFillRgb(background.Color.Red, background.Color.Green, background.Color.Blue);
-            graphics.FillRectangleEvenOdd(0, 0, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
-            graphics.RestoreState();
-            return true;
         }
-
-        if (!defaultWhenMissing)
+        else
         {
-            return false;
+            graphics.SetFillRgb(255, 255, 255);
         }
-
-        graphics.SaveState();
-        ClipSlideBoundsEvenOdd(context.Document, graphics);
-        graphics.SetFillRgb(255, 255, 255);
         graphics.FillRectangleEvenOdd(0, 0, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
         graphics.RestoreState();
-        return true;
     }
 
     private static void RenderShape(
