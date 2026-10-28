@@ -1,5 +1,25 @@
 # 0.2.0-preview qualification
 
+## Qualification join checkpoint
+
+Tool source `cba5e93870267201268b1a0d729cb5b3d1f5335c` binds the final artifact's
+test assembly to the final supplied report-producing harness and rejects empty
+reports before publication. Identical copies remain accepted; earlier passing
+methods retain their original harness provenance without being rerun.
+
+Windows metadata checks pass three valid joins and thirteen refusal scenarios;
+the preceding helper fails the new unrun-final-harness regression. Four retained
+Windows/Ubuntu reports rejoin with identical results and provenance; only the
+tool fingerprint changes. These are metadata checks, not new console-test runs.
+[Current-source CI](https://github.com/Lokad/OoxPDF/actions/runs/40697316633)
+passes both-platform script and broader checks on separate builds.
+
+Evidence: artifacts/preview-tested-harness-20261028/qualification.json. The frozen
+library/package below stay unchanged; this slice performs no local library build,
+console-test run, package check, conversion, Office export or rasterization.
+
+## Frozen library checkpoint
+
 The bounded diagnostic-provenance/dead-state milestone is qualified. Publication,
 performance optimization and feature expansion remain deferred. One linked-worktree
 Release library compilation/frozen source: `bc85828093870587b65c3d938894deaf6ba5042e`.
