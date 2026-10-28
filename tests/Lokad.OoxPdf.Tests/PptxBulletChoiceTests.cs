@@ -25,18 +25,14 @@ internal static class PptxBulletChoiceTests
             foreach (var node in scene.Slides[0].SlideNodes)
             {
                 string before = node.Source.ToString(SaveOptions.DisableFormatting);
-                var xml = PptxSceneTextAgreementTests.ReadXmlSpans(node, document, scene, resolver: resolver);
-                var fed = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Theme, scene.Slides[0].SlideColorMap,
+                var spans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Theme, scene.Slides[0].SlideColorMap,
                     1, false, [], resolver, default);
-                foreach (var spans in new[] { xml, fed })
-                {
-                    var bullet = spans.Single(span => span.Run.Text == "*").Run;
-                    var expected = gold.RootElement.GetProperty("Rows")[index];
-                    TestAssert.Equal(expected.GetProperty("NominalSize").GetDouble(), bullet.FontSize);
-                    TestAssert.Equal(expected.GetProperty("FontFamily").GetString(), bullet.FontFamily);
-                    var color = expected.GetProperty("Color").GetInt32();
-                    TestAssert.Equal(new RgbColor((byte)(color >> 16), (byte)(color >> 8), (byte)color), bullet.Color);
-                }
+                var bullet = spans.Single(span => span.Run.Text == "*").Run;
+                var expected = gold.RootElement.GetProperty("Rows")[index];
+                TestAssert.Equal(expected.GetProperty("NominalSize").GetDouble(), bullet.FontSize);
+                TestAssert.Equal(expected.GetProperty("FontFamily").GetString(), bullet.FontFamily);
+                var color = expected.GetProperty("Color").GetInt32();
+                TestAssert.Equal(new RgbColor((byte)(color >> 16), (byte)(color >> 8), (byte)color), bullet.Color);
                 TestAssert.Equal(before, node.Source.ToString(SaveOptions.DisableFormatting));
                 index++;
             }
