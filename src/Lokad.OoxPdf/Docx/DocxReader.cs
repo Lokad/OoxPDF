@@ -48,12 +48,13 @@ internal sealed partial class DocxReader
 
     private sealed class DocxComplexFieldState
     {
-        public DocxComplexFieldState(int sourceRunIndex, int textRunIndex, int textLengthStart, int nestingDepth)
+        public DocxComplexFieldState(int sourceRunIndex, int textRunIndex, int textLengthStart, int nestingDepth, bool isLocked)
         {
             SourceRunIndex = sourceRunIndex;
             TextRunIndex = textRunIndex;
             TextLengthStart = textLengthStart;
             NestingDepth = nestingDepth;
+            IsLocked = isLocked;
         }
 
         public StringBuilder Instruction { get; } = new();
@@ -62,6 +63,7 @@ internal sealed partial class DocxReader
         public int TextRunIndex { get; private set; }
         public int TextLengthStart { get; private set; }
         public int NestingDepth { get; }
+        public bool IsLocked { get; }
         public bool HasSeparate { get; set; }
         public bool InResult { get; set; }
         public bool HasCachedResult { get; set; }

@@ -452,7 +452,8 @@ internal sealed partial class DocxReader
         {
             string? instruction = (string?)field.Attribute(WordprocessingNamespace + "instr");
             DocxFieldKind kind = ResolveFieldKind(instruction);
-            string? placeholder = ResolveFieldPlaceholder(instruction);
+            string? placeholder = ResolveFieldPlaceholder(instruction,
+                OoxBoolean.IsTrue((string?)field.Attribute(WordprocessingNamespace + "fldLock")));
             int fieldSourceRunIndex = sourceRunIndex;
             int fieldTextRunIndex = runs.Count;
             int fieldImageIndex = images.Count;
@@ -793,7 +794,8 @@ internal sealed partial class DocxReader
                     currentSourceRunIndex,
                     runs.Count,
                     runs.Sum(run => run.Text.Length),
-                    complexFieldStack.Count));
+                    complexFieldStack.Count,
+                    OoxBoolean.IsTrue((string?)fieldChar.Attribute(WordprocessingNamespace + "fldLock"))));
                 return;
             }
 
@@ -832,7 +834,7 @@ internal sealed partial class DocxReader
             {
                 DocxComplexFieldState field = complexFieldStack[fieldIndex];
                 string instruction = field.Instruction.ToString();
-                string? placeholder = ResolveFieldPlaceholder(instruction);
+                string? placeholder = ResolveFieldPlaceholder(instruction, field.IsLocked);
                 if (placeholder is null && (!field.HasSeparate || !field.HasCachedResult))
                 {
                     continue;
@@ -847,7 +849,7 @@ internal sealed partial class DocxReader
         void AddComplexFieldReference(DocxComplexFieldState field, string? instruction, string? placeholder)
         {
             instruction ??= field.Instruction.ToString();
-            placeholder ??= ResolveFieldPlaceholder(instruction);
+            placeholder ??= ResolveFieldPlaceholder(instruction, field.IsLocked);
             int textRunIndex = field.ResultRunCount == 0 && !field.PlaceholderEmitted
                 ? runs.Count
                 : field.TextRunIndex;
@@ -926,7 +928,7 @@ internal sealed partial class DocxReader
 
             field.Instruction.Append(instructionText);
             field.InstructionRunCount++;
-            string? fieldPlaceholder = ResolveFieldPlaceholder(field.Instruction.ToString());
+            string? fieldPlaceholder = ResolveFieldPlaceholder(field.Instruction.ToString(), field.IsLocked);
             if (fieldPlaceholder is not null && !field.PlaceholderEmitted)
             {
                 field.EnsureTextSpan(runs.Count, runs.Sum(run => run.Text.Length));

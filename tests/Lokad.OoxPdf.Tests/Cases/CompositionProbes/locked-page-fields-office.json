@@ -1,0 +1,19 @@
+{
+  "Controls": [
+    {
+      "Input": "locked-page-fields.docx",
+      "InputSha256": "3091FFB77312AD1051DD4855E16105F0FF159BC9FF6C59036435A97D43BD31B5",
+      "WordPdfSha256": "77A4B535368584580DF1EE6523E4989D67DCDEE381F6E95D2ACC4BC768B9AD86",
+      "WordText": "PAGE simple unlocked: 1 \nPAGE simple locked: 99 \nPAGE complex unlocked: 1 \nPAGE complex locked: 99 \nNUMPAGES simple unlocked: 1 \nNUMPAGES simple locked: 88 \nNUMPAGES complex unlocked: 1 \nNUMPAGES complex locked: 88 \n",
+      "Office": "Word 16.0 Final/preserved layout"
+    },
+    {
+      "Input": "locked-page-field-edges.docx",
+      "InputSha256": "413452AD02CDEBE4F4A854ADC652ABD135C4C0863D79086B72BF50C5E54B0BDC",
+      "WordPdfSha256": "41A191BB6FE9B87EBF4585BB6BAE4C02566EF759661E1079A345D41B403193AF",
+      "WordText": "Simple empty: [] \nComplex empty: [] \nSplit locked: [42] \nNested locked: [before 77 after] \nLocked outer: [before 1 after] \nSimple locked outer: [before 1 after] \n",
+      "Office": "Word 16.0 Final/preserved layout"
+    }
+  ],
+  "Scope": "Independent visible content and lock semantics; no glyph-position or pixel-parity claim."
+}

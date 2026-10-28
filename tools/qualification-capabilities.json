@@ -1,4 +1,15 @@
 {
+  "docx-locked-page-fields": [
+      "DocxLockedFields",
+      "DocxDynamicFieldFormat",
+      "DocxReaderPreservesFieldReferencesStructurally",
+      "DocxReaderPreservesDynamicFieldReferencesInsideNoteStories",
+      "DocxNestedComplexFieldsUseCachedResultsAndInspectionCounters",
+      "DocxComplexFieldWithCachedResultDoesNotEmitUnsupportedDiagnostic",
+      "DocxComplexFieldSpanningInlineContentControlUsesCachedResult",
+      "DocxLiteralFieldLikeTextSurvivesWhileActualFieldsResolve",
+      "DocxReaderSizesRunlessFieldPlaceholderThroughStyleCascade"
+  ],
   "pptx-source-slide-numbers": [
       "PptxSlideNumbers",
       "PptxSlideMembership",

@@ -10,8 +10,10 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
-    private static string? ResolveFieldPlaceholder(string? instruction)
-        => DocxFieldText.Placeholder(ResolveFieldKind(instruction));
+    // A lock preserves the stored result, including an empty result, while the
+    // opcode remains available for source inspection. Nested fields own their locks.
+    private static string? ResolveFieldPlaceholder(string? instruction, bool isLocked = false)
+        => isLocked ? null : DocxFieldText.Placeholder(ResolveFieldKind(instruction));
 
     private static bool UsesDefaultDynamicFieldFormatting(string? instruction, DocxFieldKind kind) => kind switch
     {
