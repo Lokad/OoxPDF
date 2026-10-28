@@ -55,6 +55,12 @@ reports retain skip reasons and counts. An expected skip never replaces a failed
 check when joining repaired reports. Undeclared skips and failures retain their
 reports and reject qualification.
 
+`JoinQualificationTestReports.ps1` requires the final artifact's test assembly
+to match the final supplied report-producing harness. Every source report must
+contain method results. Equivalent artifact copies remain valid by identity;
+earlier passes keep their original provenance without rerunning. Changed final
+test bytes require a corresponding final run before the join can publish.
+
 For qualification, bind the case or family to the already qualified CLI:
 
 ```powershell

@@ -1,6 +1,6 @@
 # Exercise report reuse with small identity fixtures; no build, conversion or test-runner replay.
 [CmdletBinding()]
-param([string] $OutputDirectory)
+param([string] $OutputDirectory, [string] $JoinScript = (Join-Path $PSScriptRoot 'JoinQualificationTestReports.ps1'))
 $ErrorActionPreference='Stop'
 if (!$OutputDirectory) { $OutputDirectory=Join-Path (Split-Path $PSScriptRoot) ('artifacts/qualification-report-join-test-'+[Guid]::NewGuid().ToString('N')) }
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'Use a fresh self-test directory' }
@@ -9,7 +9,7 @@ $root=(Resolve-Path -LiteralPath $OutputDirectory).Path
 $repo=Join-Path $root 'repo'
 New-Item -ItemType Directory -Path (Join-Path $repo 'tools') -Force | Out-Null
 $join=Join-Path $repo 'tools/JoinQualificationTestReports.ps1'
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'JoinQualificationTestReports.ps1') -Destination $join
+Copy-Item -LiteralPath $JoinScript -Destination $join
 function Write-Text([string] $Path,[string] $Text) {
     New-Item -ItemType Directory -Path (Split-Path -Parent $Path) -Force | Out-Null
     [IO.File]::WriteAllText($Path,$Text,[Text.UTF8Encoding]::new($false))
@@ -82,6 +82,41 @@ function Reject([string] $Name,[string] $Pattern) {
     if (!$caught -or $caught -notmatch $Pattern -or (Test-Path -LiteralPath $path)) { throw ('Missing pre-publication rejection: '+$Name+' / '+$caught) }
     $script:rejections += $Name
 }
+# A final artifact may be stored separately, but its harness must have been run.
+Write-Text (Join-Path $repo 'tests/observer.txt') 'unrun final harness'
+$null=Invoke-Git @('add','tests/observer.txt');$null=Invoke-Git @('commit','--quiet','-m','unrun test repair')
+$unrunRevision=[string](Invoke-Git @('rev-parse','HEAD'))
+$unrun=Join-Path $repo 'artifacts/unrun-final'
+Copy-Item -LiteralPath (Join-Path $repo 'artifacts/after') -Destination $unrun -Recurse
+Write-Text (Join-Path $unrun $tests) 'different final test version, never run'
+$unrunPin=Get-Content -LiteralPath (Join-Path $unrun 'identity.json') -Raw | ConvertFrom-Json -AsHashtable
+$unrunPin.Revision=$unrunRevision
+$unrunPin.TestAssemblySha256=$unrunPin.Assets[$tests]=(Get-FileHash -LiteralPath (Join-Path $unrun $tests)).Hash
+Write-Json (Join-Path $unrun 'identity.json') $unrunPin
+$config.FinalArtifact='repo/artifacts/unrun-final';Write-Json $manifest $config
+Reject 'untested-final-harness' 'Final artifact test assembly differs'
+$config.FinalArtifact='repo/artifacts/before';Write-Json $manifest $config
+Reject 'earlier-final-harness' 'Final artifact test assembly differs'
+# An empty final report must not stand in for execution of the new harness.
+Write-Json (Join-Path $root 'empty-final.json') @{passed=0;failed=0;skipped=0;tests=@()}
+$config.FinalArtifact='repo/artifacts/unrun-final'
+$config.Repairs+=@{Artifact='repo/artifacts/unrun-final';Report='empty-final.json'}
+Write-Json $manifest $config
+Reject 'empty-final-run' 'at least one test method'
+[IO.File]::WriteAllBytes($manifest,$positiveInputs[$manifest])
+$config=Get-Content -LiteralPath $manifest -Raw | ConvertFrom-Json -AsHashtable
+$copy=Join-Path $repo 'artifacts/tested-final-copy'
+Copy-Item -LiteralPath (Join-Path $repo 'artifacts/after') -Destination $copy -Recurse
+$copyConfig=$config.Clone();$copyConfig.FinalArtifact='repo/artifacts/tested-final-copy'
+$copyManifest=Join-Path $root 'tested-final-copy-manifest.json';Write-Json $copyManifest $copyConfig
+$copyOutput=Join-Path $root 'tested-final-copy.json'
+$null=& $join -Manifest $copyManifest -OutputPath $copyOutput
+$copyResult=Get-Content -LiteralPath $copyOutput -Raw | ConvertFrom-Json
+if ($copyResult.TestAssemblySha256 -ne $result.TestAssemblySha256 -or $copyResult.passed -ne 3 -or
+    $copyResult.MethodAttempts -ne 4 -or
+    ($copyResult.tests | Where-Object name -eq 'Unchanged').SourceTestAssemblySha256 -eq $copyResult.TestAssemblySha256) {
+    throw 'Equivalent final copies must preserve tested identity and earlier-pass provenance'
+}
 # A method first failing during a repair must also finish with a real pass.
 Write-Json (Join-Path $root 'repair-failed.json') @{passed=1;failed=1;skipped=0;tests=@(
     @{name='Corrected';outcome='passed'},@{name='Neighbor';outcome='failed';detail='failure during repair'})}
@@ -143,12 +178,14 @@ $null=Invoke-Git @('add','src/source.txt');$null=Invoke-Git @('commit','--quiet'
 $finalPin.Revision=[string](Invoke-Git @('rev-parse','HEAD'));Write-Json $finalPinPath $finalPin
 Reject 'changed-production' 'Production source changed'
 foreach ($path in $positiveInputs.Keys) { [IO.File]::WriteAllBytes($path,$positiveInputs[$path]) }
-$positivePins=@($result.Manifest,$result.Selection,$result.Tool,$resolved.Manifest,$resolved.Selection,$resolved.Tool)
-foreach ($source in @($result.Sources)+@($resolved.Sources)) { $positivePins+=@($source.Report,$source.ArtifactIdentity) }
+$positivePins=@($result.Manifest,$result.Selection,$result.Tool,$resolved.Manifest,$resolved.Selection,$resolved.Tool,
+    $copyResult.Manifest,$copyResult.Selection,$copyResult.Tool)
+foreach ($source in @($result.Sources)+@($resolved.Sources)+@($copyResult.Sources)) { $positivePins+=@($source.Report,$source.ArtifactIdentity) }
 foreach ($pin in $positivePins) {
     if ((Get-FileHash -LiteralPath $pin.Path).Hash -ne $pin.Sha256) { throw 'Negative fixtures invalidated retained positive provenance' }
 }
 Write-Json (Join-Path $root 'evidence.json') @{PositiveReportSha256=(Get-FileHash -LiteralPath $positive).Hash
-    ResolvedRepairReportSha256=(Get-FileHash -LiteralPath $resolvedPath).Hash;PositiveJoins=2
+    ResolvedRepairReportSha256=(Get-FileHash -LiteralPath $resolvedPath).Hash
+    TestedFinalCopyReportSha256=(Get-FileHash -LiteralPath $copyOutput).Hash;PositiveJoins=3
     Rejections=$rejections;FilesRetained=$true;Builds=0;Conversions=0;RunnerInvocations=0}
-"Qualification report join checks pass: two provenance-preserving joins, $($rejections.Count) pre-publication rejections; no builds/tests/conversions."
+"Qualification report join checks pass: three provenance-preserving joins, $($rejections.Count) pre-publication rejections; no builds/tests/conversions."

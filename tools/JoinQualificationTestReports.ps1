@@ -64,6 +64,11 @@ foreach ($artifact in $pins.Keys) {
         if ((Get-FileHash -LiteralPath (Join-Path $artifact $name)).Hash -ne $pin.Inputs[$name]) { throw 'A pinned public input differs' }
     }
 }
+# Earlier passes may retain their original harness, but the declared final
+# harness must be the one used by the final supplied run, wherever it is stored.
+if (!$last.TestAssemblySha256 -or $last.TestAssemblySha256 -ne $pins[$attempts[-1].Artifact].TestAssemblySha256) {
+    throw 'Final artifact test assembly differs from the final report-producing harness'
+}
 $rows=[Collections.Generic.Dictionary[string,object]]::new([StringComparer]::Ordinal)
 $initialFailures=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $observedFailures=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
@@ -90,6 +95,7 @@ foreach ($attempt in $attempts) {
         $row.SourceTestAssemblySha256=$pins[$attempt.Artifact].TestAssemblySha256
         $rows[$test.name]=$row
     }
+    if (!$seen.Count) { throw 'A source report must contain at least one test method' }
     foreach ($outcome in @('passed','failed','skipped')) {
         if ($counts[$outcome] -ne $report.$outcome) { throw 'Report totals differ from method outcomes' }
     }
