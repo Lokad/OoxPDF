@@ -43,7 +43,7 @@ internal static class PptxNoWrapDistributionTests
             PptxSceneNode node = scene.Slides[0].SlideNodes[0];
             var resolver = new PresentationFontResolver(new DistributionFontResolver());
             var xml = PptxSceneTextAgreementTests.ReadXmlSpans(node, document, scene, resolver: resolver);
-            var fed = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Theme, scene.Slides[0].SlideColorMap, 1, false, [], resolver, CancellationToken.None);
+            var fed = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, false, [], resolver, CancellationToken.None);
             TestAssert.Equal(xml.Count, fed.Count);
             TestAssert.True(xml.Any(x => x.Run.Text.Contains("ABAB", StringComparison.Ordinal)), "Nominal text must retain word spans.");
             for (int i = 0; i < xml.Count; i++)

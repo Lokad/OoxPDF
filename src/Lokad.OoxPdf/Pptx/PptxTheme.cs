@@ -7,9 +7,6 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed class PptxTheme
 {
-    private const string ThemeRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme";
-    private const string SlideMasterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
-
     private PptxTheme(
         IReadOnlyDictionary<string, RgbColor> colors,
         string? majorLatinFont,
@@ -56,34 +53,9 @@ internal sealed class PptxTheme
 
     public static PptxTheme Empty { get; } = new(new Dictionary<string, RgbColor>(), null, null, null, null, null, null, [], [], []);
 
-    public static PptxTheme Load(OoxPackage package, string presentationPartName, CancellationToken cancellationToken)
+    public static PptxTheme Load(OoxPackage package, OoxPart themePart, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        OoxRelationship? themeRelationship = package.GetRelationships(presentationPartName, cancellationToken)
-            .FirstOrDefault(r => !r.IsExternal && r.Type == ThemeRelationshipType && r.ResolvedTarget is not null);
-        string? themePartName = themeRelationship?.ResolvedTarget;
-        if (themePartName is null)
-        {
-            OoxRelationship? masterRelationship = package.GetRelationships(presentationPartName, cancellationToken)
-                .FirstOrDefault(r => !r.IsExternal && r.Type == SlideMasterRelationshipType && r.ResolvedTarget is not null);
-            themePartName = masterRelationship?.ResolvedTarget is null
-                ? null
-                : package.GetRelationships(masterRelationship.ResolvedTarget, cancellationToken)
-                    .FirstOrDefault(r => !r.IsExternal && r.Type == ThemeRelationshipType && r.ResolvedTarget is not null)
-                    ?.ResolvedTarget;
-        }
-
-        if (themePartName is null)
-        {
-            return Empty;
-        }
-
-        OoxPart? themePart = package.GetPart(themePartName);
-        if (themePart is null)
-        {
-            return Empty;
-        }
-
         XDocument document = package.LoadXml(themePart, cancellationToken);
         var colors = new Dictionary<string, RgbColor>(StringComparer.Ordinal);
         XElement? colorScheme = document.Descendants(DrawingNamespace + "clrScheme").FirstOrDefault();

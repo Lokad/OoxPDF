@@ -1,0 +1,105 @@
+{
+  "Scope": "Source-owned master accent fills and inline run picture visibility; geometry retained independently, no overall pixel-parity claim.",
+  "Rows": [
+    {
+      "File": "pptx-master-themes-distinct.pptx",
+      "InputSha256": "E45ED5BE4DE78CC6D6E2200C394ED6D0EDBF7D9412A82094A04D814AED680120",
+      "OfficePdfSha256": "D118D99D26AA44DE604283325938B064440523B5B3B32378B0D0891106DEC2E2",
+      "OfficeApp": "PowerPoint",
+      "OfficeVersion": "16.0",
+      "Mode": "presentation",
+      "Pages": [
+        {
+          "Page": 1,
+          "ImageCount": 0,
+          "AfterBounds": [],
+          "ThemeRectangles": [
+            {
+              "Rect": [
+                120.0,
+                160.0,
+                420.0,
+                320.0
+              ],
+              "Fill": [
+                1.0,
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "Page": 2,
+          "ImageCount": 0,
+          "AfterBounds": [],
+          "ThemeRectangles": [
+            {
+              "Rect": [
+                120.0,
+                160.0,
+                420.0,
+                320.0
+              ],
+              "Fill": [
+                0.0,
+                0.0,
+                1.0
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "File": "pptx-master-themes-same.pptx",
+      "InputSha256": "798902139FE7BBD882607AA5809AD53CAF9DC3514D61DC991DDA56B013B9668A",
+      "OfficePdfSha256": "A8D1F1BF1837CB8FC12B6D0B1D93957A76FED1B6F27A0F3FA8CFE8310966399A",
+      "OfficeApp": "PowerPoint",
+      "OfficeVersion": "16.0",
+      "Mode": "presentation",
+      "Pages": [
+        {
+          "Page": 1,
+          "ImageCount": 0,
+          "AfterBounds": [],
+          "ThemeRectangles": [
+            {
+              "Rect": [
+                120.0,
+                160.0,
+                420.0,
+                320.0
+              ],
+              "Fill": [
+                1.0,
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        {
+          "Page": 2,
+          "ImageCount": 0,
+          "AfterBounds": [],
+          "ThemeRectangles": [
+            {
+              "Rect": [
+                120.0,
+                160.0,
+                420.0,
+                320.0
+              ],
+              "Fill": [
+                1.0,
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

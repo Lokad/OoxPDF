@@ -25,7 +25,6 @@ internal sealed partial class PptxRenderer
     {
         cancellationToken.ThrowIfCancellationRequested();
         PptxScene scene = new PptxSceneBuilder().Build(document, package, cancellationToken);
-        PptxTheme theme = scene.Theme;
         var imageCache = new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase);
         // one bounded workbook model per embedded part, shared by every chart
         // frame of this conversion (like the image cache above). Each model is already
@@ -57,7 +56,7 @@ internal sealed partial class PptxRenderer
             var graphics = new PdfGraphicsBuilder();
             var textSpanMemo = new Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>(PptxTextSpanMemoKeyComparer.Instance);
             var tableFrameMemo = new Dictionary<PptxTableFrameMemoKey, TableFrameLayout?>(PptxTableFrameMemoKeyComparer.Instance);
-            PptxRenderContext context = CreateRenderContext(document, theme, slide, slideXml, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache, textSpanMemo, tableFrameMemo);
+            PptxRenderContext context = CreateRenderContext(document, slide, slideXml, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache, textSpanMemo, tableFrameMemo);
 
             bool masterBackgroundPainted = RenderBackground(context, context.SceneSlide.MasterBackground, graphics, defaultWhenMissing: false);
             bool layoutBackgroundPainted = RenderBackground(context, context.SceneSlide.LayoutBackground, graphics, defaultWhenMissing: false);
@@ -129,12 +128,11 @@ internal sealed partial class PptxRenderer
             return null;
         }
 
-        return CreateRenderContext(document, scene.Theme, slide, slideXml, sceneSlide, new PresentationFontResolver(null), imageCache, diagnosticSink, cancellationToken);
+        return CreateRenderContext(document, slide, slideXml, sceneSlide, new PresentationFontResolver(null), imageCache, diagnosticSink, cancellationToken);
     }
 
     private static PptxRenderContext CreateRenderContext(
         PptxDocument document,
-        PptxTheme theme,
         PptxSlide slide,
         XDocument slideXml,
         PptxSceneSlide sceneSlide,
@@ -153,7 +151,7 @@ internal sealed partial class PptxRenderer
             slideXml,
             sceneSlide.SlideRelationships,
             sceneSlide.SlideColorMap);
-        return new PptxRenderContext(document, theme, slide, sceneSlide, slideSource, BuildInheritedSources(), fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache ?? new Dictionary<string, ChartWorkbookData?>(StringComparer.Ordinal), textSpanMemo ?? new Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>(PptxTextSpanMemoKeyComparer.Instance), tableFrameMemo ?? new Dictionary<PptxTableFrameMemoKey, TableFrameLayout?>(PptxTableFrameMemoKeyComparer.Instance));
+        return new PptxRenderContext(document, slide, sceneSlide, slideSource, BuildInheritedSources(), fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache ?? new Dictionary<string, ChartWorkbookData?>(StringComparer.Ordinal), textSpanMemo ?? new Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>(PptxTextSpanMemoKeyComparer.Instance), tableFrameMemo ?? new Dictionary<PptxTableFrameMemoKey, TableFrameLayout?>(PptxTableFrameMemoKeyComparer.Instance));
 
         IReadOnlyList<PptxRenderSource> BuildInheritedSources()
         {

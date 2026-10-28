@@ -2288,7 +2288,7 @@ internal static class PptxModelTests
         XElement cellRun = cell.TextBody!.Descendants(OoxNamespaces.DrawingNamespace + "r")
             .Single(run => run.Element(OoxNamespaces.DrawingNamespace + "t")?.Value == "CellMapped");
         TestAssert.True(PptxColorResolver.TryReadSolidColor(cellRun.Element(OoxNamespaces.DrawingNamespace + "rPr"),
-            scene.Theme, scene.Slides[0].SlideColorMap, out RgbColor cellTextColor), "The live color resolver reads the cell run fill.");
+            scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, out RgbColor cellTextColor), "The live color resolver reads the cell run fill.");
         TestAssert.Equal(new RgbColor(17, 34, 51), cellTextColor);
         TestAssert.Equal(new RgbColor(17, 34, 51), cell.Fill.Color);
         TestAssert.Equal(new RgbColor(68, 85, 102), cell.Borders.Left.Line.Color);

@@ -8,6 +8,7 @@ namespace Lokad.OoxPdf.Pptx;
 internal sealed record PptxSceneSlide(
     int Index,
     string PartName,
+    PptxTheme Theme,
     string? MasterPartName,
     string? LayoutPartName,
     XDocument? MasterXml,

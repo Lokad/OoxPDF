@@ -5,7 +5,7 @@ using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Pptx;
 
-internal sealed record PptxScene(PptxDocument Document, PptxTheme Theme, IReadOnlyList<PptxSceneSlide> Slides);
+internal sealed record PptxScene(PptxDocument Document, IReadOnlyList<PptxSceneSlide> Slides);
 
 internal sealed record PptxSceneSnapshot(IReadOnlyList<PptxSceneSlideSnapshot> Slides);
 
@@ -213,6 +213,7 @@ internal sealed partial class PptxSceneBuilder
     private const string HyperlinkRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink";
     private const string SlideLayoutRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
     private const string SlideMasterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
+    private const string ThemeRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme";
     private const string ChartExternalDataPackageRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
     private const string ChartColorStyleRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/chartColorStyle";
     private const string ChartStyleRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/chartStyle";
@@ -220,7 +221,10 @@ internal sealed partial class PptxSceneBuilder
     public PptxScene Build(PptxDocument document, OoxPackage package, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName, cancellationToken);
+        // Themes belong to masters, not to the presentation as a whole. Share
+        // parsed models only by their actual part identity within this scene.
+        var themes = new Dictionary<string, PptxTheme>(StringComparer.OrdinalIgnoreCase);
+        PptxTheme? fallbackTheme = null;
         var slides = new List<PptxSceneSlide>(document.Slides.Count);
         foreach (PptxSlide slide in document.Slides)
         {
@@ -231,6 +235,7 @@ internal sealed partial class PptxSceneBuilder
                 slides.Add(new PptxSceneSlide(
                     slide.Index,
                     slide.PartName,
+                    GetFallbackTheme(),
                     null,
                     null,
                     null,
@@ -258,6 +263,7 @@ internal sealed partial class PptxSceneBuilder
             XDocument slideXml = LoadXml(package, slidePart, cancellationToken);
             OoxPart? layoutPart = GetRelatedPart(package, slide.PartName, SlideLayoutRelationshipType, cancellationToken);
             OoxPart? masterPart = layoutPart is null ? null : GetRelatedPart(package, layoutPart.Name, SlideMasterRelationshipType, cancellationToken);
+            PptxTheme theme = ReadTheme(masterPart?.Name) ?? GetFallbackTheme();
             XDocument? masterXml = masterPart is null ? null : LoadXml(package, masterPart, cancellationToken);
             XDocument? layoutXml = layoutPart is null ? null : LoadXml(package, layoutPart, cancellationToken);
             IReadOnlyDictionary<string, OoxRelationship> masterRelationships = masterPart is null ? new Dictionary<string, OoxRelationship>() : ReadRelationships(package, masterPart.Name, cancellationToken);
@@ -273,6 +279,7 @@ internal sealed partial class PptxSceneBuilder
             slides.Add(new PptxSceneSlide(
                 slide.Index,
                 slide.PartName,
+                theme,
                 masterPart?.Name,
                 layoutPart?.Name,
                 masterXml,
@@ -296,7 +303,28 @@ internal sealed partial class PptxSceneBuilder
                 ReadNodes(slideXml, slideSources, theme, slideColorMap, package, slideRelationships, cancellationToken)));
         }
 
-        return new PptxScene(document, theme, slides);
+        return new PptxScene(document, slides);
+
+        PptxTheme? ReadTheme(string? ownerPartName)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            OoxPart? part = ownerPartName is null ? null :
+                GetRelatedPart(package, ownerPartName, ThemeRelationshipType, cancellationToken);
+            if (part is null) return null;
+            if (!themes.TryGetValue(part.Name, out PptxTheme? parsed))
+                themes.Add(part.Name, parsed = PptxTheme.Load(package, part, cancellationToken));
+            return parsed;
+        }
+
+        PptxTheme GetFallbackTheme()
+        {
+            if (fallbackTheme is not null) return fallbackTheme;
+            var relationships = package.GetRelationships(document.PresentationPartName, cancellationToken);
+            string? owner = relationships.Any(r => !r.IsExternal && r.Type == ThemeRelationshipType && r.ResolvedTarget is not null)
+                ? document.PresentationPartName
+                : relationships.FirstOrDefault(r => !r.IsExternal && r.Type == SlideMasterRelationshipType && r.ResolvedTarget is not null)?.ResolvedTarget;
+            return fallbackTheme = ReadTheme(owner) ?? PptxTheme.Empty;
+        }
 
         bool HasSlideOleObject(XDocument slideXml)
         {

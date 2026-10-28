@@ -22,7 +22,6 @@ internal sealed record PptxRenderSource(
 
 internal sealed record PptxRenderContext(
     PptxDocument Document,
-    PptxTheme Theme,
     PptxSlide Slide,
     PptxSceneSlide SceneSlide,
     PptxRenderSource SlideSource,
@@ -37,6 +36,8 @@ internal sealed record PptxRenderContext(
     Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>>? TextSpanMemo = null,
     Dictionary<PptxTableFrameMemoKey, PptxRenderer.TableFrameLayout?>? TableFrameMemo = null)
 {
+    public PptxTheme Theme => SceneSlide.Theme;
+
     public IReadOnlyList<XDocument> InheritedXml { get; } = InheritedSources.Select(source => source.Xml).ToArray();
 
     public int SlideNumber => Slide.Index + 1;

@@ -25,7 +25,7 @@ internal static class PptxBulletChoiceTests
             foreach (var node in scene.Slides[0].SlideNodes)
             {
                 string before = node.Source.ToString(SaveOptions.DisableFormatting);
-                var spans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Theme, scene.Slides[0].SlideColorMap,
+                var spans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap,
                     1, false, [], resolver, default);
                 var bullet = spans.Single(span => span.Run.Text == "*").Run;
                 var expected = gold.RootElement.GetProperty("Rows")[index];

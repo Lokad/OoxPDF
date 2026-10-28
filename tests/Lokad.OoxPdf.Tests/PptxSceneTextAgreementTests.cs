@@ -115,7 +115,7 @@ internal static class PptxSceneTextAgreementTests
 
         IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadXmlSpans(node, document, scene);
         var resolver = CreateCannedPresentationResolver("memory:r14-scene-fed");
-        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None);
+        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None);
         TestAssert.Equal(xmlSpans.Count, fedSpans.Count);
         for (int index = 0; index < xmlSpans.Count; index++)
         {
@@ -155,7 +155,7 @@ internal static class PptxSceneTextAgreementTests
                     continue;
                 }
                 IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadXmlSpans(node, document, scene, true);
-                IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Theme, scene.Slides[0].SlideColorMap, 1, true, InheritedSources(scene), resolver, CancellationToken.None);
+                IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, true, InheritedSources(scene), resolver, CancellationToken.None);
                 TestAssert.Equal(xmlSpans.Count, fedSpans.Count);
                 comparedSpans += xmlSpans.Count;
                 for (int index = 0; index < xmlSpans.Count; index++)
@@ -222,7 +222,7 @@ internal static class PptxSceneTextAgreementTests
             }
 
             IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadXmlSpans(node, document, scene);
-            IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None);
+            IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None);
             comparedSpans += xmlSpans.Count;
             TestAssert.Equal(xmlSpans.Count, fedSpans.Count);
             for (int index = 0; index < xmlSpans.Count; index++)
@@ -280,7 +280,7 @@ internal static class PptxSceneTextAgreementTests
 
         IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadXmlSpans(node, document, scene);
         var resolver = CreateCannedPresentationResolver("memory:r14-scene-fed-grouped");
-        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None);
+        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None);
         TestAssert.Equal(xmlSpans.Count, fedSpans.Count);
         TestAssert.True(xmlSpans.Count > 0, "Expected the grouped shape to exercise fed-path spans.");
         for (int index = 0; index < xmlSpans.Count; index++)
@@ -1147,7 +1147,6 @@ internal static class PptxSceneTextAgreementTests
             scene.Slides[0].SlideColorMap);
         var context = new PptxRenderContext(
             document,
-            scene.Theme,
             document.Slides[0],
             scene.Slides[0],
             slideSource,
@@ -1314,7 +1313,6 @@ internal static class PptxSceneTextAgreementTests
             scene.Slides[0].SlideColorMap);
         var context = new PptxRenderContext(
             document,
-            scene.Theme,
             document.Slides[0],
             scene.Slides[0],
             slideSource,
@@ -1441,7 +1439,7 @@ internal static class PptxSceneTextAgreementTests
             // do not retain the obsolete shape-cloning production wrapper.
             MethodInfo build = typeof(PptxRenderer).GetMethods(flags)
                 .Single(method => method.Name == "BuildTextLayoutModel" && method.GetParameters().Length == 9);
-            object layout = build.Invoke(null, [TestAssert.NotNull(node.Source.Document), document, scene.Theme, scene.Slides[0].SlideColorMap, 1, includePlaceholders, InheritedSources(scene), resolver, CancellationToken.None])!;
+            object layout = build.Invoke(null, [TestAssert.NotNull(node.Source.Document), document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, includePlaceholders, InheritedSources(scene), resolver, CancellationToken.None])!;
             var frames = (System.Collections.IEnumerable)layout.GetType().GetProperty("Frames")!.GetValue(layout)!;
             TestAssert.True(frames.Cast<object>().All(frame =>
             {
