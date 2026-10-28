@@ -51,7 +51,7 @@ internal static class PptxInheritanceTests
                 });
             }
             WithDeck(parts, (document, package) => CheckBackground(Render(document, package)[0],
-                owner switch { 0 => "1 0 0 rg", 1 => "0 1 0 rg", 2 => "0 0 1 rg", _ => "1 1 1 rg" }));
+                owner switch { 0 => "1 0 0 rg", 1 => "0 1 0 rg", 2 => "0 0 1 rg", _ => "1 g" }));
         }
     }
 
@@ -120,7 +120,7 @@ internal static class PptxInheritanceTests
 
     private static void CheckBackground(PdfPage page, string expected)
     {
-        TestAssert.Equal(expected, Regex.Match(page.Content, @"(?m)^[\d.]+ [\d.]+ [\d.]+ rg\r?$").Value.TrimEnd('\r'));
+        TestAssert.Equal(expected, Regex.Match(page.Content, @"(?m)^(?:[\d.]+ [\d.]+ [\d.]+ rg|[\d.]+ g)\r?$").Value.TrimEnd('\r'));
         string rectangle = "0 0 " + PdfDocumentWriter.FormatNumber(page.Width) + " " + PdfDocumentWriter.FormatNumber(page.Height) + " re f*";
         TestAssert.Equal(1, page.Content.Split('\n').Count(line => line.TrimEnd('\r') == rectangle));
     }
