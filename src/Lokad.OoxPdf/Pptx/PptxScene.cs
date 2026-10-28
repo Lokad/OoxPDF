@@ -5,7 +5,7 @@ using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Pptx;
 
-internal sealed record PptxScene(PptxDocument Document, IReadOnlyList<PptxSceneSlide> Slides);
+internal sealed record PptxScene(IReadOnlyList<PptxSceneSlide> Slides);
 
 internal sealed record PptxSceneSnapshot(IReadOnlyList<PptxSceneSlideSnapshot> Slides);
 
@@ -303,7 +303,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadNodes(slideXml, slideSources, theme, slideColorMap, package, slideRelationships, cancellationToken)));
         }
 
-        return new PptxScene(document, slides);
+        return new PptxScene(slides);
 
         PptxTheme? ReadTheme(string? ownerPartName)
         {

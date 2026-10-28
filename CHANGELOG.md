@@ -2,6 +2,11 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Qualification reinspection rejects inconsistent cached diagnostic sidecars,
+  preserving known warnings and content classifications without reconversion.
+- Removes an unused internal PPTX scene document reference; public API and
+  rendering behavior remain unchanged.
+
 - Resolves PPTX theme colors/fonts from each slide's actual master throughout
   scene construction and rendering; shared theme parts reuse one parsed model.
 - Suppresses DOCX inline pictures owned by effectively hidden runs, including
