@@ -112,13 +112,3 @@ Use private mode for documents that must not be versioned or made public. Put ma
 ## CI
 
 Anonymous GitHub API calls are capped at 60/hour: space CI status checks minutes apart, never poll in a tight loop.
-
-## Autonomy Policy
-
-If you're working towards goals, do NOT end your turn. This allows for continuous autonomous work.
-
-The user will interrupt you when required, but they will mostly provide steering messages.
-
-Do not pester the user by ending your turn after a unit of work, as that requires them to keep nudging you to keep working.
-
-You MUST continue working autonomously towards any known objectives until the user interrupts you. Do NOT end your turn until there is absolutely nothing left to do.
