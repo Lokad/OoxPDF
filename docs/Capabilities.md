@@ -35,7 +35,9 @@ and [diagnostics](Diagnostics.md) before relying on a conversion.
 Supported within the following constraints:
 
 - Slide order/size, hidden-slide exclusion and per-slide master-shape suppression;
-  common inherited backgrounds, shapes, theme colors and Latin theme fonts.
+  common inherited backgrounds, shapes, theme colors and Latin theme fonts
+  resolved from each slide's master. Missing master themes retain the existing
+  presentation/first-master fallback; theme-override expansion remains unsupported.
 - Common solid shapes, paths, straight lines, rotation/flips and nested group
   translation/scaling. Advanced/custom geometry and effects remain partial.
 - JPEG/PNG pictures and bounded native SVG paint. Crop/fill clipping, source
@@ -121,7 +123,9 @@ Supported within the following constraints:
   vertical merges and nested/fragmented layout retain qualified restrictions.
 - Inline raster/SVG pictures in qualified body/cell/header/footer containers,
   including supported crop/flips/rotation and source frames. Picture-only body
-  paragraphs use occupied height and collapsed spacing. Floating pictures/textboxes
+  paragraphs use occupied height and collapsed spacing. Inline pictures follow
+  effective run hiding, including inherited styles and explicit false overrides;
+  drawing-level `docPr hidden` alone retains Word's print behavior. Floating pictures/textboxes
   have bounded positioning, clipping, z-order and first-pass wrap exclusions;
   arbitrary Word reflow around floating content is unsupported.
 - Default headers/footers, simple page fields, supported notes and source-owned

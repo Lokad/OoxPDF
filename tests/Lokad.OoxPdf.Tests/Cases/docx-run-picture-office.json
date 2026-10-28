@@ -1,0 +1,74 @@
+{
+  "Scope": "Source-owned master accent fills and inline run picture visibility; geometry retained independently, no overall pixel-parity claim.",
+  "Rows": [
+    {
+      "File": "docx-run-picture-docpr.docx",
+      "InputSha256": "656320FD8B82CB9ECB1F3B6D9DC2F395E4A15FA151EB99520160D5F5CD71C00A",
+      "OfficePdfSha256": "DDF9805ABEBDBB7B6487992FB3F0A12F4B0829DCA4A4BF4DA70E95F0B88412C8",
+      "OfficeApp": "Word",
+      "OfficeVersion": "16.0",
+      "Mode": "final-preserve",
+      "Pages": [
+        {
+          "Page": 1,
+          "ImageCount": 1,
+          "AfterBounds": [
+            [
+              72.02400207519531,
+              174.1999969482422,
+              136.75201416015625,
+              187.5800018310547
+            ]
+          ],
+          "ThemeRectangles": []
+        }
+      ]
+    },
+    {
+      "File": "docx-run-picture-hidden.docx",
+      "InputSha256": "D8085AA5227F32B404533B88D0E618CD351E638A42741CDC63A695CA631530CC",
+      "OfficePdfSha256": "F26870DE5FEC8B1AFF4B682FDA7D76FDEFB062D636077B7E4960858B6CD8BD5C",
+      "OfficeApp": "Word",
+      "OfficeVersion": "16.0",
+      "Mode": "final-preserve",
+      "Pages": [
+        {
+          "Page": 1,
+          "ImageCount": 0,
+          "AfterBounds": [
+            [
+              72.02400207519531,
+              121.40000915527344,
+              136.75201416015625,
+              134.78001403808594
+            ]
+          ],
+          "ThemeRectangles": []
+        }
+      ]
+    },
+    {
+      "File": "docx-run-picture-visible.docx",
+      "InputSha256": "182DEB9907261835C31A18D7BC39F94B05AC155F55095127FAEBF3474E6B9954",
+      "OfficePdfSha256": "CBA59BA923A547D0963A26CE3AA221B68187485DE0FDF669A0D19800B316FFCF",
+      "OfficeApp": "Word",
+      "OfficeVersion": "16.0",
+      "Mode": "final-preserve",
+      "Pages": [
+        {
+          "Page": 1,
+          "ImageCount": 1,
+          "AfterBounds": [
+            [
+              72.02400207519531,
+              174.1999969482422,
+              136.75201416015625,
+              187.5800018310547
+            ]
+          ],
+          "ThemeRectangles": []
+        }
+      ]
+    }
+  ]
+}

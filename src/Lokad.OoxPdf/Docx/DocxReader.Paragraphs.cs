@@ -468,7 +468,8 @@ internal sealed partial class DocxReader
                 XElement formattingRun = firstRun is null || UsesDefaultDynamicFieldFormatting(instruction, kind)
                     ? new XElement(WordprocessingNamespace + "r") : firstRun;
                 AddFieldPlaceholderRun(formattingRun, placeholder, fieldSourceRunIndex, revision, kind);
-                if (firstRun is not null)
+                if (firstRun is not null && ResolveRunProperties(firstRun.Element(WordprocessingNamespace + "rPr"),
+                    paragraphStyleId, ReadCharacterStyleId(firstRun), styles, tableCellStyle?.Run).Hidden != true)
                     foreach (var image in ReadInlineImages(firstRun, package, relationships, revision, fieldSourceRunIndex, cancellationToken))
                         images.Add(revision?.Kind == DocxRevisionKind.Insertion && runs.Count > fieldTextRunIndex
                             ? image with { SourceRunStyle = runs[fieldTextRunIndex] } : image);
@@ -687,6 +688,9 @@ internal sealed partial class DocxReader
 
             void AddRunImages()
             {
+                // Pictures share their source run's resolved visibility. Keep
+                // the paragraph/source index even when that run paints nothing.
+                if (resolvedRun.Hidden == true) return;
                 var parsed = ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex, cancellationToken);
                 if (parsed.Count == 0) return;
                 if (revision?.Kind != DocxRevisionKind.Insertion) { images.AddRange(parsed); return; }

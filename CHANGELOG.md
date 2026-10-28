@@ -2,6 +2,12 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Resolves PPTX theme colors/fonts from each slide's actual master throughout
+  scene construction and rendering; shared theme parts reuse one parsed model.
+- Suppresses DOCX inline pictures owned by effectively hidden runs, including
+  inherited hiding and pictures accompanying computed fields. Paragraphs and
+  source positions remain; drawing-level `docPr hidden` retains Word's print behavior.
+
 - Preserves authored PPTX bullet size/font/color choices, including follow-text
   resets, and inherited styling when a paragraph supplies its own marker.
 - Excludes hidden drawing owners and groups from raw diagnostic fallbacks while

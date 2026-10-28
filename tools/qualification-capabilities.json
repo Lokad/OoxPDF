@@ -1,4 +1,26 @@
 {
+  "pptx-master-themes": [
+      "PptxMasterThemes",
+      "PptxSyntheticTheme",
+      "PptxThemeColorMap",
+      "PptxSyntheticTextBoxResolvesThemeEaAndCsFonts",
+      "SceneFedSpansMatchXmlPath",
+      "PptxLiveStylesHonorNoFillAndRetainLayoutSource",
+      "PptxBulletChoices"
+  ],
+  "docx-hidden-inline-pictures": [
+      "DocxHiddenPictures",
+      "DocxParagraphLayoutSuppressesHiddenRunText",
+      "DocxStaticStoryInlineImagesShareTheTextBaseline",
+      "DocxStaticStoryDeclaredFramesClipInlineImages",
+      "DocxFooterInlineImageReservesItsVisibleHeight",
+      "PortableRenderingInlinePictureLinksFollowVisibleFrames",
+      "PortableRenderingStaticPictureLinksRetainComposedFrames",
+      "DocxInlineCompositionHiddenRunPreservesMathGeometry",
+      "DocxInlineCompositionMeasurementPreservesSourceTrackingKerningAndHiddenRuns",
+      "DocxLockedFields",
+      "DocxReaderPreservesFieldReferencesStructurally"
+  ],
   "pptx-visible-diagnostics": [
       "PptxVisibleDiagnostics",
       "PptxDiagnosticAdmission",
