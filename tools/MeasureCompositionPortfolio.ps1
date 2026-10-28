@@ -31,7 +31,27 @@ function Get-PortfolioModes($Document) {
     if ($DocxPreset -eq 'Review') { return @('all-word-compatible') }
     return @('final-preserve','all-word-compatible')
 }
+function Get-VerifiedDiagnosticsHash([string] $Path, $Outcome, [string] $Id) {
+    $retained = $Outcome.PSObject.Properties['Diagnostics']
+    if (!$retained -or $retained.Value -isnot [Array]) { throw ('Retained diagnostics are missing or not an array: ' + $Id) }
+    # Compare semantic JSON values, but pin the exact bytes read in that check.
+    # This accepts formatting/property-order differences without trusting a stale
+    # sidecar or hashing a different file version after parsing it.
+    $bytes = [IO.File]::ReadAllBytes($Path)
+    $text = [Text.Encoding]::UTF8.GetString($bytes)
+    if ($text.Length -and $text[0] -eq [char]0xFEFF) { $text = $text.Substring(1) }
+    try {
+        $actual = [Text.Json.Nodes.JsonNode]::Parse($text)
+        $expected = [Text.Json.Nodes.JsonNode]::Parse((ConvertTo-Json -InputObject $retained.Value -Depth 12 -Compress))
+    }
+    catch { throw ('Reused diagnostics are invalid: ' + $Id) }
+    if ($actual -isnot [Text.Json.Nodes.JsonArray] -or ![Text.Json.Nodes.JsonNode]::DeepEquals($actual, $expected)) {
+        throw ('Reused diagnostics differ from the retained outcome: ' + $Id)
+    }
+    return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))
+}
 $priorByKey = @{}
+$priorDiagnosticsHashes = @{}
 $priorPath = $null
 $priorHash = $null
 if ($ReuseCandidateDirectory) {
@@ -62,6 +82,7 @@ if ($ReuseCandidateDirectory) {
             if ((Get-FileHash -LiteralPath (Join-Path $source 'candidate.pdf')).Hash -ne $row.PdfSha256) {
                 throw ('Reused PDF differs: ' + $key)
             }
+            $priorDiagnosticsHashes[$key] = Get-VerifiedDiagnosticsHash -Path (Join-Path $source 'diagnostics.json') -Outcome $row -Id $key
         }
     }
 }
@@ -94,6 +115,10 @@ foreach ($job in $jobs) {
             foreach ($name in @('candidate.pdf','diagnostics.json','convert.log')) {
                 Copy-Item -LiteralPath (Join-Path $source $name) -Destination (Join-Path $run $name)
             }
+            if ((Get-FileHash -LiteralPath $diagnosticsPath).Hash -ne $priorDiagnosticsHashes[$key] -or
+                (Get-FileHash -LiteralPath (Join-Path $source 'diagnostics.json')).Hash -ne $priorDiagnosticsHashes[$key]) {
+                throw ('Reused diagnostics changed during copying: ' + $key)
+            }
             if ((Get-FileHash -LiteralPath $pdf).Hash -ne $priorRow.PdfSha256 -or
                 (Get-FileHash -LiteralPath $priorPath).Hash -ne $priorHash) { throw 'Reused candidate changed during inspection' }
             $elapsedMs = $priorRow.ColdProcessElapsedMs
@@ -125,7 +150,15 @@ foreach ($job in $jobs) {
         if ($pageCount -lt 1) { throw ('No inspected PDF pages: ' + $document.Id) }
         $text = Normalize-Text (($operations.DecodedText) -join ' ')
         $missing = @($expectedText | Where-Object { !$text.Contains((Normalize-Text $_), [StringComparison]::Ordinal) })
-        $diagnostics = @(Get-Content -LiteralPath $diagnosticsPath -Raw | ConvertFrom-Json)
+        if ($ReuseCandidateDirectory) {
+            if ((Get-FileHash -LiteralPath $diagnosticsPath).Hash -ne $priorDiagnosticsHashes[$key] -or
+                (Get-FileHash -LiteralPath (Join-Path $source 'diagnostics.json')).Hash -ne $priorDiagnosticsHashes[$key] -or
+                (Get-FileHash -LiteralPath $priorPath).Hash -ne $priorHash) {
+                throw ('Reused diagnostics changed during inspection: ' + $key)
+            }
+            $diagnostics = @($priorRow.Diagnostics)
+        }
+        else { $diagnostics = @(Get-Content -LiteralPath $diagnosticsPath -Raw | ConvertFrom-Json) }
         $ignoredMath = @($diagnostics | Where-Object { $_.Id -eq 'DOCX_UNSUPPORTED_EQUATION' }).Count
         $rows += [ordered]@{
             Id=$document.Id;Mode=$mode;HeldOut=$document.HeldOut;InputSha256=$document.Sha256

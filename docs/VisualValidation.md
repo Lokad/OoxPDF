@@ -91,6 +91,13 @@ explicitly requested), rasterizes both PDFs through the pinned PDFium, compares
 pages and writes an assessment template. Reuse reference comparisons by exact
 input/options/PDF identity. Do not duplicate frozen and root qualification.
 
+`MeasureCompositionPortfolio.ps1 -ReuseCandidateDirectory` requires each saved
+outcome's `Diagnostics` array to agree with its diagnostic sidecar. Missing or
+contradictory provenance refuses the complete batch before copying or inspection.
+Verified bytes remain checked through copying and inspection; equivalent JSON
+formatting/property order and matching empty arrays remain reusable. Timings and
+PDF/runtime/input identities retain their original meaning; no conversion runs.
+
 `CompareCompositionPortfolio.ps1` reuses complete page measurements after matching
 PDF and threshold-source identities. It derives failures from those measurements
 and the current limits; cached `Failures` and `Thresholds` are not authoritative.
