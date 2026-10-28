@@ -69,6 +69,9 @@ Approximate or restricted:
   period/parenthesis forms with supported levels/starts and sequence resets.
   Empty/plain paragraphs and changed settings affect continuation; richer formats
   and table combinations remain restricted.
+- Bullet size/font/color follow the nearest authored choice, including explicit
+  follow-text resets; inherited styling survives a direct marker. Typography and
+  layout remain subject to the approximations above.
 - Clustered/stacked bar/column, line-with-markers and plain pie are closer-parity
   targets. Area, scatter/bubble, secondary axes, percent-stacked and leader-label
   layouts remain approximate; trendlines are diagnosed and omitted.

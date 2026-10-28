@@ -78,21 +78,21 @@ internal sealed partial class PptxRenderer
         }
 
         if (HasVideo(sceneSlide.SlideNodes) ||
-            slideXml.Descendants(PresentationNamespace + "video").Any() ||
-            slideXml.Descendants(DrawingNamespace + "videoFile").Any())
+            VisibleSlideElements(PresentationNamespace + "video").Any() ||
+            VisibleSlideElements(DrawingNamespace + "videoFile").Any())
         {
             Emit("PPTX_UNSUPPORTED_VIDEO", "video");
         }
 
         if (HasAudio(sceneSlide.SlideNodes) ||
-            slideXml.Descendants(PresentationNamespace + "audio").Any() ||
-            slideXml.Descendants(DrawingNamespace + "audioFile").Any())
+            VisibleSlideElements(PresentationNamespace + "audio").Any() ||
+            VisibleSlideElements(DrawingNamespace + "audioFile").Any())
         {
             Emit("PPTX_UNSUPPORTED_AUDIO", "audio");
         }
 
         if (sceneSlide.HasOleObject ||
-            slideXml.Descendants(PresentationNamespace + "oleObj").Any())
+            VisibleSlideElements(PresentationNamespace + "oleObj").Any())
         {
             Emit("PPTX_UNSUPPORTED_OLE_OBJECT", "OLE object");
         }
@@ -103,7 +103,7 @@ internal sealed partial class PptxRenderer
         }
 
         if (HasUnsupportedGraphicFrame(sceneSlide.SlideNodes) ||
-            slideXml.Descendants(PresentationNamespace + "graphicFrame").Any(IsUnsupportedGraphicFrame))
+            VisibleSlideElements(PresentationNamespace + "graphicFrame").Any(IsUnsupportedGraphicFrame))
         {
             Emit("PPTX_UNSUPPORTED_GRAPHIC_FRAME", "graphic frame");
         }
@@ -115,18 +115,22 @@ internal sealed partial class PptxRenderer
         EmitNodeDiagnostics(sceneSlide.LayoutNodes, false, sceneSlide.LayoutPartName ?? partName);
         EmitNodeDiagnostics(sceneSlide.SlideNodes, true, partName);
 
-        // These XML fallbacks cover non-scene content, including the slide
-        // background. Inherited styles and MustUnderstand checks remain above.
-        if (slideXml.Descendants(DrawingNamespace + "gradFill").Any(IsUnsupportedNonShapeGradientFill))
+        // Non-scene fallbacks retain background and orphan-content diagnostics,
+        // while drawing-owned content shares scene visibility, including groups.
+        // Part-level compatibility, timing and transition checks stay independent.
+        if (VisibleSlideElements(DrawingNamespace + "gradFill").Any(IsUnsupportedNonShapeGradientFill))
             Emit("PPTX_UNSUPPORTED_GRADIENT_FILL", "gradient fill");
-        if (slideXml.Descendants(DrawingNamespace + "pattFill").Any(IsUnsupportedNonShapePatternFill))
+        if (VisibleSlideElements(DrawingNamespace + "pattFill").Any(IsUnsupportedNonShapePatternFill))
             Emit("PPTX_UNSUPPORTED_PATTERN_FILL", "pattern fill");
-        if (slideXml.Descendants(DrawingNamespace + "bodyPr").Any(IsUnsupportedNonShapeTextOrientation))
+        if (VisibleSlideElements(DrawingNamespace + "bodyPr").Any(IsUnsupportedNonShapeTextOrientation))
             Emit("PPTX_UNSUPPORTED_TEXT_ORIENTATION", "vertical text");
-        if (slideXml.Descendants(DrawingNamespace + "bodyPr").Any(IsUnsupportedNonShapeTextVerticalOverflow))
+        if (VisibleSlideElements(DrawingNamespace + "bodyPr").Any(IsUnsupportedNonShapeTextVerticalOverflow))
             EmitTextOverflow();
-        if (slideXml.Descendants(DrawingNamespace + "alpha").Any(IsUnsupportedNonShapeAlpha))
+        if (VisibleSlideElements(DrawingNamespace + "alpha").Any(IsUnsupportedNonShapeAlpha))
             Emit("PPTX_UNSUPPORTED_TRANSPARENCY", "transparency");
+
+        IEnumerable<XElement> VisibleSlideElements(XName name) =>
+            slideXml.Descendants(name).Where(PptxSceneBuilder.IsVisibleDrawingContent);
 
         void EmitNodeDiagnostics(IReadOnlyList<PptxSceneNode> nodes, bool renderPlaceholders, string nodePartName)
         {

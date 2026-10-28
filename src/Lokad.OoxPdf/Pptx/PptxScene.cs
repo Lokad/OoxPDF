@@ -300,7 +300,7 @@ internal sealed partial class PptxSceneBuilder
 
         bool HasSlideOleObject(XDocument slideXml)
         {
-            return slideXml.Descendants(PresentationNamespace + "oleObj").Any();
+            return slideXml.Descendants(PresentationNamespace + "oleObj").Any(IsVisibleDrawingContent);
         }
 
         bool HasSlideTiming(XDocument slideXml)
@@ -410,7 +410,7 @@ internal sealed partial class PptxSceneBuilder
             XElement? nonVisualProperties = ReadNonVisualProperties(child);
             // Exclude hidden objects before their text, images, charts or group
             // children enter resource preflight and painting.
-            if (nonVisualProperties is not null && OoxXml.ReadBool(nonVisualProperties, "hidden"))
+            if (IsHiddenNonVisualProperties(nonVisualProperties))
             {
                 continue;
             }
@@ -484,6 +484,12 @@ internal sealed partial class PptxSceneBuilder
             .Select(element => (string?)element.Attribute("uri"))
             .Any(uri => uri?.Contains("drawingml/2006/diagram", StringComparison.OrdinalIgnoreCase) == true);
     }
+
+    internal static bool IsVisibleDrawingContent(XElement element) =>
+        !element.AncestorsAndSelf().Any(owner => IsHiddenNonVisualProperties(ReadNonVisualProperties(owner)));
+
+    private static bool IsHiddenNonVisualProperties(XElement? properties) =>
+        properties is not null && OoxXml.ReadBool(properties, "hidden");
 
     private static XElement? ReadNonVisualProperties(XElement element)
     {

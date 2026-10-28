@@ -29,6 +29,7 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(PptxDiagnosticAdmissionTests)),
         .. FromType("rendering-portable", typeof(PptxSlideNumberTests)),
         .. FromType("rendering-portable", typeof(PptxBulletChoiceTests)),
+        .. FromType("rendering-portable", typeof(PptxVisibleDiagnosticTests)),
         .. FromType("rendering-portable", typeof(DocxParagraphIdentityTests)),
         .. FromType("rendering-portable", typeof(DocxLockedFieldTests)),
         .. FromType("rendering-portable", typeof(DocxFontSlotTests)),

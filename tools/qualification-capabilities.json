@@ -1,4 +1,14 @@
 {
+  "pptx-visible-diagnostics": [
+      "PptxVisibleDiagnostics",
+      "PptxDiagnosticAdmission",
+      "PptxUnsupportedFeaturesEmitDiagnostics",
+      "PptxUnsupportedMediaDiagnosticsUseScenePictureState",
+      "PptxUnsupportedSmartArtDiagnosticsUseSceneGraphicFrameState",
+      "PptxUnsupportedDynamicDiagnosticsUseSceneSlideState",
+      "PptxUnsupportedTransparencyDiagnosticsUseSceneShapeState",
+      "PptxUnsupportedTableTextDiagnosticsUseSceneCellBodyProperties"
+  ],
   "pptx-bullet-choices": [
       "PptxBulletChoices",
       "PptxNumbering",

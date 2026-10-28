@@ -2,6 +2,11 @@
 
 ## 0.2.0-preview — candidate prepared, not published
 
+- Preserves authored PPTX bullet size/font/color choices, including follow-text
+  resets, and inherited styling when a paragraph supplies its own marker.
+- Excludes hidden drawing owners and groups from raw diagnostic fallbacks while
+  retaining warnings for visible unsupported media and global/compatibility content.
+
 - Preserves locked DOCX PAGE/NUMPAGES results, including empty results, while
   unlocked fields and independently locked nested fields retain their own behavior.
 - Removes unused chart-workbook calculation/filter metadata and per-cell formula
