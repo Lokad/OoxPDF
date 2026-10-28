@@ -315,5 +315,6 @@ internal enum PptxThemeTypefaceSource
     MinorEastAsian,
     MinorEastAsianFallbackLatin,
     MinorComplexScript,
-    MinorComplexScriptFallbackLatin
+    MinorComplexScriptFallbackLatin,
+    FollowText
 }

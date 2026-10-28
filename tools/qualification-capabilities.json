@@ -1,4 +1,10 @@
 {
+  "pptx-bullet-choices": [
+      "PptxBulletChoices",
+      "PptxNumbering",
+      "SceneFedSpansMatchXmlPathForPlaceholders",
+      "PptxLiveStylesHonorNoFillAndRetainLayoutSource"
+  ],
   "pptx-workbook-cached-content": [
       "PptxWorkbookOptionalParts",
       "PptxChartWorkbookParsingPreservesRangeMetadata",

@@ -48,20 +48,19 @@ internal static class PptxParagraphPropertyMerger
             ns + "buAutoNum",
             ns + "buBlip"
         ];
-        XName[] bulletPropertyNames =
+        XName[][] bulletPropertyChoices =
         [
-            ns + "buFont",
-            ns + "buClr",
-            ns + "buSzPct",
-            ns + "buSzPts"
+            [ns + "buClrTx", ns + "buClr"],
+            [ns + "buSzTx", ns + "buSzPct", ns + "buSzPts"],
+            [ns + "buFontTx", ns + "buFont"]
         ];
 
-        foreach (XName propertyName in bulletPropertyNames)
+        foreach (XName[] choices in bulletPropertyChoices)
         {
-            if (primaryParent.Element(propertyName) is null &&
-                fallbackParent.Element(propertyName) is { } fallbackProperty)
+            if (FindProperty(primaryParent, choices) is null &&
+                FindProperty(fallbackParent, choices) is { } fallbackProperty)
             {
-                primaryParent.Add(new XElement(fallbackProperty));
+                AddBeforeBulletOrTail(fallbackProperty);
             }
         }
 
@@ -74,9 +73,27 @@ internal static class PptxParagraphPropertyMerger
         {
             if (fallbackParent.Element(kindName) is { } fallbackKind)
             {
-                primaryParent.Add(new XElement(fallbackKind));
+                AddBeforeBulletOrTail(fallbackKind);
                 return;
             }
+        }
+
+        XElement? FindProperty(XElement parent, XName[] choices)
+        {
+            // Authored properties after a marker retain their existing ignored
+            // fallback. Inherited properties must join the same pre-marker scope.
+            return parent.Elements().TakeWhile(element => !bulletKindNames.Contains(element.Name))
+                .FirstOrDefault(element => choices.Contains(element.Name));
+        }
+
+        void AddBeforeBulletOrTail(XElement property)
+        {
+            XElement copy = new(property);
+            XElement? next = primaryParent.Elements().FirstOrDefault(element =>
+                bulletKindNames.Contains(element.Name) || element.Name == ns + "tabLst" ||
+                element.Name == ns + "defRPr" || element.Name == ns + "extLst");
+            if (next is not null) next.AddBeforeSelf(copy);
+            else primaryParent.Add(copy);
         }
     }
 

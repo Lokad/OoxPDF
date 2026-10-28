@@ -1,0 +1,129 @@
+{
+  "Input": "pptx-bullet-choices.pptx",
+  "InputSha256": "77FA587C82233F9A5D67840BF046C61CFB04EAA04A5F0D35ECE60E6AB27CB44E",
+  "OfficePdfSha256": "034C91392210CEEAB1738E1B6432A8474C37CC2F9CC36FF21352ABD31C173BB7",
+  "Office": "PowerPoint 16.0",
+  "Rows": [
+    {
+      "Label": "Direct points control",
+      "NominalSize": 24,
+      "FontFamily": "Arial",
+      "Color": 255,
+      "Office": {
+        "Size": 24.0,
+        "Font": "ArialMT",
+        "Color": 255,
+        "Origin": [
+          67.19999694824219,
+          59.019989013671875
+        ]
+      }
+    },
+    {
+      "Label": "Inherited percent control",
+      "NominalSize": 12,
+      "FontFamily": "Arial",
+      "Color": 255,
+      "Office": {
+        "Size": 12.0,
+        "Font": "ArialMT",
+        "Color": 255,
+        "Origin": [
+          67.19999694824219,
+          117.01998901367188
+        ]
+      }
+    },
+    {
+      "Label": "Points override percent",
+      "NominalSize": 24,
+      "FontFamily": "Arial",
+      "Color": 255,
+      "Office": {
+        "Size": 24.0,
+        "Font": "ArialMT",
+        "Color": 255,
+        "Origin": [
+          67.19999694824219,
+          175.02999877929688
+        ]
+      }
+    },
+    {
+      "Label": "Percent override points",
+      "NominalSize": 12,
+      "FontFamily": "Arial",
+      "Color": 255,
+      "Office": {
+        "Size": 12.0,
+        "Font": "ArialMT",
+        "Color": 255,
+        "Origin": [
+          67.19999694824219,
+          233.04000854492188
+        ]
+      }
+    },
+    {
+      "Label": "Size follows text",
+      "NominalSize": 24,
+      "FontFamily": "Arial",
+      "Color": 255,
+      "Office": {
+        "Size": 24.02400016784668,
+        "Font": "ArialMT",
+        "Color": 255,
+        "Origin": [
+          67.19999694824219,
+          291.04998779296875
+        ]
+      }
+    },
+    {
+      "Label": "Font follows text",
+      "NominalSize": 24,
+      "FontFamily": "Arial",
+      "Color": 255,
+      "Office": {
+        "Size": 24.0,
+        "Font": "ArialMT",
+        "Color": 255,
+        "Origin": [
+          67.19999694824219,
+          349.08001708984375
+        ]
+      }
+    },
+    {
+      "Label": "Color follows text",
+      "NominalSize": 24,
+      "FontFamily": "Arial",
+      "Color": 255,
+      "Office": {
+        "Size": 24.0,
+        "Font": "ArialMT",
+        "Color": 255,
+        "Origin": [
+          67.19999694824219,
+          407.0899963378906
+        ]
+      }
+    },
+    {
+      "Label": "New marker inherits color",
+      "NominalSize": 24,
+      "FontFamily": "Arial",
+      "Color": 16711680,
+      "Office": {
+        "Size": 24.0,
+        "Font": "ArialMT",
+        "Color": 16711680,
+        "Origin": [
+          67.19999694824219,
+          465.09600830078125
+        ]
+      }
+    }
+  ],
+  "Scope": "Source-selected bullet styling. Follow-text Word size residual .024pt retained; no new raster/baseline pass claimed."
+}

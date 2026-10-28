@@ -936,7 +936,9 @@ internal sealed partial class PptxRenderer
         XElement? bulletSizePoints = FindBulletProperty("buSzPts");
         string? fontTypeface = (string?)bulletFont?.Attribute("typeface");
         string? fontCharset = (string?)bulletFont?.Attribute("charset");
-        PptxThemeTypefaceResolution FontFaceResolution = theme.ResolveTypefaceWithSource(fontTypeface);
+        PptxThemeTypefaceResolution FontFaceResolution = FindBulletProperty("buFontTx") is not null
+            ? new(null, null, PptxThemeTypefaceSource.FollowText)
+            : theme.ResolveTypefaceWithSource(fontTypeface);
         RgbColor? color = bulletColor is not null && PptxColorResolver.TryReadSolidColor(bulletColor, theme, colorMap, out RgbColor resolvedColor)
             ? resolvedColor
             : null;
