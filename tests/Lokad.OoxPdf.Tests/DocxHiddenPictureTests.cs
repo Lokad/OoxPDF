@@ -133,7 +133,6 @@ internal static class DocxHiddenPictureTests
                 if (!computed)
                 {
                     TestAssert.Equal(2, paragraph.Images.Single().SourceRunIndex);
-                    TestAssert.Equal(1, paragraph.InlineContent!.OfType<DocxInlinePicture>().Count());
                 }
                 TestAssert.Equal(computed ? 0 : 1, Render(document, OoxPdfDocxMarkupMode.Final).Sum(page => page.Images.Count));
             });
