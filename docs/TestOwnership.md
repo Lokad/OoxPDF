@@ -75,3 +75,9 @@ only the first page's font and require stable continuation paint and targets;
 Ubuntu CI selects their union with the existing rendering capabilities. The
 separate Windows-font oracles retain their declared environmental preconditions.
 Full-page image failures remain separate from the one-point geometry checks.
+
+Portfolio measurement and the source-text gate share decoded operation assembly:
+preserve emitted spaces and operation order within each page; separate pages with
+a newline. `TestCompositionMeasurement.ps1` checks punctuation/run splits, missing
+spaces/words, page boundaries and decoded Unicode without builds or conversion.
+This is a content-presence screen; geometry and visual gates remain independent.

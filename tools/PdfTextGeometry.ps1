@@ -10,3 +10,11 @@ function Select-NonWhitespacePdfTextOperations($Operations) {
         }
     }
 }
+
+# Preserve emitted separators and operation order within each page. A font,
+# kerning or punctuation split does not add a source space. Page boundaries do
+# separate text; this is a presence screen, not a reading-order reconstruction.
+function Join-DecodedPdfTextPages($Operations) {
+    $pages = @($Operations | Group-Object { $_.PageNumber } | Sort-Object { [int]$_.Name })
+    ($pages | ForEach-Object { ($_.Group | ForEach-Object { $_.DecodedText }) -join '' }) -join "`n"
+}

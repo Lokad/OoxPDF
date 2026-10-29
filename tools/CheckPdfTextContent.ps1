@@ -13,6 +13,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot 'PdfTextGeometry.ps1')
 $repoRoot = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($CasesDir)) {
     $CasesDir = Join-Path $repoRoot "tools/text-content-cases"
@@ -56,8 +57,7 @@ foreach ($caseFile in $cases) {
     if ($LASTEXITCODE -ne 0) { throw "Conversion failed for $($case.input)." }
     & (Join-Path $repoRoot "tools/InspectPdf.ps1") -Framework $Framework -InputPdf $pdf -OutputDirectory $inspectDir -TextOnly -InspectorPath $inspectorDll -SkipBuild
     $ops = Get-Content -Raw -LiteralPath (Join-Path $inspectDir "text-operations.json") | ConvertFrom-Json
-    $pages = $ops | Group-Object { $_.PageNumber } | Sort-Object { [int]$_.Name }
-    $fullText = ($pages | ForEach-Object { ($_.Group | ForEach-Object { $_.DecodedText }) -join "" }) -join "`n"
+    $fullText = Join-DecodedPdfTextPages $ops
     $cursor = 0
     foreach ($expected in @($case.expected)) {
         $found = $fullText.IndexOf($expected, $cursor, [StringComparison]::Ordinal)

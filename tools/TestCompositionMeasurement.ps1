@@ -14,6 +14,7 @@ $tools = Join-Path $repo 'tools'
 New-Item -ItemType Directory -Path $tools -Force | Out-Null
 $script = Join-Path $tools 'MeasureCompositionPortfolio.ps1'
 Copy-Item -LiteralPath $MeasurementScript -Destination $script
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'PdfTextGeometry.ps1') -Destination (Join-Path $tools 'PdfTextGeometry.ps1')
 $cli = Join-Path $repo 'candidate.dll'
 $inspector = Join-Path $repo 'inspector.dll'
 foreach ($file in @($cli, $inspector, (Join-Path $repo 'Lokad.OoxPdf.dll'))) {
@@ -21,6 +22,7 @@ foreach ($file in @($cli, $inspector, (Join-Path $repo 'Lokad.OoxPdf.dll'))) {
 }
 $calls = [Collections.Generic.List[object]]::new()
 $inspectionOnly = $false
+$inspectionOperations = @([pscustomobject]@{PageNumber=1;Font='Body';DecodedText='Retained source.'})
 $mutation = [pscustomobject]@{CopyPath=$null;InspectionSource=$null;InspectionDestination=$false}
 function Copy-Item {
     param([string] $LiteralPath, [string] $Destination)
@@ -44,10 +46,12 @@ function dotnet {
             $mutation.InspectionDestination = $false
         }
         New-Item -ItemType Directory -Path $args[2] | Out-Null
-        @(@{PageNumber=1;Font='Body';DecodedText='Retained source.'}) | ConvertTo-Json -AsArray |
+        $inspectionOperations | ConvertTo-Json -AsArray |
             Set-Content -LiteralPath (Join-Path $args[2] 'text-operations.json')
         $global:LASTEXITCODE = 0
-        Write-Output '1 0 obj: page'
+        foreach ($page in @($inspectionOperations.PageNumber | Sort-Object -Unique)) {
+            Write-Output ($page.ToString() + ' 0 obj: page')
+        }
         return
     }
     throw 'Sentinel conversion reached'
@@ -190,4 +194,41 @@ foreach ($fault in @('runtime', 'input', 'pdf', 'missing', 'duplicate',
     }
     $validReuses++
 }
-Write-Output "Measurement/reinspection passes: $preflightRejects invalid caches reject before output/work, $lateRejects late changes reject before report publication, $validReuses valid empty/nonempty/equivalent diagnostic batches reuse without conversion. No .NET processes or library builds."
+$textCases = @(
+    @{Id='punctuation';Pages=@(1,1,1);Text=@('Public first','-','page heading.');Expected='Public first-page heading.';Missing=$false},
+    @{Id='word-fragments';Pages=@(1,1,1);Text=@('Ret','ained ','source.');Expected='Retained source.';Missing=$false},
+    @{Id='emitted-word-space';Pages=@(1,1,1);Text=@('Retained',' ','source.');Expected='Retained source.';Missing=$false},
+    @{Id='absent-word-space';Pages=@(1,1);Text=@('Retained','source.');Expected='Retained source.';Missing=$true},
+    @{Id='page-boundary';Pages=@(1,2);Text=@('Retained','source.');Expected='Retainedsource.';Missing=$true},
+    @{Id='numeric-page-order';Pages=@(10,2);Text=@('last','first');Expected='first last';Missing=$false},
+    @{Id='decoded-unicode';Pages=@(1,1,1);Text=@('of',([string][char]0xFB01),'ce');Expected='office';Missing=$false},
+    @{Id='missing-word';Pages=@(1,1);Text=@('Retained ','.');Expected='Retained source.';Missing=$true}
+)
+foreach ($textCase in $textCases) {
+    $inspectionOperations = @(for ($index=0; $index -lt $textCase.Text.Count; $index++) {
+        [pscustomobject]@{PageNumber=$textCase.Pages[$index];Font='Body';DecodedText=$textCase.Text[$index]}
+    })
+    $case = Join-Path $OutputDirectory ('text-' + $textCase.Id)
+    New-Item -ItemType Directory -Path $case | Out-Null
+    $manifest = Join-Path $case 'manifest.json'
+    @(@{Id='first';Input='first.docx';Sha256=$firstHash;ExpectedText=@($textCase.Expected);ExpectedEquationCount=0}) |
+        ConvertTo-Json -Depth 4 -AsArray | Set-Content -LiteralPath $manifest
+    $calls.Clear()
+    $output = Join-Path $case 'candidate'
+    & $script -CliPath $cli -InspectorPath $inspector -Manifest $manifest -OutputDirectory $output -ReuseCandidateDirectory $prior | Out-Null
+    $report = Get-Content -LiteralPath (Join-Path $output 'outcomes.json') -Raw | ConvertFrom-Json
+    if ($calls.Count -ne 2 -or $report.Conversions -ne 0 -or $report.ReusedCandidates -ne 2) {
+        throw ('Text-screen reinspection started conversion or lost candidates: ' + $textCase.Id)
+    }
+    foreach ($row in $report.Rows) {
+        $expectedMissing = if ($textCase.Missing) {1} else {0}
+        if ($row.MissingExpectedText.Count -ne $expectedMissing -or
+            ($textCase.Missing -and $row.MissingExpectedText[0] -cne $textCase.Expected)) {
+            throw ('Decoded operation assembly changed a source expectation: ' + $textCase.Id)
+        }
+        if (($row.Severity -eq 'Content blocker') -ne $textCase.Missing) {
+            throw ('Text-screen classification differs: ' + $textCase.Id)
+        }
+    }
+}
+Write-Output "Measurement/reinspection passes: $preflightRejects invalid caches reject before output/work, $lateRejects late changes reject before report publication, $validReuses valid diagnostic batches and $($textCases.Count) text-assembly controls reuse without conversion. No .NET processes or library builds."

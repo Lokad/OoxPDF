@@ -10,6 +10,9 @@ param(
     [string] $ReuseCandidateDirectory
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'PdfTextGeometry.ps1')
+$measurementScriptHash = (Get-FileHash -LiteralPath $PSCommandPath).Hash
+$textAssemblyHash = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'PdfTextGeometry.ps1')).Hash
 $repo = Split-Path -Parent $PSScriptRoot
 $cli = (Resolve-Path -LiteralPath $CliPath).Path
 $inspector = (Resolve-Path -LiteralPath $InspectorPath).Path
@@ -148,7 +151,7 @@ foreach ($job in $jobs) {
         $operations = if (Test-Path -LiteralPath $textReport) { @(Get-Content -LiteralPath $textReport -Raw | ConvertFrom-Json) } else { @() }
         $pageCount = @(Get-Content -LiteralPath (Join-Path $run 'inspect.log') | Where-Object { $_ -match '^\d+ \d+ obj: page$' }).Count
         if ($pageCount -lt 1) { throw ('No inspected PDF pages: ' + $document.Id) }
-        $text = Normalize-Text (($operations.DecodedText) -join ' ')
+        $text = Normalize-Text (Join-DecodedPdfTextPages $operations)
         $missing = @($expectedText | Where-Object { !$text.Contains((Normalize-Text $_), [StringComparison]::Ordinal) })
         if ($ReuseCandidateDirectory) {
             if ((Get-FileHash -LiteralPath $diagnosticsPath).Hash -ne $priorDiagnosticsHashes[$key] -or
@@ -176,6 +179,7 @@ foreach ($job in $jobs) {
     }
 }
 [ordered]@{
+    MeasurementScriptSha256=$measurementScriptHash;TextAssemblyHelperSha256=$textAssemblyHash
     LibrarySha256=$libraryHash;CliSha256=$cliHash;InspectorSha256=$inspectorHash
     ManifestSha256=(Get-FileHash -LiteralPath $Manifest).Hash;Rebuilt=$false;DocxPreset=$DocxPreset
     InspectionMode=if ($IncludeRawStreams) {'SummariesAndRawStreams'} else {'SummariesOnly'}
