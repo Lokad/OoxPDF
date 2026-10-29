@@ -10,6 +10,8 @@ $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 $artifact = (Resolve-Path -LiteralPath $ArtifactDirectory).Path
 $pin = Get-Content (Join-Path $artifact 'identity.json') -Raw | ConvertFrom-Json -AsHashtable
+$framework = if ($pin.Framework) { $pin.Framework } else { 'net10.0' }
+if ($framework -notin @('net10.0','net11.0')) { throw 'Unknown frozen target framework' }
 $qualification = Get-Content -LiteralPath $QualificationEvidence -Raw | ConvertFrom-Json
 if ($qualification.LibrarySha256 -ne $pin.LibrarySha256 -or
     $qualification.TestAssemblySha256 -ne $pin.TestAssemblySha256) { throw 'Qualification identities differ' }
@@ -65,7 +67,7 @@ foreach ($name in $pin.Assets.Keys) {
     }
     if ((Get-FileHash -LiteralPath $target).Hash -ne $pin.Assets[$name]) { throw 'Transferred asset differs' }
 }
-$cli = Join-Path $repo 'src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.Cli.dll'
+$cli = Join-Path $repo "src/Lokad.OoxPdf.Cli/bin/Release/$framework/Lokad.OoxPdf.Cli.dll"
 $rows = @()
 foreach ($job in $jobs) {
     $pdf = Join-Path $OutputDirectory ($rows.Count.ToString() + '.pdf')
@@ -73,6 +75,6 @@ foreach ($job in $jobs) {
     if ($LASTEXITCODE -ne 0 -or (Get-FileHash $pdf).Hash -ne $job.PdfSha256) { throw 'Transfer smoke PDF differs' }
     $rows += $job
 }
-[ordered]@{FrozenRevision=$pin.Revision;LibrarySha256=$pin.LibrarySha256;AssetsVerified=$pin.Assets.Count;Rebuilt=$false;RepeatedSuite=$false;Smoke=$rows} |
+[ordered]@{FrozenRevision=$pin.Revision;Framework=$framework;LibrarySha256=$pin.LibrarySha256;AssetsVerified=$pin.Assets.Count;Rebuilt=$false;RepeatedSuite=$false;Smoke=$rows} |
     ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json') -Encoding utf8
 Write-Output "$($pin.Assets.Count) assets transferred; $($rows.Count) smoke PDFs match. No build or suite replay."

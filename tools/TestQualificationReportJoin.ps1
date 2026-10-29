@@ -1,6 +1,8 @@
 # Exercise report reuse with small identity fixtures; no build, conversion or test-runner replay.
 [CmdletBinding()]
-param([string] $OutputDirectory, [string] $JoinScript = (Join-Path $PSScriptRoot 'JoinQualificationTestReports.ps1'))
+param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
+    [string] $OutputDirectory, [string] $JoinScript = (Join-Path $PSScriptRoot 'JoinQualificationTestReports.ps1'))
 $ErrorActionPreference='Stop'
 if (!$OutputDirectory) { $OutputDirectory=Join-Path (Split-Path $PSScriptRoot) ('artifacts/qualification-report-join-test-'+[Guid]::NewGuid().ToString('N')) }
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'Use a fresh self-test directory' }
@@ -33,9 +35,9 @@ Write-Text (Join-Path $repo 'tests/observer.txt') 'reviewed test repair'
 $null=Invoke-Git @('add','.')
 $null=Invoke-Git @('commit','--quiet','-m','test repair')
 $finalRevision=[string](Invoke-Git @('rev-parse','HEAD'))
-$library='src/Lokad.OoxPdf/bin/Release/net10.0/Lokad.OoxPdf.dll'
-$tests='tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll'
-$deps='tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.deps.json'
+$library="src/Lokad.OoxPdf/bin/Release/$Framework/Lokad.OoxPdf.dll"
+$tests="tests/Lokad.OoxPdf.Tests/bin/Release/$Framework/Lokad.OoxPdf.Tests.dll"
+$deps="tests/Lokad.OoxPdf.Tests/bin/Release/$Framework/Lokad.OoxPdf.Tests.deps.json"
 $inputName='tests/Lokad.OoxPdf.Tests/Cases/sample.txt'
 foreach ($id in @('before','after')) {
     $artifact=Join-Path $repo ('artifacts/'+$id)
@@ -46,7 +48,7 @@ foreach ($id in @('before','after')) {
     $assets=@{};foreach ($name in @($library,$tests,$deps)) { $assets[$name]=(Get-FileHash -LiteralPath (Join-Path $artifact $name)).Hash }
     Write-Json (Join-Path $artifact 'identity.json') @{
         Revision=$(if($id -eq 'before'){$firstRevision}else{$finalRevision})
-        Assets=$assets;Inputs=@{$inputName=(Get-FileHash -LiteralPath (Join-Path $artifact $inputName)).Hash}
+        Framework=$(if ($Framework -eq 'net11.0') {$Framework} else {$null});Assets=$assets;Inputs=@{$inputName=(Get-FileHash -LiteralPath (Join-Path $artifact $inputName)).Hash}
         LibrarySha256=$assets[$library];TestAssemblySha256=$assets[$tests]
     }
 }
@@ -163,6 +165,11 @@ Write-Json (Join-Path $root 'repair.json') @{passed=1;failed=0;skipped=1;tests=@
 Reject 'failure-replaced-by-skip' 'failed check remains'
 $finalPinPath=Join-Path $repo 'artifacts/after/identity.json'
 $finalPin=Get-Content -LiteralPath $finalPinPath -Raw | ConvertFrom-Json -AsHashtable
+$originalFramework=$finalPin.Framework
+$finalPin.Framework=if ($Framework -eq 'net11.0') {'net10.0'} else {'net11.0'}
+Write-Json $finalPinPath $finalPin
+Reject 'mixed-framework' 'Frozen target frameworks differ'
+$finalPin.Framework=$originalFramework
 $finalPin.Inputs[$inputName]='F'*64;Write-Json $finalPinPath $finalPin
 Reject 'changed-input' 'Frozen inputs differ'
 $finalPin.Inputs[$inputName]=(Get-FileHash -LiteralPath (Join-Path $repo ('artifacts/after/'+$inputName))).Hash

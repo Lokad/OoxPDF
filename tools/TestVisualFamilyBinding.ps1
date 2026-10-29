@@ -11,14 +11,14 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'CheckVisualFamily.ps1') -Destin
 $buildLog = Join-Path $repo 'builds.jsonl'
 $caseLog = Join-Path $repo 'cases.jsonl'
 @'
-param($Project, $OutputDll, $Description, $RecordPath)
+param($Project, $OutputDll, $Description, $RecordPath, $Framework)
 @{Project=$Project;Description=$Description} | ConvertTo-Json -Compress | Add-Content (Join-Path (Split-Path $PSScriptRoot) 'builds.jsonl')
 New-Item -ItemType Directory -Path (Split-Path $OutputDll) -Force | Out-Null
 [IO.File]::WriteAllText($OutputDll, 'fake CLI or validation tool')
 if ($Description -eq 'CLI') { [IO.File]::WriteAllText((Join-Path (Split-Path $OutputDll) 'Lokad.OoxPdf.dll'), 'fake library') }
 '@ | Set-Content (Join-Path $repo 'tools/EnsureDotnetBuild.ps1')
 @'
-param($Case, $RunId, [switch]$SkipBuild, $CliPath, [switch]$CacheOnlyReference)
+param($Case, $RunId, [switch]$SkipBuild, $CliPath, [switch]$CacheOnlyReference, $Framework)
 @{Case=$Case;RunId=$RunId;SkipBuild=[bool]$SkipBuild;CliPath=$CliPath;CacheOnlyReference=[bool]$CacheOnlyReference} |
     ConvertTo-Json -Compress | Add-Content (Join-Path (Split-Path $PSScriptRoot) 'cases.jsonl')
 if (!$SkipBuild -or !(Test-Path -LiteralPath $CliPath)) { throw 'Family did not bind an existing CLI without per-case builds' }
@@ -81,7 +81,7 @@ foreach($key in $inspectionKeys) {
 $before=@(Get-Content $buildLog).Count
 & $script -Family probe -CliPath $frozenCli -SkipBuild | Out-Null
 if(@(Get-Content $buildLog).Count -ne $before) {throw 'An inspecting prebuilt family requested a build'}
-$inspector=Join-Path $repo 'tools/Lokad.OoxPdf.PdfInspect/bin/Debug/net10.0/Lokad.OoxPdf.PdfInspect.dll'
+$inspector=Join-Path $repo 'tools/Lokad.OoxPdf.PdfInspect/bin/Debug/net11.0/Lokad.OoxPdf.PdfInspect.dll'
 if(!$inspector.StartsWith($repo+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) {throw 'Unexpected synthetic inspector path'}
 Remove-Item -LiteralPath $inspector
 $caseCount=@(Get-Content $caseLog).Count
@@ -102,12 +102,12 @@ foreach($name in @('CheckVisualCase.ps1','InspectPdf.ps1','JsonArray.ps1','Compa
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination (Join-Path $repo 'tools') -Force
 }
 @'
-param($InputPath,$OutputDirectory,$Dpi,$CaseId,[switch]$SkipBuild)
+param($InputPath,$OutputDirectory,$Dpi,$CaseId,[switch]$SkipBuild,$Framework)
 [IO.File]::WriteAllText((Join-Path $OutputDirectory 'reference.pdf'),'%PDF-fake reference')
 [IO.File]::WriteAllText((Join-Path $OutputDirectory 'page-001.png'),'synthetic raster')
 '@ | Set-Content (Join-Path $repo 'tools/RenderCachedReference.ps1')
 @'
-param($InputPdf,$OutputDirectory,$Dpi,[switch]$SkipBuild)
+param($InputPdf,$OutputDirectory,$Dpi,[switch]$SkipBuild,$Framework)
 [IO.File]::WriteAllText((Join-Path $OutputDirectory 'page-001.png'),'synthetic raster')
 '@ | Set-Content (Join-Path $repo 'tools/RasterizePdf.ps1')
 foreach($id in @('probe-a','probe-b')) {

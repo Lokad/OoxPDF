@@ -44,7 +44,7 @@ OoxPdfConverter.Convert(
 ## CLI
 
 ```powershell
-dotnet src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll convert input.docx output.pdf --docx-markup all --docx-markup-geometry word-compatible
+dotnet src/Lokad.OoxPdf.Cli/bin/Debug/net11.0/Lokad.OoxPdf.Cli.dll convert input.docx output.pdf --docx-markup all --docx-markup-geometry word-compatible
 ```
 
 Accepted markup CLI values are `final`, `original`, `simple`, `simple-markup`, `all`, and `all-markup`. Accepted geometry CLI values are `preserve`, `preserve-layout`, `preserve-document-layout`, `reserve`, `reserve-margin`, `markup-margin`, `reserve-markup-margin`, `word`, `word-compatible`, `word-compatible-all-markup`, `office`, `office-compatible`, and `office-compatible-all-markup`. Both DOCX markup options are rejected for PPTX input.

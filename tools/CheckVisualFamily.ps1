@@ -1,4 +1,5 @@
 param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
     [Parameter(Mandatory = $true)]
     [string] $Family,
 
@@ -267,9 +268,9 @@ Write-Host ("Visual family: {0} ({1} cases)" -f $Family, $cases.Count)
 # Bind every case to the same CLI. A supplied frozen CLI never builds the library;
 # independent validation tools can still be built once unless -SkipBuild is set.
 if (!$CliPath) {
-    $CliPath = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll"
+    $CliPath = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/$Framework/Lokad.OoxPdf.Cli.dll"
     if (!$SkipBuild) {
-        & (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Project (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj") -OutputDll $CliPath -Description "CLI"
+        & (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Framework $Framework -Project (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj") -OutputDll $CliPath -Description "CLI"
     }
 }
 $CliPath = (Resolve-Path -LiteralPath $CliPath).Path
@@ -277,8 +278,8 @@ $libraryPath = Join-Path (Split-Path $CliPath) 'Lokad.OoxPdf.dll'
 $cliHash = (Get-FileHash -LiteralPath $CliPath).Hash
 $libraryHash = (Get-FileHash -LiteralPath $libraryPath).Hash
 if (!$SkipBuild) {
-& (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Project (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj") -OutputDll (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/net10.0/Lokad.OoxPdf.VisualDiff.dll") -Description "VisualDiff"
-& (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Project (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj") -OutputDll (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll") -Description "PDFium rasterizer"
+& (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Framework $Framework -Project (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj") -OutputDll (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/$Framework/Lokad.OoxPdf.VisualDiff.dll") -Description "VisualDiff"
+& (Join-Path $PSScriptRoot "EnsureDotnetBuild.ps1") -Framework $Framework -Project (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj") -OutputDll (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll") -Description "PDFium rasterizer"
 }
 # Only inspection gates need this tool. Cases consume it prebuilt, just like the
 # rasterizer and VisualDiff, rather than invoking MSBuild for each inspected PDF.
@@ -298,9 +299,9 @@ foreach ($case in $cases) {
     }
 }
 if ($needsPdfInspection) {
-    $inspector = Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/bin/Debug/net10.0/Lokad.OoxPdf.PdfInspect.dll'
+    $inspector = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/bin/Debug/$Framework/Lokad.OoxPdf.PdfInspect.dll"
     if (!$SkipBuild) {
-        & (Join-Path $PSScriptRoot 'EnsureDotnetBuild.ps1') -Project (Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/Lokad.OoxPdf.PdfInspect.csproj') -OutputDll $inspector -Description 'PDF inspect'
+        & (Join-Path $PSScriptRoot 'EnsureDotnetBuild.ps1') -Framework $Framework -Project (Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/Lokad.OoxPdf.PdfInspect.csproj') -OutputDll $inspector -Description 'PDF inspect'
     }
     elseif (!(Test-Path -LiteralPath $inspector -PathType Leaf)) {
         throw ('PDF inspector is missing and -SkipBuild was requested: ' + $inspector)
@@ -329,7 +330,7 @@ foreach ($case in $cases) {
             $caseArgs.CacheOnlyReference = $true
         }
 
-        & (Join-Path $PSScriptRoot "CheckVisualCase.ps1") @caseArgs
+        & (Join-Path $PSScriptRoot "CheckVisualCase.ps1") -Framework $Framework @caseArgs
     }
     catch {
         $passed = $false

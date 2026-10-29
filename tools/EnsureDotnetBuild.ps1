@@ -20,6 +20,9 @@ param(
 
     [string] $Configuration = "Debug",
 
+    [ValidateSet('net10.0', 'net11.0')]
+    [string] $Framework = 'net11.0',
+
     [string] $RecordPath
 )
 
@@ -46,7 +49,7 @@ try {
     }
 
     try {
-        & dotnet build $projectFull -c $Configuration --nologo
+        & dotnet build $projectFull -c $Configuration -f $Framework --nologo
         if ($LASTEXITCODE -ne 0) {
             throw "$Description build failed with exit code $LASTEXITCODE."
         }
@@ -89,6 +92,7 @@ if (-not [string]::IsNullOrWhiteSpace($RecordPath)) {
         Project = $projectFull.Substring($repoRoot.Length).TrimStart("\", "/").Replace("\", "/")
         ProjectSha256 = (Get-FileHash -LiteralPath $projectFull -Algorithm SHA256).Hash.ToLowerInvariant()
         Configuration = $Configuration
+        Framework = $Framework
         RootFiles = $rootFiles
         OutputDll = $OutputDll
         OutputSha256 = (Get-FileHash -LiteralPath $OutputDll -Algorithm SHA256).Hash.ToLowerInvariant()

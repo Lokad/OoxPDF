@@ -1,6 +1,7 @@
 # Exercise the real wrapper and existing native tool; never build or export Office.
 [CmdletBinding()]
 param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
     [Parameter(Mandatory=$true)] [string] $InputPdf,
     [Parameter(Mandatory=$true)] [string] $RasterizerPath,
     [string] $OutputDirectory
@@ -15,7 +16,7 @@ $root=(New-Item -ItemType Directory -Path $OutputDirectory).FullName
 # The copied wrapper, tool assembly and native loader path all contain spaces.
 $ownedRepo=Join-Path $root 'repository with spaces'
 $ownedTools=Join-Path $ownedRepo 'tools'
-$ownedRuntime=Join-Path $ownedTools 'Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/net10.0'
+$ownedRuntime=Join-Path $ownedTools "Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework"
 New-Item -ItemType Directory -Path $ownedRuntime -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'RasterizePdf.ps1') -Destination $ownedTools
 foreach ($file in Get-ChildItem -LiteralPath (Split-Path $rasterizer) -File) {
@@ -44,7 +45,7 @@ foreach ($job in @(
     $timeout=if ($job.ContainsKey('Timeout')) { $job.Timeout } else { 30 }
     $failure=$null
     try {
-        & (Join-Path $ownedTools 'RasterizePdf.ps1') -InputPdf $job.Input -OutputDirectory $destination -Dpi 36 -SkipBuild -TimeoutSeconds $timeout *> (Join-Path $root ($job.Id+'.log'))
+        & (Join-Path $ownedTools 'RasterizePdf.ps1') -Framework $Framework -InputPdf $job.Input -OutputDirectory $destination -Dpi 36 -SkipBuild -TimeoutSeconds $timeout *> (Join-Path $root ($job.Id+'.log'))
     }
     catch { $failure=$_.Exception.Message }
     $pages=@(Get-ChildItem -LiteralPath $destination -Filter 'page-*.png' -File)
@@ -81,14 +82,14 @@ $twoPages=Join-Path $root 'two-pages.pdf';$onePage=Join-Path $root 'one-page.pdf
 Write-BlankPdf $twoPages 2
 Write-BlankPdf $onePage 1
 $reused=Join-Path $root 'shrinking-raster'
-& (Join-Path $ownedTools 'RasterizePdf.ps1') -InputPdf $twoPages -OutputDirectory $reused -Dpi 36 -SkipBuild *> (Join-Path $root 'two-pages.log')
+& (Join-Path $ownedTools 'RasterizePdf.ps1') -Framework $Framework -InputPdf $twoPages -OutputDirectory $reused -Dpi 36 -SkipBuild *> (Join-Path $root 'two-pages.log')
 if (@(Get-ChildItem -LiteralPath $reused -Filter '*.png' -File).Count -ne 2) { throw 'Expected two initial raster pages' }
 $before=@(Get-ChildItem -LiteralPath $reused -File | Sort-Object Name | ForEach-Object { (Get-FileHash $_.FullName).Hash })
 foreach ($job in @(@{Id='shrinking-reuse';Input=$onePage;Timeout=30},
                   @{Id='failed-reuse';Input=$invalid;Timeout=30},
                   @{Id='timeout-reuse';Input=$twoPages;Timeout=0})) {
     $failure=$null
-    try { & (Join-Path $ownedTools 'RasterizePdf.ps1') -InputPdf $job.Input -OutputDirectory $reused -Dpi 36 -SkipBuild -TimeoutSeconds $job.Timeout *> (Join-Path $root ($job.Id+'.log')) }
+    try { & (Join-Path $ownedTools 'RasterizePdf.ps1') -Framework $Framework -InputPdf $job.Input -OutputDirectory $reused -Dpi 36 -SkipBuild -TimeoutSeconds $job.Timeout *> (Join-Path $root ($job.Id+'.log')) }
     catch { $failure=$_.Exception.Message }
     if (!$failure -or !$failure.Contains('choose a fresh directory')) { throw ('Reused raster did not refuse: '+$job.Id) }
     $rows+=@{Id=$job.Id;Outcome='passed';Pages=2;ExpectedFailure=$failure}
@@ -99,7 +100,7 @@ $after=@(Get-ChildItem -LiteralPath $reused -File | Sort-Object Name | ForEach-O
 if (@(Compare-Object $before $after).Count) { throw 'Refused raster reuse modified caller files' }
 $rows+=@{Id='direct-reuse';Outcome='passed';Pages=2;ExpectedFailure='Exit 2; existing pages preserved'}
 $fresh=Join-Path $root 'fresh-shorter-raster'
-& (Join-Path $ownedTools 'RasterizePdf.ps1') -InputPdf $onePage -OutputDirectory $fresh -Dpi 36 -SkipBuild *> (Join-Path $root 'fresh-shorter.log')
+& (Join-Path $ownedTools 'RasterizePdf.ps1') -Framework $Framework -InputPdf $onePage -OutputDirectory $fresh -Dpi 36 -SkipBuild *> (Join-Path $root 'fresh-shorter.log')
 if (@(Get-ChildItem -LiteralPath $fresh -Filter '*.png' -File).Count -ne 1) { throw 'Fresh shorter PDF must produce exactly one page' }
 $rows+=@{Id='fresh-shorter';Outcome='passed';Pages=1}
 $inputHash=(Get-FileHash -LiteralPath $inputFull).Hash

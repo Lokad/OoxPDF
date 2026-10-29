@@ -1,4 +1,5 @@
 param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
     [Parameter(Mandatory = $true)]
     [string] $Case,
 
@@ -16,7 +17,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $pdfInspectorPrepared = $false
 $pdfInspectorProject = Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/Lokad.OoxPdf.PdfInspect.csproj'
-$pdfInspectorDll = Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/bin/Debug/net10.0/Lokad.OoxPdf.PdfInspect.dll'
+$pdfInspectorDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/bin/Debug/$Framework/Lokad.OoxPdf.PdfInspect.dll"
 $caseFull = (Resolve-Path -LiteralPath $Case).Path
 $caseDirectory = Split-Path -Parent $caseFull
 $manifest = Get-Content -Raw -LiteralPath $caseFull | ConvertFrom-Json
@@ -42,14 +43,14 @@ function Invoke-RepoBuild([string] $Project, [string] $OutputDll, [string] $Desc
         $params.RecordPath = $RecordPath
     }
 
-    & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") @params
+    & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Framework $Framework @params
 }
 function Invoke-PdfInspection([string] $InputPdf, [string] $OutputDirectory) {
     if (!$script:pdfInspectorPrepared) {
         Invoke-RepoBuild $pdfInspectorProject $pdfInspectorDll 'PDF inspect' (Join-Path $buildInfoDir 'pdf-inspect.json')
         $script:pdfInspectorPrepared = $true
     }
-    & (Join-Path $PSScriptRoot 'InspectPdf.ps1') -InputPdf $InputPdf -OutputDirectory $OutputDirectory -InspectorPath $pdfInspectorDll -SkipBuild
+    & (Join-Path $PSScriptRoot 'InspectPdf.ps1') -Framework $Framework -InputPdf $InputPdf -OutputDirectory $OutputDirectory -InspectorPath $pdfInspectorDll -SkipBuild
 }
 . (Join-Path $PSScriptRoot "JsonArray.ps1")
 
@@ -63,7 +64,7 @@ $docxMarkupGeometry = if ($manifest.PSObject.Properties.Name -contains "docxMark
 
 $cliProject = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj"
 $cliDll = if ($CliPath) { (Resolve-Path -LiteralPath $CliPath).Path } else {
-    Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll"
+    Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/$Framework/Lokad.OoxPdf.Cli.dll"
 }
 $buildInfoDir = Join-Path $runRoot "build-info"
 New-Item -ItemType Directory -Force -Path $buildInfoDir | Out-Null
@@ -113,12 +114,12 @@ if ($CacheOnlyReference) {
     }
 }
 Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Rendering reference...";
-& (Join-Path $PSScriptRoot "RenderCachedReference.ps1") @referenceArgs
+& (Join-Path $PSScriptRoot "RenderCachedReference.ps1") -Framework $Framework @referenceArgs
 Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Rasterizing candidate...";
-& (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $candidatePdf -OutputDirectory $candidateDir -Dpi $dpi -SkipBuild:$SkipBuild
+& (Join-Path $PSScriptRoot "RasterizePdf.ps1") -Framework $Framework -InputPdf $candidatePdf -OutputDirectory $candidateDir -Dpi $dpi -SkipBuild:$SkipBuild
 
 $visualDiffProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj"
-$visualDiffDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/net10.0/Lokad.OoxPdf.VisualDiff.dll"
+$visualDiffDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/$Framework/Lokad.OoxPdf.VisualDiff.dll"
 Invoke-RepoBuild $visualDiffProject $visualDiffDll "VisualDiff" (Join-Path $buildInfoDir "visual-diff.json")
 Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Comparing pages...";
 dotnet $visualDiffDll $referenceDir $candidateDir $comparisonDir
@@ -872,7 +873,7 @@ if (Test-Path -LiteralPath $libraryDll) {
     $runInfo.LibrarySha256 = (Get-FileHash -LiteralPath $libraryDll -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
-$rasterizerDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll"
+$rasterizerDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll"
 if (Test-Path -LiteralPath $rasterizerDll) {
     $runInfo.RasterizerDll = $rasterizerDll
     $runInfo.RasterizerSha256 = (Get-FileHash -LiteralPath $rasterizerDll -Algorithm SHA256).Hash.ToLowerInvariant()

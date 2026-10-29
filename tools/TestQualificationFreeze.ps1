@@ -1,6 +1,8 @@
 # Exercise fixture sharing and rejection paths without building or running the library.
 [CmdletBinding()]
-param([string] $OutputDirectory)
+param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
+    [string] $OutputDirectory)
 $ErrorActionPreference = 'Stop'
 if (!$OutputDirectory) {
     $OutputDirectory = Join-Path (Split-Path $PSScriptRoot) ('artifacts/qualification-freeze-test-' + [Guid]::NewGuid().ToString('N'))
@@ -38,19 +40,19 @@ $nested = Join-Path (Split-Path $inputFile) 'nested/second.txt'
 New-Item -ItemType Directory -Path (Split-Path $nested) -Force | Out-Null
 [IO.File]::WriteAllText($nested, "nested fixture`n")
 foreach ($project in @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests', 'tools/Lokad.OoxPdf.DocxInspect')) {
-    $directory = Join-Path $repo ($project + '/bin/Release/net10.0')
+    $directory = Join-Path $repo ($project + "/bin/Release/$Framework")
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
     'same fake library; no executable code' | Set-Content -LiteralPath (Join-Path $directory 'Lokad.OoxPdf.dll')
     'fake test assembly' | Set-Content -LiteralPath (Join-Path $directory 'Lokad.OoxPdf.Tests.dll')
 }
 foreach ($name in @('Lokad.OoxPdf.Tests.pdb','Lokad.OoxPdf.Tests.deps.json','Lokad.OoxPdf.Tests.runtimeconfig.json')) {
-    'fake runner support; no executable code' | Set-Content -LiteralPath (Join-Path $repo ('tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/' + $name))
+    'fake runner support; no executable code' | Set-Content -LiteralPath (Join-Path $repo ("tests/Lokad.OoxPdf.Tests/bin/Release/$Framework/" + $name))
 }
 Invoke-Git @('add', '.')
 Invoke-Git @('commit', '--quiet', '-m', 'Initial fixtures')
 function Freeze([string] $Name) {
     $target = Join-Path $repo ('artifacts/' + $Name)
-    & $script -OutputDirectory $target | Out-Null
+    & $script -OutputDirectory $target -Framework $Framework | Out-Null
     return (Get-Content -LiteralPath (Join-Path $target 'identity.json') -Raw | ConvertFrom-Json)
 }
 function Reject([string] $Name, [string] $ExpectedMessage) {
@@ -68,8 +70,8 @@ $expectedSharedAssets = @($first.Assets.psobject.Properties).Count - @($first.As
 if ($expectedSharedAssets -lt 1 -or $first.SharedAssetFiles -ne $expectedSharedAssets -or $first.SharedAssetBytes -lt 1) {
     throw 'Frozen duplicate assets were not shared'
 }
-$libraryRelative = 'src/Lokad.OoxPdf/bin/Release/net10.0/Lokad.OoxPdf.dll'
-$cliLibraryRelative = 'src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.dll'
+$libraryRelative = "src/Lokad.OoxPdf/bin/Release/$Framework/Lokad.OoxPdf.dll"
+$cliLibraryRelative = "src/Lokad.OoxPdf.Cli/bin/Release/$Framework/Lokad.OoxPdf.dll"
 $firstLibrary = Join-Path $repo ('artifacts/first/' + $libraryRelative)
 $firstCliLibrary = Join-Path $repo ('artifacts/first/' + $cliLibraryRelative)
 $secondLibrary = Join-Path $repo ('artifacts/second/' + $libraryRelative)
@@ -199,14 +201,14 @@ if ((Get-FileHash -LiteralPath (Join-Path $worktree $inputPath)).Hash -ne (Get-F
     throw 'Verbatim public fixtures changed under autocrlf checkout'
 }
 foreach ($project in @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests', 'tools/Lokad.OoxPdf.DocxInspect')) {
-    $relative = $project + '/bin/Release/net10.0'
+    $relative = $project + "/bin/Release/$Framework"
     New-Item -ItemType Directory -Path (Join-Path $worktree $relative) -Force | Out-Null
     foreach ($asset in Get-ChildItem -LiteralPath (Join-Path $repo $relative) -File) {
         Copy-Item -LiteralPath $asset.FullName -Destination (Join-Path $worktree $relative)
     }
 }
 $worktreeOutput = Join-Path $repo 'artifacts/from-worktree'
-& (Join-Path $worktree 'tools/FreezeQualificationArtifact.ps1') -OutputDirectory $worktreeOutput | Out-Null
+& (Join-Path $worktree 'tools/FreezeQualificationArtifact.ps1') -OutputDirectory $worktreeOutput -Framework $Framework | Out-Null
 $worktreePin = Get-Content -LiteralPath (Join-Path $worktreeOutput 'identity.json') -Raw | ConvertFrom-Json
 if (!$worktreePin.ReusedInputSnapshot -or $worktreePin.InputSnapshot -ne $first.InputSnapshot) { throw 'Linked worktree reuse failed' }
 'second fixture' | Set-Content -LiteralPath $inputFile
@@ -288,7 +290,7 @@ $damaged = Join-Path $raced.InputSnapshot $inputPath
 Reject 'corrupt' 'Shared public input differs'
 Copy-Item -LiteralPath $inputFile -Destination $damaged -Force
 (Get-Item -LiteralPath $damaged).IsReadOnly = $true
-'stale CLI library' | Set-Content -LiteralPath (Join-Path $repo 'src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.dll')
+'stale CLI library' | Set-Content -LiteralPath (Join-Path $repo "src/Lokad.OoxPdf.Cli/bin/Release/$Framework/Lokad.OoxPdf.dll")
 Reject 'mixed' 'Release library copies differ'
 [ordered]@{
     Checks=@('Shared unchanged fixture tree', 'Frozen runner input link', 'Linked worktree reuse', 'Verbatim autocrlf checkout', 'Dirty source rejection',

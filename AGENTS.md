@@ -98,13 +98,19 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/Lokad.OoxPdf.PptxInspect`: dependency-free PPTX text/glyph-run inspector.
 
 Use `--test-set <file.json>` for a JSON array of exact method names in one run.
+Use the SDK pinned in `global.json` (.NET 11 RC3, prerelease). Projects target
+`net10.0;net11.0`; select `-f net11.0` for console development and extensive tests.
+Build/visual/package scripts accept `-Framework net10.0` for compatibility checks
+and default to `net11.0`. Frozen artifacts record one framework each; transfer,
+report joins and derived runtimes use that pinned framework. Historical identities
+without a framework field are net10-only.
 Keep runner TMP/TEMP in its ignored artifact directory. For frozen CLI checks,
 set `OOXPDF_TEST_CLI_ASSEMBLY` to that artifact's CLI. Package checks can use
 `TestPackageSmoke.ps1 -NoBuild -ExpectedLibrarySha256 <qualified hash>`.
 Use `-PackagePath <nupkg>` with that hash to consume the same package on another
 platform without rebuilding or repacking the library.
 Unit tests can also be filtered by capability group with `--group`, for example:
-`dotnet run --project tests/Lokad.OoxPdf.Tests -- --group pptx-typography --skip-slow`.
+`dotnet run --project tests/Lokad.OoxPdf.Tests -f net11.0 -- --group pptx-typography --skip-slow`.
 
 ## Private Mode
 

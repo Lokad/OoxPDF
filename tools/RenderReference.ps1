@@ -15,6 +15,7 @@
 # in -OutputDirectory. A reference-status.json is always written there.
 
 param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
     [Parameter(Mandatory = $true)]
     [string] $InputPath,
 
@@ -120,6 +121,9 @@ try {
     if ($SkipBuild) { $workerArgs += "-SkipBuild" }
     Write-SupervisorLog "starting owned worker: $shellPath"
     $start = [Diagnostics.ProcessStartInfo]::new($shellPath)
+    # Preserve custom workers' argument contract. Only this owned child inherits
+    # the framework selected for its validation tools.
+    $start.Environment['OOXPDF_TARGET_FRAMEWORK'] = $Framework
     $start.UseShellExecute = $false
     $start.CreateNoWindow = $true
     $start.RedirectStandardOutput = $true

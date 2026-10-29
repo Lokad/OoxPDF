@@ -23,7 +23,7 @@ foreach ($relative in @('tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj','sr
 }
 New-Item -ItemType Directory -Path (Join-Path $repo 'tools') -Force | Out-Null
 @'
-param($OutputDirectory)
+param($OutputDirectory,$Framework)
 New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
 $repo=Split-Path -Parent $PSScriptRoot
 @{Revision=(git -C $repo rev-parse HEAD);LibrarySha256=('1'*64);Fake=$true} |
@@ -108,7 +108,8 @@ try {
     foreach ($arguments in $builds) {
         if ($arguments[0] -ne 'build' -or ![IO.Path]::IsPathFullyQualified($arguments[1]) -or
             !$arguments[1].StartsWith($worktree+[IO.Path]::DirectorySeparatorChar) -or
-            $arguments[2] -ne '-c' -or $arguments[3] -ne 'Release') { throw 'Build selected a relative/wrong project or configuration' }
+            $arguments[2] -ne '-c' -or $arguments[3] -ne 'Release' -or
+            $arguments[4] -ne '-f' -or $arguments[5] -ne 'net11.0') { throw 'Build selected a relative/wrong project or configuration' }
     }
     $identity=Get-Content -LiteralPath (Join-Path $destination 'identity.json') -Raw | ConvertFrom-Json
     $evidence=Get-Content -LiteralPath ($destination+'.build/evidence.json') -Raw | ConvertFrom-Json

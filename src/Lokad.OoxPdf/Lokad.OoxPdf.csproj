@@ -1,19 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <PackageId>Lokad.OoxPdf</PackageId>
-    <Version>0.2.0</Version>
-    <AssemblyVersion>0.2.0.0</AssemblyVersion>
-    <FileVersion>0.2.0.0</FileVersion>
-    <InformationalVersion>0.2.0</InformationalVersion>
+    <Version>0.3.0</Version>
+    <AssemblyVersion>0.3.0.0</AssemblyVersion>
+    <FileVersion>0.3.0.0</FileVersion>
+    <InformationalVersion>0.3.0</InformationalVersion>
     <Authors>Lokad</Authors>
     <Company>Lokad</Company>
     <Description>Dependency-free OOXML to PDF renderer for PPTX and DOCX corporate documents.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <PackageIcon>icon.png</PackageIcon>
-    <PackageReleaseNotes>0.2.0 improves composed DOCX content, PPTX inheritance and image handling, and simplifies hosting. Breaking API changes require recompiling callers: docs/PublicApiChanges.md. Rendering scope and limitations: docs/PreviewRelease.md. See CHANGELOG.md for release notes.</PackageReleaseNotes>
+    <PackageReleaseNotes>0.3.0 development: .NET 10 and .NET 11 assets. Rendering improvements remain in progress; see CHANGELOG.md and docs/Capabilities.md for the current scope.</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/Lokad/OoxPDF</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Lokad/OoxPDF.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

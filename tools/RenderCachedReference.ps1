@@ -8,6 +8,7 @@
 # corrupt-entry error, while rendering mode deletes and re-renders.
 
 param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
     [Parameter(Mandatory = $true)]
     [string] $InputPath,
 
@@ -99,7 +100,7 @@ if ($resolution.Outcome -eq "Miss") {
         $staging = Join-Path (Get-ReferenceCacheRoot) ("_render-" + [System.Guid]::NewGuid().ToString("N"))
         New-Item -ItemType Directory -Force -Path $staging | Out-Null
         try {
-            & $renderReference -InputPath $inputFull -OutputDirectory $staging -Dpi $Dpi -TimeoutSeconds $RenderTimeoutSeconds -SkipBuild:$SkipBuild
+            & $renderReference -Framework $Framework -InputPath $inputFull -OutputDirectory $staging -Dpi $Dpi -TimeoutSeconds $RenderTimeoutSeconds -SkipBuild:$SkipBuild
             $workerStatus = $null
             $workerStatusPath = Join-Path $staging "reference-worker-status.json"
             if (Test-Path -LiteralPath $workerStatusPath) {
@@ -164,7 +165,7 @@ if ($derivative.State -eq "Missing") {
         }
         New-Item -ItemType Directory -Force -Path $staging | Out-Null
         try {
-            & (Join-Path $PSScriptRoot 'RasterizePdf.ps1') -InputPdf (Join-Path $resolution.CacheDirectory 'reference.pdf') -OutputDirectory $staging -Dpi $Dpi -SkipBuild:$SkipBuild
+            & (Join-Path $PSScriptRoot 'RasterizePdf.ps1') -Framework $Framework -InputPdf (Join-Path $resolution.CacheDirectory 'reference.pdf') -OutputDirectory $staging -Dpi $Dpi -SkipBuild:$SkipBuild
             if (!(Get-ReferenceRasterPages $staging).Count) { throw 'Rasterizer produced no pages' }
             # Retain interrupted derivatives as evidence, never mix their pages
             # into a fresh run. Only complete pages receive a completion record.

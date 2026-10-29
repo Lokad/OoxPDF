@@ -3,7 +3,8 @@
 param(
     [Parameter(Mandatory=$true)] [string] $WorktreeDirectory,
     [Parameter(Mandatory=$true)] [ValidatePattern('^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$')] [string] $Revision,
-    [Parameter(Mandatory=$true)] [string] $OutputDirectory
+    [Parameter(Mandatory=$true)] [string] $OutputDirectory,
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0'
 )
 $ErrorActionPreference='Stop'
 # Handle native exit codes explicitly so failures always point to retained logs.
@@ -44,15 +45,15 @@ foreach ($relative in $projects) {
     $project=Join-Path $source $relative
     $log=Join-Path $logs ($builds.Count.ToString()+'.log')
     # Absolute project arguments make the caller's working directory irrelevant.
-    & dotnet build $project -c Release --nologo -v minimal *> $log
+    & dotnet build $project -c Release -f $Framework --nologo -v minimal *> $log
     if ($LASTEXITCODE -ne 0) { throw ('Qualification build failed; inspect '+$log) }
-    $builds += [ordered]@{Project=$project;Log=$log;Configuration='Release'}
+    $builds += [ordered]@{Project=$project;Log=$log;Configuration='Release';Framework=$Framework}
     Assert-Source
 }
-& $freeze -OutputDirectory $output
+& $freeze -OutputDirectory $output -Framework $Framework
 $pin=Get-Content -LiteralPath (Join-Path $output 'identity.json') -Raw | ConvertFrom-Json
 if ($pin.Revision -ne $Revision) { throw 'Frozen source revision differs' }
 [ordered]@{Worktree=$source;Revision=$Revision;Builds=$builds;Artifact=$output;
-    LibrarySha256=$pin.LibrarySha256;TestsRun=0} | ConvertTo-Json -Depth 5 |
+    Framework=$Framework;LibrarySha256=$pin.LibrarySha256;TestsRun=0} | ConvertTo-Json -Depth 5 |
     Set-Content -LiteralPath (Join-Path $logs 'evidence.json') -Encoding utf8
 Write-Output ('Built and froze '+$Revision+' from explicit linked worktree; no tests replayed.')

@@ -8,7 +8,9 @@ $ErrorActionPreference='Stop'
 $PSNativeCommandUseErrorActionPreference=$false
 $artifact=(Resolve-Path -LiteralPath $ArtifactDirectory).Path
 $pin=Get-Content -LiteralPath (Join-Path $artifact 'identity.json') -Raw | ConvertFrom-Json
-$library=Join-Path $artifact 'src/Lokad.OoxPdf/bin/Release/net10.0/Lokad.OoxPdf.dll'
+$framework=if ($pin.Framework) {$pin.Framework} else {'net10.0'}
+if ($framework -notin @('net10.0','net11.0')) { throw 'Unknown frozen target framework' }
+$library=Join-Path $artifact "src/Lokad.OoxPdf/bin/Release/$framework/Lokad.OoxPdf.dll"
 if ((Get-FileHash -LiteralPath $library).Hash -ne $pin.LibrarySha256) { throw 'Frozen library identity differs' }
 $output=[IO.Path]::GetFullPath($OutputDirectory)
 if (Test-Path -LiteralPath $output) { throw 'Use a fresh allocation runtime directory' }
@@ -28,11 +30,11 @@ $snapshotLibrary=Join-Path $output 'library/Lokad.OoxPdf.dll'
 Copy-Item -LiteralPath $library -Destination $snapshotLibrary
 if ((Get-FileHash -LiteralPath $snapshotLibrary).Hash -ne $pin.LibrarySha256) { throw 'Probe library copy differs' }
 $project=Join-Path $output 'Lokad.OoxPdf.AllocProbe.csproj'
-@'
+@"
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>$framework</TargetFramework>
     <AssemblyName>Lokad.OoxPdf.AllocProbe</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -45,18 +47,18 @@ $project=Join-Path $output 'Lokad.OoxPdf.AllocProbe.csproj'
     </Reference>
   </ItemGroup>
 </Project>
-'@ | Set-Content -LiteralPath $project -Encoding utf8
+"@ | Set-Content -LiteralPath $project -Encoding utf8
 # No ProjectReference: this builds only the probe and never the library.
 & dotnet build $project -c Release --nologo -v minimal *> (Join-Path $output 'build.log')
 if ($LASTEXITCODE -ne 0) { throw ('Allocation probe build failed; inspect '+(Join-Path $output 'build.log')) }
-$runtime=Join-Path $output 'bin/Release/net10.0'
+$runtime=Join-Path $output "bin/Release/$framework"
 if ((Get-FileHash -LiteralPath (Join-Path $runtime 'Lokad.OoxPdf.dll')).Hash -ne $pin.LibrarySha256 -or
     (Get-FileHash -LiteralPath $library).Hash -ne $pin.LibrarySha256) { throw 'Qualified library changed during probe preparation' }
 $probe=Join-Path $runtime 'Lokad.OoxPdf.AllocProbe.dll'
 & dotnet $probe --self-test *> (Join-Path $output 'self-test.log')
 if ($LASTEXITCODE -ne 0) { throw ('Allocation probe self-test failed; inspect '+(Join-Path $output 'self-test.log')) }
 [ordered]@{
-    FrozenRevision=$pin.Revision;LibrarySha256=$pin.LibrarySha256
+    FrozenRevision=$pin.Revision;Framework=$framework;LibrarySha256=$pin.LibrarySha256
     ProbeBuilt=$true;LibraryRebuilt=$false;SourceHashes=$sourceHashes
     ProjectSha256=(Get-FileHash -LiteralPath $project).Hash
     ProbeSha256=(Get-FileHash -LiteralPath $probe).Hash

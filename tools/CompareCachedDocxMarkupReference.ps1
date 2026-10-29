@@ -1,4 +1,5 @@
 param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
     [Parameter(Mandatory = $true)]
     [string] $Case,
 
@@ -100,7 +101,7 @@ function Invoke-DotnetBuildIfStale {
     if (-not [string]::IsNullOrWhiteSpace($RecordPath)) {
         $buildParameters.RecordPath = $RecordPath
     }
-    & (Join-Path $repoRoot 'tools/EnsureDotnetBuild.ps1') @buildParameters
+    & (Join-Path $repoRoot 'tools/EnsureDotnetBuild.ps1') -Framework $Framework @buildParameters
 }
 
 . (Join-Path $PSScriptRoot "JsonArray.ps1")
@@ -3421,7 +3422,7 @@ if ($ValidateOnly) {
 }
 
 $cliProject = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj"
-$cliDll = if ($CliPath) { (Resolve-Path $CliPath).Path } else { Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll" }
+$cliDll = if ($CliPath) { (Resolve-Path $CliPath).Path } else { Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/$Framework/Lokad.OoxPdf.Cli.dll" }
 if ([bool]$CliPath -ne [bool]$DocxInspectorPath) { throw 'Supply the qualified CLI and matching DOCX inspector together' }
 if (!$CliPath) { Invoke-DotnetBuildIfStale -Project $cliProject -OutputDll $cliDll -Description "CLI" -RecordPath (Join-Path $runRoot 'cli-build-info.json') }
 $cliHash = (Get-FileHash $cliDll).Hash
@@ -3442,35 +3443,35 @@ if ($LASTEXITCODE -ne 0) {
     throw "Candidate conversion failed with exit code $LASTEXITCODE."
 }
 
-& (Join-Path $PSScriptRoot "InspectDocx.ps1") -InputDocx $inputFull -OutputDirectory $candidateDocxInspect -DocxMarkup $resolvedDocxMarkup -DocxMarkupGeometry $resolvedDocxMarkupGeometry -InspectorPath $DocxInspectorPath -SkipBuild:$SkipBuild -ExpectedLibrarySha256 $cliLibraryHash | Out-Null
+& (Join-Path $PSScriptRoot "InspectDocx.ps1") -Framework $Framework -InputDocx $inputFull -OutputDirectory $candidateDocxInspect -DocxMarkup $resolvedDocxMarkup -DocxMarkupGeometry $resolvedDocxMarkupGeometry -InspectorPath $DocxInspectorPath -SkipBuild:$SkipBuild -ExpectedLibrarySha256 $cliLibraryHash | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw "DOCX inspection failed with exit code $LASTEXITCODE."
 }
 
-& (Join-Path $PSScriptRoot "InspectPdf.ps1") -InputPdf $referencePdfPath -OutputDirectory $referencePdfInspect -InspectorPath $PdfInspectorPath -SkipBuild:$SkipBuild | Out-Null
+& (Join-Path $PSScriptRoot "InspectPdf.ps1") -Framework $Framework -InputPdf $referencePdfPath -OutputDirectory $referencePdfInspect -InspectorPath $PdfInspectorPath -SkipBuild:$SkipBuild | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw "Reference PDF inspection failed with exit code $LASTEXITCODE."
 }
 
-& (Join-Path $PSScriptRoot "InspectPdf.ps1") -InputPdf $candidatePdf -OutputDirectory $candidatePdfInspect -InspectorPath $PdfInspectorPath -SkipBuild:$SkipBuild | Out-Null
+& (Join-Path $PSScriptRoot "InspectPdf.ps1") -Framework $Framework -InputPdf $candidatePdf -OutputDirectory $candidatePdfInspect -InspectorPath $PdfInspectorPath -SkipBuild:$SkipBuild | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw "Candidate PDF inspection failed with exit code $LASTEXITCODE."
 }
 
 $visualMetrics = @()
 if (-not $SkipRasterDiff) {
-    & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $referencePdfPath -OutputDirectory $referenceRasterDir -Dpi $Dpi -SkipBuild:$SkipBuild | Out-Null
+    & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -Framework $Framework -InputPdf $referencePdfPath -OutputDirectory $referenceRasterDir -Dpi $Dpi -SkipBuild:$SkipBuild | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "Reference PDF rasterization failed with exit code $LASTEXITCODE."
     }
 
-    & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $candidatePdf -OutputDirectory $candidateRasterDir -Dpi $Dpi -SkipBuild:$SkipBuild | Out-Null
+    & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -Framework $Framework -InputPdf $candidatePdf -OutputDirectory $candidateRasterDir -Dpi $Dpi -SkipBuild:$SkipBuild | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "Candidate PDF rasterization failed with exit code $LASTEXITCODE."
     }
 
     $visualDiffProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj"
-    $visualDiffDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/net10.0/Lokad.OoxPdf.VisualDiff.dll"
+    $visualDiffDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/$Framework/Lokad.OoxPdf.VisualDiff.dll"
     Invoke-DotnetBuildIfStale -Project $visualDiffProject -OutputDll $visualDiffDll -Description "VisualDiff" -RecordPath (Join-Path $runRoot 'visual-diff-build-info.json')
     dotnet $visualDiffDll $referenceRasterDir $candidateRasterDir $visualDiffDir | Out-Null
     if ($LASTEXITCODE -ne 0) {

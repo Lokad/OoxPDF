@@ -9,6 +9,7 @@
 #   - on success leaves reference.pdf plus DPI raster page-*.png in -WorkDirectory.
 
 param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = $(if ($env:OOXPDF_TARGET_FRAMEWORK) {$env:OOXPDF_TARGET_FRAMEWORK} else {'net11.0'}),
     [Parameter(Mandatory = $true)]
     [string] $InputPath,
 
@@ -117,7 +118,7 @@ try {
 
         $stage = "rasterize"
         Write-Stage $stage
-        & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $referencePdf -OutputDirectory $workFull -Dpi $Dpi -SkipBuild:$SkipBuild
+        & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -Framework $Framework -InputPdf $referencePdf -OutputDirectory $workFull -Dpi $Dpi -SkipBuild:$SkipBuild
         $stage = "done"
         Write-Stage $stage
         Write-Status "ok" $stage $officeApp $officeVersion $exportSettings ""
@@ -173,7 +174,7 @@ try {
 
         $stage = "rasterize"
         Write-Stage $stage
-        & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $referencePdf -OutputDirectory $workFull -Dpi $Dpi -SkipBuild:$SkipBuild
+        & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -Framework $Framework -InputPdf $referencePdf -OutputDirectory $workFull -Dpi $Dpi -SkipBuild:$SkipBuild
         $stage = "done"
         Write-Stage $stage
         Write-Status "ok" $stage $officeApp $officeVersion $exportSettings ""

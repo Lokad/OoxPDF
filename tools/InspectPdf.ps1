@@ -1,4 +1,5 @@
 param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
     [Parameter(Mandatory = $true)]
     [string] $InputPdf,
 
@@ -15,14 +16,14 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/Lokad.OoxPdf.PdfInspect.csproj"
-$dll = if ($InspectorPath) { (Resolve-Path $InspectorPath).Path } else { Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/bin/Debug/net10.0/Lokad.OoxPdf.PdfInspect.dll" }
+$dll = if ($InspectorPath) { (Resolve-Path $InspectorPath).Path } else { Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/bin/Debug/$Framework/Lokad.OoxPdf.PdfInspect.dll" }
 $buildRecordPath = $null
 if (-not [string]::IsNullOrWhiteSpace($OutputDirectory)) {
     New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
     $buildRecordPath = Join-Path $OutputDirectory 'pdf-inspect-build-info.json'
 }
 if (!$InspectorPath -and !$SkipBuild) {
-    & (Join-Path $repoRoot 'tools/EnsureDotnetBuild.ps1') -Project $project -OutputDll $dll -Description 'PDF inspect' -RecordPath $buildRecordPath
+    & (Join-Path $repoRoot 'tools/EnsureDotnetBuild.ps1') -Framework $Framework -Project $project -OutputDll $dll -Description 'PDF inspect' -RecordPath $buildRecordPath
 }
 $inspectorHash = (Get-FileHash $dll).Hash
 if (($InspectorPath -or $SkipBuild) -and $buildRecordPath) {

@@ -1,6 +1,7 @@
 # Check transfer ownership and refusal with byte fixtures, never a real CLI/build.
 [CmdletBinding()]
 param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
     [string] $OutputDirectory,
     [string] $TransferScript = (Join-Path $PSScriptRoot 'TransferQualificationArtifact.ps1')
 )
@@ -9,7 +10,7 @@ if (!$OutputDirectory) { $OutputDirectory=Join-Path (Split-Path $PSScriptRoot) (
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'Use a fresh transfer self-test directory' }
 New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
 $root=(Resolve-Path -LiteralPath $OutputDirectory).Path
-$asset='src/Lokad.OoxPdf/bin/Release/net10.0/Lokad.OoxPdf.dll'
+$asset="src/Lokad.OoxPdf/bin/Release/$Framework/Lokad.OoxPdf.dll"
 $rows=@()
 function Write-Text([string] $Path,[string] $Value) {
     New-Item -ItemType Directory -Path (Split-Path -Parent $Path) -Force | Out-Null
@@ -44,7 +45,7 @@ try {
         $newFile=Join-Path $artifact $asset
         Write-Text $newFile 'new frozen bytes'
         $newHash=(Get-FileHash -LiteralPath $newFile).Hash
-        $oldFile=Join-Path $checkout artifacts/previous/Release/net10.0/Lokad.OoxPdf.dll
+        $oldFile=Join-Path $checkout "artifacts/previous/Release/$Framework/Lokad.OoxPdf.dll"
         Write-Text $oldFile 'previous retained bytes'
         $oldHash=(Get-FileHash -LiteralPath $oldFile).Hash
         $target=Join-Path $checkout $asset
@@ -60,7 +61,7 @@ try {
             if ($kind -eq 'independent') { Copy-Item -LiteralPath $oldFile -Destination $target }
             else { New-Item -ItemType HardLink -Path $target -Target $oldFile | Out-Null }
         }
-        Write-Json (Join-Path $artifact identity.json) @{Revision=$revision;LibrarySha256=$newHash;TestAssemblySha256=('B'*64);Assets=@{$asset=$newHash}}
+        Write-Json (Join-Path $artifact identity.json) @{Revision=$revision;Framework=$Framework;LibrarySha256=$newHash;TestAssemblySha256=('B'*64);Assets=@{$asset=$newHash}}
         Write-Json (Join-Path $checkout artifacts/qualification.json) @{LibrarySha256=$newHash;TestAssemblySha256=('B'*64)}
         $inputFile=Join-Path $checkout artifacts/input.docx
         Write-Text $inputFile $(if ($kind -eq 'smoke-failure') {'smoke-failure'} else {'source input'})

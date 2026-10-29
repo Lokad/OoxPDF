@@ -1,6 +1,7 @@
 # Independent Office comparisons for a measured portfolio; no library builds.
 [CmdletBinding()]
 param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
     [Parameter(Mandatory=$true)] [string] $CandidateDirectory,
     [Parameter(Mandatory=$true)] [ValidateNotNullOrEmpty()] [string[]] $ReferenceDirectory,
     [Parameter(Mandatory=$true)] [string] $VisualDiffPath,
@@ -138,7 +139,7 @@ $jobs = @(foreach ($row in $outcomes.Rows) {
 })
 # Match the reference cache's PDF/DPI/tool/page-hash convention. Legacy raster
 # folders stay untouched: only derivatives completed by this command may be reused.
-$rasterizerDll = Join-Path $ValidationToolsDirectory 'Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll'
+$rasterizerDll = Join-Path $ValidationToolsDirectory "Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll"
 $rasterizerIdentity = [ordered]@{
     SourceAndNativeId = Get-RasterizerId
     WrapperSha256 = (Get-FileHash (Join-Path $ValidationToolsDirectory 'RasterizePdf.ps1')).Hash
@@ -157,7 +158,7 @@ function Get-PortfolioRaster([string] $Pdf, [string] $Folder) {
         }
     }
     else {
-        & (Join-Path $ValidationToolsDirectory 'RasterizePdf.ps1') -InputPdf $Pdf -OutputDirectory $Folder -Dpi 144 -SkipBuild *> ($Folder+'.log')
+        & (Join-Path $ValidationToolsDirectory 'RasterizePdf.ps1') -Framework $Framework -InputPdf $Pdf -OutputDirectory $Folder -Dpi 144 -SkipBuild *> ($Folder+'.log')
         # The wrapper throws on native failure; Start-Process does not set LASTEXITCODE.
     }
     $files = @(Get-ChildItem -LiteralPath $Folder -Filter 'page-*.png' -File)

@@ -1,4 +1,5 @@
 param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
     [Parameter(Mandatory = $true)]
     [string] $InputPdf,
 
@@ -42,14 +43,14 @@ New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $outputFull = (Resolve-Path -LiteralPath $OutputDirectory).Path
 
 $rasterizerProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj"
-$rasterizerDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll"
+$rasterizerDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll"
 if ($SkipBuild) {
     if (-not (Test-Path -LiteralPath $rasterizerDll)) {
         throw "PDFium rasterizer DLL is missing and -SkipBuild was requested: $rasterizerDll."
     }
 }
 else {
-    & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Project $rasterizerProject -OutputDll $rasterizerDll -Description "PDFium rasterizer"
+    & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Framework $Framework -Project $rasterizerProject -OutputDll $rasterizerDll -Description "PDFium rasterizer"
 }
 
 $start = [Diagnostics.ProcessStartInfo]::new("dotnet")

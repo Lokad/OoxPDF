@@ -1,4 +1,5 @@
 # Exercise the inspectors' production build calls with isolated projects.
+param([ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0')
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 foreach ($scriptName in @('InspectPdf.ps1', 'InspectPptxText.ps1')) {
@@ -20,9 +21,9 @@ foreach ($scriptName in @('InspectPdf.ps1', 'InspectPptxText.ps1')) {
     $project = Join-Path $projectDirectory 'probe.csproj'
     $source = Join-Path $projectDirectory 'Program.cs'
     $properties = Join-Path $scratch 'Directory.Build.props'
-    $dll = Join-Path $projectDirectory 'bin/Debug/net10.0/probe.dll'
+    $dll = Join-Path $projectDirectory "bin/Debug/$Framework/probe.dll"
     $buildRecordPath = Join-Path $scratch 'build-info.json'
-    Set-Content -LiteralPath $project -Value '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework><OutputType>Exe</OutputType></PropertyGroup></Project>'
+    Set-Content -LiteralPath $project -Value ('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>'+ $Framework + '</TargetFramework><OutputType>Exe</OutputType></PropertyGroup></Project>')
     Set-Content -LiteralPath $source -Value @'
 #if UPDATED_BUILD
 System.Console.WriteLine("updated");

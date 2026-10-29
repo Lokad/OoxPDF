@@ -40,10 +40,10 @@ Missing fonts affect glyph coverage, wrapping and pagination. See
 
 ## CLI
 
-From a checkout with the .NET 10 SDK:
+From a checkout with the SDK pinned in `global.json`:
 
 ```powershell
-dotnet run --project src/Lokad.OoxPdf.Cli -- convert input.docx output.pdf --diagnostics diagnostics.json --strict
+dotnet run --project src/Lokad.OoxPdf.Cli -f net11.0 -- convert input.docx output.pdf --diagnostics diagnostics.json --strict
 ```
 
 With `--strict`, exit code `3` means the PDF was produced with warnings or errors.
@@ -60,9 +60,14 @@ and [DOCX markup modes](docs/DocxMarkupModes.md).
 
 ## Development
 
+The 0.3.0 branch targets .NET 10 and .NET 11. Install the pinned .NET 11 SDK
+(currently RC3, a prerelease) and the .NET 10 runtime. Published 0.2.0 targets
+.NET 10. Use .NET 11 for development and extensive tests; select `net10.0`
+explicitly for compatibility checks.
+
 ```powershell
 dotnet build Lokad.OoxPdf.slnx -c Release
-dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -- --skip-slow
+dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -f net11.0 -- --skip-slow
 dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj -c Release --no-build
 ```
 

@@ -1,6 +1,7 @@
 # Candidate-only DOCX markup triage for private cases (no Office/COM).
 
 param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
     [Parameter(Mandatory = $true)]
     [string] $Case,
 
@@ -687,26 +688,26 @@ $diagnosticsPath = Join-Path $candidateDir "diagnostics.json"
 $summaryPath = Join-Path $runRoot "summary.json"
 $featureCountsPath = Join-Path $inventoryDir "markup-feature-counts.json"
 
-dotnet build (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj") --nologo
+dotnet build (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj") -f $Framework --nologo
 if ($LASTEXITCODE -ne 0) {
     throw "CLI build failed with exit code $LASTEXITCODE."
 }
 
-$cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll"
+$cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/$Framework/Lokad.OoxPdf.Cli.dll"
 dotnet $cliDll convert $inputFull $candidatePdf --diagnostics $diagnosticsPath --docx-markup $MarkupMode --docx-markup-geometry $MarkupGeometry
 if ($LASTEXITCODE -ne 0) {
     throw "Candidate conversion failed with exit code $LASTEXITCODE."
 }
 
 if (-not $SkipDocxInspect) {
-    & (Join-Path $PSScriptRoot "InspectDocx.ps1") -InputDocx $inputFull -OutputDirectory $inspectDir -DocxMarkup $MarkupMode -DocxMarkupGeometry $MarkupGeometry | Out-Null
+    & (Join-Path $PSScriptRoot "InspectDocx.ps1") -Framework $Framework -InputDocx $inputFull -OutputDirectory $inspectDir -DocxMarkup $MarkupMode -DocxMarkupGeometry $MarkupGeometry | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "DOCX inspection failed with exit code $LASTEXITCODE."
     }
 }
 
 if (-not $SkipPdfInspect) {
-    & (Join-Path $PSScriptRoot "InspectPdf.ps1") -InputPdf $candidatePdf -OutputDirectory $pdfInspectDir -TextOnly | Out-Null
+    & (Join-Path $PSScriptRoot "InspectPdf.ps1") -Framework $Framework -InputPdf $candidatePdf -OutputDirectory $pdfInspectDir -TextOnly | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "PDF inspection failed with exit code $LASTEXITCODE."
     }

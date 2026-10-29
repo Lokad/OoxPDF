@@ -10,7 +10,8 @@ param(
     [string] $FontPath = "",
     [switch] $NoBuild,
     [string] $PackagePath = "",
-    [string] $ExpectedLibrarySha256 = ""
+    [string] $ExpectedLibrarySha256 = "",
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0'
 )
 
 $ErrorActionPreference = "Stop"
@@ -70,7 +71,7 @@ try {
             $localDocumentationLinks++
         }
     }
-    $libraryEntry = $archive.GetEntry("lib/net10.0/Lokad.OoxPdf.dll")
+    $libraryEntry = $archive.GetEntry("lib/$Framework/Lokad.OoxPdf.dll")
     if ($null -eq $libraryEntry) { throw "Packed library DLL is missing." }
     $libraryStream = $libraryEntry.Open()
     try {
@@ -100,7 +101,7 @@ $csproj = @"
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>$Framework</TargetFramework>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
@@ -206,6 +207,7 @@ if ($pdfHeader -ne "%PDF-") {
 }
 Write-Host "Package smoke test passed through the packed library."
 [ordered]@{
+    Framework = $Framework
     LibraryRebuilt = -not $NoBuild -and -not $PackagePath
     ReusedPackage = [bool]$PackagePath
     ExpectedLibrarySha256 = $ExpectedLibrarySha256

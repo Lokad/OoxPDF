@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0 — Unreleased
+
+- Multi-targets .NET 10 and .NET 11. Development uses the pinned .NET 11 RC SDK;
+  qualification records framework-specific library and tool identities.
+
 ## 0.2.0 — 2026-10-29
 
 ### Rendering

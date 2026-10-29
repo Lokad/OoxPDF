@@ -1,6 +1,7 @@
 # Snapshot existing Release outputs and public fixtures. Does not build or test.
 [CmdletBinding()]
-param([Parameter(Mandatory=$true)] [string] $OutputDirectory)
+param([Parameter(Mandatory=$true)] [string] $OutputDirectory,
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0')
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 function New-FrozenHardLink([string] $Path, [string] $Target) {
@@ -17,7 +18,7 @@ if ($LASTEXITCODE -ne 0 -or $status.Count) { throw 'Commit source and public inp
 # A test-only rebuild can update the library while leaving the CLI copy stale.
 # Reject mixed runtime copies before creating an immutable snapshot.
 $libraryCopies = @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests', 'tools/Lokad.OoxPdf.DocxInspect') |
-    ForEach-Object { (Get-FileHash -LiteralPath (Join-Path $repo ($_ + '/bin/Release/net10.0/Lokad.OoxPdf.dll'))).Hash }
+    ForEach-Object { (Get-FileHash -LiteralPath (Join-Path $repo ($_ + "/bin/Release/$Framework/Lokad.OoxPdf.dll"))).Hash }
 if (@($libraryCopies | Sort-Object -Unique).Count -ne 1) {
     throw 'Release library copies differ; refresh the dependent outputs before freezing'
 }
@@ -91,7 +92,7 @@ $assetCopies = @{}
 $sharedAssetFiles = 0
 $sharedAssetBytes = 0L
 foreach ($project in @('src/Lokad.OoxPdf','src/Lokad.OoxPdf.Cli','tests/Lokad.OoxPdf.Tests','tools/Lokad.OoxPdf.DocxInspect')) {
-    $relative = $project + '/bin/Release/net10.0'
+    $relative = $project + "/bin/Release/$Framework"
     $source = Join-Path $repo $relative
     if (!(Test-Path -LiteralPath $source)) { throw ('Missing Release output: ' + $project) }
     $target = Join-Path $output $relative
@@ -120,12 +121,12 @@ New-Item -ItemType Directory -Path (Split-Path $inputLink) -Force | Out-Null
 $linkType = if ($IsWindows) { 'Junction' } else { 'SymbolicLink' }
 New-Item -ItemType $linkType -Path $inputLink -Target (Join-Path $snapshot $inputRoot) | Out-Null
 [ordered]@{
-    Revision=$revision;Rebuilt=$false;Assets=$assets;Inputs=$inputs
+    Revision=$revision;Framework=$Framework;Rebuilt=$false;Assets=$assets;Inputs=$inputs
     InputTree=$inputTree;InputSnapshot=$snapshot;ReusedInputSnapshot=$reusedInputs
     SharedInputFiles=$inputPin.SharedInputFiles
     SharedAssetFiles=$sharedAssetFiles;SharedAssetBytes=$sharedAssetBytes
     InputSnapshotIdentitySha256=(Get-FileHash -LiteralPath $inputIdentity).Hash
-    LibrarySha256=(Get-FileHash -LiteralPath (Join-Path $output 'src/Lokad.OoxPdf/bin/Release/net10.0/Lokad.OoxPdf.dll')).Hash
-    TestAssemblySha256=(Get-FileHash -LiteralPath (Join-Path $output 'tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll')).Hash
+    LibrarySha256=(Get-FileHash -LiteralPath (Join-Path $output "src/Lokad.OoxPdf/bin/Release/$Framework/Lokad.OoxPdf.dll")).Hash
+    TestAssemblySha256=(Get-FileHash -LiteralPath (Join-Path $output "tests/Lokad.OoxPdf.Tests/bin/Release/$Framework/Lokad.OoxPdf.Tests.dll")).Hash
 } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $output 'identity.json') -Encoding utf8
 Write-Output "Frozen $($assets.Count) assets at $revision; $($inputs.Count) public inputs verified in shared snapshot (reused: $reusedInputs)."

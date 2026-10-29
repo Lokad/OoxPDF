@@ -322,6 +322,9 @@ internal static class ToolBudgetTests
         start.ArgumentList.Add("build");
         start.ArgumentList.Add(projectPath);
         start.ArgumentList.Add("--nologo");
+        string framework = "net" + new System.Runtime.Versioning.FrameworkName(AppContext.TargetFrameworkName!).Version.ToString(2);
+        start.ArgumentList.Add("--framework");
+        start.ArgumentList.Add(framework);
 
         using Process process = Process.Start(start) ?? throw new InvalidOperationException("Failed to build tool project.");
         Task<string> outputRead = process.StandardOutput.ReadToEndAsync();
@@ -340,7 +343,7 @@ internal static class ToolBudgetTests
         }
 
         string projectDirectory = Path.GetDirectoryName(projectPath) ?? throw new InvalidOperationException("Expected a project directory.");
-        return Path.Combine(repositoryRoot, projectDirectory, "bin", "Debug", "net10.0", dllName);
+        return Path.Combine(repositoryRoot, projectDirectory, "bin", "Debug", framework, dllName);
     }
 
     private static string FindRepositoryRoot()

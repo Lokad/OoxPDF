@@ -3,6 +3,7 @@
 # Outputs go under ignored artifacts/alloc/. No Office/COM is required.
 
 param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
     [string[]] $Corpus = @(),
 
     [int] $Warmup = 1,
@@ -46,7 +47,7 @@ if ($Corpus.Count -eq 0) {
 }
 
 $probeProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.AllocProbe/Lokad.OoxPdf.AllocProbe.csproj"
-$probeDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.AllocProbe/bin/Release/net10.0/Lokad.OoxPdf.AllocProbe.dll"
+$probeDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.AllocProbe/bin/Release/$Framework/Lokad.OoxPdf.AllocProbe.dll"
 $allocRoot = Join-Path $repoRoot "artifacts/alloc"
 New-Item -ItemType Directory -Force -Path $allocRoot | Out-Null
 
@@ -56,7 +57,7 @@ if ($SkipBuild) {
     }
 }
 else {
-    & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Project $probeProject -OutputDll $probeDll -Description "AllocProbe" -Configuration Release -RecordPath (Join-Path $allocRoot "build-info.json")
+    & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Framework $Framework -Project $probeProject -OutputDll $probeDll -Description "AllocProbe" -Configuration Release -RecordPath (Join-Path $allocRoot "build-info.json")
 }
 
 if ($SelfTest) {

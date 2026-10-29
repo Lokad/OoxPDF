@@ -1,5 +1,6 @@
 # Exercise the cached comparison's production build gate with an isolated
 # project. Parent MSBuild properties affect the output without touching C#.
+param([ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0')
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $tokens = $null
@@ -19,8 +20,8 @@ New-Item -ItemType Directory -Path $projectDirectory -Force | Out-Null
 $project = Join-Path $projectDirectory 'probe.csproj'
 $source = Join-Path $projectDirectory 'Program.cs'
 $properties = Join-Path $scratch 'Directory.Build.props'
-$outputDll = Join-Path $projectDirectory 'bin/Debug/net10.0/probe.dll'
-Set-Content -LiteralPath $project -Value '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework><OutputType>Exe</OutputType></PropertyGroup></Project>'
+$outputDll = Join-Path $projectDirectory "bin/Debug/$Framework/probe.dll"
+Set-Content -LiteralPath $project -Value ('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>'+ $Framework + '</TargetFramework><OutputType>Exe</OutputType></PropertyGroup></Project>')
 Set-Content -LiteralPath $source -Value @'
 #if UPDATED_BUILD
 System.Console.WriteLine("updated");

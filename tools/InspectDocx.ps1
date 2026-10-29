@@ -1,6 +1,7 @@
 # Dumps DOCX layout/mode inspection JSON (helper for markup triage).
 
 param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
     [Parameter(Mandatory = $true)]
     [string] $InputDocx,
 
@@ -22,12 +23,12 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repoRoot "tools/Lokad.OoxPdf.DocxInspect/Lokad.OoxPdf.DocxInspect.csproj"
 $dll = if ($InspectorPath) { (Resolve-Path -LiteralPath $InspectorPath).Path } else {
-    Join-Path $repoRoot "tools/Lokad.OoxPdf.DocxInspect/bin/Debug/net10.0/Lokad.OoxPdf.DocxInspect.dll"
+    Join-Path $repoRoot "tools/Lokad.OoxPdf.DocxInspect/bin/Debug/$Framework/Lokad.OoxPdf.DocxInspect.dll"
 }
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $buildRecordPath = Join-Path $OutputDirectory 'docx-inspect-build-info.json'
 if (!$InspectorPath -and !$SkipBuild) {
-    & (Join-Path $repoRoot 'tools/EnsureDotnetBuild.ps1') -Project $project -OutputDll $dll -Description 'DOCX inspect' -RecordPath $buildRecordPath
+    & (Join-Path $repoRoot 'tools/EnsureDotnetBuild.ps1') -Framework $Framework -Project $project -OutputDll $dll -Description 'DOCX inspect' -RecordPath $buildRecordPath
 }
 $libraryPath = Join-Path (Split-Path $dll) 'Lokad.OoxPdf.dll'
 $inspectorHash = (Get-FileHash -LiteralPath $dll).Hash

@@ -4,6 +4,7 @@
 # hand-authored expected strings appear in order. Expectations live beside
 # the inputs they describe, never generated from candidate output.
 param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
     [string] $CasesDir = "",
     [string] $Out = "",
     [string] $CliPath,
@@ -20,18 +21,18 @@ if ([string]::IsNullOrWhiteSpace($Out)) {
     $Out = Join-Path $repoRoot "artifacts/text-content"
 }
 $cliProject = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj"
-$cliDll = if ($CliPath) { (Resolve-Path -LiteralPath $CliPath -ErrorAction Stop).Path } else { Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.Cli.dll" }
-$inspectorDll = if ($InspectorPath) { (Resolve-Path -LiteralPath $InspectorPath -ErrorAction Stop).Path } else { Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/bin/Debug/net10.0/Lokad.OoxPdf.PdfInspect.dll" }
+$cliDll = if ($CliPath) { (Resolve-Path -LiteralPath $CliPath -ErrorAction Stop).Path } else { Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Release/$Framework/Lokad.OoxPdf.Cli.dll" }
+$inspectorDll = if ($InspectorPath) { (Resolve-Path -LiteralPath $InspectorPath -ErrorAction Stop).Path } else { Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/bin/Debug/$Framework/Lokad.OoxPdf.PdfInspect.dll" }
 foreach ($binding in @(@{Path=$cliDll;Build=(!$CliPath -and !$SkipBuild)}, @{Path=$inspectorDll;Build=(!$InspectorPath -and !$SkipBuild)})) {
     if (!$binding.Build -and !(Test-Path -LiteralPath $binding.Path -PathType Leaf)) { throw ('Missing prebuilt text-gate binary: '+$binding.Path) }
 }
 $buildInfoDir = Join-Path $Out "build-info"
 New-Item -ItemType Directory -Force -Path $buildInfoDir | Out-Null
 if (!$CliPath -and !$SkipBuild) {
-    & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Project $cliProject -OutputDll $cliDll -Description "CLI" -Configuration Release -RecordPath (Join-Path $buildInfoDir "cli.json")
+    & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Framework $Framework -Project $cliProject -OutputDll $cliDll -Description "CLI" -Configuration Release -RecordPath (Join-Path $buildInfoDir "cli.json")
 }
 if (!$InspectorPath -and !$SkipBuild) {
-    & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Project (Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/Lokad.OoxPdf.PdfInspect.csproj') -OutputDll $inspectorDll -Description 'PDF inspect'
+    & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Framework $Framework -Project (Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/Lokad.OoxPdf.PdfInspect.csproj') -OutputDll $inspectorDll -Description 'PDF inspect'
 }
 [ordered]@{CliPath=$cliDll;CliSha256=(Get-FileHash -LiteralPath $cliDll).Hash;
     LibrarySha256=(Get-FileHash -LiteralPath (Join-Path (Split-Path $cliDll) 'Lokad.OoxPdf.dll')).Hash;
@@ -53,7 +54,7 @@ foreach ($caseFile in $cases) {
     Write-Host "[$($caseFile.BaseName)] converting..."
     & dotnet $cliDll convert $input $pdf
     if ($LASTEXITCODE -ne 0) { throw "Conversion failed for $($case.input)." }
-    & (Join-Path $repoRoot "tools/InspectPdf.ps1") -InputPdf $pdf -OutputDirectory $inspectDir -TextOnly -InspectorPath $inspectorDll -SkipBuild
+    & (Join-Path $repoRoot "tools/InspectPdf.ps1") -Framework $Framework -InputPdf $pdf -OutputDirectory $inspectDir -TextOnly -InspectorPath $inspectorDll -SkipBuild
     $ops = Get-Content -Raw -LiteralPath (Join-Path $inspectDir "text-operations.json") | ConvertFrom-Json
     $pages = $ops | Group-Object { $_.PageNumber } | Sort-Object { [int]$_.Name }
     $fullText = ($pages | ForEach-Object { ($_.Group | ForEach-Object { $_.DecodedText }) -join "" }) -join "`n"

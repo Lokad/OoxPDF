@@ -39,12 +39,17 @@ foreach ($artifact in @(@($attempts.Artifact)+@($final) | Select-Object -Unique)
     $pins[$artifact]=Get-Content -LiteralPath (Join-Path $artifact 'identity.json') -Raw | ConvertFrom-Json -AsHashtable
 }
 $first=$pins[$initial];$last=$pins[$final]
+# Pre-0.3 artifacts were net10-only and did not carry a Framework field.
+$framework=if ($first.Framework) {$first.Framework} else {'net10.0'}
+if ($framework -notin @('net10.0','net11.0')) { throw 'Unknown frozen target framework' }
 $runtime=@($first.Assets.Keys | Where-Object {$_ -notmatch '/Lokad\.OoxPdf\.Tests\.(dll|exe|pdb)$'})
 if (!$runtime.Count -or !$first.Inputs.Count) { throw 'Frozen runtime and public input identities are required' }
 foreach ($artifact in $pins.Keys) {
     $pin=$pins[$artifact]
-    if ($pin.LibrarySha256 -ne $pin.Assets['src/Lokad.OoxPdf/bin/Release/net10.0/Lokad.OoxPdf.dll'] -or
-        $pin.TestAssemblySha256 -ne $pin.Assets['tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll']) {
+    $selected=if ($pin.Framework) {$pin.Framework} else {'net10.0'}
+    if ($selected -ne $framework) { throw 'Frozen target frameworks differ' }
+    if ($pin.LibrarySha256 -ne $pin.Assets["src/Lokad.OoxPdf/bin/Release/$framework/Lokad.OoxPdf.dll"] -or
+        $pin.TestAssemblySha256 -ne $pin.Assets["tests/Lokad.OoxPdf.Tests/bin/Release/$framework/Lokad.OoxPdf.Tests.dll"]) {
         throw 'Frozen assembly metadata differs from asset identities'
     }
     $sourceChanges=@(& git -C $repo diff --name-only $first.Revision $pin.Revision -- src `
@@ -112,7 +117,7 @@ if (@($rows.Values | Where-Object {$_.outcome -eq 'failed'}).Count -or
 }
 $result=[ordered]@{
     Scope='Join reviewed test-only repairs; declared corrected methods still require source review.'
-    Platform=$config.Platform;FrozenRevision=$last.Revision
+    Platform=$config.Platform;Framework=$framework;FrozenRevision=$last.Revision
     LibrarySha256=$last.LibrarySha256;TestAssemblySha256=$last.TestAssemblySha256
     passed=@($rows.Values | Where-Object {$_.outcome -eq 'passed'}).Count
     failed=0;skipped=@($rows.Values | Where-Object {$_.outcome -eq 'skipped'}).Count

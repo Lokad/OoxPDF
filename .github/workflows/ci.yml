@@ -22,15 +22,21 @@ jobs:
       run:
         shell: pwsh
     env:
-      OOXPDF_TEST_CLI_ASSEMBLY: ${{ github.workspace }}/src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.Cli.dll
-      OOXPDF_TEST_PDF_INSPECTOR: ${{ github.workspace }}/tools/Lokad.OoxPdf.PdfInspect/bin/Release/net10.0/Lokad.OoxPdf.PdfInspect.dll
-      OOXPDF_TEST_VISUAL_DIFF: ${{ github.workspace }}/tools/Lokad.OoxPdf.VisualDiff/bin/Release/net10.0/Lokad.OoxPdf.VisualDiff.dll
-      OOXPDF_TEST_PDF_RASTERIZER: ${{ github.workspace }}/tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Release/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll
+      TMP: ${{ github.workspace }}/artifacts/ci-tmp
+      TEMP: ${{ github.workspace }}/artifacts/ci-tmp
+      OOXPDF_TEST_CLI_ASSEMBLY: ${{ github.workspace }}/src/Lokad.OoxPdf.Cli/bin/Release/net11.0/Lokad.OoxPdf.Cli.dll
+      OOXPDF_TEST_PDF_INSPECTOR: ${{ github.workspace }}/tools/Lokad.OoxPdf.PdfInspect/bin/Release/net11.0/Lokad.OoxPdf.PdfInspect.dll
+      OOXPDF_TEST_VISUAL_DIFF: ${{ github.workspace }}/tools/Lokad.OoxPdf.VisualDiff/bin/Release/net11.0/Lokad.OoxPdf.VisualDiff.dll
+      OOXPDF_TEST_PDF_RASTERIZER: ${{ github.workspace }}/tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Release/net11.0/Lokad.OoxPdf.PdfiumRasterizer.dll
     steps:
       - uses: actions/checkout@v4
+      - name: Prepare owned temporary directory
+        run: New-Item -ItemType Directory -Force artifacts/ci-tmp | Out-Null
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: |
+            10.0.x
+            11.0.100-rc.3.26522.148
       - name: Install font for Ubuntu package smoke test
         if: runner.os == 'Linux'
         shell: bash
@@ -40,58 +46,75 @@ jobs:
       - name: Build (Release)
         run: dotnet build Lokad.OoxPdf.slnx -c Release --nologo
       - name: Pin candidate runtime identity
-        run: pwsh -NoProfile -File tools/FreezeQualificationArtifact.ps1 -OutputDirectory artifacts/ci-candidate
+        run: |
+          pwsh -NoProfile -File tools/FreezeQualificationArtifact.ps1 -OutputDirectory artifacts/ci-candidate -Framework net11.0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh -NoProfile -File tools/FreezeQualificationArtifact.ps1 -OutputDirectory artifacts/ci-candidate-net10 -Framework net10.0
       - name: Full console suite (Windows, skip slow)
         if: runner.os == 'Windows'
         run: |
           New-Item -ItemType Directory -Force artifacts/ci-tests | Out-Null
-          dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -- --skip-slow --report artifacts/ci-tests/full.json
+          dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -f net11.0 -- --skip-slow --report artifacts/ci-tests/full.json
       - name: Portable console groups (Ubuntu, skip slow)
         if: runner.os == 'Linux'
         run: |
           New-Item -ItemType Directory -Force artifacts/ci-tests | Out-Null
           foreach ($group in @('api', 'cli', 'ooxml', 'pdf', 'imaging', 'fonts', 'rendering-portable')) {
-            dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -- --group $group --skip-slow --report "artifacts/ci-tests/$group.json"
+            dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -f net11.0 -- --group $group --skip-slow --report "artifacts/ci-tests/$group.json"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
-      - name: Affected PPTX scene inspection (Windows, native fonts)
-        if: runner.os == 'Windows'
-        run: dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -- --test PptxSceneBuilderBuildsResolvedNodeLists --report artifacts/ci-tests/pptx-scene.json
       - name: Portable picture effects (Ubuntu)
         if: runner.os == 'Linux'
-        run: pwsh -NoProfile -File tools/RunDocxAffectedTests.ps1 -RunnerPath tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/pptx-picture-effects -Capability pptx-picture-blur
+        run: pwsh -NoProfile -File tools/RunDocxAffectedTests.ps1 -RunnerPath tests/Lokad.OoxPdf.Tests/bin/Release/net11.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/pptx-picture-effects -Capability pptx-picture-blur
       - name: Portable PPTX font identity (Ubuntu)
         if: runner.os == 'Linux'
-        run: pwsh -NoProfile -File tools/RunDocxAffectedTests.ps1 -RunnerPath tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/pptx-font-identity -Capability pptx-font-identity
+        run: pwsh -NoProfile -File tools/RunDocxAffectedTests.ps1 -RunnerPath tests/Lokad.OoxPdf.Tests/bin/Release/net11.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/pptx-font-identity -Capability pptx-font-identity
       - name: Visual manifest gate
         run: pwsh -NoProfile -File tools/ValidateVisualCases.ps1
       - name: Qualification capability catalog gate
         run: |
           $capabilities = Get-Content tools/qualification-capabilities.json -Raw | ConvertFrom-Json -AsHashtable
-          & ./tools/RunDocxAffectedTests.ps1 -RunnerPath tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/capability-catalog -Capability @($capabilities.Keys) -ListOnly
+          & ./tools/RunDocxAffectedTests.ps1 -RunnerPath tests/Lokad.OoxPdf.Tests/bin/Release/net11.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/capability-catalog -Capability @($capabilities.Keys) -ListOnly
       - name: Frozen visual family binding checks
         run: |
           pwsh -NoProfile -File tools/TestVisualFamilyBinding.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pwsh -NoProfile -File tools/TestFrozenMarkupBinding.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          pwsh -NoProfile -File tools/TestCliDiagnosticsPublication.ps1 -CliPath artifacts/ci-candidate/src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.Cli.dll
+          pwsh -NoProfile -File tools/TestCliDiagnosticsPublication.ps1 -CliPath artifacts/ci-candidate/src/Lokad.OoxPdf.Cli/bin/Release/net11.0/Lokad.OoxPdf.Cli.dll
       - name: Text content gate
         if: runner.os == 'Windows'
-        run: pwsh -NoProfile -File tools/CheckPdfTextContent.ps1 -CliPath artifacts/ci-candidate/src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.Cli.dll -InspectorPath tools/Lokad.OoxPdf.PdfInspect/bin/Release/net10.0/Lokad.OoxPdf.PdfInspect.dll -SkipBuild
+        run: pwsh -NoProfile -File tools/CheckPdfTextContent.ps1 -CliPath artifacts/ci-candidate/src/Lokad.OoxPdf.Cli/bin/Release/net11.0/Lokad.OoxPdf.Cli.dll -InspectorPath tools/Lokad.OoxPdf.PdfInspect/bin/Release/net11.0/Lokad.OoxPdf.PdfInspect.dll -SkipBuild
       - name: Raster wrapper paths and failures
         if: runner.os == 'Windows'
         run: |
           $pdf = Get-ChildItem artifacts/text-content -Recurse -Filter output.pdf -File | Select-Object -First 1
-          & ./tools/TestRasterizePdfPaths.ps1 -InputPdf $pdf.FullName -RasterizerPath tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Release/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll
+          & ./tools/TestRasterizePdfPaths.ps1 -InputPdf $pdf.FullName -RasterizerPath tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Release/net11.0/Lokad.OoxPdf.PdfiumRasterizer.dll
       - name: Allocation probe self-test
         run: pwsh -NoProfile -File tools/MeasureAllocation.ps1 -SelfTest
-      - name: Package smoke test
+      - name: .NET 10 compatibility checks
         run: |
+          $env:OOXPDF_TEST_CLI_ASSEMBLY = "$env:GITHUB_WORKSPACE/artifacts/ci-candidate-net10/src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.Cli.dll"
+          $runner = 'artifacts/ci-candidate-net10/tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll'
+          $selection = @(dotnet $runner --list | ForEach-Object {
+            if ($_ -match '^FAST (api|cli|rendering-portable) (\S+)$') { $Matches[2] }
+          } | Sort-Object -Unique)
+          if ($LASTEXITCODE -ne 0 -or !$selection.Count) { throw 'Cannot select compatibility methods' }
+          ConvertTo-Json -InputObject $selection | Set-Content artifacts/ci-tests/net10-selection.json
+          dotnet $runner --test-set artifacts/ci-tests/net10-selection.json --report artifacts/ci-tests/net10.json
+      - name: Package smoke tests (one package, both frameworks)
+        run: |
+          dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj -c Release --no-build --nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          [xml]$project = Get-Content src/Lokad.OoxPdf/Lokad.OoxPdf.csproj
+          $package = "artifacts/nuget/Lokad.OoxPdf.$($project.Project.PropertyGroup.Version).nupkg"
           $fontArguments = @{}
           if ($IsLinux) { $fontArguments.FontPath = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf' }
-          $fontArguments.ExpectedLibrarySha256 = (Get-FileHash src/Lokad.OoxPdf/bin/Release/net10.0/Lokad.OoxPdf.dll).Hash
-          & ./tools/TestPackageSmoke.ps1 -NoBuild @fontArguments
+          foreach ($framework in @('net11.0','net10.0')) {
+            $hash = (Get-FileHash "src/Lokad.OoxPdf/bin/Release/$framework/Lokad.OoxPdf.dll").Hash
+            & ./tools/TestPackageSmoke.ps1 -PackagePath $package -Framework $framework -ExpectedLibrarySha256 $hash @fontArguments
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
       - name: Text comparison adversarial checks
         run: |
           pwsh -NoProfile -File tools/TestTextOperationComparison.ps1
@@ -147,10 +170,10 @@ jobs:
         run: |
           pwsh -NoProfile -File tools/TestChartClassifierRobustness.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          pwsh -NoProfile -File tools/TestChartSummaryCoverage.ps1 -InspectorPath tools/Lokad.OoxPdf.PdfInspect/bin/Release/net10.0/Lokad.OoxPdf.PdfInspect.dll
+          pwsh -NoProfile -File tools/TestChartSummaryCoverage.ps1 -InspectorPath tools/Lokad.OoxPdf.PdfInspect/bin/Release/net11.0/Lokad.OoxPdf.PdfInspect.dll
       - name: Portable VisualDiff metric probe
         if: runner.os == 'Linux'
-        run: dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -- --test VisualDiffForegroundRecallCoversSparseBlankAndRegionCases --report artifacts/ci-tests/visual-metrics.json
+        run: dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -f net11.0 -- --test VisualDiffForegroundRecallCoversSparseBlankAndRegionCases --report artifacts/ci-tests/visual-metrics.json
       - name: Publish console test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -165,6 +188,8 @@ jobs:
           retention-days: 7
           path: |
             artifacts/ci-candidate/identity.json
-            artifacts/ci-candidate/**/bin/Release/net10.0/*
-            artifacts/nuget/package-smoke/**/*.nupkg
+            artifacts/ci-candidate/**/bin/Release/net11.0/*
+            artifacts/ci-candidate-net10/identity.json
+            artifacts/ci-candidate-net10/**/bin/Release/net10.0/*
+            artifacts/nuget/*.nupkg
             artifacts/package-smoke/**/summary.json

@@ -11,6 +11,9 @@ $tests = (Resolve-Path -LiteralPath $TestArtifactDirectory).Path
 $parent = (Resolve-Path -LiteralPath $ParentArtifactDirectory).Path
 $testPin = Get-Content (Join-Path $tests 'identity.json') -Raw | ConvertFrom-Json -AsHashtable
 $parentPin = Get-Content (Join-Path $parent 'identity.json') -Raw | ConvertFrom-Json -AsHashtable
+$framework = if ($testPin.Framework) { $testPin.Framework } else { 'net10.0' }
+$parentFramework = if ($parentPin.Framework) { $parentPin.Framework } else { 'net10.0' }
+if ($framework -notin @('net10.0','net11.0') -or $parentFramework -ne $framework) { throw 'Parent and harness target frameworks must match' }
 $output = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($OutputDirectory))
 function Assert-PhysicalDirectory([string] $Path) {
     $current = $Path
@@ -36,11 +39,11 @@ $inputNames = @(Get-Content -LiteralPath $InputManifest -Raw | ConvertFrom-Json)
 if (!$inputNames.Count) { throw 'Select explicit public parent-test inputs' }
 $jobs = @()
 foreach ($name in @('Lokad.OoxPdf.Tests.dll','Lokad.OoxPdf.Tests.pdb','Lokad.OoxPdf.Tests.deps.json','Lokad.OoxPdf.Tests.runtimeconfig.json')) {
-    $relative = 'tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/' + $name
+    $relative = "tests/Lokad.OoxPdf.Tests/bin/Release/$framework/" + $name
     $jobs += [pscustomobject]@{ Source=(Join-Path $tests $relative); Relative=$relative; Hash=$testPin.Assets[$relative] }
 }
-$library = 'src/Lokad.OoxPdf/bin/Release/net10.0/Lokad.OoxPdf.dll'
-$jobs += [pscustomobject]@{ Source=(Join-Path $parent $library); Relative='tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.dll'; Hash=$parentPin.LibrarySha256 }
+$library = "src/Lokad.OoxPdf/bin/Release/$framework/Lokad.OoxPdf.dll"
+$jobs += [pscustomobject]@{ Source=(Join-Path $parent $library); Relative="tests/Lokad.OoxPdf.Tests/bin/Release/$framework/Lokad.OoxPdf.dll"; Hash=$parentPin.LibrarySha256 }
 foreach ($name in $inputNames) {
     $relative = $casePrefix + $name.Replace('\','/')
     if (!$testPin.Inputs.ContainsKey($relative)) { throw ('Input is outside the pinned public set: ' + $name) }
@@ -68,6 +71,6 @@ foreach ($job in $jobs) {
     if ((Get-FileHash -LiteralPath $temporary).Hash -ne $job.Hash) { throw 'Parent copy differs' }
     [IO.File]::Move($temporary, $target, $true)
 }
-[ordered]@{TestRevision=$testPin.Revision;ParentRevision=$parentPin.Revision;TestAssemblySha256=$testPin.TestAssemblySha256;ParentLibrarySha256=$parentPin.LibrarySha256;InputManifestSha256=(Get-FileHash -LiteralPath $InputManifest).Hash;Inputs=$inputNames;OwnedPhysicalInputs=$true;Rebuilt=$false} |
+[ordered]@{Framework=$framework;TestRevision=$testPin.Revision;ParentRevision=$parentPin.Revision;TestAssemblySha256=$testPin.TestAssemblySha256;ParentLibrarySha256=$parentPin.LibrarySha256;InputManifestSha256=(Get-FileHash -LiteralPath $InputManifest).Hash;Inputs=$inputNames;OwnedPhysicalInputs=$true;Rebuilt=$false} |
     ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $output 'identity.json') -Encoding utf8
 Write-Output "Parent runtime prepared with $($inputNames.Count) independent public inputs; frozen inputs remain unchanged."

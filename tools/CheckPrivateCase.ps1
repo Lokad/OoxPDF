@@ -1,4 +1,5 @@
 param(
+    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
     [Parameter(Mandatory = $true)]
     [string] $Case,
 
@@ -62,12 +63,12 @@ $candidatePdf = Join-Path $candidateDir "output.pdf"
 $diagnostics = Join-Path $candidateDir "diagnostics.json"
 $dpi = if ($manifest.dpi -ne $null) { [int]$manifest.dpi } else { 144 }
 
-dotnet build (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj") --nologo
+dotnet build (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj") -f $Framework --nologo
 if ($LASTEXITCODE -ne 0) {
     throw "CLI build failed with exit code $LASTEXITCODE."
 }
 
-$cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll"
+$cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/$Framework/Lokad.OoxPdf.Cli.dll"
 $candidateArgs = @("convert", $inputFull, $candidatePdf, "--diagnostics", $diagnostics)
 if (-not [string]::IsNullOrWhiteSpace($docxMarkup)) {
     $candidateArgs += @("--docx-markup", $docxMarkup)
@@ -96,16 +97,16 @@ if (-not [string]::IsNullOrWhiteSpace($docxMarkup) -or -not [string]::IsNullOrWh
 }
 
 Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Rendering reference...";
-& (Join-Path $PSScriptRoot "RenderCachedReference.ps1") @referenceArgs
+& (Join-Path $PSScriptRoot "RenderCachedReference.ps1") -Framework $Framework @referenceArgs
 Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Rasterizing candidate...";
-& (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $candidatePdf -OutputDirectory $candidateDir -Dpi $dpi
+& (Join-Path $PSScriptRoot "RasterizePdf.ps1") -Framework $Framework -InputPdf $candidatePdf -OutputDirectory $candidateDir -Dpi $dpi
 
-dotnet build (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj") --nologo
+dotnet build (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj") -f $Framework --nologo
 if ($LASTEXITCODE -ne 0) {
     throw "VisualDiff build failed with exit code $LASTEXITCODE."
 }
 
-$visualDiffDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/net10.0/Lokad.OoxPdf.VisualDiff.dll"
+$visualDiffDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/$Framework/Lokad.OoxPdf.VisualDiff.dll"
 Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Comparing pages...";
 dotnet $visualDiffDll $referenceDir $candidateDir $comparisonDir
 if ($LASTEXITCODE -ne 0) {
