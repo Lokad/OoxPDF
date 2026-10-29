@@ -42,7 +42,6 @@ internal static class PptxChartPaletteTests
                     """)
             };
             var (document, package) = PptxTests.BuildSingleChartPackage(chart, parts);
-            using var ownedPackage = package;
             var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
                 .RenderPages(document, package, null, default).Single();
             RgbColor[] paints = ReadColoredFills(page.Content).ToArray();

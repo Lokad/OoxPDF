@@ -1,6 +1,9 @@
 {
   "pptx-automatic-palette": [
       "PptxAutomaticBarPalettes",
+      "PptxUnstyledLineStrokeTintMatchesOfficeLuminance",
+      "LineStyle18StrokeUsesRawBase",
+      "LineStyle26StrokesRawSevenPointCurves",
       "PptxNegativeBar",
       "PptxScenePreservesChartColorStyleDeclarations",
       "BarStyle18",
