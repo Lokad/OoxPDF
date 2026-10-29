@@ -20,7 +20,7 @@ internal static class OoxmlStrictDocxTests
               <w:r><w:rPr><w:sz w:val="11pt"/></w:rPr><w:t>Literal 50% and 6pt</w:t></w:r>
               <w:hyperlink r:id="link"/><x:measure x:val="6pt"/></w:p>
               <w:tbl><w:tblPr><w:tblW w:w="50%" w:type="pct"/></w:tblPr></w:tbl>
-              <a:alpha val="63%"/><a:latin typeface="Literal 50%"/>
+              <a:alpha val="63%" x:val="Literal 50%"/><a:latin typeface="Literal 50%"/>
               <mc:AlternateContent><mc:Choice Requires="w"><w:p>Chosen</w:p></mc:Choice><mc:Fallback><w:p>Rejected</w:p></mc:Fallback></mc:AlternateContent>
               </w:body></w:document>
             """;
@@ -36,6 +36,7 @@ internal static class OoxmlStrictDocxTests
         TestAssert.Equal("2500", (string?)document.Descendants(w + "tblW").Single().Attribute(w + "w"));
         TestAssert.Equal("link", (string?)document.Descendants(w + "hyperlink").Single().Attribute(OoxNamespaces.RelationshipsNamespace + "id"));
         TestAssert.Equal("63000", (string?)document.Descendants(OoxNamespaces.DrawingNamespace + "alpha").Single().Attribute("val"));
+        TestAssert.Equal("Literal 50%", (string?)document.Descendants(OoxNamespaces.DrawingNamespace + "alpha").Single().Attribute(XName.Get("val", "urn:unhandled")));
         TestAssert.Equal("Literal 50%", (string?)document.Descendants(OoxNamespaces.DrawingNamespace + "latin").Single().Attribute("typeface"));
         TestAssert.Equal("Literal 50% and 6pt", document.Descendants(w + "t").Single().Value);
         TestAssert.Equal("6pt", (string?)document.Descendants(XName.Get("measure", "urn:unhandled")).Single().Attribute(XName.Get("val", "urn:unhandled")));

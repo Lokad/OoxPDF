@@ -65,7 +65,7 @@ internal static class OoxStrictDocx
 
     private static string NormalizeMeasure(XElement element, XName name, string value)
     {
-        if (element.Name.Namespace == DrawingNamespace && value.EndsWith('%') &&
+        if (element.Name.Namespace == DrawingNamespace && name.Namespace == XNamespace.None && value.EndsWith('%') &&
             IsDrawingPercentage(element.Name.LocalName, name.LocalName))
             return Scale(value.AsSpan(0, value.Length - 1), 1000m);
         if (element.Name.Namespace != WordprocessingNamespace || name.Namespace != WordprocessingNamespace)
