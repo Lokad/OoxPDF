@@ -448,22 +448,22 @@ internal sealed partial class DocxReader
 
     private static DocxTableCellMargins ReadCellMargins(XElement? margins)
     {
-            string? ReadMarginValue(XElement? margins, string edge)
-            {
-                return (string?)margins
-                    ?.Element(WordprocessingNamespace + edge)
-                    ?.Attribute(WordprocessingNamespace + "w");
-            }
-
+        XElement? top = margins?.Element(WordprocessingNamespace + "top");
+        XElement? bottom = margins?.Element(WordprocessingNamespace + "bottom");
+        // Resolve logical edges once for the supported left-to-right table layout.
+        XElement? left = margins?.Element(WordprocessingNamespace + "start")
+            ?? margins?.Element(WordprocessingNamespace + "left");
+        XElement? right = margins?.Element(WordprocessingNamespace + "end")
+            ?? margins?.Element(WordprocessingNamespace + "right");
         return new DocxTableCellMargins(
-            ReadMargin(margins, "top"),
-            ReadMargin(margins, "right"),
-            ReadMargin(margins, "bottom"),
-            ReadMargin(margins, "left"),
-            ReadMarginValue(margins, "top"),
-            ReadMarginValue(margins, "right"),
-            ReadMarginValue(margins, "bottom"),
-            ReadMarginValue(margins, "left"));
+            ReadCellMarginPoints(top),
+            ReadCellMarginPoints(right),
+            ReadCellMarginPoints(bottom),
+            ReadCellMarginPoints(left),
+            (string?)top?.Attribute(WordprocessingNamespace + "w"),
+            (string?)right?.Attribute(WordprocessingNamespace + "w"),
+            (string?)bottom?.Attribute(WordprocessingNamespace + "w"),
+            (string?)left?.Attribute(WordprocessingNamespace + "w"));
     }
 
     private static bool HasAnyTableCellMargin(DocxTableCellMargins margins)
@@ -474,9 +474,8 @@ internal sealed partial class DocxReader
             margins.LeftValue is not null;
     }
 
-    private static double? ReadMargin(XElement? margins, string edge)
+    private static double? ReadCellMarginPoints(XElement? margin)
     {
-        XElement? margin = margins?.Element(WordprocessingNamespace + edge);
         string? type = (string?)margin?.Attribute(WordprocessingNamespace + "type");
         if (type is not null && !type.Equals("dxa", StringComparison.OrdinalIgnoreCase))
         {

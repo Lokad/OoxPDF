@@ -2374,56 +2374,59 @@ internal static class DocxTableCellsTests
 
     public static void DocxReaderTableCellPreservesMarginTokens()
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        foreach ((string left, string right) in new[] { ("left", "right"), ("start", "end") })
         {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:body>
-                    <w:tbl>
-                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
-                      <w:tr><w:tc>
-                        <w:tcPr>
-                          <w:tcMar>
-                            <w:top w:w="120" w:type="dxa"/>
-                            <w:right w:w="180" w:type="dxa"/>
-                            <w:bottom w:w="240" w:type="dxa"/>
-                            <w:left w:w="300" w:type="dxa"/>
-                          </w:tcMar>
-                        </w:tcPr>
-                        <w:p><w:r><w:t>Margins</w:t></w:r></w:p>
-                      </w:tc></w:tr>
-                    </w:tbl>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-                  </w:body>
-                </w:document>
-                """
-        });
+            string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                      <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                      <Default Extension="xml" ContentType="application/xml"/>
+                      <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                    </Types>
+                    """,
+                ["_rels/.rels"] = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                    </Relationships>
+                    """,
+                ["word/document.xml"] = $$"""
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                      <w:body>
+                        <w:tbl>
+                          <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                          <w:tr><w:tc>
+                            <w:tcPr>
+                              <w:tcMar>
+                                <w:top w:w="120" w:type="dxa"/>
+                                <w:{{right}} w:w="180" w:type="dxa"/>
+                                <w:bottom w:w="240" w:type="dxa"/>
+                                <w:{{left}} w:w="300" w:type="dxa"/>
+                              </w:tcMar>
+                            </w:tcPr>
+                            <w:p><w:r><w:t>Margins</w:t></w:r></w:p>
+                          </w:tc></w:tr>
+                        </w:tbl>
+                        <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                      </w:body>
+                    </w:document>
+                    """
+            });
 
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        DocxTableCellMargins margins = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final).Tables[0].Rows[0].Cells[0].Margins;
+            using FileStream stream = File.OpenRead(input);
+            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+            DocxTableCellMargins margins = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final).Tables[0].Rows[0].Cells[0].Margins;
 
-        TestAssert.Equal("120", margins.TopValue ?? string.Empty);
-        TestAssert.Equal("180", margins.RightValue ?? string.Empty);
-        TestAssert.Equal("240", margins.BottomValue ?? string.Empty);
-        TestAssert.Equal("300", margins.LeftValue ?? string.Empty);
-        TestAssert.Equal(6d, margins.TopPoints ?? 0d);
-        TestAssert.Equal(15d, margins.LeftPoints ?? 0d);
+            TestAssert.Equal("120", margins.TopValue ?? string.Empty);
+            TestAssert.Equal("180", margins.RightValue ?? string.Empty);
+            TestAssert.Equal("240", margins.BottomValue ?? string.Empty);
+            TestAssert.Equal("300", margins.LeftValue ?? string.Empty);
+            TestAssert.Equal(6d, margins.TopPoints ?? 0d);
+            TestAssert.Equal(15d, margins.LeftPoints ?? 0d);
+        }
     }
 
     public static void DocxReaderTableCellPreservesGridSpanToken()

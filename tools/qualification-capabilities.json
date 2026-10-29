@@ -9,7 +9,17 @@
       "ParsesContentTypesAndRelationships",
       "ProcessContent",
       "AlternateContent",
-      "MustUnderstand"
+      "MustUnderstand",
+      "RejectsDeeplyNestedXml",
+      "RejectsDefaultDeepXmlNesting",
+      "RejectsXmlBeyondCharacterBudget",
+      "RejectsXmlBeyondNodeBudget",
+      "RejectsMalformedXmlAsInvalidData",
+      "XmlAttributesBelowLimitPass",
+      "DocxReaderTableCellPreservesMarginTokens",
+      "DocxReaderTableRowPreservesPropertyExceptionCellMargins",
+      "PortableRenderingAuthoredTableMarginsKeepBorderedGridAndMath",
+      "PortableRenderingParallelCellInsetsKeepPaddingContentAndBoxedMath"
   ],
   "pptx-fallback-hyperlinks": [
       "PptxChartTitleExternalHyperlinkEmitsUriAnnotation",
