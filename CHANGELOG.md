@@ -12,10 +12,8 @@
   wrapped legend rows; crowded frames report clipped entries.
 - DOCX: preserves plain comment paragraph breaks beyond five paragraphs, using
   shared measured rows for balloon height and painting.
-- Keeps minimum-line geometry when hyperlinks are added without changing text
-  formatting; navigation metadata no longer disables the shared plain-flow path.
-- DOCX highlighting and run shading preserve qualified minimum leading and
-  kerning instead of disabling text placement elsewhere in the document.
+- DOCX: minimum-line placement uses measured local slots across fonts, styles
+  and neighboring tables/wrapped text; links and background paint retain geometry.
 - PPTX: retains readable advances and run/chart hyperlinks when standard PDF
   fonts replace unavailable fonts, including cell text and transformed links.
 - Preserves authored chart titles when automatic-title deletion is enabled;

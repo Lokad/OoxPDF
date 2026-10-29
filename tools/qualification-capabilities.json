@@ -197,6 +197,12 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+      "DocxMinimumLeadingUsesLocalSlotsAcrossNeighborsAndSlotGrowth",
+      "PptxAutomaticChartTitlePlacementKeepsWholeLinkedLine",
+      "PptxAutomaticChartTitleUsesAuthoredChartSizeBeforeGalleryDefaults",
+      "StrictDocxOfficeCompositionMatchesTransitional",
+      "PptxFallbackTextKeepsMeasuredAdvances",
+      "PptxFallbackRunHyperlinksFollowClippedText",
       "ConvertRejectsDirectoryAliasDestinations",
       "ConvertReplacesDistinctLinkedDestinations",
       "ConvertRejectsLinkedInputReferentDestinations",

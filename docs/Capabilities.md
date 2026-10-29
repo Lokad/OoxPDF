@@ -175,6 +175,10 @@ Approximate or restricted:
   line placement; their navigation targets follow the placed content.
   Highlighting and run shading retain these text metrics while painting their
   backgrounds; font-changing and unsupported layout combinations keep fallbacks.
+  Simple single-line body minimum spacing uses measured font height across sizes,
+  bold/mixed faces, kept paragraphs and neighboring tables/wrapped paragraphs.
+  Multiline minimum paragraphs, columns, unresolved static frames, unsupported
+  spacing/contextual styles and complex note-marker formatting retain restrictions.
 - Review balloons, ranges, revision bands, comment collision/layout and note-marker
   revisions remain partial. Remaining typography/geometry and extraction failures
   are recorded in [document review](PreviewVisualReview.md); successful conversion
