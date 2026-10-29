@@ -108,7 +108,13 @@ internal static class DocxElevenPointBodyTests
                 if (guard is "center" or "right") first.Element(Word + "pPr")!.Add(new XElement(Word + "jc", new XAttribute(Word + "val", guard)));
             }, removeStyles: guard == "missing-styles");
             var layout = Layout(source);
-            TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(source, layout, out var unchanged) && ReferenceEquals(layout, unchanged), "Unsupported complete 11pt frames retain minimum fallback: " + guard);
+            var first = Lines(layout)[0];
+            DocxMinimumBodyLineLeading.TryCreateLayout(source, layout, out var placed);
+            var actual = Lines(placed).First(line => line.SourceBlockIndex == first.SourceBlockIndex && line.SourceLineIndex == first.SourceLineIndex);
+            if (guard is "bold" or "mixed-size" or "mixed-family" or "malformed-kern" or "keep")
+                Near(first.LineHeight!.Value - first.SingleLineHeight!.Value, first.BaselineY - actual.BaselineY,
+                    "Known measured minimum placement is independent of the separate kerning policy: " + guard);
+            else TestAssert.True(ReferenceEquals(first, actual), "Unresolved spacing/style/flow retains the local minimum fallback: " + guard);
             TestAssert.True(!DocxPlainFootnoteKerning.TryCreateDocument(source, layout, out var original, out _) && ReferenceEquals(source, original), "Unsupported complete 11pt frames retain kerning fallback: " + guard);
         }
     }

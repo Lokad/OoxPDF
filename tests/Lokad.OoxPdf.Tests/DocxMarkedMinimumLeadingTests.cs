@@ -68,16 +68,23 @@ internal static class DocxMarkedMinimumLeadingTests
         Action<XDocument>[] guards = [
             xml=>Body(xml)[1].Descendants(Word+"vertAlign").Single().SetAttributeValue(Word+"val","baseline"),
             xml=>Body(xml)[1].Descendants(Word+"rPr").First().Add(new XElement(Word+"vertAlign",new XAttribute(Word+"val","superscript"))),
-            xml=>Body(xml)[1].Descendants(Word+"rPr").Last().Add(new XElement(Word+"b")),
+            xml=>Body(xml)[1].Descendants(Word+"footnoteReference").Single().Parent!.Element(Word+"rPr")!.Add(new XElement(Word+"b")),
             xml=>Body(xml)[1].Element(Word+"pPr")!.Element(Word+"spacing")!.SetAttributeValue(Word+"after","180"),
             xml=>Body(xml)[1].Element(Word+"pPr")!.Element(Word+"spacing")!.SetAttributeValue(Word+"before","240"),
             xml=>Body(xml)[1].Element(Word+"pPr")!.Element(Word+"spacing")!.SetAttributeValue(Word+"afterLines","100"),
             xml=>Body(xml)[1].Element(Word+"pPr")!.Element(Word+"spacing")!.SetAttributeValue(Word+"line","280"),
-            xml=>Body(xml)[1].Element(Word+"pPr")!.Add(new XElement(Word+"keepNext")),
             xml=>Body(xml)[1].Descendants(Word+"t").First().Value+=string.Concat(Enumerable.Repeat(" Public wrapped marked line.",30)),
             xml=>xml.Descendants(Word+"sectPr").Single().Add(new XElement(Word+"cols",new XAttribute(Word+"num","2")))
         ];
-        foreach (var modify in guards) { var source = Read(modify); var before = Layout(source); TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(source, before, out var after), "Unowned superscripts, marker formatting, unsupported spacing/slots and composed flow retain fallback."); TestAssert.True(ReferenceEquals(before, after), "An exclusion retains the whole layout."); }
+        foreach (var modify in guards)
+        {
+            var source = Read(modify); var before = Layout(source);
+            var paragraph = source.Paragraphs.First(p => p.InlineReferences.Count != 0);
+            var excluded = before.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>().First(l => ReferenceEquals(l.SourceParagraph, paragraph));
+            DocxMinimumBodyLineLeading.TryCreateLayout(source, before, out var after);
+            TestAssert.True(after.Pages.SelectMany(p => p.Items).Any(item => ReferenceEquals(item, excluded)),
+                "Unowned superscripts, actual marker formatting, unsupported spacing/slots and wrapped/column source retain their local line.");
+        }
         TestAssert.Throws<InvalidDataException>(() => Read(xml => Body(xml)[1].Element(Word + "pPr")!.Element(Word + "spacing")!.SetAttributeValue(Word + "after", "bad")));
     }
 

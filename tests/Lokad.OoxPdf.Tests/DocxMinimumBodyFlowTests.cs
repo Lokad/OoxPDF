@@ -7,6 +7,16 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxMinimumBodyFlowTests
 {
+    public static void DocxMinimumBodyFlowCancellationStopsMinimumPlacement()
+    {
+        var source = Read(ordinary: true);
+        var layout = Layout(source);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() =>
+            DocxMinimumBodyLineLeading.TryCreateLayout(source, layout, out _, cancellation.Token));
+    }
+
     public static void DocxMinimumBodyFlowDefaultNotesKeepSlotsRegionsAndActualTargets()
     {
         var document = Read(ordinary: false);
@@ -44,9 +54,8 @@ internal static class DocxMinimumBodyFlowTests
     {
         Action<XDocument>[] guards =
         [
-            xml => MinimumParagraph(xml).Element(Word + "r")!.Element(Word + "rPr")!.Add(new XElement(Word + "b")),
-            xml => MinimumParagraph(xml).Element(Word + "r")!.Element(Word + "rPr")!.Add(new XElement(Word + "i")),
-            xml => MinimumParagraph(xml).Element(Word + "pPr")!.Add(new XElement(Word + "keepNext")),
+            xml => MinimumParagraph(xml).Element(Word + "r")!.Element(Word + "rPr")!.Add(new XElement(Word + "vertAlign", new XAttribute(Word + "val", "superscript"))),
+            xml => MinimumParagraph(xml).Element(Word + "pPr")!.Add(new XElement(Word + "jc", new XAttribute(Word + "val", "center"))),
             xml => MinimumParagraph(xml).Descendants(Word + "t").First().Value += string.Concat(Enumerable.Repeat(" Public wrapped minimum.", 40)),
             xml => xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2"))),
             xml => MinimumParagraph(xml).Descendants(Word + "t").First().Value += " e\u0301"
@@ -54,8 +63,9 @@ internal static class DocxMinimumBodyFlowTests
         foreach (var modify in guards)
         {
             var document = Read(ordinary: true, modify); var before = Layout(document);
-            TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var after), "Font-changing, kept, wrapped, column and combining-text paths retain the original layout.");
-            TestAssert.True(ReferenceEquals(before, after), "Exclusions preserve the complete layout object.");
+            DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var after);
+            TestAssert.True(ReferenceEquals(Minimum(before)[0], Minimum(after)[0]),
+                "Unowned scripts, alignment, wrapped, column and combining-text sources retain their local fallback.");
         }
     }
 

@@ -79,22 +79,22 @@ internal static class DocxContextualMinimumLeadingTests
     public static void DocxContextualMinimumRejectsUnknownStyleIdentitiesAndRichFlow()
     {
         foreach (bool notes in new[] { false, true })
-        foreach (string guard in new[] { "missing-styles", "ambiguous-defaults", "unknown-named", "bold", "auto-spacing", "keep", "wrapped", "columns" })
+        foreach (string guard in new[] { "missing-styles", "ambiguous-defaults", "unknown-named", "auto-spacing", "wrapped", "columns" })
         {
             var source = Read(notes, (xml, styles) =>
             {
                 var paragraphs = Body(xml);
                 if (guard == "ambiguous-defaults") { AddStyle(styles, "PublicContextualA", true); AddStyle(styles, "PublicContextualB", true); }
                 if (guard == "unknown-named") paragraphs[0].Element(Word + "pPr")!.AddFirst(new XElement(Word + "pStyle", new XAttribute(Word + "val", "PublicMissing")));
-                if (guard == "bold") paragraphs[0].Descendants(Word + "rPr").First().Add(new XElement(Word + "b"));
                 if (guard == "auto-spacing") Spacing(paragraphs[0]).SetAttributeValue(Word + "beforeAutospacing", "1");
-                if (guard == "keep") paragraphs[0].Element(Word + "pPr")!.Add(new XElement(Word + "keepLines"));
                 if (guard == "wrapped") paragraphs[0].Descendants(Word + "t").First().Value += string.Concat(Enumerable.Repeat(" Public contextual wrapped paragraph.", 30));
                 if (guard == "columns") xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2")));
             }, removeStyles: guard == "missing-styles");
             var original = Layout(source);
-            TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var fallback), "Unknown contextual identities and unsupported complete frames retain fallback.");
-            TestAssert.True(ReferenceEquals(original, fallback), "An excluded frame retains its entire original layout.");
+            var excluded = Lines(original)[0];
+            DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var fallback);
+            TestAssert.True(Lines(fallback).Any(line => ReferenceEquals(line, excluded)),
+                "Unknown contextual identities and unsupported wrapped/column sources retain their local line.");
         }
     }
 

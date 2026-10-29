@@ -30,25 +30,17 @@ internal static class DocxMinimumBodyLineLeadingTests
         Action<XDocument, XDocument>[] guards = [
             (xml, _) => Target(xml).Element(Word + "pPr")!.Element(Word + "spacing")!.SetAttributeValue(Word + "lineRule", "exact"),
             (xml, _) => Target(xml).Element(Word + "pPr")!.Element(Word + "spacing")!.SetAttributeValue(Word + "lineRule", "auto"),
-            (xml, _) => Target(xml).Element(Word + "pPr")!.Element(Word + "spacing")!.SetAttributeValue(Word + "line", "560"),
-            (xml, _) => Target(xml).Element(Word + "pPr")!.Add(new XElement(Word + "keepNext")),
-            (xml, _) => Target(xml).Element(Word + "pPr")!.Add(new XElement(Word + "keepLines")),
-            (xml, _) => Target(xml).Descendants(Word + "rPr").First().Add(new XElement(Word + "b")),
-            (xml, _) => Target(xml).Descendants(Word + "sz").First().SetAttributeValue(Word + "val", "28"),
-            (xml, _) => { var p = Target(xml); p.Element(Word + "pPr")!.Element(Word + "spacing")!.SetAttributeValue(Word + "line", "280");
-                var fonts = p.Descendants(Word + "rFonts").First(); fonts.SetAttributeValue(Word + "ascii", "Times New Roman"); fonts.SetAttributeValue(Word + "hAnsi", "Times New Roman"); },
-            (xml, _) => { var p = Target(xml); var run = new XElement(p.Element(Word + "r")!); var fonts = run.Descendants(Word + "rFonts").First();
-                fonts.SetAttributeValue(Word + "ascii", "Arial"); fonts.SetAttributeValue(Word + "hAnsi", "Arial"); run.Element(Word + "t")!.Value = " Mixed face."; p.Add(run); },
+            (xml, _) => Target(xml).Descendants(Word + "rPr").First().Add(new XElement(Word + "vertAlign", new XAttribute(Word + "val", "superscript"))),
+            (xml, _) => Target(xml).Element(Word + "pPr")!.Add(new XElement(Word + "jc", new XAttribute(Word + "val", "center"))),
             (xml, _) => Target(xml).Descendants(Word + "t").First().Value += string.Concat(Enumerable.Repeat(" Public wrapped minimum.", 40)),
-            (xml, _) => { var p = xml.Descendants(Word + "p").First(p => p.Descendants(Word + "footnoteReference").Any());
-                var spacing = p.Element(Word + "pPr")!.Element(Word + "spacing")!;
-                spacing.SetAttributeValue(Word + "line", "280"); spacing.SetAttributeValue(Word + "lineRule", "atLeast"); },
+            (xml, _) => xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2"))),
         ];
         foreach (var modify in guards)
         {
             var document = ReadFixture(modify); var before = Layout(document);
-            TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var fallback), "Exact/auto, unqualified slots/styles, wrapped text, marked slots below 16pt and keep rules retain fallback.");
-            TestAssert.True(ReferenceEquals(before, fallback), "An exclusion keeps the entire original layout.");
+            DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var fallback);
+            TestAssert.True(ReferenceEquals(Minimum(before), Minimum(fallback)),
+                "Exact/auto, unowned scripts, alignment, wrapped text and columns retain the affected line; other measured paragraphs remain independent.");
         }
     }
 
