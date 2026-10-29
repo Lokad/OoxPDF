@@ -54,7 +54,7 @@ internal sealed partial class PptxRenderer
                 bool categoryLegend = barOptions.VaryColors.Value && barSeriesVectors.Count == 1 &&
                     sceneChart?.Plots.Sum(plot => plot.Series.Count) == 1;
                 var legendEntries = new List<ChartLegendEntry>(categoryLegend
-                    ? BuildBarCategoryLegendEntries(theme, colorMap, chartPalette, barPlot, barChart, barSeriesVectors[0], barOptions, seriesFills, pointFills, pointStrokes, workbook, plotVisibleOnly)
+                    ? BuildBarCategoryLegendEntries(theme, colorMap, chartPalette, barPlot, barChart, barSeriesVectors[0], barOptions, seriesFills, seriesStrokes, pointFills, pointStrokes, workbook, plotVisibleOnly)
                     : BuildFillLegendEntries(theme, colorMap, chartPalette, barPlot, barChart, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook));
                 ChartLayout chartLayout = GetBarChartLayout(document, theme, bounds, chartXml, sceneChart, colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver);
                 ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);

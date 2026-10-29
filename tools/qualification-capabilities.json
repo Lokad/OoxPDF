@@ -12,6 +12,10 @@
       "PptxSyntheticBarLegendKey",
       "PptxSyntheticChartStackedColumnDataLabelsUseStackSegmentGeometry",
       "PptxSyntheticBarChartLegendSwatchesUseSeriesStroke",
+      "PptxSyntheticBarChartSeriesLineWithoutWidthUsesFilledSeriesDefault",
+      "PptxSyntheticPieChartUsesSparsePointIndicesForSliceStyles",
+      "PptxSyntheticLineAndPieChartsRenderNativeCharts",
+      "PptxSyntheticAreaScatterRadarAndDoughnutChartsRenderNativeCharts",
       "PptxSyntheticChartHorizontalBar",
       "PptxPercentStackedColumnChartUsesPercentValueAxis",
       "PortableRenderingPptxPreservesCompositeChartAndText"

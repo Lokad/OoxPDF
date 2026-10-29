@@ -10,6 +10,7 @@ internal sealed partial class PptxRenderer
         PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? palette,
         PptxSceneChartPlot? plot, XElement chart, ChartIndexedNumberVector vector,
         ChartBarPlotOptions options, IReadOnlyList<ChartSeriesFill?> seriesFills,
+        IReadOnlyList<ChartSeriesStroke?> seriesStrokes,
         IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills,
         IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes,
         ChartWorkbookData? workbook, bool plotVisibleOnly)
@@ -20,7 +21,8 @@ internal sealed partial class PptxRenderer
         ChartSeriesFill Fill(int index) => ResolveBarPointFill(theme, colorMap, palette, 0, index, 1,
             options.VaryColors.Value, seriesFills, pointFills, count, Value(index), options.InvertsNegativePoint(0, index));
         ChartSeriesStroke? Stroke(int index) => pointStrokes.Count > 0 && pointStrokes[0].TryGetValue(index, out var stroke)
-            ? stroke : ResolveNegativeBarFallbackStroke(pointStrokes, 0, index, Value(index), options.InvertsNegativePoint(0, index));
+            ? stroke : seriesStrokes.Count > 0 && seriesStrokes[0] is { } seriesStroke
+                ? seriesStroke : ResolveNegativeBarFallbackStroke(pointStrokes, 0, index, Value(index), options.InvertsNegativePoint(0, index));
         return BuildCategoryFillLegendEntries(theme, colorMap, palette, plot, chart, pointFills[0],
             workbook, plotVisibleOnly, count, Fill, Stroke);
     }
