@@ -171,6 +171,8 @@ Approximate or restricted:
 - Pagination, line leading, kerning, numbering, table/story geometry and complex
   composition remain approximate. Font/size/document-shape guards protect independently
   qualified behavior; they are not promises for every combination.
+  Bookmarks and unchanged-format hyperlinks preserve qualified plain-body minimum
+  line placement; their navigation targets follow the placed content.
 - Review balloons, ranges, revision bands, comment collision/layout and note-marker
   revisions remain partial. Remaining typography/geometry and extraction failures
   are recorded in [document review](PreviewVisualReview.md); successful conversion

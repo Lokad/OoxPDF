@@ -1,5 +1,8 @@
 {
   "docx-minimum-navigation": [
+      "DocxBodyHyperlinkUsesExactLineBoxAcrossFontsAndPrintScale",
+      "DocxRevisionNeutralityRetainsUnownedAndVisibleFallbacks",
+      "DocxSimpleScriptPlainFramesRetainShapingAndUnknownTextFallbacks",
       "DocxMinimumHyperlinksKeepVisibleFramesAndTargets",
       "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames",
       "DocxMinimumBookmarksKeepSourceMetadataOutOfVisibleFrames",
