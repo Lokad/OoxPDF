@@ -11,7 +11,8 @@ param(
     [switch] $IncludeText,
     [string] $InspectorPath,
     [switch] $SkipBuild,
-    [string] $ExpectedLibrarySha256
+    [string] $ExpectedLibrarySha256,
+    [string] $FontDirectory
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,6 +43,10 @@ foreach ($slideNumber in $Slide) {
 }
 if ($IncludeText) {
     $arguments += "--include-text"
+}
+if ($FontDirectory) {
+    $arguments += '--font-directory'
+    $arguments += (Resolve-Path -LiteralPath $FontDirectory).Path
 }
 
 dotnet $dll @arguments

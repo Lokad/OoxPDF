@@ -11,9 +11,9 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    internal static IReadOnlyList<PptxTextFrameModelSnapshot> InspectTextFrameModels(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null)
+    internal static IReadOnlyList<PptxTextFrameModelSnapshot> InspectTextFrameModels(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene, inspectionFonts: inspectionFonts);
         if (context is null)
         {
             return [];
@@ -26,9 +26,9 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    internal static IReadOnlyList<PptxTextFrameModelSnapshot> InspectTableTextFrameModels(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null)
+    internal static IReadOnlyList<PptxTextFrameModelSnapshot> InspectTableTextFrameModels(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene, inspectionFonts: inspectionFonts);
         if (context is null)
         {
             return [];

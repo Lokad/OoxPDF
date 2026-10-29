@@ -11,9 +11,9 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadSlideTextSpansForInspection(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null)
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadSlideTextSpansForInspection(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene, inspectionFonts: inspectionFonts);
         if (context is null)
         {
             return [];
@@ -57,9 +57,9 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    internal static PptxTextLayoutSnapshot InspectTextLayout(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null)
+    internal static PptxTextLayoutSnapshot InspectTextLayout(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene, inspectionFonts: inspectionFonts);
         if (context is null)
         {
             return new PptxTextLayoutSnapshot([]);
@@ -81,9 +81,9 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    internal static PptxTextFlowSnapshot InspectTextFlow(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null)
+    internal static PptxTextFlowSnapshot InspectTextFlow(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
     {
-        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null, cancellationToken: CancellationToken.None, sharedScene: sharedScene, inspectionFonts: inspectionFonts);
         if (context is null)
         {
             return new PptxTextFlowSnapshot([]);
@@ -289,10 +289,11 @@ internal sealed partial class PptxRenderer
             glyph.AdjustmentBefore);
     }
 
-    internal static IReadOnlyList<PptxTextGlyphRunSnapshot> InspectTextGlyphRuns(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null)
+    internal static IReadOnlyList<PptxTextGlyphRunSnapshot> InspectTextGlyphRuns(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
     {
-        IReadOnlyList<PptxPositionedTextSpan> textSpans = ReadSlideTextSpansForInspection(document, package, slideIndex, sharedScene);
-        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans, [], new PresentationFontResolver(null), "F", CancellationToken.None);
+        inspectionFonts ??= new PresentationFontResolver(null);
+        IReadOnlyList<PptxPositionedTextSpan> textSpans = ReadSlideTextSpansForInspection(document, package, slideIndex, sharedScene, inspectionFonts);
+        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans, [], inspectionFonts, "F", CancellationToken.None);
         textSpans = SplitLeadingSpacesAtHighlightBoundaries(textSpans);
         textSpans = CoalesceAdjacentTextSpans(textSpans, compareHighlight: true);
         textSpans = CoalesceUnderlineSpans(textSpans);

@@ -1,4 +1,14 @@
 {
+  "pptx-inspection-fonts": [
+      "PptxTextFrameVerticalClipDropsLinesWithBaselineOutsideClip",
+      "PptxTextGlyphRunInspectionReportsInterGlyphAdjustmentAggregates",
+      "PptxNumberedAutofitFramesEmitOfficeCharacterSpacingTextState",
+      "PptxNumberedNoAutofitFramesEmitOfficeCharacterSpacingTextState",
+      "PptxSceneBuilderBuildsResolvedNodeLists",
+      "PortablePptxInspectionUsesTheRenderingFontSource",
+      "PortableRenderingPptxPreservesCompositeChartAndText",
+      "PptxRunExternalHyperlinkEmitsUriAnnotation"
+  ],
   "docx-common-strict": [
       "StrictDocx",
       "StrictOoxmlDialectWarnsForDocx",

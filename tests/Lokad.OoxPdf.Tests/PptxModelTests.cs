@@ -1048,7 +1048,7 @@ internal static class PptxModelTests
         TestAssert.Equal(PptxSceneTextRunKind.Break, textBody.Paragraphs[0].Runs[1].Kind);
         TestAssert.Equal(PptxSceneTextRunKind.Field, textBody.Paragraphs[0].Runs[2].Kind);
 
-        PptxTextGlyphRunSnapshot[] glyphHelloRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
+        PptxTextGlyphRunSnapshot[] glyphHelloRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: new PresentationFontResolver(new TestFaceFontResolver()))
             .Where(run => run.FrameIndex == 0 && run.ParagraphIndex == 0 && run.SourceRunIndex == 0)
             .ToArray();
         TestAssert.Equal("Hello", string.Concat(glyphHelloRuns.Select(run => run.Text)));

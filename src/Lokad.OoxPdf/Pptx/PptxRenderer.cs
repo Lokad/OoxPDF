@@ -103,7 +103,8 @@ internal sealed partial class PptxRenderer
         Dictionary<string, PdfImageXObject?> imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         CancellationToken cancellationToken,
-        PptxScene? sharedScene = null)
+        PptxScene? sharedScene = null,
+        PresentationFontResolver? inspectionFonts = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (slideIndex < 0 || slideIndex >= document.Slides.Count)
@@ -122,7 +123,7 @@ internal sealed partial class PptxRenderer
             return null;
         }
 
-        return CreateRenderContext(document, slide, slideXml, sceneSlide, new PresentationFontResolver(null), imageCache, diagnosticSink, cancellationToken);
+        return CreateRenderContext(document, slide, slideXml, sceneSlide, inspectionFonts ?? new PresentationFontResolver(null), imageCache, diagnosticSink, cancellationToken);
     }
 
     private static PptxRenderContext CreateRenderContext(

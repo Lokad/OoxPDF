@@ -1684,6 +1684,22 @@ internal static class PortableRenderingTests
         CheckWrittenPages(pages);
     }
 
+    public static void PortablePptxInspectionUsesTheRenderingFontSource()
+    {
+        var resolver = new PinnedResolver();
+        var package = OoxPackage.Open(Case("pptx-ladder-02-plain-text.pptx"), default);
+        var document = new PptxReader().Read(package, default);
+        var runs = PptxRenderer.InspectTextGlyphRuns(document, package, 0,
+            inspectionFonts: new PresentationFontResolver(resolver));
+        var pages = new PptxRenderer(resolver).RenderPages(document, package, null, default).ToArray();
+        TestAssert.True(runs.Count > 0 && runs.All(run => run.ResolvedFontFamily == "DejaVu Sans"),
+            "Inspection must use the supplied face for measurement and font preparation.");
+        string inspected = string.Concat(runs.Select(run => run.Text));
+        string painted = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
+        TestAssert.Equal(painted, inspected);
+        TestAssert.True(runs.All(run => run.Width > 0d), "The pinned control must expose painted glyph widths.");
+    }
+
     private static void CheckDocx(OoxPdfDocxMarkupMode mode, OoxPdfDocxMarkupGeometryMode geometry)
     {
         var document = DocxTests.ReadDocx(Case("PortableFonts/letter-normal-math.docx"), mode);

@@ -4,11 +4,12 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pptx;
 
 if (args.Length < 2)
 {
-    Console.Error.WriteLine("Usage: Lokad.OoxPdf.PptxInspect <input.pptx> <output-directory> [--slide <number>]... [--include-text]");
+    Console.Error.WriteLine("Usage: Lokad.OoxPdf.PptxInspect <input.pptx> <output-directory> [--slide <number>]... [--include-text] [--font-directory <path>]");
     return 2;
 }
 
@@ -16,6 +17,18 @@ string inputPath = Path.GetFullPath(args[0]);
 string outputDirectory = Path.GetFullPath(args[1]);
 bool includeText = args.Any(arg => string.Equals(arg, "--include-text", StringComparison.Ordinal));
 HashSet<int>? slideFilter = ReadSlideFilter(args);
+int fontOption = Array.IndexOf(args, "--font-directory", 2);
+string? fontDirectory = null;
+if (fontOption >= 0)
+{
+    if (fontOption + 1 >= args.Length || !Directory.Exists(args[fontOption + 1]))
+    {
+        Console.Error.WriteLine("--font-directory requires an existing font directory.");
+        return 2;
+    }
+    fontDirectory = Path.GetFullPath(args[fontOption + 1]);
+}
+var inspectionFonts = new PresentationFontResolver(fontDirectory is null ? null : new WindowsFontResolver(fontDirectory));
 
 // inspection inputs are bounded independently of library safety.
 const long MaxInspectInputBytes = 512L * 1024L * 1024L;
@@ -32,6 +45,8 @@ if (new FileInfo(inputPath).Length > MaxInspectInputBytes)
 }
 
 Directory.CreateDirectory(outputDirectory);
+File.WriteAllText(Path.Combine(outputDirectory, "inspection-font-source.json"),
+    JsonSerializer.Serialize(new { FontDirectory = fontDirectory, Source = fontDirectory is null ? "Host default" : "Explicit directory" }), Encoding.UTF8);
 
 using FileStream stream = File.OpenRead(inputPath);
 OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
@@ -70,7 +85,7 @@ foreach (PptxSlide slide in slides)
     try
     {
     int slideNumber = slide.Index + 1;
-    IReadOnlyList<PptxTextFrameModelSnapshot> frameModels = PptxRenderer.InspectTextFrameModels(document, package, slide.Index, scene);
+    IReadOnlyList<PptxTextFrameModelSnapshot> frameModels = PptxRenderer.InspectTextFrameModels(document, package, slide.Index, scene, inspectionFonts);
     for (int frameIndex = 0; frameIndex < frameModels.Count; frameIndex++)
     {
         PptxTextFrameModelSnapshot frame = frameModels[frameIndex];
@@ -82,7 +97,7 @@ foreach (PptxSlide slide in slides)
         }
     }
 
-    IReadOnlyList<PptxTextFrameModelSnapshot> tableFrameModels = PptxRenderer.InspectTableTextFrameModels(document, package, slide.Index, scene);
+    IReadOnlyList<PptxTextFrameModelSnapshot> tableFrameModels = PptxRenderer.InspectTableTextFrameModels(document, package, slide.Index, scene, inspectionFonts);
     for (int frameIndex = 0; frameIndex < tableFrameModels.Count; frameIndex++)
     {
         PptxTextFrameModelSnapshot frame = tableFrameModels[frameIndex];
@@ -93,7 +108,7 @@ foreach (PptxSlide slide in slides)
         }
     }
 
-    PptxTextLayoutSnapshot textLayout = PptxRenderer.InspectTextLayout(document, package, slide.Index, scene);
+    PptxTextLayoutSnapshot textLayout = PptxRenderer.InspectTextLayout(document, package, slide.Index, scene, inspectionFonts);
     for (int frameIndex = 0; frameIndex < textLayout.Frames.Count; frameIndex++)
     {
         PptxTextFrameLayoutSnapshot frame = textLayout.Frames[frameIndex];
@@ -157,7 +172,7 @@ foreach (PptxSlide slide in slides)
         }
     }
 
-    foreach (PptxTextGlyphRunSnapshot run in PptxRenderer.InspectTextGlyphRuns(document, package, slide.Index, scene))
+    foreach (PptxTextGlyphRunSnapshot run in PptxRenderer.InspectTextGlyphRuns(document, package, slide.Index, scene, inspectionFonts))
     {
         GlyphCategoryCounts categories = CountGlyphCategories(run.Text);
         records.Add(new PptxGlyphRunRecord(

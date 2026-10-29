@@ -1433,7 +1433,7 @@ internal static class PptxTextLayoutTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        string[] glyphRunTexts = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
+        string[] glyphRunTexts = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: new PresentationFontResolver(new PortableRenderingTests.PinnedResolver()))
             .Select(run => run.Text)
             .ToArray();
 
@@ -1782,7 +1782,7 @@ internal static class PptxTextLayoutTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        PptxTextGlyphRunSnapshot glyphRun = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
+        PptxTextGlyphRunSnapshot glyphRun = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: new PresentationFontResolver(new PortableRenderingTests.PinnedResolver()))
             .First(run => run.Glyphs.Count > 2);
         double[] adjustments = glyphRun.Glyphs.Skip(1).Select(glyph => glyph.AdjustmentBefore).ToArray();
 
@@ -1866,7 +1866,7 @@ internal static class PptxTextLayoutTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: new PresentationFontResolver(new PortableRenderingTests.PinnedResolver())).ToArray();
         AssertNumberedFrameCharacterSpacing(glyphRuns);
         TestAssert.True(
             glyphRuns.Where(run => Math.Abs(run.PdfCharacterSpacing) > 0.001d).All(run => Math.Abs(run.LayoutCharacterSpacing) < 0.001d),
@@ -1889,7 +1889,7 @@ internal static class PptxTextLayoutTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: new PresentationFontResolver(new PortableRenderingTests.PinnedResolver())).ToArray();
         AssertNumberedFrameCharacterSpacing(glyphRuns);
         TestAssert.True(
             glyphRuns.Where(run => Math.Abs(run.PdfCharacterSpacing) > 0.001d).All(run => Math.Abs(run.LayoutCharacterSpacing) < 0.001d),
