@@ -20,12 +20,11 @@ footnote annotation mismatch and two field/extraction flags remain explicit in
 [current qualification](PreviewQualification.md). Correct PDF structure and
 manifest validity are separate from Office fidelity.
 
-Maintenance removes retired corrections, inert state and verified inactive
-helpers, retargeting useful tests/probes to live implementations. It does
-not generalize chart-color, five-paragraph balloon or font/size/document-shape
-rules. Future rendering corrections require a supported-scope counterexample,
-source-owned measurement/placement/painting contracts and independent Office
-comparison. Performance optimization and broader feature expansion are deferred.
+The 0.2.0 maintenance checkpoint is complete. Development toward 0.3.0 now
+prioritizes composed DOCX layout, generalized PPTX chart styles and effective
+properties, and calibrated Office image references alongside the retained PDF
+comparisons. Changes need source-backed witnesses and independent appearance
+and content checks. Historical thresholds and residuals above remain visible.
 
 The complete 9,570-line development and qualification journal remains in
 [checkpoint history at the reviewed revision](https://github.com/Lokad/OoxPDF/blob/6584386f9f36bd0c32dc59c7f3043f5b39f8d062/docs/CompositionCheckpoint.md).

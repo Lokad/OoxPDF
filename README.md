@@ -61,7 +61,8 @@ and [DOCX markup modes](docs/DocxMarkupModes.md).
 ## Development
 
 The 0.3.0 branch targets .NET 10 and .NET 11. Install the pinned .NET 11 SDK
-(currently RC3, a prerelease) and the .NET 10 runtime. Published 0.2.0 targets
+(currently RC3, a prerelease) and .NET 10 SDK 10.0.403, which supplies the
+compatibility runtime and reference packs. Published 0.2.0 targets
 .NET 10. Use .NET 11 for development and extensive tests; select `net10.0`
 explicitly for compatibility checks.
 

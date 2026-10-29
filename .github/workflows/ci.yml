@@ -35,7 +35,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            10.0.x
+            10.0.403
             11.0.100-rc.3.26522.148
       - name: Install font for Ubuntu package smoke test
         if: runner.os == 'Linux'
@@ -95,13 +95,7 @@ jobs:
       - name: .NET 10 compatibility checks
         run: |
           $env:OOXPDF_TEST_CLI_ASSEMBLY = "$env:GITHUB_WORKSPACE/artifacts/ci-candidate-net10/src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.Cli.dll"
-          $runner = 'artifacts/ci-candidate-net10/tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll'
-          $selection = @(dotnet $runner --list | ForEach-Object {
-            if ($_ -match '^FAST (api|cli|rendering-portable) (\S+)$') { $Matches[2] }
-          } | Sort-Object -Unique)
-          if ($LASTEXITCODE -ne 0 -or !$selection.Count) { throw 'Cannot select compatibility methods' }
-          ConvertTo-Json -InputObject $selection | Set-Content artifacts/ci-tests/net10-selection.json
-          dotnet $runner --test-set artifacts/ci-tests/net10-selection.json --report artifacts/ci-tests/net10.json
+          & ./tools/RunDocxAffectedTests.ps1 -RunnerPath artifacts/ci-candidate-net10/tests/Lokad.OoxPdf.Tests/bin/Release/net10.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/net10 -Capability framework-compatibility
       - name: Package smoke tests (one package, both frameworks)
         run: |
           dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj -c Release --no-build --nologo

@@ -1,4 +1,23 @@
 {
+  "framework-compatibility": [
+      "AutoDetectsDocxExtension",
+      "AutoDetectsPptxExtension",
+      "PortableRenderingDocxAllMarkupPreservesMixedContent",
+      "PortableRenderingDocxFinalPreservesMixedContent",
+      "PortableRenderingPptxPreservesCompositeChartAndText",
+      "CliConvertReturnsZeroOnSuccess",
+      "CliStrictReturnsThreeWhenWarningsAreEmitted",
+      "ConvertAsyncStreamWorksWithForwardOnlyOutputForDocx",
+      "ConvertAsyncStreamWorksWithForwardOnlyOutputForPptx",
+      "ConvertObservesCancellationAfterWorkBegins",
+      "ConvertPptxObservesCancellationAfterWorkBegins",
+      "ConvertPreservesExistingDestinationWhenWriterRejectsPage",
+      "ConvertReplacesExistingDestinationOnSuccess",
+      "ConverterUsesCustomFontResolverForDocxText",
+      "DeterministicConversionProducesStableBytes",
+      "PublicFontSourcesPreserveOptionalCancellationTokens",
+      "PublicApiPreservesOptionalRecordArguments"
+  ],
   "pptx-inheritance": [
       "PptxInheritance",
       "PptxMasterThemes",
