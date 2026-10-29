@@ -1057,25 +1057,9 @@ internal sealed partial class DocxRenderer
                 {
                     return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + wrappedMixedFourthRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
                 }
-                if (ResolveWordCompatibleFiveParagraphRows(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } fiveParagraphRows)
+                if (ResolveWordCompatibleParagraphRows(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } plainParagraphRows)
                 {
-                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + fiveParagraphRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
-                }
-                if (ResolveWordCompatibleParagraphGap(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth) is double paragraphGap)
-                {
-                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + paragraphGap + WordCompatibleAllMarkupBalloonBottomInsetPoints;
-                }
-                if (ResolveWordCompatibleWrappedParagraphRows(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } paragraphRows)
-                {
-                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + paragraphRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
-                }
-                if (ResolveWordCompatibleLastWrappedParagraphRows(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } lastParagraphRows)
-                {
-                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + lastParagraphRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
-                }
-                if (ResolveWordCompatibleFittingParagraphGaps(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth) is { } paragraphGaps)
-                {
-                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + paragraphGaps.Sum() + WordCompatibleAllMarkupBalloonBottomInsetPoints;
+                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + plainParagraphRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
                 }
                 bool singleRowParts = TryMeasureWordCompatibleSingleRowParts(candidate.WordCompatibleBodyParts, fontSize, firstLineWidth, out _);
                 DocxMarkupTwoFaceRows? twoFaceRows = singleRowParts ? null :
@@ -1569,34 +1553,10 @@ internal sealed partial class DocxRenderer
                 firstBaselineY, fontSize, cancellationToken);
             return;
         }
-        if (ResolveWordCompatibleFiveParagraphRows(placement.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } fiveParagraphRows)
+        if (ResolveWordCompatibleParagraphRows(placement.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } plainParagraphRows)
         {
-            RenderWordCompatibleFiveParagraphRows(fiveParagraphRows, placement, graphics, bodyFirstLineX, textX,
+            RenderWordCompatibleParagraphRows(plainParagraphRows, placement, graphics, bodyFirstLineX, textX,
                 firstBaselineY, fontSize, cancellationToken);
-            return;
-        }
-        if (ResolveWordCompatibleParagraphGap(placement.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth) is double paragraphGap)
-        {
-            RenderWordCompatibleParagraphs(placement.WordCompatibleParagraphs!, placement, graphics, bodyFirstLineX, textX,
-                firstBaselineY, paragraphGap, fontSize, cancellationToken);
-            return;
-        }
-        if (ResolveWordCompatibleWrappedParagraphRows(placement.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } paragraphRows)
-        {
-            RenderWordCompatibleWrappedParagraphRows(paragraphRows, placement, graphics, bodyFirstLineX, textX,
-                firstBaselineY, fontSize, cancellationToken);
-            return;
-        }
-        if (ResolveWordCompatibleLastWrappedParagraphRows(placement.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } lastParagraphRows)
-        {
-            RenderWordCompatibleLastWrappedParagraphRows(lastParagraphRows, placement, graphics, bodyFirstLineX, textX,
-                firstBaselineY, fontSize, cancellationToken);
-            return;
-        }
-        if (ResolveWordCompatibleFittingParagraphGaps(placement.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth) is { } paragraphGaps)
-        {
-            RenderWordCompatibleFittingParagraphs(placement.WordCompatibleParagraphs!, paragraphGaps, placement, graphics,
-                bodyFirstLineX, textX, firstBaselineY, fontSize, cancellationToken);
             return;
         }
         if (TryMeasureWordCompatibleSingleRowParts(placement.WordCompatibleBodyParts, fontSize, firstLineWidth, out _))

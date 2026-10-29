@@ -18,15 +18,16 @@ internal static class DocxBalloonParagraphPolicy
         paragraph.Indent == DocxParagraphIndent.Empty && paragraph.TabStops.Count == 0 &&
         IsWordCompatibleBalloonParagraphSpacing(paragraph.Spacing) && paragraph.LineSpacingPoints is null;
 
-    internal static bool CanRetainFiveParagraphMarks(IReadOnlyList<DocxBodyElement> elements)
+    internal static bool CanRetainPlainParagraphMarks(IReadOnlyList<DocxBodyElement> elements)
     {
-        if (elements.Count != 5) { return false; }
+        if (elements.Count < 2) { return false; }
         int paragraphIndex = 0;
         foreach (DocxBodyElement element in elements)
         {
             if (element is not DocxParagraphElement item || !HasPlainBalloonParagraphShape(item.Paragraph) ||
                 item.Paragraph.ParagraphMarkRun is not { } mark || !IsPlainBalloonParagraphRun(mark)) { return false; }
-            bool mixedTerminal = paragraphIndex == 4 && item.Paragraph.Runs.Count(run => run.Text.Length != 0) == 2;
+            // The separately qualified mixed-terminal family keeps its existing scope.
+            bool mixedTerminal = elements.Count == 5 && paragraphIndex == 4 && item.Paragraph.Runs.Count(run => run.Text.Length != 0) == 2;
             DocxTextRun? first = null;
             foreach (DocxTextRun run in item.Paragraph.Runs)
             {

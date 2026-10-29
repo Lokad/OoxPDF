@@ -1,4 +1,14 @@
 {
+  "docx-plain-balloon-paragraphs": [
+      "DocxWordCompatibleMixedBalloon",
+      "DocxReaderRetainsPlainCommentBalloonParagraphMarks",
+      "DocxWordCompatibleBalloonUsesUniformCommentTypeface",
+      "DocxWordCompatibleBalloonBodyWrapsLikeOfficeTitles",
+      "DocxWordCompatibleBalloonTerminalBlankUsesParagraphMarkFace",
+      "DocxWordCompatibleWrappedHeaderCommentPreservesTextWithoutMarkup",
+      "DocxReviewCommentAuthorsKeepTextOwnershipCaseAndCancellation",
+      "DocxInlineCompositionFormattingBalloonDescriptionsKeepExplicitFallbacks"
+  ],
   "docx-balloon-font-witness": [
       "DocxWordCompatibleBalloonBodyWrapsLikeOfficeTitles",
       "DocxWordCompatibleBalloonUsesUniformCommentTypeface",
@@ -3472,7 +3482,7 @@
     "DocxMarkupModesPreserveDeletedRunParagraphMarkAndTableContent",
     "DocxReaderAlwaysEmitsParagraphMarkRunForEmptyParagraphs",
     "DocxReviewTerminalSpacePreservesResolvedParagraphMarkSize",
-    "DocxReaderRetainsOneToFiveCommentBalloonParagraphMarks",
+    "DocxReaderRetainsPlainCommentBalloonParagraphMarks",
     "DocxWordCompatibleMixedBalloonRetainsParagraphMarkFace",
     "DocxWordCompatibleBalloonTerminalBlankUsesParagraphMarkFace"
   ],
@@ -3590,7 +3600,7 @@
     "DocxMarkupModesPreserveDeletedRunParagraphMarkAndTableContent",
     "DocxReaderAlwaysEmitsParagraphMarkRunForEmptyParagraphs",
     "DocxReviewTerminalSpacePreservesResolvedParagraphMarkSize",
-    "DocxReaderRetainsOneToFiveCommentBalloonParagraphMarks",
+    "DocxReaderRetainsPlainCommentBalloonParagraphMarks",
     "DocxWordCompatibleMixedBalloonRetainsParagraphMarkFace",
     "DocxWordCompatibleBalloonTerminalBlankUsesParagraphMarkFace",
     "DocxInlineCompositionNumberingMarkDecorations",
@@ -3710,7 +3720,7 @@
     "DocxMarkupModesPreserveDeletedRunParagraphMarkAndTableContent",
     "DocxReaderAlwaysEmitsParagraphMarkRunForEmptyParagraphs",
     "DocxReviewTerminalSpacePreservesResolvedParagraphMarkSize",
-    "DocxReaderRetainsOneToFiveCommentBalloonParagraphMarks",
+    "DocxReaderRetainsPlainCommentBalloonParagraphMarks",
     "DocxWordCompatibleMixedBalloonRetainsParagraphMarkFace",
     "DocxWordCompatibleBalloonTerminalBlankUsesParagraphMarkFace",
     "DocxInlineCompositionNumberingMarkDecorations",
@@ -3832,7 +3842,7 @@
     "DocxMarkupModesPreserveDeletedRunParagraphMarkAndTableContent",
     "DocxReaderAlwaysEmitsParagraphMarkRunForEmptyParagraphs",
     "DocxReviewTerminalSpacePreservesResolvedParagraphMarkSize",
-    "DocxReaderRetainsOneToFiveCommentBalloonParagraphMarks",
+    "DocxReaderRetainsPlainCommentBalloonParagraphMarks",
     "DocxWordCompatibleMixedBalloonRetainsParagraphMarkFace",
     "DocxWordCompatibleBalloonTerminalBlankUsesParagraphMarkFace",
     "DocxInlineCompositionNumberingMarkDecorations",
@@ -3900,7 +3910,7 @@
     "DocxLayoutStageEmitsEmptyParagraphMarkSpaceLine",
     "DocxReaderAlwaysEmitsParagraphMarkRunForEmptyParagraphs",
     "DocxReviewTerminalSpacePreservesResolvedParagraphMarkSize",
-    "DocxReaderRetainsOneToFiveCommentBalloonParagraphMarks",
+    "DocxReaderRetainsPlainCommentBalloonParagraphMarks",
     "DocxReviewAutofitMeasuresCommentDisplayLabelAtParagraphMarkSize"
   ],
   "docx-revision-author-ink": [
@@ -3926,7 +3936,7 @@
     "DocxLayoutStageEmitsEmptyParagraphMarkSpaceLine",
     "DocxReaderAlwaysEmitsParagraphMarkRunForEmptyParagraphs",
     "DocxReviewTerminalSpacePreservesResolvedParagraphMarkSize",
-    "DocxReaderRetainsOneToFiveCommentBalloonParagraphMarks",
+    "DocxReaderRetainsPlainCommentBalloonParagraphMarks",
     "DocxReviewAutofitMeasuresCommentDisplayLabelAtParagraphMarkSize",
     "DocxReviewRevisionInk",
     "PortableRenderingRevisionAuthorInk",

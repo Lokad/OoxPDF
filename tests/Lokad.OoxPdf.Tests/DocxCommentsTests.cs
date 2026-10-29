@@ -5908,16 +5908,17 @@ internal static partial class DocxCommentsTests
         }
     }
 
-    public static void DocxWordCompatibleMixedBalloonWrapsFiveParagraphsIndependently()
+    public static void DocxWordCompatibleMixedBalloonWrapsParagraphsIndependently()
     {
-        foreach (int wrappedMask in Enumerable.Range(0, 32))
+        foreach (int paragraphCount in new[] { 2, 3, 4, 5, 6, 7 })
+        foreach (int wrappedMask in paragraphCount == 5 ? Enumerable.Range(0, 32) : new[] { 0, 1 << (paragraphCount / 2), (1 << paragraphCount) - 1 })
         foreach (bool supplementary in new[] { false, true })
         foreach (short bodyGap in new short[] { 0, 450 })
         foreach (double rightMargin in new[] { 72d, 207d })
         {
             string[] families = ["CommentFace", "OtherCommentFace", "AnchorFace", "CommentFace", "OtherCommentFace"];
             string[] markFamilies = ["AnchorFace", "CommentFace", "OtherCommentFace", "AnchorFace", "CommentFace"];
-            var paragraphs = new DocxParagraph[5];
+            var paragraphs = new DocxParagraph[paragraphCount];
             for (int index = 0; index < paragraphs.Length; index++)
             {
                 string word = supplementary ? string.Concat(Enumerable.Repeat("f\U0001F600", 40)) : new string('f', 80);
@@ -5925,8 +5926,8 @@ internal static partial class DocxCommentsTests
                 paragraphs[index] = DocxTests.CreateDocxLayoutParagraph(text, 12d, 14d) with
                 {
                     LineSpacingPoints = null,
-                    Runs = [new DocxTextRun(text, 12d, null, false, false, false, null, families[index])],
-                    ParagraphMarkRun = new DocxTextRun(" ", 18d + index * 6d, null, false, false, false, null, markFamilies[index])
+                    Runs = [new DocxTextRun(text, 12d, null, false, false, false, null, families[index % families.Length])],
+                    ParagraphMarkRun = new DocxTextRun(" ", 18d + index * 6d, null, false, false, false, null, markFamilies[index % markFamilies.Length])
                 };
             }
             DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
@@ -5954,7 +5955,7 @@ internal static partial class DocxCommentsTests
             int offset = 0;
             double expectedHeight = 12.61d;
             double previousY = 0d, previousDescentEm = 0d;
-            for (int paragraphIndex = 0; paragraphIndex < 5; paragraphIndex++)
+            for (int paragraphIndex = 0; paragraphIndex < paragraphCount; paragraphIndex++)
             {
                 int start = offset;
                 string joined = string.Empty;
@@ -5970,10 +5971,10 @@ internal static partial class DocxCommentsTests
                         group.First().X, group.First().Y, group.First().Size, group.First().Font
                     }).ToArray();
                 TestAssert.True(bodyRows.Length >= ((wrappedMask & (1 << paragraphIndex)) != 0 ? 2 : 1),
-                    "Each five-paragraph body fits or wraps independently.");
+                    "Each paragraph body fits or wraps independently.");
                 var firstRow = bodyRows[0];
                 var lastRow = bodyRows[^1];
-                int expectedAdvance = families[paragraphIndex] == "CommentFace" ? 700 : families[paragraphIndex] == "OtherCommentFace" ? 900 : 500;
+                int expectedAdvance = families[paragraphIndex % families.Length] == "CommentFace" ? 700 : families[paragraphIndex % families.Length] == "OtherCommentFace" ? 900 : 500;
                 TestAssert.Equal(expectedAdvance, (int)firstRow.Font.Font.GetAdvanceWidth(firstRow.Font.Font.MapCodePoint('R')));
                 double size = firstRow.Size;
                 var font = firstRow.Font.Font;
@@ -5988,13 +5989,13 @@ internal static partial class DocxCommentsTests
                     double transition = (previousDescentEm +
                         (font.Hhea.HorizontalAscender + font.Hhea.HorizontalLineGap) / (double)font.UnitsPerEm) * size;
                     TestAssert.True(Math.Abs(previousY - firstRow.Y - transition) < 0.02d,
-                        "All four adjacent transitions use previous descent and next ascent/gap.");
+                        "All adjacent transitions use previous descent and next ascent/gap.");
                     expectedHeight += transition;
                 }
                 expectedHeight += (bodyRows.Length - 1) * pitch;
                 previousY = lastRow.Y;
                 previousDescentEm = -font.Hhea.HorizontalDescender / (double)font.UnitsPerEm;
-                int expectedMarkAdvance = markFamilies[paragraphIndex] == "CommentFace" ? 123 : markFamilies[paragraphIndex] == "OtherCommentFace" ? 900 : 500;
+                int expectedMarkAdvance = markFamilies[paragraphIndex % markFamilies.Length] == "CommentFace" ? 123 : markFamilies[paragraphIndex % markFamilies.Length] == "OtherCommentFace" ? 900 : 500;
                 TestAssert.Equal(" ", mark.Text);
                 TestAssert.Equal(expectedMarkAdvance, (int)mark.Font.Font.GetAdvanceWidth(mark.Font.Font.MapCodePoint(' ')));
                 TestAssert.True(Math.Abs(mark.Size - size) < 0.001d && Math.Abs(mark.Y - lastRow.Y) < 0.001d &&
@@ -6790,9 +6791,9 @@ internal static partial class DocxCommentsTests
         }
     }
 
-    public static void DocxReaderRetainsOneToFiveCommentBalloonParagraphMarks()
+    public static void DocxReaderRetainsPlainCommentBalloonParagraphMarks()
     {
-        foreach (int count in new[] { 1, 2, 3, 4, 5, 6 })
+        foreach (int count in new[] { 1, 2, 3, 4, 5, 6, 7 })
         foreach (OoxPdfDocxMarkupMode mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         foreach (string guard in new[] { "plain", "mixed", "mixed-last", "mixed-first", "three-last", "decorated", "before400", "after400", "autoYes" })
         {
@@ -6851,14 +6852,14 @@ internal static partial class DocxCommentsTests
             for (int index = 0; index < count; index++)
             {
                 DocxTextRun? mark = readParagraphs[index].ParagraphMarkRun;
-                if (mode == OoxPdfDocxMarkupMode.AllMarkup && count <= 5 && guard is ("plain" or "mixed-last"))
+                if (mode == OoxPdfDocxMarkupMode.AllMarkup && (guard == "plain" || count == 5 && guard == "mixed-last"))
                 {
                     TestAssert.True(mark is not null, "Plain comment bodies and a two-face fifth terminal body retain their mark runs.");
                     TestAssert.Equal(" ", mark!.Text);
                     TestAssert.Equal("Mark" + index.ToString(CultureInfo.InvariantCulture), mark.FontFamily);
                     TestAssert.Equal(18d, mark.FontSize);
                 }
-                else { TestAssert.True(mark is null, "Final view and larger stories retain the prior mark policy."); }
+                else { TestAssert.True(mark is null, "Final view and unsupported paragraph shapes retain their fallback mark policy."); }
             }
         }
     }
