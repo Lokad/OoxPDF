@@ -1,12 +1,35 @@
-# 0.2.0 qualification
+# 0.2.0 release qualification
 
-Release preparation sets package/informational version to **0.2.0** and retains
-assembly/file version **0.2.0.0**. Renderer C# is unchanged from the qualified
-preview below; its Office references, thresholds and residuals remain applicable.
-The package includes relative documentation targets, and its smoke check verifies
-all shipped Markdown links. Build/runtime identities, API and metadata checks,
-Windows/Linux package consumers and smoke output identities are recorded in
-artifacts/release-020-20261029/qualification.json. Publication is deferred.
+The **0.2.0** NuGet package and symbols are prepared. Publication and release
+tagging remain deferred. Frozen Release source: `7c43223bbc2b93027ce7f23821216990c6a1c8bd`.
+Library SHA-256: `6FCAF88D0B7DFDE75AB2DBD623C05BFC0B17E149ADC57C83792C28276DF47F9E`.
+[Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40850658711) passes on separate builds.
+
+| Gate | Result |
+|---|---|
+| Stable metadata | Package/informational version 0.2.0, assembly/file 0.2.0.0. No prerelease suffix; no runtime package dependencies. |
+| Renderer continuity | Renderer C# is unchanged from the qualified preview. All 25,508 method bodies/signatures and 247 public declarations match; IL-only, no P/Invoke/imported COM, explicit AllowUnsafeBlocks=false. Version and packaging metadata change. |
+| Focused checks | **49 passes/one declared filesystem skip on each of Windows and Ubuntu**, one 50-method invocation per host. API contracts plus portable DOCX Final/review and composite PPTX rendering are covered. The skipped case requires a case-sensitive temp filesystem. |
+| Package consumers | Windows and Ubuntu consume the same package with the same source, verifying the exact DLL, stable metadata, embedded fonts and memory-admission release. All 63 local links across 22 packaged Markdown guides resolve; symbols match the frozen PDB. |
+| Output identity and transfer | Two ordinary DOCX/PPTX smoke PDFs and three Office-control PDFs are byte-identical to the preview. Reuse their pinned Office comparisons without exports/raster replay or threshold changes. 24 assets transfer and two integration PDFs match, with no root rebuild or suite replay. |
+| Broader gate and limits | Both-platform CI passes its established broader/package/portable/tool checks. Historical inherited failures, raw extraction flags and rendering approximations below remain explicit; stable versioning adds no Office-parity claim. |
+
+One committed linked-worktree library compilation; the existing 2,629-input
+snapshot is reused. Local broad DOCX/corpus suites were not replayed. The two
+existing nullable test warnings remain. Package documentation is pinned to the
+build source; final checksums/provenance are recorded separately here and in
+artifacts/release-020-20261029/qualification.json.
+
+Package: artifacts/nuget/release-020-20261029/Lokad.OoxPdf.0.2.0.nupkg.
+SHA-256: `DCC3A5E95D207B8B31E02FDB8465A61F7F5746CCCA86295789C8FD4F73EF24AC`.
+Symbols: artifacts/nuget/release-020-20261029/Lokad.OoxPdf.0.2.0.snupkg.
+SHA-256: `C310E83D85A82DFC495173D4DD02605F946CF8FB8DE72676B089C78D957F47F5`.
+
+Relative current-repository Markdown links are committed as 84548286; historical
+revision and CI links preserve their targets. Release metadata/guidance is
+committed as 7c43223b. No library/API change beyond metadata was introduced.
+The scoped evidence directory measured about 28 MB/280 files; the last full
+workspace measure is 5.18 GB before this release slice. No full rescan or cleanup.
 
 ## Retained preview renderer qualification
 
