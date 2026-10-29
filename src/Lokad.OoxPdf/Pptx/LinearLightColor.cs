@@ -3,8 +3,7 @@ namespace Lokad.OoxPdf.Pptx;
 internal static class LinearLightColor
 {
     // Single owner for the Office-calibrated linear-light color math (sRGB to linear,
-    // float, round-half-away bytes). Shared by the chart fraction-curve engine and the
-    // table band fills; previously byte-identical private copies lived in both files.
+    // float, round-half-away bytes). Shared by automatic chart colors and table fills.
     public static double ToLinear(byte channel)
     {
         double c = channel / 255d;
@@ -25,7 +24,7 @@ internal static class LinearLightColor
         return clamped <= 0.0031308d ? clamped * 12.92d : 1.055d * System.Math.Pow(clamped, 1d / 2.4d) - 0.055d;
     }
 
-    // Linear-light tint toward white (table bands; fraction-curve upper-half form).
+    // Linear-light tint toward white.
     public static RgbColor TintTowardWhite(RgbColor color, double weight)
     {
         return new RgbColor(
@@ -34,7 +33,7 @@ internal static class LinearLightColor
             ToSrgbByte(ToLinear(color.Blue) + (1d - ToLinear(color.Blue)) * weight));
     }
 
-    // Linear-light shade toward black (table dark bands; fraction-curve base form).
+    // Linear-light shade toward black.
     public static RgbColor ShadeTowardBlack(RgbColor color, double weight)
     {
         return new RgbColor(

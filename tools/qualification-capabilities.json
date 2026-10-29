@@ -1,4 +1,17 @@
 {
+  "pptx-automatic-palette": [
+      "PptxAutomaticBarPalettes",
+      "PptxNegativeBar",
+      "PptxScenePreservesChartColorStyleDeclarations",
+      "BarStyle18",
+      "BarStyle10ColumnStrokesWhiteOutline",
+      "PptxSyntheticBarLegendKey",
+      "PptxSyntheticChartStackedColumnDataLabelsUseStackSegmentGeometry",
+      "PptxSyntheticBarChartLegendSwatchesUseSeriesStroke",
+      "PptxSyntheticChartHorizontalBar",
+      "PptxPercentStackedColumnChartUsesPercentValueAxis",
+      "PortableRenderingPptxPreservesCompositeChartAndText"
+  ],
   "pptx-negative-inversion": [
       "PptxNegativeBar",
       "BarScalarOptionsAgreeBetweenSceneAndXml",
