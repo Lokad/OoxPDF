@@ -28,19 +28,19 @@ internal sealed partial class DocxReader
         cancellationToken.ThrowIfCancellationRequested();
         var emitted = new HashSet<string>(StringComparer.Ordinal);
 
-        // Strict OOXML (ISO 29500) parts read as blank under transitional queries;
-        // fail visibly once per document instead of converting silently empty (O02).
-        if (OoxNamespaces.HasStrictOoxmlRoot(document))
+        // Common Strict DOCX vocabulary is adapted at package load; preserve the
+        // origin warning because dialect-specific constructs remain unsupported.
+        if (OoxNamespaces.HasStrictOoxmlOrigin(document))
         {
             diagnosticSink(new OoxPdfDiagnostic(
                 "OOXML_STRICT_DIALECT",
                 OoxPdfSeverity.Warning,
-                "Strict OOXML content was detected; only the transitional dialect is supported and content may be missing.",
+                "Strict DOCX content was detected; common markup is supported, but dialect-specific constructs may be missing.",
                 partName,
                 SlideIndex: null,
                 PageIndex: null,
                 Feature: "strict-dialect",
-                Fallback: "Ignored"));
+                Fallback: "Partial"));
         }
 
         if (OoxMarkupCompatibility.HasUnrecognizedMustUnderstand(document))

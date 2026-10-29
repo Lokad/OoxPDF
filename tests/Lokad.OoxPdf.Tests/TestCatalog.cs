@@ -42,6 +42,7 @@ internal static class TestCatalog
         .. FromType("cli", typeof(CliTests)),
         .. FromType("tools", typeof(ToolBudgetTests)),
         .. FromType("ooxml", typeof(OoxmlTests)),
+        .. FromType("ooxml", typeof(OoxmlStrictDocxTests)),
         .. FromType("ooxml", typeof(OoxMarkupCompatibilityTests)),
         .. FromType("ooxml", typeof(OoxComplexScriptTests)),
         .. FromType("ooxml", typeof(OoxmlBoundsTests)),

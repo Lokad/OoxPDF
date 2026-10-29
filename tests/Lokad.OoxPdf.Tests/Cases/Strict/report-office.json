@@ -1,0 +1,45 @@
+{
+  "Source": "tests/Lokad.OoxPdf.Tests/Cases/Composition/report.docx",
+  "SourceSha256": "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F",
+  "OfficeBuild": "16.0.20527.20088",
+  "FormatIds": [
+    12,
+    24
+  ],
+  "InputHashes": {
+    "office-transitional.docx": "B1F35626AC14DDB7FAC036577944D8A4B657B3D25CCB75EF009AFD14A4AAF1DD",
+    "office-strict.docx": "10C627D56D59A9BF1E9404D12928248D9D111FFCC2B145C1944D3EF2F1FD34E5",
+    "office-transitional.pdf": "43E911485610ABE047F53BB96D1648FABE156865F34A4BA8EBF54879FFB1AC9B",
+    "office-strict.pdf": "59B0B794D2FCE11945B433F0735586B5AB92477B5BBF7286CE0E39EB9AF420ED"
+  },
+  "OfficePdfPages": [
+    2,
+    2
+  ],
+  "OfficePdfTextIdentical": true,
+  "Appearance": "Secondary PDF evidence only; visible calibration unavailable on locked desktop",
+  "CaptureNote": "First metadata attempt tried hashing the still-open Strict DOCX; owned process closed in finally, then hashes were collected without reopening/re-exporting.",
+  "FixtureHashes": {
+    "report-transitional.docx": "B1F35626AC14DDB7FAC036577944D8A4B657B3D25CCB75EF009AFD14A4AAF1DD",
+    "report-strict.docx": "10C627D56D59A9BF1E9404D12928248D9D111FFCC2B145C1944D3EF2F1FD34E5"
+  },
+  "OfficePdfGeometryIdentical": true,
+  "Expected": {
+    "Equations": 6,
+    "InlineImages": 1,
+    "Features": [
+      "paragraphs",
+      "styles",
+      "numbering",
+      "fixed table",
+      "image",
+      "bookmark",
+      "hyperlink",
+      "header",
+      "footer",
+      "footnote",
+      "comment"
+    ]
+  },
+  "Scope": "Common Strict DOCX vocabulary and supported unit forms; not general Strict OOXML or Strict PPTX."
+}

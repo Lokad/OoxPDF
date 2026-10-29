@@ -34,9 +34,10 @@ internal static class OoxNamespaces
         return namespaceName?.StartsWith("http://purl.oclc.org/ooxml/", StringComparison.Ordinal) == true;
     }
 
-    public static bool HasStrictOoxmlRoot(System.Xml.Linq.XDocument? document)
+    public static bool HasStrictOoxmlOrigin(XDocument? document)
     {
-        return IsStrictOoxmlNamespace(document?.Root?.Name.NamespaceName);
+        return IsStrictOoxmlNamespace(document?.Root?.Name.NamespaceName) ||
+            (document is not null && OoxStrictDocx.HasNormalizedRoot(document));
     }
 
     // Strict relationship arcs name the same targets under a purl family (O02).

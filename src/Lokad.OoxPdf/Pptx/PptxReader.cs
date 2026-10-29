@@ -20,7 +20,7 @@ internal sealed class PptxReader
 
         // Strict OOXML (ISO 29500) parts read as blank under transitional queries;
         // fail visibly once per document instead of converting silently empty (O02).
-        if (diagnosticSink is not null && OoxNamespaces.HasStrictOoxmlRoot(document))
+        if (diagnosticSink is not null && OoxNamespaces.HasStrictOoxmlOrigin(document))
         {
             diagnosticSink(new OoxPdfDiagnostic(
                 "OOXML_STRICT_DIALECT",

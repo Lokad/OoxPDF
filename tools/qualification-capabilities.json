@@ -1,4 +1,16 @@
 {
+  "docx-common-strict": [
+      "StrictDocx",
+      "StrictOoxmlDialectWarnsForDocx",
+      "TransitionalOoxmlDialectStaysQuietForDocx",
+      "StrictOoxmlDialectWarnsForPptx",
+      "TransitionalOoxmlDialectStaysQuietForPptx",
+      "StrictRelationshipTypes",
+      "ParsesContentTypesAndRelationships",
+      "ProcessContent",
+      "AlternateContent",
+      "MustUnderstand"
+  ],
   "pptx-fallback-hyperlinks": [
       "PptxChartTitleExternalHyperlinkEmitsUriAnnotation",
       "PptxChartTitleHyperlinkActionIsDiagnosed",
