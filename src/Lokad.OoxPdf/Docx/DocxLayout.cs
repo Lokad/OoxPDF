@@ -501,14 +501,14 @@ internal sealed partial class DocxLayoutEngine
             return page.Height - page.MarginTop - ResolvePagedDisplacement(headerOverflowDisplacementByPage);
         }
 
-        double ResolvePagedDisplacement(IReadOnlyDictionary<int, double>? displacementByPage)
+        double ResolvePagedDisplacement(IReadOnlyDictionary<int, double>? displacementByPage, int? pageIndex = null)
         {
             // Pages beyond a short map reuse its last entry (extra pages arise from the
             // displacement itself under repeated headers and footers).
             double displacement = 0d;
             if (displacementByPage is not null)
             {
-                if (!displacementByPage.TryGetValue(pages.Count, out displacement) &&
+                if (!displacementByPage.TryGetValue(pageIndex ?? pages.Count, out displacement) &&
                     displacementByPage.Count != 0)
                 {
                     displacementByPage.TryGetValue(displacementByPage.Count - 1, out displacement);
@@ -2188,7 +2188,7 @@ internal sealed partial class DocxLayoutEngine
             if (bodyBaseline is not { } baseline) return null;
             // Body paint and following note boxes share this page's source
             // origin. A heading on another page cannot translate this boundary.
-            double displacement = Math.Max(0d, headerOverflowDisplacementByPage?.GetValueOrDefault(pageIndex) ?? 0d);
+            double displacement = Math.Max(0d, ResolvePagedDisplacement(headerOverflowDisplacementByPage, pageIndex));
             double offset = new DocxPrintedPageFrame(targetPage.Height, paragraphSpacingScale)
                 .BodyYOffset(baseline + displacement, sourceOffset);
             double result = new DocxPrintedPageFrame(targetPage.Height, paragraphSpacingScale).UnmapY(bodyY - offset);

@@ -135,9 +135,10 @@ internal static class DocxPagePrintOriginTests
     private static (int Page, double X, double Y, double Size) Anchor(IReadOnlyList<PdfPage> pages, string text)
     {
         var matches = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
-            .Where(show => show.Text.StartsWith(text, StringComparison.Ordinal))
-            .Select(show => (Page: index + 1, show.X, Y: page.Height - show.Y, show.Size))).ToArray();
-        TestAssert.Equal(1, matches.Length);
+            .GroupBy(show => show.Y).Select(group => group.OrderBy(show => show.X).ToArray())
+            .Where(line => string.Concat(line.Select(show => show.Text)).StartsWith(text, StringComparison.Ordinal))
+            .Select(line => (Page: index + 1, line[0].X, Y: page.Height - line[0].Y, line[0].Size))).ToArray();
+        TestAssert.True(matches.Length == 1, $"Expected one painted source line starting with '{text}', found {matches.Length}.");
         return matches.Single();
     }
 
