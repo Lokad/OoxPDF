@@ -39,6 +39,9 @@ internal sealed partial class PptxRenderer
         bool bottom = layout.Legend.PositionKind == PptxSceneChartLegendPosition.Bottom;
         double gap = ComputeHorizontalLegendTextGap(style.FontSize, bottom);
         double padding = ResolveHorizontalLegendInterEntryGap(style.FontSize, entries, style, measure, bottom);
+        // Horizontal legends belong to the chart frame, including the axis-label
+        // reserve beside the plot. A manual legend keeps its declared width.
+        double availableWidth = layout.Legend.Layout.HasLayout ? box.Width : layout.Frame.Width;
         double[] widths = new double[entries.Count];
         var rows = new List<(int Start, int End, double Width)>();
         int start = 0;
@@ -47,7 +50,7 @@ internal sealed partial class PptxRenderer
         {
             context.CancellationToken.ThrowIfCancellationRequested();
             widths[i] = GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, measure, box.MarkerSize, gap, padding);
-            if (i > start && width + widths[i] - padding > box.Width)
+            if (i > start && width + widths[i] - padding > availableWidth)
             {
                 rows.Add((start, i, Math.Max(0d, width - padding)));
                 start = i;
@@ -56,6 +59,14 @@ internal sealed partial class PptxRenderer
             width += widths[i];
         }
         rows.Add((start, entries.Count, Math.Max(0d, width - padding)));
+        if (!layout.Legend.Layout.HasLayout)
+        {
+            double packedWidth = Math.Min(availableWidth, rows.Max(row => row.Width));
+            double x = bottom
+                ? ResolveBottomLegendFrameAnchorX(layout.Frame.X, layout.Frame.Width, packedWidth, box.MarkerSize)
+                : layout.Frame.X + (layout.Frame.Width - packedWidth) / 2d;
+            box = box with { X = x, Width = packedWidth };
+        }
         double extra = (rows.Count - 1) * box.LineHeight;
         bool automatic = !layout.Legend.Overlay && !layout.Legend.Layout.HasLayout && !layout.ManualPlotLayoutApplied;
         double reserved = automatic ? Math.Min(extra, Math.Max(0d, layout.PlotBox.Height - 1d)) : 0d;
