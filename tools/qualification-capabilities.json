@@ -1,4 +1,14 @@
 {
+  "docx-minimum-paint": [
+      "DocxMinimumPaintPreservesTextFramesAndBackgrounds",
+      "DocxOrdinaryKerning",
+      "DocxMinimumBodyFlow",
+      "DocxMinimumBodyLineLeading",
+      "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames",
+      "DocxMinimumHyperlinksKeepVisibleFramesAndTargets",
+      "DocxRevisionNeutralityRetainsUnownedAndVisibleFallbacks",
+      "DocxSimpleScriptPlainFramesRetainShapingAndUnknownTextFallbacks"
+  ],
   "docx-minimum-navigation": [
       "DocxBodyHyperlinkUsesExactLineBoxAcrossFontsAndPrintScale",
       "DocxRevisionNeutralityRetainsUnownedAndVisibleFallbacks",

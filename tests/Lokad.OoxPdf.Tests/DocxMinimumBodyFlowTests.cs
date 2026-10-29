@@ -44,8 +44,8 @@ internal static class DocxMinimumBodyFlowTests
     {
         Action<XDocument>[] guards =
         [
-            xml => MinimumParagraph(xml).Element(Word + "r")!.Element(Word + "rPr")!.Add(new XElement(Word + "highlight", new XAttribute(Word + "val", "yellow"))),
-            xml => MinimumParagraph(xml).Element(Word + "r")!.Element(Word + "rPr")!.Add(new XElement(Word + "shd", new XAttribute(Word + "fill", "FFEEAA"))),
+            xml => MinimumParagraph(xml).Element(Word + "r")!.Element(Word + "rPr")!.Add(new XElement(Word + "b")),
+            xml => MinimumParagraph(xml).Element(Word + "r")!.Element(Word + "rPr")!.Add(new XElement(Word + "i")),
             xml => MinimumParagraph(xml).Element(Word + "pPr")!.Add(new XElement(Word + "keepNext")),
             xml => MinimumParagraph(xml).Descendants(Word + "t").First().Value += string.Concat(Enumerable.Repeat(" Public wrapped minimum.", 40)),
             xml => xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2"))),
@@ -54,7 +54,7 @@ internal static class DocxMinimumBodyFlowTests
         foreach (var modify in guards)
         {
             var document = Read(ordinary: true, modify); var before = Layout(document);
-            TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var after), "Painted, kept, wrapped, column and combining-text paths retain the original layout.");
+            TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var after), "Font-changing, kept, wrapped, column and combining-text paths retain the original layout.");
             TestAssert.True(ReferenceEquals(before, after), "Exclusions preserve the complete layout object.");
         }
     }

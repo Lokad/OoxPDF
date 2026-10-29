@@ -60,7 +60,7 @@ internal static class DocxPlainFootnoteKerning
                     run.Bold || run.Italic || run.Underline || run.Strike || run.DoubleStrike ||
                     run.AllCaps || run.SmallCaps || run.CharacterSpacingPoints != 0d ||
                     run.VerticalAlignment != DocxRunVerticalAlignment.Baseline ||
-                    ordinary && (run.Hidden || run.HighlightValue is not null || run.ShadingFillHex is not null) ||
+                    ordinary && run.Hidden ||
                     !new[] { "Calibri", "Arial", "Times New Roman" }.Contains(run.FontFamily, StringComparer.OrdinalIgnoreCase)) return false;
                 // Measured Word output treats absent/zero as disabled and a
                 // positive threshold as enabled only when the nominal size meets it.

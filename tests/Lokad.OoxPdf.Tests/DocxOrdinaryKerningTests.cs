@@ -65,13 +65,13 @@ internal static class DocxOrdinaryKerningTests
         TestAssert.True(source.Paragraphs[0].Runs[0].PairKerningEnabled, "Rendering leaves source pair policy unchanged.");
     }
 
-    public static void DocxOrdinaryKerningRetainsPaintedWrappedKeptAndMalformedFallbacks()
+    public static void DocxOrdinaryKerningRetainsFormattedWrappedKeptAndMalformedFallbacks()
     {
         Action<XDocument, XDocument>[] guards =
         [
             (xml, _) => FirstRunProperties(xml).Add(new XElement(Word + "b")),
-            (xml, _) => FirstRunProperties(xml).Add(new XElement(Word + "highlight", new XAttribute(Word + "val", "yellow"))),
-            (xml, _) => FirstRunProperties(xml).Add(new XElement(Word + "shd", new XAttribute(Word + "fill", "FFEEAA"))),
+            (xml, _) => FirstRunProperties(xml).Add(new XElement(Word + "i")),
+            (xml, _) => FirstRunProperties(xml).Add(new XElement(Word + "vanish")),
             (xml, _) => FirstRunProperties(xml).Add(Kern("-1")),
             (xml, _) => FirstRunProperties(xml).Add(new XElement(Word + "kern")),
             (xml, _) => FirstRunProperties(xml).Element(Word + "sz")!.SetAttributeValue(Word + "val", "28"),
@@ -84,7 +84,7 @@ internal static class DocxOrdinaryKerningTests
         foreach (var modify in guards)
         {
             var source = Read(modify);
-            TestAssert.True(!DocxPlainFootnoteKerning.TryCreateDocument(source, Layout(source), out var fallback, out _), "Rich/painted, malformed, other-size, kept, wrapped, combining-text, column and already-enabled inputs retain fallback.");
+            TestAssert.True(!DocxPlainFootnoteKerning.TryCreateDocument(source, Layout(source), out var fallback, out _), "Font-changing/hidden, malformed, other-size, kept, wrapped, combining-text, column and already-enabled inputs retain fallback.");
             TestAssert.True(ReferenceEquals(source, fallback), "Excluded ordinary flow retains the original document object.");
         }
     }

@@ -126,7 +126,6 @@ internal static class DocxMinimumBodyLineLeading
     private static bool IsQualifiedRun(DocxTextRun run, bool marker, double fontSize) =>
         run.FontSize == fontSize && !run.Bold && !run.Italic && !run.Underline && !run.Strike && !run.DoubleStrike &&
         !run.AllCaps && !run.SmallCaps && !run.Hidden && run.CharacterSpacingPoints == 0d &&
-        run.HighlightValue is null && run.ShadingFillHex is null &&
         run.VerticalAlignment == (marker ? DocxRunVerticalAlignment.Superscript : DocxRunVerticalAlignment.Baseline) &&
         new[] { "Calibri", "Arial", "Times New Roman" }.Contains(run.FontFamily, StringComparer.OrdinalIgnoreCase);
 }
