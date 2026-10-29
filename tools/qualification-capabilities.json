@@ -1,5 +1,6 @@
 {
   "docx-plain-balloon-paragraphs": [
+      "DocxWordCompatiblePlainParagraphCountsMatchIndependentOffice",
       "DocxWordCompatibleMixedBalloonWrapsParagraphsIndependently",
       "DocxWordCompatibleMixedBalloonParagraphBodyBoundaries",
       "DocxWordCompatibleMixedBalloonKeepsFifthFontAliasesOnPriorFallback",

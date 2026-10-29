@@ -1,0 +1,306 @@
+{
+  "Template": "docx-markup-comment-unresolved-aptos.docx",
+  "TemplateSha256": "4CDAAFB3C813E84A058A1E3E7220439DCF9F4AF80C86079468CBBDA2B01C16AB",
+  "OfficeBuild": "16.0.20527.20088",
+  "View": "AllMarkup Word-compatible print layout",
+  "MaximumOriginErrorPoints": 0.25,
+  "Scope": "Independent paragraph-label starts; complete-page images retain separate unchanged gates and uncalibrated status.",
+  "Rows": [
+    {
+      "Id": "paragraphs-2",
+      "ParagraphTexts": [
+        "Paragraph 1.",
+        "Paragraph 2."
+      ],
+      "Origins": [
+        {
+          "Paragraph": 1,
+          "X": 499.2200012207031,
+          "Y": 180.8599853515625
+        },
+        {
+          "Paragraph": 2,
+          "X": 436.8699951171875,
+          "Y": 189.239990234375
+        }
+      ],
+      "InputSha256": "9E93097EB7C461438099B365A89CBE7C79B061975295EF76D9DC9CA9CCB6D958",
+      "ReferenceImageMetadataSha256": "99E2D44DEE62B4B9D333B7647003B129BEE31520B81F04E63E98FC6F40AF1FF0",
+      "ReferenceImageSha256": "FA9D40495468085361970B306BFB1CEFFFFF8084FCECAB5E93E6C02EB50B30C8"
+    },
+    {
+      "Id": "paragraphs-3",
+      "ParagraphTexts": [
+        "Paragraph 1.",
+        "Paragraph 2.",
+        "Paragraph 3."
+      ],
+      "Origins": [
+        {
+          "Paragraph": 1,
+          "X": 499.2200012207031,
+          "Y": 180.8599853515625
+        },
+        {
+          "Paragraph": 2,
+          "X": 436.8699951171875,
+          "Y": 189.239990234375
+        },
+        {
+          "Paragraph": 3,
+          "X": 436.8699951171875,
+          "Y": 197.52001953125
+        }
+      ],
+      "InputSha256": "CF2F0D10CF779FE6F252A07F64041571AE8CACE18F23D76DC594F5B005539B25",
+      "ReferenceImageMetadataSha256": "9FA7FFAD4BA354FE9376D0C16654B8C4E0348D36F226BF8EE6F9D2B8505B82E4",
+      "ReferenceImageSha256": "FA9D40495468085361970B306BFB1CEFFFFF8084FCECAB5E93E6C02EB50B30C8"
+    },
+    {
+      "Id": "paragraphs-4",
+      "ParagraphTexts": [
+        "Paragraph 1.",
+        "Paragraph 2.",
+        "Paragraph 3.",
+        "Paragraph 4."
+      ],
+      "Origins": [
+        {
+          "Paragraph": 1,
+          "X": 499.2200012207031,
+          "Y": 180.8599853515625
+        },
+        {
+          "Paragraph": 2,
+          "X": 436.8699951171875,
+          "Y": 189.239990234375
+        },
+        {
+          "Paragraph": 3,
+          "X": 436.8699951171875,
+          "Y": 197.52001953125
+        },
+        {
+          "Paragraph": 4,
+          "X": 436.8699951171875,
+          "Y": 205.9000244140625
+        }
+      ],
+      "InputSha256": "80B18119E93F4A0908E4D3E77A836C51F1BF5BF2F03E3A830F841F747AB44ED1",
+      "ReferenceImageMetadataSha256": "7561D31BB661468870C0E29738D96EC07E4BBED73A41094768BFF3D9D4090F19",
+      "ReferenceImageSha256": "FA9D40495468085361970B306BFB1CEFFFFF8084FCECAB5E93E6C02EB50B30C8"
+    },
+    {
+      "Id": "paragraphs-5",
+      "ParagraphTexts": [
+        "Paragraph 1.",
+        "Paragraph 2.",
+        "Paragraph 3.",
+        "Paragraph 4.",
+        "Paragraph 5."
+      ],
+      "Origins": [
+        {
+          "Paragraph": 1,
+          "X": 499.2200012207031,
+          "Y": 180.8599853515625
+        },
+        {
+          "Paragraph": 2,
+          "X": 436.8699951171875,
+          "Y": 189.239990234375
+        },
+        {
+          "Paragraph": 3,
+          "X": 436.8699951171875,
+          "Y": 197.52001953125
+        },
+        {
+          "Paragraph": 4,
+          "X": 436.8699951171875,
+          "Y": 205.9000244140625
+        },
+        {
+          "Paragraph": 5,
+          "X": 436.8699951171875,
+          "Y": 214.17999267578125
+        }
+      ],
+      "InputSha256": "7A57161CE5AABAB2D1BD0024ED2A4FA1031953EEA042705D98C325EE727FD843",
+      "ReferenceImageMetadataSha256": "88122B6DBBC97912F678AE11E5F43D828DD7D9F260717AD75F0C8EF7FFBD4197",
+      "ReferenceImageSha256": "FA9D40495468085361970B306BFB1CEFFFFF8084FCECAB5E93E6C02EB50B30C8"
+    },
+    {
+      "Id": "paragraphs-6",
+      "ParagraphTexts": [
+        "Paragraph 1.",
+        "Paragraph 2.",
+        "Paragraph 3.",
+        "Paragraph 4.",
+        "Paragraph 5.",
+        "Paragraph 6."
+      ],
+      "Origins": [
+        {
+          "Paragraph": 1,
+          "X": 499.2200012207031,
+          "Y": 180.8599853515625
+        },
+        {
+          "Paragraph": 2,
+          "X": 436.8699951171875,
+          "Y": 189.239990234375
+        },
+        {
+          "Paragraph": 3,
+          "X": 436.8699951171875,
+          "Y": 197.52001953125
+        },
+        {
+          "Paragraph": 4,
+          "X": 436.8699951171875,
+          "Y": 205.9000244140625
+        },
+        {
+          "Paragraph": 5,
+          "X": 436.8699951171875,
+          "Y": 214.17999267578125
+        },
+        {
+          "Paragraph": 6,
+          "X": 436.8699951171875,
+          "Y": 222.54998779296875
+        }
+      ],
+      "InputSha256": "0B353071E998C926CD85D4F198CF4232803C764ACBDD64DC35BA4A031A3EEC24",
+      "ReferenceImageMetadataSha256": "A4819598AB04AA3A48ED486CF50164302E7DDD524A05F4BA4947C919EFAFC72B",
+      "ReferenceImageSha256": "FA9D40495468085361970B306BFB1CEFFFFF8084FCECAB5E93E6C02EB50B30C8"
+    },
+    {
+      "Id": "paragraphs-7",
+      "ParagraphTexts": [
+        "Paragraph 1.",
+        "Paragraph 2.",
+        "Paragraph 3.",
+        "Paragraph 4.",
+        "Paragraph 5.",
+        "Paragraph 6.",
+        "Paragraph 7."
+      ],
+      "Origins": [
+        {
+          "Paragraph": 1,
+          "X": 499.2200012207031,
+          "Y": 180.8599853515625
+        },
+        {
+          "Paragraph": 2,
+          "X": 436.8699951171875,
+          "Y": 189.239990234375
+        },
+        {
+          "Paragraph": 3,
+          "X": 436.8699951171875,
+          "Y": 197.52001953125
+        },
+        {
+          "Paragraph": 4,
+          "X": 436.8699951171875,
+          "Y": 205.9000244140625
+        },
+        {
+          "Paragraph": 5,
+          "X": 436.8699951171875,
+          "Y": 214.17999267578125
+        },
+        {
+          "Paragraph": 6,
+          "X": 436.8699951171875,
+          "Y": 222.54998779296875
+        },
+        {
+          "Paragraph": 7,
+          "X": 436.8699951171875,
+          "Y": 230.92999267578125
+        }
+      ],
+      "InputSha256": "AB52D9AC6C0768204B431D71C4733DD0C740FA875D60574B963E5D7447BC1DEC",
+      "ReferenceImageMetadataSha256": "80928E50ACCA184EA29EAF74E25B844969E9F1F2D2043F2095DE7CD614681037",
+      "ReferenceImageSha256": "FA9D40495468085361970B306BFB1CEFFFFF8084FCECAB5E93E6C02EB50B30C8"
+    },
+    {
+      "Id": "paragraphs-3-middle-wrap",
+      "ParagraphTexts": [
+        "Paragraph 1.",
+        "Paragraph 2. This public middle paragraph contains enough ordinary words to wrap independently within the review balloon width.",
+        "Paragraph 3."
+      ],
+      "Origins": [
+        {
+          "Paragraph": 1,
+          "X": 499.2200012207031,
+          "Y": 180.8599853515625
+        },
+        {
+          "Paragraph": 2,
+          "X": 436.8699951171875,
+          "Y": 189.239990234375
+        },
+        {
+          "Paragraph": 3,
+          "X": 436.8699951171875,
+          "Y": 214.17999267578125
+        }
+      ],
+      "InputSha256": "5426289F76B624A324CADBB479C472EAD2CAF1A28EA64FD33880ECF34DC44523",
+      "ReferenceImageMetadataSha256": "031649457C376AFA61A59999DC643DB078DF9FAB3D432B89EE517DDB062C6C0C",
+      "ReferenceImageSha256": "FA9D40495468085361970B306BFB1CEFFFFF8084FCECAB5E93E6C02EB50B30C8"
+    },
+    {
+      "Id": "paragraphs-6-middle-wrap",
+      "ParagraphTexts": [
+        "Paragraph 1.",
+        "Paragraph 2.",
+        "Paragraph 3.",
+        "Paragraph 4. This public middle paragraph contains enough ordinary words to wrap independently within the review balloon width.",
+        "Paragraph 5.",
+        "Paragraph 6."
+      ],
+      "Origins": [
+        {
+          "Paragraph": 1,
+          "X": 499.2200012207031,
+          "Y": 180.8599853515625
+        },
+        {
+          "Paragraph": 2,
+          "X": 436.8699951171875,
+          "Y": 189.239990234375
+        },
+        {
+          "Paragraph": 3,
+          "X": 436.8699951171875,
+          "Y": 197.52001953125
+        },
+        {
+          "Paragraph": 4,
+          "X": 436.8699951171875,
+          "Y": 205.9000244140625
+        },
+        {
+          "Paragraph": 5,
+          "X": 436.8699951171875,
+          "Y": 230.92999267578125
+        },
+        {
+          "Paragraph": 6,
+          "X": 436.8699951171875,
+          "Y": 239.21002197265625
+        }
+      ],
+      "InputSha256": "9618E3471FC8A4D59E222CAEC7823D95C1CD6CA3405B3BA459D15CD3D60A5074",
+      "ReferenceImageMetadataSha256": "5CAAA1C863F51C33DBF19691A62E1132CB2C326BE3E30011A11210B4589A3539",
+      "ReferenceImageSha256": "FA9D40495468085361970B306BFB1CEFFFFF8084FCECAB5E93E6C02EB50B30C8"
+    }
+  ]
+}
