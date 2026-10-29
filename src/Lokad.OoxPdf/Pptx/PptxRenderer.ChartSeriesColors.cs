@@ -4569,7 +4569,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartSeriesFill ResolveBarPointFill(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, int seriesIndex, int categoryIndex, int seriesCount, bool varyColors, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, int valuePointCount, bool shadeSingleSeriesVaryColors, double value, bool invertNegative)
     {
-        if (value < 0d && invertNegative && !HasExplicitChartPointFill(pointFills, seriesIndex, categoryIndex))
+        if (value < 0d && invertNegative)
         {
             return new ChartSeriesFill(new RgbColor(255, 255, 255), 1d, null, null);
         }

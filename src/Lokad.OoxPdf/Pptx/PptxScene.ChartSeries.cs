@@ -81,11 +81,13 @@ internal sealed partial class PptxSceneBuilder
         Dictionary<int, bool>? points = null;
         foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
         {
-            if (TryReadChartNonNegativeIndex(point, out int index, out _) &&
-                ReadOptionalOoxmlBooleanElementWithValue(point, "invertIfNegative").Value is { } value)
+            if (TryReadChartNonNegativeIndex(point, out int index, out _))
             {
                 points ??= new Dictionary<int, bool>();
-                points[index] = value;
+                // A point declaration has its own enabled default, including
+                // declarations that only override fill or line. Office does not
+                // inherit the series flag for an existing dPt with no flag.
+                points[index] = ReadOptionalOoxmlBooleanElementWithValue(point, "invertIfNegative").Value ?? true;
             }
         }
         return new PptxSceneChartNegativeInversion(seriesValue, points);

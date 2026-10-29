@@ -32,6 +32,10 @@ internal static class PptxChartNegativeInversionTests
         TestAssert.Equal(true, series.NegativeInversion.ForPoint(1));
         TestAssert.Equal(true, series.NegativeInversion.ForPoint(2));
         TestAssert.Equal(2, TestAssert.NotNull(series.NegativeInversion.PointValues).Count);
+        var pointDefault = TestAssert.NotNull(PptxTests.BuildSingleChartScene(Chart(
+            "<c:invertIfNegative val=\"0\"/>", "<c:dPt><c:idx val=\"0\"/></c:dPt>"))).Plots[0].Series[0];
+        TestAssert.Equal(true, pointDefault.NegativeInversion.ForPoint(0));
+        TestAssert.Equal(false, pointDefault.NegativeInversion.ForPoint(1));
     }
 
     public static void PptxNegativeBarPaintHonorsInversionAcrossLayouts()
@@ -61,7 +65,25 @@ internal static class PptxChartNegativeInversionTests
         }
     }
 
-    private static string Chart(string inversion, string points = "", string direction = "col", string grouping = "clustered", bool labels = false) => $$"""
+    public static void PptxNegativeBarPointDefaultsAndExplicitPaintMatchOffice()
+    {
+        const string fill = "<c:spPr><a:solidFill><a:srgbClr val=\"3366CC\"/></a:solidFill></c:spPr>";
+        foreach ((string flag, string paint, bool negative, int expected) in new[]
+        {
+            ("", "", true, 0),
+            ("", fill, true, 0),
+            ("<c:invertIfNegative val=\"0\"/>", fill, true, 1),
+            ("<c:invertIfNegative val=\"1\"/>", fill, true, 0),
+            ("", fill, false, 1)
+        })
+        {
+            string point = "<c:dPt><c:idx val=\"0\"/>" + flag + paint + "</c:dPt>";
+            PdfPage page = Render(Chart("<c:invertIfNegative val=\"0\"/>", point, negative: negative));
+            TestAssert.Equal(expected, CountSeriesColorPaint(page.Content));
+        }
+    }
+
+    private static string Chart(string inversion, string points = "", string direction = "col", string grouping = "clustered", bool labels = false, bool negative = true) => $$"""
         <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
           <c:chart><c:plotArea><c:barChart>
@@ -70,7 +92,7 @@ internal static class PptxChartNegativeInversionTests
               <c:spPr><a:solidFill><a:srgbClr val="3366CC"/></a:solidFill><a:ln><a:noFill/></a:ln></c:spPr>
               {{inversion}}{{points}}
               <c:cat><c:strLit><c:ptCount val="1"/><c:pt idx="0"><c:v>Negative</c:v></c:pt></c:strLit></c:cat>
-              <c:val><c:numLit><c:ptCount val="1"/><c:pt idx="0"><c:v>-2</c:v></c:pt></c:numLit></c:val>
+              <c:val><c:numLit><c:ptCount val="1"/><c:pt idx="0"><c:v>{{(negative ? "-2" : "2")}}</c:v></c:pt></c:numLit></c:val>
               {{(labels ? "<c:dLbls><c:dLblPos val=\"outEnd\"/><c:showLegendKey val=\"1\"/><c:showVal val=\"1\"/></c:dLbls>" : "")}}
             </c:ser>
           </c:barChart></c:plotArea><c:legend><c:delete val="1"/></c:legend></c:chart>
