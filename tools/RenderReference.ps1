@@ -28,7 +28,8 @@ param(
 
     [string] $WorkerScript,
 
-    [switch] $SkipBuild
+    [switch] $SkipBuild,
+    [string] $RasterizerPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -124,6 +125,7 @@ try {
     # Preserve custom workers' argument contract. Only this owned child inherits
     # the framework selected for its validation tools.
     $start.Environment['OOXPDF_TARGET_FRAMEWORK'] = $Framework
+    if ($RasterizerPath) { $start.Environment['OOXPDF_REFERENCE_RASTERIZER'] = (Resolve-Path -LiteralPath $RasterizerPath).Path }
     $start.UseShellExecute = $false
     $start.CreateNoWindow = $true
     $start.RedirectStandardOutput = $true

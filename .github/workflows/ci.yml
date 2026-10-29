@@ -130,6 +130,8 @@ jobs:
         run: pwsh -NoProfile -File tools/TestQualificationTransfer.ps1
       - name: Reference and affected-report mechanics
         run: |
+          pwsh -NoProfile -File tools/TestOfficeReferenceOwnership.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pwsh -NoProfile -File tools/TestReferenceDerivative.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pwsh -NoProfile -File tools/TestReferenceWorkerPaths.ps1

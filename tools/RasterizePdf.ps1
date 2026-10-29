@@ -13,7 +13,8 @@ param(
     # R21: bound native validation time from the outside. PDFium calls are
     # synchronous, so an over-long render is killed at the process boundary
     # instead of hanging the validation gate.
-    [int] $TimeoutSeconds = 600
+    [int] $TimeoutSeconds = 600,
+    [string] $RasterizerPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,8 +44,9 @@ New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $outputFull = (Resolve-Path -LiteralPath $OutputDirectory).Path
 
 $rasterizerProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj"
-$rasterizerDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll"
-if ($SkipBuild) {
+$rasterizerDll = if ($RasterizerPath) { (Resolve-Path -LiteralPath $RasterizerPath).Path }
+    else { Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll" }
+if ($SkipBuild -or $RasterizerPath) {
     if (-not (Test-Path -LiteralPath $rasterizerDll)) {
         throw "PDFium rasterizer DLL is missing and -SkipBuild was requested: $rasterizerDll."
     }

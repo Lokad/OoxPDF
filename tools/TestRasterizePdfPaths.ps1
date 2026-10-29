@@ -103,6 +103,11 @@ $fresh=Join-Path $root 'fresh-shorter-raster'
 & (Join-Path $ownedTools 'RasterizePdf.ps1') -Framework $Framework -InputPdf $onePage -OutputDirectory $fresh -Dpi 36 -SkipBuild *> (Join-Path $root 'fresh-shorter.log')
 if (@(Get-ChildItem -LiteralPath $fresh -Filter '*.png' -File).Count -ne 1) { throw 'Fresh shorter PDF must produce exactly one page' }
 $rows+=@{Id='fresh-shorter';Outcome='passed';Pages=1}
+$bound=Join-Path $root 'explicit-frozen-tool'
+$otherFramework=if ($Framework -eq 'net11.0') {'net10.0'} else {'net11.0'}
+& (Join-Path $ownedTools 'RasterizePdf.ps1') -Framework $otherFramework -RasterizerPath (Join-Path $ownedRuntime 'Lokad.OoxPdf.PdfiumRasterizer.dll') -InputPdf $onePage -OutputDirectory $bound -Dpi 36 *> (Join-Path $root 'explicit-frozen-tool.log')
+if (@(Get-ChildItem -LiteralPath $bound -Filter '*.png' -File).Count -ne 1) { throw 'Explicit frozen rasterizer did not override framework discovery without building' }
+$rows+=@{Id='explicit-frozen-tool';Outcome='passed';Pages=1}
 $inputHash=(Get-FileHash -LiteralPath $inputFull).Hash
 if ((Get-FileHash -LiteralPath $plain).Hash -ne $inputHash -or (Get-FileHash -LiteralPath $spaced).Hash -ne $inputHash) { throw 'Probe changed its PDF input' }
 @{InputSha256=$inputHash;RasterizerSha256=(Get-FileHash -LiteralPath $rasterizer).Hash;

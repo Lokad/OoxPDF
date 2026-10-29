@@ -84,6 +84,7 @@ finally {if(!$sentinel.HasExited) {$sentinel.Kill();$null=$sentinel.WaitForExit(
 # Exercise the actual worker, replacing only COM activation with managed stubs.
 # Rasterization is also stubbed; these checks never build or use Office/PDFium.
 $actualWorkerSource=Get-Content (Join-Path $PSScriptRoot 'RenderReferenceWorker.ps1') -Raw
+Copy-Item (Join-Path $PSScriptRoot 'OfficeReferenceOwnership.ps1') -Destination $root
 $activationStub=@'
 function Enter-Operation([string] $Name) {
     if ($script:failureStage -eq ('delay-'+$Name)) {
@@ -97,7 +98,8 @@ function New-Object {
     $script:failureStage=[IO.Path]::GetFileNameWithoutExtension($InputPath)
     Enter-Operation 'activation'
     if ($script:failureStage -eq 'activation') {throw 'Controlled activation failure'}
-    $script:probeDocument=[pscustomobject]@{}
+    $script:probeDocument=[pscustomobject]@{FullName=$referenceInput}
+    if ($script:failureStage -eq 'foreign-document') { $script:probeDocument.FullName=$InputPath }
     $save={param($Path,$Format)
         Enter-Operation 'export'
         if ($script:failureStage -eq 'export') {throw 'Controlled export failure'}
@@ -106,6 +108,7 @@ function New-Object {
     $script:probeDocument | Add-Member ScriptMethod SaveAs $save
     $script:probeDocument | Add-Member ScriptMethod SaveAs2 $save
     $script:probeDocument | Add-Member ScriptMethod Close {
+        if ($script:failureStage -eq 'foreign-document') { throw 'Foreign document was closed' }
         Enter-Operation 'cleanup'
         if ($script:failureStage -eq 'cleanup') {throw 'Controlled cleanup failure'}
     }
@@ -118,7 +121,7 @@ function New-Object {
     $documents | Add-Member ScriptMethod Open $open
     $documents | Add-Member ScriptMethod OpenNoRepairDialog $open
     $application=[pscustomobject]@{Version='control';DisplayAlerts=0;Visible=$false;Presentations=$documents;Documents=$documents}
-    $application | Add-Member ScriptMethod Quit {}
+    $application | Add-Member ScriptMethod Quit { throw 'Unknown/shared Office process must not be quit' }
     return $application
 }
 '@
@@ -152,6 +155,20 @@ foreach($extension in @('pptx','docx')) {
         $stageChecks+=@{Format=$extension;FailureStage=$stage;ReportedStage=$status.Stage;Status=$status.Status}
     }
 }
+$foreignChecks=@()
+foreach($extension in @('pptx','docx')) {
+    $folder=New-Item -ItemType Directory -Path (Join-Path $root ('foreign-'+$extension))
+    $inputFile=Join-Path $folder.FullName ('foreign-document.'+$extension)
+    [IO.File]::WriteAllText($inputFile,'controlled public input; no COM')
+    $output=Join-Path $folder.FullName 'output';$errorText=$null
+    try { & (Join-Path $PSScriptRoot 'RenderReference.ps1') -InputPath $inputFile -OutputDirectory $output -WorkerScript $actualWorker -TimeoutSeconds 20 *> (Join-Path $folder.FullName 'supervisor.log') }
+    catch { $errorText=$_.Exception.Message }
+    $status=Get-Content (Join-Path $output 'reference-status.json') -Raw | ConvertFrom-Json
+    if (!$errorText -or $status.Stage -ne 'open' -or $status.Error -notlike '*not the owned input copy*') {
+        throw ('Foreign Office document was not preserved: '+$extension)
+    }
+    $foreignChecks+=@{Format=$extension;DocumentClosed=$false;ApplicationQuit=$false;Stage=$status.Stage}
+}
 $timeoutChecks=@();$rasterChecks=@()
 foreach($extension in @('pptx','docx')) {
     foreach($stage in @('activation','open','export','cleanup','rasterize')) {
@@ -179,5 +196,5 @@ foreach($extension in @('pptx','docx')) {
         $rasterChecks+=@{Format=$extension;SkipBuild=$skip;Forwarded=$actual.SkipBuild}
     }
 }
-@{Checks=$checks;ActualWorkerStageChecks=$stageChecks;TimeoutStageChecks=$timeoutChecks;RasterBuildChecks=$rasterChecks;Builds=0;OfficeExports=0} | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $root 'evidence.json') -Encoding utf8
-"Reference worker: $($checks.Count) supervision, $($stageChecks.Count) exception, $($timeoutChecks.Count) timeout and $($rasterChecks.Count) raster forwarding checks pass; no build or Office."
+@{Checks=$checks;ActualWorkerStageChecks=$stageChecks;ForeignDocumentChecks=$foreignChecks;TimeoutStageChecks=$timeoutChecks;RasterBuildChecks=$rasterChecks;Builds=0;OfficeExports=0} | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $root 'evidence.json') -Encoding utf8
+"Reference worker: $($checks.Count) supervision, $($stageChecks.Count) exception, $($foreignChecks.Count) ownership, $($timeoutChecks.Count) timeout and $($rasterChecks.Count) raster forwarding checks pass; no build or Office."
