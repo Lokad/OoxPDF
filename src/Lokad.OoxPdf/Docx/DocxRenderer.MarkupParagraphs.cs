@@ -16,7 +16,8 @@ internal sealed partial class DocxRenderer
         // Preserve each plain paragraph's prepared body and mark faces. The
         // measured rendering paths separately admit fitting and wrapped bodies.
         if (fonts is null || storyLayout is null || storyLayout.Story.BodyElements.Count < (allowSingleParagraph ? 1 : 2) ||
-            storyLayout.InlineImages.Count != 0 || storyLayout.FloatingDrawings.Count != 0) { return null; }
+            storyLayout.InlineImages.Count != 0 || storyLayout.FloatingDrawings.Count != 0 ||
+            HasMixedFiveParagraphTerminal(storyLayout.Story.BodyElements)) { return null; }
         var paragraphs = new List<DocxMarkupBalloonParagraph>(storyLayout.Story.BodyElements.Count);
         foreach (DocxBodyElement item in storyLayout.Story.BodyElements)
         {

@@ -1,6 +1,17 @@
 {
   "docx-plain-balloon-paragraphs": [
-      "DocxWordCompatibleMixedBalloon",
+      "DocxWordCompatibleMixedBalloonWrapsParagraphsIndependently",
+      "DocxWordCompatibleMixedBalloonParagraphBodyBoundaries",
+      "DocxWordCompatibleMixedBalloonKeepsFifthFontAliasesOnPriorFallback",
+      "DocxWordCompatibleMixedBalloonKeepsLeadingFittingParagraphsAndWrapsFourth",
+      "DocxWordCompatibleMixedBalloonKeepsTwoFittingParagraphsAndTheirMarks",
+      "DocxWordCompatibleMixedBalloonRetainsParagraphMarkFace",
+      "DocxWordCompatibleMixedBalloonKeepsFittingFifthBodyFaces",
+      "DocxWordCompatibleMixedBalloonMovesPreservedFifthClosingRunToOwnRow",
+      "DocxWordCompatibleMixedBalloonMovesPreservedFourthClosingRunToOwnRow",
+      "DocxWordCompatibleMixedBalloonWrapsFifthBodyBeforeFittingClosingRun",
+      "DocxWordCompatibleMixedBalloonWrapsFourthBodyBeforeFittingClosingRun",
+      "DocxWordCompatibleMixedBalloonSpacingBoundaries",
       "DocxReaderRetainsPlainCommentBalloonParagraphMarks",
       "DocxWordCompatibleBalloonUsesUniformCommentTypeface",
       "DocxWordCompatibleBalloonBodyWrapsLikeOfficeTitles",
