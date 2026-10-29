@@ -2049,7 +2049,7 @@ internal static class PptxChartLegendsTests
         TestAssert.Equal("1200000", PptxTests.ChartTextBodyRotationValue(xmlBody));
     }
 
-    public static void PptxChartTitlePreservesTextBodyPropertiesAtRendererBoundary()
+    public static void PptxChartTitlePreservesTextBodyProperties()
     {
         PptxSceneChart chart = PptxTests.BuildSingleChartScene("""
             <?xml version="1.0" encoding="UTF-8"?>
@@ -2065,26 +2065,9 @@ internal static class PptxChartLegendsTests
             </c:chartSpace>
             """) ?? throw new InvalidOperationException("Expected chart scene.");
 
-        XDocument mismatchedChartXml = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:chart>
-                <c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>XML title</a:t></a:r></a:p></c:rich></c:tx><c:txPr><a:bodyPr rot="-1200000"/><a:lstStyle/><a:p><a:pPr><a:defRPr/></a:pPr></a:p></c:txPr></c:title>
-                <c:plotArea/>
-              </c:chart>
-            </c:chartSpace>
-            """);
-        System.Reflection.MethodInfo readTitleBody = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartTitleTextBodyProperties",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer title text-body bridge.");
-
-        object sceneBody = readTitleBody.Invoke(null, [chart, mismatchedChartXml]) ?? throw new InvalidOperationException("Expected scene chart title body properties.");
-        object xmlBody = readTitleBody.Invoke(null, [null, mismatchedChartXml]) ?? throw new InvalidOperationException("Expected XML-only chart title body properties.");
-
-        TestAssert.Equal(90d, PptxTests.ChartTextBodyRotationDegrees(sceneBody) ?? 0d);
-        TestAssert.Equal("5400000", PptxTests.ChartTextBodyRotationValue(sceneBody));
-        TestAssert.Equal(-20d, PptxTests.ChartTextBodyRotationDegrees(xmlBody) ?? 0d);
-        TestAssert.Equal("-1200000", PptxTests.ChartTextBodyRotationValue(xmlBody));
+        TestAssert.Equal("Scene title", chart.Title.Text ?? "");
+        TestAssert.Equal(90d, chart.Title.TextBodyProperties.RotationDegrees ?? 0d);
+        TestAssert.Equal("5400000", chart.Title.TextBodyProperties.RotationValue);
     }
 
     public static void PptxChartMissingSceneAxesDoNotFallBackToMismatchedXmlAxes()

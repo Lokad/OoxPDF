@@ -19,7 +19,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<RgbColor>? chartPalette,
         ShapeBounds bounds,
         XDocument chartXml,
-        PptxSceneChart? sceneChart,
+        PptxSceneChart sceneChart,
         ChartWorkbookData? workbook,
         List<PdfFontResource> fonts,
         PresentationFontResolver fontResolver,
@@ -66,7 +66,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<RgbColor>? chartPalette,
         ShapeBounds bounds,
         XDocument chartXml,
-        PptxSceneChart? sceneChart,
+        PptxSceneChart sceneChart,
         ChartWorkbookData? workbook,
         List<PdfFontResource> fonts,
         PresentationFontResolver fontResolver,
@@ -108,7 +108,7 @@ internal sealed partial class PptxRenderer
                 bool isDoughnutLeftFillLegend = isDoughnutFillLegend && legend.PositionKind == PptxSceneChartLegendPosition.Left;
                 bool isExplodedDoughnut = polarPoints.PointExplosions.Count != 0;
                 double explodedDoughnutLegendReserve = 0d;
-                bool doughnutHasTitle = !string.IsNullOrWhiteSpace(ReadSceneOrXmlChartTitleText(sceneChart, chartXml));
+                bool doughnutHasTitle = !string.IsNullOrWhiteSpace(sceneChart.Title.Text);
                 if (isDoughnutRightFillLegend && !isExplodedDoughnut)
                 {
                     double doughnutLegendReserve = ComputeDoughnutRightLegendReserve(doughnutLegendEntries, doughnutLegendStyle, new ChartTextMeasurer(fontResolver));

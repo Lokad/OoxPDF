@@ -91,8 +91,6 @@ internal sealed partial class PptxSceneBuilder
         }
     }
 
-    // D01: absent titles parse through the same body-properties reader as the XML arm,
-    // so the scene and XML interpretations agree on the absent spelling.
     private static PptxSceneChartTitle EmptyChartTitle(bool? IsAutoDeleted, string IsAutoDeletedValue)
     {
         return new PptxSceneChartTitle(

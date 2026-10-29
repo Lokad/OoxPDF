@@ -6,11 +6,13 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-// D01 branch-equivalence evidence: plot/chart option readers must agree whether they
+// Branch-equivalence evidence for the remaining dual plot/chart option readers:
+// they must agree whether they
 // interpret the scene model or re-parse the plot XML. The scene builder and the render
 // XML arms share parsers, but defaults and clamps are applied at different layers, so
 // absent/unknown/out-of-range spellings are the divergence surface. Any failure here is
-// a dual-interpretation bug and blocks deleting the XML arms.
+// a dual-interpretation bug. Title consumers use only the scene model; their
+// authored text/formatting expectations below do not need a second interpreter.
 internal static class PptxChartPlotOptionsAgreementTests
 {
     private static readonly XNamespace C = "http://schemas.openxmlformats.org/drawingml/2006/chart";
@@ -212,36 +214,42 @@ internal static class PptxChartPlotOptionsAgreementTests
         return (sceneChart.Axes[0], element);
     }
 
-    public static void TitleOptionsAgreeBetweenSceneAndXml()
+    public static void ChartTitleSceneRetainsAuthoredFormatting()
     {
-        // Shape-style arms carry nested reference payloads (list identity never
-        // agrees across arms), so the battery pins text, body properties, text
-        // style, and text runs; style equality is covered by renderer families.
-        string[] titles = new[]
-        {
+        string[] titles =
+        [
             "",
-            "<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:t>Sales</a:t></a:r></a:p></c:rich></c:tx><c:layout/><c:overlay val=\"0\"/></c:title>",
-            "<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:rPr b=\"1\" sz=\"1400\"/><a:t>Q1 </a:t></a:r><a:r><a:rPr i=\"1\"/><a:t>rev</a:t></a:r></a:p></c:rich></c:tx><c:layout/><c:overlay val=\"1\"/></c:title>",
-            "<c:title><c:txPr><a:bodyPr rot=\"5400000\"/></c:txPr><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:t>Spun</a:t></a:r></a:p></c:rich></c:tx><c:layout/></c:title>",
-        };
-        foreach (string title in titles)
+            """<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:t>Sales</a:t></a:r></a:p></c:rich></c:tx><c:layout/><c:overlay val="0"/></c:title>""",
+            """<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:rPr b="1" sz="1400"/><a:t>Q1 </a:t></a:r><a:r><a:rPr i="1"/><a:t>rev</a:t></a:r></a:p></c:rich></c:tx><c:layout/><c:overlay val="1"/></c:title>""",
+            """<c:title><c:txPr><a:bodyPr rot="5400000"/></c:txPr><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:t>Spun</a:t></a:r></a:p></c:rich></c:tx><c:layout/></c:title>"""
+        ];
+        string?[] expectedText = [null, "Sales", "Q1 rev", "Spun"];
+        bool?[] expectedOverlay = [null, false, true, null];
+        for (int index = 0; index < titles.Length; index++)
         {
-            string xml = ChartSpace("<c:barChart><c:ser><c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:barChart>", title);
-            PptxSceneChart sceneChart = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml));
-
-            XDocument xmlDoc = XDocument.Parse(xml);
-            object? xmlText = Invoke("ReadSceneOrXmlChartTitleText", new[] { typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { null, xmlDoc });
-            object? sceneText = Invoke("ReadSceneOrXmlChartTitleText", new[] { typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { sceneChart, xmlDoc });
-            TestAssert.True(Equals(xmlText, sceneText), "Title text must agree for: " + title);
-            object? xmlBody = Invoke("ReadSceneOrXmlChartTitleTextBodyProperties", new[] { typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { null, xmlDoc });
-            object? sceneBody = Invoke("ReadSceneOrXmlChartTitleTextBodyProperties", new[] { typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { sceneChart, xmlDoc });
-            TestAssert.True(Equals(xmlBody, sceneBody), "Title body properties must agree for: " + title);
-            object? xmlStyle = Invoke("ReadSceneOrXmlChartTitleTextStyle", new[] { typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument), typeof(bool) }, new object?[] { PptxTheme.Empty, PptxColorMap.Default, null, xmlDoc, false });
-            object? sceneStyle = Invoke("ReadSceneOrXmlChartTitleTextStyle", new[] { typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument), typeof(bool) }, new object?[] { PptxTheme.Empty, PptxColorMap.Default, sceneChart, xmlDoc, false });
-            TestAssert.True(Equals(xmlStyle, sceneStyle), "Title text style must agree for: " + title);
-            object? xmlRuns = Invoke("ReadSceneOrXmlChartTitleTextRuns", new[] { typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { PptxTheme.Empty, PptxColorMap.Default, null, xmlDoc });
-            object? sceneRuns = Invoke("ReadSceneOrXmlChartTitleTextRuns", new[] { typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { PptxTheme.Empty, PptxColorMap.Default, sceneChart, xmlDoc });
-            TestAssert.True(SequenceEqual(xmlRuns, sceneRuns), "Title text runs must agree for: " + title);
+            string xml = ChartSpace("""<c:barChart><c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val="10"/><c:axId val="20"/></c:barChart>""", titles[index]);
+            PptxSceneChartTitle title = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml)).Title;
+            TestAssert.True(title.Text == expectedText[index]);
+            TestAssert.True(title.Overlay == expectedOverlay[index]);
+            TestAssert.True(!title.IsAutoGenerated);
+            if (index == 0)
+            {
+                TestAssert.Equal(0, title.TextRuns.Count);
+            }
+            else if (index == 2)
+            {
+                TestAssert.Equal(2, title.TextRuns.Count);
+                TestAssert.Equal("Q1 ", title.TextRuns[0].Text);
+                TestAssert.Equal(14d, title.TextRuns[0].TextStyle.FontSize ?? 0d);
+                TestAssert.True(title.TextRuns[0].TextStyle.Bold == true);
+                TestAssert.Equal("rev", title.TextRuns[1].Text);
+                TestAssert.True(title.TextRuns[1].TextStyle.Italic == true);
+            }
+            else if (index == 3)
+            {
+                TestAssert.Equal(90d, title.TextBodyProperties.RotationDegrees ?? 0d);
+                TestAssert.Equal("5400000", title.TextBodyProperties.RotationValue);
+            }
         }
     }
 
@@ -250,7 +258,7 @@ internal static class PptxChartPlotOptionsAgreementTests
         // Absent legends flow through the shared legend builder on both arms, so
         // the absent spelling must agree exactly (this pins the no-divergence claim).
         // Shape-style variants stay out: nested reference payloads never agree by
-        // identity across arms (same documented scope as title shape style).
+        // identity across arms; renderer families cover the resulting paint.
         string[] legends = new[]
         {
             "",

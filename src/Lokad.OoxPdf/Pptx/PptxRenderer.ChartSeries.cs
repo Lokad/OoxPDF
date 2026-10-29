@@ -100,10 +100,8 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        // D01: the scene chart is always present below the missing-part return (both
-        // derive from the same scene node payload), so render paths below resolve chart
-        // options from the scene model. The guard documents the invariant for flow
-        // analysis; the pairing proof test guards the builder side.
+        // Rendering requires the resolved scene model; missing content is diagnosed
+        // here rather than interpreted again by individual painting/layout helpers.
         if (sceneChart is null)
         {
             EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart frame was missing from the scene model and was ignored.", chartPartName, context.SlideNumber, "Ignored");
@@ -113,7 +111,7 @@ internal sealed partial class PptxRenderer
         // one bounded workbook model per embedded part, shared by every chart
         // frame of this conversion through the render context cache. The per-frame range
         // memo on the shared model is cleared below so nothing accumulates across frames.
-        ChartWorkbookData? chartWorkbook = GetOrCreateChartWorkbook(context.WorkbookCache, sceneChart?.ExternalData ?? default, context.CancellationToken);
+        ChartWorkbookData? chartWorkbook = GetOrCreateChartWorkbook(context.WorkbookCache, sceneChart.ExternalData, context.CancellationToken);
         context.CancellationToken.ThrowIfCancellationRequested();
 
         try
@@ -163,19 +161,19 @@ internal sealed partial class PptxRenderer
         string chartPartName,
         XDocument resolvedChartXml,
         IReadOnlyList<RgbColor>? resolvedChartPalette,
-        PptxSceneChart? sceneChart,
+        PptxSceneChart sceneChart,
         ChartWorkbookData? chartWorkbook,
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        PptxColorMap chartColorMap = sceneChart?.ColorMap ?? context.SlideColorMap;
+        PptxColorMap chartColorMap = sceneChart.ColorMap;
 
         if (TryRenderChart(graphics, context.Document, context.Theme, chartColorMap, resolvedChartPalette, bounds, resolvedChartXml, sceneChart, chartWorkbook, fonts, context.FontResolver, context, linkAnnotations, reportedHyperlinkIds))
         {
-            EmitUnrenderedDefaultChartAxisTitleDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
+            EmitUnrenderedDefaultChartAxisTitleDiagnostics(sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
             EmitUnsupportedChartNumberFormatDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
             EmitUnsupportedChartTrendlineDiagnostics(resolvedChartXml, context.DiagnosticSink, chartPartName, context.SlideNumber);
-            RenderManualChartAxisTitles(context.Document, context.Theme, chartColorMap, graphics, bounds, resolvedChartXml, sceneChart, context.FontResolver, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false, fonts, context, linkAnnotations, reportedHyperlinkIds);
+            RenderManualChartAxisTitles(context.Document, context.Theme, graphics, bounds, sceneChart, context.FontResolver, context.DiagnosticSink, fonts, context, linkAnnotations, reportedHyperlinkIds);
             RenderChartTitle(context.Document, context.Theme, chartColorMap, graphics, bounds, resolvedChartXml, sceneChart, chartWorkbook, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds, context.DiagnosticSink);
             return;
         }
@@ -203,10 +201,10 @@ internal sealed partial class PptxRenderer
                         series.YValuePoints.Any(point => point.Value is not null));
             }
 
-            return sceneChart?.Plots.Any(plot =>
+            return sceneChart.Plots.Any(plot =>
                 IsSupportedNativeChartPlot(plot.PlotKind) &&
                 plot.Series.Count != 0 &&
-                !plot.Series.Any(HasRenderableCachedValues)) == true;
+                !plot.Series.Any(HasRenderableCachedValues));
         }
 
         if (HasSupportedSceneChartWithoutRenderableCachedValues())

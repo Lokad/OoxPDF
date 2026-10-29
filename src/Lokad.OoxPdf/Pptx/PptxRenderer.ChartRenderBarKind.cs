@@ -19,7 +19,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<RgbColor>? chartPalette,
         ShapeBounds bounds,
         XDocument chartXml,
-        PptxSceneChart? sceneChart,
+        PptxSceneChart sceneChart,
         ChartWorkbookData? workbook,
         List<PdfFontResource> fonts,
         PresentationFontResolver fontResolver,
@@ -378,7 +378,7 @@ internal sealed partial class PptxRenderer
                         }
                     }
                 }
-                RenderDefaultChartAxisTitles(theme, colorMap, graphics, chartLayout, chartXml, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds);
+                RenderDefaultChartAxisTitles(theme, graphics, chartLayout, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds);
                 RenderChartLegend(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend, legendTextStyle, fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, preparedBox: categoryLegendBox);
                 RenderBarDataLabels(
                     theme,

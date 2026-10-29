@@ -176,7 +176,7 @@ internal sealed partial class PptxRenderer
         PptxTheme theme,
         ShapeBounds bounds,
         XDocument chartXml,
-        PptxSceneChart? sceneChart,
+        PptxSceneChart sceneChart,
         PptxColorMap colorMap,
         PptxSceneChartPlot? barPlot,
         XElement barChart,
@@ -186,14 +186,14 @@ internal sealed partial class PptxRenderer
         PresentationFontResolver? fontResolver)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
-        string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
-        PptxSceneChartTextBodyProperties titleTextBodyProperties = ReadSceneOrXmlChartTitleTextBodyProperties(sceneChart, chartXml);
+        string? title = sceneChart.Title.Text;
+        PptxSceneChartTextBodyProperties titleTextBodyProperties = sceneChart.Title.TextBodyProperties;
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, colorMap, sceneChart, chartXml);
         ChartPlotLayout plotLayout = GetBarChartPlotLayout(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, legend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false);
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend);
     }
 
-    private static double ReadSceneOrXmlCategoryTitleFontSizeAtPosition(PptxTheme theme, PptxColorMap colorMap, PptxSceneChart? sceneChart, XDocument chartXml, PptxSceneChartAxisPosition titlePosition)
+    private static double ReadCategoryTitleFontSizeAtPosition(PptxSceneChart sceneChart, PptxSceneChartAxisPosition titlePosition)
     {
         // Horizontal axis titles render on the opposite side of their recorded position
         // (Top hangs below the plot, Bottom sits above it). The caller sizes each reserve var
@@ -202,57 +202,25 @@ internal sealed partial class PptxRenderer
         // the height and hence the bottom edge). Category-kind only: value-kind horizontal
         // titles keep legacy output, unobserved. Run sizes win over paragraph defaults,
         // mirroring emission.
-        if (sceneChart is not null)
+        foreach (PptxSceneChartAxis axis in sceneChart.Axes)
         {
-            foreach (PptxSceneChartAxis axis in sceneChart.Axes)
-            {
-                if (axis.PositionKind != titlePosition || !IsBottomPlacedCategoryTitleCandidate(axis.AxisKind, axis.Title.Text, axis.Title.Layout.HasLayout))
-                {
-                    continue;
-                }
-
-                foreach (PptxSceneChartTextRun run in axis.Title.TextRuns)
-                {
-                    if (run.TextStyle.FontSize is { } runSize && runSize > 0d)
-                    {
-                        return runSize;
-                    }
-                }
-
-                ChartTextStyleOverride titleStyle = ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, axis.Title.TextStyle, GetChartAxisStyleRole(axis.AxisKind)));
-                if (titleStyle.FontSize is { } sceneSize && sceneSize > 0d)
-                {
-                    return sceneSize;
-                }
-
-                return 0d;
-            }
-
-            return 0d;
-        }
-
-        foreach (XElement axis in ReadChartAxisElements(chartXml))
-        {
-            PptxSceneChartAxisKind axisKind = PptxSceneBuilder.ParseChartAxisKind(axis.Name.LocalName);
-            PptxSceneChartAxisPosition positionKind = PptxSceneBuilder.ParseChartAxisPosition(PptxSceneBuilder.ReadChartElementValue(axis, "axPos"));
-            XElement? title = axis.Element(ChartNamespace + "title");
-            if (positionKind != titlePosition || title is null || !IsBottomPlacedCategoryTitleCandidate(axisKind, PptxSceneBuilder.ReadChartText(title.Element(ChartNamespace + "tx"), trimLiteral: true), PptxSceneBuilder.ReadChartManualLayout(title).HasLayout))
+            if (axis.PositionKind != titlePosition || !IsBottomPlacedCategoryTitleCandidate(axis.AxisKind, axis.Title.Text, axis.Title.Layout.HasLayout))
             {
                 continue;
             }
 
-            foreach (XElement runProperties in title.Descendants(OoxNamespaces.DrawingNamespace + "rPr"))
+            foreach (PptxSceneChartTextRun run in axis.Title.TextRuns)
             {
-                if (runProperties.Attribute("sz") is { } sizeAttribute && int.TryParse(sizeAttribute.Value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int sizeHundredths) && sizeHundredths > 0)
+                if (run.TextStyle.FontSize is { } runSize && runSize > 0d)
                 {
-                    return sizeHundredths / 100d;
+                    return runSize;
                 }
             }
 
-            ChartTextStyleOverride titleStyle = ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(title, theme, colorMap));
-            if (titleStyle.FontSize is { } xmlSize && xmlSize > 0d)
+            ChartTextStyleOverride titleStyle = ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, axis.Title.TextStyle, GetChartAxisStyleRole(axis.AxisKind)));
+            if (titleStyle.FontSize is { } sceneSize && sceneSize > 0d)
             {
-                return xmlSize;
+                return sceneSize;
             }
 
             return 0d;
@@ -290,7 +258,7 @@ internal sealed partial class PptxRenderer
         PptxColorMap colorMap,
         ChartFrameBox frame,
         XDocument chartXml,
-        PptxSceneChart? sceneChart,
+        PptxSceneChart sceneChart,
         PptxSceneChartPlot? barPlot,
         XElement barChart,
         string? title,
@@ -349,14 +317,14 @@ internal sealed partial class PptxRenderer
             // Default placement anchors the title above the plot. The same font
             // metrics used for chart text must fit in the remaining frame band;
             // frame-ratio presets alone can put the entire title above the clip.
-            ChartTextStyle titleStyle = ReadSceneOrXmlChartTitleTextStyle(theme, colorMap, sceneChart, chartXml, IsAutoGeneratedChartTitle(sceneChart));
+            ChartTextStyle titleStyle = ReadChartTitleTextStyle(theme, sceneChart);
             var titleMeasurer = new ChartTextMeasurer(fontResolver);
             double lineHeight = titleMeasurer.MeasureNormalLineHeight(titleStyle);
-            foreach (ChartTextRunOverride run in ReadSceneOrXmlChartTitleTextRuns(theme, colorMap, sceneChart, chartXml))
+            foreach (ChartTextRunOverride run in ReadChartTitleTextRuns(sceneChart))
             {
                 lineHeight = Math.Max(lineHeight, titleMeasurer.MeasureNormalLineHeight(titleStyle.Merge(run.TextStyle)));
             }
-            double titleOffset = titleStyle.FontSize * (!horizontalBars && IsAutoGeneratedChartTitle(sceneChart)
+            double titleOffset = titleStyle.FontSize * (!horizontalBars && sceneChart.Title.IsAutoGenerated
                 ? PptxChartMetricRules.AutoBarTitleAbovePlotBaselineOffsetFactor
                 : PptxChartMetricRules.TitleAbovePlotBaselineOffsetFactor);
             double top = Math.Min(defaultPlotBox.Y + defaultPlotBox.Height, frame.Y + frame.Height - lineHeight - titleOffset);
@@ -391,7 +359,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            ChartAxisTitleReserveSides reserveSides = ReadSceneOrXmlDefaultAxisTitleReserveSides(sceneChart, chartXml);
+            ChartAxisTitleReserveSides reserveSides = ReadDefaultAxisTitleReserveSides(sceneChart);
             if (!reserveSides.HasHorizontalTitle || !reserveSides.HasVerticalTitle)
             {
                 return plotBox;
@@ -425,7 +393,7 @@ internal sealed partial class PptxRenderer
 
                 if (hasTitle)
                 {
-                    ChartTextStyle titleStyle = ReadSceneOrXmlChartTitleTextStyle(theme, colorMap, sceneChart, chartXml, IsAutoGeneratedChartTitle(sceneChart));
+                    ChartTextStyle titleStyle = ReadChartTitleTextStyle(theme, sceneChart);
                     bottomReserve = ComputeDefaultAxisTitleHorizontalBarReserves(0d, titleStyle.FontSize).BottomReserve;
                 }
 
@@ -459,7 +427,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 ChartTextStyle categoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
-                double categoryTitleFontSize = ReadSceneOrXmlCategoryTitleFontSizeAtPosition(theme, colorMap, sceneChart, chartXml, titlePosition);
+                double categoryTitleFontSize = ReadCategoryTitleFontSizeAtPosition(sceneChart, titlePosition);
                 if (categoryTitleFontSize <= 0d)
                 {
                     return legacyReserve;
