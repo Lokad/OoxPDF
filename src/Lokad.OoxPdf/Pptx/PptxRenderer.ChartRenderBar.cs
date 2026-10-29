@@ -312,7 +312,7 @@ internal sealed partial class PptxRenderer
         ChartAxisSource rightReserveCategoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
         bool rightReserveLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(rightReserveCategoryAxis.SceneAxis, rightReserveCategoryAxis.XmlAxis);
         defaultPlotBox = AdjustVerticalBarPlotBoxRightReserve(defaultPlotBox, frame, horizontalBars, legend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly) && rightReserveLabelsVisible);
-        if (hasTitle && sceneChart?.Title.Layout.HasLayout != true && sceneChart?.Title.Overlay != true)
+        if (hasTitle && !sceneChart.Title.Layout.HasLayout && sceneChart.Title.Overlay != true)
         {
             // Default placement anchors the title above the plot. The same font
             // metrics used for chart text must fit in the remaining frame band;

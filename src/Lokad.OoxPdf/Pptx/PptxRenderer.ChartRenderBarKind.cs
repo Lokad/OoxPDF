@@ -52,7 +52,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneOrXmlSeriesPointFills(barPlot, barChart, theme, colorMap);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneOrXmlSeriesPointStrokes(barPlot, barChart, theme, colorMap);
                 bool categoryLegend = barOptions.VaryColors.Value && barSeriesVectors.Count == 1 &&
-                    sceneChart?.Plots.Sum(plot => plot.Series.Count) == 1;
+                    sceneChart.Plots.Sum(plot => plot.Series.Count) == 1;
                 var legendEntries = new List<ChartLegendEntry>(categoryLegend
                     ? BuildBarCategoryLegendEntries(theme, colorMap, chartPalette, barPlot, barChart, barSeriesVectors[0], barOptions, seriesFills, seriesStrokes, pointFills, pointStrokes, workbook, plotVisibleOnly)
                     : BuildFillLegendEntries(theme, colorMap, chartPalette, barPlot, barChart, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook));
@@ -70,7 +70,7 @@ internal sealed partial class PptxRenderer
                 // Gallery style 2 fills unstyled axis-family strokes on single-plot charts
                 // (multi-plot dual-axis charts keep legacy output); explicit styles win by
                 // construction since only null entries are replaced.
-                if (barCharts.Count == 1 && ResolveGalleryAxisFamilyDefault(sceneChart?.StyleId) is { } galleryAxisDefault)
+                if (barCharts.Count == 1 && ResolveGalleryAxisFamilyDefault(sceneChart.StyleId) is { } galleryAxisDefault)
                 {
                     // SecondaryValueAxis stays untouched: its null-ness gates secondary-axis
                     // emission downstream, and filling it would conjure duplicate axis lines.
@@ -162,7 +162,7 @@ internal sealed partial class PptxRenderer
                         ReadSceneOrXmlDataLabelOptions(sceneChart, extraBarPlot, extraBarChart, theme, colorMap),
                         ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, extraBarPlot, extraBarChart, theme, colorMap),
                         ReadSceneOrXmlCategoryLabelVector(extraBarPlot, extraBarChart, workbook, plotVisibleOnly),
-                        ReadSharedChartSeriesNames(extraBarPlot, extraBarChart, workbook), fontResolver, fonts, context, sceneChart?.Relationships, linkAnnotations, reportedHyperlinkIds);
+                        ReadSharedChartSeriesNames(extraBarPlot, extraBarChart, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds);
                     seriesOffset += extraSeriesCount;
                     barChartIndex++;
                 }
@@ -227,7 +227,7 @@ internal sealed partial class PptxRenderer
                         ReadSceneOrXmlDataLabelOptions(sceneChart, linePlot, comboLineChart, theme, colorMap),
                         ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, linePlot, comboLineChart, theme, colorMap),
                         ReadSceneOrXmlCategoryLabelVector(linePlot, comboLineChart, workbook, plotVisibleOnly),
-                        ReadSharedChartSeriesNames(linePlot, comboLineChart, workbook), fontResolver, fonts, context, sceneChart?.Relationships, linkAnnotations, reportedHyperlinkIds);
+                        ReadSharedChartSeriesNames(linePlot, comboLineChart, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds);
                     lineChartIndex++;
                 }
 
@@ -395,7 +395,7 @@ internal sealed partial class PptxRenderer
                     ReadSceneOrXmlDataLabelOptions(sceneChart, barPlot, barChart, theme, colorMap),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, barPlot, barChart, theme, colorMap),
                     ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly),
-                    ReadSharedChartSeriesNames(barPlot, barChart, workbook), fontResolver, fonts, context, sceneChart?.Relationships, linkAnnotations, reportedHyperlinkIds);
+                    ReadSharedChartSeriesNames(barPlot, barChart, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds);
                 return true;
             }
         }
