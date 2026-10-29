@@ -1,5 +1,7 @@
 {
   "docx-page-print-origins-portable": [
+      "DocxExactContinuationPrintOriginKeepsItsAuthoredSlot",
+      "DocxWordCompatibleExactKeepChainUsesPrintedPageBoundary",
       "DocxContinuationPagePaintIgnoresOtherPageFontSizes",
       "DocxPagePrintOriginsKeepInspectionLinksAndNoteTargetsTogether",
       "DocxPrintedBodyBoundaryRecoversNoteDesignCoordinates",
@@ -8,6 +10,10 @@
       "DocxInlineCompositionFittingNestedEndnotesRetainAncestorChildAndPartialClipFallbacks"
   ],
   "docx-page-print-origins": [
+      "DocxExactContinuationPrintOriginKeepsItsAuthoredSlot",
+      "DocxWordCompatibleExactKeepChainUsesPrintedPageBoundary",
+      "DocxInlineCompositionExactCommentFramesMatchIndependentWordVerticalBounds",
+      "DocxInlineCompositionOwnedNoteContainersKeepWordHeadsAndEmptyPageTakes",
       "DocxContinuationPagePaintIgnoresOtherPageFontSizes",
       "DocxPagePrintOriginsMatchIndependentWordViews",
       "DocxPagePrintOriginsKeepInspectionLinksAndNoteTargetsTogether",
@@ -238,6 +244,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+      "DocxExactContinuationPrintOriginKeepsItsAuthoredSlot",
       "DocxMinimumLeadingUsesLocalSlotsAcrossNeighborsAndSlotGrowth",
       "PptxAutomaticChartTitlePlacementKeepsWholeLinkedLine",
       "PptxAutomaticChartTitleUsesAuthoredChartSizeBeforeGalleryDefaults",

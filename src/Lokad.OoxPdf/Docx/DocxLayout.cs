@@ -1821,8 +1821,12 @@ internal sealed partial class DocxLayoutEngine
                     {
                         FrameOriginOffsetX = x - lineShape.X,
                         InlineObjectEndOffsetX = lineMath is null ? null : lineMath.X + inlineMath!.Width - lineShape.X,
-                        SourceBaselineOffset = IsExactLineSpacing(effective) || midLinePlan is null ? 0d :
-                            Math.Max(0d, midLinePlan.SourceShiftAboveHeights[lineIndex] - extraAbove),
+                        // Baseline transitions already consume printed spacing.
+                        // Retain their source-frame displacement so the page
+                        // origin does not scale an exact/kept slot a second time.
+                        SourceBaselineOffset = rawBaselineOffset - baselineOffset +
+                            (IsExactLineSpacing(effective) || midLinePlan is null ? 0d :
+                                Math.Max(0d, midLinePlan.SourceShiftAboveHeights[lineIndex] - extraAbove)),
                         UsesUniformBodyTypographicBaseline = typographicBaselineInset is not null,
                         BodyLineBoxBaselineInsetPoints = lineHeightProfile.Source is DocxLineHeightSource.ExactLineSpacing or DocxLineHeightSource.BodySingleLineAuto
                             ? rawBaselineOffset * paragraphSpacingScale : null,

@@ -100,7 +100,30 @@ internal static class DocxPagePrintOriginTests
         }
     }
 
-    private static DocxDocument WithContinuationBookmark(string input)
+    public static void DocxExactContinuationPrintOriginKeepsItsAuthoredSlot()
+    {
+        double? previous = null;
+        foreach (int firstSize in new[] { 11, 18, 24 })
+        {
+            var source = WithContinuationBookmark(Case($"page-origin-first{firstSize}-continuation11.docx"), exact: true);
+            var fonts = new TestFaceFontResolver();
+            var printed = Renderer(fonts, final: false).RenderBlankPages(source, null, default).ToArray();
+            var nominal = new DocxRenderer(fonts, OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(source, null, default).ToArray();
+            TestAssert.Equal(2, printed.Length);
+            TestAssert.Equal(2, nominal.Length);
+            var actual = Anchor(printed, "Public continuation body.");
+            var design = Anchor(nominal, "Public continuation body.");
+            double scale = DocxRenderer.ResolveWordCompatiblePrintScale(source,
+                DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+            double expected = new DocxPrintedPageFrame(nominal[1].Height, scale).MapY(nominal[1].Height - design.Y);
+            Near(expected, printed[1].Height - actual.Y, .0015d, "An exact slot retains the independently scaled source origin.");
+            if (previous is { } prior) Near(prior, actual.Y, .0015d, "A different first-page font cannot translate the exact continuation slot.");
+            previous = actual.Y;
+        }
+    }
+
+    private static DocxDocument WithContinuationBookmark(string input, bool exact = false)
     {
         string temporary = Path.Combine(Path.GetTempPath(), "ooxpdf-page-origin-" + Guid.NewGuid().ToString("N") + ".docx");
         File.Copy(input, temporary);
@@ -114,6 +137,12 @@ internal static class DocxPagePrintOriginTests
                 using (var stream = entry.Open()) xml = XDocument.Load(stream);
                 XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
                 var paragraphs = xml.Root!.Element(w + "body")!.Elements(w + "p").ToArray();
+                if (exact)
+                {
+                    var spacing = paragraphs[1].Element(w + "pPr")!.Element(w + "spacing")!;
+                    spacing.SetAttributeValue(w + "line", 1600);
+                    spacing.SetAttributeValue(w + "lineRule", "exact");
+                }
                 var heading = paragraphs[0].Elements(w + "r").First(run => run.Element(w + "t") is not null);
                 heading.ReplaceWith(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PublicContinuation"), new XElement(heading)));
                 paragraphs[1].Element(w + "pPr")!.AddAfterSelf(new XElement(w + "bookmarkStart",
