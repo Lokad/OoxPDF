@@ -43,6 +43,13 @@ usable primary face nor discovery fonts, so host fonts cannot conceal collapsed
 fallback advances. Ubuntu CI runs its union with the existing picture/font
 capabilities in one invocation.
 
+Chart and axis titles are interpreted by the scene builder. Rendering and reserved
+space consume that model; removed XML-only title branches no longer need private
+branch-equivalence tests. `pptx-chart-titles` retains authored text/style, inferred
+titles, manual/overlay layouts, axis reserves, links and unsupported-position
+diagnostics. Synthetic style checks supply an explicit font; bold-face selection
+observes requested styles instead of counting host-dependent embedded font files.
+
 PPTX inspection accepts the same explicit font owner for model measurement and
 glyph preparation. The live inspector exposes `--font-directory` (PowerShell:
 `-FontDirectory`); retain/pin those font inputs for comparisons. Five inherited
