@@ -738,6 +738,21 @@ internal static class PptxChartLegendsTests
         TestAssert.True(Regex.IsMatch(pdf, @"/C[AV][A-Z][0-9]+ 18 Tf"), "Expected chart axis text to keep the unscaled chart txPr size.");
     }
 
+    public static void PptxAutomaticChartTitleUsesAuthoredChartSizeBeforeGalleryDefaults()
+    {
+        string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "ChartTitles"));
+        string input = Path.Combine(directory, "automatic-chart-text-size.pptx");
+        using JsonDocument golden = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "automatic-chart-text-size-office.json")));
+        TestAssert.Equal(golden.RootElement.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+        double expected = golden.RootElement.GetProperty("TitleFontSize").GetDouble();
+        using var output = new MemoryStream();
+        using var source = File.OpenRead(input);
+        OoxPdfConverter.Convert(source, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, FontResolver = new TestFaceFontResolver() });
+        string pdf = Encoding.ASCII.GetString(output.ToArray());
+        TestAssert.True(Regex.IsMatch(pdf, @"/CT[0-9]+ " + Regex.Escape(expected.ToString(CultureInfo.InvariantCulture)) + @" Tf"),
+            "An inferred title must use the authored chart text size with Office's title scale, ahead of gallery defaults.");
+    }
+
     public static void PptxChartAutoTitleUsesSingleSeriesNameForLineCharts()
     {
         PptxSceneChart? chart = PptxTests.BuildSingleChartScene("""

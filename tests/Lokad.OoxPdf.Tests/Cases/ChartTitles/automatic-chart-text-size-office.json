@@ -1,0 +1,10 @@
+{
+  "InputSha256": "8F5D4F54FC57E46C0459A29AB48180AF9EEC1A4D574A4C33CF69E317CF649D96",
+  "TitleFontSize": 10.8,
+  "OfficeBuild": "16.0.20527.20088",
+  "OfficePdfSha256": "182B0879196848C8AE739C538CFF26CC8DC457C33E762AF7AD93E08AB8ACCFBE",
+  "ImageSha256": "19692B9AB2058D2B2E5E7BF856E0D89998F3757F0CE38605DBB997A565773BDA",
+  "CaptureMethod": "PowerPoint.Slide.Export(PNG)",
+  "CalibrationStatus": "Uncalibrated; compare with the visible application before adopting",
+  "Provenance": "Synthetic public single-series column chart. Only chart txPr size changed to 9pt; gallery title default remains 18.62pt. Independent Office secondary PDF emits Series 1 at 10.8pt. This font-size witness does not establish whole-page visual parity."
+}

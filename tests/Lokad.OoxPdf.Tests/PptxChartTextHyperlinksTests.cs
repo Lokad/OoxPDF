@@ -8,6 +8,31 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxChartTextHyperlinksTests
 {
+    public static void PptxAutomaticChartTitlePlacementKeepsWholeLinkedLine()
+    {
+        var font = TestFontBuilder.LoadTestFont();
+        foreach (IFontResolver resolver in new IFontResolver[] { new TestFaceFontResolver(), new MissingTestFontResolver() })
+        {
+            foreach (int size in new[] { 18, 48, 72 })
+            {
+                (List<PdfPage> pages, _) = RenderChartTitlePage(
+                    $"""<a:r><a:rPr sz="{size * 100}"><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Title</a:t></a:r>""",
+                    """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/title" TargetMode="External"/>
+                    </Relationships>
+                    """, fontResolver: resolver);
+                PdfLinkAnnotation link = pages.Single().Annotations.Single();
+                double expectedHeight = resolver is MissingTestFontResolver
+                    ? size * (PdfFallbackFont.AscentEm + PdfFallbackFont.DescentEm)
+                    : size * (font.Os2.WindowsAscender + font.Os2.WindowsDescender) / font.UnitsPerEm;
+                TestAssert.True(Math.Abs(link.Height - expectedHeight) < 0.01d,
+                    $"The complete {size}pt title line must survive the frame clip ({link.Height}pt).");
+                TestAssert.True(link.Y + link.Height <= 468.001d, "The title must stay within its source frame.");
+            }
+        }
+    }
+
     public static void PptxAuthoredChartTitleSurvivesAutomaticTitleDeletion()
     {
         foreach (IFontResolver? resolver in new IFontResolver?[] { null, new MissingTestFontResolver() })

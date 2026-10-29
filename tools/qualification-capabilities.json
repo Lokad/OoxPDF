@@ -1,5 +1,11 @@
 {
   "pptx-chart-titles": [
+      "PptxAutomaticChartTitlePlacementKeepsWholeLinkedLine",
+      "PptxAutomaticChartTitleUsesAuthoredChartSizeBeforeGalleryDefaults",
+      "PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox",
+      "PptxSyntheticChartLegendManualBoxDrivesPlacement",
+      "PptxSyntheticBarChartOverlayLegendDoesNotReservePlotSpace",
+      "PptxChartTitlePreservesTextBodyPropertiesAtRendererBoundary",
       "PptxAuthoredChartTitleSurvivesAutomaticTitleDeletion",
       "TitleOptionsAgreeBetweenSceneAndXml",
       "PptxChartTitleExternalHyperlinkEmitsUriAnnotation",
