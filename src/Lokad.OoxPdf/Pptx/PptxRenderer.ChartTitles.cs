@@ -777,17 +777,9 @@ internal sealed partial class PptxRenderer
 
     private static string? ReadSceneOrXmlChartTitleText(PptxSceneChart? sceneChart, XDocument chartXml)
     {
-        if (sceneChart is not null)
-        {
-            if (sceneChart.Title.IsAutoDeleted == true)
-            {
-                return null;
-            }
-
-            return sceneChart.Title.Text;
-        }
-
-        return ReadChartTitleText(chartXml);
+        // The scene resolves automatic-title eligibility. autoTitleDeleted does not
+        // suppress an authored title, which Office retains regardless of that flag.
+        return sceneChart is not null ? sceneChart.Title.Text : ReadChartTitleText(chartXml);
     }
 
     private static PptxSceneChartTextBodyProperties ReadSceneOrXmlChartTitleTextBodyProperties(PptxSceneChart? sceneChart, XDocument chartXml)

@@ -1,4 +1,21 @@
 {
+  "pptx-chart-titles": [
+      "PptxAuthoredChartTitleSurvivesAutomaticTitleDeletion",
+      "PptxChartTitleExternalHyperlinkEmitsUriAnnotation",
+      "PptxChartTitleHyperlinkActionIsDiagnosed",
+      "PptxChartTitleMissingRelationshipIsDiagnosed",
+      "PptxChartTitleWithoutHyperlinkStaysQuiet",
+      "PptxChartAxisTitleExternalHyperlinkEmitsUriAnnotation",
+      "PptxSyntheticChartAutoTitleUsesOfficeScaledSize",
+      "PptxChartAutoTitleUsesSingleSeriesNameForLineCharts",
+      "PptxChartAutoTitleRequiresExplicitAutoTitleDeletedFalse",
+      "PptxChartAutoTitleDeletedSuppressesSingleSeriesName",
+      "PptxChartAutoTitleDoesNotInventAmbiguousMultiSeriesTitle",
+      "PptxChartAutoTitleFillsTextlessTitleElement",
+      "PptxChartTitlePolarDetectionUsesScenePlotKinds",
+      "PptxSyntheticPolarTitleTopOffsetKeepsOfficeCalibration",
+      "PptxVaryingBarCategoryLegends"
+  ],
   "pptx-inspection-fonts": [
       "SuppressedMasterShapesStayOutOfFontPreflight",
       "TextLayoutComputedOncePerNode",

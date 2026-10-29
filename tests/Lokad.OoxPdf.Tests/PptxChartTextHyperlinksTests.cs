@@ -8,6 +8,29 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxChartTextHyperlinksTests
 {
+    public static void PptxAuthoredChartTitleSurvivesAutomaticTitleDeletion()
+    {
+        foreach (IFontResolver? resolver in new IFontResolver?[] { null, new MissingTestFontResolver() })
+        {
+            string? baseline = null;
+            foreach (bool? autoTitleDeleted in new bool?[] { null, false, true })
+            {
+                (List<PdfPage> pages, _) = RenderChartTitlePage(
+                    """<a:r><a:rPr><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Authored heading</a:t></a:r>""",
+                    """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/authored-heading" TargetMode="External"/>
+                    </Relationships>
+                    """, fontResolver: resolver, autoTitleDeleted: autoTitleDeleted);
+                PdfPage page = pages.Single();
+                TestAssert.Equal("https://example.invalid/authored-heading", page.Annotations.Single().Uri);
+                string content = page.Content;
+                baseline ??= content;
+                TestAssert.Equal(baseline, content);
+            }
+        }
+    }
+
     public static void PptxChartTitleExternalHyperlinkEmitsUriAnnotation()
     {
         foreach (IFontResolver? resolver in new IFontResolver?[] { null, new MissingTestFontResolver() })
@@ -151,7 +174,7 @@ internal static class PptxChartTextHyperlinksTests
         }
     }
 
-    private static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderChartTitlePage(string titleRunXml, string? chartRelsXml, string? chartXmlOverride = null, IFontResolver? fontResolver = null)
+    private static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderChartTitlePage(string titleRunXml, string? chartRelsXml, string? chartXmlOverride = null, IFontResolver? fontResolver = null, bool? autoTitleDeleted = null)
     {
         string contentTypes = PptxTests.BasicContentTypes().Replace(
             "</Types>",
@@ -191,6 +214,7 @@ internal static class PptxChartTextHyperlinksTests
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <c:chart>
                     <c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p>{{titleRunXml}}</a:p></c:rich></c:tx></c:title>
+                    {{(autoTitleDeleted is bool deleted ? $"<c:autoTitleDeleted val=\"{(deleted ? 1 : 0)}\"/>" : "")}}
                     <c:plotArea>
                       <c:barChart>
                         <c:barDir val="col"/>
