@@ -9,7 +9,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent minimum/bookmark controls use installed Windows fonts.");
-        foreach (string name in new[] { "minimum-bookmark-office.json", "minimum-bookmark-static-office.json", "minimum-navigation-office.json", "minimum-paint-office.json" })
+        foreach (string name in new[] { "minimum-bookmark-office.json", "minimum-bookmark-static-office.json", "minimum-navigation-office.json", "minimum-paint-office.json", "minimum-local-leading-office.json" })
         {
             using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath(name)));
             foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
@@ -31,6 +31,30 @@ internal static partial class DocxInlineCompositionTests
                         $"Neutral metadata and requested Final/Word modes retain the qualified source frame: {row.GetProperty("Id").GetString()}/{mode}/{text}/{show.Y}.");
                 }
             }
+        }
+    }
+
+    public static void DocxMinimumLeadingUsesLocalSlotsAcrossNeighborsAndSlotGrowth()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            double[] Origins(string name) => renderer.RenderBlankPages(DocxTests.ReadDocx(NestedMathCasePath(
+                    $"minimum-local-leading-{name}.docx"), mode), null, default)
+                .SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true))
+                .Where(show => show.Text.StartsWith("Public minimum ", StringComparison.Ordinal))
+                .Select(show => show.Y).ToArray();
+            var control = Origins("font12-control");
+            TestAssert.Equal(4, control.Length);
+            foreach (string name in new[] { "table-neighbor12", "wrapped-neighbor12", "bold12", "kept12" })
+                TestAssert.True(control.SequenceEqual(Origins(name)),
+                    "A neighboring container/paragraph or measured same-height face must not disable minimum placement elsewhere.");
+            var taller = Origins("calibri-min28");
+            TestAssert.Equal(4, taller.Length);
+            for (int i = 0; i < control.Length; i++)
+                TestAssert.True(Math.Abs(control[i] - taller[i] - (i + 1) * 8d) < .001d,
+                    "Each extra 8pt source slot must move its bottom-bearing baseline and subsequent slots by the authored growth.");
         }
     }
 

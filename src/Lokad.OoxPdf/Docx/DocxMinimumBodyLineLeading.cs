@@ -7,58 +7,43 @@ internal static class DocxMinimumBodyLineLeading
     internal static bool TryCreateLayout(DocxDocument document, DocxLayout source, out DocxLayout adjusted)
     {
         adjusted = source;
-        bool ordinaryBody = DocxPlainBodyFrame.IsOrdinaryBody(document);
-        if (!(ordinaryBody ? DocxPlainBodyFrame.IsEligible(document, source) :
-                DocxPageFootnoteNumbering.IsEligibleDocument(document) && DocxPlainBodyFrame.HasSingleLineLayout(document, source)) ||
-            (!ordinaryBody && !DocxPageFootnoteNumbering.TryGetReferencePages(document, source, out _))) return false;
+        if (!DocxPlainBodyFrame.HasKnownBodyFrame(document)) return false;
+        var counts = new Dictionary<DocxParagraph, int>(ReferenceEqualityComparer.Instance);
+        foreach (var line in source.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>())
+            if (line.SourceParagraph is { } paragraph)
+                counts[paragraph] = counts.GetValueOrDefault(paragraph) + 1;
 
         var replacements = new Dictionary<DocxTextLineLayout, DocxTextLineLayout>(ReferenceEqualityComparer.Instance);
-        double bodyFontSize = DocxPlainElevenPointBody.HasQualifiedTypography(document) ? 11d : 12d;
-        bool? ordinaryExpansionQualified = null;
-        bool contextualBody = document.Paragraphs.Any(p => p.Spacing.ContextualSpacing == true);
-        bool? contextualExpansionQualified = null;
-        foreach (var line in source.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>())
+        foreach (var page in source.Pages)
         {
-            if (line.LineHeightSource != DocxLineHeightSource.AtLeastLineSpacing ||
-                string.IsNullOrWhiteSpace(line.Text)) continue;
-            if (line.SourceParagraph is not { } paragraph) return false;
-            bool marked = paragraph.InlineReferences.Count != 0;
-            bool extended = marked || paragraph.SpacingBeforePoints != 0d || paragraph.SpacingAfterPoints != 0d;
-            if (extended && contextualBody)
+            // Column placement retains its independently qualified fallback.
+            if (page.ColumnFrames.Count > 1) continue;
+            foreach (var line in page.Items.OfType<DocxTextLineLayout>())
             {
-                // New contextual admissions resolve every boundary from trusted
-                // styles and qualify the complete visible frame once.
-                contextualExpansionQualified ??= IsQualifiedContextualExpansion(document, line.StyleRun.FontFamily, bodyFontSize);
-                if (contextualExpansionQualified != true) return false;
-            }
-            if (ordinaryBody && extended)
-            {
-                // New spaced ordinary admissions qualify the complete visible
-                // frame once; legacy zero-spacing paragraphs keep their gates.
-                ordinaryExpansionQualified ??= IsQualifiedOrdinaryExpansion(document, line.StyleRun.FontFamily, contextualBody, bodyFontSize);
-                if (ordinaryExpansionQualified != true) return false;
-            }
-            if (extended && (line.LineHeight < 16d || !IsQualifiedExpansionSpacing(paragraph, contextualBody)) ||
-                line.LineHeight is not (>= 14d and <= 24d) ||
-                line.SingleLineHeight is not > 0d || !double.IsFinite(line.SingleLineHeight.Value) ||
-                line.FirstLineInsetPoints is not > 0d ||
-                paragraph.Runs.Any(r => !IsQualifiedParagraphRun(paragraph, r, bodyFontSize) ||
-                    !string.Equals(r.FontFamily, line.StyleRun.FontFamily, StringComparison.OrdinalIgnoreCase)) ||
-                string.Equals(line.StyleRun.FontFamily, "Times New Roman", StringComparison.OrdinalIgnoreCase) &&
-                    line.LineHeight < 16d) return false;
+                if (line.LineHeightSource != DocxLineHeightSource.AtLeastLineSpacing ||
+                    string.IsNullOrWhiteSpace(line.Text) ||
+                    line.SourceParagraph is not { } paragraph || counts[paragraph] != 1 ||
+                    !DocxPlainBodyFrame.IsPlainParagraph(paragraph) ||
+                    paragraph.Runs.Any(run => run.Hidden) || paragraph.InlineReferences.Count > 1 ||
+                    line.LineHeight is not > 0d || !double.IsFinite(line.LineHeight.Value) ||
+                    line.LineHeight > page.Height - page.MarginTop - page.MarginBottom ||
+                    line.SingleLineHeight is not > 0d || !double.IsFinite(line.SingleLineHeight.Value) ||
+                    line.FirstLineInsetPoints is not > 0d || !double.IsFinite(line.FirstLineInsetPoints.Value)) continue;
 
-            // Independent Word font/slot probes place positive minimum-height
-            // excess above the baseline. Exact/auto pitches keep their own rule.
-            double excess = Math.Max(0d, line.LineHeight.Value - line.SingleLineHeight.Value);
-            if (excess == 0d) continue;
-            replacements.Add(line, line with {
-                BaselineY = line.BaselineY - excess,
-                FirstLineInsetPoints = line.FirstLineInsetPoints + excess,
-                // A generated marker still owns the authored paragraph slot;
-                // moving its text baseline must preserve the link's slot top.
-                BodyLineBoxBaselineInsetPoints = marked ? line.FirstLineInsetPoints + excess : line.BodyLineBoxBaselineInsetPoints,
-                BodyLineBoxHeightPoints = marked ? line.LineHeight : line.BodyLineBoxHeightPoints
-            });
+                // The measured natural line owns its bottom bearing. A larger
+                // minimum slot grows above that baseline, independently of other
+                // paragraphs, font size, surrounding tables or run paint.
+                double excess = Math.Max(0d, line.LineHeight.Value - line.SingleLineHeight.Value);
+                if (excess == 0d) continue;
+                bool marked = paragraph.InlineReferences.Count != 0;
+                replacements.Add(line, line with {
+                    BaselineY = line.BaselineY - excess,
+                    FirstLineInsetPoints = line.FirstLineInsetPoints + excess,
+                    // Generated markers retain the original source slot top.
+                    BodyLineBoxBaselineInsetPoints = marked ? line.FirstLineInsetPoints + excess : line.BodyLineBoxBaselineInsetPoints,
+                    BodyLineBoxHeightPoints = marked ? line.LineHeight : line.BodyLineBoxHeightPoints
+                });
+            }
         }
         if (replacements.Count == 0) return false;
         adjusted = source with {

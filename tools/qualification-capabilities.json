@@ -1,4 +1,17 @@
 {
+  "docx-local-minimum-leading": [
+      "DocxMinimumLeadingUsesLocalSlotsAcrossNeighborsAndSlotGrowth",
+      "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames",
+      "DocxMinimumHyperlinksKeepVisibleFramesAndTargets",
+      "DocxMinimumPaintPreservesTextFramesAndBackgrounds",
+      "DocxMinimumBodyLineLeading",
+      "DocxMinimumBodyFlow",
+      "DocxOrdinaryKerning",
+      "DocxElevenPoint",
+      "DocxMarkedMinimumLeading",
+      "DocxContextualMinimum",
+      "DocxMinimumBeforeLeading"
+  ],
   "docx-minimum-paint": [
       "DocxMinimumPaintPreservesTextFramesAndBackgrounds",
       "DocxOrdinaryKerning",

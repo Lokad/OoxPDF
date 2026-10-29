@@ -1,0 +1,681 @@
+{
+  "Scope": "Independent Word 16.0.20527.20088 controls for font sizes 10/12/13/16, bold/mixed faces, table/wrapped neighbors, kept/spaced paragraphs and 14/20/24/28pt minimum slots. Direct EMF/PNG references remain uncalibrated; existing 0.5pt baseline threshold retained.",
+  "Rows": [
+    {
+      "Id": "minimum-local-leading-font12-control",
+      "Input": "CompositionProbes/minimum-local-leading-font12-control.docx",
+      "InputSha256": "EFAF7746DA55C38D123C67F7C76642385B2D2FB30213A3C2D8B110135A37F2C6",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "1D0D2C568083677636631AEC23AF17F303582496E0095EAA800EB011A4731EB2",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-font12-control",
+      "Input": "CompositionProbes/minimum-local-leading-font12-control.docx",
+      "InputSha256": "EFAF7746DA55C38D123C67F7C76642385B2D2FB30213A3C2D8B110135A37F2C6",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "7F721BCF1A3A9B6391202D6FC7F4306F4B92853A63D704398F8591FDD3B3BBE3",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-font10",
+      "Input": "CompositionProbes/minimum-local-leading-font10.docx",
+      "InputSha256": "7CEFF3E62F8FFA84C9D17C02862BF86DC07EFAAE101BD0D4C519159E3ABE2733",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "10351FE9A0DAB82A0B20B42CBB5A0114B50878FAA998432492A2E2640893D00B",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 702.5800170898438
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 670.4199829101562
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 638.260009765625
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 593.739990234375
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-font10",
+      "Input": "CompositionProbes/minimum-local-leading-font10.docx",
+      "InputSha256": "7CEFF3E62F8FFA84C9D17C02862BF86DC07EFAAE101BD0D4C519159E3ABE2733",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "64831BF3B2C952859BC702E584E24982BA4ECBE2AA73CFFE6389A4DF44CF9872",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 702.5800170898438
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 670.4199829101562
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 638.260009765625
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 593.739990234375
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-font13",
+      "Input": "CompositionProbes/minimum-local-leading-font13.docx",
+      "InputSha256": "C45D6A70FA61ED1936825C6205B5EDC8D7653FB21A7B1DEB664374CDF746560A",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "13CFBBF3D1814BA2A88B5CF73CA15703847C551A465294FBF2343C0E704CDF18",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.4199829101562
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 667.5399780273438
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 631.780029296875
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 579.9400024414062
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-font13",
+      "Input": "CompositionProbes/minimum-local-leading-font13.docx",
+      "InputSha256": "C45D6A70FA61ED1936825C6205B5EDC8D7653FB21A7B1DEB664374CDF746560A",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "E63880C72777110CF0B224011C24D5A60D42373DA3111E8B75B83E056413C909",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.4199829101562
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 667.5399780273438
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 631.780029296875
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 579.9400024414062
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-font16",
+      "Input": "CompositionProbes/minimum-local-leading-font16.docx",
+      "InputSha256": "FA8642BEB8FFC9D17E383A6511B6132176E276236C7F534FE60B034D6BB3C466",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "E74626B70652325E81467127CA083AA2C6C6CA0A0225AA6895FD971B9A6741F6",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 700.2999877929688
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 656.739990234375
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 613.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 550.1799926757812
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-font16",
+      "Input": "CompositionProbes/minimum-local-leading-font16.docx",
+      "InputSha256": "FA8642BEB8FFC9D17E383A6511B6132176E276236C7F534FE60B034D6BB3C466",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "FBC8757538951DCBA4C63E35BF84FDBC0D40074A0F6BCF173BBCE370A5326553",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 700.2999877929688
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 656.739990234375
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 613.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 550.1799926757812
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-bold12",
+      "Input": "CompositionProbes/minimum-local-leading-bold12.docx",
+      "InputSha256": "7C599860C00C9A4A29974106465D7A4ADCEB571231A5F0135C5D58FCEB55081D",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "7DD398F6907020BF77E10785A97ACF60AC36D2245C70A308FB0EA3A31141D3EC",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-bold12",
+      "Input": "CompositionProbes/minimum-local-leading-bold12.docx",
+      "InputSha256": "7C599860C00C9A4A29974106465D7A4ADCEB571231A5F0135C5D58FCEB55081D",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "844FF2225CC5170B493F7A8D6145FF3A90455EC2FCAF618F78D3C38C4EB5C5BA",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-mixed-face12",
+      "Input": "CompositionProbes/minimum-local-leading-mixed-face12.docx",
+      "InputSha256": "42854F38D3CD0212C8B78C0C9BD4CE46F1DB3F3F06144F60B70BB65CF0949329",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "781A768434ED308E4A42990A4E671E00BA79974072C65114E53F3932052AAA20",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 702.4600219726562
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-mixed-face12",
+      "Input": "CompositionProbes/minimum-local-leading-mixed-face12.docx",
+      "InputSha256": "42854F38D3CD0212C8B78C0C9BD4CE46F1DB3F3F06144F60B70BB65CF0949329",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "6BE5AAD191ED2DD753EEF0E39DE0880673A3C4529538E42A8C55DA1FA4D467C0",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 702.4600219726562
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-table-neighbor12",
+      "Input": "CompositionProbes/minimum-local-leading-table-neighbor12.docx",
+      "InputSha256": "A428C90EA7CD271BE665C3C279694B0D737B8C46031112606E35F6ABFB6985CF",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "6D0578B4A8C14F53E778188B3F7EEEC3B439A28760290FBFFA1DDBF83225CB0B",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-table-neighbor12",
+      "Input": "CompositionProbes/minimum-local-leading-table-neighbor12.docx",
+      "InputSha256": "A428C90EA7CD271BE665C3C279694B0D737B8C46031112606E35F6ABFB6985CF",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "204E418FDBE06249928008B8C454F3624C81BEF37325B52EB2AB2546D66F7E20",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-wrapped-neighbor12",
+      "Input": "CompositionProbes/minimum-local-leading-wrapped-neighbor12.docx",
+      "InputSha256": "3AF7909A8CF007D1A597401431114094792840C2422B7B4D6C7968BD2C18FD12",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "2EF88A94C96CE41D65AF8153C6C9BDB5AA257B9E6FA24294A587497DD94B2C36",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-wrapped-neighbor12",
+      "Input": "CompositionProbes/minimum-local-leading-wrapped-neighbor12.docx",
+      "InputSha256": "3AF7909A8CF007D1A597401431114094792840C2422B7B4D6C7968BD2C18FD12",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "4015D0BA47345622C2D1C0FC80FA77D3DD35029BEF0AEB2E10181B81F140F263",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-times-min14",
+      "Input": "CompositionProbes/minimum-local-leading-times-min14.docx",
+      "InputSha256": "9CB2031A364E017D3875263FE84A73E86692EA2E8F865190EF94670F7BA53A00",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "A5F594236A6260383D0822A395669DA1B538C82FD21C260D3E8EAF9A089C4ED0",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 708.5800170898438
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 680.8599853515625
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 653.02001953125
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 611.3800048828125
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-times-min14",
+      "Input": "CompositionProbes/minimum-local-leading-times-min14.docx",
+      "InputSha256": "9CB2031A364E017D3875263FE84A73E86692EA2E8F865190EF94670F7BA53A00",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "A8FA7CDD63E3CC2A44A2D5E54878609FD13DE5FAD68E49E3F1D65ABB864FCF82",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 708.5800170898438
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 680.8599853515625
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 653.02001953125
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 611.3800048828125
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-arial-min14",
+      "Input": "CompositionProbes/minimum-local-leading-arial-min14.docx",
+      "InputSha256": "63F77BF6F43ECBF93F312DD2C6714F20903A22D4BE0C50173320446835782B2D",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "18E3212C0257F44CCBE026AEF7A83D9FCBF456FF974BFE47CB461D136975466B",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 708.4600219726562
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 680.739990234375
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 652.9000244140625
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 611.260009765625
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-arial-min14",
+      "Input": "CompositionProbes/minimum-local-leading-arial-min14.docx",
+      "InputSha256": "63F77BF6F43ECBF93F312DD2C6714F20903A22D4BE0C50173320446835782B2D",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "8A6D8861F9CE8DC254C6263124451AF06C912F241AE4B1DF233203CD1A7FCD60",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 708.4600219726562
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 680.739990234375
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 652.9000244140625
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 611.260009765625
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-calibri-min28",
+      "Input": "CompositionProbes/minimum-local-leading-calibri-min28.docx",
+      "InputSha256": "4A3B5B5A4CBF4D7EEBCD3F043D60E822FB37285C2030167B9FAB780A37B78559",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "831BE65B1C78E7C9A83706CB7F4B1AE28DF760424DD5D2E53492A8808AA00CB0",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 695.260009765625
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 652.6599731445312
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 609.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 552.7000122070312
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-calibri-min28",
+      "Input": "CompositionProbes/minimum-local-leading-calibri-min28.docx",
+      "InputSha256": "4A3B5B5A4CBF4D7EEBCD3F043D60E822FB37285C2030167B9FAB780A37B78559",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "6AD156E77A28533ED7F5A8514153B0FCE49D42E8758AC7FB862BE685732A11EF",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 695.260009765625
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 652.6599731445312
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 609.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 552.7000122070312
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-kept12",
+      "Input": "CompositionProbes/minimum-local-leading-kept12.docx",
+      "InputSha256": "9B76954B8B03C95D196BE0183E1808138616C6C205ADBB454A0C4D7D7DF5D711",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "6DF3F4DBD2F58693D9139AD0CE5E36D54FD92E5CDDC03619352F9407AD2147A7",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-kept12",
+      "Input": "CompositionProbes/minimum-local-leading-kept12.docx",
+      "InputSha256": "9B76954B8B03C95D196BE0183E1808138616C6C205ADBB454A0C4D7D7DF5D711",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "A147C30FE6FAC160844E3537CA54430C65530EB38776C273CD9DECAD3EDBAF12",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-spaced12",
+      "Input": "CompositionProbes/minimum-local-leading-spaced12.docx",
+      "InputSha256": "F108DA400B463071773EB3A4898CA96B35B238D48EE2AA7CD695C5D3CD831974",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "376CC164E442F94F120535ACCAD1A733167F73FCC7424779B7C83047A0D6C6CA",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 699.219970703125
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 660.5800170898438
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 621.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 568.6599731445312
+        }
+      ]
+    },
+    {
+      "Id": "minimum-local-leading-spaced12",
+      "Input": "CompositionProbes/minimum-local-leading-spaced12.docx",
+      "InputSha256": "F108DA400B463071773EB3A4898CA96B35B238D48EE2AA7CD695C5D3CD831974",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "299616A65155708626A7AD439B36C2D230E01B934FCEA6014C4DDD7A7C17E388",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 699.219970703125
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 660.5800170898438
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 621.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 568.6599731445312
+        }
+      ]
+    }
+  ]
+}
