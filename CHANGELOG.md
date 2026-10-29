@@ -27,7 +27,7 @@
 [migration guide](docs/PublicApiChanges.md) for removed APIs and hosting contracts.
 Rendering remains approximate in documented areas; unsupported content may be
 simplified or omitted. See [scope and limitations](docs/PreviewRelease.md) and
-[qualification evidence](https://github.com/Lokad/OoxPDF/blob/master/docs/PreviewQualification.md).
+[qualification evidence](docs/PreviewQualification.md).
 
 ## 0.1.5 - 2026-09-19
 

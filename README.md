@@ -33,7 +33,7 @@ failure. Stream input requires an explicit `OoxPdfOptions.InputKind`.
 The default resolver reads installed Windows fonts. For Linux or a portable
 deployment, supply `OoxPdfOptions.FontResolver` with packaged or custom fonts.
 Missing fonts affect glyph coverage, wrapping and pagination. See
-[font setup and HTTP font packs](https://github.com/Lokad/OoxPDF/blob/master/docs/Fonts.md).
+[font setup and HTTP font packs](docs/Fonts.md).
 
 ## CLI
 
@@ -44,16 +44,16 @@ dotnet run --project src/Lokad.OoxPdf.Cli -- convert input.docx output.pdf --dia
 ```
 
 With `--strict`, exit code `3` means the PDF was produced with warnings or errors.
-See [diagnostics and exit codes](https://github.com/Lokad/OoxPDF/blob/master/docs/Diagnostics.md)
-and [DOCX markup modes](https://github.com/Lokad/OoxPDF/blob/master/docs/DocxMarkupModes.md).
+See [diagnostics and exit codes](docs/Diagnostics.md)
+and [DOCX markup modes](docs/DocxMarkupModes.md).
 
 ## Documentation
 
-- [Capabilities and fallbacks](https://github.com/Lokad/OoxPDF/blob/master/docs/Capabilities.md)
-- [Rendering architecture](https://github.com/Lokad/OoxPDF/blob/master/docs/RenderingModel.md)
-- [Resource limits and hosting](https://github.com/Lokad/OoxPDF/blob/master/docs/OperatingEnvelope.md)
-- [Qualification results and known failures](https://github.com/Lokad/OoxPDF/blob/master/docs/PreviewQualification.md)
-- [Visual validation](https://github.com/Lokad/OoxPDF/blob/master/docs/VisualValidation.md) and [private documents](https://github.com/Lokad/OoxPDF/blob/master/docs/PrivateValidation.md)
+- [Capabilities and fallbacks](docs/Capabilities.md)
+- [Rendering architecture](docs/RenderingModel.md)
+- [Resource limits and hosting](docs/OperatingEnvelope.md)
+- [Qualification results and known failures](docs/PreviewQualification.md)
+- [Visual validation](docs/VisualValidation.md) and [private documents](docs/PrivateValidation.md)
 
 ## Development
 
@@ -64,5 +64,5 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj -c Release --no-build
 ```
 
 Packages go to ignored `artifacts/nuget/`. CI runs on Windows and Ubuntu.
-See [AGENTS.md](https://github.com/Lokad/OoxPDF/blob/master/AGENTS.md) for focused
+See [AGENTS.md](AGENTS.md) for focused
 test selection and reuse of qualified build artifacts.

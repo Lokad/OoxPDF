@@ -29,8 +29,9 @@
     <None Include="..\..\LICENSE.txt" Pack="true" PackagePath="\" Visible="false" />
     <None Include="..\..\README.md" Pack="true" PackagePath="\" Visible="false" />
     <None Include="..\..\CHANGELOG.md" Pack="true" PackagePath="\" Visible="false" />
-    <None Include="..\..\docs\PublicApiChanges.md" Pack="true" PackagePath="docs/" Visible="false" />
-    <None Include="..\..\docs\PreviewRelease.md" Pack="true" PackagePath="docs/" Visible="false" />
+    <None Include="..\..\AGENTS.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="..\..\docs\*.md" Pack="true" PackagePath="docs/" Visible="false" />
+    <None Include="..\..\tests\Lokad.OoxPdf.Tests\Cases\DocxEditInterop\README.md" Pack="true" PackagePath="tests/Lokad.OoxPdf.Tests/Cases/DocxEditInterop/" Visible="false" />
     <None Include="..\..\icon.png" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
   <ItemGroup>

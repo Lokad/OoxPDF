@@ -54,11 +54,14 @@ try {
     foreach ($required in @('README.md', 'CHANGELOG.md', 'docs/PublicApiChanges.md', 'docs/PreviewRelease.md')) {
         $entry = $archive.GetEntry($required)
         if ($null -eq $entry) { throw "Packed caller documentation is missing: $required" }
+    }
+    foreach ($entry in @($archive.Entries | Where-Object { $_.FullName.EndsWith('.md', [StringComparison]::OrdinalIgnoreCase) })) {
+        $required = $entry.FullName
         $reader = [IO.StreamReader]::new($entry.Open())
         try { $markdown = $reader.ReadToEnd() }
         finally { $reader.Dispose() }
-        # These authored guides use ordinary inline links. Check archive-local
-        # targets, including ../CHANGELOG.md; repository-only guides use URLs.
+        # Relative repository links must also work in the extracted package.
+        # Check every shipped guide, including their transitive local links.
         foreach ($link in [regex]::Matches($markdown, '(?<!!)\[[^\]]+\]\(([^)\s]+)\)')) {
             $target = $link.Groups[1].Value
             if ($target.StartsWith('#') -or $target -match '^[a-zA-Z][a-zA-Z0-9+.-]*:') { continue }

@@ -16,7 +16,7 @@ requires recompiling consumers. Package/informational version is
 | Unsupported or staged fallback | Arbitrary floating/nested/fragmented DOCX stories, general Word field evaluation, unrestricted equation/shaping coverage, advanced charts and SmartArt, arbitrary custom picture geometry, and SVG picture-link composition beyond qualified raster links. Unsupported content may receive a diagnostic and be simplified or omitted; inspect diagnostics before relying on a conversion. |
 
 These are scope summaries, not blanket guarantees for every combination. The
-[capability inventory](https://github.com/Lokad/OoxPDF/blob/master/docs/Capabilities.md) and [markup modes](https://github.com/Lokad/OoxPDF/blob/master/docs/DocxMarkupModes.md)
+[capability inventory](Capabilities.md) and [markup modes](DocxMarkupModes.md)
 describe constraints and fallbacks. Public DOCX defaults remain Final with
 preserved document layout. Qualification also measures AllMarkup with the
 Word-compatible review margin separately.
@@ -38,7 +38,7 @@ excluded from supported scope before accepting the candidate.
 
 Exact source/runtime identities, Windows and Ubuntu results, package consumers
 and CI provenance are recorded in the
-[current qualification record](https://github.com/Lokad/OoxPDF/blob/master/docs/PreviewQualification.md).
+[current qualification record](PreviewQualification.md).
 The broad local suite retains an inherited balloon-wrapping assertion failure
 that also occurs with the preceding qualified DLL on the same machine. The
 assertion and rendering policy remain unchanged. Local failed checks and
