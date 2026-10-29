@@ -25,7 +25,7 @@ internal static class PptxChartTextHyperlinksTests
                 PdfLinkAnnotation link = pages.Single().Annotations.Single();
                 double expectedHeight = resolver is MissingTestFontResolver
                     ? size * (PdfFallbackFont.AscentEm + PdfFallbackFont.DescentEm)
-                    : size * (font.Os2.WindowsAscender + font.Os2.WindowsDescender) / font.UnitsPerEm;
+                    : size * (font.Os2.WindowsAscender + font.Os2.WindowsDescender) / (double)font.UnitsPerEm;
                 TestAssert.True(Math.Abs(link.Height - expectedHeight) < 0.01d,
                     $"The complete {size}pt title line must survive the frame clip ({link.Height}pt).");
                 TestAssert.True(link.Y + link.Height <= 468.001d, "The title must stay within its source frame.");
