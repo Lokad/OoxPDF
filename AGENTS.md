@@ -64,7 +64,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/RenderReference.ps1`: render Office reference output through COM.
 - `tools/RasterizePdf.ps1`: rasterize PDFs through local PDFium.
 - `tools/InspectPdf.ps1`: inspect Office/candidate PDF objects and streams.
-- `tools/InspectPptxText.ps1`: inspect PPTX glyph-run layout/emission summaries without text by default.
+- `tools/InspectPptxText.ps1`: inspect PPTX glyph layout/emission; `-FontDirectory` binds explicit fonts, text is omitted by default.
 - `tools/ComparePdfTextOperations.ps1`: compare inspected PDF text matrices and spacing.
 - `tools/ComparePptxTextEmission.ps1`: compare Office PDF text operations to candidate PPTX glyph-run emission.
 - `tools/SummarizePptxFontEmissionProbe.ps1`: join public-safe PPTX textbox geometry with Office text-operation font sizes.

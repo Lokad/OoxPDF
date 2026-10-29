@@ -43,6 +43,13 @@ usable primary face nor discovery fonts, so host fonts cannot conceal collapsed
 fallback advances. Ubuntu CI runs its union with the existing picture/font
 capabilities in one invocation.
 
+PPTX inspection accepts the same explicit font owner for model measurement and
+glyph preparation. The live inspector exposes `--font-directory` (PowerShell:
+`-FontDirectory`); retain/pin those font inputs for comparisons. Five inherited
+Linux checks now supply pinned faces, preserving their assertions and avoiding
+environmental skips. The portable paint/inspection control checks the same source
+and face on both paths. `pptx-font-identity` includes the five checks for Ubuntu CI.
+
 Use `framework-compatibility` in `tools/qualification-capabilities.json` for the
 small .NET 10 lane: public conversion, streams, cancellation, atomic publication,
 fonts, CLI and three composed-document controls. Extensive suites use .NET 11.

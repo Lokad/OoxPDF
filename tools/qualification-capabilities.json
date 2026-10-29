@@ -675,6 +675,11 @@
     "PptxUnsupportedPngImageEmitsDiagnostic"
   ],
   "pptx-font-identity": [
+      "PptxTextFrameVerticalClipDropsLinesWithBaselineOutsideClip",
+      "PptxTextGlyphRunInspectionReportsInterGlyphAdjustmentAggregates",
+      "PptxNumberedAutofitFramesEmitOfficeCharacterSpacingTextState",
+      "PptxNumberedNoAutofitFramesEmitOfficeCharacterSpacingTextState",
+      "PptxSceneBuilderBuildsResolvedNodeLists",
     "PptxEstimatorsSharingResolverReuseLoadedPrograms",
     "PptxSlideRenderLoadsEachFontProgramOnce",
     "PptxSharedResolverDeduplicatesIdenticalSubsets",
