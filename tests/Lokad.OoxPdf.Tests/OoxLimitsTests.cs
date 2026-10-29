@@ -2095,17 +2095,13 @@ internal static partial class OoxLimitsTests
 
     private static PptxRenderContext W02Context(PptxDocument document, OoxPackage package)
     {
-        // Q06 added an optional shared-scene parameter; accept either arity so the
-        // helper does not pin the private signature.
+        // Supply declared optional defaults rather than pinning the private arity.
         MethodInfo tryLoad = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
             .Where(method => method.Name == "TryLoadRenderContext" && method.GetParameters().Length >= 6)
             .OrderBy(method => method.GetParameters().Length)
             .First();
         object?[] args = [document, package, 0, new Dictionary<string, PdfImageXObject?>(), null, CancellationToken.None];
-        if (tryLoad.GetParameters().Length == 7)
-        {
-            args = [.. args, null];
-        }
+        args = [.. args, .. tryLoad.GetParameters().Skip(args.Length).Select(parameter => parameter.DefaultValue)];
 
         try
         {

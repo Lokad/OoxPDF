@@ -1,5 +1,9 @@
 {
   "pptx-inspection-fonts": [
+      "SuppressedMasterShapesStayOutOfFontPreflight",
+      "TextLayoutComputedOncePerNode",
+      "TableFrameComputedOncePerNode",
+      "TableCellSpansPreserveSourceContentAndDeclaredFrame",
       "PptxTextFrameVerticalClipDropsLinesWithBaselineOutsideClip",
       "PptxTextGlyphRunInspectionReportsInterGlyphAdjustmentAggregates",
       "PptxNumberedAutofitFramesEmitOfficeCharacterSpacingTextState",
@@ -675,6 +679,10 @@
     "PptxUnsupportedPngImageEmitsDiagnostic"
   ],
   "pptx-font-identity": [
+      "SuppressedMasterShapesStayOutOfFontPreflight",
+      "TextLayoutComputedOncePerNode",
+      "TableFrameComputedOncePerNode",
+      "TableCellSpansPreserveSourceContentAndDeclaredFrame",
       "PptxTextFrameVerticalClipDropsLinesWithBaselineOutsideClip",
       "PptxTextGlyphRunInspectionReportsInterGlyphAdjustmentAggregates",
       "PptxNumberedAutofitFramesEmitOfficeCharacterSpacingTextState",

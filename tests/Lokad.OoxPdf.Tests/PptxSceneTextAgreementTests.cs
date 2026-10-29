@@ -304,11 +304,13 @@ internal static class PptxSceneTextAgreementTests
         MethodInfo frameMethod = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
             .Single(candidate => candidate.Name == "BuildTableCellTextFrame" && candidate.GetParameters().Length == 15);
         MethodInfo contextMethod = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
-            .Single(candidate => candidate.Name == "TryLoadRenderContext" && candidate.GetParameters().Length == 7);
+            .Single(candidate => candidate.Name == "TryLoadRenderContext");
         object? context;
         try
         {
-            context = contextMethod.Invoke(null, new object?[] { document, package, 0, new Dictionary<string, PdfImageXObject?>(), null, CancellationToken.None, null });
+            object?[] arguments = [document, package, 0, new Dictionary<string, PdfImageXObject?>(), null, CancellationToken.None];
+            arguments = [.. arguments, .. contextMethod.GetParameters().Skip(arguments.Length).Select(parameter => parameter.DefaultValue)];
+            context = contextMethod.Invoke(null, arguments);
         }
         catch (TargetInvocationException ex)
         {
