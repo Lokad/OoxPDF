@@ -4,6 +4,8 @@
 
 - Multi-targets .NET 10 and .NET 11. Development uses the pinned .NET 11 RC SDK;
   qualification records framework-specific library and tool identities.
+- PPTX: honors series and point negative-bar inversion flags across clustered and
+  stacked bar/column charts, including label swatches and explicit point fills.
 
 ## 0.2.0 — 2026-10-29
 
