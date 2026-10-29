@@ -3,6 +3,7 @@
       "ConvertRejectsDirectoryAliasDestinations",
       "ConvertReplacesDistinctLinkedDestinations",
       "ConvertRejectsLinkedInputReferentDestinations",
+      "ConvertReplacesSymbolicLinkDestinationWithoutChangingInput",
       "AutoDetectsDocxExtension",
       "AutoDetectsPptxExtension",
       "PortableRenderingDocxAllMarkupPreservesMixedContent",

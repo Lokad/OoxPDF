@@ -41,7 +41,7 @@ internal static partial class PublicApiTests
 
     public static void ConvertReplacesDistinctLinkedDestinations()
     {
-        foreach (string kind in new[] { "directory", "hard-link", "output-symbolic-link", "input-hard-link" })
+        foreach (string kind in new[] { "directory", "hard-link", "input-hard-link" })
         {
             InPublicationDirectory(root =>
             {
@@ -64,7 +64,7 @@ internal static partial class PublicApiTests
                 }
                 else
                 {
-                    CreatePublicationLink(kind == "hard-link" ? "HardLink" : "SymbolicLink", destination, input);
+                    CreatePublicationLink("HardLink", destination, input);
                 }
 
                 OoxPdfConverter.Convert(input, destination);
@@ -74,6 +74,22 @@ internal static partial class PublicApiTests
                 AssertNoPublicationStaging(root);
             });
         }
+    }
+
+    public static void ConvertReplacesSymbolicLinkDestinationWithoutChangingInput()
+    {
+        InPublicationDirectory(root =>
+        {
+            byte[] source = ReadMinimalDocxBytes("<w:p/>");
+            string input = Path.Combine(root, "source.docx");
+            string destination = Path.Combine(root, "result.pdf");
+            File.WriteAllBytes(input, source);
+            CreatePublicationLink("SymbolicLink", destination, input);
+            OoxPdfConverter.Convert(input, destination);
+            TestAssert.True(File.ReadAllBytes(input).SequenceEqual(source), "Symbolic-link replacement changed input.");
+            TestAssert.True(File.ReadAllBytes(destination).AsSpan().StartsWith("%PDF-"u8), "Expected a separate PDF entry.");
+            AssertNoPublicationStaging(root);
+        });
     }
 
     public static void ConvertRejectsLinkedInputReferentDestinations()
@@ -136,6 +152,8 @@ internal static partial class PublicApiTests
         {
             try { File.CreateSymbolicLink(path, target); }
             catch (UnauthorizedAccessException) when (OperatingSystem.IsWindows()) { TestAssert.Skip("Windows symbolic-link privilege unavailable."); }
+            catch (IOException ex) when (OperatingSystem.IsWindows() && (ex.HResult & 0xFFFF) == 1314)
+            { TestAssert.Skip("Windows symbolic-link privilege unavailable (ERROR_PRIVILEGE_NOT_HELD)."); }
             return;
         }
         // Junctions preserve Windows coverage without symlink privilege; the
