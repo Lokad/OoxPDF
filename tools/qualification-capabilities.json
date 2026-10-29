@@ -1,5 +1,8 @@
 {
   "framework-compatibility": [
+      "ConvertRejectsDirectoryAliasDestinations",
+      "ConvertReplacesDistinctLinkedDestinations",
+      "ConvertRejectsLinkedInputReferentDestinations",
       "AutoDetectsDocxExtension",
       "AutoDetectsPptxExtension",
       "PortableRenderingDocxAllMarkupPreservesMixedContent",

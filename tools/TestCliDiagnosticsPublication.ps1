@@ -1,4 +1,6 @@
-# Exercise real library/CLI publication without a build or Office; aliases are owned.
+# Exercise frozen CLI diagnostics publication without a build or Office.
+# Direct library link checks live in PublicApiTests.PublicationLinks.cs and run
+# under the library TFM, independently of the PowerShell host runtime.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)] [string] $CliPath,
@@ -49,128 +51,49 @@ foreach ($kind in @('HardLink','SymbolicLink','Separate','Directory')) {
         $results+=@{Kind=$kind;Target=$target;Outcome='passed'}
     }
 }
-[Reflection.Assembly]::LoadFrom($library) | Out-Null
 $fixture=Join-Path (Split-Path $PSScriptRoot) 'tests/Lokad.OoxPdf.Tests/Cases/docx-basic-paragraphs.docx'
 $fixtureHash=(Get-FileHash $fixture).Hash
 $source=[IO.File]::ReadAllBytes($fixture)
-foreach ($kind in @('LibraryAlias','LibraryAncestorAlias','LibraryTargetAncestorAlias','CliInputAlias','CliOutputAlias','CliUncreatedOutputAlias','DistinctLinkedDestination','LibraryFileLink')) {
+foreach ($kind in @('CliInputAlias','CliOutputAlias','CliUncreatedOutputAlias')) {
     $run=New-Item -ItemType Directory -Path (Join-Path $root.FullName $kind)
     $real=New-Item -ItemType Directory -Path (Join-Path $run.FullName 'real')
     $alias=Join-Path $run.FullName 'alias'
-    $linkKind=if ($IsWindows) {'Junction'} else {'SymbolicLink'}
-    $container=if ($kind -in @('LibraryAncestorAlias','LibraryTargetAncestorAlias')) {'nested'} else {''}
-    $realDirectory=Join-Path $real.FullName $container
-    New-Item -ItemType Directory -Path $realDirectory -Force | Out-Null
-    $targetAlias=$null
-    if ($kind -eq 'LibraryTargetAncestorAlias') {
-        $targetAlias=Join-Path $run.FullName 'target-alias'
-        New-Item -ItemType $linkKind -Path $targetAlias -Target $real.FullName | Out-Null
-        New-Item -ItemType $linkKind -Path $alias -Target (Join-Path $targetAlias $container) | Out-Null
-        $aliasDirectory=$alias
-    }
-    else {
-        New-Item -ItemType $linkKind -Path $alias -Target $real.FullName | Out-Null
-        $aliasDirectory=Join-Path $alias $container
-    }
-    $inputFile=Join-Path $realDirectory 'source.docx'
-    [IO.File]::WriteAllBytes($inputFile,$source)
-    $outputFile=Join-Path $realDirectory 'result.pdf'
-    $existing='Owned PDF sentinel'
-    if ($kind -ne 'CliUncreatedOutputAlias') { [IO.File]::WriteAllText($outputFile,$existing) }
+    New-Item -ItemType $(if ($IsWindows) {'Junction'} else {'SymbolicLink'}) -Path $alias -Target $real.FullName | Out-Null
     try {
-        if ($kind -in @('LibraryAlias','LibraryAncestorAlias','LibraryTargetAncestorAlias')) {
-            $failure=$null
-            try { [Lokad.OoxPdf.OoxPdfConverter]::Convert($inputFile,(Join-Path $aliasDirectory 'source.docx')) }
-            catch { $failure=$_.Exception.GetBaseException() }
-            if ($failure -isnot [ArgumentException]) { throw ('Directory alias was not rejected: '+$kind) }
-        }
-        elseif ($kind -like 'Cli*') {
-            $diagnostics=Join-Path $aliasDirectory $(if ($kind -eq 'CliInputAlias') {'source.docx'} else {'result.pdf'})
-            & dotnet $cli convert $inputFile $outputFile --diagnostics $diagnostics *> (Join-Path $run.FullName 'cli.log')
-            if ($LASTEXITCODE -ne 2) { throw ('CLI directory alias must refuse before conversion: '+$kind) }
-            if ($kind -eq 'CliUncreatedOutputAlias') {
-                if (Test-Path -LiteralPath $outputFile) { throw 'Refused CLI created output' }
-            }
-        }
-        else {
-            if ($kind -eq 'LibraryFileLink') {
-                Remove-Item -LiteralPath $outputFile
-                New-Item -ItemType HardLink -Path $outputFile -Target $inputFile | Out-Null
-            }
-            [Lokad.OoxPdf.OoxPdfConverter]::Convert($inputFile,(Join-Path $aliasDirectory 'result.pdf'))
-            if (![Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($outputFile),0,5).StartsWith('%PDF-')) { throw 'Distinct linked destination is not PDF' }
-        }
+        $inputFile=Join-Path $real.FullName 'source.docx';$outputFile=Join-Path $real.FullName 'result.pdf'
+        [IO.File]::WriteAllBytes($inputFile,$source)
+        if ($kind -ne 'CliUncreatedOutputAlias') { [IO.File]::WriteAllText($outputFile,'Owned PDF sentinel') }
+        $diagnostics=Join-Path $alias $(if ($kind -eq 'CliInputAlias') {'source.docx'} else {'result.pdf'})
+        & dotnet $cli convert $inputFile $outputFile --diagnostics $diagnostics *> (Join-Path $run.FullName 'cli.log')
+        if ($LASTEXITCODE -ne 2) { throw ('CLI directory alias must refuse before conversion: '+$kind) }
         if ((Get-FileHash $inputFile).Hash -ne $fixtureHash) { throw ('Publication replaced its input: '+$kind) }
-        if ($kind -in @('LibraryAlias','LibraryAncestorAlias','LibraryTargetAncestorAlias','CliInputAlias','CliOutputAlias') -and [IO.File]::ReadAllText($outputFile) -ne $existing) {
-            throw ('Refused publication replaced its PDF: '+$kind)
-        }
-        if (@(Get-ChildItem -LiteralPath $realDirectory -Filter '*.tmp-*').Count) { throw 'Directory-alias staging file leaked' }
+        if ($kind -eq 'CliUncreatedOutputAlias') {
+            if (Test-Path -LiteralPath $outputFile) { throw 'Refused CLI created output' }
+        } elseif ([IO.File]::ReadAllText($outputFile) -ne 'Owned PDF sentinel') { throw 'Refusal replaced its destination' }
+        if (@(Get-ChildItem -LiteralPath $real.FullName -Filter '*.tmp-*').Count) { throw 'Directory-alias staging file leaked' }
         $results+=@{Kind=$kind;Target='directory-entry';Outcome='passed'}
     }
-    finally {
-        # Remove only this owned link, so later recursive test cleanup cannot follow it.
-        [IO.Directory]::Delete($alias)
-        if ($targetAlias) { [IO.Directory]::Delete($targetAlias) }
-    }
+    finally { [IO.Directory]::Delete($alias) }
 }
-foreach ($kind in @('LibraryInputLink','LibraryInputLinkSameEntry','CliInputLinkSameEntry','LibraryInputLinkChain','LibraryInputLinkTargetAncestor','CliInputLinkOutput','CliInputLinkDiagnostics','LibraryOutputLinkControl','LibraryInputHardLinkControl')) {
+foreach ($kind in @('CliInputLinkSameEntry','CliInputLinkOutput','CliInputLinkDiagnostics')) {
     $run=New-Item -ItemType Directory -Path (Join-Path $root.FullName $kind)
-    $inputFile=Join-Path $run.FullName 'source.docx'
+    $inputFile=Join-Path $run.FullName 'source.docx';$outputFile=Join-Path $run.FullName 'result.pdf'
     [IO.File]::WriteAllBytes($inputFile,$source)
-    $outputFile=Join-Path $run.FullName 'result.pdf'
     $alias=Join-Path $run.FullName 'input-link.docx'
-    $directoryAlias=$null
-    try {
-        if ($kind -eq 'LibraryOutputLinkControl') {
-            New-Item -ItemType SymbolicLink -Path $outputFile -Target $inputFile | Out-Null
-        }
-        else {
-            $target=$inputFile
-            if ($kind -eq 'LibraryInputLinkTargetAncestor') {
-                $directoryAlias=Join-Path $run.FullName 'parent-link'
-                New-Item -ItemType $(if ($IsWindows) {'Junction'} else {'SymbolicLink'}) -Path $directoryAlias -Target $run.FullName | Out-Null
-                $target=Join-Path $directoryAlias 'source.docx'
-            }
-            if ($kind -eq 'LibraryInputLinkChain') {
-                $middle=Join-Path $run.FullName 'middle.docx'
-                New-Item -ItemType SymbolicLink -Path $middle -Target $target | Out-Null
-                $target=$middle
-            }
-            New-Item -ItemType $(if ($kind -eq 'LibraryInputHardLinkControl') {'HardLink'} else {'SymbolicLink'}) -Path $alias -Target $target | Out-Null
-        }
-    }
+    try { New-Item -ItemType SymbolicLink -Path $alias -Target $inputFile | Out-Null }
     catch {
-        if ($directoryAlias) { [IO.Directory]::Delete($directoryAlias) }
         if (!$IsWindows -or $_.Exception.Message -notmatch 'privilege|permission|access|1314') { throw }
         $results+=@{Kind=$kind;Target='input-referent';Outcome='skipped';Reason='Windows symbolic-link privilege unavailable'}
         continue
     }
-    try {
-        if ($kind -like 'Cli*') {
-            $diagnostics=if ($kind -eq 'CliInputLinkSameEntry') {$alias} elseif ($kind -eq 'CliInputLinkDiagnostics') {$inputFile} else {Join-Path $run.FullName 'diagnostics.json'}
-            $destination=if ($kind -eq 'CliInputLinkOutput') {$inputFile} else {$outputFile}
-            & dotnet $cli convert $alias $destination --diagnostics $diagnostics *> (Join-Path $run.FullName 'cli.log')
-            $expected=if ($kind -in @('CliInputLinkDiagnostics','CliInputLinkSameEntry')) {2} else {1}
-            if ($LASTEXITCODE -ne $expected) { throw ('CLI input referent was not protected: '+$kind) }
-        }
-        elseif ($kind -in @('LibraryOutputLinkControl','LibraryInputHardLinkControl')) {
-            $readPath=if ($kind -eq 'LibraryInputHardLinkControl') {$alias} else {$inputFile}
-            $destination=if ($kind -eq 'LibraryInputHardLinkControl') {$inputFile} else {$outputFile}
-            [Lokad.OoxPdf.OoxPdfConverter]::Convert($readPath,$destination)
-            if ((Get-FileHash $readPath).Hash -ne $fixtureHash) { throw ('Separate file-link replacement changed input: '+$kind) }
-            if (![Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($destination),0,5).StartsWith('%PDF-')) { throw 'Allowed link destination is not PDF' }
-        }
-        else {
-            $failure=$null
-            try { [Lokad.OoxPdf.OoxPdfConverter]::Convert($alias,$(if ($kind -eq 'LibraryInputLinkSameEntry') {$alias} else {$inputFile})) }
-            catch { $failure=$_.Exception.GetBaseException() }
-            if ($failure -isnot [ArgumentException]) { throw ('Input file referent was not rejected: '+$kind) }
-        }
-        if ($kind -ne 'LibraryInputHardLinkControl' -and (Get-FileHash $inputFile).Hash -ne $fixtureHash) { throw ('Input file referent changed: '+$kind) }
-        if (@(Get-ChildItem -LiteralPath $run.FullName -Filter '*.tmp-*').Count) { throw 'Input-link staging file leaked' }
-        $results+=@{Kind=$kind;Target='input-referent';Outcome='passed'}
-    }
-    finally { if ($directoryAlias) { [IO.Directory]::Delete($directoryAlias) } }
+    $diagnostics=if ($kind -eq 'CliInputLinkSameEntry') {$alias} elseif ($kind -eq 'CliInputLinkDiagnostics') {$inputFile} else {Join-Path $run.FullName 'diagnostics.json'}
+    $destination=if ($kind -eq 'CliInputLinkOutput') {$inputFile} else {$outputFile}
+    & dotnet $cli convert $alias $destination --diagnostics $diagnostics *> (Join-Path $run.FullName 'cli.log')
+    $expected=if ($kind -in @('CliInputLinkDiagnostics','CliInputLinkSameEntry')) {2} else {1}
+    if ($LASTEXITCODE -ne $expected) { throw ('CLI input referent was not protected: '+$kind) }
+    if ((Get-FileHash $inputFile).Hash -ne $fixtureHash) { throw ('Input file referent changed: '+$kind) }
+    if (@(Get-ChildItem -LiteralPath $run.FullName -Filter '*.tmp-*').Count) { throw 'Input-link staging file leaked' }
+    $results+=@{Kind=$kind;Target='input-referent';Outcome='passed'}
 }
 if ((Get-FileHash $fixture).Hash -ne $fixtureHash) { throw 'Original public fixture changed' }
 if ((Get-FileHash $cli).Hash -ne $cliHash -or (Get-FileHash $library).Hash -ne $libraryHash) { throw 'CLI runtime changed' }

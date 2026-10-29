@@ -33,7 +33,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/TestRasterizePdfPaths.ps1`: check spaced paths, failure/timeout and stale raster refusal with an existing tool; never builds.
 - `tools/TestVisualReportComparison.ps1`: check zero/finite metrics, required recall and legacy reports; never builds or renders.
 - `tools/TestReferenceDerivative.ps1`, `TestReferenceWorkerPaths.ps1`, `TestAffectedTestReporting.ps1`: focused cache/worker/report mechanics without builds or Office.
-- `tools/TestCliDiagnosticsPublication.ps1`: check frozen library/CLI publication through directory aliases and separate file links; never builds.
+- `tools/TestCliDiagnosticsPublication.ps1`: check frozen CLI diagnostics publication through aliases and file links; never builds. Direct library checks live in `PublicApiTests.PublicationLinks.cs` under the selected test TFM.
 - `tools/BuildQualificationArtifact.ps1`: build/freeze an explicit committed linked worktree and revision; absolute projects prevent accidental root builds. Reuse the frozen artifact for qualification and transfer.
 - `tools/TestQualificationTransfer.ps1`: check transfer alias ownership, preflight and failure cleanup with synthetic files; never builds or converts.
 - `tools/NewFrozenAllocationRuntime.ps1`: build/self-test the existing allocation probe against a frozen library without rebuilding the library.
