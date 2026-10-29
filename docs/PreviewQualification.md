@@ -20,9 +20,9 @@ existing nullable test warnings remain. Package documentation is pinned to the
 build source; final checksums/provenance are recorded separately here and in
 artifacts/release-020-20261029/qualification.json.
 
-Package: artifacts/nuget/release-020-20261029/Lokad.OoxPdf.0.2.0.nupkg.
+Package: artifacts/nuget/Lokad.OoxPdf.0.2.0.nupkg.
 SHA-256: `DCC3A5E95D207B8B31E02FDB8465A61F7F5746CCCA86295789C8FD4F73EF24AC`.
-Symbols: artifacts/nuget/release-020-20261029/Lokad.OoxPdf.0.2.0.snupkg.
+Symbols: artifacts/nuget/Lokad.OoxPdf.0.2.0.snupkg.
 SHA-256: `C310E83D85A82DFC495173D4DD02605F946CF8FB8DE72676B089C78D957F47F5`.
 
 Relative current-repository Markdown links are committed as 84548286; historical

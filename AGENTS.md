@@ -1,4 +1,5 @@
-NuGet packages are written to ignored `artifacts/nuget/`.
+Write release packages, symbols and checksums directly into ignored
+`artifacts/nuget/`, without a per-release subfolder.
 
 Keep the workspace near a loose 5 GB cap. Check infrequently with
 `pwsh tools/MeasureWorkspaceFootprint.ps1`; purge stale artifacts/worktrees while

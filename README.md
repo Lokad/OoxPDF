@@ -63,6 +63,6 @@ dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -- --skip-sl
 dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj -c Release --no-build
 ```
 
-Packages go to ignored `artifacts/nuget/`. CI runs on Windows and Ubuntu.
+Packages go directly to ignored `artifacts/nuget/`. CI runs on Windows and Ubuntu.
 See [AGENTS.md](AGENTS.md) for focused
 test selection and reuse of qualified build artifacts.
