@@ -12,7 +12,7 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> Annotations,
         HashSet<string> ReportedIds)
     {
-        public void CollectEmissionSpan(PptxPositionedTextSpan emissionSpan, PdfEmbeddedFont embedded)
+        public void CollectEmissionSpan(PptxPositionedTextSpan emissionSpan, PdfEmbeddedFont? embedded)
         {
             AddEmissionSpanHyperlinkAnnotation(emissionSpan, embedded, this);
         }
@@ -20,7 +20,7 @@ internal sealed partial class PptxRenderer
 
     private static void AddEmissionSpanHyperlinkAnnotation(
         PptxPositionedTextSpan emissionSpan,
-        PdfEmbeddedFont embedded,
+        PdfEmbeddedFont? embedded,
         PptxTextHyperlinkScope scope)
     {
         TextRun run = emissionSpan.Run;
@@ -71,12 +71,13 @@ internal sealed partial class PptxRenderer
             : PdfLinkAnnotation.ToDestination(x, y, width, height, resolution.Destination!.Value));
     }
 
-    // Baseline-anchored box from the emitted font metrics, mirroring the DOCX
+    // Baseline-anchored box from the emitted font metrics (null means the standard
+    // PDF fallback), mirroring the DOCX
     // hyperlink contract; rotated/flipped runs reuse the emission matrix so the
     // link area covers the painted glyphs.
     private static bool TryGetSpanLinkRect(
         TextRun run,
-        PdfEmbeddedFont embedded,
+        PdfEmbeddedFont? embedded,
         out double x,
         out double y,
         out double width,
@@ -87,15 +88,21 @@ internal sealed partial class PptxRenderer
         width = 0d;
         height = 0d;
         double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(run.FontSize);
-        double unitsPerEm = embedded.Font.UnitsPerEm;
+        double unitsPerEm = embedded?.Font.UnitsPerEm ?? PdfFallbackFont.UnitsPerEm;
         if (unitsPerEm <= 0d || pdfFontSize <= 0d)
         {
             return false;
         }
 
-        double ascender = embedded.Font.Os2.WindowsAscender * pdfFontSize / unitsPerEm;
-        double descender = embedded.Font.Os2.WindowsDescender * pdfFontSize / unitsPerEm;
+        double ascender = embedded is null ? PdfFallbackFont.AscentEm * pdfFontSize
+            : embedded.Font.Os2.WindowsAscender * pdfFontSize / unitsPerEm;
+        double descender = embedded is null ? PdfFallbackFont.DescentEm * pdfFontSize
+            : embedded.Font.Os2.WindowsDescender * pdfFontSize / unitsPerEm;
         double baselineY = run.Y + run.BaselineOffset;
+        if (embedded is null && !BaselineIntersectsClip(run, baselineY))
+        {
+            return false;
+        }
         double x0 = run.X;
         double y0 = baselineY - descender;
         double x1 = run.X + run.Width;

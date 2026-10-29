@@ -1,4 +1,24 @@
 {
+  "pptx-fallback-hyperlinks": [
+      "PptxChartTitleExternalHyperlinkEmitsUriAnnotation",
+      "PptxChartTitleHyperlinkActionIsDiagnosed",
+      "PptxChartTitleMissingRelationshipIsDiagnosed",
+      "PptxChartTitleWithoutHyperlinkStaysQuiet",
+      "PptxChartAxisTitleExternalHyperlinkEmitsUriAnnotation",
+      "PptxChartDataLabelCustomTextHyperlinkEmitsUriAnnotation",
+      "PptxRunExternalHyperlinkEmitsUriAnnotation",
+      "PptxRunHyperlinkBoundaryKeepsAdjacentLinksSeparate",
+      "PptxRunInternalSlideHyperlinkEmitsDestination",
+      "PptxRunHyperlinkMissingRelationshipEmitsSingleDiagnostic",
+      "PptxTableCellRunHyperlinkEmitsUriAnnotation",
+      "PptxRunHyperlinkActionWithoutTargetEmitsDiagnostic",
+      "PptxRotatedRunHyperlinkUsesTransformedBox",
+      "PptxFallbackRunHyperlinksFollowClippedText",
+      "PptxTableFrameHyperlinkSitsBelowCellRunLinks",
+      "PptxChartFrameHyperlinkEmitsUriAnnotation",
+      "PptxGroupHyperlinkSurvivesDiagnosedChildFallback",
+      "MissingFontsPreservePptxText"
+  ],
   "docx-plain-balloon-paragraphs": [
       "DocxWordCompatiblePlainParagraphCountsMatchIndependentOffice",
       "DocxWordCompatibleMixedBalloonWrapsParagraphsIndependently",

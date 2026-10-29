@@ -103,10 +103,9 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        // RV01: fallback spans stay link-free like other unresolved spans.
         if (!renderedFonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered) ||
-            rendered.Font is not { } linkEmbedded ||
-            !TryGetSpanLinkRect(run, linkEmbedded, out double x, out double y, out double width, out double height))
+            (rendered.Font is null && rendered.FallbackFace is null) ||
+            !TryGetSpanLinkRect(run, rendered.Font, out double x, out double y, out double width, out double height))
         {
             return;
         }

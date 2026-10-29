@@ -1,5 +1,6 @@
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
@@ -9,22 +10,25 @@ internal static class PptxChartTextHyperlinksTests
 {
     public static void PptxChartTitleExternalHyperlinkEmitsUriAnnotation()
     {
-        (List<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderChartTitlePage(
-            """<a:r><a:rPr><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Visit site</a:t></a:r>""",
-            """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/chart-title" TargetMode="External"/>
-                </Relationships>
-                """);
+        foreach (IFontResolver? resolver in new IFontResolver?[] { null, new MapFontResolver([], "Fallback") })
+        {
+            (List<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderChartTitlePage(
+                """<a:r><a:rPr><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Visit site</a:t></a:r>""",
+                """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/chart-title" TargetMode="External"/>
+                    </Relationships>
+                    """, fontResolver: resolver);
 
-        PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
-        TestAssert.Equal("https://example.invalid/chart-title", annotation.Uri);
-        TestAssert.True(annotation.Width > 0d && annotation.Height > 0d, "Chart title links need a non-degenerate box.");
-        TestAssert.True(annotation.Width < 288d, "Chart title links must cover the run span, not the whole frame.");
-        TestAssert.True(annotation.X >= 72d && annotation.X + annotation.Width <= 360d, "Chart title links must sit inside the chart frame horizontally.");
-        TestAssert.True(annotation.Y > 360d && annotation.Y + annotation.Height <= 540d, "Chart title links must sit in the title zone above the plot area.");
-        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_HYPERLINK" && d.Id != "PPTX_UNSUPPORTED_HYPERLINK_ACTION"), "A resolvable chart title hyperlink should not emit hyperlink diagnostics.");
+            PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
+            TestAssert.Equal("https://example.invalid/chart-title", annotation.Uri);
+            TestAssert.True(annotation.Width > 0d && annotation.Height > 0d, "Chart title links need a non-degenerate box.");
+            TestAssert.True(annotation.Width < 288d, "Chart title links must cover the run span, not the whole frame.");
+            TestAssert.True(annotation.X >= 72d && annotation.X + annotation.Width <= 360d, "Chart title links must sit inside the chart frame horizontally.");
+            TestAssert.True(annotation.Y > 360d && annotation.Y + annotation.Height <= 540d, "Chart title links must sit in the title zone above the plot area.");
+            TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_HYPERLINK" && d.Id != "PPTX_UNSUPPORTED_HYPERLINK_ACTION"), "A resolvable chart title hyperlink should not emit hyperlink diagnostics.");
+        }
     }
 
     public static void PptxChartTitleHyperlinkActionIsDiagnosed()
@@ -59,89 +63,95 @@ internal static class PptxChartTextHyperlinksTests
 
     public static void PptxChartAxisTitleExternalHyperlinkEmitsUriAnnotation()
     {
-        (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderChartTitlePage(
-            "",
-            """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/chart-axis" TargetMode="External"/>
-                </Relationships>
-                """,
-            """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <c:chart>
-                    <c:plotArea>
-                      <c:barChart>
-                        <c:barDir val="col"/>
-                        <c:grouping val="clustered"/>
-                        <c:ser>
-                          <c:idx val="0"/><c:order val="0"/>
-                          <c:tx><c:strLit><c:pt idx="0"><c:v>Series</c:v></c:pt></c:strLit></c:tx>
-                          <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
-                          <c:val><c:numLit><c:pt idx="0"><c:v>4</c:v></c:pt></c:numLit></c:val>
-                        </c:ser>
-                        <c:axId val="10"/><c:axId val="20"/>
-                      </c:barChart>
-                      <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/><c:tickLblPos val="none"/></c:catAx>
-                      <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:crossAx val="10"/><c:majorUnit val="5"/><c:tickLblPos val="none"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Y axis</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title></c:valAx>
-                    </c:plotArea>
-                  </c:chart>
-                </c:chartSpace>
-                """);
+        foreach (IFontResolver? resolver in new IFontResolver?[] { null, new MapFontResolver([], "Fallback") })
+        {
+            (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderChartTitlePage(
+                "",
+                """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/chart-axis" TargetMode="External"/>
+                    </Relationships>
+                    """,
+                """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                      <c:chart>
+                        <c:plotArea>
+                          <c:barChart>
+                            <c:barDir val="col"/>
+                            <c:grouping val="clustered"/>
+                            <c:ser>
+                              <c:idx val="0"/><c:order val="0"/>
+                              <c:tx><c:strLit><c:pt idx="0"><c:v>Series</c:v></c:pt></c:strLit></c:tx>
+                              <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+                              <c:val><c:numLit><c:pt idx="0"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                            </c:ser>
+                            <c:axId val="10"/><c:axId val="20"/>
+                          </c:barChart>
+                          <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/><c:tickLblPos val="none"/></c:catAx>
+                          <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:crossAx val="10"/><c:majorUnit val="5"/><c:tickLblPos val="none"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Y axis</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title></c:valAx>
+                        </c:plotArea>
+                      </c:chart>
+                    </c:chartSpace>
+                    """, fontResolver: resolver);
 
-        PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
-        TestAssert.Equal("https://example.invalid/chart-axis", annotation.Uri);
-        TestAssert.True(annotation.Width > 0d && annotation.Height > 0d, "Chart axis title links need a non-degenerate box.");
-        TestAssert.True(annotation.X >= 60d && annotation.X + annotation.Width <= 216d, "Chart axis title links must sit in the left title zone.");
-        TestAssert.True(annotation.Y >= 252d && annotation.Y + annotation.Height <= 468d, "Chart axis title links must sit inside the chart frame vertically.");
-        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_HYPERLINK" && d.Id != "PPTX_UNSUPPORTED_HYPERLINK_ACTION"), "A resolvable chart axis title hyperlink should not emit hyperlink diagnostics.");
+            PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
+            TestAssert.Equal("https://example.invalid/chart-axis", annotation.Uri);
+            TestAssert.True(annotation.Width > 0d && annotation.Height > 0d, "Chart axis title links need a non-degenerate box.");
+            TestAssert.True(annotation.X >= 60d && annotation.X + annotation.Width <= 216d, "Chart axis title links must sit in the left title zone.");
+            TestAssert.True(annotation.Y >= 252d && annotation.Y + annotation.Height <= 468d, "Chart axis title links must sit inside the chart frame vertically.");
+            TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_HYPERLINK" && d.Id != "PPTX_UNSUPPORTED_HYPERLINK_ACTION"), "A resolvable chart axis title hyperlink should not emit hyperlink diagnostics.");
+        }
     }
 
     public static void PptxChartDataLabelCustomTextHyperlinkEmitsUriAnnotation()
     {
-        (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderChartTitlePage(
-            "",
-            """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/chart-label" TargetMode="External"/>
-                </Relationships>
-                """,
-            """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <c:chart>
-                    <c:plotArea>
-                      <c:barChart>
-                        <c:barDir val="col"/>
-                        <c:grouping val="clustered"/>
-                        <c:ser>
-                          <c:idx val="0"/><c:order val="0"/>
-                          <c:tx><c:strLit><c:pt idx="0"><c:v>Series</c:v></c:pt></c:strLit></c:tx>
-                          <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
-                          <c:val><c:numLit><c:pt idx="0"><c:v>4</c:v></c:pt></c:numLit></c:val>
-                        </c:ser>
-                        <c:dLbls><c:dLbl><c:idx val="0"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Point link</a:t></a:r></a:p></c:rich></c:tx></c:dLbl></c:dLbls>
-                        <c:axId val="10"/><c:axId val="20"/>
-                      </c:barChart>
-                      <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/><c:tickLblPos val="none"/></c:catAx>
-                      <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:crossAx val="10"/><c:majorUnit val="5"/><c:tickLblPos val="none"/></c:valAx>
-                    </c:plotArea>
-                  </c:chart>
-                </c:chartSpace>
-                """);
+        foreach (IFontResolver? resolver in new IFontResolver?[] { null, new MapFontResolver([], "Fallback") })
+        {
+            (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderChartTitlePage(
+                "",
+                """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/chart-label" TargetMode="External"/>
+                    </Relationships>
+                    """,
+                """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                      <c:chart>
+                        <c:plotArea>
+                          <c:barChart>
+                            <c:barDir val="col"/>
+                            <c:grouping val="clustered"/>
+                            <c:ser>
+                              <c:idx val="0"/><c:order val="0"/>
+                              <c:tx><c:strLit><c:pt idx="0"><c:v>Series</c:v></c:pt></c:strLit></c:tx>
+                              <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+                              <c:val><c:numLit><c:pt idx="0"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                            </c:ser>
+                            <c:dLbls><c:dLbl><c:idx val="0"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Point link</a:t></a:r></a:p></c:rich></c:tx></c:dLbl></c:dLbls>
+                            <c:axId val="10"/><c:axId val="20"/>
+                          </c:barChart>
+                          <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/><c:tickLblPos val="none"/></c:catAx>
+                          <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:crossAx val="10"/><c:majorUnit val="5"/><c:tickLblPos val="none"/></c:valAx>
+                        </c:plotArea>
+                      </c:chart>
+                    </c:chartSpace>
+                    """, fontResolver: resolver);
 
-        PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
-        TestAssert.Equal("https://example.invalid/chart-label", annotation.Uri);
-        TestAssert.True(annotation.Width > 0d && annotation.Height > 0d, "Chart data label links need a non-degenerate box.");
-        TestAssert.True(annotation.Width < 288d, "Chart data label links must cover the run span, not the whole frame.");
-        TestAssert.True(annotation.X >= 72d && annotation.X + annotation.Width <= 360d, "Chart data label links must sit inside the chart frame horizontally.");
-        TestAssert.True(annotation.Y >= 252d && annotation.Y + annotation.Height <= 468d, "Chart data label links must sit inside the chart frame vertically.");
-        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_HYPERLINK" && d.Id != "PPTX_UNSUPPORTED_HYPERLINK_ACTION"), "A resolvable chart data label hyperlink should not emit hyperlink diagnostics.");
+            PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
+            TestAssert.Equal("https://example.invalid/chart-label", annotation.Uri);
+            TestAssert.True(annotation.Width > 0d && annotation.Height > 0d, "Chart data label links need a non-degenerate box.");
+            TestAssert.True(annotation.Width < 288d, "Chart data label links must cover the run span, not the whole frame.");
+            TestAssert.True(annotation.X >= 72d && annotation.X + annotation.Width <= 360d, "Chart data label links must sit inside the chart frame horizontally.");
+            TestAssert.True(annotation.Y >= 252d && annotation.Y + annotation.Height <= 468d, "Chart data label links must sit inside the chart frame vertically.");
+            TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_HYPERLINK" && d.Id != "PPTX_UNSUPPORTED_HYPERLINK_ACTION"), "A resolvable chart data label hyperlink should not emit hyperlink diagnostics.");
+        }
     }
 
-    private static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderChartTitlePage(string titleRunXml, string? chartRelsXml, string? chartXmlOverride = null)
+    private static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderChartTitlePage(string titleRunXml, string? chartRelsXml, string? chartXmlOverride = null, IFontResolver? fontResolver = null)
     {
         string contentTypes = PptxTests.BasicContentTypes().Replace(
             "</Types>",
@@ -210,7 +220,9 @@ internal static class PptxChartTextHyperlinksTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         var diagnostics = new List<OoxPdfDiagnostic>();
-        List<PdfPage> pages = new PptxRenderer(null).RenderPages(document, package, diagnostics.Add, CancellationToken.None).ToList();
+        List<PdfPage> pages = new PptxRenderer(fontResolver).RenderPages(document, package, diagnostics.Add, CancellationToken.None).ToList();
+        if (fontResolver is MapFontResolver)
+            TestAssert.True(pages[0].FallbackFonts.Count > 0 && pages[0].Fonts.Count == 0, "The missing-font control must use standard PDF fonts.");
         return (pages, diagnostics);
     }
 }

@@ -775,7 +775,7 @@ internal sealed partial class PptxRenderer
                     if (rendered.FallbackFace is { } fallback)
                     {
                         DrawFallbackWrappedSpan(fallback, emissionSpan);
-                        // Fallback spans stay link-free like other unresolved spans.
+                        hyperlinkScope?.CollectEmissionSpan(emissionSpan, null);
                     }
                     else if (rendered.Font is { } embedded)
                     {
