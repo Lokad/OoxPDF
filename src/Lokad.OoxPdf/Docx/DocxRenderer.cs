@@ -187,7 +187,7 @@ internal sealed partial class DocxRenderer
         document = prepared.Document;
         DocxFontResources fontResources = prepared.FontResources;
         DocxLayout layout = prepared.Layout;
-        effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
+        bool separatePlainHeaderOrigins = CanSeparatePlainHeaderOrigins(layout);
         if (UsesWordCompatibleAllMarkupTextProfile(effectiveMarkupContext) && HasWordCompatibleBalloonContent(document, effectiveMarkupContext))
         {
             effectiveMarkupContext = effectiveMarkupContext with { BalloonTitleFaceResolution = ResolveBalloonTitleFace(fontResolver, effectiveMarkupContext, CancellationToken.None) };
@@ -204,7 +204,7 @@ internal sealed partial class DocxRenderer
                 layout.Pages[pageIndex],
                 layout.RelatedStories,
                 drawingPages.PageAll(pageIndex),
-                effectiveMarkupContext,
+                WithPageTextEmissionOffsets(effectiveMarkupContext, layout, pageIndex, separatePlainHeaderOrigins),
                 balloonLabelEmbedded,
                 balloonBodyEmbedded,
                 fontResources))
@@ -235,7 +235,7 @@ internal sealed partial class DocxRenderer
         document = prepared.Document;
         DocxFontResources fontResources = prepared.FontResources;
         DocxLayout layout = prepared.Layout;
-        effectiveMarkupContext = WithFirstPinYOffset(effectiveMarkupContext, document, layout);
+        bool separatePlainHeaderOrigins = CanSeparatePlainHeaderOrigins(layout);
         double textEmissionFontScale = ResolveTextEmissionFontScale(effectiveMarkupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(effectiveMarkupContext);
         double textEmissionXOffset = ResolveTextEmissionXOffset(effectiveMarkupContext);
@@ -246,7 +246,8 @@ internal sealed partial class DocxRenderer
         {
             DocxLayoutPage page = layout.Pages[pageIndex];
             int pageNumber = pageIndex + 1;
-            effectiveMarkupContext = WithPageTextEmissionXOffset(effectiveMarkupContext, page);
+            effectiveMarkupContext = WithPageTextEmissionOffsets(effectiveMarkupContext, layout, pageIndex, separatePlainHeaderOrigins);
+            textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(effectiveMarkupContext);
             textEmissionXOffset = ResolveTextEmissionXOffset(effectiveMarkupContext);
             void AddLine(
                 DocxTextLineLayout line,
@@ -571,7 +572,7 @@ internal sealed partial class DocxRenderer
             ? -document.MarginLeftPoints * (1d - printScale)
             : 0d;
         // The Y shift defaults to the fitted anchor here; scaled pages refine it from the
-        // laid-out first baseline once a layout exists (see ResolveFirstPinYOffset).
+        // owning page's laid-out baseline once a layout exists (WithPageTextEmissionOffsets).
         double yOffset = effective.Mode == OoxPdfDocxMarkupMode.AllMarkup &&
             effective.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
             effective.ExpandsMarkupMargin
@@ -618,14 +619,6 @@ internal sealed partial class DocxRenderer
         }
 
         return document.PageWidthPoints / designWidth;
-    }
-
-    // Word balloons comments from the main story and revision balloons from
-    // the separately qualified revision stories. Only printed balloons sustain
-    // the fitted text anchor; hidden static/note comments do not.
-    private static bool HasAnyWordCompatibleBalloon(DocxDocument document)
-    {
-        return HasBalloonableCommentAnchor(document) || HasAnyRevisionBalloon(document);
     }
 
     private static bool HasWordCompatibleBalloonContent(DocxDocument document, DocxMarkupContext markupContext)
@@ -985,14 +978,24 @@ internal sealed partial class DocxRenderer
             .BodyYOffset(firstBaselineY.Value, sourceBaselineOffset);
     }
 
-    private static DocxMarkupContext WithFirstPinYOffset(DocxMarkupContext markupContext, DocxDocument document, DocxLayout layout)
+    private static bool CanSeparatePlainHeaderOrigins(DocxLayout layout) =>
+        layout.Pages.All(page => page.ColumnFrames.Count <= 1 &&
+            page.StaticTextLines.Count == 1 && page.StaticTextLines[0].Story?.Kind == DocxStoryKind.Header &&
+            page.StaticInlineImages.Count == 0 && page.StaticTableRows.Count == 0 &&
+            page.StaticInlineTextBoxes.Count == 0);
+
+    private static DocxMarkupContext WithPageTextEmissionOffsets(
+        DocxMarkupContext markupContext, DocxLayout layout, int pageIndex, bool separatePlainHeaderOrigins)
     {
-        if (layout.Pages.Count == 0)
+        if (!UsesWordCompatibleAllMarkupTextProfile(markupContext))
         {
             return markupContext;
         }
 
-        DocxLayoutPage page = layout.Pages[0];
+        // Layout already scales advances. Restore this page's source origin;
+        // another page's heading or margins cannot translate its body or links.
+        DocxLayoutPage page = layout.Pages[pageIndex];
+        double xOffset = -page.MarginLeft * (1d - markupContext.WordCompatiblePrintScale);
         var (firstBaselineY, sourceBaselineOffset) = ResolveBodyPrintOrigin(page);
         double? firstBodyBaselineY = firstBaselineY;
         double bodySourceBaselineOffset = sourceBaselineOffset;
@@ -1002,17 +1005,18 @@ internal sealed partial class DocxRenderer
                 (firstBaselineY, sourceBaselineOffset) = (line.BaselineY, 0d);
         }
 
-        bool hasBalloons = markupContext.WordCompatibleHasPrintedBalloons ?? HasAnyWordCompatibleBalloon(document);
+        bool hasBalloons = markupContext.WordCompatibleHasPrintedBalloons == true;
         if ((page.StaticTextLines.Any(line => line.StaticStoryUsesPhysicalY) ||
             page.StaticTableRows.Any(row => row.StaticStoryUsesPhysicalY) ||
             page.StaticInlineTextBoxes.Any(box => box.StaticStoryUsesPhysicalY)) && firstBodyBaselineY is { } bodyBaseline)
         {
-            double headerDisplacement = layout.HeaderContentBottomByPage.TryGetValue(0, out double headerBottom)
+            double headerDisplacement = layout.HeaderContentBottomByPage.TryGetValue(pageIndex, out double headerBottom)
                 ? Math.Max(0d, page.Height - page.MarginTop - headerBottom) : 0d;
             return markupContext with
             {
                 WordCompatibleTextYOffset = ResolveWordCompatibleTextYOffset(markupContext,
                     bodyBaseline + headerDisplacement, page.Height, hasBalloons, bodySourceBaselineOffset),
+                WordCompatibleTextXOffset = xOffset,
                 WordCompatibleStaticTextYAdjustmentPoints = 0d
             };
         }
@@ -1023,19 +1027,16 @@ internal sealed partial class DocxRenderer
         // must not move the body down by the unscaled distance between them.
         // Preserve the established static origin, and keep composed static
         // stories and table-first or multi-column bodies on their prior path.
-        bool useBodyAnchor = UsesWordCompatibleAllMarkupTextProfile(markupContext) &&
-            markupContext.WordCompatiblePrintScale < 1d && firstBodyBaselineY is not null &&
+        bool useBodyAnchor = markupContext.WordCompatiblePrintScale < 1d && firstBodyBaselineY is not null &&
             page.Items.FirstOrDefault() is DocxTextLineLayout &&
-            layout.Pages.All(candidate => candidate.ColumnFrames.Count <= 1 &&
-                candidate.StaticTextLines.Count == 1 && candidate.StaticTextLines[0].Story?.Kind == DocxStoryKind.Header &&
-                candidate.StaticInlineImages.Count == 0 && candidate.StaticTableRows.Count == 0 &&
-                candidate.StaticInlineTextBoxes.Count == 0);
+            separatePlainHeaderOrigins;
         double bodyOffset = useBodyAnchor
             ? ResolveWordCompatibleTextYOffset(markupContext, firstBodyBaselineY, page.Height, hasBalloons, bodySourceBaselineOffset)
             : legacyOffset;
         return markupContext with
         {
             WordCompatibleTextYOffset = bodyOffset,
+            WordCompatibleTextXOffset = xOffset,
             WordCompatibleStaticTextYAdjustmentPoints = bodyOffset - legacyOffset
         };
     }
@@ -1048,21 +1049,6 @@ internal sealed partial class DocxRenderer
     private static double ResolveTextEmissionXOffset(DocxMarkupContext markupContext)
     {
         return markupContext.WordCompatibleTextXOffset;
-    }
-
-    // Office (mirrored-margin reference, Word-COM rendered): the print-scale X shift
-    // follows each page own left margin (even mirrored body at 40.06 = 54pt times scale),
-    // not the document margin, so scaled pages keep margin-times-scale body origins.
-    private static DocxMarkupContext WithPageTextEmissionXOffset(DocxMarkupContext markupContext, DocxLayoutPage layoutPage)
-    {
-        if (markupContext.Mode != OoxPdfDocxMarkupMode.AllMarkup ||
-            markupContext.GeometryMode != OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ||
-            !markupContext.ExpandsMarkupMargin)
-        {
-            return markupContext;
-        }
-
-        return markupContext with { WordCompatibleTextXOffset = -layoutPage.MarginLeft * (1d - markupContext.WordCompatiblePrintScale) };
     }
 
     private static bool UsesWordCompatibleAllMarkupTextProfile(DocxMarkupContext markupContext)
@@ -1133,7 +1119,7 @@ internal sealed partial class DocxRenderer
         {
             markupContext = markupContext with { BalloonTitleFaceResolution = ResolveBalloonTitleFace(fontResolver, markupContext, cancellationToken) };
         }
-        markupContext = WithFirstPinYOffset(markupContext, document, layout);
+        bool separatePlainHeaderOrigins = CanSeparatePlainHeaderOrigins(layout);
         (DocxRunFontResource? balloonTextResource, DocxRunFontResource? balloonTitleResource, DocxRunFontResource? balloonBodyResource) = EnsureMarkupBalloonTextResources(layout, fontResources, markupContext, cancellationToken);
         double textEmissionFontScale = ResolveTextEmissionFontScale(markupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(markupContext);
@@ -1156,7 +1142,8 @@ internal sealed partial class DocxRenderer
             // and images never produce past the trip.
             OoxConversionBudget.Current?.ChargePdfPages(1);
             DocxLayoutPage layoutPage = layout.Pages[pageIndex];
-            markupContext = WithPageTextEmissionXOffset(markupContext, layoutPage);
+            markupContext = WithPageTextEmissionOffsets(markupContext, layout, pageIndex, separatePlainHeaderOrigins);
+            textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(markupContext);
             textEmissionXOffset = ResolveTextEmissionXOffset(markupContext);
             var graphics = new PdfGraphicsBuilder();
             var pageImages = new List<PdfImageResource>();
@@ -1282,7 +1269,8 @@ internal sealed partial class DocxRenderer
                 cancellationToken.ThrowIfCancellationRequested();
                 DocxLayoutPage page = layout.Pages[pageIndex];
                 int pageNumber = pageIndex + 1;
-                DocxMarkupContext pageMarkupContext = WithPageTextEmissionXOffset(markupContext, page);
+                DocxMarkupContext pageMarkupContext = WithPageTextEmissionOffsets(markupContext, layout, pageIndex, separatePlainHeaderOrigins);
+                double pageTextEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(pageMarkupContext);
                 double pageTextEmissionXOffset = ResolveTextEmissionXOffset(pageMarkupContext);
                 var bodyMath = fontResources.MathEquations.Count == 0 ? null : page.Items.OfType<DocxEquationLayout>()
                     .ToLookup(item => item.Math.Equation, ReferenceEqualityComparer.Instance);
@@ -1299,11 +1287,11 @@ internal sealed partial class DocxRenderer
                     if (line.Math is { } math && !line.IsInlineMath && line.FrameOriginOffsetX is { } frameOffset)
                     {
                         AddMathTargets(paragraph, line.X + frameOffset,
-                            line.BaselineY + math.BaselineInset * line.MathScale, pageIndex, pageTextEmissionXOffset);
+                            line.BaselineY + math.BaselineInset * line.MathScale, pageIndex, pageTextEmissionXOffset, pageTextEmissionBaselineOffset);
                         continue;
                     }
 
-                    IReadOnlyList<DocxTextEmissionSegment> segments = CreateTextEmissionSegments(line, fontResources, pageNumber, layout.Pages.Count, textEmissionFontScale, textEmissionBaselineOffset, pageTextEmissionXOffset, useWordCompatibleTextProfile, cancellationToken)
+                    IReadOnlyList<DocxTextEmissionSegment> segments = CreateTextEmissionSegments(line, fontResources, pageNumber, layout.Pages.Count, textEmissionFontScale, pageTextEmissionBaselineOffset, pageTextEmissionXOffset, useWordCompatibleTextProfile, cancellationToken)
                         .Where(segment => !segment.IsTerminalLineSpace && segment.SourceTextRunIndex >= 0 && segment.Width > 0d)
                         .ToArray();
                     foreach (DocxBookmarkAnchor bookmark in paragraph.BookmarkAnchors)
@@ -1343,7 +1331,7 @@ internal sealed partial class DocxRenderer
                                 if (placement is not null && line.FrameOriginOffsetX is { } inlineOrigin)
                                     destinations.Add(bookmark.Name, new PdfLinkDestination(pageIndex,
                                         line.X + (placement.OffsetX == 0d ? inlineOrigin : placement.OffsetX) + pageTextEmissionXOffset - viewportContextPoints * textEmissionFontScale,
-                                        mathTop - textEmissionBaselineOffset, Zoom: null));
+                                        mathTop - pageTextEmissionBaselineOffset, Zoom: null));
                                 continue;
                             }
                         }
@@ -1395,13 +1383,13 @@ internal sealed partial class DocxRenderer
                     if (equation.FrameOriginOffsetX is { } frameOffset)
                         AddMathTargets(equation.SourceParagraph, equation.X + frameOffset,
                             equation.BaselineY + equation.Math.BaselineInset * equation.Scale,
-                            pageIndex, pageTextEmissionXOffset);
+                            pageIndex, pageTextEmissionXOffset, pageTextEmissionBaselineOffset);
                 }
             }
 
             return destinations;
 
-            void AddMathTargets(DocxParagraph paragraph, double originX, double top, int pageIndex, double xOffset)
+            void AddMathTargets(DocxParagraph paragraph, double originX, double top, int pageIndex, double xOffset, double yOffset)
             {
                 foreach (var bookmark in paragraph.BookmarkAnchors)
                 {
@@ -1409,7 +1397,7 @@ internal sealed partial class DocxRenderer
                     if (!string.IsNullOrEmpty(bookmark.Name))
                         destinations.TryAdd(bookmark.Name, new PdfLinkDestination(pageIndex,
                             originX + xOffset - viewportContextPoints * textEmissionFontScale,
-                            top - textEmissionBaselineOffset, Zoom: null));
+                            top - yOffset, Zoom: null));
                 }
             }
         }

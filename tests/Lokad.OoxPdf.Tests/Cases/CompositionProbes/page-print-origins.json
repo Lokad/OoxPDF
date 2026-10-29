@@ -1,0 +1,126 @@
+[
+  {
+    "Id": "page-origin-first11-continuation11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/page-origin-first11-continuation11.docx",
+    "Sha256": "E13432457B8FD542F25B80640108D36B4F3ED0D55A8FB1DA3E508DC74C31D848",
+    "ExpectedText": [
+      "Public first-page heading.",
+      "Public continuation body.",
+      "Return to heading."
+    ],
+    "ExpectedEquationCount": 0,
+    "FirstPageFontPoints": 11,
+    "ContinuationFontPoints": 11,
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/composed-static-picture-report.docx",
+    "SourceSha256": "F3ED6D23D2C656A8F13441C0BF49FECE2AAC2C6F0B1597655AA24AEBFE21B569",
+    "Change": "Replace body with two explicit page-separated paragraphs; retain source header/footer, comment and footnote plus a source-owned internal link."
+  },
+  {
+    "Id": "page-origin-first18-continuation11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/page-origin-first18-continuation11.docx",
+    "Sha256": "AF8604EBF64282ECBE3F4C8FB0D4D9029791CACFA245021669E19B0EA63E1B00",
+    "ExpectedText": [
+      "Public first-page heading.",
+      "Public continuation body.",
+      "Return to heading."
+    ],
+    "ExpectedEquationCount": 0,
+    "FirstPageFontPoints": 18,
+    "ContinuationFontPoints": 11,
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/composed-static-picture-report.docx",
+    "SourceSha256": "F3ED6D23D2C656A8F13441C0BF49FECE2AAC2C6F0B1597655AA24AEBFE21B569",
+    "Change": "Replace body with two explicit page-separated paragraphs; retain source header/footer, comment and footnote plus a source-owned internal link."
+  },
+  {
+    "Id": "page-origin-first24-continuation11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/page-origin-first24-continuation11.docx",
+    "Sha256": "079FB35EAE4C9CE8EB8AFCC57E4D444338BD7B79539620E29A0B3592D2CA7D28",
+    "ExpectedText": [
+      "Public first-page heading.",
+      "Public continuation body.",
+      "Return to heading."
+    ],
+    "ExpectedEquationCount": 0,
+    "FirstPageFontPoints": 24,
+    "ContinuationFontPoints": 11,
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/composed-static-picture-report.docx",
+    "SourceSha256": "F3ED6D23D2C656A8F13441C0BF49FECE2AAC2C6F0B1597655AA24AEBFE21B569",
+    "Change": "Replace body with two explicit page-separated paragraphs; retain source header/footer, comment and footnote plus a source-owned internal link."
+  },
+  {
+    "Id": "page-origin-first18-continuation18",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/page-origin-first18-continuation18.docx",
+    "Sha256": "8DAB047ED29E8532817ECB24864B4A4400D6D5FEF7519AC8D5EDF0284B450502",
+    "ExpectedText": [
+      "Public first-page heading.",
+      "Public continuation body.",
+      "Return to heading."
+    ],
+    "ExpectedEquationCount": 0,
+    "FirstPageFontPoints": 18,
+    "ContinuationFontPoints": 18,
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/composed-static-picture-report.docx",
+    "SourceSha256": "F3ED6D23D2C656A8F13441C0BF49FECE2AAC2C6F0B1597655AA24AEBFE21B569",
+    "Change": "Replace body with two explicit page-separated paragraphs; retain source header/footer, comment and footnote plus a source-owned internal link."
+  },
+  {
+    "Id": "page-origin-bare-first11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/page-origin-bare-first11.docx",
+    "Sha256": "6B81DE4FAEBC415498086CC079873D0F9664F0AD4A466F6AA601A0627A19CA02",
+    "ExpectedText": [
+      "Public first-page heading.",
+      "Public continuation body.",
+      "Return to heading."
+    ],
+    "ExpectedEquationCount": 0,
+    "FirstPageFontPoints": 11,
+    "ContinuationFontPoints": 11,
+    "StaticFrame": "bare",
+    "Change": "Source-equivalent forced continuation with inactive stories or one plain selected header; retained comment, footnote and internal hyperlink."
+  },
+  {
+    "Id": "page-origin-bare-first24",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/page-origin-bare-first24.docx",
+    "Sha256": "F887A230B065FBDD37F96B1FCE6F347DDEB2E7C91B0D882EEFD332B7B3049F62",
+    "ExpectedText": [
+      "Public first-page heading.",
+      "Public continuation body.",
+      "Return to heading."
+    ],
+    "ExpectedEquationCount": 0,
+    "FirstPageFontPoints": 24,
+    "ContinuationFontPoints": 11,
+    "StaticFrame": "bare",
+    "Change": "Source-equivalent forced continuation with inactive stories or one plain selected header; retained comment, footnote and internal hyperlink."
+  },
+  {
+    "Id": "page-origin-header-first11",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/page-origin-header-first11.docx",
+    "Sha256": "06271D202A7458F8AB9E1C5962627826A657E3B32283B256621CA418EA7A7ABC",
+    "ExpectedText": [
+      "Public first-page heading.",
+      "Public continuation body.",
+      "Return to heading."
+    ],
+    "ExpectedEquationCount": 0,
+    "FirstPageFontPoints": 11,
+    "ContinuationFontPoints": 11,
+    "StaticFrame": "header",
+    "Change": "Source-equivalent forced continuation with inactive stories or one plain selected header; retained comment, footnote and internal hyperlink."
+  },
+  {
+    "Id": "page-origin-header-first24",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/page-origin-header-first24.docx",
+    "Sha256": "59E00DAAE4E98B03700A8C8447EF6371F75E79D36EE62D4A456EB745BC7F3406",
+    "ExpectedText": [
+      "Public first-page heading.",
+      "Public continuation body.",
+      "Return to heading."
+    ],
+    "ExpectedEquationCount": 0,
+    "FirstPageFontPoints": 24,
+    "ContinuationFontPoints": 11,
+    "StaticFrame": "header",
+    "Change": "Source-equivalent forced continuation with inactive stories or one plain selected header; retained comment, footnote and internal hyperlink."
+  }
+]

@@ -319,9 +319,6 @@ internal sealed partial class DocxLayoutEngine
         var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int, int), DocxStaticStoryLayoutResult?>();
         var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int, int), (double Body, double Note, double? Physical)>();
         var plainFootnoteFooterFrames = new Dictionary<(DocxPageSettings, double, double, double, double, double, double, int, int), DocxLayoutPage?>();
-        double? bodyFirstBaselineMemo = null;
-        double bodyFirstSourceOffsetMemo = 0d;
-        bool bodyFirstBaselineComputed = false;
         bool useSimpleSectionPagination = UsesSimpleSectionPagination(document) &&
             (Math.Abs(paragraphSpacingScale - 1d) < 0.000001d ||
              Math.Abs(paragraphSpacingScale - WordCompatibleAllMarkupParagraphSpacingScale) < 0.000001d);
@@ -2138,24 +2135,13 @@ internal sealed partial class DocxLayoutEngine
             // advances, so the keep-out crosses into take space through the same maps as
             // emission: static lines shift by the first-pin offset while footnote stories
             // map uniformly about the page center. The page height cancels, leaving the
-            // first-pin baseline and the print scale (identity at unit scale).
-            if (!bodyFirstBaselineComputed && pages.Count != 0)
+            // owning page's origin and print scale (identity at unit scale).
+            var (firstPinBaseline, firstPinSourceOffset) = DocxRenderer.ResolveBodyPrintOrigin(templatePage);
+            if (headerLayout.TextLines.Count != 0)
             {
-                bodyFirstBaselineComputed = true;
-                (bodyFirstBaselineMemo, bodyFirstSourceOffsetMemo) = DocxRenderer.ResolveBodyPrintOrigin(pages[0]);
-            }
-
-            double? firstPinBaseline = bodyFirstBaselineMemo;
-            double firstPinSourceOffset = bodyFirstSourceOffsetMemo;
-            if (pages.Count != 0)
-            {
-                DocxStaticStoryLayoutResult? firstHeaderLayout = GetContinuationHeader(pages[0], 1, pageCount);
-                if (firstHeaderLayout is not null && firstHeaderLayout.TextLines.Count != 0)
-                {
-                    double firstHeaderBaseline = firstHeaderLayout.TextLines.Max(staticLine => staticLine.BaselineY);
-                    if (firstPinBaseline is null || firstHeaderBaseline > firstPinBaseline.Value)
-                        (firstPinBaseline, firstPinSourceOffset) = (firstHeaderBaseline, 0d);
-                }
+                double headerBaseline = headerLayout.TextLines.Max(staticLine => staticLine.BaselineY);
+                if (firstPinBaseline is null || headerBaseline > firstPinBaseline.Value)
+                    (firstPinBaseline, firstPinSourceOffset) = (headerBaseline, 0d);
             }
 
             if (firstPinBaseline is null)
@@ -2190,27 +2176,21 @@ internal sealed partial class DocxLayoutEngine
             Math.Max(templatePage.MarginBottom, ResolveFooterBounds(templatePage, pageNumber, pageCount).Body);
         double ResolveNoteFooterKeepOut(DocxLayoutPage templatePage, int pageNumber, int pageCount) =>
             Math.Max(templatePage.MarginBottom, ResolveFooterBounds(templatePage, pageNumber, pageCount).Note);
-        double? MapBodyBoundaryToNoteDesign(DocxLayoutPage targetPage, double bodyY)
+        double? MapBodyBoundaryToNoteDesign(DocxLayoutPage targetPage, int pageIndex, double bodyY)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (paragraphSpacingScale is not (> 0d and < 1d) || pages.Count == 0 ||
-                targetPage.ColumnFrames.Count > 1 || pages[0].ColumnFrames.Count > 1) return null;
-            var firstPage = pages[0];
-            var header = GetContinuationHeader(firstPage, 1, pages.Count);
+                targetPage.ColumnFrames.Count > 1) return null;
+            var header = GetContinuationHeader(targetPage, pageIndex + 1, pages.Count);
             if (header?.PhysicalHeaderFrameBottom is null &&
-                ResolveFooterBounds(firstPage, 1, pages.Count).Physical is null) return null;
-            if (!bodyFirstBaselineComputed)
-            {
-                bodyFirstBaselineComputed = true;
-                (bodyFirstBaselineMemo, bodyFirstSourceOffsetMemo) = DocxRenderer.ResolveBodyPrintOrigin(firstPage);
-            }
-            if (bodyFirstBaselineMemo is not { } baseline) return null;
-            // Painting restores the first source origin before mapping the
-            // displaced body. Invert that same global origin for note boxes;
-            // a later page's first baseline includes different header/text insets.
-            double displacement = Math.Max(0d, headerOverflowDisplacementByPage?.GetValueOrDefault(0) ?? 0d);
-            double offset = new DocxPrintedPageFrame(firstPage.Height, paragraphSpacingScale)
-                .BodyYOffset(baseline + displacement, bodyFirstSourceOffsetMemo);
+                ResolveFooterBounds(targetPage, pageIndex + 1, pages.Count).Physical is null) return null;
+            var (bodyBaseline, sourceOffset) = DocxRenderer.ResolveBodyPrintOrigin(targetPage);
+            if (bodyBaseline is not { } baseline) return null;
+            // Body paint and following note boxes share this page's source
+            // origin. A heading on another page cannot translate this boundary.
+            double displacement = Math.Max(0d, headerOverflowDisplacementByPage?.GetValueOrDefault(pageIndex) ?? 0d);
+            double offset = new DocxPrintedPageFrame(targetPage.Height, paragraphSpacingScale)
+                .BodyYOffset(baseline + displacement, sourceOffset);
             double result = new DocxPrintedPageFrame(targetPage.Height, paragraphSpacingScale).UnmapY(bodyY - offset);
             return double.IsFinite(result) ? result : null;
         }

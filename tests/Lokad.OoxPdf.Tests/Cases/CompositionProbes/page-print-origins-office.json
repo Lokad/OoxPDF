@@ -1,0 +1,517 @@
+{
+  "Provenance": "Eight public synthetic two-page sources exported independently by Word 16 on 2026-10-29 in Final and AllMarkup print views. Existing 1pt origin/0.1pt font-size limits; no visible-image calibration or whole-document pixel parity claim. Original probes and supervised export identities retained under artifacts/development-030/svg-placement, artifacts/pgo and artifacts/pgo2.",
+  "Rows": [
+    {
+      "Id": "page-origin-first11-continuation11",
+      "Mode": "final-preserve",
+      "InputSha256": "E13432457B8FD542F25B80640108D36B4F3ED0D55A8FB1DA3E508DC74C31D848",
+      "WordPdfSha256": "B1EC86B6DE1D1277087B0F4E9342A2C23D4559A1B9294AF3A77FF5DAB7CCD571",
+      "WordPages": 2,
+      "WordAnchors": [
+        {
+          "Text": "Public first-page heading.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 84.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public continuation body.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 84.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "All quantities",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 711.0960083007812,
+          "Size": 11.039999961853027
+        }
+      ],
+      "FirstPageFontPoints": 11,
+      "ContinuationFontPoints": 11
+    },
+    {
+      "Id": "page-origin-first11-continuation11",
+      "Mode": "all-word-compatible",
+      "InputSha256": "E13432457B8FD542F25B80640108D36B4F3ED0D55A8FB1DA3E508DC74C31D848",
+      "WordPdfSha256": "436938BD77752F07B147C978CFC9ECAFD4C65FD378B4BCE5F7B48A793CD6AB11",
+      "WordPages": 2,
+      "WordAnchors": [
+        {
+          "Text": "Public first-page heading.",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 159.66998291015625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "Public continuation body.",
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 159.66998291015625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "All quantities",
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 634.6600341796875,
+          "Size": 8.35200023651123
+        }
+      ],
+      "FirstPageFontPoints": 11,
+      "ContinuationFontPoints": 11
+    },
+    {
+      "Id": "page-origin-first18-continuation11",
+      "Mode": "final-preserve",
+      "InputSha256": "AF8604EBF64282ECBE3F4C8FB0D4D9029791CACFA245021669E19B0EA63E1B00",
+      "WordPdfSha256": "9158669B180177512524A2B2929615EE049BE48B1BB5E0D52D50BA64D5B618FB",
+      "WordPages": 2,
+      "WordAnchors": [
+        {
+          "Text": "Public first-page heading.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 91.46002197265625,
+          "Size": 18.0
+        },
+        {
+          "Text": "Public continuation body.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 84.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "All quantities",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 711.0960083007812,
+          "Size": 11.039999961853027
+        }
+      ],
+      "FirstPageFontPoints": 18,
+      "ContinuationFontPoints": 11
+    },
+    {
+      "Id": "page-origin-first18-continuation11",
+      "Mode": "all-word-compatible",
+      "InputSha256": "AF8604EBF64282ECBE3F4C8FB0D4D9029791CACFA245021669E19B0EA63E1B00",
+      "WordPdfSha256": "337248EA452F021C00D5E0928B4403EF12AD20E4C02D3213968C59CA071D7EFD",
+      "WordPages": 2,
+      "WordAnchors": [
+        {
+          "Text": "Public first-page heading.",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 164.760009765625,
+          "Size": 13.631999969482422
+        },
+        {
+          "Text": "Public continuation body.",
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 159.66998291015625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "All quantities",
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 634.6600341796875,
+          "Size": 8.35200023651123
+        }
+      ],
+      "FirstPageFontPoints": 18,
+      "ContinuationFontPoints": 11
+    },
+    {
+      "Id": "page-origin-first24-continuation11",
+      "Mode": "final-preserve",
+      "InputSha256": "079FB35EAE4C9CE8EB8AFCC57E4D444338BD7B79539620E29A0B3592D2CA7D28",
+      "WordPdfSha256": "6D3EB987E6893897DB30A53CEF29109D0663E4862EB3A7F247004606D6F59AE9",
+      "WordPages": 2,
+      "WordAnchors": [
+        {
+          "Text": "Public first-page heading.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 97.0999755859375,
+          "Size": 24.0
+        },
+        {
+          "Text": "Public continuation body.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 84.739990234375,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "All quantities",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 711.0960083007812,
+          "Size": 11.039999961853027
+        }
+      ],
+      "FirstPageFontPoints": 24,
+      "ContinuationFontPoints": 11
+    },
+    {
+      "Id": "page-origin-first24-continuation11",
+      "Mode": "all-word-compatible",
+      "InputSha256": "079FB35EAE4C9CE8EB8AFCC57E4D444338BD7B79539620E29A0B3592D2CA7D28",
+      "WordPdfSha256": "AB2E24191EE2FC0E74C03E56D524BC7C4AEFD1109711C3707D161DA81AF75515",
+      "WordPages": 2,
+      "WordAnchors": [
+        {
+          "Text": "Public first-page heading.",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 169.030029296875,
+          "Size": 18.191999435424805
+        },
+        {
+          "Text": "Public continuation body.",
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 159.66998291015625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "All quantities",
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 634.6600341796875,
+          "Size": 8.35200023651123
+        }
+      ],
+      "FirstPageFontPoints": 24,
+      "ContinuationFontPoints": 11
+    },
+    {
+      "Id": "page-origin-first18-continuation18",
+      "Mode": "final-preserve",
+      "InputSha256": "8DAB047ED29E8532817ECB24864B4A4400D6D5FEF7519AC8D5EDF0284B450502",
+      "WordPdfSha256": "CE0F2D156A70F017E99A6A6A3671F9D785307F514AC65C0F013FA43871150DAD",
+      "WordPages": 2,
+      "WordAnchors": [
+        {
+          "Text": "Public first-page heading.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 91.46002197265625,
+          "Size": 18.0
+        },
+        {
+          "Text": "Public continuation body.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 91.46002197265625,
+          "Size": 18.0
+        },
+        {
+          "Text": "All quantities",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 711.0960083007812,
+          "Size": 11.039999961853027
+        }
+      ],
+      "FirstPageFontPoints": 18,
+      "ContinuationFontPoints": 18
+    },
+    {
+      "Id": "page-origin-first18-continuation18",
+      "Mode": "all-word-compatible",
+      "InputSha256": "8DAB047ED29E8532817ECB24864B4A4400D6D5FEF7519AC8D5EDF0284B450502",
+      "WordPdfSha256": "48A0CA175444D03372C0189F885A8FD5D2D90A6630AF83808AEAD2FD1EE6E5D9",
+      "WordPages": 2,
+      "WordAnchors": [
+        {
+          "Text": "Public first-page heading.",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 164.760009765625,
+          "Size": 13.631999969482422
+        },
+        {
+          "Text": "Public continuation body.",
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 164.760009765625,
+          "Size": 13.631999969482422
+        },
+        {
+          "Text": "All quantities",
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 634.6600341796875,
+          "Size": 8.35200023651123
+        }
+      ],
+      "FirstPageFontPoints": 18,
+      "ContinuationFontPoints": 18
+    },
+    {
+      "Id": "page-origin-bare-first11",
+      "Mode": "final-preserve",
+      "InputSha256": "6B81DE4FAEBC415498086CC079873D0F9664F0AD4A466F6AA601A0627A19CA02",
+      "WordPdfSha256": "0E0B4C88D37FEFD4E033B5750058B88F9F267D9BD7F68A41697AED5DD2B8A5D6",
+      "WordPages": 2,
+      "WordAnchors": [
+        {
+          "Text": "Public first-page heading.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.46002197265625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public continuation body.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 82.46002197265625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "All quantities",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 711.0960083007812,
+          "Size": 11.039999961853027
+        }
+      ],
+      "FirstPageFontPoints": 11,
+      "ContinuationFontPoints": 11
+    },
+    {
+      "Id": "page-origin-bare-first11",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6B81DE4FAEBC415498086CC079873D0F9664F0AD4A466F6AA601A0627A19CA02",
+      "WordPdfSha256": "0D377C5C880A0018DEA75FC508CA317B9E2E77283370F02E7124D0A8D8C12BFF",
+      "WordPages": 2,
+      "WordAnchors": [
+        {
+          "Text": "Public first-page heading.",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 157.94000244140625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "Public continuation body.",
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 157.94000244140625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "All quantities",
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 634.6600341796875,
+          "Size": 8.35200023651123
+        }
+      ],
+      "FirstPageFontPoints": 11,
+      "ContinuationFontPoints": 11
+    },
+    {
+      "Id": "page-origin-bare-first24",
+      "Mode": "final-preserve",
+      "InputSha256": "F887A230B065FBDD37F96B1FCE6F347DDEB2E7C91B0D882EEFD332B7B3049F62",
+      "WordPdfSha256": "DAE3DF45AA301E87EB6E478305F6CCE328D91446A686979D75C9F0406B207387",
+      "WordPages": 2,
+      "WordAnchors": [
+        {
+          "Text": "Public first-page heading.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 94.82000732421875,
+          "Size": 24.0
+        },
+        {
+          "Text": "Public continuation body.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 82.46002197265625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "All quantities",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 711.0960083007812,
+          "Size": 11.039999961853027
+        }
+      ],
+      "FirstPageFontPoints": 24,
+      "ContinuationFontPoints": 11
+    },
+    {
+      "Id": "page-origin-bare-first24",
+      "Mode": "all-word-compatible",
+      "InputSha256": "F887A230B065FBDD37F96B1FCE6F347DDEB2E7C91B0D882EEFD332B7B3049F62",
+      "WordPdfSha256": "98021A4C770BCA3E39A56E90A5EDFF13B3D62B668B8FD713D2C0A66D97394868",
+      "WordPages": 2,
+      "WordAnchors": [
+        {
+          "Text": "Public first-page heading.",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 167.29998779296875,
+          "Size": 18.191999435424805
+        },
+        {
+          "Text": "Public continuation body.",
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 157.94000244140625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "All quantities",
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 634.6600341796875,
+          "Size": 8.35200023651123
+        }
+      ],
+      "FirstPageFontPoints": 24,
+      "ContinuationFontPoints": 11
+    },
+    {
+      "Id": "page-origin-header-first11",
+      "Mode": "final-preserve",
+      "InputSha256": "06271D202A7458F8AB9E1C5962627826A657E3B32283B256621CA418EA7A7ABC",
+      "WordPdfSha256": "22FA7FC4872E6A3110D1CEDD79E2551456476AFE2A5556CEDFF537DD1628F284",
+      "WordPages": 2,
+      "WordAnchors": [
+        {
+          "Text": "Public first-page heading.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 82.46002197265625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "Public continuation body.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 82.46002197265625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "All quantities",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 711.0960083007812,
+          "Size": 11.039999961853027
+        }
+      ],
+      "FirstPageFontPoints": 11,
+      "ContinuationFontPoints": 11
+    },
+    {
+      "Id": "page-origin-header-first11",
+      "Mode": "all-word-compatible",
+      "InputSha256": "06271D202A7458F8AB9E1C5962627826A657E3B32283B256621CA418EA7A7ABC",
+      "WordPdfSha256": "C2BC149029A73F5932D5A66B2000DA8B25C2BD204C2BDECD1CC57DD8DEB4113A",
+      "WordPages": 2,
+      "WordAnchors": [
+        {
+          "Text": "Public first-page heading.",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 157.94000244140625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "Public continuation body.",
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 157.94000244140625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "All quantities",
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 634.6600341796875,
+          "Size": 8.35200023651123
+        }
+      ],
+      "FirstPageFontPoints": 11,
+      "ContinuationFontPoints": 11
+    },
+    {
+      "Id": "page-origin-header-first24",
+      "Mode": "final-preserve",
+      "InputSha256": "59E00DAAE4E98B03700A8C8447EF6371F75E79D36EE62D4A456EB745BC7F3406",
+      "WordPdfSha256": "1C2962B30741754F862E41BB48D94069C5BAA1C05582B2F221C78C469C1BBAAA",
+      "WordPages": 2,
+      "WordAnchors": [
+        {
+          "Text": "Public first-page heading.",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 94.82000732421875,
+          "Size": 24.0
+        },
+        {
+          "Text": "Public continuation body.",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 82.46002197265625,
+          "Size": 11.039999961853027
+        },
+        {
+          "Text": "All quantities",
+          "Page": 2,
+          "X": 72.02400207519531,
+          "Y": 711.0960083007812,
+          "Size": 11.039999961853027
+        }
+      ],
+      "FirstPageFontPoints": 24,
+      "ContinuationFontPoints": 11
+    },
+    {
+      "Id": "page-origin-header-first24",
+      "Mode": "all-word-compatible",
+      "InputSha256": "59E00DAAE4E98B03700A8C8447EF6371F75E79D36EE62D4A456EB745BC7F3406",
+      "WordPdfSha256": "0489E983D906C68F899F2F7FE24B859980F48A96BA6A9C88F1D642B958FE7519",
+      "WordPages": 2,
+      "WordAnchors": [
+        {
+          "Text": "Public first-page heading.",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 167.29998779296875,
+          "Size": 18.191999435424805
+        },
+        {
+          "Text": "Public continuation body.",
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 157.94000244140625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "All quantities",
+          "Page": 2,
+          "X": 54.599998474121094,
+          "Y": 634.6600341796875,
+          "Size": 8.35200023651123
+        }
+      ],
+      "FirstPageFontPoints": 24,
+      "ContinuationFontPoints": 11
+    }
+  ]
+}

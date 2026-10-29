@@ -84,6 +84,7 @@ internal sealed partial class DocxRenderer
         // R12: page drawings come from the once-per-pass page index instead of
         // re-filtering both drawing lists for every page.
         FloatingDrawingPageIndex.PageIndexPair drawingPages = FloatingDrawingPageIndex.BuildPair(layout, cancellationToken);
+        bool separatePlainHeaderOrigins = CanSeparatePlainHeaderOrigins(layout);
         var codepoints = new HashSet<int>();
         var titleCodepoints = new HashSet<int>();
         var bodyCodepoints = new HashSet<int>();
@@ -95,7 +96,7 @@ internal sealed partial class DocxRenderer
                 layout.Pages[pageIndex],
                 layout.RelatedStories,
                 drawingPages.PageAll(pageIndex),
-                markupContext,
+                WithPageTextEmissionOffsets(markupContext, layout, pageIndex, separatePlainHeaderOrigins),
                 labelResource.Embedded,
                 bodyCoverageResource.Embedded,
                 fontResources,

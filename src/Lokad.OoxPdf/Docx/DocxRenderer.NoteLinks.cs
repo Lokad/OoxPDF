@@ -42,7 +42,8 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken)
     {
         if (destinations.Count == 0) yield break;
-        DocxMarkupContext pageContext = WithPageTextEmissionXOffset(markupContext, page);
+        // The caller supplies the owning page context used for body painting.
+        DocxMarkupContext pageContext = markupContext;
         double scale = ResolveTextEmissionFontScale(pageContext);
         double yOffset = ResolveTextEmissionBaselineOffset(pageContext);
         double xOffset = ResolveTextEmissionXOffset(pageContext);

@@ -1,4 +1,27 @@
 {
+  "docx-page-print-origins": [
+      "DocxContinuationPagePaintIgnoresOtherPageFontSizes",
+      "DocxPagePrintOriginsMatchIndependentWordViews",
+      "DocxPagePrintOriginsKeepInspectionLinksAndNoteTargetsTogether",
+      "DocxPrintedBodyBoundaryRecoversNoteDesignCoordinates",
+      "DocxComposedInlineFrameReportRetainsIndependentWordPagesAndContent",
+      "DocxCompoundTotalCountRetainsCompleteWordReportAndActualFieldValue",
+      "DocxInlineCompositionFittingEndnotesOwnBoundariesWithoutChangingTypography",
+      "DocxInlineCompositionFittingEndnotesRetainComplexFrameFallbacks",
+      "DocxInlineCompositionFittingEndnotesMatchIndependentBodyAndStoryBoundaries",
+      "DocxInlineCompositionFittingNestedEndnotesMatchIndependentWordBoundaries",
+      "DocxInlineCompositionFittingNestedEndnotesRetainAncestorChildAndPartialClipFallbacks",
+      "DocxInlineCompositionMinimumStaticFramesMatchWordAndKeepBodyAdmission",
+      "DocxInlineCompositionTypographicMinimumStaticFramesKeepIndependentWordBaselines",
+      "DocxStaticSvgFramesPreserveIndependentWordBodyBaselines",
+      "DocxPassiveStaticPicturesKeepIntrusiveUnownedAndUnmeasuredFallbacks",
+      "DocxStaticPictureOnlyFramesKeepDeclaredAndMixedTextFallbacks",
+      "DocxInactiveStaticVariantsKeepSelectedRichStoryFallbacks",
+      "DocxMinimumBodyLineLeadingKeepsEmissionAndPreserveGeometryCoherent",
+      "DocxMinimumBodyFlowDefaultNotesKeepSlotsRegionsAndActualTargets",
+      "DocxMinimumBodyFlowOrdinaryRichWrappedAndColumnPathsKeepFallback",
+      "DocxNativeStaticMathRetainsStoryFlow"
+  ],
   "docx-local-minimum-leading": [
       "DocxOrdinaryMinimumSpacing",
       "DocxPassiveStaticPicturesKeepIntrusiveUnownedAndUnmeasuredFallbacks",
