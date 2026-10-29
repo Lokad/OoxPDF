@@ -10,6 +10,8 @@
   horizontal charts and theme changes.
 - Restores category legends for varying-color bar charts and reserves space for
   wrapped legend rows; crowded frames report clipped entries.
+- DOCX: preserves plain comment paragraph breaks beyond five paragraphs, using
+  shared measured rows for balloon height and painting.
 
 ## 0.2.0 — 2026-10-29
 

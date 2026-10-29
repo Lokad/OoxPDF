@@ -29,6 +29,13 @@ inversion, explicit paint, neighboring axes/labels and line-stroke controls.
 The 205-point witness retains one point-specific, one-byte rounding residual;
 whole-slide thresholds are unchanged and remain separate from color assertions.
 
+`DocxCommentsTests.PlainParagraphs.cs` pins eight independent Office controls for
+plain comment paragraphs, including neighboring counts and a wrapped middle.
+The mixed-balloon matrix checks measurement/painting and unsupported fallbacks;
+the reader test owns paragraph-mark retention. Select their union once through
+`docx-plain-balloon-paragraphs`. The exhaustive mixed-body matrix remains a broader
+milestone check; it is distinct from the compact paragraph-boundary matrix.
+
 Use `framework-compatibility` in `tools/qualification-capabilities.json` for the
 small .NET 10 lane: public conversion, streams, cancellation, atomic publication,
 fonts, CLI and three composed-document controls. Extensive suites use .NET 11.

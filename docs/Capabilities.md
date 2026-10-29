@@ -167,6 +167,10 @@ Approximate or restricted:
   revisions remain partial. Remaining typography/geometry and extraction failures
   are recorded in [document review](PreviewVisualReview.md); successful conversion
   does not turn a failed visual threshold into a pass.
+  Plain comment paragraphs share measured rows without a five-paragraph limit;
+  independent Office controls cover two through seven paragraphs and middle-row
+  wrapping. Mixed terminal formatting and explicit paragraph-spacing combinations
+  retain their qualified fallbacks; whole-page parity remains unresolved.
 - SVG gradients follow Office-visible centered focal geometry and smooth preview
   transparency. Broader SVG composition, transformed picture-link combinations
   and some alpha/color effects retain restrictions and explicit residuals.
