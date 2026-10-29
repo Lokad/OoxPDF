@@ -16,7 +16,7 @@ Use host concurrency limits and representative measurements to size headroom.
 ## Measurement scope
 
 The historical observations below pin older source/runtime identities; they are
-not measurements of the current preview. Calling-thread allocations are allocation
+not measurements of the current release. Calling-thread allocations are allocation
 volume, not peak or retained memory, and exclude background threads. Diagnostic
 stages overlap and must not be added. Sampled heap/process peaks may miss short
 spikes. Font discovery, JIT, installed fonts, GC configuration, concurrency and

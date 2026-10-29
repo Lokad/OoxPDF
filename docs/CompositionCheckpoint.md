@@ -1,8 +1,8 @@
 # Composed-document reliability checkpoint
 
-The **0.2.0-preview** candidate remains unpublished. Current source/runtime,
+The **0.2.0** candidate remains unpublished. Current source/runtime,
 Windows/Linux results, package identity and CI provenance are recorded in
-[PreviewQualification.md](PreviewQualification.md). See [preview scope](PreviewRelease.md)
+[PreviewQualification.md](PreviewQualification.md). See [release scope](PreviewRelease.md)
 and [caller migration](PublicApiChanges.md).
 
 The fixed portfolio has nine sources and sixteen outcomes across public Final

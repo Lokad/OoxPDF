@@ -1,4 +1,4 @@
-# Migrating to 0.2.0-preview
+# Migrating to 0.2.0
 
 PPTX table paragraph-default bold and color now override table styling, including
 an explicit `b="0"`. Direct run formatting and inherited table defaults retain
@@ -21,8 +21,8 @@ these incomplete packages. No public declarations or options changed; callers
 should inspect diagnostics when accepting conversions with omitted picture pixels.
 
 These intentional changes from 0.1.5 require recompiling callers. Package and
-informational version are `0.2.0-preview`; assembly/file version is `0.2.0.0`.
-See [preview scope and qualification](PreviewRelease.md). Publication is deferred.
+informational version are `0.2.0`; assembly/file version is `0.2.0.0`.
+See [release scope and qualification](PreviewRelease.md). Publication is deferred.
 
 Installed-font discovery also matches supported English/localized family-name
 records for the same face. Canonical resolved names, program identities and

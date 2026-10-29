@@ -1,4 +1,14 @@
-# 0.2.0-preview qualification
+# 0.2.0 qualification
+
+Release preparation sets package/informational version to **0.2.0** and retains
+assembly/file version **0.2.0.0**. Renderer C# is unchanged from the qualified
+preview below; its Office references, thresholds and residuals remain applicable.
+The package includes relative documentation targets, and its smoke check verifies
+all shipped Markdown links. Build/runtime identities, API and metadata checks,
+Windows/Linux package consumers and smoke output identities are recorded in
+artifacts/release-020-20261029/qualification.json. Publication is deferred.
+
+## Retained preview renderer qualification
 
 The bounded PPTX inheritance milestone is qualified. Publication, performance
 optimization and broader feature expansion remain deferred. Production source:

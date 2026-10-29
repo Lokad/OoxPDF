@@ -3,7 +3,7 @@
 Supported OMML is rendered through managed math boxes, shared font preparation
 and ordered inline measurement. This is approximate equation rendering, with
 explicit fallbacks for unsupported structures; it is not general Word equation
-layout. See [preview scope](PreviewRelease.md) and [capabilities](Capabilities.md).
+layout. See [release scope](PreviewRelease.md) and [capabilities](Capabilities.md).
 
 ## Supported combinations
 
@@ -65,7 +65,7 @@ General operator breaking, broad OMML nesting and arbitrary floating/nested stor
 remain deferred. Do not extend font/size/document-shape exceptions without
 independent Office evidence for a semantic rule.
 
-[Preview qualification](PreviewQualification.md) records the current frozen runtime,
+[Release qualification](PreviewQualification.md) records the current frozen runtime,
 portfolio and residuals. [Composition history](CompositionCheckpoint.md) keeps
 milestone evidence. The superseded equation-development journal remains in
 [Git history](https://github.com/Lokad/OoxPDF/blob/78e7589ef3f0ddc9b1fbc38c94fa6743fd7fde16/docs/docx-equations.md).

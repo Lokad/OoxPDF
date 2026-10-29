@@ -3,17 +3,17 @@
     <TargetFramework>net10.0</TargetFramework>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <PackageId>Lokad.OoxPdf</PackageId>
-    <Version>0.2.0-preview</Version>
+    <Version>0.2.0</Version>
     <AssemblyVersion>0.2.0.0</AssemblyVersion>
     <FileVersion>0.2.0.0</FileVersion>
-    <InformationalVersion>0.2.0-preview</InformationalVersion>
+    <InformationalVersion>0.2.0</InformationalVersion>
     <Authors>Lokad</Authors>
     <Company>Lokad</Company>
     <Description>Dependency-free OOXML to PDF renderer for PPTX and DOCX corporate documents.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <PackageIcon>icon.png</PackageIcon>
-    <PackageReleaseNotes>0.2.0-preview improves composed DOCX content, shared placement and picture handling, and simplifies conversion resource control. Breaking API removals and caller migration: docs/PublicApiChanges.md. Supported scope, approximations and preview qualification: docs/PreviewRelease.md. Publication is deferred.</PackageReleaseNotes>
+    <PackageReleaseNotes>0.2.0 improves composed DOCX content, PPTX inheritance and image handling, and simplifies hosting. Breaking API changes require recompiling callers: docs/PublicApiChanges.md. Rendering scope and limitations: docs/PreviewRelease.md. See CHANGELOG.md for release notes.</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/Lokad/OoxPDF</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Lokad/OoxPDF.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

@@ -1,9 +1,9 @@
 # Capabilities
 
-This is the supported scope of **0.2.0-preview**, including approximations and
+This is the supported scope of **0.2.0**, including approximations and
 explicit fallbacks. A successful conversion or absence of diagnostics does not
 establish Office fidelity. Features outside this inventory remain unsupported.
-See [preview scope](PreviewRelease.md), [measured qualification](PreviewQualification.md)
+See [release scope](PreviewRelease.md), [measured qualification](PreviewQualification.md)
 and [diagnostics](Diagnostics.md) before relying on a conversion.
 
 ## Shared input and compatibility behavior

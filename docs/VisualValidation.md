@@ -154,7 +154,7 @@ A supported label requires the applicable unchanged gates and source/visual revi
 manifest coverage and a successful conversion alone are insufficient.
 
 See [Capabilities.md](Capabilities.md) for family constraints and
-[PreviewRelease.md](PreviewRelease.md) for the finite preview gate. SVG focal
+[PreviewRelease.md](PreviewRelease.md) for the finite release gate. SVG focal
 fills follow Office-visible centered gradients; smooth transparency follows the
 Office PNG preview where its PDF export is defective. Charts, typography and
 DOCX markup retain explicit approximations. Do not infer parity from a family name.
@@ -295,7 +295,7 @@ locked case isolates the remaining spacing, table and pixel differences.
 
 ## Current status and history
 
-See [preview qualification](PreviewQualification.md), [preview scope](PreviewRelease.md)
+See [release qualification](PreviewQualification.md), [release scope](PreviewRelease.md)
 and [composition history](CompositionCheckpoint.md) for accepted outcomes and
 explicit residuals. Fourteen fixed-portfolio DOCX strict gates remain failed;
 manifest validity counts are separate from Office agreement. Keep default Final

@@ -1,11 +1,11 @@
-# 0.2.0-preview candidate
+# 0.2.0 release candidate
 
-The candidate is prepared for .NET 10. Publication is deferred. This is a
-preview of the supported scope below, with known rendering approximations; it
+The candidate is prepared for .NET 10. Publication is deferred. It supports
+the scope below, with known rendering approximations; it
 does not promise arbitrary-document fidelity or pixel-perfect Office parity.
 [Caller migration](PublicApiChanges.md) lists the intentional API removals and
 requires recompiling consumers. Package/informational version is
-`0.2.0-preview`; assembly/file version is `0.2.0.0`.
+`0.2.0`; assembly/file version is `0.2.0.0`.
 
 ## Rendering scope
 

@@ -4,7 +4,7 @@ Convert `.pptx` presentations and `.docx` documents to PDF in **.NET 10**.
 The library is safe managed code with no runtime dependencies, Office automation
 or native libraries. Office and PDFium are used only by separate validation tools.
 
-The next release is **0.2.0**, currently unreleased. Read the
+The **0.2.0** release is prepared; publication is pending. Read the
 [changelog](CHANGELOG.md), [migration guide](docs/PublicApiChanges.md) and
 [supported scope and limitations](docs/PreviewRelease.md).
 

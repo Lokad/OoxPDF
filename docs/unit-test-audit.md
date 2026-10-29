@@ -21,7 +21,7 @@ The testing principles remain useful:
   then run broader/platform/package qualification at a meaningful milestone.
   Reuse one frozen artifact and proven identical outputs/references.
 
-Current evidence is in [preview qualification](PreviewQualification.md).
+Current evidence is in [release qualification](PreviewQualification.md).
 [Visual validation](VisualValidation.md) describes the workflow, and
 [diagnostics](Diagnostics.md) and [caller migration](PublicApiChanges.md)
 describe the current output totals, staged emission and coarse memory admission.
