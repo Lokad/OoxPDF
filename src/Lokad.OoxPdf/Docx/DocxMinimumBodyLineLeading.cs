@@ -8,7 +8,8 @@ internal static class DocxMinimumBodyLineLeading
     {
         adjusted = source;
         cancellationToken.ThrowIfCancellationRequested();
-        if (!DocxPlainBodyFrame.HasKnownBodyFrame(document)) return false;
+        if (!DocxPlainBodyFrame.HasKnownBodyFrame(document) ||
+            !DocxPlainBodyFrame.HasSupportedStaticLayout(document, source)) return false;
         var counts = new Dictionary<DocxParagraph, int>(ReferenceEqualityComparer.Instance);
         foreach (var line in source.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>())
         {

@@ -14,9 +14,12 @@ internal static class DocxPlainBodyFrame
         HasSingleLineParagraphs(layout) &&
         !layout.Pages.Any(p => p.ColumnFrames.Count > 1) &&
         !document.Paragraphs.Any(p => p.KeepRules.KeepNext == true || p.KeepRules.KeepLines == true) &&
-        (HasNoStaticStories(document)
+        HasSupportedStaticLayout(document, layout);
+
+    internal static bool HasSupportedStaticLayout(DocxDocument document, DocxLayout layout) =>
+        HasNoStaticStories(document)
             ? !layout.Pages.Any(p => p.StaticTextLines.Count != 0 || p.StaticInlineImages.Count != 0)
-            : HasIndependentStaticLayout(layout));
+            : HasIndependentStaticLayout(layout);
 
     internal static bool IsEligible(DocxDocument document, DocxLayout layout) =>
         HasPlainBody(document) && HasSingleLineLayout(document, layout);

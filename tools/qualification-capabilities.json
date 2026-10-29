@@ -1,5 +1,11 @@
 {
   "docx-local-minimum-leading": [
+      "DocxOrdinaryMinimumSpacing",
+      "DocxPassiveStaticPicturesKeepIntrusiveUnownedAndUnmeasuredFallbacks",
+      "DocxPassiveStaticTextKeepsIntrusiveUnsupportedAndUnmeasuredFallbacks",
+      "DocxInactiveStaticVariantsKeepSelectedRichStoryFallbacks",
+      "DocxWrappedFootnoteNumbersKeepUnqualifiedSourceFrames",
+      "DocxWrappedCalibriKerningRetainsOtherFontsSizesAndLayoutGates",
       "DocxMinimumLeadingUsesLocalSlotsAcrossNeighborsAndSlotGrowth",
       "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames",
       "DocxMinimumHyperlinksKeepVisibleFramesAndTargets",

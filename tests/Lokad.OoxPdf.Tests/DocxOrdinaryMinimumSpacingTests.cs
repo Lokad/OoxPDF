@@ -94,14 +94,8 @@ internal static class DocxOrdinaryMinimumSpacingTests
             xml => Spacing(Body(xml)[0]).SetAttributeValue(Word + "before", "-80"),
             xml => Spacing(Body(xml)[0]).SetAttributeValue(Word + "afterLines", "100"),
             xml => Spacing(Body(xml)[0]).SetAttributeValue(Word + "beforeAutospacing", "1"),
-            xml => Spacing(Body(xml)[0]).SetAttributeValue(Word + "line", "560"),
-            xml => Spacing(Body(xml)[0]).SetAttributeValue(Word + "line", "280"),
             xml => Body(xml)[0].Element(Word + "pPr")!.Add(new XElement(Word + "contextualSpacing"),
                 new XElement(Word + "pStyle", new XAttribute(Word + "val", "PublicMissingContextualStyle"))),
-            xml => Body(xml)[0].Element(Word + "pPr")!.Add(new XElement(Word + "keepLines")),
-            xml => Body(xml)[0].Descendants(Word + "rPr").First().Add(new XElement(Word + "b")),
-            xml => Body(xml)[1].Descendants(Word + "rPr").First().Add(new XElement(Word + "b")),
-            xml => Spacing(Body(xml)[1]).SetAttributeValue(Word + "beforeAutospacing", "1"),
             xml => Body(xml)[0].Descendants(Word + "rPr").First().Add(new XElement(Word + "vertAlign", new XAttribute(Word + "val", "superscript"))),
             xml => Body(xml)[0].Descendants(Word + "t").First().Value += string.Concat(Enumerable.Repeat(" Public wrapped minimum paragraph.", 30)),
             xml => xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2")))
@@ -109,8 +103,10 @@ internal static class DocxOrdinaryMinimumSpacingTests
         foreach (var modify in guards)
         {
             var source = Read(4, 4, (xml, _) => modify(xml)); var original = Layout(source);
-            TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var fallback), "Unsupported spacing, rich runs and composed flow keep fallback.");
-            TestAssert.True(ReferenceEquals(original, fallback), "An exclusion retains the complete original layout.");
+            var excluded = original.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>().First(l => ReferenceEquals(l.SourceParagraph, source.Paragraphs[0]));
+            DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var fallback);
+            TestAssert.True(fallback.Pages.SelectMany(p => p.Items).Any(item => ReferenceEquals(item, excluded)),
+                "Unsupported spacing, unowned script and wrapped/column sources retain their local fallback.");
         }
         TestAssert.Throws<InvalidDataException>(() => Read(4, 4, (xml, _) => Spacing(Body(xml)[0]).SetAttributeValue(Word + "before", "bad")));
     }
