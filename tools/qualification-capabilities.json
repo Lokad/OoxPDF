@@ -1,4 +1,15 @@
 {
+  "docx-minimum-navigation": [
+      "DocxMinimumHyperlinksKeepVisibleFramesAndTargets",
+      "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames",
+      "DocxMinimumBookmarksKeepSourceMetadataOutOfVisibleFrames",
+      "DocxMinimumBodyLineLeadingKeepsCapacityAndParagraphTop",
+      "DocxMinimumBodyLineLeadingKeepsRuleMarkerAndSlotGuards",
+      "DocxMinimumBodyLineLeadingKeepsEmissionAndPreserveGeometryCoherent",
+      "DocxMinimumBodyFlowDefaultNotesKeepSlotsRegionsAndActualTargets",
+      "DocxMinimumBodyFlowOrdinaryPlacementKeepsCapacityAndPreserveEmission",
+      "DocxMinimumBodyFlowOrdinaryRichWrappedAndColumnPathsKeepFallback"
+  ],
   "pptx-chart-titles": [
       "PptxAutomaticChartTitlePlacementKeepsWholeLinkedLine",
       "PptxAutomaticChartTitleUsesAuthoredChartSizeBeforeGalleryDefaults",

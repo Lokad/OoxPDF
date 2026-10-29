@@ -9,7 +9,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent minimum/bookmark controls use installed Windows fonts.");
-        foreach (string name in new[] { "minimum-bookmark-office.json", "minimum-bookmark-static-office.json" })
+        foreach (string name in new[] { "minimum-bookmark-office.json", "minimum-bookmark-static-office.json", "minimum-navigation-office.json" })
         {
             using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath(name)));
             foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
@@ -30,6 +30,38 @@ internal static partial class DocxInlineCompositionTests
                     TestAssert.True(Math.Abs(show.Y - anchor.GetProperty("Y").GetDouble()) < .5d,
                         $"Neutral metadata and requested Final/Word modes retain the qualified source frame: {row.GetProperty("Id").GetString()}/{mode}/{text}/{show.Y}.");
                 }
+            }
+        }
+    }
+
+    public static void DocxMinimumHyperlinksKeepVisibleFramesAndTargets()
+    {
+        foreach (string context in new[] { "ordinary11", "ordinary12" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new TestFaceFontResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var control = DocxTests.ReadDocx(NestedMathCasePath($"minimum-navigation-{context}-control.docx"), mode);
+            var before = renderer.RenderBlankPages(control, null, default).ToArray();
+            foreach (string kind in new[] { "external", "internal" })
+            {
+                var source = DocxTests.ReadDocx(NestedMathCasePath($"minimum-navigation-{context}-{kind}.docx"), mode);
+                TestAssert.Equal(1, source.Paragraphs.Sum(p => p.Hyperlinks.Count));
+                var after = renderer.RenderBlankPages(source, null, default).ToArray();
+                TestAssert.Equal(before.Length, after.Length);
+                for (int page = 0; page < before.Length; page++)
+                {
+                    var expected = DocxCommentsTests.ReadEmbeddedGlyphTextShows(before[page], usePageCoordinates: true)
+                        .Select(show => (show.Text, show.X, show.Y)).ToArray();
+                    var actual = DocxCommentsTests.ReadEmbeddedGlyphTextShows(after[page], usePageCoordinates: true)
+                        .Select(show => (show.Text, show.X, show.Y)).ToArray();
+                    TestAssert.True(expected.SequenceEqual(actual),
+                        "Navigation metadata with unchanged run formatting must preserve all paragraph geometry.");
+                }
+                var link = after.SelectMany(page => page.Annotations).Single();
+                TestAssert.True(link.Width > 0d && link.Height > 0d, "The visible link retains its placed area.");
+                if (kind == "external") TestAssert.Equal("https://example.invalid/minimum-navigation", link.Uri);
+                else TestAssert.Equal(0, link.Destination!.Value.PageIndex);
             }
         }
     }

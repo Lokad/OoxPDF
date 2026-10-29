@@ -1,0 +1,317 @@
+{
+  "Scope": "Fresh independent Word 16.0.20527.20088 Final/review exports. Navigation metadata alone preserves all visible run origins; direct EMF/PNG captures remain uncalibrated on locked desktop. Existing 0.5pt baseline threshold retained.",
+  "Rows": [
+    {
+      "Id": "minimum-navigation-ordinary12-control",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/minimum-navigation-ordinary12-control.docx",
+      "InputSha256": "FDBB72D50A3E29170603D3EA90A62C8489176A334DD20E77C9DB4E6B086E22BC",
+      "ReferencePdfSha256": "65AEB497B8DFAAFC5A13BDAD33125DD1B8D2E91B740272284E03C17EA0F4FD1C",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-navigation-ordinary12-control",
+      "Mode": "all-word-compatible",
+      "Input": "CompositionProbes/minimum-navigation-ordinary12-control.docx",
+      "InputSha256": "FDBB72D50A3E29170603D3EA90A62C8489176A334DD20E77C9DB4E6B086E22BC",
+      "ReferencePdfSha256": "72E37875EB7DBD2E2AD094A8D77FAC6AF45B6B8A5D8A53C13D6CAAF897246064",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-navigation-ordinary12-external",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/minimum-navigation-ordinary12-external.docx",
+      "InputSha256": "16C22B97112F632A9C2449C88F7EE6C270DB61D08FD0C90D1AF3EE932A2046BD",
+      "ReferencePdfSha256": "B02A81C49EC2D66E1C11ABD084A2C19AF143378197E8496943684ED759F5DDD4",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-navigation-ordinary12-external",
+      "Mode": "all-word-compatible",
+      "Input": "CompositionProbes/minimum-navigation-ordinary12-external.docx",
+      "InputSha256": "16C22B97112F632A9C2449C88F7EE6C270DB61D08FD0C90D1AF3EE932A2046BD",
+      "ReferencePdfSha256": "EC347AC005E56A513DAB4DF88F20847A656FE6DAA3A8C5106659CB0EE17D1947",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-navigation-ordinary12-internal",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/minimum-navigation-ordinary12-internal.docx",
+      "InputSha256": "AF074E8C391148168F78CF17C781C7BF208CF40484970BE3791A612279963A7A",
+      "ReferencePdfSha256": "44197625BA1752789BB8926A0E6731D505FED87465E9A8B8BD76AF2B54959DD7",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-navigation-ordinary12-internal",
+      "Mode": "all-word-compatible",
+      "Input": "CompositionProbes/minimum-navigation-ordinary12-internal.docx",
+      "InputSha256": "AF074E8C391148168F78CF17C781C7BF208CF40484970BE3791A612279963A7A",
+      "ReferencePdfSha256": "57712F8FA939E7E1FFC044D5E471F065D9AA52F39A4198BCD6EFB9544C5A5CEB",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 703.1799926757812
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 668.6199951171875
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 633.9400024414062
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 584.6199951171875
+        }
+      ]
+    },
+    {
+      "Id": "minimum-navigation-ordinary11-control",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/minimum-navigation-ordinary11-control.docx",
+      "InputSha256": "D45496ECC878755D5BBC84706D63283935BCD98F9038EF84EB1C27B5F7FD7694",
+      "ReferencePdfSha256": "F86384F1A006B98F837F044D34925BEED43FA1C73E7C9C653DD6849E2BB20584",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 698.97998046875
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 665.5
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 632.1400146484375
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 585.219970703125
+        }
+      ]
+    },
+    {
+      "Id": "minimum-navigation-ordinary11-control",
+      "Mode": "all-word-compatible",
+      "Input": "CompositionProbes/minimum-navigation-ordinary11-control.docx",
+      "InputSha256": "D45496ECC878755D5BBC84706D63283935BCD98F9038EF84EB1C27B5F7FD7694",
+      "ReferencePdfSha256": "A6C54301412077200E401185AE5AAC5D7207B0A8483E4C54BA4D390C9692BD2F",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 698.97998046875
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 665.5
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 632.1400146484375
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 585.219970703125
+        }
+      ]
+    },
+    {
+      "Id": "minimum-navigation-ordinary11-external",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/minimum-navigation-ordinary11-external.docx",
+      "InputSha256": "B04F149E15906011F53295997921BE0A690B9C6D0148298A96894CCF95FF6084",
+      "ReferencePdfSha256": "DD4D05621A06B3529C257CB81579EED4DD8F199BB4FC04608E38A722986A02B9",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 698.97998046875
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 665.5
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 632.1400146484375
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 585.219970703125
+        }
+      ]
+    },
+    {
+      "Id": "minimum-navigation-ordinary11-external",
+      "Mode": "all-word-compatible",
+      "Input": "CompositionProbes/minimum-navigation-ordinary11-external.docx",
+      "InputSha256": "B04F149E15906011F53295997921BE0A690B9C6D0148298A96894CCF95FF6084",
+      "ReferencePdfSha256": "62EC8A1F0CAD0400DAF647C160B24F2FF82FF7015C4A2EFD79D8EC2669683EA6",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 698.97998046875
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 665.5
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 632.1400146484375
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 585.219970703125
+        }
+      ]
+    },
+    {
+      "Id": "minimum-navigation-ordinary11-internal",
+      "Mode": "final-preserve",
+      "Input": "CompositionProbes/minimum-navigation-ordinary11-internal.docx",
+      "InputSha256": "3C4B88C03BE4CCC4B95CA30121A208500E17474403CDF3ED812A20039BB8ACA7",
+      "ReferencePdfSha256": "AE0E2A7FDC01FF57C1F1D292616D1B972B08F677232D582CECCBCA3BD25E96D2",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 698.97998046875
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 665.5
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 632.1400146484375
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 585.219970703125
+        }
+      ]
+    },
+    {
+      "Id": "minimum-navigation-ordinary11-internal",
+      "Mode": "all-word-compatible",
+      "Input": "CompositionProbes/minimum-navigation-ordinary11-internal.docx",
+      "InputSha256": "3C4B88C03BE4CCC4B95CA30121A208500E17474403CDF3ED812A20039BB8ACA7",
+      "ReferencePdfSha256": "B0425B18F3627D6E6E845E26F438C48D099B91729B741257955289AEEC2E66FB",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "Public minimum Top.",
+          "Y": 698.97998046875
+        },
+        {
+          "Text": "Public minimum AfterAlpha.",
+          "Y": 665.5
+        },
+        {
+          "Text": "Public minimum AfterBravo.",
+          "Y": 632.1400146484375
+        },
+        {
+          "Text": "Public minimum AfterDelta.",
+          "Y": 585.219970703125
+        }
+      ]
+    }
+  ]
+}
