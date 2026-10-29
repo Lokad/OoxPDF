@@ -843,7 +843,21 @@ internal sealed record PptxSceneChartSeries(
     string ExplosionValue,
     bool? Smooth,
     string SmoothValue,
-    PptxSceneChartDataLabels DataLabels);
+    PptxSceneChartDataLabels DataLabels)
+{
+    public PptxSceneChartNegativeInversion NegativeInversion { get; init; }
+}
+
+// One source-owned policy for both series defaults and point overrides.
+internal readonly record struct PptxSceneChartNegativeInversion(
+    bool? SeriesValue,
+    IReadOnlyDictionary<int, bool>? PointValues)
+{
+    public bool ForPoint(int index) =>
+        PointValues is not null && PointValues.TryGetValue(index, out bool value)
+            ? value
+            : SeriesValue ?? true;
+}
 
 internal readonly record struct PptxSceneChartNumberPoint(
     int Index,

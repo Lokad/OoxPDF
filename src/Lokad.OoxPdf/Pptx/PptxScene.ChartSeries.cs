@@ -66,10 +66,29 @@ internal sealed partial class PptxSceneBuilder
                 explosionValue,
                 smooth,
                 smoothValue,
-                ReadChartDataLabels(seriesElement, theme, colorMap)));
+                ReadChartDataLabels(seriesElement, theme, colorMap))
+            {
+                NegativeInversion = ReadChartNegativeInversion(seriesElement)
+            });
         }
 
         return series;
+    }
+
+    internal static PptxSceneChartNegativeInversion ReadChartNegativeInversion(XElement series)
+    {
+        bool? seriesValue = ReadOptionalOoxmlBooleanElementWithValue(series, "invertIfNegative").Value;
+        Dictionary<int, bool>? points = null;
+        foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
+        {
+            if (TryReadChartNonNegativeIndex(point, out int index, out _) &&
+                ReadOptionalOoxmlBooleanElementWithValue(point, "invertIfNegative").Value is { } value)
+            {
+                points ??= new Dictionary<int, bool>();
+                points[index] = value;
+            }
+        }
+        return new PptxSceneChartNegativeInversion(seriesValue, points);
     }
 
     private static PptxSceneFillStyle ReadChartSeriesFill(XElement series, PptxTheme theme, PptxColorMap colorMap)

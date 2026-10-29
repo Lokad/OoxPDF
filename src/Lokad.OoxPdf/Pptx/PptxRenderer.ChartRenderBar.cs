@@ -123,11 +123,11 @@ internal sealed partial class PptxRenderer
             {
                 if (stacked)
                 {
-                    RenderStackedHorizontalBars(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, percentStacked, seriesFills, pointFills, pointStrokes, plotOptions.VaryColors.Value, plotOptions.GapWidth, chartStyleId);
+                    RenderStackedHorizontalBars(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, percentStacked, seriesFills, pointFills, pointStrokes, plotOptions, chartStyleId);
                 }
                 else
                 {
-                    RenderClusteredHorizontalBars(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, zeroX, seriesFills, pointFills, pointStrokes, plotOptions.VaryColors.Value, plotOptions.GapWidth, plotOptions.Overlap, chartStyleId);
+                    RenderClusteredHorizontalBars(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, zeroX, seriesFills, pointFills, pointStrokes, plotOptions, chartStyleId);
                 }
 
                 return;
@@ -135,7 +135,7 @@ internal sealed partial class PptxRenderer
 
             if (stacked)
             {
-                RenderStackedColumns(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, percentStacked, seriesFills, pointFills, pointStrokes, plotOptions.VaryColors.Value, plotOptions.GapWidth, chartStyleId);
+                RenderStackedColumns(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, percentStacked, seriesFills, pointFills, pointStrokes, plotOptions, chartStyleId);
                 return;
             }
 
@@ -154,7 +154,7 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
-                    ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseSeries.Count, plotOptions.VaryColors.Value, seriesFills, pointFills, values.Count, true, value);
+                    ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseSeries.Count, plotOptions.VaryColors.Value, seriesFills, pointFills, values.Count, true, value, plotOptions.InvertsNegativePoint(seriesIndex, category));
                     double barX = categoryX + seriesIndex * step;
                     double valueY = ChartValueToPlotCoordinate(valueExtents, value, plotY, plotHeight, valueAxisOptions.Reversed);
                     double barY = Math.Min(columnBaseY, valueY);
@@ -165,7 +165,7 @@ internal sealed partial class PptxRenderer
                         FillChartRectangleInPlotClip(graphics, plotClipBox, barX, barY, barWidth, barHeight, fill);
                     }
                     PaintStyleColumnOutline(graphics, plotClipBox, chartStyleId, !isStyleDriven, fill, barX, barY, barWidth, barHeight);
-                    StrokeChartPointRectangleInPlotClip(graphics, plotClipBox, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight, ResolveNegativeBarFallbackStroke(pointStrokes, seriesIndex, category, value));
+                    StrokeChartPointRectangleInPlotClip(graphics, plotClipBox, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight, ResolveNegativeBarFallbackStroke(pointStrokes, seriesIndex, category, value, plotOptions.InvertsNegativePoint(seriesIndex, category)));
                 }
             }
         }
@@ -1760,8 +1760,11 @@ internal sealed partial class PptxRenderer
         return int.TryParse(patternPreset.AsSpan(3), NumberStyles.Integer, CultureInfo.InvariantCulture, out densityPercent);
     }
 
-    private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, double zeroX, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent, double overlapPercent, int? chartStyleId)
+    private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, double zeroX, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, ChartBarPlotOptions barOptions, int? chartStyleId)
     {
+        bool varyColors = barOptions.VaryColors.Value;
+        double gapWidthPercent = barOptions.GapWidth;
+        double overlapPercent = barOptions.Overlap;
         double categoryHeight = plotHeight / categoryCount;
         double barHeight = GetClusteredBarWidth(categoryHeight, series.Count, gapWidthPercent, overlapPercent);
         double step = GetClusteredBarStep(barHeight, overlapPercent);
@@ -1777,7 +1780,7 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills, values.Count, false, value);
+                ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills, values.Count, false, value, barOptions.InvertsNegativePoint(seriesIndex, category));
                 double valueX = ChartValueToPlotCoordinate(valueExtents, value, plotX, plotWidth, valueAxisReversed);
                 double barX = Math.Min(zeroX, valueX);
                 double barWidth = Math.Abs(valueX - zeroX);
@@ -1791,13 +1794,15 @@ internal sealed partial class PptxRenderer
                 {
                     FillChartRectangleInPlotClip(graphics, plotBox, barX, barY, barWidth, barHeight, fill);
                 }
-                StrokeChartPointRectangleInPlotClip(graphics, plotBox, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight, ResolveNegativeBarFallbackStroke(pointStrokes, seriesIndex, category, value));
+                StrokeChartPointRectangleInPlotClip(graphics, plotBox, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight, ResolveNegativeBarFallbackStroke(pointStrokes, seriesIndex, category, value, barOptions.InvertsNegativePoint(seriesIndex, category)));
             }
         }
     }
 
-    private static void RenderStackedColumns(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent, int? chartStyleId)
+    private static void RenderStackedColumns(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, ChartBarPlotOptions barOptions, int? chartStyleId)
     {
+        bool varyColors = barOptions.VaryColors.Value;
+        double gapWidthPercent = barOptions.GapWidth;
         double categoryWidth = plotWidth / categoryCount;
         double barWidth = GetStackedBarWidth(categoryWidth, gapWidthPercent);
         double[] positiveValues = new double[categoryCount];
@@ -1817,7 +1822,7 @@ internal sealed partial class PptxRenderer
 
                 double categoryX = plotX + category * categoryWidth + (categoryWidth - barWidth) / 2d;
                 double value = NormalizeStackedValue(rawValue, positiveTotals[category], percentStacked);
-                ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills, values.Count, true, value);
+                ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills, values.Count, true, value, barOptions.InvertsNegativePoint(seriesIndex, category));
                 double segmentStartValue;
                 double segmentEndValue;
                 if (value >= 0d)
@@ -1871,7 +1876,7 @@ internal sealed partial class PptxRenderer
                 segment.Y,
                 segment.Width,
                 segment.Height,
-                ResolveNegativeBarFallbackStroke(pointStrokes, segment.SeriesIndex, segment.CategoryIndex, segment.Value));
+                ResolveNegativeBarFallbackStroke(pointStrokes, segment.SeriesIndex, segment.CategoryIndex, segment.Value, barOptions.InvertsNegativePoint(segment.SeriesIndex, segment.CategoryIndex)));
         }
     }
 
@@ -1891,8 +1896,10 @@ internal sealed partial class PptxRenderer
         fillRuns.Add(new ChartStackedBarFillRun(fill, rectangles));
     }
 
-    private static void RenderStackedHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent, int? chartStyleId)
+    private static void RenderStackedHorizontalBars(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, ChartBarPlotOptions barOptions, int? chartStyleId)
     {
+        bool varyColors = barOptions.VaryColors.Value;
+        double gapWidthPercent = barOptions.GapWidth;
         double categoryHeight = plotHeight / categoryCount;
         double barHeight = GetStackedBarWidth(categoryHeight, gapWidthPercent);
         double[] positiveValues = new double[categoryCount];
@@ -1912,7 +1919,7 @@ internal sealed partial class PptxRenderer
 
                 double categoryY = plotY + category * categoryHeight + (categoryHeight - barHeight) / 2d;
                 double value = NormalizeStackedValue(rawValue, positiveTotals[category], percentStacked);
-                ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills, values.Count, false, value);
+                ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills, values.Count, false, value, barOptions.InvertsNegativePoint(seriesIndex, category));
                 double segmentStartValue;
                 double segmentEndValue;
                 if (value >= 0d)
@@ -1966,7 +1973,7 @@ internal sealed partial class PptxRenderer
                 segment.Y,
                 segment.Width,
                 segment.Height,
-                ResolveNegativeBarFallbackStroke(pointStrokes, segment.SeriesIndex, segment.CategoryIndex, segment.Value));
+                ResolveNegativeBarFallbackStroke(pointStrokes, segment.SeriesIndex, segment.CategoryIndex, segment.Value, barOptions.InvertsNegativePoint(segment.SeriesIndex, segment.CategoryIndex)));
         }
     }
 

@@ -16,7 +16,13 @@ internal sealed partial class PptxRenderer
         PptxSceneChartBarDirection BarDirection,
         ChartBooleanOption VaryColors,
         double GapWidth,
-        double Overlap);
+        double Overlap,
+        IReadOnlyList<PptxSceneChartNegativeInversion> NegativeInversions)
+    {
+        public bool InvertsNegativePoint(int seriesIndex, int pointIndex) =>
+            NegativeInversions is null || seriesIndex >= NegativeInversions.Count ||
+            NegativeInversions[seriesIndex].ForPoint(pointIndex);
+    }
 
     // D01: chart-level scene is authoritative below the frame early-return; only the
     // plot-level fallback (absent scene plot) is retained.
@@ -67,7 +73,10 @@ internal sealed partial class PptxRenderer
             ReadSceneOrXmlChartBarDirection(plot, chartElement),
             ReadSceneOrXmlChartVaryColors(),
             ReadSceneOrXmlChartGapWidth(),
-            ReadSceneOrXmlChartOverlap());
+            ReadSceneOrXmlChartOverlap(),
+            plot is not null
+                ? plot.Series.Select(series => series.NegativeInversion).ToArray()
+                : chartElement.Elements(ChartNamespace + "ser").Select(PptxSceneBuilder.ReadChartNegativeInversion).ToArray());
     }
 
     private readonly record struct ChartLinePlotOptions(

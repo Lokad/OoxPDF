@@ -307,7 +307,13 @@ internal static class PptxChartPlotOptionsAgreementTests
         TestAssert.True(Equals(xmlDir, sceneDir), "BarDirection must agree for plot XML: " + plotInner);
         object? xmlOptions = Invoke("ReadSceneOrXmlChartBarOptions", new[] { typeof(PptxSceneChartPlot), typeof(XElement), typeof(PptxSceneChartGrouping) }, new object?[] { null, element, PptxSceneChartGrouping.Standard });
         object? sceneOptions = Invoke("ReadSceneOrXmlChartBarOptions", new[] { typeof(PptxSceneChartPlot), typeof(XElement), typeof(PptxSceneChartGrouping) }, new object?[] { plot, element, PptxSceneChartGrouping.Standard });
-        TestAssert.True(Equals(xmlOptions, sceneOptions), "Bar options record must agree for plot XML: " + plotInner);
+        foreach (string name in new[] { "Grouping", "BarDirection", "VaryColors", "GapWidth", "Overlap" })
+        {
+            object xml = TestAssert.NotNull(xmlOptions);
+            object scene = TestAssert.NotNull(sceneOptions);
+            var property = TestAssert.NotNull(xml.GetType().GetProperty(name));
+            TestAssert.True(Equals(property.GetValue(xml), property.GetValue(scene)), name + " must agree for plot XML: " + plotInner);
+        }
     }
 
     public static void ScenePlotsCorrespondToXmlPlotElementsAcrossFixtures()

@@ -4567,9 +4567,9 @@ internal sealed partial class PptxRenderer
         return ChartCategoryOrSeriesColor(theme, colorMap, chartPalette, seriesIndex, categoryIndex, seriesCount, varyColors, seriesFills, valuePointCount, shadeSingleSeriesVaryColors);
     }
 
-    private static ChartSeriesFill ResolveBarPointFill(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, int seriesIndex, int categoryIndex, int seriesCount, bool varyColors, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, int valuePointCount, bool shadeSingleSeriesVaryColors, double value)
+    private static ChartSeriesFill ResolveBarPointFill(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, int seriesIndex, int categoryIndex, int seriesCount, bool varyColors, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, int valuePointCount, bool shadeSingleSeriesVaryColors, double value, bool invertNegative)
     {
-        if (value < 0d && !HasExplicitChartPointFill(pointFills, seriesIndex, categoryIndex))
+        if (value < 0d && invertNegative && !HasExplicitChartPointFill(pointFills, seriesIndex, categoryIndex))
         {
             return new ChartSeriesFill(new RgbColor(255, 255, 255), 1d, null, null);
         }
@@ -4582,9 +4582,9 @@ internal sealed partial class PptxRenderer
         return seriesIndex < pointFills.Count && pointFills[seriesIndex].ContainsKey(categoryIndex);
     }
 
-    private static ChartSeriesStroke? ResolveNegativeBarFallbackStroke(IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, int seriesIndex, int categoryIndex, double value)
+    private static ChartSeriesStroke? ResolveNegativeBarFallbackStroke(IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, int seriesIndex, int categoryIndex, double value, bool invertNegative)
     {
-        return value < 0d && !HasExplicitChartPointStroke()
+        return value < 0d && invertNegative && !HasExplicitChartPointStroke()
             ? ChartNegativeBarDefaultStroke
             : null;
 

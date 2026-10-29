@@ -1,4 +1,22 @@
 {
+  "pptx-negative-inversion": [
+      "PptxNegativeBar",
+      "BarScalarOptionsAgreeBetweenSceneAndXml",
+      "PptxSyntheticClusteredBarWidthHonorsNegativeOverlap",
+      "PptxSyntheticBarLegendKeyUnitLeftCentersOnBar",
+      "PptxSyntheticBarLegendKeyOutEndGapLiftsWithFontSize",
+      "PptxSyntheticBarLegendKeySwatchAnchorsToText",
+      "PptxSyntheticChartStackedColumnDataLabelsUseStackSegmentGeometry",
+      "PptxSyntheticBarChartRendersLegendKeyOnlyDataLabels",
+      "PptxSyntheticBarChartLegendSwatchesUseSeriesStroke",
+      "PptxSyntheticBarChartSeriesLineWithoutWidthUsesFilledSeriesDefault",
+      "PptxPercentStackedColumnChartUsesPercentValueAxis",
+      "BarStyle18ExplicitFillKeepsFlatFill",
+      "BarStyle18HorizontalBarPaintsGradient",
+      "BarStyle18StackedColumnPaintsPerSegmentGradient",
+      "BarStyle10ColumnStrokesWhiteOutline",
+      "PortableRenderingPptxPreservesCompositeChartAndText"
+  ],
   "framework-compatibility": [
       "ConvertRejectsDirectoryAliasDestinations",
       "ConvertReplacesDistinctLinkedDestinations",
