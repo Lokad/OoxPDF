@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
+using Lokad.OoxPdf.Fonts;
 
 namespace Lokad.OoxPdf.Pptx;
 
