@@ -1,6 +1,10 @@
 # Visual Validation
 
-Visual validation exists because a valid PDF structure does not prove visual fidelity. The harness renders an Office-produced reference, renders the candidate PDF with PDFium, compares PNG pages, and creates files that an agent or contributor can inspect.
+Visual validation keeps appearance, source/content checks and PDF structure
+separate. Existing cases use Office PDF exports as their reference. Development
+toward 0.3.0 also pilots direct Office images, calibrated against the application
+view; an export API alone does not establish visual truth. Candidate PDFs still
+use the pinned PDFium rasterizer.
 
 Graphics-operation comparisons preserve PDF page identity in both indexed and
 nearest-bounds modes. Reordering within a page can match; moving paint to another
@@ -25,7 +29,38 @@ inspector without building. These optional summaries are exploratory reports.
 - .NET SDK.
 - `tools/vendor/pdfium/win-x64/bin/pdfium.dll`.
 - .NET restore needs network access to nuget.org (or a local feed such as the ignored `artifacts/localfeed/` workaround); without it only prebuilt binaries under `bin/` can run.
-- Reference rendering drives Office through COM: PowerPoint closes other presentations and Word runs headless (`DisplayAlerts = 0`); large decks export silently for many minutes with no progress output, and a missing `artifacts/reference-cache/` entry fails cache-only private runs instead of invoking Office.
+- Reference rendering uses the supervised Office worker, with progress and a total
+  deadline. It opens private input copies, closes only verified owned documents,
+  and quits only an identified new process with no other open documents.
+  Cache-only private runs never start Office.
+
+## Office image pilot
+
+`ExportCompositionReferences.ps1 -ReferenceKind OfficeImage` uses the same
+manifest, source/mode folders and cache preflight as PDF references. PowerPoint
+uses [Slide.Export](https://learn.microsoft.com/en-us/office/vba/api/powerpoint.slide.export);
+Word uses [Page.EnhMetaFileBits](https://learn.microsoft.com/en-us/office/vba/api/word.page.enhmetafilebits)
+from a repaginated Print Layout view. GDI+ replay stays in Windows validation
+tooling. Final and AllMarkup views are configured and verified separately.
+The legacy `ExportDocxMarkupReference.ps1` now delegates to this supervisor and
+shared view configuration.
+
+Capture records include Office build, view, printer/field policy, page dimensions,
+DPI, tool identities and image hashes. Pass `-FontIdentity` with a reviewed font
+inventory hash; it records the caller's inventory, which must be checked during
+calibration. The PDF export remains a secondary artifact. Cache replay checks
+image/frame identities offline and does not require Office.
+
+Use `CompareCompositionPortfolio.ps1 -ReferenceKind OfficeImage` to compare
+direct images. It writes `office-image-comparisons.json` separately from
+`office-comparisons.json` and retains the existing numerical thresholds.
+Frozen validation tools can be supplied through `-VisualDiffPath` and
+`-RasterizerPath`. Image references cannot silently satisfy a PDF-reference run.
+
+Current captures are explicitly **uncalibrated**. Matching dimensions, complete
+page counts and numerical gates do not establish agreement with the visible
+application. Controlled view calibration, repeatability and divergence probes
+must precede adopting an image reference as authoritative.
 
 The repository vendors the exact rasterizer binary (`tools/vendor/pdfium/win-x64/bin/pdfium.dll`, PDFium 150.0.7834.0 per `VERSION`); checkouts must use it as-is. Do not replace it from `releases/latest`: a different build silently changes raster output, and `tools/RasterizePdf.ps1` verifies the binary against the pinned SHA256 in `tools/vendor/pdfium/win-x64/pdfium.sha256` before every run. To upgrade, fetch the versioned release matching `VERSION`, replace the DLL, and update the pin file in the same commit.
 

@@ -29,6 +29,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot 'OfficeReferenceOwnership.ps1')
+. (Join-Path $PSScriptRoot 'OfficeReferenceCapture.ps1')
+$referenceKind = if ($env:OOXPDF_REFERENCE_KIND) {$env:OOXPDF_REFERENCE_KIND} else {'OfficePdf'}
+$wordView = if ($env:OOXPDF_REFERENCE_WORD_VIEW) {ConvertFrom-Json -InputObject $env:OOXPDF_REFERENCE_WORD_VIEW -AsHashtable} else {$null}
+$skipRaster = $env:OOXPDF_REFERENCE_SKIP_RASTER -eq 'True'
+$wordViewInfo = $null
 
 function Write-Stage([string] $Name) {
     Add-Content -LiteralPath $ProgressLog -Value ("stage:{0} {1}" -f $Name, ([DateTime]::UtcNow.ToString("O", [Globalization.CultureInfo]::InvariantCulture)))
@@ -42,8 +47,31 @@ function Write-Status([string] $Status, [string] $Stage, [string] $OfficeApp, [s
         OfficeVersion = $OfficeVersion
         ExportSettings = $ExportSettings
         Ownership = $script:ownership
+        ReferenceKind = $script:referenceKind
+        OfficeView = $script:wordViewInfo
         Error = $ErrorMessage
     } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $StatusPath -Encoding UTF8
+}
+
+function Write-ImageReferenceMetadata($Capture, $Application, [string] $Executable) {
+    $metadata = [ordered]@{
+        Schema=1;ReferenceKind='OfficeImage';CalibrationStatus='Uncalibrated; compare with the visible application before adopting'
+        InputSha256=(Get-FileHash $inputFull).Hash;SecondaryPdfSha256=(Get-FileHash $referencePdf).Hash
+        OfficeVersion=[string]$Application.Version
+        OfficeBuild=[Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path ([string]$Application.Path) $Executable)).FileVersion
+        Dpi=$Dpi;Capture=$Capture;OfficeView=$wordViewInfo;FontIdentity=$env:OOXPDF_REFERENCE_FONT_IDENTITY
+        OsVersion=[Environment]::OSVersion.VersionString;PowerShellVersion=$PSVersionTable.PSVersion.ToString()
+        WorkerSha256=(Get-FileHash $PSCommandPath).Hash
+        CaptureToolSha256=(Get-FileHash (Join-Path $PSScriptRoot 'OfficeReferenceCapture.ps1')).Hash
+        FieldsPolicy='No explicit Fields.Update; automatic Office updates are not suppressed'
+    }
+    if ($Executable -eq 'WINWORD.EXE') {
+        $metadata.ActivePrinter=[string]$Application.ActivePrinter
+        $metadata.UpdateFieldsAtPrint=[bool]$Application.Options.UpdateFieldsAtPrint
+        $metadata.UpdateLinksAtPrint=[bool]$Application.Options.UpdateLinksAtPrint
+        $metadata.CompatibilityMode=[int]$document.CompatibilityMode
+    }
+    $metadata | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $workFull 'reference-image-metadata.json') -Encoding utf8
 }
 
 function Release-ComObject($value) {
@@ -71,6 +99,10 @@ $ownership = [ordered]@{InputCopy=$null;DocumentOwned=$false;ProcessId=$null;Pro
 Write-Stage $stage
 
 try {
+    if ($referenceKind -notin @('OfficePdf','OfficeImage')) { throw 'Unknown Office reference kind' }
+    if ($referenceKind -eq 'OfficeImage' -and $extension -eq '.docx' -and !$wordView) {
+        throw 'Office Word image capture requires explicit view settings'
+    }
     # Opening a private copy establishes document ownership even when Office
     # activation attaches to an existing interactive application.
     if ($extension -in @('.pptx','.docx')) {
@@ -116,6 +148,11 @@ try {
             $stage = "export"
             Write-Stage $stage
             $presentation.SaveAs($referencePdf, 32)
+            if ($referenceKind -eq 'OfficeImage') {
+                $stage='image-export';Write-Stage $stage
+                $capture=Export-OfficeSlideImages $presentation $workFull $Dpi
+                Write-ImageReferenceMetadata $capture $powerPoint 'POWERPNT.EXE'
+            }
         }
         finally {
             $operationStage = $stage
@@ -145,7 +182,9 @@ try {
 
         $stage = "rasterize"
         Write-Stage $stage
-        & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -Framework $Framework -InputPdf $referencePdf -OutputDirectory $workFull -Dpi $Dpi -SkipBuild:$SkipBuild -RasterizerPath $env:OOXPDF_REFERENCE_RASTERIZER
+        if ($referenceKind -eq 'OfficePdf' -and !$skipRaster) {
+            & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -Framework $Framework -InputPdf $referencePdf -OutputDirectory $workFull -Dpi $Dpi -SkipBuild:$SkipBuild -RasterizerPath $env:OOXPDF_REFERENCE_RASTERIZER
+        }
         $stage = "done"
         Write-Stage $stage
         Write-Status "ok" $stage $officeApp $officeVersion $exportSettings ""
@@ -174,7 +213,8 @@ try {
             $stage = "open"
             Write-Stage $stage
             $missing = [Type]::Missing
-            $document = $word.Documents.OpenNoRepairDialog($referenceInput, $false, $true, $false,
+            $readOnlyOpen = !$wordView -or !$wordView.RejectAll
+            $document = $word.Documents.OpenNoRepairDialog($referenceInput, $false, $readOnlyOpen, $false,
                 $missing, $missing, $false, $missing, $missing, $missing, $missing, $false)
             $ownership.DocumentOwned = Test-OfficeDocumentOwned $document $referenceInput
             if (!$ownership.DocumentOwned) { throw 'Opened Word document is not the owned input copy; leaving it open' }
@@ -182,9 +222,21 @@ try {
             $ownership.ProcessId = $officeProcess.Id
             $ownership.ProcessOwned = Test-OfficeProcessOwned $officeProcess $existingProcesses $activationStarted 'WINWORD'
             if ($ownership.ProcessOwned) { $word.Visible = $false; $word.DisplayAlerts = 0 }
+            if ($wordView) {
+                $stage='configure';Write-Stage $stage
+                $wordViewInfo = Set-OfficeWordReferenceView $document $wordView
+                $settings = ($wordViewInfo.Actual.Keys | ForEach-Object {$_+'='+$wordViewInfo.Actual[$_]}) -join ' '
+                $exportSettings='Word/'+$word.Version+' '+$settings+' RejectAll='+[bool]$wordView.RejectAll+
+                    ' (inherited MarkupMode='+$wordViewInfo.Inherited.MarkupMode+' RevisionsMode='+$wordViewInfo.Inherited.RevisionsMode+')'
+            }
             $stage = "export"
             Write-Stage $stage
             $document.SaveAs2($referencePdf, 17)
+            if ($referenceKind -eq 'OfficeImage') {
+                $stage='image-export';Write-Stage $stage
+                $capture=Export-OfficeWordImages $document $workFull $Dpi
+                Write-ImageReferenceMetadata $capture $word 'WINWORD.EXE'
+            }
         }
         finally {
             $operationStage = $stage
@@ -212,7 +264,9 @@ try {
 
         $stage = "rasterize"
         Write-Stage $stage
-        & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -Framework $Framework -InputPdf $referencePdf -OutputDirectory $workFull -Dpi $Dpi -SkipBuild:$SkipBuild -RasterizerPath $env:OOXPDF_REFERENCE_RASTERIZER
+        if ($referenceKind -eq 'OfficePdf' -and !$skipRaster) {
+            & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -Framework $Framework -InputPdf $referencePdf -OutputDirectory $workFull -Dpi $Dpi -SkipBuild:$SkipBuild -RasterizerPath $env:OOXPDF_REFERENCE_RASTERIZER
+        }
         $stage = "done"
         Write-Stage $stage
         Write-Status "ok" $stage $officeApp $officeVersion $exportSettings ""

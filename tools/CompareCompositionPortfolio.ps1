@@ -6,10 +6,14 @@ param(
     [Parameter(Mandatory=$true)] [ValidateNotNullOrEmpty()] [string[]] $ReferenceDirectory,
     [Parameter(Mandatory=$true)] [string] $VisualDiffPath,
     [string] $ValidationToolsDirectory = $PSScriptRoot,
-    [string[]] $ReuseComparisonDirectory = @()
+    [string[]] $ReuseComparisonDirectory = @(),
+    [ValidateSet('OfficePdf','OfficeImage')] [string] $ReferenceKind = 'OfficePdf',
+    [string] $RasterizerPath
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'ReferenceCache.ps1')
+if ($ReferenceKind -eq 'OfficeImage') { . (Join-Path $PSScriptRoot 'OfficeReferenceCapture.ps1') }
+$reportName=if ($ReferenceKind -eq 'OfficeImage') {'office-image-comparisons.json'} else {'office-comparisons.json'}
 $candidate = (Resolve-Path -LiteralPath $CandidateDirectory).Path
 $references = @($ReferenceDirectory | ForEach-Object { (Resolve-Path -LiteralPath $_).Path } | Select-Object -Unique)
 $outcomes = Get-Content -LiteralPath (Join-Path $candidate 'outcomes.json') -Raw | ConvertFrom-Json
@@ -72,7 +76,7 @@ function Get-ComparisonFailures([object[]] $Metrics, $Limits, $Outcome, [string]
     return @($failures | Sort-Object -Unique)
 }
 $cached = @(foreach ($directory in $ReuseComparisonDirectory) {
-    $path = Join-Path (Resolve-Path -LiteralPath $directory).Path 'office-comparisons.json'
+    $path = Join-Path (Resolve-Path -LiteralPath $directory).Path $reportName
     $report = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
     if ($report.DocxThresholdSourceSha256 -eq $thresholdHashes.docx -and
         $report.PptxThresholdSourceSha256 -eq $thresholdHashes.pptx) {
@@ -96,17 +100,27 @@ $jobs = @(foreach ($row in $outcomes.Rows) {
         $referenceHash = (Get-FileHash -LiteralPath $referencePdf).Hash
         $identity = Join-Path $source 'source-identity.json'
         $identityHash = $null; $exportLog = $null; $exportLogHash = $null
+        $imagePath=$null; $imageHash=''; $dpi=144; $calibration='PDF-backed bootstrap'
         # Existing single-directory bare PDF comparisons remain usable. Selecting
         # across caches requires a pin, so stale or conflicting source/mode
         # entries cannot silently win by directory order.
         if ($references.Count -gt 1 -or (Test-Path -LiteralPath $identity)) {
             if (!(Test-Path -LiteralPath $identity -PathType Leaf)) { throw ('Reference identity missing: ' + $id) }
             $pin = Get-Content -LiteralPath $identity -Raw | ConvertFrom-Json
+            $kind=if ($pin.ReferenceKind) {$pin.ReferenceKind} else {'OfficePdf'}
+            if ($kind -ne $ReferenceKind) { throw ('Reference kind differs: '+$id) }
             if ($pin.Id -cne $row.Id -or $pin.Mode -cne $row.Mode -or
                 $pin.InputSha256 -ne $row.InputSha256 -or $pin.PdfSha256 -ne $referenceHash) {
                 throw ('Reference identity differs: ' + $id)
             }
             $identityHash = (Get-FileHash -LiteralPath $identity).Hash
+            if ($ReferenceKind -eq 'OfficeImage') {
+                $image=Test-OfficeImageReference $source $row.InputSha256
+                $imagePath=Join-Path $source 'reference-image-metadata.json'
+                $imageHash=(Get-FileHash $imagePath).Hash
+                if ($imageHash -ne $pin.ImageMetadataSha256) { throw ('Image reference metadata differs: '+$id) }
+                $dpi=[int]$image.Dpi; $calibration=$image.CalibrationStatus
+            }
             if ($pin.ExportLogSha256) {
                 $exportLog = Join-Path $source 'export.log'
                 if (!(Test-Path -LiteralPath $exportLog -PathType Leaf) -or
@@ -116,49 +130,57 @@ $jobs = @(foreach ($row in $outcomes.Rows) {
                 $exportLogHash = $pin.ExportLogSha256
             }
         }
+        elseif ($ReferenceKind -eq 'OfficeImage') { throw ('Image reference identity missing: '+$id) }
         [pscustomobject]@{Source=$source;Pdf=$referencePdf;Hash=$referenceHash;
-            Identity=$identity;IdentityHash=$identityHash;ExportLog=$exportLog;ExportLogHash=$exportLogHash}
+            Identity=$identity;IdentityHash=$identityHash;ExportLog=$exportLog;ExportLogHash=$exportLogHash;
+            ImagePath=$imagePath;ImageHash=$imageHash;Dpi=$dpi;Calibration=$calibration}
     })
     if (!$sources.Count) { throw ('Reference missing: ' + $id) }
     if (@($sources.Hash | Select-Object -Unique).Count -ne 1) { throw ('Conflicting references: ' + $id) }
+    if (@($sources.ImageHash | Select-Object -Unique).Count -ne 1) { throw ('Conflicting image references: '+$id) }
     $selected = $sources[0]
     $source = $selected.Source; $referencePdf = $selected.Pdf; $referenceHash = $selected.Hash
     $reuse = @($cached | Where-Object {
         $_.Row.Id -eq $row.Id -and $_.Row.Mode -eq $row.Mode -and
-        $_.Row.CandidatePdfSha256 -eq $row.PdfSha256 -and $_.Row.ReferencePdfSha256 -eq $referenceHash
+        $_.Row.CandidatePdfSha256 -eq $row.PdfSha256 -and $_.Row.ReferencePdfSha256 -eq $referenceHash -and
+        [string]$_.Row.ReferenceImageMetadataSha256 -eq $selected.ImageHash
     } | Select-Object -First 1)
     $limits = if ($row.Mode -eq 'presentation') {$thresholds.pptx} else {$thresholds.docx}
     $reuseFailures = @(if ($reuse.Count) {
         Get-ComparisonFailures -Metrics @($reuse[0].Row.Metrics) -Limits $limits -Outcome $row -Id $id
     })
-    $diff = Join-Path $run 'office-diff'
+    $diff = Join-Path $run $(if ($ReferenceKind -eq 'OfficeImage') {'office-image-diff'} else {'office-diff'})
     if (!$reuse.Count -and (Test-Path -LiteralPath $diff)) { throw ('Comparison already exists: ' + $id) }
     [pscustomobject]@{Row=$row;Id=$id;Run=$run;Source=$source;Pdf=$pdf;
         ReferencePdf=$referencePdf;ReferenceHash=$referenceHash;Identity=$selected.Identity;IdentityHash=$selected.IdentityHash;
-        ExportLog=$selected.ExportLog;ExportLogHash=$selected.ExportLogHash;Reuse=$reuse;ReuseFailures=$reuseFailures;Limits=$limits;Diff=$diff}
+        ExportLog=$selected.ExportLog;ExportLogHash=$selected.ExportLogHash;Reuse=$reuse;ReuseFailures=$reuseFailures;Limits=$limits;Diff=$diff;
+        ImagePath=$selected.ImagePath;ImageHash=$selected.ImageHash;Dpi=$selected.Dpi;Calibration=$selected.Calibration}
 })
 # Match the reference cache's PDF/DPI/tool/page-hash convention. Legacy raster
 # folders stay untouched: only derivatives completed by this command may be reused.
-$rasterizerDll = Join-Path $ValidationToolsDirectory "Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll"
+$rasterizerDll = if ($RasterizerPath) {(Resolve-Path -LiteralPath $RasterizerPath).Path}
+    else {Join-Path $ValidationToolsDirectory "Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll"}
 $rasterizerIdentity = [ordered]@{
     SourceAndNativeId = Get-RasterizerId
     WrapperSha256 = (Get-FileHash (Join-Path $ValidationToolsDirectory 'RasterizePdf.ps1')).Hash
     AssemblySha256 = if (Test-Path -LiteralPath $rasterizerDll) { (Get-FileHash $rasterizerDll).Hash } else { $null }
 }
 $rasterizerId = Get-ShortSha256 ([Text.Encoding]::UTF8.GetBytes(($rasterizerIdentity | ConvertTo-Json -Compress))) 32
-function Get-PortfolioRaster([string] $Pdf, [string] $Folder) {
+function Get-PortfolioRaster([string] $Pdf, [string] $Folder, [int] $Dpi=144) {
     $pdfHash = (Get-FileHash -LiteralPath $Pdf).Hash
     $identityPath = Join-Path $Folder 'raster-identity.json'
     $reuseRaster = Test-Path -LiteralPath $Folder
     if ($reuseRaster) {
         if (!(Test-Path -LiteralPath $identityPath -PathType Leaf)) { throw ('Unpinned or incomplete portfolio raster: ' + $Folder) }
         $pin = Get-Content -LiteralPath $identityPath -Raw | ConvertFrom-Json
-        if ($pin.PdfSha256 -ne $pdfHash -or $pin.Dpi -ne 144 -or $pin.RasterizerId -ne $rasterizerId) {
+        if ($pin.PdfSha256 -ne $pdfHash -or $pin.Dpi -ne $Dpi -or $pin.RasterizerId -ne $rasterizerId) {
             throw ('Portfolio raster identity differs: ' + $Folder)
         }
     }
     else {
-        & (Join-Path $ValidationToolsDirectory 'RasterizePdf.ps1') -Framework $Framework -InputPdf $Pdf -OutputDirectory $Folder -Dpi 144 -SkipBuild *> ($Folder+'.log')
+        $binding=@{}
+        if ($RasterizerPath) {$binding.RasterizerPath=$rasterizerDll}
+        & (Join-Path $ValidationToolsDirectory 'RasterizePdf.ps1') -Framework $Framework -InputPdf $Pdf -OutputDirectory $Folder -Dpi $Dpi -SkipBuild @binding *> ($Folder+'.log')
         # The wrapper throws on native failure; Start-Process does not set LASTEXITCODE.
     }
     $files = @(Get-ChildItem -LiteralPath $Folder -Filter 'page-*.png' -File)
@@ -178,7 +200,7 @@ function Get-PortfolioRaster([string] $Pdf, [string] $Folder) {
     }
     if ((Get-FileHash -LiteralPath $Pdf).Hash -ne $pdfHash) { throw ('Rasterized PDF changed: ' + $Pdf) }
     if (!$reuseRaster) {
-        @{PdfSha256=$pdfHash;Dpi=144;RasterizerId=$rasterizerId;Pages=$pages} | ConvertTo-Json -Depth 5 |
+        @{PdfSha256=$pdfHash;Dpi=$Dpi;RasterizerId=$rasterizerId;Pages=$pages} | ConvertTo-Json -Depth 5 |
             Set-Content -LiteralPath $identityPath -Encoding utf8
     }
     return $Folder
@@ -199,28 +221,36 @@ foreach ($job in $jobs) {
         $rows += [ordered]@{Id=$row.Id;Mode=$row.Mode;HeldOut=$row.HeldOut;
             CandidatePdfSha256=$row.PdfSha256;ReferencePdfSha256=$referenceHash;
             ReferenceSourceDirectory=$source;ReferenceIdentitySha256=$job.IdentityHash;ReferenceExportLogSha256=$job.ExportLogHash;
+            ReferenceKind=$ReferenceKind;ReferenceImageMetadataSha256=$job.ImageHash;ReferenceCalibrationStatus=$job.Calibration;
             Failures=$job.ReuseFailures;Metrics=$prior.Metrics;Thresholds=$job.Limits;
             ContentSeverity=$row.Severity;ReusedComparison=$reuse[0].Path;
             ReusedComparisonSha256=(Get-FileHash $reuse[0].Path).Hash}
         Write-Output ($id + ': reused identical PDFs and threshold sources')
         continue
     }
-    $candidateRaster = Get-PortfolioRaster $pdf (Join-Path $run 'portfolio-raster')
-    $referenceRaster = Get-PortfolioRaster $referencePdf (Join-Path $source 'portfolio-raster')
+    $rasterFolder=if ($job.Dpi -eq 144) {'portfolio-raster'} else {'portfolio-raster-dpi'+$job.Dpi}
+    $candidateRaster = Get-PortfolioRaster $pdf (Join-Path $run $rasterFolder) $job.Dpi
+    $referenceRaster = if ($ReferenceKind -eq 'OfficeImage') {$source}
+        else {Get-PortfolioRaster $referencePdf (Join-Path $source 'portfolio-raster')}
     dotnet $VisualDiffPath $referenceRaster $candidateRaster $diff *> (Join-Path $run 'office-diff.log')
     if ($LASTEXITCODE -ne 0) { throw ('Visual comparison failed: ' + $id) }
     $metrics = @(Get-Content (Join-Path $diff 'metrics.json') -Raw | ConvertFrom-Json)
     $limits = $job.Limits
     $failures = @(Get-ComparisonFailures -Metrics $metrics -Limits $limits -Outcome $row -Id $id)
-    $rows += [ordered]@{Id=$row.Id;Mode=$row.Mode;HeldOut=$row.HeldOut;CandidatePdfSha256=$row.PdfSha256;ReferencePdfSha256=$referenceHash;ReferenceSourceDirectory=$source;ReferenceIdentitySha256=$job.IdentityHash;ReferenceExportLogSha256=$job.ExportLogHash;Failures=@($failures | Sort-Object -Unique);Metrics=$metrics;Thresholds=$limits;ContentSeverity=$row.Severity}
+    $rows += [ordered]@{Id=$row.Id;Mode=$row.Mode;HeldOut=$row.HeldOut;CandidatePdfSha256=$row.PdfSha256;ReferencePdfSha256=$referenceHash;ReferenceSourceDirectory=$source;ReferenceIdentitySha256=$job.IdentityHash;ReferenceExportLogSha256=$job.ExportLogHash;ReferenceKind=$ReferenceKind;ReferenceImageMetadataSha256=$job.ImageHash;ReferenceCalibrationStatus=$job.Calibration;Failures=@($failures | Sort-Object -Unique);Metrics=$metrics;Thresholds=$limits;ContentSeverity=$row.Severity}
+    if ($ReferenceKind -eq 'OfficeImage') {
+        if ((Get-FileHash $job.ImagePath).Hash -ne $job.ImageHash) { throw ('Image reference metadata changed: '+$id) }
+        $null=Test-OfficeImageReference $source $row.InputSha256
+    }
     if ((Get-FileHash -LiteralPath $pdf).Hash -ne $row.PdfSha256 -or
         (Get-FileHash -LiteralPath $referencePdf).Hash -ne $referenceHash) { throw ('Comparison input changed: ' + $id) }
     Write-Output ($id + ': ' + ($failures | Sort-Object -Unique) -join ', ')
 }
 [ordered]@{
     CandidateLibrarySha256=$outcomes.LibrarySha256
+    ReferenceKind=$ReferenceKind
     DocxThresholdSourceSha256=$thresholdHashes.docx
     PptxThresholdSourceSha256=$thresholdHashes.pptx
     Scope='Existing numerical visual thresholds retained; no claim of complete content or layout fidelity'
     Rows=$rows
-} | ConvertTo-Json -Depth 14 | Set-Content (Join-Path $candidate 'office-comparisons.json') -Encoding utf8
+} | ConvertTo-Json -Depth 14 | Set-Content (Join-Path $candidate $reportName) -Encoding utf8

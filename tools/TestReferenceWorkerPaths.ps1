@@ -85,6 +85,7 @@ finally {if(!$sentinel.HasExited) {$sentinel.Kill();$null=$sentinel.WaitForExit(
 # Rasterization is also stubbed; these checks never build or use Office/PDFium.
 $actualWorkerSource=Get-Content (Join-Path $PSScriptRoot 'RenderReferenceWorker.ps1') -Raw
 Copy-Item (Join-Path $PSScriptRoot 'OfficeReferenceOwnership.ps1') -Destination $root
+Copy-Item (Join-Path $PSScriptRoot 'OfficeReferenceCapture.ps1') -Destination $root
 $activationStub=@'
 function Enter-Operation([string] $Name) {
     if ($script:failureStage -eq ('delay-'+$Name)) {

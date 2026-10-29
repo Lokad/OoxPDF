@@ -4,9 +4,13 @@ param(
     [Parameter(Mandatory=$true)] [string] $Manifest,
     [Parameter(Mandatory=$true)] [string] $OutputDirectory,
     [ValidateSet('Both','Final','Review')] [string] $DocxPreset = 'Both',
-    [switch] $SkipBuild
+    [switch] $SkipBuild,
+    [ValidateSet('OfficePdf','OfficeImage')] [string] $ReferenceKind = 'OfficePdf',
+    [int] $Dpi = 144,
+    [string] $FontIdentity
 )
 $ErrorActionPreference = 'Stop'
+if ($ReferenceKind -eq 'OfficeImage') { . (Join-Path $PSScriptRoot 'OfficeReferenceCapture.ps1') }
 $repo = Split-Path -Parent $PSScriptRoot
 $jobs = @()
 function Assert-WordView([string] $Log, $Expected, [string] $Case) {
@@ -39,8 +43,15 @@ foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Js
         $log = Join-Path $folder 'export.log'
         if (Test-Path -LiteralPath $identity) {
             $pin = Get-Content -LiteralPath $identity -Raw | ConvertFrom-Json -AsHashtable
+            $cachedKind=if ($pin.ReferenceKind) {$pin.ReferenceKind} else {'OfficePdf'}
+            if ($cachedKind -ne $ReferenceKind) { throw 'Cached reference kind differs; use a separate output directory' }
             if ($pin.InputSha256 -ne $document.Sha256 -or $pin.Mode -ne $mode -or
                 (Get-FileHash $pdf).Hash -ne $pin.PdfSha256) { throw 'Cached reference differs' }
+            if ($ReferenceKind -eq 'OfficeImage') {
+                $capture=Test-OfficeImageReference $folder $document.Sha256
+                if ((Get-FileHash (Join-Path $folder 'reference-image-metadata.json')).Hash -ne $pin.ImageMetadataSha256 -or
+                    $capture.Dpi -ne $Dpi -or $capture.FontIdentity -ne $FontIdentity) { throw 'Cached image capture settings differ' }
+            }
             if ($docx) {
                 $settings = Assert-WordView $log $view ($document.Id + '/' + $mode)
                 if ($pin.ContainsKey('OfficeView')) {
@@ -65,7 +76,17 @@ foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Js
 foreach ($job in $jobs) {
         $folder=$job.Folder; $pdf=$job.Pdf; $inputPath=$job.Input; $document=$job.Document; $mode=$job.Mode
         New-Item -ItemType Directory -Force -Path $folder | Out-Null
-        if ($job.Docx) {
+        if ($ReferenceKind -eq 'OfficeImage') {
+            $arguments=@{InputPath=$inputPath;OutputDirectory=$folder;ReferenceKind=$ReferenceKind;Dpi=$Dpi;FontIdentity=$FontIdentity}
+            if ($job.Docx) {$arguments.WordView=$job.View}
+            & (Join-Path $PSScriptRoot 'RenderReference.ps1') @arguments *> $job.Log
+            if ($job.Docx) {
+                $worker=Get-Content (Join-Path $folder 'reference-worker-status.json') -Raw | ConvertFrom-Json
+                Write-Output ('ExportSettings: '+$worker.ExportSettings) | Add-Content $job.Log
+                $settings=Assert-WordView $job.Log $job.View ($document.Id+'/'+$mode)
+            }
+        }
+        elseif ($job.Docx) {
             $view = $job.View
             & (Join-Path $PSScriptRoot 'ExportDocxMarkupReference.ps1') -InputDocx $inputPath -OutputPdf $pdf @view *> $job.Log
             $settings = Assert-WordView $job.Log $view ($document.Id + '/' + $mode)
@@ -73,9 +94,14 @@ foreach ($job in $jobs) {
         else {
             & (Join-Path $PSScriptRoot 'RenderReference.ps1') -InputPath $inputPath -OutputDirectory $folder -SkipBuild:$SkipBuild *> (Join-Path $folder 'export.log')
         }
-        $pin = [ordered]@{Id=$document.Id;Mode=$mode;InputSha256=$document.Sha256;PdfSha256=(Get-FileHash $pdf).Hash}
+        $pin = [ordered]@{Id=$document.Id;Mode=$mode;InputSha256=$document.Sha256;PdfSha256=(Get-FileHash $pdf).Hash;ReferenceKind=$ReferenceKind}
+        if ($ReferenceKind -eq 'OfficeImage') {
+            $capture=Test-OfficeImageReference $folder $document.Sha256
+            $pin.ImageMetadataSha256=(Get-FileHash (Join-Path $folder 'reference-image-metadata.json')).Hash
+            $pin.CalibrationStatus=$capture.CalibrationStatus
+        }
         if ($job.Docx) {
-            $pin.OfficeView=$view; $pin.ExportSettings=$settings; $pin.ExportLogSha256=(Get-FileHash $job.Log).Hash
+            $pin.OfficeView=$job.View; $pin.ExportSettings=$settings; $pin.ExportLogSha256=(Get-FileHash $job.Log).Hash
         }
         $pin | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $job.Identity -Encoding utf8
         Write-Output ($document.Id+' '+$mode+' independent reference retained')

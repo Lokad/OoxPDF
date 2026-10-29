@@ -132,6 +132,54 @@ if ($report.Rows.Count -ne 2 -or @($report.Rows | Where-Object {
     throw 'Identical comparisons must reuse retained failures without rendering'
 }
 $passed += 'identity-reuse'
+Copy-Item (Join-Path $PSScriptRoot 'OfficeReferenceCapture.ps1') -Destination $tools
+function New-ImageCase([string] $Name) {
+    $case=New-Case $Name 'image'
+    foreach ($row in $case.Rows) {
+        $source=Join-Path $case.ReferenceDirectory ($row.Id+'-'+$row.Mode)
+        $png=[Convert]::FromBase64String('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9WQAAAAASUVORK5CYII=')
+        [IO.File]::WriteAllBytes((Join-Path $source 'page-001.png'),$png)
+        @{Schema=1;ReferenceKind='OfficeImage';InputSha256=$row.InputSha256;OfficeBuild='control';Dpi=144;
+            CalibrationStatus='Uncalibrated';SecondaryPdfSha256=(Get-FileHash (Join-Path $source 'reference.pdf')).Hash;
+            Capture=@{Method='managed control';Pages=@(@{Page=1;File='page-001.png';Width=1;Height=1;
+                WidthPoints=0.5;HeightPoints=0.5;Sha256=(Get-FileHash (Join-Path $source 'page-001.png')).Hash})}} |
+            ConvertTo-Json -Depth 8 | Set-Content (Join-Path $source 'reference-image-metadata.json')
+        $identity=Join-Path $source 'source-identity.json'
+        $pin=Get-Content $identity -Raw | ConvertFrom-Json -AsHashtable
+        $pin.ReferenceKind='OfficeImage';$pin.ImageMetadataSha256=(Get-FileHash (Join-Path $source 'reference-image-metadata.json')).Hash
+        $pin | ConvertTo-Json | Set-Content $identity
+    }
+    $cache=New-ReuseCache $case
+    $prior=Get-Content (Join-Path $cache 'office-comparisons.json') -Raw | ConvertFrom-Json -AsHashtable
+    foreach ($row in $prior.Rows) {
+        $row.ReferenceImageMetadataSha256=(Get-FileHash (Join-Path $case.ReferenceDirectory ($row.Id+'-'+$row.Mode+'/reference-image-metadata.json'))).Hash
+    }
+    $prior | ConvertTo-Json -Depth 9 | Set-Content (Join-Path $cache 'office-image-comparisons.json')
+    $case.Cache=$cache
+    return $case
+}
+$case=New-ImageCase 'image-identity-reuse'
+& $script -ReferenceKind OfficeImage -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools -ReuseComparisonDirectory $case.Cache | Out-Null
+$report=Get-Content (Join-Path $case.CandidateDirectory 'office-image-comparisons.json') -Raw | ConvertFrom-Json
+if ($report.ReferenceKind -ne 'OfficeImage' -or @($report.Rows | Where-Object {
+    !$_.ReusedComparison -or !$_.ReferenceImageMetadataSha256 -or $_.Failures -notcontains 'ForegroundRecall' -or
+    $_.ReferenceCalibrationStatus -ne 'Uncalibrated'
+}).Count -or @(Get-ChildItem $case.Directory -Recurse -Filter '*.called').Count) {throw 'Image reuse lost provenance, failures or calibration status'}
+$passed+='image-identity-reuse'
+foreach ($fault in @('image-as-pdf','changed-image-metadata')) {
+    $case=New-ImageCase $fault
+    $arguments=@{}
+    if ($fault -eq 'changed-image-metadata') {
+        $arguments.ReferenceKind='OfficeImage'
+        $path=Join-Path $case.ReferenceDirectory 'second-final-preserve/reference-image-metadata.json'
+        [IO.File]::AppendAllText($path,' ')
+    }
+    $before=Snapshot $case.Directory;$rejected=$false
+    try {& $script @arguments -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools | Out-Null}
+    catch {if ($_.Exception.Message -notmatch 'Reference kind differs|Image reference metadata differs') {throw};$rejected=$true}
+    if (!$rejected -or (Snapshot $case.Directory) -cne $before) {throw 'Image reference mismatch mutated comparison stages'}
+    $passed+=$fault
+}
 foreach ($fault in @('empty-metrics','missing-metric','null-error','nonfinite-metric','boolean-metric',
     'missing-page-index','duplicate-page','truncated-pages','wrong-file','nonboolean-dimensions','neither-file')) {
     $case = New-Case $fault 'legacy'

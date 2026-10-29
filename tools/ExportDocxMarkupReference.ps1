@@ -26,67 +26,24 @@ param(
 $ErrorActionPreference = "Stop"
 $inputFull = (Resolve-Path -LiteralPath $InputDocx).Path
 $outputFull = [IO.Path]::GetFullPath($OutputPdf)
+if ($inputFull.Equals($outputFull,[StringComparison]::OrdinalIgnoreCase)) { throw 'Reference output must differ from its input' }
 $outputDir = [IO.Path]::GetDirectoryName($outputFull)
-if (-not [IO.Directory]::Exists($outputDir)) { [void][IO.Directory]::CreateDirectory($outputDir) }
-$openPath = $inputFull
-$tempCopy = $null
-if ($RejectAll) {
-    $tempCopy = [IO.Path]::Combine([IO.Path]::GetTempPath(), [IO.Path]::GetRandomFileName() + ".docx")
-    [IO.File]::Copy($inputFull, $tempCopy, $true)
-    $openPath = $tempCopy
-}
-$word = New-Object -ComObject Word.Application
+[void][IO.Directory]::CreateDirectory($outputDir)
+# Retain the supervised attempt and provenance beside the requested PDF. The
+# worker opens a private copy and owns all COM cleanup; this wrapper never does.
+$run = Join-Path $outputDir ('word-reference-'+[guid]::NewGuid().ToString('N'))
+$view = @{ShowRevisions=$ShowRevisions;RevisionsView=$RevisionsView;MarkupMode=$MarkupMode;
+    RevisionsMode=$RevisionsMode;ShowComments=$ShowComments;ShowFormatChanges=$ShowFormatChanges;
+    ShowInsertionsAndDeletions=$ShowInsertionsAndDeletions;RejectAll=[bool]$RejectAll}
+& (Join-Path $PSScriptRoot 'RenderReference.ps1') -InputPath $inputFull -OutputDirectory $run -WordView $view -SkipRaster
+$status=Get-Content (Join-Path $run 'reference-worker-status.json') -Raw | ConvertFrom-Json
+if (!$status.OfficeView.PrintLayout) { throw 'Supervised Word view is unverified' }
+$staging=$outputFull+'.staging-'+[guid]::NewGuid().ToString('N')
 try {
-    $word.Visible = $false
-    $word.DisplayAlerts = 0
-    Write-Output ("Word version: " + $word.Version)
-    $readOnlyOpen = -not $RejectAll
-    $doc = $word.Documents.OpenNoRepairDialog($openPath, $false, $readOnlyOpen, $false)
-    if ($RejectAll) {
-        $doc.Revisions.RejectAll()
-    }
-    $view = $doc.ActiveWindow.View
-    $inheritedMarkupMode = $view.MarkupMode
-    $inheritedRevisionsMode = $view.RevisionsMode
-    Write-Output ("Inherited view: MarkupMode=" + $inheritedMarkupMode + " RevisionsMode=" + $inheritedRevisionsMode)
-    $doc.ShowRevisions = $ShowRevisions
-    $view.RevisionsView = $RevisionsView
-    $view.ShowComments = $ShowComments
-    $view.ShowFormatChanges = $ShowFormatChanges
-    $view.ShowInsertionsAndDeletions = $ShowInsertionsAndDeletions
-    # Visibility setters can reset MarkupMode when the last category is hidden.
-    # Apply the requested display modes last, then verify the entire state.
-    $view.MarkupMode = $MarkupMode
-    $view.RevisionsMode = $RevisionsMode
-    # Word 16 accepts mixed mode 2. Verify the actual state rather than trusting
-    # an enum label or a setter that could silently retain another session's view.
-    $actual = [ordered]@{ShowRevisions=[bool]$doc.ShowRevisions;RevisionsView=[int]$view.RevisionsView;
-        MarkupMode=[int]$view.MarkupMode;RevisionsMode=[int]$view.RevisionsMode;ShowComments=[bool]$view.ShowComments;
-        ShowFormatChanges=[bool]$view.ShowFormatChanges;ShowInsertionsAndDeletions=[bool]$view.ShowInsertionsAndDeletions}
-    $expected = [ordered]@{ShowRevisions=$ShowRevisions;RevisionsView=$RevisionsView;MarkupMode=$MarkupMode;
-        RevisionsMode=$RevisionsMode;ShowComments=$ShowComments;ShowFormatChanges=$ShowFormatChanges;
-        ShowInsertionsAndDeletions=$ShowInsertionsAndDeletions}
-    foreach ($key in $expected.Keys) {
-        if ($actual[$key] -ne $expected[$key]) { throw ('Word did not apply requested view setting: '+$key) }
-    }
-    if ([IO.File]::Exists($outputFull)) {
-        [IO.File]::Delete($outputFull)
-    }
-    $doc.SaveAs2($outputFull, 17)
-    $doc.Close($false)
-    $length = (Get-Item -LiteralPath $outputFull).Length
-    $sha = (Get-FileHash -LiteralPath $outputFull -Algorithm SHA256).Hash
-    Write-Output ("Exported: " + $outputFull + " (" + $length + " bytes, sha256 " + $sha + ")")
-    $settings = ($actual.Keys | ForEach-Object { $_+'='+$actual[$_] }) -join ' '
-    Write-Output ("ExportSettings: Word/" + $word.Version + " " + $settings + " RejectAll=" + [bool]$RejectAll + " (inherited MarkupMode=" + $inheritedMarkupMode + " RevisionsMode=" + $inheritedRevisionsMode + ")")
-} finally {
-    try { $word.Quit() } catch { }
-    try { [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($view) } catch { }
-    try { [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc) } catch { }
-    try { [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) } catch { }
-    [GC]::Collect()
-    [GC]::WaitForPendingFinalizers()
-    if ($tempCopy -ne $null -and [IO.File]::Exists($tempCopy)) {
-        [IO.File]::Delete($tempCopy)
-    }
+    [IO.File]::Copy((Join-Path $run 'reference.pdf'),$staging,$false)
+    [IO.File]::Move($staging,$outputFull,$true)
 }
+finally { if ([IO.File]::Exists($staging)) { [IO.File]::Delete($staging) } }
+Write-Output ('Word version: '+$status.OfficeVersion)
+Write-Output ('Exported: '+$outputFull+' ('+(Get-Item $outputFull).Length+' bytes, sha256 '+(Get-FileHash $outputFull).Hash+')')
+Write-Output ('ExportSettings: '+$status.ExportSettings)

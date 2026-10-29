@@ -84,6 +84,47 @@ if (!$rejected -or (Test-Path -LiteralPath (Join-Path $wrong 'first-all-word-com
     throw 'An exporter that reports the wrong view must not publish a reference identity'
 }
 $passed+='observed-export-view'
+# Image references use the same manifest/cache path, with independent view pins.
+Copy-Item (Join-Path $PSScriptRoot 'OfficeReferenceCapture.ps1') -Destination $scripts
+@'
+param($InputPath,$OutputDirectory,$ReferenceKind,$Dpi,$FontIdentity,$WordView)
+Add-Content (Join-Path $PSScriptRoot 'image-calls.txt') $InputPath
+[IO.File]::WriteAllText((Join-Path $OutputDirectory 'reference.pdf'),'Fake Word PDF')
+$png=[Convert]::FromBase64String('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9WQAAAAASUVORK5CYII=')
+[IO.File]::WriteAllBytes((Join-Path $OutputDirectory 'page-001.png'),$png)
+$names=@('ShowRevisions','RevisionsView','MarkupMode','RevisionsMode','ShowComments','ShowFormatChanges','ShowInsertionsAndDeletions')
+$settings=($names | ForEach-Object {$_+'='+$WordView[$_]}) -join ' '
+@{ExportSettings='Word/16.0 '+$settings+' RejectAll='+[bool]$WordView.RejectAll} | ConvertTo-Json | Set-Content (Join-Path $OutputDirectory 'reference-worker-status.json')
+@{Schema=1;ReferenceKind=$ReferenceKind;InputSha256=(Get-FileHash $InputPath).Hash;OfficeBuild='control';Dpi=$Dpi;FontIdentity=$FontIdentity;
+    SecondaryPdfSha256=(Get-FileHash (Join-Path $OutputDirectory 'reference.pdf')).Hash;
+    CalibrationStatus='Uncalibrated';Capture=@{Method='managed control';Pages=@(@{Page=1;File='page-001.png';Width=1;Height=1;
+        WidthPoints=0.5;HeightPoints=0.5;Sha256=(Get-FileHash (Join-Path $OutputDirectory 'page-001.png')).Hash})}} |
+    ConvertTo-Json -Depth 8 | Set-Content (Join-Path $OutputDirectory 'reference-image-metadata.json')
+'@ | Set-Content (Join-Path $scripts 'RenderReference.ps1')
+ConvertTo-Json -InputObject @($documents[0],$documents[1]) | Set-Content $manifest
+$imageReference=Join-Path $OutputDirectory 'image-reference'
+& $script -Manifest $manifest -OutputDirectory $imageReference -ReferenceKind OfficeImage -FontIdentity 'pinned control fonts' | Out-Null
+& $script -Manifest $manifest -OutputDirectory $imageReference -ReferenceKind OfficeImage -FontIdentity 'pinned control fonts' | Out-Null
+if (@(Get-Content (Join-Path $scripts 'image-calls.txt')).Count -ne 4) {throw 'Image cache replay called Office'}
+foreach ($mode in @('final-preserve','all-word-compatible')) {
+    $pin=Get-Content (Join-Path $imageReference ('first-'+$mode+'/source-identity.json')) -Raw | ConvertFrom-Json
+    if ($pin.OfficeView.ShowRevisions -ne ($mode -eq 'all-word-compatible') -or !$pin.ImageMetadataSha256) {
+        throw 'Image source identity borrowed another mode view'
+    }
+}
+$passed+='image-view-pins-and-offline-reuse'
+foreach ($fault in @('reference-kind','capture-fonts')) {
+    $rejected=$false
+    try {
+        if ($fault -eq 'reference-kind') {& $script -Manifest $manifest -OutputDirectory $imageReference -ReferenceKind OfficePdf | Out-Null}
+        else {& $script -Manifest $manifest -OutputDirectory $imageReference -ReferenceKind OfficeImage -FontIdentity 'other fonts' | Out-Null}
+    } catch {
+        if ($_.Exception.Message -notmatch 'Cached reference kind differs|Cached image capture settings differ') {throw}
+        $rejected=$true
+    }
+    if (!$rejected -or @(Get-Content (Join-Path $scripts 'image-calls.txt')).Count -ne 4) {throw 'Image cache mismatch was not refused before export'}
+    $passed+=$fault
+}
 @{Passed=$passed;OfficeInvocations=0;LibraryBuilds=0;Scope='Fake DOCX/PDF inputs; view and provenance orchestration only'} |
     ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json')
 Write-Output ($passed.Count.ToString()+' reference view/provenance checks passed; no Office or library build.')

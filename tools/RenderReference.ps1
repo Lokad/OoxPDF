@@ -29,10 +29,15 @@ param(
     [string] $WorkerScript,
 
     [switch] $SkipBuild,
-    [string] $RasterizerPath
+    [string] $RasterizerPath,
+    [ValidateSet('OfficePdf','OfficeImage')] [string] $ReferenceKind = 'OfficePdf',
+    [hashtable] $WordView,
+    [switch] $SkipRaster,
+    [string] $FontIdentity
 )
 
 $ErrorActionPreference = "Stop"
+if ($ReferenceKind -eq 'OfficeImage') { . (Join-Path $PSScriptRoot 'OfficeReferenceCapture.ps1') }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($WorkerScript)) {
@@ -126,6 +131,11 @@ try {
     # the framework selected for its validation tools.
     $start.Environment['OOXPDF_TARGET_FRAMEWORK'] = $Framework
     if ($RasterizerPath) { $start.Environment['OOXPDF_REFERENCE_RASTERIZER'] = (Resolve-Path -LiteralPath $RasterizerPath).Path }
+    else { [void]$start.Environment.Remove('OOXPDF_REFERENCE_RASTERIZER') }
+    $start.Environment['OOXPDF_REFERENCE_KIND'] = $ReferenceKind
+    $start.Environment['OOXPDF_REFERENCE_WORD_VIEW'] = ConvertTo-Json -InputObject $WordView -Compress
+    $start.Environment['OOXPDF_REFERENCE_SKIP_RASTER'] = [string][bool]$SkipRaster
+    $start.Environment['OOXPDF_REFERENCE_FONT_IDENTITY'] = $FontIdentity
     $start.UseShellExecute = $false
     $start.CreateNoWindow = $true
     $start.RedirectStandardOutput = $true
@@ -195,6 +205,15 @@ try {
     }
 
     $stagedPdf = Join-Path $workerWorkDir "reference.pdf"
+    if ($ReferenceKind -eq 'OfficeImage' -and
+        ($workerStatus.ReferenceKind -ne $ReferenceKind -or
+        !(Test-Path -LiteralPath (Join-Path $workerWorkDir 'reference-image-metadata.json')))) {
+        Write-OutputStatus 'export-failed' 'verify' 'Worker did not produce the requested Office image reference.' $false
+        throw 'Worker did not produce the requested Office image reference'
+    }
+    if ($ReferenceKind -eq 'OfficeImage') {
+        $null=Test-OfficeImageReference $workerWorkDir (Get-FileHash $inputFull).Hash
+    }
     if (-not (Test-Path -LiteralPath $stagedPdf) -or (Get-Item -LiteralPath $stagedPdf).Length -lt 8) {
         Write-OutputStatus "export-failed" "verify" "Worker reported success but reference.pdf is missing or truncated." $false
         throw "Office reference rendering failed verification: reference.pdf is missing or truncated."

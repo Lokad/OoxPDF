@@ -33,6 +33,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/TestRasterizePdfPaths.ps1`: check spaced paths, failure/timeout and stale raster refusal with an existing tool; never builds.
 - `tools/TestVisualReportComparison.ps1`: check zero/finite metrics, required recall and legacy reports; never builds or renders.
 - `tools/TestReferenceDerivative.ps1`, `TestReferenceWorkerPaths.ps1`, `TestAffectedTestReporting.ps1`: focused cache/worker/report mechanics without builds or Office.
+- `tools/TestOfficeReferenceOwnership.ps1`, `TestOfficeImageReference.ps1`: Office ownership policy and image/view cache checks with managed controls; no Office, native calls or builds.
 - `tools/TestCliDiagnosticsPublication.ps1`: check frozen CLI diagnostics publication through aliases and file links; never builds. Direct library checks live in `PublicApiTests.PublicationLinks.cs` under the selected test TFM.
 - `tools/BuildQualificationArtifact.ps1`: build/freeze an explicit committed linked worktree and revision; absolute projects prevent accidental root builds. Reuse the frozen artifact for qualification and transfer.
 - `tools/TestQualificationTransfer.ps1`: check transfer alias ownership, preflight and failure cleanup with synthetic files; never builds or converts.
@@ -42,6 +43,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/MeasureCompositionPortfolio.ps1`: use a frozen ActualText-aware inspector; `-ReuseCandidateDirectory` reinspects pinned PDFs without conversion.
 
 - `tools/ExportCompositionReferences.ps1`: export or reuse pinned Office references by manifest and optional DOCX preset.
+- Its `-ReferenceKind OfficeImage` pilot captures direct Office images alongside a secondary PDF. Comparisons use the same explicit kind and separate reports; captures remain uncalibrated until checked against the application view.
 - `tools/NewParentRegressionRuntime.ps1`: prepare parent regressions with independent owned public-input copies; reject unowned or linked output directories.
 - `tools/RunDocxAffectedTests.ps1`: run a capability or selectors as one exact method set on a frozen assembly; declare understood skips with `-ExpectedSkip`, use `-AllDocx` at broader milestones.
 - `tools/JoinQualificationTestReports.ps1`: join reviewed harness repairs from a manifest after checking unchanged production source, runtime assets, public inputs and complete exact-test coverage; retain failed attempts.
