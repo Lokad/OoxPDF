@@ -36,6 +36,13 @@ the reader test owns paragraph-mark retention. Select their union once through
 `docx-plain-balloon-paragraphs`. The exhaustive mixed-body matrix remains a broader
 milestone check; it is distinct from the compact paragraph-boundary matrix.
 
+`pptx-fallback-hyperlinks` checks embedded and standard-font paths together:
+chart titles/axes/labels, shape/cell runs, internal destinations, boundaries,
+rotation, clipping and diagnostics. `MissingTestFontResolver` supplies neither a
+usable primary face nor discovery fonts, so host fonts cannot conceal collapsed
+fallback advances. Ubuntu CI runs its union with the existing picture/font
+capabilities in one invocation.
+
 Use `framework-compatibility` in `tools/qualification-capabilities.json` for the
 small .NET 10 lane: public conversion, streams, cancellation, atomic publication,
 fonts, CLI and three composed-document controls. Extensive suites use .NET 11.

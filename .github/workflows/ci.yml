@@ -63,12 +63,10 @@ jobs:
             dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -f net11.0 -- --group $group --skip-slow --report "artifacts/ci-tests/$group.json"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
-      - name: Portable picture effects (Ubuntu)
+      - name: Portable PPTX capabilities (Ubuntu)
         if: runner.os == 'Linux'
-        run: pwsh -NoProfile -File tools/RunDocxAffectedTests.ps1 -RunnerPath tests/Lokad.OoxPdf.Tests/bin/Release/net11.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/pptx-picture-effects -Capability pptx-picture-blur
-      - name: Portable PPTX font identity (Ubuntu)
-        if: runner.os == 'Linux'
-        run: pwsh -NoProfile -File tools/RunDocxAffectedTests.ps1 -RunnerPath tests/Lokad.OoxPdf.Tests/bin/Release/net11.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/pptx-font-identity -Capability pptx-font-identity
+        run: |
+          & ./tools/RunDocxAffectedTests.ps1 -RunnerPath tests/Lokad.OoxPdf.Tests/bin/Release/net11.0/Lokad.OoxPdf.Tests.dll -OutputDirectory artifacts/ci-tests/pptx-capabilities -Capability pptx-picture-blur,pptx-font-identity,pptx-fallback-hyperlinks
       - name: Visual manifest gate
         run: pwsh -NoProfile -File tools/ValidateVisualCases.ps1
       - name: Qualification capability catalog gate

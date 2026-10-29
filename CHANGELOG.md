@@ -12,6 +12,8 @@
   wrapped legend rows; crowded frames report clipped entries.
 - DOCX: preserves plain comment paragraph breaks beyond five paragraphs, using
   shared measured rows for balloon height and painting.
+- PPTX: retains readable advances and run/chart hyperlinks when standard PDF
+  fonts replace unavailable fonts, including cell text and transformed links.
 
 ## 0.2.0 — 2026-10-29
 

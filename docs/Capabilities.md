@@ -183,6 +183,9 @@ a complete inventory of every feature in an arbitrary document.
 
 ## PDF Output
 
+- PPTX run and chart hyperlinks survive standard PDF font fallback. Missing-font
+  typography remains an approximation; diagnostics still identify substitution.
+
 - Deterministic resource naming/object order for stable input, fonts and options;
   optional fixed creation-date metadata. There is no Deterministic option/mode.
 - Subset embedded TrueType/CID fonts with ToUnicode, plus standard Type1/WinAnsi
