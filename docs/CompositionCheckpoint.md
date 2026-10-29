@@ -13,7 +13,7 @@ transformations. The finite gate covers content omissions, pagination, serious
 clipping/overlap and regressions within supported scope; it does not require
 pixel-perfect Office parity.
 
-The canonical [portfolio manifest](../tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json)
+The canonical source manifest, `tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json`,
 includes all nine pinned sources. Default measurement and content-audit commands
 use it; the older seven-source checkpoint manifest has been retired.
 

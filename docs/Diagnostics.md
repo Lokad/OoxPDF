@@ -8,7 +8,9 @@ Diagnostics are emitted through `OoxPdfOptions.DiagnosticSink` and through the C
 
 Top-level package or dialect issues:
 
-- `OOXML_STRICT_DIALECT`: Strict OOXML (ISO 29500) content was detected; only the transitional dialect is supported and content may be missing.
+- `OOXML_STRICT_DIALECT`: Strict OOXML (ISO 29500) content was detected. Common
+  Strict DOCX markup and measure forms are supported with `Fallback=Partial`;
+  other dialect-specific forms may be missing. Strict PPTX remains unsupported.
 - `OOXML_MUST_UNDERSTAND`: a `mc:MustUnderstand` namespace-prefix list requires an unsupported or unresolved namespace. Conversion continues with a warning and partial compatibility handling, not full MCE conformance. Requirements use their declaration scope; unselected alternate branches do not participate. Main parts warn once per document; slides, shared masters/layouts, and DOCX story and infrastructure parts warn once per part with their part names.
 
 ## PPTX

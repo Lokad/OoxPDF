@@ -1,6 +1,6 @@
 # Capabilities
 
-This is the supported scope of **0.2.0**, including approximations and
+This is the **0.3.0 development scope**, including approximations and
 explicit fallbacks. A successful conversion or absence of diagnostics does not
 establish Office fidelity. Features outside this inventory remain unsupported.
 See [release scope](PreviewRelease.md), [measured qualification](PreviewQualification.md)
@@ -8,8 +8,11 @@ and [diagnostics](Diagnostics.md) before relying on a conversion.
 
 ## Shared input and compatibility behavior
 
-- Transitional OOXML DOCX/PPTX packages; Strict OOXML is diagnosed and may render
-  missing content. Archive, XML, image and font bounds remain enforced.
+- Transitional OOXML DOCX/PPTX packages and common Strict DOCX vocabulary: prose,
+  styles, fixed tables, images, links, supported math and related stories. Common
+  point/inch/metric and percentage forms use the existing layout units. Strict
+  dialect warnings remain; Strict PPTX, arbitrary Strict-only property forms and
+  general bidirectional layout remain unsupported. Input bounds remain enforced.
 - Exactly one AlternateContent representation: the first understood Choice,
   otherwise Fallback, otherwise no representation. Supported content inside
   ignorable ProcessContent wrappers is exposed to the ordinary format reader.
@@ -226,5 +229,5 @@ Each row links an unsupported family to its detection diagnostic, fallback, and 
 | DOCX OLE objects | `DOCX_UNSUPPORTED_OLE_OBJECT` Warning | Ignored | `DocxUnsupportedFeaturesEmitDiagnostics` (docx-core) |
 | DOCX external images | `DOCX_UNSUPPORTED_EXTERNAL_IMAGE` Warning | Ignored | `DocxUnsupportedFeaturesEmitDiagnostics` (docx-core) |
 | DOCX macros | `DOCX_UNSUPPORTED_MACRO` Warning | Ignored | `DocxUnsupportedFeaturesEmitDiagnostics` (docx-core) |
-| Strict OOXML | `OOXML_STRICT_DIALECT` Warning | May render missing | OoxmlTests dialect probes (ooxml) |
+| Strict OOXML | `OOXML_STRICT_DIALECT` Warning | Partial common DOCX support; Strict PPTX unsupported | OoxmlStrictDocxTests and dialect probes (ooxml) |
 | Font packs | `FONT_PACK_*` throw codes | Conversion fails with DiagnosticId | FontTests pack suites (fonts) |

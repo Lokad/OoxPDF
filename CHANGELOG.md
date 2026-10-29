@@ -14,6 +14,9 @@
   shared measured rows for balloon height and painting.
 - PPTX: retains readable advances and run/chart hyperlinks when standard PDF
   fonts replace unavailable fonts, including cell text and transformed links.
+- Reads common Strict DOCX content and measure forms, including composed tables,
+  images, equations and related stories. Strict dialect warnings remain; this
+  does not add general Strict OOXML or Strict PPTX support.
 
 ## 0.2.0 — 2026-10-29
 

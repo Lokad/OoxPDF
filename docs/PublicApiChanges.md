@@ -1,4 +1,14 @@
-# Migrating to 0.2.0
+# Caller migration
+
+## 0.3.0
+
+The package provides .NET 10 and .NET 11 assets. Common Strict DOCX content now
+renders through the existing pipeline. `OOXML_STRICT_DIALECT` remains a warning,
+with DOCX `Fallback` changed to `Partial`; callers must still inspect other
+unsupported-content diagnostics. Strict PPTX remains unsupported. No public
+declarations or conversion options were added for this support.
+
+## Migrating to 0.2.0
 
 PPTX table paragraph-default bold and color now override table styling, including
 an explicit `b="0"`. Direct run formatting and inherited table defaults retain
