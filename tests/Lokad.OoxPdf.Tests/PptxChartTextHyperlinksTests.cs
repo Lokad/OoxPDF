@@ -10,7 +10,7 @@ internal static class PptxChartTextHyperlinksTests
 {
     public static void PptxChartTitleExternalHyperlinkEmitsUriAnnotation()
     {
-        foreach (IFontResolver? resolver in new IFontResolver?[] { null, new MapFontResolver([], "Fallback") })
+        foreach (IFontResolver? resolver in new IFontResolver?[] { null, new MissingTestFontResolver() })
         {
             (List<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderChartTitlePage(
                 """<a:r><a:rPr><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>Visit site</a:t></a:r>""",
@@ -63,7 +63,7 @@ internal static class PptxChartTextHyperlinksTests
 
     public static void PptxChartAxisTitleExternalHyperlinkEmitsUriAnnotation()
     {
-        foreach (IFontResolver? resolver in new IFontResolver?[] { null, new MapFontResolver([], "Fallback") })
+        foreach (IFontResolver? resolver in new IFontResolver?[] { null, new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderChartTitlePage(
                 "",
@@ -107,7 +107,7 @@ internal static class PptxChartTextHyperlinksTests
 
     public static void PptxChartDataLabelCustomTextHyperlinkEmitsUriAnnotation()
     {
-        foreach (IFontResolver? resolver in new IFontResolver?[] { null, new MapFontResolver([], "Fallback") })
+        foreach (IFontResolver? resolver in new IFontResolver?[] { null, new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderChartTitlePage(
                 "",
@@ -221,7 +221,7 @@ internal static class PptxChartTextHyperlinksTests
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         var diagnostics = new List<OoxPdfDiagnostic>();
         List<PdfPage> pages = new PptxRenderer(fontResolver).RenderPages(document, package, diagnostics.Add, CancellationToken.None).ToList();
-        if (fontResolver is MapFontResolver)
+        if (fontResolver is MissingTestFontResolver)
             TestAssert.True(pages[0].FallbackFonts.Count > 0 && pages[0].Fonts.Count == 0, "The missing-font control must use standard PDF fonts.");
         return (pages, diagnostics);
     }

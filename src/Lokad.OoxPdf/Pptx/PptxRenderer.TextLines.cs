@@ -100,10 +100,12 @@ internal sealed partial class PptxRenderer
             ResolvedGlyphFont? resolved = advanceEstimator.ResolveGlyphFont(run.FontFamily, run.Bold, run.Italic, rune.Value);
             if (resolved is null || resolved.Font.UnitsPerEm == 0)
             {
-                // RV01 residual: estimator-unresolvable runes keep a zero-advance marker
-                // instead of vanishing; emission substitutes a diagnosed question mark with
-                // zero advance, so measured and emitted positions stay consistent.
-                glyphs.Add(new PptxTextGlyphLayout(rune.Value, null, PptxGlyphTypefaceResolutionSource.Unresolved, 0, 0d, 0d));
+                // Keep the measured fallback advance when emission splits by face.
+                // A zero-width marker would collapse visible standard-font text.
+                double fallbackAdvance = PptxTextMetricRules.FallbackAdvanceWidth(rune.Utf16SequenceLength, 1, run.FontSize, 0d);
+                glyphs.Add(new PptxTextGlyphLayout(rune.Value, null, PptxGlyphTypefaceResolutionSource.Unresolved, 0,
+                    fallbackAdvance, glyphs.Count > 0 ? run.CharacterSpacing : 0d));
+                previousFont = null;
                 previousGlyph = 0;
                 continue;
             }

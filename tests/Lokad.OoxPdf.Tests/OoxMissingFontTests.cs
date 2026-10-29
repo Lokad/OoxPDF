@@ -78,8 +78,8 @@ internal static class OoxMissingFontTests
         TestAssert.Contains("U+4E2D", missing.Message);
     }
 
-    // RV01: estimator-unresolvable runes keep a zero-advance marker so emission
-    // substitutes a diagnosed question mark instead of dropping them.
+    // Unresolvable runes retain a fallback advance and a diagnosed question mark
+    // instead of disappearing or overlapping the following text.
     public static void UnresolvableRunesSubstituteQuestionMark()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

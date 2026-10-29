@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Globalization;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
@@ -10,13 +11,39 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxTextHyperlinksTests
 {
+    public static void PptxFallbackTextKeepsMeasuredAdvances()
+    {
+        foreach (string text in new[] { "Link", "A😀B" })
+        {
+            string input = WriteRunLinkPackage(
+                $"""<a:p><a:r><a:rPr sz="1800"><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>{text}</a:t></a:r></a:p>""",
+                """<Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/advances" TargetMode="External"/>""");
+            (List<PdfPage> pages, _) = RenderSlidePages(input, new MissingTestFontResolver());
+            PdfPage page = pages.Single();
+            Match[] shows = Regex.Matches(page.Content, @"1 0 0 1 ([-0-9.]+) [-0-9.]+ Tm\s+<([0-9A-F]{2})> Tj").ToArray();
+            Rune[] runes = text.EnumerateRunes().ToArray();
+            TestAssert.Equal(runes.Length, shows.Length);
+            double firstX = double.Parse(shows[0].Groups[1].Value, CultureInfo.InvariantCulture);
+            int codeUnits = 0;
+            for (int i = 0; i < runes.Length; i++)
+            {
+                double x = double.Parse(shows[i].Groups[1].Value, CultureInfo.InvariantCulture);
+                TestAssert.True(Math.Abs(x - firstX - codeUnits * 18d * 0.42d) < 0.001d,
+                    "Fallback glyphs must retain their measured advances instead of overlapping.");
+                codeUnits += runes[i].Utf16SequenceLength;
+            }
+            TestAssert.True(Math.Abs(page.Annotations.Single().Width - codeUnits * 18d * 0.42d) < 0.001d,
+                "The link must cover the same fallback advance as the painted text.");
+        }
+    }
+
     public static void PptxFallbackRunHyperlinksFollowClippedText()
     {
         string paragraph = """<a:p><a:r><a:rPr sz="1800"><a:hlinkClick r:id="rIdLink"/></a:rPr><a:t>X</a:t></a:r></a:p>""";
         string input = WriteRunLinkPackage(string.Concat(Enumerable.Repeat(paragraph, 6)),
             """<Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/clipped" TargetMode="External"/>""",
             """<a:bodyPr vertOverflow="clip" lIns="0" rIns="0" tIns="0" bIns="0"/>""");
-        (List<PdfPage> pages, _) = RenderSlidePages(input, new MapFontResolver([], "Fallback"));
+        (List<PdfPage> pages, _) = RenderSlidePages(input, new MissingTestFontResolver());
         PdfPage page = pages.Single();
         int painted = Regex.Matches(page.Content, @"<58>\s+Tj").Count;
         TestAssert.True(painted > 0 && painted < 6, "The control must paint some rows and omit clipped rows.");
@@ -31,7 +58,7 @@ internal static class PptxTextHyperlinksTests
             paragraphXml: """<a:p><a:r><a:rPr sz="1800"><a:latin typeface="Link Sans"/><a:hlinkClick r:id="rIdRunLink"/></a:rPr><a:t>Link</a:t></a:r></a:p>""",
             slideRelsXml: """<Relationship Id="rIdRunLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/run" TargetMode="External"/>""");
 
-        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MapFontResolver([], "Fallback") })
+        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MissingTestFontResolver() })
         {
             (List<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input, resolver);
 
@@ -55,7 +82,7 @@ internal static class PptxTextHyperlinksTests
             slideRelsXml: """<Relationship Id="rIdLink1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/first" TargetMode="External"/>""" +
                 """<Relationship Id="rIdLink2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/second" TargetMode="External"/>""");
 
-        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MapFontResolver([], "Fallback") })
+        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, _) = RenderSlidePages(input, resolver);
 
@@ -133,7 +160,7 @@ internal static class PptxTextHyperlinksTests
                 """
         });
 
-        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MapFontResolver([], "Fallback") })
+        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input, resolver);
 
@@ -155,7 +182,7 @@ internal static class PptxTextHyperlinksTests
                 """<a:r><a:rPr sz="1800"><a:latin typeface="Link Sans"/><a:hlinkClick r:id="rIdMissing"/></a:rPr><a:t>C</a:t></a:r></a:p>""",
             slideRelsXml: string.Empty);
 
-        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MapFontResolver([], "Fallback") })
+        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input, resolver);
 
@@ -198,7 +225,7 @@ internal static class PptxTextHyperlinksTests
                 """
         });
 
-        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MapFontResolver([], "Fallback") })
+        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input, resolver);
 
@@ -217,7 +244,7 @@ internal static class PptxTextHyperlinksTests
             paragraphXml: """<a:p><a:r><a:rPr sz="1800"><a:latin typeface="Link Sans"/><a:hlinkClick action="ppaction://hlinkshowjump"/></a:rPr><a:t>Action</a:t></a:r></a:p>""",
             slideRelsXml: string.Empty);
 
-        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MapFontResolver([], "Fallback") })
+        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, List<OoxPdfDiagnostic> diagnostics) = RenderSlidePages(input, resolver);
 
@@ -258,7 +285,7 @@ internal static class PptxTextHyperlinksTests
                 """
         });
 
-        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MapFontResolver([], "Fallback") })
+        foreach (IFontResolver resolver in new IFontResolver[] { new LinkTestFontResolver(), new MissingTestFontResolver() })
         {
             (IReadOnlyList<PdfPage> pages, _) = RenderSlidePages(input, resolver);
 
@@ -324,7 +351,7 @@ internal static class PptxTextHyperlinksTests
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         var diagnostics = new List<OoxPdfDiagnostic>();
         List<PdfPage> pages = new PptxRenderer(fontResolver).RenderPages(document, package, diagnostics.Add, CancellationToken.None).ToList();
-        if (fontResolver is MapFontResolver)
+        if (fontResolver is MissingTestFontResolver)
             TestAssert.True(pages[0].FallbackFonts.Count > 0 && pages[0].Fonts.Count == 0, "The missing-font control must use standard PDF fonts.");
         return (pages, diagnostics);
     }

@@ -282,6 +282,9 @@ internal sealed partial class PptxRenderer
                 ResolvedGlyphFont? resolved = ResolveGlyphFont(familyName, bold, italic, rune.Value);
                 if (resolved is null)
                 {
+                    points += PptxTextMetricRules.FallbackAdvanceWidth(rune.Utf16SequenceLength, 1, fontSize, 0d);
+                    previousFont = null;
+                    previousGlyph = 0;
                     continue;
                 }
 
@@ -305,11 +308,6 @@ internal sealed partial class PptxRenderer
                 points += font.GetAdvanceWidth(glyph) * fontSize / font.UnitsPerEm;
                 previousFont = font;
                 previousGlyph = glyph;
-            }
-
-            if (previousFont is null)
-            {
-                return PptxTextMetricRules.FallbackAdvanceWidth(text.Length, runeCount, fontSize, characterSpacing);
             }
 
             return Math.Max(0d, points + Math.Max(0, runeCount - 1) * characterSpacing);

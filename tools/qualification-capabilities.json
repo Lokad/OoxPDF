@@ -14,10 +14,15 @@
       "PptxRunHyperlinkActionWithoutTargetEmitsDiagnostic",
       "PptxRotatedRunHyperlinkUsesTransformedBox",
       "PptxFallbackRunHyperlinksFollowClippedText",
+      "PptxFallbackTextKeepsMeasuredAdvances",
       "PptxTableFrameHyperlinkSitsBelowCellRunLinks",
       "PptxChartFrameHyperlinkEmitsUriAnnotation",
       "PptxGroupHyperlinkSurvivesDiagnosedChildFallback",
-      "MissingFontsPreservePptxText"
+      "MissingFontsPreservePptxText",
+      "UnresolvableRunesSubstituteQuestionMark",
+      "CffUnresolvableRunesSubstituteQuestionMark",
+      "CffChartUnresolvableRunesSubstituteQuestionMark",
+      "ResolvableSplitFamiliesEmbedInsteadOfVanishing"
   ],
   "docx-plain-balloon-paragraphs": [
       "DocxWordCompatiblePlainParagraphCountsMatchIndependentOffice",
