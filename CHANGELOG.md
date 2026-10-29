@@ -8,6 +8,8 @@
   stacked bar/column charts, including label swatches and explicit point fills.
 - Replaces fitted bar-color regimes with shared cycle shading, including
   horizontal charts and theme changes.
+- Restores category legends for varying-color bar charts and reserves space for
+  wrapped legend rows; crowded frames report clipped entries.
 
 ## 0.2.0 — 2026-10-29
 

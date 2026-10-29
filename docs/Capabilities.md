@@ -87,9 +87,10 @@ Approximate or restricted:
   keep their fallbacks. Empty manual metadata retains automatic measurement.
 - Qualified gallery defaults, authored stroke/fill precedence, line smoothing,
   markers and automatic six-accent bar palettes are implemented. Classic/composed
-  gallery roles, minor-stroke defaults, automatic tick fitting, category bar legends
-  and arbitrary color-style methods remain incomplete. Existing independent Office
-  thresholds still apply.
+  gallery roles, minor-stroke defaults, automatic tick fitting and arbitrary
+  color-style methods remain incomplete. Category bar legends share point paint
+  and wrap within the chart frame; crowded frames diagnose clipped entries.
+  Existing independent Office thresholds still apply.
 - Horizontal shape text renders an ellipsis marker when vertical overflow hides
   later lines. Non-horizontal text and chart-title contexts retain diagnosed
   clipping fallbacks. Complex effects and typography may be simplified or omitted
