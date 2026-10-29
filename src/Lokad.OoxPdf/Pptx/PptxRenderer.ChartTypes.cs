@@ -451,7 +451,10 @@ internal sealed partial class PptxRenderer
         double MarkerWidth,
         double TextGap,
         bool Horizontal,
-        bool SideStrokeLegend);
+        bool SideStrokeLegend,
+        IReadOnlyList<ChartLegendEntryFrame>? EntryFrames = null);
+
+    private readonly record struct ChartLegendEntryFrame(double X, double Y, double Width);
 
     private readonly record struct ChartAxisSource(PptxSceneChartAxis? SceneAxis, XElement? XmlAxis);
 

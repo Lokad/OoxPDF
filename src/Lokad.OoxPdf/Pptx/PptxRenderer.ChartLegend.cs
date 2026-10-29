@@ -45,7 +45,7 @@ internal sealed partial class PptxRenderer
         return entries;
     }
 
-    private static IReadOnlyList<ChartLegendEntry> BuildCategoryFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, ChartWorkbookData? workbook, bool plotVisibleOnly, int valuePointCount = 0)
+    private static IReadOnlyList<ChartLegendEntry> BuildCategoryFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, ChartWorkbookData? workbook, bool plotVisibleOnly, int valuePointCount = 0, Func<int, ChartSeriesFill>? resolveFill = null, Func<int, ChartSeriesStroke?>? resolveStroke = null)
     {
         IReadOnlyList<ChartIndexedTextPoint> points = ReadSharedCategoryLabels(plot, chartElement, workbook, plotVisibleOnly)
             .OfType<ChartIndexedTextPoint>()
@@ -60,10 +60,10 @@ internal sealed partial class PptxRenderer
             }
 
             usedIndexes.Add(point.Index);
-            ChartSeriesFill fill = pointFills.TryGetValue(point.Index, out ChartSeriesFill pointFill)
+            ChartSeriesFill fill = resolveFill is not null ? resolveFill(point.Index) : pointFills.TryGetValue(point.Index, out ChartSeriesFill pointFill)
                 ? pointFill
                 : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, point.Index), 1d, null, null);
-            entries.Add(new ChartLegendEntry(point.Text, fill, null, null, null, LineHidden: false));
+            entries.Add(new ChartLegendEntry(point.Text, fill, resolveStroke?.Invoke(point.Index), null, null, LineHidden: false));
         }
 
         // Value points without category text still draw swatch-only legend rows
@@ -76,10 +76,10 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            ChartSeriesFill valueFill = pointFills.TryGetValue(valueIndex, out ChartSeriesFill valuePointFill)
+            ChartSeriesFill valueFill = resolveFill is not null ? resolveFill(valueIndex) : pointFills.TryGetValue(valueIndex, out ChartSeriesFill valuePointFill)
                 ? valuePointFill
                 : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, valueIndex), 1d, null, null);
-            entries.Add(new ChartLegendEntry(string.Empty, valueFill, null, null, null, LineHidden: false));
+            entries.Add(new ChartLegendEntry(string.Empty, valueFill, resolveStroke?.Invoke(valueIndex), null, null, LineHidden: false));
         }
 
         return entries;
@@ -256,7 +256,7 @@ internal sealed partial class PptxRenderer
         return style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartLegendTextStyleOverride(sceneChart)));
     }
 
-    private static void RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver, ChartLegendPlacement placement, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false, double doughnutRingCenterY = 0d, bool scatterLegend = false)
+    private static void RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver, ChartLegendPlacement placement, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false, double doughnutRingCenterY = 0d, bool scatterLegend = false, ChartLegendBox? preparedBox = null)
     {
         if (!layout.Visible || entries.Count == 0)
         {
@@ -265,7 +265,7 @@ internal sealed partial class PptxRenderer
 
         // Legend boxes measure unkerned advances like the emission (see reserve note).
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
-        ChartLegendBox legendBox = ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer, placement, legendLeadExtra, doughnutRightLegend, doughnutLeftLegend, doughnutRingCenterY, scatterLegend);
+        ChartLegendBox legendBox = preparedBox ?? ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer, placement, legendLeadExtra, doughnutRightLegend, doughnutLeftLegend, doughnutRingCenterY, scatterLegend);
 
         RenderChartShapeStyle(graphics, legendBox.X, legendBox.ClipY, legendBox.Width, legendBox.ClipHeight, layout.ShapeStyle);
 
@@ -287,9 +287,11 @@ internal sealed partial class PptxRenderer
             return x;
             }
 
-            double entryX = legendBox.Horizontal ? GetPackedHorizontalLegendEntryX(legendBox.MarkerSize, legendBox.X, i) : legendBox.X;
-            double entryWidth = legendBox.Horizontal ? GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, textMeasurer, legendBox.MarkerSize, emitTextGap, emitEntryPadding) : legendBox.Width;
-            double y = legendBox.Horizontal ? legendBox.FirstY : legendBox.FirstY - i * legendBox.LineHeight;
+            ChartLegendEntryFrame? entryFrame = legendBox.EntryFrames is { } frames ? frames[i] : null;
+            double entryX = entryFrame?.X ?? (legendBox.Horizontal ? GetPackedHorizontalLegendEntryX(legendBox.MarkerSize, legendBox.X, i) : legendBox.X);
+            double entryWidth = entryFrame?.Width ?? (legendBox.Horizontal ? GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, textMeasurer, legendBox.MarkerSize, emitTextGap, emitEntryPadding) : legendBox.Width);
+            double y = entryFrame?.Y ?? (legendBox.Horizontal ? legendBox.FirstY : legendBox.FirstY - i * legendBox.LineHeight);
+            if (entryFrame is not null && (y < legendBox.ClipY - 0.001d || y + legendBox.LineHeight > legendBox.ClipY + legendBox.ClipHeight + 0.001d)) { continue; }
             double markerBaselineFactor = legendBox.Horizontal || legendBox.SideStrokeLegend
                 ? PptxChartMetricRules.LegendHorizontalMarkerBaselineFactor
                 : entry.Fill is not null

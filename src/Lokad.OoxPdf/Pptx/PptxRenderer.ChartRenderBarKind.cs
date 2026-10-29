@@ -51,8 +51,20 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(barPlot, barChart, theme, colorMap, ChartFilledSeriesInheritedStrokeWidth);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneOrXmlSeriesPointFills(barPlot, barChart, theme, colorMap);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneOrXmlSeriesPointStrokes(barPlot, barChart, theme, colorMap);
-                var legendEntries = new List<ChartLegendEntry>(BuildFillLegendEntries(theme, colorMap, chartPalette, barPlot, barChart, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook));
+                bool categoryLegend = barOptions.VaryColors.Value && barSeriesVectors.Count == 1 &&
+                    sceneChart?.Plots.Sum(plot => plot.Series.Count) == 1;
+                var legendEntries = new List<ChartLegendEntry>(categoryLegend
+                    ? BuildBarCategoryLegendEntries(theme, colorMap, chartPalette, barPlot, barChart, barSeriesVectors[0], barOptions, seriesFills, pointFills, pointStrokes, workbook, plotVisibleOnly)
+                    : BuildFillLegendEntries(theme, colorMap, chartPalette, barPlot, barChart, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook));
                 ChartLayout chartLayout = GetBarChartLayout(document, theme, bounds, chartXml, sceneChart, colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver);
+                ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
+                ChartLegendBox? categoryLegendBox = null;
+                if (categoryLegend)
+                {
+                    var prepared = LayoutBarCategoryLegend(chartLayout, legendEntries, legendTextStyle, fontResolver, context);
+                    chartLayout = prepared.Layout;
+                    categoryLegendBox = prepared.Box;
+                }
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 // Gallery style 2 fills unstyled axis-family strokes on single-plot charts
@@ -367,7 +379,7 @@ internal sealed partial class PptxRenderer
                     }
                 }
                 RenderDefaultChartAxisTitles(theme, colorMap, graphics, chartLayout, chartXml, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds);
-                RenderChartLegend(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml), fontResolver, ChartLegendPlacement.Default, chartFonts: fonts);
+                RenderChartLegend(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend, legendTextStyle, fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, preparedBox: categoryLegendBox);
                 RenderBarDataLabels(
                     theme,
                     colorMap,
