@@ -1,4 +1,12 @@
 {
+  "docx-balloon-font-witness": [
+      "DocxWordCompatibleBalloonBodyWrapsLikeOfficeTitles",
+      "DocxWordCompatibleBalloonUsesUniformCommentTypeface",
+      "DocxFontPlanUsesWordClassicTypefaceBeforeModernFallbacks",
+      "DocxFontPlanPrefersOfficeBodyFontForImplicitDefaultTypeface",
+      "DocxFontPlanResolvesImplicitDefaultTypefaceWithRunStyle",
+      "PortableRenderingUndeclaredTypefacesKeepSourceOwners"
+  ],
   "pptx-automatic-palette": [
       "PptxAutomaticBarPalettes",
       "PptxVaryingBarCategoryLegends",

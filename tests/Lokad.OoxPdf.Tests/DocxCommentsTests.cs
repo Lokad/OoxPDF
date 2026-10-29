@@ -1068,8 +1068,8 @@ internal static partial class DocxCommentsTests
         // The wrap parity needs Office-matching title advances; environments whose Segoe UI
         // Bold file is missing, unloadable, or metrically divergent keep the label face and
         // skip like other font-environmental tests (the measured design advance is reported).
-        // Wrap parity needs the full Office stack: Segoe titles set the first-row width
-        // while Aptos bodies set the wrap itself (CI server SKUs ship neither reliably).
+        // The source declares Aptos for the body. Merely installing Aptos does not
+        // select it for an undeclared font, whose stable library fallback is Times New Roman.
         if (!HasUsableAptosBodyFace())
         {
             TestAssert.Skip("Environmental precondition not met: Aptos is not installed.");
@@ -1087,13 +1087,19 @@ internal static partial class DocxCommentsTests
             "..",
             "..",
             "Cases",
-            "docx-markup-comment-unresolved.docx"));
+            "docx-markup-comment-unresolved-aptos.docx"));
+        using var office = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.ChangeExtension(input, ".office.json")));
+        TestAssert.Equal(office.RootElement.GetProperty("InputSha256").GetString(),
+            Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(input))));
         DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
         var renderer = new DocxRenderer(
             fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
+        var fontPlan = renderer.InspectFontPlan(document);
+        TestAssert.True(fontPlan.PrimaryCount > 0 && fontPlan.ResolverFallbackCount == 0,
+            "The Office wrap witness must resolve its declared body face, rather than the undeclared-font fallback.");
         DocxMarkupBalloonPlacementSnapshot[] balloons = renderer.InspectMarkupBalloons(document)
             .Where(placement => placement.Kind == "Comment")
             .ToArray();
@@ -1102,7 +1108,7 @@ internal static partial class DocxCommentsTests
         // Office wraps the second body after "for" (Segoe UI Bold titles leave no room on the
         // first row) while Aptos titles fit it on one row (12.61pt tall); Segoe titles grow it
         TestAssert.True(
-            balloons[1].Height > 16d,
+            balloons[1].Height > office.RootElement.GetProperty("ExpectedMinimumSecondBalloonHeight").GetDouble(),
             "The second body should wrap to a second row like Office; observed Height=" + balloons[1].Height.ToString(CultureInfo.InvariantCulture) + ".");
     }
 

@@ -1,0 +1,17 @@
+{
+  "InputSha256": "4CDAAFB3C813E84A058A1E3E7220439DCF9F4AF80C86079468CBBDA2B01C16AB",
+  "SourceInputSha256": "BF3AF325C741B18E912604455FE82DFFB609BCED8BBBB0FC5FD7DC6B20DBBC00",
+  "Change": "Declare Office original defaults Aptos/12pt in styles.xml; preserve existing body/comment XML parts.",
+  "OfficeBuild": "16.0.20527.20088",
+  "ReferenceImageMetadataSha256": "595D581099FABF4746C822B71EDF4D6391AF884883CE1F15495F39ED1B00CCBC",
+  "ReferenceImageSha256": "FA9D40495468085361970B306BFB1CEFFFFF8084FCECAB5E93E6C02EB50B30C8",
+  "OriginalAndDeclaredOfficeTextGeometryIdentical": false,
+  "ExpectedTitleFace": "Segoe UI Bold",
+  "ExpectedBodyFace": "Aptos",
+  "SecondCommentRows": [
+    "Open second comment for",
+    "ordering."
+  ],
+  "ExpectedMinimumSecondBalloonHeight": 16,
+  "Scope": "Explicit source-default wrap control; not a change to the Times New Roman undeclared-font policy. Office image calibration and full-document gates remain separate."
+}
