@@ -1,7 +1,7 @@
-# 0.2.0 release candidate
+# 0.2.0 release
 
-The candidate is prepared for .NET 10. Publication is deferred. It supports
-the scope below, with known rendering approximations; it
+Version **0.2.0** was published on NuGet on 2026-10-29 and targets .NET 10.
+It supports the scope below, with known rendering approximations; it
 does not promise arbitrary-document fidelity or pixel-perfect Office parity.
 [Caller migration](PublicApiChanges.md) lists the intentional API removals and
 requires recompiling consumers. Package/informational version is

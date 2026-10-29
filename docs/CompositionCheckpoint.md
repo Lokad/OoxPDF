@@ -1,6 +1,6 @@
 # Composed-document reliability checkpoint
 
-The **0.2.0** candidate remains unpublished. Current source/runtime,
+The **0.2.0** release is published on NuGet. Current source/runtime,
 Windows/Linux results, package identity and CI provenance are recorded in
 [PreviewQualification.md](PreviewQualification.md). See [release scope](PreviewRelease.md)
 and [caller migration](PublicApiChanges.md).

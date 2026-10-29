@@ -1,7 +1,8 @@
 # 0.2.0 release qualification
 
-The **0.2.0** NuGet package and symbols are prepared. Publication and release
-tagging remain deferred. Frozen Release source: `7c43223bbc2b93027ce7f23821216990c6a1c8bd`.
+The **0.2.0** package was [published on NuGet](https://www.nuget.org/packages/Lokad.OoxPdf/0.2.0)
+on 2026-10-29. Git release tag: `v0.2.0`.
+Frozen package source: `7c43223bbc2b93027ce7f23821216990c6a1c8bd`.
 Library SHA-256: `6FCAF88D0B7DFDE75AB2DBD623C05BFC0B17E149ADC57C83792C28276DF47F9E`.
 [Windows/Ubuntu CI](https://github.com/Lokad/OoxPDF/actions/runs/40850658711) passes on separate builds.
 
@@ -20,10 +21,16 @@ existing nullable test warnings remain. Package documentation is pinned to the
 build source; final checksums/provenance are recorded separately here and in
 artifacts/release-020-20261029/qualification.json.
 
-Package: artifacts/nuget/Lokad.OoxPdf.0.2.0.nupkg.
+Prepared local package: artifacts/nuget/Lokad.OoxPdf.0.2.0.nupkg.
 SHA-256: `DCC3A5E95D207B8B31E02FDB8465A61F7F5746CCCA86295789C8FD4F73EF24AC`.
 Symbols: artifacts/nuget/Lokad.OoxPdf.0.2.0.snupkg.
 SHA-256: `C310E83D85A82DFC495173D4DD02605F946CF8FB8DE72676B089C78D957F47F5`.
+
+NuGet's repository-signed package SHA-256:
+`55A9DDDE970189463E18341BFDD0628007394B03DE737116DA487A994C3FB3BD`.
+All 28 original package payload files match the qualified local package; only
+the repository signature and archive content-type metadata are excluded from
+that comparison. Registry publication time: 2026-10-29T11:19:29.223Z.
 
 Relative current-repository Markdown links are committed as 84548286; historical
 revision and CI links preserve their targets. Release metadata/guidance is
@@ -33,8 +40,8 @@ workspace measure is 5.18 GB before this release slice. No full rescan or cleanu
 
 ## Retained preview renderer qualification
 
-The bounded PPTX inheritance milestone is qualified. Publication, performance
-optimization and broader feature expansion remain deferred. Production source:
+The bounded PPTX inheritance milestone was qualified before this release.
+Performance optimization and broader feature expansion remain deferred. Production source:
 `4093ae541acdbe4fb3bb9e55ece291b53a265c8d`. Final artifact/test-harness source:
 `4be66e0c62a8fe92ede1852f81f0e4683110a472`; its assertion-only repair reused the same library.
 Library SHA-256: `54B3C6167FEA79CA56656C2616AEC8DE0652F509D2B8F2AF8C58EDD222967999`.
@@ -162,7 +169,8 @@ Package: artifacts/nuget/preview-020-pptx-inheritance-20261028/Lokad.OoxPdf.0.2.
 SHA-256: `2C6CFB76082B48680C6F0218008A84A1318A4012B210771AD4B4D8A5E8CED60D`.
 Safe managed dependency-free execution, meaningful input bounds, cancellation,
 coarse host admission/refunds, bounded caches/staging, deterministic cleanup,
-atomic publication and PDF validity remain. Publication stays deferred.
+atomic publication and PDF validity remain. Publication was deferred at this
+historical preview checkpoint; the stable release is published as recorded above.
 
 The last full workspace measure remains 8.162 GB/1,013,013 files before earlier
 bounded cleanup, above the loose 5 GB target. This milestone's scoped measurement
