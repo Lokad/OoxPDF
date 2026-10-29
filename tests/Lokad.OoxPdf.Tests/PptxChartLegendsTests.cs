@@ -404,7 +404,7 @@ internal static class PptxChartLegendsTests
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
-        OoxPdfConverter.Convert(input, output);
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver() });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0.333 0.667 rg", pdf);
@@ -1551,10 +1551,19 @@ internal static class PptxChartLegendsTests
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
-        OoxPdfConverter.Convert(input, output);
+        bool requestedRegular = false;
+        bool requestedBold = false;
+        var fonts = new TestFaceFontResolver(request =>
+        {
+            requestedBold |= request.Bold;
+            requestedRegular |= !request.Bold;
+        });
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = fonts });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(pdf.Split("/FontFile2", StringSplitOptions.None).Length - 1 >= 2, "Expected unstyled default axis titles to request a distinct embedded bold face like Office.");
+        TestAssert.Contains("/FontFile2", pdf);
+        TestAssert.Contains("/CAT", pdf);
+        TestAssert.True(requestedRegular && requestedBold, "Default axis titles must request bold while ordinary chart text requests regular. The pinned synthetic program serves both styles.");
     }
 
     public static void PptxChartUnknownLegendPositionResolvesThroughExplicitDefault()

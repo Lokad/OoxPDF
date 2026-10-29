@@ -3911,7 +3911,7 @@ internal static class PptxChartsTests
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         var diagnostics = new List<OoxPdfDiagnostic>();
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver(), DiagnosticSink = diagnostics.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT"),
@@ -4177,7 +4177,7 @@ internal static class PptxChartsTests
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
-        OoxPdfConverter.Convert(input, output);
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver() });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.784 0.392 0.196 rg", pdf);

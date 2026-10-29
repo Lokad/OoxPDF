@@ -5,12 +5,13 @@ namespace Lokad.OoxPdf.Tests;
 // RV01: deterministic embeddable test face serving the synthetic TrueType for every
 // requested family, so font-budget and admission tests assert identical behavior with
 // or without installed fonts (no environmental skips).
-internal sealed class TestFaceFontResolver : IFontResolver
+internal sealed class TestFaceFontResolver(Action<FontRequest>? onResolve = null) : IFontResolver
 {
     private static readonly byte[] FaceBytes = TestFontBuilder.CreateTestFont();
 
     public FontFaceResolution Resolve(FontRequest request)
     {
+        onResolve?.Invoke(request);
         return new FontFaceResolution(
             request.FamilyName,
             "TestFace",
