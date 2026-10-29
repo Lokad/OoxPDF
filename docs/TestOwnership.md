@@ -67,3 +67,11 @@ Independent Office comparisons remain necessary for fidelity changes. Parser or
 layout assertions alone cannot establish visual correctness; image comparisons
 alone cannot establish searchable text, annotations or links. Historical failures
 and unavailable checks retain their explicit classifications.
+
+`docx-page-print-origins` qualifies body origins, annotation targets, inspection,
+static stories and following-note boundaries together. Eight source-pinned public
+controls retain sixteen independent Word PDF measurements. Portable tests change
+only the first page's font and require stable continuation paint and targets;
+Ubuntu CI selects their union with the existing rendering capabilities. The
+separate Windows-font oracles retain their declared environmental preconditions.
+Full-page image failures remain separate from the one-point geometry checks.

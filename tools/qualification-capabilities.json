@@ -1,4 +1,12 @@
 {
+  "docx-page-print-origins-portable": [
+      "DocxContinuationPagePaintIgnoresOtherPageFontSizes",
+      "DocxPagePrintOriginsKeepInspectionLinksAndNoteTargetsTogether",
+      "DocxPrintedBodyBoundaryRecoversNoteDesignCoordinates",
+      "DocxInlineCompositionFittingEndnotesOwnBoundariesWithoutChangingTypography",
+      "DocxInlineCompositionFittingEndnotesRetainComplexFrameFallbacks",
+      "DocxInlineCompositionFittingNestedEndnotesRetainAncestorChildAndPartialClipFallbacks"
+  ],
   "docx-page-print-origins": [
       "DocxContinuationPagePaintIgnoresOtherPageFontSizes",
       "DocxPagePrintOriginsMatchIndependentWordViews",
@@ -256,7 +264,9 @@
       "ConverterUsesCustomFontResolverForDocxText",
       "DeterministicConversionProducesStableBytes",
       "PublicFontSourcesPreserveOptionalCancellationTokens",
-      "PublicApiPreservesOptionalRecordArguments"
+      "PublicApiPreservesOptionalRecordArguments",
+      "DocxContinuationPagePaintIgnoresOtherPageFontSizes",
+      "DocxPagePrintOriginsKeepInspectionLinksAndNoteTargetsTogether"
   ],
   "pptx-inheritance": [
       "PptxInheritance",

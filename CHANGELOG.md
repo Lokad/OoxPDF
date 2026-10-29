@@ -14,6 +14,8 @@
   shared measured rows for balloon height and painting.
 - DOCX: minimum-line placement uses measured local slots across fonts, styles
   and neighboring tables/wrapped text; links and background paint retain geometry.
+- DOCX: continuation pages use their own body print origins, keeping text,
+  bookmarks, links and following endnotes independent of page-one font sizes.
 - PPTX: retains readable advances and run/chart hyperlinks when standard PDF
   fonts replace unavailable fonts, including cell text and transformed links.
 - Preserves authored chart titles when automatic-title deletion is enabled;

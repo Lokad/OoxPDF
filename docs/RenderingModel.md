@@ -30,6 +30,10 @@ PPTX layout is mostly absolute: shapes, images, text boxes, groups, and tables a
 
 DOCX layout is flow-based. The renderer converts twips to points, computes the content rectangle from page size and margins, performs simple greedy Latin line breaking, handles keep rules, split table rows with repeated headers, floating-drawing exclusion geometry, and markup balloon contexts, advances a page cursor, and creates new pages when content crosses the bottom margin. Headers and footers are drawn on each produced page.
 
+Word-compatible body origins belong to each printed page. Painting, inspection,
+bookmark/link geometry and following-note boundaries use that page's origin;
+mapped static stories and bottom-anchored notes retain their own frames.
+
 Current text layout intentionally avoids complex shaping. Bold/italic use a hybrid: prefer a real font face on exact non-fallback matches, otherwise synthesize (stroked bold pass, oblique shear). Font programs flow through FontRequest, FontFaceResolution, IFontProgramSource, OpenTypeFont, and the subsetted embedded PDF font (see [fonts and portability](Fonts.md)).
 
 ## Shape, media, and table pipeline (PPTX)
