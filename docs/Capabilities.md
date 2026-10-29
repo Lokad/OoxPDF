@@ -96,8 +96,9 @@ Approximate or restricted:
   Existing independent Office thresholds still apply.
 - Authored chart titles survive automatic-title deletion flags. Automatic-title
   inference remains limited to an explicitly enabled, unambiguous series name;
-  title placement can still clip against the chart frame. Empty-title Office
-  placeholders are not synthesized.
+  inferred titles honor explicit chart text sizes. Automatic bar layouts reserve
+  measured title-line space; default sizing, wrapping and composed/manual title
+  geometry remain approximate. Empty-title Office placeholders are not synthesized.
 - Horizontal shape text renders an ellipsis marker when vertical overflow hides
   later lines. Non-horizontal text and chart-title contexts retain diagnosed
   clipping fallbacks. Complex effects and typography may be simplified or omitted

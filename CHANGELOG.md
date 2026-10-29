@@ -14,7 +14,9 @@
   shared measured rows for balloon height and painting.
 - PPTX: retains readable advances and run/chart hyperlinks when standard PDF
   fonts replace unavailable fonts, including cell text and transformed links.
-- Preserves authored chart titles when automatic-title deletion is enabled.
+- Preserves authored chart titles when automatic-title deletion is enabled;
+  automatic bar layouts reserve a measured title line inside the frame, and
+  inferred titles honor authored chart text sizes ahead of gallery defaults.
 - Reads common Strict DOCX content and measure forms, including composed tables,
   images, equations and related stories. Strict dialect warnings remain; this
   does not add general Strict OOXML or Strict PPTX support.
