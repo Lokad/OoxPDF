@@ -22,6 +22,13 @@ scenarios. Windows junctions and hard links run without symlink privilege. Only
 the file-symlink methods declare that environmental precondition. Linux runs all
 eleven library scenarios.
 
+`PptxChartPaletteTests` compares painted output against 481 independent Office bar
+colors across counts, themes and orientations. It replaces eighteen tests of
+private fitted helpers. The `pptx-automatic-palette` selection includes negative
+inversion, explicit paint, neighboring axes/labels and line-stroke controls.
+The 205-point witness retains one point-specific, one-byte rounding residual;
+whole-slide thresholds are unchanged and remain separate from color assertions.
+
 Use `framework-compatibility` in `tools/qualification-capabilities.json` for the
 small .NET 10 lane: public conversion, streams, cancellation, atomic publication,
 fonts, CLI and three composed-document controls. Extensive suites use .NET 11.

@@ -86,9 +86,10 @@ Approximate or restricted:
   coordinates, composed/secondary plots, unsupported scales and unresolved fonts
   keep their fallbacks. Empty manual metadata retains automatic measurement.
 - Qualified gallery defaults, authored stroke/fill precedence, line smoothing,
-  markers and point-count color regimes remain implemented. Classic/composed
-  gallery roles, minor-stroke defaults, automatic tick fitting and chart color
-  parity are incomplete. Existing independent Office thresholds still apply.
+  markers and automatic six-accent bar palettes are implemented. Classic/composed
+  gallery roles, minor-stroke defaults, automatic tick fitting, category bar legends
+  and arbitrary color-style methods remain incomplete. Existing independent Office
+  thresholds still apply.
 - Horizontal shape text renders an ellipsis marker when vertical overflow hides
   later lines. Non-horizontal text and chart-title contexts retain diagnosed
   clipping fallbacks. Complex effects and typography may be simplified or omitted

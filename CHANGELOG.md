@@ -6,6 +6,8 @@
   qualification records framework-specific library and tool identities.
 - PPTX: honors series and point negative-bar inversion flags across clustered and
   stacked bar/column charts, including label swatches and explicit point fills.
+- Replaces fitted bar-color regimes with shared cycle shading, including
+  horizontal charts and theme changes.
 
 ## 0.2.0 — 2026-10-29
 
