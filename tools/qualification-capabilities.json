@@ -1,6 +1,7 @@
 {
   "pptx-chart-titles": [
       "PptxAuthoredChartTitleSurvivesAutomaticTitleDeletion",
+      "TitleOptionsAgreeBetweenSceneAndXml",
       "PptxChartTitleExternalHyperlinkEmitsUriAnnotation",
       "PptxChartTitleHyperlinkActionIsDiagnosed",
       "PptxChartTitleMissingRelationshipIsDiagnosed",
