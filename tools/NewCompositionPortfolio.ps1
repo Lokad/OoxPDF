@@ -86,5 +86,10 @@ foreach ($deck in @(@{Id='briefing-deck';Name='pptx-ladder-11-composite-chart-po
     $path = Join-Path $cases $deck.Name
     $manifest += [ordered]@{Id=$deck.Id;Input=('tests/Lokad.OoxPdf.Tests/Cases/'+$deck.Name);Sha256=(Get-FileHash $path).Hash;HeldOut=$deck.HeldOut;Features=@('text','shapes','table-or-chart')}
 }
-ConvertTo-Json -InputObject $manifest -Depth 5 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'portfolio.json') -Encoding utf8
-Write-Output 'Four fixed DOCX composites generated; two existing PPTX composites pinned. Six documents total.'
+# Keep the separately authored composition witnesses in the canonical portfolio.
+# Regenerating the four base documents must not silently shrink its coverage.
+$canonical = @(Get-Content (Join-Path $cases 'Composition/portfolio.json') -Raw | ConvertFrom-Json)
+$generatedIds = @($manifest | ForEach-Object { $_.Id })
+$manifest += @($canonical | Where-Object { $_.Id -notin $generatedIds })
+ConvertTo-Json -InputObject $manifest -Depth 8 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'portfolio.json') -Encoding utf8
+Write-Output "Four fixed DOCX composites generated; existing decks and composition witnesses retained. $($manifest.Count) documents total."

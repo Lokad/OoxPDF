@@ -13,12 +13,20 @@ transformations. The finite gate covers content omissions, pagination, serious
 clipping/overlap and regressions within supported scope; it does not require
 pixel-perfect Office parity.
 
+The canonical [portfolio manifest](../tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json)
+includes all nine pinned sources. Default measurement and content-audit commands
+use it; the older seven-source checkpoint manifest has been retired.
+
 Independent Office references and thresholds remain fixed. Two PPTX strict gates
 pass; fourteen DOCX strict gates retain typography/geometry failures. The inherited
 balloon second-row assertion, SVG Review Y 1.436035pt against 1pt, raw Word
 footnote annotation mismatch and two field/extraction flags remain explicit in
 [current qualification](PreviewQualification.md). Correct PDF structure and
 manifest validity are separate from Office fidelity.
+
+Those are retained historical results: sixteen original Office reference PDFs
+are no longer available locally. Fresh 0.3.0 references use explicit new identities;
+image captures remain uncalibrated until checked against the visible application.
 
 The 0.2.0 maintenance checkpoint is complete. Development toward 0.3.0 now
 prioritizes composed DOCX layout, generalized PPTX chart styles and effective

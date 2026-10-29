@@ -30,7 +30,7 @@ def load(path):
 
 base = cases / "Composition/report.docx"
 assert sha(base) == "10F63D162D0D46DBE8CD682BB50452DB6672104706F116EA50CDCAFEE054575F"
-portfolio = json.loads((cases / "Composition/portfolio-checkpoint.json").read_text(encoding="utf-8-sig"))
+portfolio = json.loads((cases / "Composition/portfolio.json").read_text(encoding="utf-8-sig"))
 assert not next(item for item in portfolio if item["Id"] == "report")["HeldOut"]
 nav = next(item for item in json.loads((cases / "CompositionProbes/nested-math-navigation.json").read_text(encoding="utf-8-sig"))
            if item["Id"] == "nested-math-navigation-outgoing")

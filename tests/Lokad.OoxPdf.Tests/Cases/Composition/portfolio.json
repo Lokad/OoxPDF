@@ -124,5 +124,119 @@
       "shapes",
       "table-or-chart"
     ]
+  },
+  {
+    "Id": "composed-static-cell-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/Composition/composed-static-cell-report.docx",
+    "Sha256": "98980EB43EA8B9662666C026B7DD467F40D79A34E4A96F5805D032C192C8CEB3",
+    "HeldOut": true,
+    "ExpectedEquationCount": 10,
+    "ExpectedInlineImageCount": 3,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "See calculation",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative.",
+      "Calculation:",
+      "Footer:"
+    ],
+    "Features": [
+      "image/math/comment/link/bookmark in one paragraph",
+      "math/endnote reference in a table cell",
+      "numbering",
+      "header equation",
+      "footer",
+      "continuous endnote",
+      "wrapped prose",
+      "cached field results beside math/image/comment and inside an internal hyperlink",
+      "two supported fractions and a bookmark inside the endnote",
+      "source PNG also embedded beside the endnote fractions",
+      "simple/packed PAGE fields beside cached fields/math/images, inside an internal hyperlink and in a math/note table cell",
+      "existing header/footer prose and equation preserved in simple cells; mixed footer fractions/image/PAGE/NUMPAGES"
+    ]
+  },
+  {
+    "Id": "composed-static-svg-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/composed-static-svg-report.docx",
+    "Sha256": "A8614B801CD381C69220D7F1158D4BE563CB2765D3663FA960EDD94F34615CFD",
+    "HeldOut": true,
+    "ExpectedEquationCount": 6,
+    "ExpectedInlineImageCount": 2,
+    "ExpectedText": [
+      "Quarterly operations report",
+      "Inventory availability",
+      "Review section 12.",
+      "All quantities in this synthetic example are illustrative."
+    ],
+    "Features": [
+      "tables",
+      "numbering",
+      "image",
+      "equations",
+      "bookmark",
+      "link",
+      "header",
+      "footer",
+      "footnote",
+      "comment"
+    ],
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/composed-static-picture-report.docx",
+    "SourceSha256": "F3ED6D23D2C656A8F13441C0BF49FECE2AAC2C6F0B1597655AA24AEBFE21B569",
+    "BodyXmlSha256": "838132F457B465A5F185DF64A8E6D1B98A254AC5EAA5F1429AF25976680E2D57",
+    "Part": "word/footer1.xml",
+    "Change": "Replace only static drawing/media with canonical SVG plus PNG preview at the same18x9pt extent; body/style entries exact.",
+    "Story": "footer",
+    "ImageWidth": 18,
+    "ImageHeight": 9,
+    "StoryDistance": 36,
+    "SvgViewBox": [
+      0,
+      0,
+      120,
+      60
+    ],
+    "SvgWitnessColor": [
+      0,
+      170,
+      102
+    ],
+    "SvgWitnessRect": [
+      10,
+      8,
+      100,
+      44
+    ]
+  },
+  {
+    "Id": "linked-footnote-picture-report",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/linked-footnote-picture-report.docx",
+    "Sha256": "410C0F3BCCA7854CABDFBC5B355A041311267CE3AB5F923FB3984B518FCD0FB9",
+    "HeldOut": true,
+    "ExpectedInlineImageCount": 2,
+    "ExpectedText": [
+      "Public continuation note line 01:",
+      "Public continuation note line 64:",
+      "Second public continuation note."
+    ],
+    "ExpectedEquationCount": 7,
+    "SourceInput": "tests/Lokad.OoxPdf.Tests/Cases/CompositionProbes/linked-mixed-note-report.docx",
+    "SourceSha256": "B468F52D59AC7CCF3052AFF70871B3A68EC4C5B7B63951B3013344CB32F71AA4",
+    "PictureLinkOwners": [
+      {
+        "Part": "word/document.xml",
+        "PictureId": "1",
+        "TargetUri": "https://example.invalid/footnote-picture/document/1",
+        "ExpectedNativeNavigation": true,
+        "Scope": "Complete inline picture; container owns physical placement and clip"
+      },
+      {
+        "Part": "word/footnotes.xml",
+        "PictureId": "501",
+        "TargetUri": "https://example.invalid/footnote-picture/footnotes/501",
+        "ExpectedNativeNavigation": true,
+        "Scope": "Complete inline picture; container owns physical placement and clip"
+      }
+    ],
+    "Change": "Add only canonical picture click targets/relationships; preserve all visible source content and geometry."
   }
 ]
