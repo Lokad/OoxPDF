@@ -81,7 +81,10 @@ internal static class DocxTableStyleMarginTests
     private static DocxTableCellLayout FirstCell(DocxDocument source, bool final)
     {
         var layout = new DocxLayoutEngine(final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
-            : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+            : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup,
+            // These sources have no revisions or balloons. Like the renderer,
+            // retain their full-size page frame in Word-compatible mode.
+            wordCompatiblePrintScale: 1d)
             .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
         return layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>().Concat(page.StaticTableRows))
             .SelectMany(row => row.Cells).First(cell => cell.Cell.Paragraphs.Any(paragraph =>
