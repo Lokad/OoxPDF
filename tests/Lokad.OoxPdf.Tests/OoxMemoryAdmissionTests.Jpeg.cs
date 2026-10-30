@@ -132,26 +132,32 @@ internal static partial class OoxMemoryAdmissionTests
                 using (var package = TestFixtures.CreateZipPackage(parts)) File.WriteAllBytes(input, package.ToArray());
                 // The same source first succeeds through the actual decoder.
                 var successDiagnostics = new List<OoxPdfDiagnostic>();
+                int admitted = 0;
+                var successBudget = new TestMemoryBudget { RefuseChange = (_, after) => {
+                    if (after == construction) admitted++;
+                    return false;
+                }};
                 using (var source = File.OpenRead(input))
                 using (var output = new MemoryStream())
                 {
                     OoxPdfConverter.Convert(source, output, new OoxPdfOptions { InputKind=OoxPdfInputKind.Pptx,
-                        FontResolver=new PortableRenderingTests.PinnedResolver(mathFont: true), DiagnosticSink=successDiagnostics.Add });
+                        FontResolver=new PortableRenderingTests.PinnedResolver(mathFont: true), MemoryBudget=successBudget, DiagnosticSink=successDiagnostics.Add });
                     TestAssert.True(output.Length > 0, "The baseline effect conversion succeeds.");
                 }
                 TestAssert.True(successDiagnostics.All(d => d.Id is not "PPTX_UNSUPPORTED_IMAGE_RECOLOR" and not "IMAGE_CROP_UNSUPPORTED_FORMAT" and not "PPTX_NODE_RENDER_FAILED"), "The positive control does not take effect recovery.");
+                TestAssert.True(admitted > 0, "The image-only deck must exercise live JPEG construction without requiring font acquisition.");
+                TestAssert.Equal(0L, successBudget.Reserved);
                 foreach (bool file in new[] { false, true })
                 {
-                    bool rendering = false;
                     int refusals = 0;
                     var pool = new TestMemoryBudget { RefuseChange = (_, after) => {
-                        if (!rendering || after != construction) return false;
+                        if (after != construction) return false;
                         refusals++;
                         return true;
                     }};
                     var diagnostics = new List<OoxPdfDiagnostic>();
                     var options = new OoxPdfOptions { InputKind=OoxPdfInputKind.Pptx, MemoryBudget=pool,
-                        FontResolver=new ObservedResolver(() => rendering=true), DiagnosticSink=diagnostics.Add };
+                        FontResolver=new PortableRenderingTests.PinnedResolver(mathFont: true), DiagnosticSink=diagnostics.Add };
                     OoxPdfLimitExceededException failure;
                     if (file)
                     {
