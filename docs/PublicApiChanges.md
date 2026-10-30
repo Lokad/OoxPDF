@@ -2,6 +2,14 @@
 
 ## 0.3.0
 
+`ConvertAsync` now awaits bounded package-input reads, ZIP preflight and entry
+extraction instead of unconditionally queuing the synchronous converter with
+`Task.Run`. Synchronous entry points block on the same pipeline. CPU rendering,
+font acquisition and staging/output writes remain synchronous during the ongoing
+embedding migration; this is not yet end-to-end asynchronous conversion. Caller
+streams remain open, and cancellation waits for an outstanding read before
+refunding its borrowed storage. Input-read failures escape without preflight retry.
+
 An explicit `FontResolver` now defines the entire allowed font universe for PPTX
 as well as DOCX. Custom resolvers without a built-in catalog no longer gain
 implicit Windows fallback fonts. Provide all required glyph coverage through
@@ -190,10 +198,10 @@ the token during the final resource summary also prevents file publication.
 Callbacks remain synchronous and may invoke nested conversions. These are contract
 repairs; they add no public API or buffering layer.
 
-Asynchronous file conversions also capture the invocation working directory
-before queuing. Changing the process directory while a conversion waits for a
-worker no longer changes its relative input/output paths. Argument failures
-still fault the returned task, and pre-cancellation still takes precedence.
+Asynchronous file conversions capture the invocation working directory before
+awaiting input or invoking host callbacks. Later directory changes cannot redirect
+relative input/output paths. Argument failures still fault the returned task,
+and pre-cancellation still takes precedence.
 
 Info-only diagnostic overflow now emits an informational `DIAGNOSTIC_OVERFLOW`
 marker, consistent with `DiagnosticCollector.HasWarningsOrErrors == false`.

@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Xml.Linq;
 
@@ -58,7 +59,10 @@ internal sealed class OoxPackage : IDisposable
         return Open(stream, cancellationToken);
     }
 
-    public static OoxPackage Open(Stream stream, CancellationToken cancellationToken)
+    public static OoxPackage Open(Stream stream, CancellationToken cancellationToken) =>
+        OpenAsync(stream, cancellationToken).GetAwaiter().GetResult();
+
+    public static async ValueTask<OoxPackage> OpenAsync(Stream stream, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         // bound archive intake before ZipArchive buffers it. For forward-only
@@ -80,7 +84,7 @@ internal sealed class OoxPackage : IDisposable
             byte[] scratch = new byte[ScratchBytes];
             if (!stream.CanSeek)
             {
-                stagedBytes = StageCompressedInput(stream, MaxCompressedBytes, scratch, compressed, cancellationToken);
+                stagedBytes = await StageCompressedInputAsync(stream, MaxCompressedBytes, scratch, compressed, cancellationToken).ConfigureAwait(false);
                 archiveStream = stagedBytes;
             }
             else
@@ -111,138 +115,143 @@ internal sealed class OoxPackage : IDisposable
 
                 if (stageSeekable)
                 {
-                    stagedBytes = StageCompressedInput(stream, MaxCompressedBytes, scratch, compressed, cancellationToken);
+                    stagedBytes = await StageCompressedInputAsync(stream, MaxCompressedBytes, scratch, compressed, cancellationToken).ConfigureAwait(false);
                     archiveStream = stagedBytes;
                 }
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            PreflightCentralDirectory(archiveStream, scratch, cancellationToken);
-            using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, leaveOpen: true);
-            if (archive.Entries.Count > MaxEntryCount)
+            await PreflightCentralDirectoryAsync(archiveStream, scratch, cancellationToken).ConfigureAwait(false);
+            OoxContentTypes contentTypes;
+            Dictionary<string, OoxPart> parts;
+            ZipArchive archive = await ZipArchive.CreateAsync(archiveStream, ZipArchiveMode.Read,
+                leaveOpen: true, entryNameEncoding: null, cancellationToken).ConfigureAwait(false);
+            await using (archive.ConfigureAwait(false))
             {
-                throw new OoxPdfLimitExceededException($"OOXML package has too many ZIP entries: {archive.Entries.Count}.");
-            }
-
-            // Bound central-directory claims before extracting retained parts.
-            long claimedCompressed = 0;
-            foreach (ZipArchiveEntry claimed in archive.Entries)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                long entryCompressed = claimed.CompressedLength;
-                if (entryCompressed < 0)
+                if (archive.Entries.Count > MaxEntryCount)
                 {
-                    continue;
+                    throw new OoxPdfLimitExceededException($"OOXML package has too many ZIP entries: {archive.Entries.Count}.");
                 }
 
-                try
+                // Bound central-directory claims before extracting retained parts.
+                long claimedCompressed = 0;
+                foreach (ZipArchiveEntry claimed in archive.Entries)
                 {
-                    claimedCompressed = checked(claimedCompressed + entryCompressed);
-                }
-                catch (OverflowException ex)
-                {
-                    throw new OoxPdfLimitExceededException("OOXML package central directory exceeds the maximum supported size.", ex);
-                }
-
-                if (claimedCompressed > MaxCompressedBytes)
-                {
-                    throw new OoxPdfLimitExceededException("OOXML package exceeds the maximum supported compressed size.");
-                }
-            }
-
-        ZipArchiveEntry? contentTypesEntry = archive.GetEntry("[Content_Types].xml")
-            ?? throw new InvalidDataException("OOXML package is missing [Content_Types].xml.");
-
-        // The declared entry length is untrusted: copy through a bounded buffer first
-        // so an oversized Content_Types part fails before XML parsing amplifies it.
-        byte[] contentTypesBytes;
-        using (Stream contentTypesStream = contentTypesEntry.Open())
-        {
-            contentTypesBytes = CopyBounded(contentTypesStream, MaxContentTypesBytes, "[Content_Types].xml", scratch, working, retained, cancellationToken);
-        }
-
-        OoxContentTypes contentTypes;
-        using (var contentTypesBuffer = new MemoryStream(contentTypesBytes, writable: false))
-        {
-            contentTypes = OoxContentTypes.Parse(contentTypesBuffer, cancellationToken);
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        long totalBytes = 0;
-        var parts = new Dictionary<string, OoxPart>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (ZipArchiveEntry entry in archive.Entries)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (entry.FullName.EndsWith('/'))
-            {
-                continue;
-            }
-
-            string partName = OoxPath.NormalizePartName(entry.FullName);
-            if (entry.Length < 0 || entry.Length > MaxPartBytes)
-            {
-                throw new OoxPdfLimitExceededException($"OOXML part '{partName}' exceeds the maximum supported size.");
-            }
-
-            string? contentType = partName == "/[Content_Types].xml"
-                ? "application/xml"
-                : contentTypes.GetContentType(partName);
-            if (contentType is null)
-            {
-                continue;
-            }
-
-            // Two archive entries normalizing to one part name are ambiguous: keep neither guess.
-            if (parts.ContainsKey(partName))
-            {
-                throw new InvalidDataException($"OOXML package contains a duplicate part {partName}.");
-            }
-
-            // The [Content_Types].xml entry was already copied and parsed above: reuse
-            // those bytes instead of copying the entry a second time (G01).
-            byte[] partBytes;
-            if (string.Equals(entry.FullName, "[Content_Types].xml", StringComparison.Ordinal))
-            {
-                partBytes = contentTypesBytes;
-            }
-            else
-            {
-                // Declared lengths are untrusted: enforce the budgets on actual copied
-                // bytes, capped by the remaining aggregate capacity so a single part
-                // cannot overshoot the package budget by its full size before rejection.
-                long remaining = MaxTotalBytes - totalBytes;
-                if (remaining < 0)
-                {
-                    throw new OoxPdfLimitExceededException("OOXML package exceeds the maximum supported uncompressed size.");
-                }
-
-                long partBudget = Math.Min(MaxPartBytes, remaining);
-                bool cappedByTotal = partBudget < MaxPartBytes;
-                try
-                {
-                    using (Stream entryStream = entry.Open())
+                    cancellationToken.ThrowIfCancellationRequested();
+                    long entryCompressed = claimed.CompressedLength;
+                    if (entryCompressed < 0)
                     {
-                        partBytes = CopyBounded(entryStream, partBudget, partName, scratch, working, retained, cancellationToken);
+                        continue;
+                    }
+
+                    try
+                    {
+                        claimedCompressed = checked(claimedCompressed + entryCompressed);
+                    }
+                    catch (OverflowException ex)
+                    {
+                        throw new OoxPdfLimitExceededException("OOXML package central directory exceeds the maximum supported size.", ex);
+                    }
+
+                    if (claimedCompressed > MaxCompressedBytes)
+                    {
+                        throw new OoxPdfLimitExceededException("OOXML package exceeds the maximum supported compressed size.");
                     }
                 }
-                catch (OoxPdfLimitExceededException exception) when (cappedByTotal && exception.Kind == OoxPdfLimitKind.DocumentBound)
+
+                ZipArchiveEntry? contentTypesEntry = archive.GetEntry("[Content_Types].xml")
+                    ?? throw new InvalidDataException("OOXML package is missing [Content_Types].xml.");
+
+                // The declared entry length is untrusted: copy through a bounded buffer first
+                // so an oversized Content_Types part fails before XML parsing amplifies it.
+                byte[] contentTypesBytes;
+                Stream contentTypesStream = await contentTypesEntry.OpenAsync(cancellationToken).ConfigureAwait(false);
+                await using (contentTypesStream.ConfigureAwait(false))
                 {
-                    throw new OoxPdfLimitExceededException("OOXML package exceeds the maximum supported uncompressed size.");
+                    contentTypesBytes = await CopyBoundedAsync(contentTypesStream, MaxContentTypesBytes, "[Content_Types].xml", scratch, working, retained, cancellationToken).ConfigureAwait(false);
+                }
+                using (var contentTypesBuffer = new MemoryStream(contentTypesBytes, writable: false))
+                {
+                    contentTypes = OoxContentTypes.Parse(contentTypesBuffer, cancellationToken);
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                long totalBytes = 0;
+                parts = new Dictionary<string, OoxPart>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (ZipArchiveEntry entry in archive.Entries)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (entry.FullName.EndsWith('/'))
+                    {
+                        continue;
+                    }
+
+                    string partName = OoxPath.NormalizePartName(entry.FullName);
+                    if (entry.Length < 0 || entry.Length > MaxPartBytes)
+                    {
+                        throw new OoxPdfLimitExceededException($"OOXML part '{partName}' exceeds the maximum supported size.");
+                    }
+
+                    string? contentType = partName == "/[Content_Types].xml"
+                        ? "application/xml"
+                        : contentTypes.GetContentType(partName);
+                    if (contentType is null)
+                    {
+                        continue;
+                    }
+
+                    // Two archive entries normalizing to one part name are ambiguous: keep neither guess.
+                    if (parts.ContainsKey(partName))
+                    {
+                        throw new InvalidDataException($"OOXML package contains a duplicate part {partName}.");
+                    }
+
+                    // The [Content_Types].xml entry was already copied and parsed above: reuse
+                    // those bytes instead of copying the entry a second time (G01).
+                    byte[] partBytes;
+                    if (string.Equals(entry.FullName, "[Content_Types].xml", StringComparison.Ordinal))
+                    {
+                        partBytes = contentTypesBytes;
+                    }
+                    else
+                    {
+                        // Declared lengths are untrusted: enforce the budgets on actual copied
+                        // bytes, capped by the remaining aggregate capacity so a single part
+                        // cannot overshoot the package budget by its full size before rejection.
+                        long remaining = MaxTotalBytes - totalBytes;
+                        if (remaining < 0)
+                        {
+                            throw new OoxPdfLimitExceededException("OOXML package exceeds the maximum supported uncompressed size.");
+                        }
+
+                        long partBudget = Math.Min(MaxPartBytes, remaining);
+                        bool cappedByTotal = partBudget < MaxPartBytes;
+                        try
+                        {
+                            Stream entryStream = await entry.OpenAsync(cancellationToken).ConfigureAwait(false);
+                            await using (entryStream.ConfigureAwait(false))
+                            {
+                                partBytes = await CopyBoundedAsync(entryStream, partBudget, partName, scratch, working, retained, cancellationToken).ConfigureAwait(false);
+                            }
+                        }
+                        catch (OoxPdfLimitExceededException exception) when (cappedByTotal && exception.Kind == OoxPdfLimitKind.DocumentBound)
+                        {
+                            throw new OoxPdfLimitExceededException("OOXML package exceeds the maximum supported uncompressed size.");
+                        }
+                    }
+
+                    totalBytes = checked(totalBytes + partBytes.LongLength);
+                    if (totalBytes > MaxTotalBytes)
+                    {
+                        throw new OoxPdfLimitExceededException("OOXML package exceeds the maximum supported uncompressed size.");
+                    }
+
+                    parts.Add(partName, new OoxPart(partName, contentType, partBytes));
                 }
             }
-
-            totalBytes = checked(totalBytes + partBytes.LongLength);
-            if (totalBytes > MaxTotalBytes)
-            {
-                throw new OoxPdfLimitExceededException("OOXML package exceeds the maximum supported uncompressed size.");
-            }
-
-            parts.Add(partName, new OoxPart(partName, contentType, partBytes));
-        }
-
-            // Intake buffers have no remaining readers. Refund them before
+            // Archive/entry disposal has completed. Refund intake buffers before
             // transferring the package's retained-byte scope to the result.
             stagedBytes?.Dispose();
             stagedBytes = null;
@@ -269,7 +278,7 @@ internal sealed class OoxPackage : IDisposable
     // restored. Limit failures always propagate; only metadata-query failures fall
     // through (OoxPdfLimitExceededException derives from IOException, so every catch
     // below rethrows it explicitly).
-    private static void PreflightCentralDirectory(Stream archiveStream, byte[] scratch, CancellationToken cancellationToken)
+    private static async ValueTask PreflightCentralDirectoryAsync(Stream archiveStream, byte[] scratch, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (!archiveStream.CanSeek)
@@ -325,11 +334,11 @@ internal sealed class OoxPackage : IDisposable
                 return;
             }
 
-            archiveStream.Seek(scanStart, SeekOrigin.Begin);
+            if (!TrySeekCentralDirectory(archiveStream, scanStart)) return;
             int read = 0;
             while (read < scanLength)
             {
-                int chunk = archiveStream.Read(scratch, read, scanLength - read);
+                int chunk = await archiveStream.ReadAsync(scratch.AsMemory(read, scanLength - read), cancellationToken).ConfigureAwait(false);
                 if (chunk == 0)
                 {
                     return;
@@ -372,10 +381,10 @@ internal sealed class OoxPackage : IDisposable
                 ((long)scratch[recordBase + 14] << 16) | ((long)scratch[recordBase + 15] << 24);
             if (entryCount == 0xFFFF || directorySize == 0xFFFFFFFF)
             {
-                if (!TryReadZip64Counts(archiveStream, recordOffset, scratch, out entryCount, out directorySize))
-                {
-                    return;
-                }
+                var counts = await ReadZip64CountsAsync(archiveStream, recordOffset, scratch, cancellationToken).ConfigureAwait(false);
+                if (counts is not { } zip64) return;
+                entryCount = zip64.EntryCount;
+                directorySize = zip64.DirectorySize;
             }
 
             if (entryCount > MaxEntryCount)
@@ -388,113 +397,50 @@ internal sealed class OoxPackage : IDisposable
                 throw new OoxPdfLimitExceededException("OOXML package central directory exceeds the maximum supported size.");
             }
         }
-        catch (Exception ex) when (ex is NotSupportedException or IOException)
-        {
-            if (ex is OoxPdfLimitExceededException)
-            {
-                throw;
-            }
-
-            return;
-        }
         finally
         {
-            try
-            {
-                archiveStream.Seek(savedPosition, SeekOrigin.Begin);
-            }
-            catch (Exception ex) when (ex is NotSupportedException or IOException)
-            {
-                if (ex is OoxPdfLimitExceededException)
-                {
-                    throw;
-                }
-            }
+            _ = TrySeekCentralDirectory(archiveStream, savedPosition);
         }
     }
 
-    private static bool TryReadZip64Counts(Stream archiveStream, long recordOffset, byte[] scratch, out long entryCount, out long directorySize)
+    // Only unavailable metadata/seek operations fall back. An actual read failure
+    // belongs to the caller's transport and must escape without a second read.
+    private static bool TrySeekCentralDirectory(Stream stream, long position)
     {
-        entryCount = 0;
-        directorySize = 0;
+        try { stream.Seek(position, SeekOrigin.Begin); return true; }
+        catch (Exception ex) when (ex is NotSupportedException or IOException)
+        {
+            if (ex is OoxPdfLimitExceededException) throw;
+            return false;
+        }
+    }
+
+    private static async ValueTask<(long EntryCount, long DirectorySize)?> ReadZip64CountsAsync(
+        Stream archiveStream, long recordOffset, byte[] scratch, CancellationToken cancellationToken)
+    {
         // The Zip64 locator sits 20 bytes before the End-of-Central-Directory.
-        if (recordOffset < 20 || scratch.Length < 56)
+        if (recordOffset < 20 || scratch.Length < 56 || !TrySeekCentralDirectory(archiveStream, recordOffset - 20)) return null;
+        int read = 0;
+        while (read < 20)
         {
-            return false;
+            int chunk = await archiveStream.ReadAsync(scratch.AsMemory(read, 20 - read), cancellationToken).ConfigureAwait(false);
+            if (chunk == 0) return null;
+            read += chunk;
         }
-
-        try
+        if (!(scratch[0] == 0x50 && scratch[1] == 0x4B && scratch[2] == 0x06 && scratch[3] == 0x07)) return null;
+        long offset = BinaryPrimitives.ReadInt64LittleEndian(scratch.AsSpan(8, 8));
+        if (offset < 0 || !TrySeekCentralDirectory(archiveStream, offset)) return null;
+        read = 0;
+        while (read < 56)
         {
-            archiveStream.Seek(recordOffset - 20, SeekOrigin.Begin);
-            int read = 0;
-            while (read < 20)
-            {
-                int chunk = archiveStream.Read(scratch, read, 20 - read);
-                if (chunk == 0)
-                {
-                    return false;
-                }
-
-                read += chunk;
-            }
+            int chunk = await archiveStream.ReadAsync(scratch.AsMemory(read, 56 - read), cancellationToken).ConfigureAwait(false);
+            if (chunk == 0) return null;
+            read += chunk;
         }
-        catch (Exception ex) when (ex is NotSupportedException or IOException)
-        {
-            if (ex is OoxPdfLimitExceededException)
-            {
-                throw;
-            }
-
-            return false;
-        }
-
-        if (!(scratch[0] == 0x50 && scratch[1] == 0x4B && scratch[2] == 0x06 && scratch[3] == 0x07))
-        {
-            return false;
-        }
-
-        long zip64Offset = (long)scratch[8] | ((long)scratch[9] << 8) | ((long)scratch[10] << 16) | ((long)scratch[11] << 24) |
-            ((long)scratch[12] << 32) | ((long)scratch[13] << 40) | ((long)scratch[14] << 48) | ((long)scratch[15] << 56);
-        if (zip64Offset < 0)
-        {
-            return false;
-        }
-
-        try
-        {
-            archiveStream.Seek(zip64Offset, SeekOrigin.Begin);
-            int got = 0;
-            while (got < 56)
-            {
-                int chunk = archiveStream.Read(scratch, got, 56 - got);
-                if (chunk == 0)
-                {
-                    return false;
-                }
-
-                got += chunk;
-            }
-        }
-        catch (Exception ex) when (ex is NotSupportedException or IOException)
-        {
-            if (ex is OoxPdfLimitExceededException)
-            {
-                throw;
-            }
-
-            return false;
-        }
-
-        if (!(scratch[0] == 0x50 && scratch[1] == 0x4B && scratch[2] == 0x06 && scratch[3] == 0x06))
-        {
-            return false;
-        }
-
-        entryCount = (long)scratch[32] | ((long)scratch[33] << 8) | ((long)scratch[34] << 16) | ((long)scratch[35] << 24) |
-            ((long)scratch[36] << 32) | ((long)scratch[37] << 40) | ((long)scratch[38] << 48) | ((long)scratch[39] << 56);
-        directorySize = (long)scratch[40] | ((long)scratch[41] << 8) | ((long)scratch[42] << 16) | ((long)scratch[43] << 24) |
-            ((long)scratch[44] << 32) | ((long)scratch[45] << 40) | ((long)scratch[46] << 48) | ((long)scratch[47] << 56);
-        return entryCount >= 0 && directorySize >= 0;
+        if (!(scratch[0] == 0x50 && scratch[1] == 0x4B && scratch[2] == 0x06 && scratch[3] == 0x06)) return null;
+        long entries = BinaryPrimitives.ReadInt64LittleEndian(scratch.AsSpan(32, 8));
+        long size = BinaryPrimitives.ReadInt64LittleEndian(scratch.AsSpan(40, 8));
+        return entries >= 0 && size >= 0 ? (entries, size) : null;
     }
 
     public OoxPart? GetPart(string partName)
@@ -574,7 +520,7 @@ internal sealed class OoxPackage : IDisposable
         return relationships;
     }
 
-    private static MemoryStream StageCompressedInput(Stream source, long maxBytes, byte[] scratch, IMemoryReservation? storage, CancellationToken cancellationToken)
+    private static async ValueTask<MemoryStream> StageCompressedInputAsync(Stream source, long maxBytes, byte[] scratch, IMemoryReservation? storage, CancellationToken cancellationToken)
     {
         var destination = new MemoryStream();
         try
@@ -583,7 +529,7 @@ internal sealed class OoxPackage : IDisposable
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                int read = source.Read(buffer, 0, buffer.Length);
+                int read = await source.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
                 if (read == 0)
                 {
                     destination.Position = 0;
@@ -606,7 +552,7 @@ internal sealed class OoxPackage : IDisposable
         }
     }
 
-    private static byte[] CopyBounded(Stream source, long maxBytes, string what, byte[] scratch,
+    private static async ValueTask<byte[]> CopyBoundedAsync(Stream source, long maxBytes, string what, byte[] scratch,
         IMemoryReservation? working, IMemoryReservation? retained, CancellationToken cancellationToken)
     {
         var destination = new MemoryStream();
@@ -615,7 +561,7 @@ internal sealed class OoxPackage : IDisposable
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                int read = source.Read(scratch, 0, scratch.Length);
+                int read = await source.ReadAsync(scratch.AsMemory(), cancellationToken).ConfigureAwait(false);
                 if (read == 0)
                 {
                     // The final array and construction buffer overlap until

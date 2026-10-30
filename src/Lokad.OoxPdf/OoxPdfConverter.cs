@@ -14,11 +14,11 @@ namespace Lokad.OoxPdf;
 /// <para>Operational contracts for hosting services:</para>
 /// <list type="bullet">
 /// <item>Synchronous and asynchronous overloads perform the same conversion. The Async
-/// variants offload the synchronous pipeline to the thread pool and perform no true
-/// asynchronous I/O; awaiting one yields byte-identical output to the matching sync
-/// overload for the same inputs.</item>
+/// variants await bounded package input I/O. Font acquisition, CPU rendering and
+/// staging/output writes currently remain synchronous. Synchronous convenience
+/// methods block on the same pipeline; matching inputs produce identical PDFs.</item>
 /// <item>File paths are resolved against the working directory at invocation,
-/// including asynchronous calls that wait in the thread pool.</item>
+/// before asynchronous reads or host callbacks can change that directory.</item>
 /// <item>Caller-owned streams are never closed or disposed. Seekable input may be
 /// randomly accessed; non-seekable input is read forward through bounded staging.
 /// Output needs only forward writes; non-seekable host streams are supported.
@@ -89,7 +89,7 @@ public static class OoxPdfConverter
     {
         cancellationToken.ThrowIfCancellationRequested();
         string baseDirectory = Environment.CurrentDirectory;
-        await Task.Run(() => ConvertCore(inputPath, outputPath, options, cancellationToken, baseDirectory), cancellationToken).ConfigureAwait(false);
+        await ConvertCoreAsync(inputPath, outputPath, options, cancellationToken, baseDirectory).ConfigureAwait(false);
     }
 
     public static Task ConvertAsync(Stream input, Stream output, OoxPdfOptions? options)
@@ -99,10 +99,14 @@ public static class OoxPdfConverter
 
     public static Task ConvertAsync(Stream input, Stream output, OoxPdfOptions? options, CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => ConvertCore(input, output, options, cancellationToken), cancellationToken);
+        return cancellationToken.IsCancellationRequested ? Task.FromCanceled(cancellationToken) :
+            ConvertCoreAsync(input, output, options, cancellationToken);
     }
 
-    private static void ConvertCore(string inputPath, string outputPath, OoxPdfOptions? options, CancellationToken cancellationToken, string? baseDirectory = null)
+    private static void ConvertCore(string inputPath, string outputPath, OoxPdfOptions? options, CancellationToken cancellationToken, string? baseDirectory = null) =>
+        ConvertCoreAsync(inputPath, outputPath, options, cancellationToken, baseDirectory).GetAwaiter().GetResult();
+
+    private static async Task ConvertCoreAsync(string inputPath, string outputPath, OoxPdfOptions? options, CancellationToken cancellationToken, string? baseDirectory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(inputPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
@@ -155,13 +159,18 @@ public static class OoxPdfConverter
         {
             using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits, options.MemoryBudget))
             {
-                using FileStream input = File.OpenRead(inputPath);
-                using OoxPackage package = OoxPackage.Open(input, cancellationToken);
-                // The package owns source bytes borrowed by page resources. Keep it
-                // funded until the writer has emitted every resource and page.
-                using (FileStream output = File.Create(stagingPath))
+                var input = new FileStream(inputPath, new FileStreamOptions {
+                    Mode = FileMode.Open, Access = FileAccess.Read, Share = FileShare.Read,
+                    Options = FileOptions.Asynchronous | FileOptions.SequentialScan });
+                await using (input.ConfigureAwait(false))
                 {
-                    PdfDocumentWriter.WriteStaged(output, RenderPages(package, inputKind, options, diagnosticSink, cancellationToken), options.ConversionLimits ?? new OoxConversionLimits(), diagnosticSink, cancellationToken, options.FixedCreationDate);
+                    using OoxPackage package = await OoxPackage.OpenAsync(input, cancellationToken).ConfigureAwait(false);
+                    // The package owns source bytes borrowed by page resources. Keep it
+                    // funded until the writer has emitted every resource and page.
+                    using (FileStream output = File.Create(stagingPath))
+                    {
+                        PdfDocumentWriter.WriteStaged(output, RenderPages(package, inputKind, options, diagnosticSink, cancellationToken), options.ConversionLimits ?? new OoxConversionLimits(), diagnosticSink, cancellationToken, options.FixedCreationDate);
+                    }
                 }
                 totals = scope.Budget.Totals;
                 pageCount = checked((int)totals.PdfPages);
@@ -192,7 +201,10 @@ public static class OoxPdfConverter
         }
     }
 
-    private static void ConvertCore(Stream input, Stream output, OoxPdfOptions? options, CancellationToken cancellationToken)
+    private static void ConvertCore(Stream input, Stream output, OoxPdfOptions? options, CancellationToken cancellationToken) =>
+        ConvertCoreAsync(input, output, options, cancellationToken).GetAwaiter().GetResult();
+
+    private static async Task ConvertCoreAsync(Stream input, Stream output, OoxPdfOptions? options, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(output);
@@ -239,7 +251,7 @@ public static class OoxPdfConverter
         {
             using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits, options.MemoryBudget))
             {
-                using OoxPackage package = OoxPackage.Open(input, cancellationToken);
+                using OoxPackage package = await OoxPackage.OpenAsync(input, cancellationToken).ConfigureAwait(false);
                 // R06.3: produce (drain, spill, blank) first so the totals snapshot and the
                 // observer report still precede serialization, preserving the stream rules;
                 // emission follows from staging.

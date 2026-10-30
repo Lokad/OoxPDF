@@ -5,9 +5,9 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PublicApiTests
 {
-    public static void ConvertAsyncCapturesPathsBeforeWorkerStarts()
+    public static void ConvertAsyncCapturesPathsBeforeHostCallbacks()
     {
-        // Isolate process-wide directory/thread-pool changes from the remaining suite.
+        // Isolate process-wide directory changes from the remaining suite.
         const string childMarker = "OOXPDF_TEST_ASYNC_PATH_CHILD";
         if (Environment.GetEnvironmentVariable(childMarker) != "1")
         {
@@ -20,7 +20,7 @@ internal static partial class PublicApiTests
             };
             start.ArgumentList.Add(typeof(PublicApiTests).Assembly.Location);
             start.ArgumentList.Add("--test");
-            start.ArgumentList.Add(nameof(ConvertAsyncCapturesPathsBeforeWorkerStarts));
+            start.ArgumentList.Add(nameof(ConvertAsyncCapturesPathsBeforeHostCallbacks));
             start.Environment[childMarker] = "1";
             using Process process = Process.Start(start) ?? throw new InvalidOperationException("Cannot start isolated async-path check.");
             Task<string> output = process.StandardOutput.ReadToEndAsync();
@@ -44,26 +44,15 @@ internal static partial class PublicApiTests
         string unrelated = Path.Combine(worker, "result.pdf");
         File.WriteAllText(destination, "original destination");
         File.WriteAllText(unrelated, "unrelated destination");
-        var options = new OoxPdfOptions { FontResolver = new FixedFontResolver(TestFontBuilder.CreateTestFont()) };
         string previousDirectory = Environment.CurrentDirectory;
-        ThreadPool.GetMinThreads(out int minWorkers, out int minIo);
-        ThreadPool.GetMaxThreads(out int maxWorkers, out int maxIo);
-        using var entered = new ManualResetEventSlim();
-        using var release = new ManualResetEventSlim();
-        Task? blocker = null;
+        var pool = new TestMemoryBudget(onCreate: () => Environment.CurrentDirectory = worker);
+        var options = new OoxPdfOptions { MemoryBudget = pool, FontResolver = new FixedFontResolver(TestFontBuilder.CreateTestFont()) };
         try
         {
-            TestAssert.True(ThreadPool.SetMinThreads(1, 1) && ThreadPool.SetMaxThreads(1, 1), "The isolated process must allow one deterministic worker.");
-            blocker = Task.Run(() => { entered.Set(); release.Wait(); });
-            TestAssert.True(entered.Wait(TimeSpan.FromSeconds(10)), "The worker gate must enter.");
             Environment.CurrentDirectory = invocation;
-            Task conversion = OoxPdfConverter.ConvertAsync("input.docx", "result.pdf", options);
-            TestAssert.True(!conversion.IsCompleted, "Conversion must remain queued behind the occupied worker.");
-            Environment.CurrentDirectory = worker;
-            release.Set();
-            TestAssert.True(conversion.Wait(TimeSpan.FromSeconds(30)), "Queued conversion must complete.");
-            conversion.GetAwaiter().GetResult();
-
+            OoxPdfConverter.ConvertAsync("input.docx", "result.pdf", options).GetAwaiter().GetResult();
+            TestAssert.Equal(worker, Environment.CurrentDirectory);
+            TestAssert.Equal(0L, pool.Reserved);
             ValidatePdfXref(File.ReadAllBytes(destination));
             TestAssert.Equal("unrelated destination", File.ReadAllText(unrelated));
             TestAssert.True(!File.Exists(Path.Combine(worker, "input.docx")), "Input must be read from the invocation directory.");
@@ -72,11 +61,7 @@ internal static partial class PublicApiTests
         }
         finally
         {
-            release.Set();
-            blocker?.GetAwaiter().GetResult();
             Environment.CurrentDirectory = previousDirectory;
-            ThreadPool.SetMaxThreads(maxWorkers, maxIo);
-            ThreadPool.SetMinThreads(minWorkers, minIo);
             Directory.Delete(directory, recursive: true);
         }
     }

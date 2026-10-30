@@ -712,34 +712,20 @@ internal static partial class OoxLimitsTests
 
     public static void IntakeBoundedCopyEnforcesSmallQuota()
     {
-        MethodInfo copy = typeof(OoxPackage).GetMethod("CopyBounded", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Expected bounded copy helper.");
+        MethodInfo copy = typeof(OoxPackage).GetMethod("CopyBoundedAsync", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected bounded async copy helper.");
         using var source = new MemoryStream(new byte[20]);
-        try
-        {
-            copy.Invoke(null, [source, 10L, "probe", new byte[81920], null, null, CancellationToken.None]);
-        }
-        catch (TargetInvocationException ex) when (ex.InnerException is IOException)
-        {
-            return;
-        }
-        throw new InvalidOperationException("Expected small-quota copy to throw.");
+        var pending = (ValueTask<byte[]>)copy.Invoke(null, [source, 10L, "probe", new byte[81920], null, null, CancellationToken.None])!;
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => pending.GetAwaiter().GetResult());
     }
 
     public static void IntakeStagingEnforcesSmallCompressedQuota()
     {
-        MethodInfo stage = typeof(OoxPackage).GetMethod("StageCompressedInput", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Expected staging helper.");
+        MethodInfo stage = typeof(OoxPackage).GetMethod("StageCompressedInputAsync", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected staging async helper.");
         using var source = new NonSeekableReadStream(new byte[20]);
-        try
-        {
-            stage.Invoke(null, [source, 10L, new byte[81920], null, CancellationToken.None]);
-        }
-        catch (TargetInvocationException ex) when (ex.InnerException is IOException)
-        {
-            return;
-        }
-        throw new InvalidOperationException("Expected small-quota staging to throw.");
+        var pending = (ValueTask<MemoryStream>)stage.Invoke(null, [source, 10L, new byte[81920], null, CancellationToken.None])!;
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => pending.GetAwaiter().GetResult());
     }
 
     public static void IntakeEntryCountPreflightRejectsBeforeMaterialization()
