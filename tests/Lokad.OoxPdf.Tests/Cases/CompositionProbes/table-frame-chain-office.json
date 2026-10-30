@@ -1,5 +1,5 @@
 {
-  "Scope": "Independent mixed-font body-origin geometry for adjacent and paragraph-separated source table rows. Logical grouping does not change the measured row gap or following prose gate.",
+  "Scope": "Independent mixed-font body-origin geometry for distinct adjacent and paragraph-separated tables; source widths identify root border families.",
   "Rows": [
     {
       "Id": "table-frame-chain-direct",

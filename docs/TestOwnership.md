@@ -89,6 +89,10 @@ existing derived-grid bound. Qualify `docx-adjacent-tables` with
 grid spans, vertical merges, nested content, placement, revisions and composition
 neighbors once per exact method. Reader correctness and Office PDF/image geometry
 remain separate gates; visible Office calibration is still pending.
+Cell-note publication checks follow unchanged cells across renumbered neighboring
+rows. Mixed-font frame checks retain their original Office row-gap/following-prose
+measurements across grouping; historical oracle wording about distinct tables is
+descriptive errata, with source/reference hashes and numeric gates unchanged.
 
 `DocxNormalTableStyleTests` checks twenty-two source-pinned Word controls for the
 intrinsic style's name/custom metadata, padding and paint, including direct and

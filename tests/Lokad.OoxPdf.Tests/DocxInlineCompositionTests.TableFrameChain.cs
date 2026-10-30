@@ -22,9 +22,11 @@ internal static partial class DocxInlineCompositionTests
             var layout = renderer.InspectLayout(source);
             TestAssert.Equal(row.GetProperty("Pages").GetInt32(), layout.Pages.Count);
             var tables = layout.Pages[0].TableRows;
-            TestAssert.Equal(2, tables.Count);
-            var preceding = tables[0];
-            var next = tables[1];
+            // The source fragments have two rows and one row; logical grouping
+            // changes their table indices, not this measured source boundary.
+            TestAssert.Equal(3, tables.Count);
+            var preceding = tables[1];
+            var next = tables[2];
             double gap = preceding.Y - next.Y - next.Height;
             TestAssert.True(Math.Abs(gap - row.GetProperty("TableGap").GetDouble()) < .5d,
                 $"Authored rows keep Word's shared body frame and intervening paragraph: {id}/{mode}/gap={gap}.");
