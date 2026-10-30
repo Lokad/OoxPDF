@@ -41,7 +41,7 @@ internal static class DocxSkewedFractionTests
             TestAssert.Equal(20d, box.ParentMetrics!.Size);
             var slash = box.Glyphs.Single(g => g.SourceCodePoint == 0x2044);
             TestAssert.True(ReferenceEquals(slash.ControlOwner, fraction) && ReferenceEquals(slash.Font, complete) && slash.FontSize == 20.04d &&
-                slash.Color.Red == 255 && slash.Color.Green == 0d && slash.Color.Blue == 0d,
+                slash.Color?.Red == 255 && slash.Color?.Green == 0d && slash.Color?.Blue == 0d,
                 "Authored structural font, size and red ink stay on the slash.");
             TestAssert.True(box.Glyphs.Take(2).All(g => ReferenceEquals(g.Font, text) && g.FontSize == 12d && g.ControlOwner is null) &&
                 box.Glyphs[0].BaselineY > box.Glyphs[1].BaselineY && box.Glyphs[0].X < box.Glyphs[1].X,
