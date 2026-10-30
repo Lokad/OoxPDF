@@ -22,11 +22,12 @@ internal static partial class DocxInlineCompositionTests
             var layout = renderer.InspectLayout(source);
             TestAssert.Equal(row.GetProperty("Pages").GetInt32(), layout.Pages.Count);
             var tables = layout.Pages[0].TableRows;
-            var preceding = tables.Last(table => table.TableIndex == 0);
-            var next = tables.First(table => table.TableIndex == 1);
+            TestAssert.Equal(2, tables.Count);
+            var preceding = tables[0];
+            var next = tables[1];
             double gap = preceding.Y - next.Y - next.Height;
             TestAssert.True(Math.Abs(gap - row.GetProperty("TableGap").GetDouble()) < .5d,
-                $"Distinct tables keep Word's shared body frame and authored intervening paragraph: {id}/{mode}/gap={gap}.");
+                $"Authored rows keep Word's shared body frame and intervening paragraph: {id}/{mode}/gap={gap}.");
             var page = renderer.RenderBlankPages(source, null, default).Single();
             var following = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
                 .Single(show => show.Text == "Following tables.");

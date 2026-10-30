@@ -24,9 +24,8 @@ internal static partial class DocxInlineCompositionTests
             var after = DocxBlockTraversal.EnumerateBodyParagraphs(numbered).ToArray();
             TestAssert.Equal("09,10,09,10", string.Join(',', after.SelectMany(paragraph => paragraph.InlineReferences).Select(reference => reference.DisplayText)));
             TestAssert.Equal("105,106,107,108", string.Join(',', before.SelectMany(paragraph => paragraph.InlineReferences).Select(reference => reference.DisplayText)));
-            foreach (var table in numbered.Tables)
+            foreach (var cell in numbered.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells))
             {
-                var cell = table.Rows.Single().Cells.Single();
                 var paragraph = cell.Paragraphs.Single();
                 TestAssert.True(ReferenceEquals(paragraph, cell.BodyElements.OfType<DocxParagraphElement>().Single().Paragraph),
                     "Ordered and fallback cell views publish the same replacement paragraph.");
@@ -113,8 +112,8 @@ internal static partial class DocxInlineCompositionTests
                 OoxPdfDocxMarkupMode.Final, false, false);
             var paragraphs = DocxBlockTraversal.EnumerateBodyParagraphs(source).ToArray();
             var custom = paragraphs.SelectMany(paragraph => paragraph.InlineReferences).Single(reference => reference.CustomMarkText is not null);
-            var manualTable = source.Tables.Single(table => DocxBlockTraversal.EnumerateTableParagraphs(table)
-                .Any(paragraph => paragraph.InlineReferences.Contains(custom)));
+            var manualCell = source.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells)
+                .Single(cell => cell.Paragraphs.Any(paragraph => paragraph.InlineReferences.Contains(custom)));
             var target = source.RelatedStories.Single(story => story.Id == custom.Id && story.IsNormalStoryType);
             var equations = paragraphs.SelectMany(paragraph => paragraph.Equations).ToDictionary(equation => equation,
                 equation => new DocxPreparedMathParagraph(equation, new(18d, 9d, 4d, []), 12d, 16d));
@@ -125,8 +124,9 @@ internal static partial class DocxInlineCompositionTests
                 "Complete cell markers retain manual ownership while automatic references consume page counters.");
             TestAssert.Equal("*,09,09,10", string.Join(',', DocxBlockTraversal.EnumerateBodyParagraphs(numbered)
                 .SelectMany(paragraph => paragraph.InlineReferences).Select(reference => reference.DisplayText ?? reference.CustomMarkText)));
-            TestAssert.True(numbered.Tables.Any(table => ReferenceEquals(table, manualTable)),
-                "A table containing only an unchanged custom reference retains its container identity.");
+            TestAssert.True(numbered.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells)
+                .Any(cell => ReferenceEquals(cell, manualCell)),
+                "An unchanged custom-reference cell retains its identity when neighboring rows are renumbered.");
             TestAssert.True(ReferenceEquals(target.Paragraphs[0], numbered.RelatedStories.Single(story => story.Id == custom.Id && story.IsNormalStoryType).Paragraphs[0]),
                 "An authored target mark is not replaced with automatic text.");
             var final = engine.Create(numbered, new DocxTests.FamilyWidthTextMeasurer(), default, mathEquations: equations);

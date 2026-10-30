@@ -12,6 +12,8 @@
     "DocxTableLayoutStage",
     "DocxInlineCompositionNestedCellNeighbors",
     "DocxInlineCompositionNestedNavigation",
+    "DocxInlineCompositionCellPageNotes",
+    "DocxInlineCompositionTableFrameChain",
     "DocxInlineCompositionMergedCellMath",
     "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement"
   ],
