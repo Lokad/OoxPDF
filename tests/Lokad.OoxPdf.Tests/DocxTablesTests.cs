@@ -1365,11 +1365,13 @@ internal static class DocxTablesTests
                       <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
                       <w:tr><w:tc><w:tcPr><w:tcW w:w="2160" w:type="dxa"/></w:tcPr><w:p><w:r><w:t>Fixed</w:t></w:r></w:p></w:tc></w:tr>
                     </w:tbl>
+                    <w:p/>
                     <w:tbl>
                       <w:tblPr><w:tblLayout w:type="autofit"/></w:tblPr>
                       <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
                       <w:tr><w:tc><w:p><w:r><w:t>Autofit</w:t></w:r></w:p></w:tc></w:tr>
                     </w:tbl>
+                    <w:p/>
                     <w:tbl>
                       <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
                       <w:tr><w:tc><w:p><w:r><w:t>Default</w:t></w:r></w:p></w:tc></w:tr>

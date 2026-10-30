@@ -3,6 +3,7 @@
     "DocxAdjacentTables",
     "DocxBodyElementsRetainRevisionProvenance",
     "DocxMarkupModesFilterStaticAndRelatedStoryRevisions",
+    "DocxReaderTablePreservesLayoutToken",
     "DocxReaderInfersMissingTableGridFromLogicalGridSpans",
     "DocxReaderTableInventoryIncludesNestedTableCellBodies",
     "DocxReaderTableCellPreservesGridSpanToken",
