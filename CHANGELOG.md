@@ -1,6 +1,9 @@
 # Changelog
 
-## 0.3.0 â€” Unreleased
+## 0.3.0 — Unreleased
+
+- Font programs use explicit immutable leases and optional host-funded bounded caches;
+  eviction and shutdown preserve active readers. See caller migration guidance.
 
 - Awaits package, staging and PDF output I/O; synchronous calls share that path.
   Font acquisition and CPU rendering remain synchronous.
@@ -50,7 +53,7 @@
   images, equations and related stories. Strict dialect warnings remain; this
   does not add general Strict OOXML or Strict PPTX support.
 
-## 0.2.0 â€” 2026-10-29
+## 0.2.0 — 2026-10-29
 
 ### Rendering
 

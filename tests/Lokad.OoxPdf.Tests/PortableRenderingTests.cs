@@ -627,7 +627,7 @@ internal static class PortableRenderingTests
     {
         var resolver = new PinnedResolver(mathFont: true);
         var resolution = resolver.Resolve(new FontRequest("Cambria Math"));
-        var font = OpenTypeFont.Load(resolution.Source.GetBytesAsync().GetAwaiter().GetResult().ToArray());
+        var font = OpenTypeFont.Load(TestFontPrograms.CopyAsync(resolution.Source).GetAwaiter().GetResult().ToArray());
         TestAssert.True(font.HasTrueTypeOutlines && font.TryGetMathConstants(out _),
             "The pinned math face must supply managed TrueType outlines and MATH constants.");
         foreach (int scalar in new[] { 0x1D44E, 0x1D44F, 0x1D450, 0x1D465, 0x1D466 })

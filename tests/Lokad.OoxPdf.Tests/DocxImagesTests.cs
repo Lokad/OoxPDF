@@ -2149,7 +2149,7 @@ internal static class DocxImagesTests
         var resolver = new WindowsFontResolver();
         FontFaceResolution calibrated = resolver.Resolve(new FontRequest("Calibri"));
         if (!calibrated.FamilyName.Equals("Calibri", StringComparison.OrdinalIgnoreCase) ||
-            calibrated.Source.GetBytesAsync(default).AsTask().GetAwaiter().GetResult().IsEmpty)
+            TestFontPrograms.CopyAsync(calibrated.Source, default).AsTask().GetAwaiter().GetResult().IsEmpty)
         {
             TestAssert.Skip("The Word-coordinate calibration requires the Calibri font program.");
         }

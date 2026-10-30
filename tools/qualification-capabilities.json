@@ -11414,5 +11414,19 @@
     "WritesSubsetBaseFontWithSixLetterTagAndPlus",
     "WritesTilingPatternResources",
     "XrefTablePointsAtObjectHeaders"
+  ],
+  "font-program-leases": [
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "FontLeasesCallerFundedMemoryIsBorrowedWithoutDuplicateAdmission",
+    "FontLeasesCanceledWaiterDoesNotInvalidateAnotherReader",
+    "FontLeasesCancellationAwaitsActualReadAndOwnedDisposal",
+    "FontLeasesGovernedFilesDoNotRetainOperationBudgets",
+    "FontLeasesKeepEvictedReplacedAndShutdownStorageFunded",
+    "FontLeasesOversizedProgramsReleaseOnlyAfterFinalReader",
+    "FontLeasesParserOwnsItsCopyBeforeSourceBorrowEnds",
+    "FontLeasesShutdownDuringAcquisitionRefundsAfterItsRead",
+    "LocalLoadsAndReadsRemainValidDuringConcurrentEviction",
+    "OversizedFontIsBorrowedWithoutExceedingRetention",
+    "PackPublicationCoalescesWhileAnotherFontIsEvicted"
   ]
 }

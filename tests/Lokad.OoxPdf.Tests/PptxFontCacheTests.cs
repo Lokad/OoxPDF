@@ -1,4 +1,4 @@
-﻿using Lokad.OoxPdf.Fonts;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
@@ -98,11 +98,11 @@ internal static class PptxFontCacheTests
         {
             public string StableId => stableId;
 
-            public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct)
+            public ValueTask<IOoxPdfFontProgramLease> AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)
             {
                 counters.AddOrUpdate(stableId, 1, (_, count) => count + 1);
                 ct.ThrowIfCancellationRequested();
-                return ValueTask.FromResult((ReadOnlyMemory<byte>)bytes);
+                return ValueTask.FromResult(TestFontPrograms.Borrow(bytes));
             }
         }
     }

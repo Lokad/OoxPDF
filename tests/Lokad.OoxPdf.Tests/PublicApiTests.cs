@@ -30,15 +30,18 @@ internal static partial class PublicApiTests
         byte[] bytes = [1, 2, 3];
         var memory = new MemoryFontProgramSource("compatibility", bytes);
         IFontProgramSource source = memory;
-        TestAssert.True(memory.GetBytesAsync().GetAwaiter().GetResult().Span.SequenceEqual(bytes), "Concrete memory source must accept an omitted token.");
-        TestAssert.True(source.GetBytesAsync().GetAwaiter().GetResult().Span.SequenceEqual(bytes), "Interface source must accept an omitted token.");
+        using var concreteLease = memory.AcquireAsync(null).GetAwaiter().GetResult();
+        using var interfaceLease = source.AcquireAsync(null).GetAwaiter().GetResult();
+        TestAssert.True(concreteLease.Bytes.Span.SequenceEqual(bytes), "Concrete memory source must accept an omitted token.");
+        TestAssert.True(interfaceLease.Bytes.Span.SequenceEqual(bytes), "Interface source must accept an omitted token.");
 
         string path = Path.GetTempFileName();
         try
         {
             File.WriteAllBytes(path, bytes);
-            var file = new FileFontProgramSource(path);
-            TestAssert.True(file.GetBytesAsync().GetAwaiter().GetResult().Span.SequenceEqual(bytes), "File source must accept an omitted token.");
+            using var file = new FileFontProgramSource(path);
+            using var fileLease = file.AcquireAsync(null).GetAwaiter().GetResult();
+            TestAssert.True(fileLease.Bytes.Span.SequenceEqual(bytes), "File source must accept an omitted token.");
         }
         finally
         {
@@ -975,12 +978,12 @@ internal static partial class PublicApiTests
     {
         public string StableId => "test:cancelling-font";
 
-        public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct)
+        public ValueTask<IOoxPdfFontProgramLease> AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)
         {
             // Cancel mid-conversion, then observe it on the converter's own token.
             cancellation.Cancel();
             ct.ThrowIfCancellationRequested();
-            return ValueTask.FromResult(ReadOnlyMemory<byte>.Empty);
+            return ValueTask.FromResult(TestFontPrograms.Borrow(ReadOnlyMemory<byte>.Empty));
         }
     }
 
@@ -1010,9 +1013,9 @@ internal static partial class PublicApiTests
         {
             public string StableId => "test:fixed-font";
 
-            public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct)
+            public ValueTask<IOoxPdfFontProgramLease> AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)
             {
-                return ValueTask.FromResult((ReadOnlyMemory<byte>)bytes);
+                return ValueTask.FromResult(TestFontPrograms.Borrow(bytes));
             }
         }
     }
@@ -1038,11 +1041,11 @@ internal static partial class PublicApiTests
 
         public bool ObservedCanBeCanceled { get; private set; }
 
-        public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct)
+        public ValueTask<IOoxPdfFontProgramLease> AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)
         {
             WasCalled = true;
             ObservedCanBeCanceled = ct.CanBeCanceled;
-            return ValueTask.FromResult(ReadOnlyMemory<byte>.Empty);
+            return ValueTask.FromResult(TestFontPrograms.Borrow(ReadOnlyMemory<byte>.Empty));
         }
     }
 }

@@ -1,60 +1,78 @@
 namespace Lokad.OoxPdf.Fonts;
 
-// Owns retained arrays and their LRU accounting together. Loading happens outside
-// this lock; sources serialize their own loads and recheck the cache first.
-// Eviction releases only this owner's reference, never bytes borrowed by callers.
-internal sealed class FontProgramCache(long maxBytes, StringComparer comparer)
+// Loading stays outside this lock. It owns cache retention; leases independently
+// keep the immutable program and its admission alive through eviction/shutdown.
+internal sealed class FontProgramCache(long maxBytes, StringComparer comparer, IMemoryBudget? budget = null) : IDisposable
 {
     private readonly object sync = new();
     private readonly Dictionary<string, LinkedListNode<Entry>> entries = new(comparer);
     private readonly LinkedList<Entry> order = new();
     private long retainedBytes;
+    private bool disposed;
+    private sealed record Entry(string Key, FontProgramBuffer Program);
+    internal IMemoryBudget? Budget => budget;
+    internal long RetainedBytes { get { lock (sync) { return retainedBytes; } } }
 
-    private sealed record Entry(string Key, byte[] Bytes);
+    // Never lend an operation's short-lived budget to cache retention. Without a
+    // cache budget, governed operations acquire private funded programs instead.
+    internal bool CanRetain(IMemoryBudget? operationBudget) => budget is not null || operationBudget is null;
 
-    internal long RetainedBytes
-    {
-        get { lock (sync) { return retainedBytes; } }
-    }
-
-    internal bool TryGet(string key, out ReadOnlyMemory<byte> bytes)
+    internal bool TryAcquire(string key, IMemoryBudget? operationBudget, out IOoxPdfFontProgramLease? lease)
     {
         lock (sync)
         {
-            if (entries.TryGetValue(key, out LinkedListNode<Entry>? node))
+            ObjectDisposedException.ThrowIf(disposed, this);
+            if (CanRetain(operationBudget) && entries.TryGetValue(key, out var node))
             {
-                order.Remove(node);
-                order.AddLast(node);
-                bytes = node.Value.Bytes;
+                lease = node.Value.Program.Acquire();
+                order.Remove(node); order.AddLast(node);
                 return true;
             }
-
-            bytes = default;
+            lease = null;
             return false;
         }
     }
 
-    internal void Store(string key, byte[] bytes)
+    internal void Store(string key, FontProgramBuffer program, IMemoryBudget? operationBudget)
     {
+        List<FontProgramBuffer>? retired = null;
+        try
+        {
+            lock (sync)
+            {
+                ObjectDisposedException.ThrowIf(disposed, this);
+                if (!CanRetain(operationBudget)) return;
+                if (entries.Remove(key, out var previous)) Retire(previous);
+                long length = program.Bytes.Length;
+                if (length > maxBytes) return;
+                while (retainedBytes > maxBytes - length && order.First is { } eldest)
+                {
+                    entries.Remove(eldest.Value.Key); Retire(eldest);
+                }
+                program.Retain();
+                entries.Add(key, order.AddLast(new Entry(key, program)));
+                retainedBytes += length;
+            }
+        }
+        finally { if (retired is not null) foreach (var old in retired) old.Release(); }
+
+        void Retire(LinkedListNode<Entry> node)
+        {
+            order.Remove(node); retainedBytes -= node.Value.Program.Bytes.Length;
+            (retired ??= []).Add(node.Value.Program);
+        }
+    }
+
+    public void Dispose()
+    {
+        FontProgramBuffer[] retired;
         lock (sync)
         {
-            if (entries.Remove(key, out LinkedListNode<Entry>? previous))
-            {
-                order.Remove(previous);
-                retainedBytes -= previous.Value.Bytes.LongLength;
-            }
-
-            // An oversized entry may be returned by its loader but never retained.
-            if (bytes.LongLength > maxBytes) { return; }
-            while (retainedBytes > maxBytes - bytes.LongLength && order.First is { } eldest)
-            {
-                order.RemoveFirst();
-                entries.Remove(eldest.Value.Key);
-                retainedBytes -= eldest.Value.Bytes.LongLength;
-            }
-
-            entries.Add(key, order.AddLast(new Entry(key, bytes)));
-            retainedBytes += bytes.LongLength;
+            if (disposed) return;
+            disposed = true;
+            retired = order.Select(entry => entry.Program).ToArray();
+            entries.Clear(); order.Clear(); retainedBytes = 0;
         }
+        foreach (var program in retired) program.Release();
     }
 }

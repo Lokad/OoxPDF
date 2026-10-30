@@ -1,21 +1,25 @@
 namespace Lokad.OoxPdf.Fonts;
 
-public sealed class FileFontProgramSource : IFontProgramSource
+/// <summary>Acquires immutable local font bytes using bounded, optionally funded caching.</summary>
+/// <remarks>
+/// Keep files unchanged for this source's lifetime. A cache budget is borrowed
+/// until this source and outstanding leases release their storage. Without one,
+/// governed operations fund private leases instead of cache retention. Disposal
+/// refuses new acquisition and ends retention; outstanding leases stay valid.
+/// </remarks>
+public sealed class FileFontProgramSource : IFontProgramSource, IDisposable
 {
-    // local files had no size guard while HTTP pack fonts are capped at
-    // 64 MiB per file. Parity cap here: installed fonts peak at 35.4 MiB on the
-    // reference machine (mingliub.ttc, measured 2026-09-21), so 64 MiB keeps ~1.8x
-    // headroom. Oversized files fail with InvalidDataException and fall back to a
-    // substitute face through FontProgramLoader, like any malformed font.
     internal const long MaxLocalFontBytes = 64L * 1024L * 1024L;
-
     private readonly string path;
     private readonly FontProgramCache cache;
-    private readonly object sync = new();
+    private readonly bool ownsCache;
+    private readonly SemaphoreSlim gate = new(1, 1);
+    private int disposed;
 
-    public FileFontProgramSource(string path)
-        : this(path, new FontProgramCache(MaxLocalFontBytes, StringComparer.OrdinalIgnoreCase))
+    public FileFontProgramSource(string path, IMemoryBudget? cacheBudget = null)
+        : this(path, new FontProgramCache(MaxLocalFontBytes, StringComparer.OrdinalIgnoreCase, cacheBudget))
     {
+        ownsCache = true;
     }
 
     internal FileFontProgramSource(string path, FontProgramCache cache)
@@ -28,35 +32,49 @@ public sealed class FileFontProgramSource : IFontProgramSource
     internal static void CheckLocalFontSize(long byteCount, string path)
     {
         if (byteCount > MaxLocalFontBytes)
-        {
             throw new InvalidDataException($"Local font file '{path}' exceeds the maximum supported size of {MaxLocalFontBytes} bytes.");
-        }
     }
 
     public string Path => path;
-
     public string StableId => "file:" + path;
 
-    public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct = default)
+    public async ValueTask<IOoxPdfFontProgramLease> AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)
     {
-        if (cache.TryGet(path, out ReadOnlyMemory<byte> bytes))
-        {
-            return ValueTask.FromResult(bytes);
-        }
-
         ct.ThrowIfCancellationRequested();
-        lock (sync)
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+        if (cache.TryAcquire(path, operationBudget, out var cached)) return cached!;
+        await gate.WaitAsync(ct).ConfigureAwait(false);
+        FontProgramBuffer? program = null;
+        try
         {
-            if (cache.TryGet(path, out ReadOnlyMemory<byte> cached))
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+            if (cache.TryAcquire(path, operationBudget, out cached)) return cached!;
             {
-                return ValueTask.FromResult(cached);
+                await using var input = new FileStream(path, new FileStreamOptions { Mode = FileMode.Open,
+                    Access = FileAccess.Read, Share = FileShare.Read, BufferSize = 1, Options = FileOptions.Asynchronous | FileOptions.SequentialScan });
+                long length = input.Length;
+                CheckLocalFontSize(length, path);
+                IMemoryReservation? reservation = OoxMemory.Reserve(cache.Budget ?? operationBudget, length, cache.Budget is null ? OoxPdfLimitScope.Conversion : OoxPdfLimitScope.SharedResource);
+                try
+                {
+                    ct.ThrowIfCancellationRequested();
+                    byte[] bytes = new byte[checked((int)length)];
+                    await input.ReadExactlyAsync(bytes, ct).ConfigureAwait(false);
+                    ct.ThrowIfCancellationRequested();
+                    program = new FontProgramBuffer(bytes, reservation);
+                    reservation = null;
+                }
+                finally { reservation?.Dispose(); }
             }
-
             ct.ThrowIfCancellationRequested();
-            CheckLocalFontSize(new FileInfo(path).Length, path);
-            byte[] loaded = File.ReadAllBytes(path);
-            cache.Store(path, loaded);
-            return ValueTask.FromResult((ReadOnlyMemory<byte>)loaded);
+            cache.Store(path, program, operationBudget);
+            return program.Acquire();
         }
+        finally { program?.Dispose(); gate.Release(); }
+    }
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref disposed, 1) == 0 && ownsCache) cache.Dispose();
     }
 }

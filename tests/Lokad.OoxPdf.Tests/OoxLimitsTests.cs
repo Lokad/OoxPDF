@@ -1029,15 +1029,15 @@ internal static partial class OoxLimitsTests
             var sourceA = new FileFontProgramSource(pathA, retention);
             var sourceB = new FileFontProgramSource(pathB, retention);
 
-            byte[] firstA = sourceA.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
-            sourceB.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            byte[] firstA = TestFontPrograms.CopyAsync(sourceA, CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            TestFontPrograms.CopyAsync(sourceB, CancellationToken.None).GetAwaiter().GetResult().ToArray();
             TestAssert.True(firstA.SequenceEqual(File.ReadAllBytes(pathA)), "First load must match the served bytes.");
 
             // Caching B evicted A. B still serves its retained array even after its
             // file changes underneath; re-accessing A afterwards re-reads from disk.
             byte[] changedB = TestFontBuilder.CreateCffKindFont("ChangedFamily");
             File.WriteAllBytes(pathB, changedB);
-            byte[] secondB = sourceB.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            byte[] secondB = TestFontPrograms.CopyAsync(sourceB, CancellationToken.None).GetAwaiter().GetResult().ToArray();
             TestAssert.True(!secondB.SequenceEqual(changedB), "Retained sources must keep serving their arrays.");
             byte[] changedA = TestFontBuilder.CreateTestFont();
             for (int i = 0; i < changedA.Length; i++)
@@ -1046,7 +1046,7 @@ internal static partial class OoxLimitsTests
             }
 
             File.WriteAllBytes(pathA, changedA);
-            byte[] secondA = sourceA.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            byte[] secondA = TestFontPrograms.CopyAsync(sourceA, CancellationToken.None).GetAwaiter().GetResult().ToArray();
             TestAssert.True(secondA.SequenceEqual(changedA), "Evicted sources must re-read the current file bytes.");
         }
         finally
@@ -1077,14 +1077,14 @@ internal static partial class OoxLimitsTests
             var sourceB = new FileFontProgramSource(pathB, retention);
             var sourceC = new FileFontProgramSource(pathC, retention);
 
-            byte[] firstA = sourceA.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
-            sourceB.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
-            sourceA.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
-            sourceC.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            byte[] firstA = TestFontPrograms.CopyAsync(sourceA, CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            TestFontPrograms.CopyAsync(sourceB, CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            TestFontPrograms.CopyAsync(sourceA, CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            TestFontPrograms.CopyAsync(sourceC, CancellationToken.None).GetAwaiter().GetResult().ToArray();
 
             // C evicted B (least recently used); A must still be retained.
             File.WriteAllBytes(pathA, TestFontBuilder.CreateCffKindFont("TouchedFamily"));
-            byte[] secondA = sourceA.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult().ToArray();
+            byte[] secondA = TestFontPrograms.CopyAsync(sourceA, CancellationToken.None).GetAwaiter().GetResult().ToArray();
             TestAssert.True(secondA.SequenceEqual(firstA), "Touched sources must survive the next eviction.");
         }
         finally
@@ -1514,14 +1514,14 @@ internal static partial class OoxLimitsTests
         IFontProgramSource sourceA = files.Create(PackFile("a.ttf", fontA));
         IFontProgramSource sourceB = files.Create(PackFile("b.ttf", fontB));
 
-        byte[] firstA = sourceA.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
-        byte[] firstB = sourceB.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
+        byte[] firstA = TestFontPrograms.CopyAsync(sourceA, CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
+        byte[] firstB = TestFontPrograms.CopyAsync(sourceB, CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
         TestAssert.True(firstA.SequenceEqual(fontA), "First download must match the served bytes.");
         TestAssert.True(firstB.SequenceEqual(fontB), "First download must match the served bytes.");
 
         // Caching B evicted A: re-accessing A downloads again with identical bytes,
         // while B is still served from retention.
-        byte[] secondA = sourceA.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
+        byte[] secondA = TestFontPrograms.CopyAsync(sourceA, CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
         TestAssert.True(secondA.SequenceEqual(fontA), "Evicted sources must reload byte-identical programs (hash-verified).");
         TestAssert.Equal(2, handler.Hits["/pack/a.ttf"]);
         TestAssert.Equal(1, handler.Hits["/pack/b.ttf"]);
@@ -1551,13 +1551,13 @@ internal static partial class OoxLimitsTests
         IFontProgramSource sourceB = files.Create(PackFile("b.ttf", fontB));
         IFontProgramSource sourceC = files.Create(PackFile("c.ttf", fontC));
 
-        sourceA.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult();
-        sourceB.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
-        sourceA.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
-        sourceC.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
+        TestFontPrograms.CopyAsync(sourceA, CancellationToken.None).AsTask().GetAwaiter().GetResult();
+        TestFontPrograms.CopyAsync(sourceB, CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
+        TestFontPrograms.CopyAsync(sourceA, CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
+        TestFontPrograms.CopyAsync(sourceC, CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
 
         // C evicted B (least recently used); A must still be retained.
-        sourceA.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
+        TestFontPrograms.CopyAsync(sourceA, CancellationToken.None).AsTask().GetAwaiter().GetResult().ToArray();
         TestAssert.Equal(1, handler.Hits["/pack/a.ttf"]);
         TestAssert.Equal(1, handler.Hits["/pack/b.ttf"]);
         TestAssert.Equal(1, handler.Hits["/pack/c.ttf"]);
@@ -1580,7 +1580,7 @@ internal static partial class OoxLimitsTests
         IFontProgramSource[] sources = Enumerable.Range(0, 8)
             .Select(i => files.Create(PackFile($"f{i}.ttf", font)))
             .ToArray();
-        ReadOnlyMemory<byte>[] results = Task.WhenAll(sources.Select(source => source.GetBytesAsync(CancellationToken.None).AsTask())).GetAwaiter().GetResult();
+        ReadOnlyMemory<byte>[] results = Task.WhenAll(sources.Select(source => TestFontPrograms.CopyAsync(source, CancellationToken.None).AsTask())).GetAwaiter().GetResult();
         foreach (ReadOnlyMemory<byte> result in results)
         {
             TestAssert.True(result.Span.SequenceEqual(font), "Concurrent downloads must stay byte-identical.");
@@ -1790,7 +1790,7 @@ internal static partial class OoxLimitsTests
             "test-pack",
             new Uri("https://example.test/ooxpdf-fonts"),
             new HttpClient(handler),
-            CancellationToken.None).GetAwaiter().GetResult();
+            cancellationToken: CancellationToken.None).GetAwaiter().GetResult();
 
         FontFaceResolution regular = resolver.Resolve(new FontRequest("PackAlpha"));
         FontFaceResolution bold = resolver.Resolve(new FontRequest("PackAlpha", true, false));
@@ -1817,10 +1817,10 @@ internal static partial class OoxLimitsTests
     {
         public string StableId => "delayed:test-font";
 
-        public async ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken cancellationToken)
+        public async ValueTask<IOoxPdfFontProgramLease> AcquireAsync(IMemoryBudget? operationBudget, CancellationToken cancellationToken = default)
         {
             await Task.Delay(1, cancellationToken).ConfigureAwait(false);
-            return bytes;
+            return TestFontPrograms.Borrow(bytes);
         }
     }
 

@@ -176,11 +176,11 @@ internal static partial class OoxMemoryAdmissionTests
     {
         private readonly byte[] bytes = TestFontBuilder.CreateTestFont();
         public string StableId => "observed-font-admission";
-        public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct = default)
+        public ValueTask<IOoxPdfFontProgramLease> AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)
         {
             ct.ThrowIfCancellationRequested();
             acquired();
-            return ValueTask.FromResult((ReadOnlyMemory<byte>)bytes);
+            return ValueTask.FromResult(TestFontPrograms.Borrow(bytes));
         }
     }
 }

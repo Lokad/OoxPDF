@@ -3,23 +3,18 @@ using System.Text.Json;
 
 namespace Lokad.OoxPdf.Fonts;
 
-public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
+public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDisposable
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     internal const long MaxManifestBytes = 1024L * 1024L;
     internal const long MaxFontFileBytes = 64L * 1024L * 1024L;
 
-    // downloaded programs persist for the resolver lifetime. The face
-    // population is manifest-finite, but retaining every downloaded face is still
-    // unbounded live memory for long-lived resolvers, so retained downloads are
-    // capped in aggregate with LRU eviction. Evicted sources re-download on demand
-    // (hash-verified every time, same retry/cancellation path); concurrently active
-    // conversions simply keep their already-handed-out array alive via GC.
-    // R13 ownership: the resolver owns retained downloads, conversions borrow the
-    // arrays. MaxConcurrentFontDownloads separately limits concurrent downloads;
-    // MaxFontFileBytes bounds payload, not accumulator/copy construction storage.
+    // Cache retention is LRU-bounded. Leases keep evicted or shutdown programs
+    // and their funding alive until the final reader. Payload limits separately
+    // bound downloads; acquisition buffers and replacement overlap are admitted.
     internal const long MaxTotalFontPackBytes = 256L * 1024L * 1024L;
     private readonly FontPackFileSource fileSource;
+    private bool disposed;
     private readonly IReadOnlyList<FontPackFace> faces;
     private readonly IReadOnlyList<string> fallbackFamilies;
     private readonly Dictionary<string, FontPackFace[]> facesByFamily;
@@ -31,11 +26,12 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         Uri packRootUri,
         HttpClient httpClient,
         IReadOnlyList<FontPackFace> faces,
-        IReadOnlyList<string> fallbackFamilies)
+        IReadOnlyList<string> fallbackFamilies,
+        IMemoryBudget? cacheBudget)
     {
         PackId = packId;
         PackRootUri = packRootUri;
-        fileSource = new FontPackFileSource(packId, packRootUri, httpClient);
+        fileSource = new FontPackFileSource(packId, packRootUri, httpClient, MaxTotalFontPackBytes, cacheBudget);
         this.faces = faces;
         this.fallbackFamilies = fallbackFamilies;
         facesByFamily = IndexFacesByFamily(faces);
@@ -79,10 +75,13 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
 
     public Uri PackRootUri { get; }
 
+    /// <summary>Loads pack metadata; programs are acquired lazily.</summary>
+    /// <remarks>Cache admission is borrowed until shutdown and outstanding leases/I/O finish. HttpClient remains caller-owned.</remarks>
     public static async Task<OoxPdfFontPackResolver> CreateHttpAsync(
         string packId,
         Uri sourceUri,
         HttpClient httpClient,
+        IMemoryBudget? cacheBudget = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(packId);
@@ -95,11 +94,13 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         Uri packRootUri = new(sourceRootUri, packId + "/");
         Uri manifestUri = new(packRootUri, "manifest.json");
 
-        byte[] manifestBytes = await DownloadBytesAsync(
+        using FontProgramBuffer manifestBytes = await DownloadBytesAsync(
             httpClient,
             manifestUri,
             "font pack manifest",
             MaxManifestBytes,
+            cacheBudget,
+            OoxPdfLimitScope.SharedResource,
             cancellationToken).ConfigureAwait(false);
         FontPackManifest manifest = DeserializeManifest();
         ValidatedManifest validated = ValidateManifest(packId, manifest);
@@ -109,7 +110,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
             packRootUri,
             httpClient,
             validated.Faces,
-            validated.FallbackFamilies);
+            validated.FallbackFamilies, cacheBudget);
 
         return resolver;
 
@@ -117,7 +118,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         {
             try
             {
-                return JsonSerializer.Deserialize<FontPackManifest>(manifestBytes, JsonOptions)
+                return JsonSerializer.Deserialize<FontPackManifest>(manifestBytes.Bytes.Span, JsonOptions)
                     ?? throw new OoxPdfFontPackException(
                         OoxPdfFontPackDiagnosticIds.FontPackInvalid,
                         "The font pack manifest is empty.");
@@ -138,6 +139,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         // Hits, publication and capacity eviction share ownership of the dictionary.
         lock (requestCache)
         {
+            ObjectDisposedException.ThrowIf(disposed, this);
             if (requestCache.TryGetValue(request, out FontFaceResolution? cached))
             {
                 return RepopulateRequestedFamily(cached, request);
@@ -181,7 +183,24 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
 
     public IReadOnlyList<FontFaceResolution> GetDiscoveredFonts()
     {
-        return faces.Select(face => face.ToResolution(fileSource, isFallback: false)).ToArray();
+        lock (requestCache)
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            return faces.Select(face => face.ToResolution(fileSource, isFallback: false)).ToArray();
+        }
+    }
+
+    /// <summary>Ends cache retention and refuses new acquisition; active leases remain valid.</summary>
+    /// <remarks>Keep the borrowed cache budget alive until in-flight acquisitions and leases finish. HttpClient remains caller-owned.</remarks>
+    public void Dispose()
+    {
+        lock (requestCache)
+        {
+            if (disposed) return;
+            disposed = true;
+            requestCache.Clear();
+        }
+        fileSource.Dispose();
     }
 
     private FontFaceResolution SelectBest(IReadOnlyList<FontPackFace> candidates, FontRequest request, bool isFallback)
@@ -268,11 +287,13 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
     internal const int MaxConcurrentFontDownloads = 4;
     private static readonly SemaphoreSlim DownloadConcurrency = new(MaxConcurrentFontDownloads, MaxConcurrentFontDownloads);
 
-    private static async Task<byte[]> DownloadBytesAsync(
+    private static async Task<FontProgramBuffer> DownloadBytesAsync(
         HttpClient httpClient,
         Uri uri,
         string description,
         long maxBytes,
+        IMemoryBudget? memoryBudget,
+        OoxPdfLimitScope admissionScope,
         CancellationToken cancellationToken)
     {
         // Transient transport failures retry immediately and bounded.
@@ -281,7 +302,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         await DownloadConcurrency.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            return await DownloadWithRetriesAsync(httpClient, uri, description, maxBytes, cancellationToken).ConfigureAwait(false);
+            return await DownloadWithRetriesAsync(httpClient, uri, description, maxBytes, memoryBudget, admissionScope, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -289,11 +310,13 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         }
     }
 
-    private static async Task<byte[]> DownloadWithRetriesAsync(
+    private static async Task<FontProgramBuffer> DownloadWithRetriesAsync(
         HttpClient httpClient,
         Uri uri,
         string description,
         long maxBytes,
+        IMemoryBudget? memoryBudget,
+        OoxPdfLimitScope admissionScope,
         CancellationToken cancellationToken)
     {
         const int maxAttempts = 3;
@@ -301,12 +324,13 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         {
             try
             {
-                return await DownloadBytesSingleAttemptAsync(httpClient, uri, description, maxBytes, cancellationToken).ConfigureAwait(false);
+                return await DownloadBytesSingleAttemptAsync(httpClient, uri, description, maxBytes, memoryBudget, admissionScope, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 throw;
             }
+            catch (OoxPdfLimitExceededException) { throw; }
             catch (OoxPdfFontPackException)
             {
                 throw;
@@ -325,33 +349,46 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         }
     }
 
-    private static async Task<byte[]> DownloadBytesSingleAttemptAsync(
+    private static async Task<FontProgramBuffer> DownloadBytesSingleAttemptAsync(
         HttpClient httpClient,
         Uri uri,
         string description,
         long maxBytes,
+        IMemoryBudget? memoryBudget,
+        OoxPdfLimitScope admissionScope,
         CancellationToken cancellationToken)
     {
-        using HttpResponseMessage response = await httpClient.GetAsync(
-            uri,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken).ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode)
+        FontProgramBuffer? result = null;
+        try
         {
-            throw new OoxPdfFontPackException(
-                OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed,
-                $"Unable to download {description} from '{uri}'. HTTP {(int)response.StatusCode} {response.ReasonPhrase}.");
-        }
+            using HttpResponseMessage response = await httpClient.GetAsync(
+                uri,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new OoxPdfFontPackException(
+                    OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed,
+                    $"Unable to download {description} from '{uri}'. HTTP {(int)response.StatusCode} {response.ReasonPhrase}.");
+            }
 
-        if (response.Content.Headers.ContentLength is long declared && declared > maxBytes)
+            if (response.Content.Headers.ContentLength is long declared && declared > maxBytes)
+            {
+                throw new OoxPdfFontPackException(
+                    OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed,
+                    $"Unable to download {description} from \u0027{uri}\u0027: declared size {declared} bytes exceeds the limit of {maxBytes} bytes.");
+            }
+
+            await using Stream content = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            result = await CopyCappedAsync(content, maxBytes, description, uri.ToString(), memoryBudget, admissionScope, cancellationToken).ConfigureAwait(false);
+        }
+        catch { result?.Dispose(); throw; }
+        if (cancellationToken.IsCancellationRequested)
         {
-            throw new OoxPdfFontPackException(
-                OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed,
-                $"Unable to download {description} from \u0027{uri}\u0027: declared size {declared} bytes exceeds the limit of {maxBytes} bytes.");
+            result?.Dispose();
+            cancellationToken.ThrowIfCancellationRequested();
         }
-
-        using Stream content = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        return await CopyCappedAsync(content, maxBytes, description, uri.ToString(), cancellationToken).ConfigureAwait(false);
+        return result!;
     }
 
     private static bool IsTransientDownloadFailure(Exception ex)
@@ -511,27 +548,48 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
             unescaped.Contains('\\', StringComparison.Ordinal);
     }
 
-    internal static async Task<byte[]> CopyCappedAsync(Stream source, long maxBytes, string description, string uri, CancellationToken cancellationToken)
+    internal static async Task<FontProgramBuffer> CopyCappedAsync(Stream source, long maxBytes, string description,
+        string uri, IMemoryBudget? memoryBudget, OoxPdfLimitScope admissionScope, CancellationToken cancellationToken)
     {
-        byte[] buffer = new byte[81920];
+        cancellationToken.ThrowIfCancellationRequested();
+        const int scratchBytes = 81920;
+        IMemoryReservation? storage = OoxMemory.Reserve(memoryBudget, scratchBytes, admissionScope);
+        byte[]? buffer = null;
         using var destination = new MemoryStream();
-        while (true)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            int read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-            if (read == 0)
+            buffer = new byte[scratchBytes];
+            while (true)
             {
-                return destination.ToArray();
+                cancellationToken.ThrowIfCancellationRequested();
+                int read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                if (read == 0) break;
+                long length = checked(destination.Length + read);
+                if (length > maxBytes)
+                    throw new OoxPdfFontPackException(OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed,
+                        "Unable to download " + description + " from " + uri + ": response exceeds the limit.");
+                if (length > destination.Capacity)
+                {
+                    int capacity = checked((int)Math.Min(maxBytes, Math.Max(length, Math.Max(256L, (long)destination.Capacity * 2))));
+                    OoxMemory.Resize(storage, checked((long)scratchBytes + destination.Capacity + capacity), admissionScope);
+                    destination.Capacity = capacity;
+                    OoxMemory.Resize(storage, (long)scratchBytes + capacity, admissionScope);
+                }
+                destination.Write(buffer, 0, read);
             }
-
-            if (checked(destination.Length + read) > maxBytes)
-            {
-                throw new OoxPdfFontPackException(
-                    OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed,
-                    "Unable to download " + description + " from " + uri + ": response exceeds the limit.");
-            }
-
-            destination.Write(buffer, 0, read);
+            OoxMemory.Resize(storage, checked((long)scratchBytes + destination.Capacity + destination.Length), admissionScope);
+            byte[] bytes = destination.ToArray();
+            destination.SetLength(0); destination.Capacity = 0; buffer = null;
+            OoxMemory.Resize(storage, bytes.Length, admissionScope);
+            var result = new FontProgramBuffer(bytes, storage);
+            storage = null;
+            return result;
+        }
+        finally
+        {
+            destination.SetLength(0); destination.Capacity = 0; buffer = null;
+            storage?.Dispose();
         }
     }
 
@@ -567,7 +625,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         return new OoxPdfFontPackException(OoxPdfFontPackDiagnosticIds.FontPackMissing, message);
     }
 
-    internal sealed class FontPackFileSource
+    internal sealed class FontPackFileSource : IDisposable
     {
         private readonly string packId;
         private readonly Uri packRootUri;
@@ -581,12 +639,12 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
         {
         }
 
-        internal FontPackFileSource(string packId, Uri packRootUri, HttpClient httpClient, long maxTotalBytes)
+        internal FontPackFileSource(string packId, Uri packRootUri, HttpClient httpClient, long maxTotalBytes, IMemoryBudget? cacheBudget = null)
         {
             this.packId = packId;
             this.packRootUri = packRootUri;
             this.httpClient = httpClient;
-            cache = new FontProgramCache(maxTotalBytes, StringComparer.Ordinal);
+            cache = new FontProgramCache(maxTotalBytes, StringComparer.Ordinal, cacheBudget);
         }
 
         public IFontProgramSource Create(FontPackFile file)
@@ -605,9 +663,10 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
 
         internal long RetainedBytes => cache.RetainedBytes;
 
-        internal bool TryGet(string relativePath, out ReadOnlyMemory<byte> bytes) => cache.TryGet(relativePath, out bytes);
-
-        internal void Store(string relativePath, byte[] bytes) => cache.Store(relativePath, bytes);
+        internal IMemoryBudget? Budget => cache.Budget;
+        internal bool TryAcquire(string path, IMemoryBudget? operationBudget, out IOoxPdfFontProgramLease? lease) => cache.TryAcquire(path, operationBudget, out lease);
+        internal void Store(string path, FontProgramBuffer program, IMemoryBudget? operationBudget) => cache.Store(path, program, operationBudget);
+        public void Dispose() => cache.Dispose();
     }
 
     private sealed class OoxPdfFontPackProgramSource(
@@ -621,31 +680,35 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
 
         public string StableId => "ooxpdf-font-pack:" + packId + ":" + file.Sha256;
 
-        public async ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct)
+        public async ValueTask<IOoxPdfFontProgramLease> AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)
         {
-            if (owner.TryGet(file.RelativePath, out ReadOnlyMemory<byte> cached))
+            ct.ThrowIfCancellationRequested();
+            if (owner.TryAcquire(file.RelativePath, operationBudget, out var cached))
             {
-                return cached;
+                return cached!;
             }
 
             await gate.WaitAsync(ct).ConfigureAwait(false);
             try
             {
-                if (owner.TryGet(file.RelativePath, out ReadOnlyMemory<byte> rechecked))
+                if (owner.TryAcquire(file.RelativePath, operationBudget, out var rechecked))
                 {
-                    return rechecked;
+                    return rechecked!;
                 }
 
-                byte[] bytes = await DownloadBytesAsync(
+                using FontProgramBuffer bytes = await DownloadBytesAsync(
                     httpClient,
                     new Uri(packRootUri, file.RelativePath),
                     "font file '" + file.RelativePath + "'",
                     Math.Min(file.ByteSize, MaxFontFileBytes),
+                    owner.Budget ?? operationBudget,
+                    owner.Budget is null ? OoxPdfLimitScope.Conversion : OoxPdfLimitScope.SharedResource,
                     ct).ConfigureAwait(false);
 
-                ValidateFontBytes(file, bytes);
-                owner.Store(file.RelativePath, bytes);
-                return bytes;
+                ct.ThrowIfCancellationRequested();
+                ValidateFontBytes(file, bytes.Bytes.Span);
+                owner.Store(file.RelativePath, bytes, operationBudget);
+                return bytes.Acquire();
             }
             finally
             {
@@ -653,13 +716,13 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog
             }
         }
 
-        private static void ValidateFontBytes(FontPackFile file, byte[] bytes)
+        private static void ValidateFontBytes(FontPackFile file, ReadOnlySpan<byte> bytes)
         {
-            if (bytes.LongLength != file.ByteSize)
+            if (bytes.Length != file.ByteSize)
             {
                 throw new OoxPdfFontPackException(
                     OoxPdfFontPackDiagnosticIds.FontPackHashMismatch,
-                    $"Font file '{file.RelativePath}' size mismatch: expected {file.ByteSize} bytes, got {bytes.LongLength} bytes.");
+                    $"Font file '{file.RelativePath}' size mismatch: expected {file.ByteSize} bytes, got {bytes.Length} bytes.");
             }
 
             string actual = Convert.ToHexString(SHA256.HashData(bytes));

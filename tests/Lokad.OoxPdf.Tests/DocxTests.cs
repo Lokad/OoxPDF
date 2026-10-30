@@ -1859,7 +1859,7 @@ internal static class DocxTests
     {
         try
         {
-            ReadOnlyMemory<byte> bytes = resolution.Source.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult();
+            ReadOnlyMemory<byte> bytes = TestFontPrograms.CopyAsync(resolution.Source, CancellationToken.None).AsTask().GetAwaiter().GetResult();
             OpenTypeFont first = OpenTypeFont.Load(bytes.ToArray(), 0);
             OpenTypeFont selected = OpenTypeFont.Load(bytes.ToArray(), resolution.FontFaceIndex);
             return selected.FamilyName.Equals(resolution.FamilyName, StringComparison.OrdinalIgnoreCase)
@@ -1885,7 +1885,7 @@ internal static class DocxTests
         {
             try
             {
-                ReadOnlyMemory<byte> bytes = resolution.Source.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult();
+                ReadOnlyMemory<byte> bytes = TestFontPrograms.CopyAsync(resolution.Source, CancellationToken.None).AsTask().GetAwaiter().GetResult();
                 OpenTypeFont font = OpenTypeFont.Load(bytes.ToArray(), resolution.FontFaceIndex);
                 if (font.UnitsPerEm != 0 && font.MapCodePoint('A') != 0)
                 {
@@ -1913,7 +1913,7 @@ internal static class DocxTests
         {
             try
             {
-                ReadOnlyMemory<byte> bytes = resolution.Source.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult();
+                ReadOnlyMemory<byte> bytes = TestFontPrograms.CopyAsync(resolution.Source, CancellationToken.None).AsTask().GetAwaiter().GetResult();
                 OpenTypeFont font = OpenTypeFont.Load(bytes.ToArray(), resolution.FontFaceIndex);
                 if (font.UnitsPerEm != 0 && font.MapCodePoint('A') != 0)
                 {

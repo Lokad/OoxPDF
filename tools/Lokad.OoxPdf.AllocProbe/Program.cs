@@ -1386,7 +1386,8 @@ sealed class ProbeFont : IFontResolver
 
     public object Describe()
     {
-        ReadOnlyMemory<byte> bytes = source.GetBytesAsync().GetAwaiter().GetResult();
+        using var lease = source.AcquireAsync(null).GetAwaiter().GetResult();
+        ReadOnlyMemory<byte> bytes = lease.Bytes;
         return new
         {
             resolver = Description,

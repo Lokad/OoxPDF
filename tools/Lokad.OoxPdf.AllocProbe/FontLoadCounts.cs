@@ -97,10 +97,10 @@ internal static class FontLoadCounts
         internal int FaceIndex => faceIndex;
         internal int Requests => Volatile.Read(ref requests);
         public string StableId => inner.StableId;
-        public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct = default)
+        public ValueTask<IOoxPdfFontProgramLease> AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)
         {
             Interlocked.Increment(ref requests);
-            return inner.GetBytesAsync(ct);
+            return inner.AcquireAsync(operationBudget, ct);
         }
     }
 }

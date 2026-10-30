@@ -8,7 +8,13 @@ An `IFontProgramSource` can be backed by files, memory, blob storage, memory-map
 public interface IFontProgramSource
 {
     string StableId { get; }
-    ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct = default);
+    ValueTask<IOoxPdfFontProgramLease> AcquireAsync(
+        IMemoryBudget? operationBudget, CancellationToken ct = default);
+}
+
+public interface IOoxPdfFontProgramLease : IDisposable
+{
+    ReadOnlyMemory<byte> Bytes { get; }
 }
 ```
 
@@ -20,11 +26,11 @@ using Lokad.OoxPdf.Fonts;
 
 using var cancellation = new CancellationTokenSource();
 using var httpClient = new HttpClient();
-IFontResolver fontResolver = await OoxPdfFontPackResolver.CreateHttpAsync(
+using var fontResolver = await OoxPdfFontPackResolver.CreateHttpAsync(
     "office-compatible-v1",
     new Uri("https://example.test/ooxpdf-fonts/"),
     httpClient,
-    cancellation.Token);
+    cancellationToken: cancellation.Token);
 
 await OoxPdfConverter.ConvertAsync(
     "input.pptx",
@@ -83,6 +89,23 @@ Use `MemoryFontProgramSource` for programs held in memory or implement the sourc
 interface for other storage. Different font programs need different stable IDs;
 published bytes must stay immutable and byte-identical for each ID. Resolvers
 and sources must support concurrent callers and observe cancellation.
+
+Keep each acquired lease alive through its final reader, then dispose it. The
+parser makes an owned font copy, so its source lease ends after copying/parsing.
+`MemoryFontProgramSource` borrows caller-owned immutable memory without copying
+or charging it again; keep that storage and its funding alive for the source.
+Custom sources fund significant acquisition buffers before allocation and finish
+outstanding reads before refunding them, including when cancellation is requested.
+
+Pass a longer-lived `cacheBudget` to `CreateHttpAsync` or `FileFontProgramSource`
+to fund shared cached programs. Without one, operations with a memory budget fund
+private leases rather than lend their short-lived budget to cache retention.
+Ungoverned local convenience retains its bounded cache. Dispose the pack resolver
+or an owned file source to end retention and refuse new acquisition. Existing
+leases and pending I/O keep their admission until their final user finishes;
+keep the cache budget alive until those users complete. `HttpClient` stays
+caller-owned. Admission refusal is terminal, with `SharedResource` scope for a
+cache budget; it is never a transport retry or a missing-font fallback.
 
 Keep files unchanged while file-backed sources are in use. See the
 [font lifetime and migration contract](PublicApiChanges.md) before replacing

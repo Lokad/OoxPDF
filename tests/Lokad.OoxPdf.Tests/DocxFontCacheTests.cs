@@ -114,11 +114,11 @@ internal static class DocxFontCacheTests
 
         public int RequestCount => requestCount;
 
-        public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct)
+        public ValueTask<IOoxPdfFontProgramLease> AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)
         {
             System.Threading.Interlocked.Increment(ref requestCount);
             ct.ThrowIfCancellationRequested();
-            return ValueTask.FromResult((ReadOnlyMemory<byte>)bytes);
+            return ValueTask.FromResult(TestFontPrograms.Borrow(bytes));
         }
     }
 
@@ -153,10 +153,10 @@ internal static class DocxFontCacheTests
         {
             public string StableId => inner.StableId;
 
-            public ValueTask<ReadOnlyMemory<byte>> GetBytesAsync(CancellationToken ct)
+            public ValueTask<IOoxPdfFontProgramLease> AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)
             {
                 counters.AddOrUpdate(inner.StableId, 1, (_, count) => count + 1);
-                return inner.GetBytesAsync(ct);
+                return inner.AcquireAsync(operationBudget, ct);
             }
         }
     }

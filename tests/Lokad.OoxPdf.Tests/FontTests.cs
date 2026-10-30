@@ -1,4 +1,4 @@
-ï»¿using System.Globalization;
+using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -187,13 +187,13 @@ internal static class FontTests
         }
 
         OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
-        ushort glyph = font.MapCodePoint('Ã©');
+        ushort glyph = font.MapCodePoint('é');
         if (glyph == 0)
         {
             TestAssert.Skip("Environmental precondition not met: (glyph == 0)");
         }
 
-        TestAssert.True(font.TryReadGlyphOutline(glyph, out var outline), "Expected a readable TrueType outline for Arial 'Ã©'.");
+        TestAssert.True(font.TryReadGlyphOutline(glyph, out var outline), "Expected a readable TrueType outline for Arial 'é'.");
         if (!outline.IsCompound)
         {
             TestAssert.Skip("Environmental precondition not met: (!outline.IsCompound)");
@@ -277,14 +277,14 @@ internal static class FontTests
         }
 
         OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
-        ushort glyph = font.MapCodePoint('Ã©');
+        ushort glyph = font.MapCodePoint('é');
         if (glyph == 0 || !font.TryReadGlyphOutline(glyph, out var outline) || !outline.IsCompound)
         {
             TestAssert.Skip("Environmental precondition not met: (glyph == 0 || !font.TryReadGlyphOutline(glyph, out var outline) || !outline.IsCompound)");
         }
 
         var graphics = new PdfGraphicsBuilder();
-        TestAssert.True(PdfGlyphOutlinePath.TryAppendGlyphPath(graphics, font, glyph, 0d, 0d, 14d, 0d), "Expected PDF glyph path conversion for compound Arial 'Ã©'.");
+        TestAssert.True(PdfGlyphOutlinePath.TryAppendGlyphPath(graphics, font, glyph, 0d, 0d, 14d, 0d), "Expected PDF glyph path conversion for compound Arial 'é'.");
         string pdf = graphics.ToString();
 
         TestAssert.True(pdf.Split(" m", StringSplitOptions.None).Length > 2, "Expected multiple contour starts for compound glyph path.");
@@ -321,7 +321,7 @@ internal static class FontTests
         }
 
         OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(cambria));
-        AssertNoKerning(font, 'D', 'Ã©');
+        AssertNoKerning(font, 'D', 'é');
     }
 
     public static void OpenTypeParserReadsGposExtensionKerning()
@@ -336,7 +336,7 @@ internal static class FontTests
         OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(cambria));
         TestAssert.True(
             HasAnyKerning(font, "Lokad en quelques mots") ||
-            HasAnyKerning(font, "DÃ©pendance Ã  l'offre") ||
+            HasAnyKerning(font, "Dépendance à l'offre") ||
             HasAnyKerning(font, "Large Global Supply Network") ||
             HasAnyKerning(font, "The scale and growth"),
             "Expected at least one Cambria extension GPOS kerning pair in the typography probe words.");
@@ -890,7 +890,7 @@ internal static class FontTests
         }
 
         OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
-        ushort originalGlyph = font.MapCodePoint('Ã©');
+        ushort originalGlyph = font.MapCodePoint('é');
         if (originalGlyph == 0 ||
             !font.TryReadGlyphOutline(originalGlyph, out OpenTypeFont.OpenTypeGlyphOutline originalOutline) ||
             !originalOutline.IsCompound)
@@ -898,9 +898,9 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (originalGlyph == 0 || !font.TryReadGlyphOutline(originalGlyph, out OpenTypeFont.OpenTypeGlyphOutline originalOutline) || !originalOutline.IsCompound)");
         }
 
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "Ã©".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "é".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
         OpenTypeFont subset = OpenTypeFont.Load(embedded.FontProgramBytes.ToArray());
-        ushort subsetGlyph = subset.MapCodePoint('Ã©');
+        ushort subsetGlyph = subset.MapCodePoint('é');
 
         TestAssert.True(embedded.UsesSubsetFontProgram, "Expected compound glyph fixture to use a subset font program.");
         TestAssert.True(subsetGlyph != 0, "Expected the subset cmap to map the compound glyph.");
@@ -965,8 +965,8 @@ internal static class FontTests
         OoxPdfFontPackResolver resolver = CreateFontPackResolver(manifest, fontBytes, out StubHttpMessageHandler handler);
 
         FontFaceResolution resolution = resolver.Resolve(new FontRequest("Aptos"));
-        ReadOnlyMemory<byte> loaded = resolution.Source.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult();
-        ReadOnlyMemory<byte> cached = resolution.Source.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult();
+        ReadOnlyMemory<byte> loaded = TestFontPrograms.CopyAsync(resolution.Source, CancellationToken.None).AsTask().GetAwaiter().GetResult();
+        ReadOnlyMemory<byte> cached = TestFontPrograms.CopyAsync(resolution.Source, CancellationToken.None).AsTask().GetAwaiter().GetResult();
 
         TestAssert.Equal("Aptos", resolution.RequestedFamily);
         TestAssert.Equal("Aptos", resolution.ResolvedFamily);
@@ -985,7 +985,7 @@ internal static class FontTests
 
         FontFaceResolution resolution = resolver.Resolve(new FontRequest("Aptos"));
         Task<ReadOnlyMemory<byte>>[] reads = Enumerable.Range(0, 16)
-            .Select(_ => resolution.Source.GetBytesAsync(CancellationToken.None).AsTask())
+            .Select(_ => TestFontPrograms.CopyAsync(resolution.Source, CancellationToken.None).AsTask())
             .ToArray();
         Task.WaitAll(reads);
 
@@ -1013,7 +1013,7 @@ internal static class FontTests
         IFontProgramSource[] programSources = [first.Source, second.Source];
         Task<ReadOnlyMemory<byte>>[] reads = programSources
             .SelectMany(source => Enumerable.Range(0, 8)
-                .Select(_ => source.GetBytesAsync(CancellationToken.None).AsTask()))
+                .Select(_ => TestFontPrograms.CopyAsync(source, CancellationToken.None).AsTask()))
             .ToArray();
         Task.WaitAll(reads);
 
@@ -1042,10 +1042,10 @@ internal static class FontTests
             "test-pack",
             new Uri("https://example.test/ooxpdf-fonts"),
             httpClient,
-            CancellationToken.None).GetAwaiter().GetResult();
+            cancellationToken: CancellationToken.None).GetAwaiter().GetResult();
 
         FontFaceResolution resolution = resolver.Resolve(new FontRequest("Aptos"));
-        ReadOnlyMemory<byte> loaded = resolution.Source.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult();
+        ReadOnlyMemory<byte> loaded = TestFontPrograms.CopyAsync(resolution.Source, CancellationToken.None).AsTask().GetAwaiter().GetResult();
 
         TestAssert.True(loaded.Span.SequenceEqual(fontBytes), "Retried download must return the validated font bytes.");
         TestAssert.Equal(3, handler.FlakyAttempts);
@@ -1067,11 +1067,11 @@ internal static class FontTests
             "test-pack",
             new Uri("https://example.test/ooxpdf-fonts"),
             httpClient,
-            CancellationToken.None).GetAwaiter().GetResult();
+            cancellationToken: CancellationToken.None).GetAwaiter().GetResult();
 
         FontFaceResolution resolution = resolver.Resolve(new FontRequest("Aptos"));
         OoxPdfFontPackException ex = TestAssert.Throws<OoxPdfFontPackException>(
-            () => resolution.Source.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult());
+            () => TestFontPrograms.CopyAsync(resolution.Source, CancellationToken.None).AsTask().GetAwaiter().GetResult());
 
         TestAssert.Equal(OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed, ex.DiagnosticId);
         TestAssert.Equal(3, handler.FlakyAttempts);
@@ -1116,7 +1116,7 @@ internal static class FontTests
         FontFaceResolution resolution = resolver.Resolve(new FontRequest("Aptos"));
 
         OoxPdfFontPackException ex = TestAssert.Throws<OoxPdfFontPackException>(
-            () => resolution.Source.GetBytesAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult());
+            () => TestFontPrograms.CopyAsync(resolution.Source, CancellationToken.None).AsTask().GetAwaiter().GetResult());
 
         TestAssert.Equal(OoxPdfFontPackDiagnosticIds.FontPackHashMismatch, ex.DiagnosticId);
     }
@@ -1194,7 +1194,7 @@ internal static class FontTests
             "test-pack",
             new Uri("https://example.test/ooxpdf-fonts"),
             httpClient,
-            CancellationToken.None).GetAwaiter().GetResult();
+            cancellationToken: CancellationToken.None).GetAwaiter().GetResult();
     }
 
     private static byte[] BuildFontPackManifest(
@@ -1463,7 +1463,7 @@ internal static class FontTests
             ["ooxpdf-fonts/test-pack/manifest.json"] = manifest,
         });
         var httpClient = new HttpClient(handler);
-        OoxPdfFontPackException ex = TestAssert.Throws<OoxPdfFontPackException>(() => OoxPdfFontPackResolver.CreateHttpAsync("test-pack", new Uri("https://example.test/ooxpdf-fonts"), httpClient, CancellationToken.None).GetAwaiter().GetResult());
+        OoxPdfFontPackException ex = TestAssert.Throws<OoxPdfFontPackException>(() => OoxPdfFontPackResolver.CreateHttpAsync("test-pack", new Uri("https://example.test/ooxpdf-fonts"), httpClient, cancellationToken: CancellationToken.None).GetAwaiter().GetResult());
         TestAssert.Equal(OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed, ex.DiagnosticId);
     }
 
@@ -1480,17 +1480,17 @@ internal static class FontTests
                 ["ooxpdf-fonts/test-pack/manifest.json"] = forged,
             });
         var httpClient = new HttpClient(handler);
-        OoxPdfFontPackException ex = TestAssert.Throws<OoxPdfFontPackException>(() => OoxPdfFontPackResolver.CreateHttpAsync("test-pack", new Uri("https://example.test/ooxpdf-fonts"), httpClient, CancellationToken.None).GetAwaiter().GetResult());
+        OoxPdfFontPackException ex = TestAssert.Throws<OoxPdfFontPackException>(() => OoxPdfFontPackResolver.CreateHttpAsync("test-pack", new Uri("https://example.test/ooxpdf-fonts"), httpClient, cancellationToken: CancellationToken.None).GetAwaiter().GetResult());
         TestAssert.Equal(OoxPdfFontPackDiagnosticIds.FontPackDownloadFailed, ex.DiagnosticId);
     }
 
     public static void FontPackCopyEnforcesByteBudget()
     {
         using var exact = new MemoryStream(new byte[] { 1, 2, 3 });
-        byte[] fitting = OoxPdfFontPackResolver.CopyCappedAsync(exact, 3, "probe", "https://example.test/x", CancellationToken.None).GetAwaiter().GetResult();
-        TestAssert.Equal(3, fitting.Length);
+        using var fitting = OoxPdfFontPackResolver.CopyCappedAsync(exact, 3, "probe", "https://example.test/x", null, OoxPdfLimitScope.Conversion, CancellationToken.None).GetAwaiter().GetResult();
+        TestAssert.Equal(3, fitting.Bytes.Length);
         using var over = new MemoryStream(new byte[] { 1, 2, 3, 4 });
-        TestAssert.Throws<OoxPdfFontPackException>(() => OoxPdfFontPackResolver.CopyCappedAsync(over, 3, "probe", "https://example.test/x", CancellationToken.None).GetAwaiter().GetResult());
+        TestAssert.Throws<OoxPdfFontPackException>(() => OoxPdfFontPackResolver.CopyCappedAsync(over, 3, "probe", "https://example.test/x", null, OoxPdfLimitScope.Conversion, CancellationToken.None).GetAwaiter().GetResult());
     }
 
     private sealed class StubHttpMessageHandler(IReadOnlyDictionary<string, byte[]> responses, IReadOnlyDictionary<string, HttpContent>? rawContents = null, TimeSpan responseDelay = default) : HttpMessageHandler
@@ -1598,7 +1598,7 @@ internal static class FontTests
                 .Select(_ => Task.Run(() =>
                 {
                     start.Wait();
-                    return source.GetBytesAsync(CancellationToken.None).GetAwaiter().GetResult();
+                    return TestFontPrograms.CopyAsync(source, CancellationToken.None).GetAwaiter().GetResult();
                 }))
                 .ToArray();
             start.Set();
@@ -1625,7 +1625,7 @@ internal static class FontTests
             var source = new FileFontProgramSource(path);
             using var cts = new CancellationTokenSource();
             cts.Cancel();
-            TestAssert.Throws<OperationCanceledException>(() => source.GetBytesAsync(cts.Token).AsTask().GetAwaiter().GetResult());
+            TestAssert.Throws<OperationCanceledException>(() => TestFontPrograms.CopyAsync(source, cts.Token).AsTask().GetAwaiter().GetResult());
         }
         finally
         {

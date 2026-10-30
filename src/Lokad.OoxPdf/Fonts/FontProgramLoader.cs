@@ -2,7 +2,10 @@ namespace Lokad.OoxPdf.Fonts;
 
 internal static class FontProgramLoader
 {
-    public static OpenTypeFont? Load(FontFaceResolution? resolution, CancellationToken cancellationToken)
+    public static OpenTypeFont? Load(FontFaceResolution? resolution, CancellationToken cancellationToken) =>
+        LoadAsync(resolution, cancellationToken).GetAwaiter().GetResult();
+
+    public static async ValueTask<OpenTypeFont?> LoadAsync(FontFaceResolution? resolution, CancellationToken cancellationToken)
     {
         if (resolution is null)
         {
@@ -12,15 +15,12 @@ internal static class FontProgramLoader
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            // synchronously completed sources (memory, cached files) must not
-            // pay a Task allocation per load. Parsing takes an owned SFNT buffer;
-            // collection extraction can create it directly from the shared source.
-            ValueTask<ReadOnlyMemory<byte>> pending = resolution.Source.GetBytesAsync(cancellationToken);
-            ReadOnlyMemory<byte> bytes = pending.IsCompletedSuccessfully
-                ? pending.Result
-                : pending.AsTask().GetAwaiter().GetResult();
+            // Parsing takes an owned SFNT copy (or extracts one collection face).
+            // Its source lease ends here; the conversion owns the parsed copy.
+            using IOoxPdfFontProgramLease lease = await resolution.Source.AcquireAsync(
+                OoxConversionBudget.Current?.Memory, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
-            return OpenTypeFont.LoadShared(bytes.Span, resolution.FontFaceIndex, cancellationToken);
+            return OpenTypeFont.LoadShared(lease.Bytes.Span, resolution.FontFaceIndex, cancellationToken);
         }
         catch (Exception ex) when (ex is not OoxPdfLimitExceededException && (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException))
         {

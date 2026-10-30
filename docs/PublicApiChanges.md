@@ -2,6 +2,23 @@
 
 ## 0.3.0
 
+`IFontProgramSource.GetBytesAsync` is replaced by
+`AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)`,
+returning an `IOoxPdfFontProgramLease`. Custom sources must implement the new
+contract; keep immutable `lease.Bytes` valid until disposal and finish every I/O
+borrow before refunding storage. The converter releases each source lease after
+the parser takes its owned copy. Caller-funded memory sources need no second copy
+or reservation. See [font ownership](Fonts.md).
+
+`OoxPdfFontPackResolver.CreateHttpAsync` accepts an optional `cacheBudget` before
+the cancellation token. Migrate positional fourth-token calls to the named
+`cancellationToken:` argument. The resolver and owned `FileFontProgramSource`
+instances are disposable. Supply a longer-lived cache budget for governed shared
+retention; otherwise a governed operation funds private acquisition. Cache
+shutdown/eviction ends retention without invalidating active leases. Keep its
+borrowed budget alive through pending acquisitions and the last lease. The
+resolver never disposes the caller's `HttpClient` or budget.
+
 `ConvertAsync` awaits bounded package input, ZIP extraction, page staging and PDF
 output, including owned storage disposal. Synchronous entry points block on the
 same pipeline. CPU rendering and font acquisition remain synchronous during the
@@ -62,12 +79,11 @@ overlap and final copying without source-sized preallocation. Image payloads sta
 funded through emission; font-compression buffers refund after their stream is
 written. Crop and generated shadow/glow planes are admitted for their invocation;
 recolor reuses private pixels and leaves encoded input/cache bytes unchanged.
-Models, font sources/caches and parsed maps, and other PDF resources still need
-their producer migration.
+Models, parsed maps and other PDF resources still need their producer migration.
 This partial coverage is not a complete conversion-memory limit. Null budget
 means ungoverned memory; input/output bounds and cancellation remain independent.
-Asynchronous font acquisition/borrow lifetimes and remaining producer coverage
-are still open. The removed estimated lease is not a second memory model.
+The converter's asynchronous font-preparation migration and remaining producer
+coverage are still open. The removed estimated lease is not a second memory model.
 
 The package provides .NET 10 and .NET 11 assets. Common Strict DOCX content now
 renders through the existing pipeline. `OOXML_STRICT_DIALECT` remains a warning,
