@@ -2,6 +2,10 @@
 
 ## 0.3.0 — Unreleased
 
+- Awaits package, staging and PDF output I/O; synchronous calls share that path.
+  Font acquisition and CPU rendering remain synchronous.
+- Adds host-selected temporary storage. Embedded streams no longer create implicit
+  temp files beyond their resident window; file/CLI convenience keeps file backing.
 - DOCX: sizes unconstrained automatic tables from content and cell insets,
   preserving fixed/preferred widths. Arithmetic roundoff no longer creates
   spurious text line breaks at an exactly fitting boundary.

@@ -35,8 +35,8 @@ internal static class PdfTransparencyGroupTests
     {
         PdfPage[] pages = [Page(Nested(20_000)), new PdfPage(100, 100, "0 g\n")];
         byte[] resident = Write(pages);
-        using PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPages(pages,
-            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None);
+        using PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPagesAsync(pages,
+            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         TestAssert.Equal(2, staged.PageEntries.Count);
         TestAssert.Equal(2, staged.GroupEntries.Count);
         TestAssert.Equal(4, staged.Staging.Count);
@@ -44,7 +44,7 @@ internal static class PdfTransparencyGroupTests
         TestAssert.True(staged.Pages.All(page => page.Content.Length == 0) && staged.GroupEntries.Keys.All(group => group.Content.Length == 0),
             "Completed payload strings must leave staged descriptors.");
         using var output = new MemoryStream();
-        PdfDocumentWriter.EmitStaged(output, staged, CancellationToken.None);
+        PdfDocumentWriter.EmitStagedAsync(output, staged, CancellationToken.None).GetAwaiter().GetResult();
         TestAssert.True(resident.AsSpan().SequenceEqual(output.ToArray()), "Spill output must retain all stream bytes and references.");
     }
 
@@ -95,7 +95,7 @@ internal static class PdfTransparencyGroupTests
         {
             using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxOutputBytesPerConversion = limit });
             using var output = new MemoryStream();
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStaged(output, pages, new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None));
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStagedAsync(output, pages, new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
             TestAssert.True(output.Length <= limit, "Group dictionary/stream bytes must be admitted before writing.");
         }
     }
@@ -122,7 +122,7 @@ internal static class PdfTransparencyGroupTests
         {
             var group = new PdfTransparencyGroup(Bounds, content, [], [], []);
             using var output = new MemoryStream();
-            TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteStaged(output, [GroupPage(group)], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None));
+            TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteStagedAsync(output, [GroupPage(group)], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
             TestAssert.Equal(0, output.Length);
         }
     }
@@ -167,16 +167,16 @@ internal static class PdfTransparencyGroupTests
             cancellation.Cancel();
             yield return page;
         }
-        TestAssert.Throws<OperationCanceledException>(() => PdfDocumentWriter.ProduceStagedPages(CancelAfterPage(),
-            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, cancellation.Token));
+        TestAssert.Throws<OperationCanceledException>(() => PdfDocumentWriter.ProduceStagedPagesAsync(CancelAfterPage(),
+            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, cancellation.Token, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
         TestAssert.True(before.Order(StringComparer.Ordinal).SequenceEqual(Directory.GetFiles(Path.GetTempPath(), "OoxPdfPages-*.tmp").Order(StringComparer.Ordinal)), "Cancelled production must close and remove its spill file.");
-        using PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPages([page],
-            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None);
+        using PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPagesAsync([page],
+            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         using var output = new MemoryStream();
-        TestAssert.Throws<OperationCanceledException>(() => PdfDocumentWriter.EmitStaged(output, staged, cancellation.Token));
+        TestAssert.Throws<OperationCanceledException>(() => PdfDocumentWriter.EmitStagedAsync(output, staged, cancellation.Token).GetAwaiter().GetResult());
         TestAssert.Equal(0, output.Length);
         staged.Dispose();
-        TestAssert.Throws<ObjectDisposedException>(() => PdfDocumentWriter.EmitStaged(output, staged, CancellationToken.None));
+        TestAssert.Throws<ObjectDisposedException>(() => PdfDocumentWriter.EmitStagedAsync(output, staged, CancellationToken.None).GetAwaiter().GetResult());
     }
 
     public static void TransparencyGroupsSnapshotResourcesWithoutSharedMutableOwnership()
@@ -193,10 +193,10 @@ internal static class PdfTransparencyGroupTests
     {
         var leaf = new PdfTransparencyGroup(Bounds, "0 g\n", [], [], []);
         PdfPage[] pages = [GroupPage(leaf), GroupPage(leaf)];
-        using PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPages(pages, new OoxConversionLimits(), null, CancellationToken.None);
+        using PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPagesAsync(pages, new OoxConversionLimits(), null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         TestAssert.Equal(1, staged.GroupEntries.Count);
         using var output = new MemoryStream();
-        PdfDocumentWriter.EmitStaged(output, staged, CancellationToken.None);
+        PdfDocumentWriter.EmitStagedAsync(output, staged, CancellationToken.None).GetAwaiter().GetResult();
         TestAssert.Equal(1, Count(Encoding.ASCII.GetString(output.ToArray()), "/Subtype /Form"));
     }
 
@@ -214,7 +214,7 @@ internal static class PdfTransparencyGroupTests
         Write([PageWith(chain)]);
         var tooDeep = new PdfTransparencyGroup(Bounds, "/Child Do\n", [], [], [new("Child", chain)]);
         using var output = new MemoryStream();
-        TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteStaged(output, [PageWith(tooDeep)], new OoxConversionLimits(), diagnosticSink: null, default));
+        TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteStagedAsync(output, [PageWith(tooDeep)], new OoxConversionLimits(), diagnosticSink: null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
         TestAssert.Equal(0L, output.Length);
     }
 
@@ -225,7 +225,7 @@ internal static class PdfTransparencyGroupTests
         var page = new PdfPage(100, 100, "/Valid Do /Invalid Do\n", [], [], [], [], [], [],
             groups: [new("Valid", valid), new("Invalid", invalid)]);
         using var output = new MemoryStream();
-        TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteStaged(output, [page], new OoxConversionLimits(), diagnosticSink: null, default));
+        TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteStagedAsync(output, [page], new OoxConversionLimits(), diagnosticSink: null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
         TestAssert.Equal(0L, output.Length);
     }
 
@@ -255,12 +255,12 @@ internal static class PdfTransparencyGroupTests
             TestAssert.True(earlier is { IsAlive: false }, "Staging must release earlier source groups and their content strings.");
             yield return new PdfPage(100, 100, "0 g\n");
         }
-        using PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPages(Pages(),
-            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None);
+        using PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPagesAsync(Pages(),
+            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         TestAssert.Equal(3, staged.Pages.Count);
         TestAssert.Equal(1, staged.GroupEntries.Count);
         using var output = new MemoryStream();
-        PdfDocumentWriter.EmitStaged(output, staged, CancellationToken.None);
+        PdfDocumentWriter.EmitStagedAsync(output, staged, CancellationToken.None).GetAwaiter().GetResult();
         TestAssert.Contains("/Subtype /Form", Encoding.ASCII.GetString(output.ToArray()));
     }
 
@@ -336,8 +336,8 @@ internal static class PdfTransparencyGroupTests
     {
         PdfPage page = Page(Masked(.5, 30_000));
         byte[] resident = Write([page]);
-        using PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPages([page],
-            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None);
+        using PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPagesAsync([page],
+            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         TestAssert.Equal(2, staged.Staging.Count);
         TestAssert.Equal(1, staged.GroupEntries.Count);
         TestAssert.True(staged.Staging.SpilledBytes > 65_536, "Large vector masks must spill through the shared content store.");
@@ -345,7 +345,7 @@ internal static class PdfTransparencyGroupTests
         TestAssert.Equal(string.Empty, staged.GroupEntries.Keys.Single().Content);
         TestAssert.Equal("Tr1", staged.Pages.Single().ExtGStates.Single().LuminosityGroupName!);
         using var output = new MemoryStream();
-        PdfDocumentWriter.EmitStaged(output, staged, CancellationToken.None);
+        PdfDocumentWriter.EmitStagedAsync(output, staged, CancellationToken.None).GetAwaiter().GetResult();
         TestAssert.True(resident.AsSpan().SequenceEqual(output.ToArray()), "Spilled mask references and content must retain bytes.");
     }
 
@@ -359,7 +359,7 @@ internal static class PdfTransparencyGroupTests
         })
         {
             using var output = new MemoryStream();
-            TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteStaged(output, [page], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None));
+            TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteStagedAsync(output, [page], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
             TestAssert.Equal(0, output.Length);
         }
     }
@@ -375,11 +375,11 @@ internal static class PdfTransparencyGroupTests
             TestAssert.True(earlier is { IsAlive: false }, "Mask graphics-state bindings must not retain earlier source Form payloads.");
             yield return new PdfPage(100, 100, "0 g\n");
         }
-        using PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPages(Pages(),
-            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None);
+        using PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPagesAsync(Pages(),
+            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         TestAssert.Equal(1, staged.GroupEntries.Count);
         using var output = new MemoryStream();
-        PdfDocumentWriter.EmitStaged(output, staged, CancellationToken.None);
+        PdfDocumentWriter.EmitStagedAsync(output, staged, CancellationToken.None).GetAwaiter().GetResult();
         TestAssert.Contains("/S /Luminosity", Encoding.ASCII.GetString(output.ToArray()));
     }
 
@@ -396,7 +396,7 @@ internal static class PdfTransparencyGroupTests
         {
             using OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxOutputBytesPerConversion = maximum });
             using var output = new MemoryStream();
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStaged(output, [page], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None));
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStagedAsync(output, [page], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
             TestAssert.True(output.Length <= maximum, "Mask streams cannot write beyond the admitted output.");
         }
         string[] before = Directory.GetFiles(Path.GetTempPath(), "OoxPdfPages-*.tmp");
@@ -407,8 +407,8 @@ internal static class PdfTransparencyGroupTests
             cancellation.Cancel();
             yield return page;
         }
-        TestAssert.Throws<OperationCanceledException>(() => PdfDocumentWriter.ProduceStagedPages(Pages(),
-            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, cancellation.Token));
+        TestAssert.Throws<OperationCanceledException>(() => PdfDocumentWriter.ProduceStagedPagesAsync(Pages(),
+            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, cancellation.Token, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
         TestAssert.True(before.Order(StringComparer.Ordinal).SequenceEqual(Directory.GetFiles(Path.GetTempPath(), "OoxPdfPages-*.tmp").Order(StringComparer.Ordinal)),
             "Cancelled mask staging must remove its owned spill file.");
     }
@@ -483,7 +483,7 @@ internal static class PdfTransparencyGroupTests
         foreach (PdfPage page in rejected)
         {
             using var output = new MemoryStream();
-            TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteStaged(output, [page], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None));
+            TestAssert.Throws<InvalidDataException>(() => PdfDocumentWriter.WriteStagedAsync(output, [page], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
             TestAssert.Equal(0, output.Length);
         }
     }
@@ -517,14 +517,14 @@ internal static class PdfTransparencyGroupTests
     {
         PdfPage page = PatternPage(30_000);
         byte[] expected = Write([page]);
-        using (PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPages([page],
-            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None))
+        using (PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPagesAsync([page],
+            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult())
         {
             TestAssert.True(staged.Staging.SpilledBytes > 0, "Pattern Forms must share the page spill store.");
             TestAssert.True(staged.GroupEntries.Keys.All(group => group.Content.Length == 0 && group.ShadingPatterns.Count == 1),
                 "Blank staged Forms must retain local pattern metadata.");
             using var output = new MemoryStream();
-            PdfDocumentWriter.EmitStaged(output, staged, CancellationToken.None);
+            PdfDocumentWriter.EmitStagedAsync(output, staged, CancellationToken.None).GetAwaiter().GetResult();
             TestAssert.True(expected.AsSpan().SequenceEqual(output.ToArray()), "Resident and spilled pattern documents must have identical bytes.");
         }
         long contentLength = page.Content.Length + page.Groups[0].Group.Content.Length;
@@ -544,7 +544,7 @@ internal static class PdfTransparencyGroupTests
             {
                 PdfPage admitted = PatternPage(30_000);
                 scope.Budget.ChargePdfContentBytes(admitted.Content.Length);
-                PdfDocumentWriter.WriteStaged(output, [admitted], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
+                PdfDocumentWriter.WriteStagedAsync(output, [admitted], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
             });
             TestAssert.Equal(0, output.Length);
         }
@@ -552,7 +552,7 @@ internal static class PdfTransparencyGroupTests
         {
             using var scope = OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxOutputBytesPerConversion = maximum });
             using var output = new MemoryStream();
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStaged(output, [page], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None));
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStagedAsync(output, [page], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
             TestAssert.True(output.Length <= maximum, "Pattern objects must respect output admission.");
         }
         string[] before = Directory.GetFiles(Path.GetTempPath(), "OoxPdfPages-*.tmp");
@@ -563,8 +563,8 @@ internal static class PdfTransparencyGroupTests
             cancellation.Cancel();
             yield return page;
         }
-        TestAssert.Throws<OperationCanceledException>(() => PdfDocumentWriter.ProduceStagedPages(Pages(),
-            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, cancellation.Token));
+        TestAssert.Throws<OperationCanceledException>(() => PdfDocumentWriter.ProduceStagedPagesAsync(Pages(),
+            new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, cancellation.Token, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
         TestAssert.True(before.Order(StringComparer.Ordinal).SequenceEqual(Directory.GetFiles(Path.GetTempPath(), "OoxPdfPages-*.tmp").Order(StringComparer.Ordinal)),
             "Cancelled pattern staging must remove its owned spill file.");
     }
@@ -580,9 +580,9 @@ internal static class PdfTransparencyGroupTests
             TestAssert.True(earlier is { IsAlive: false }, "Pattern metadata must not retain earlier source Forms.");
             yield return new PdfPage(100, 100, "0 g\n");
         }
-        using var staged = PdfDocumentWriter.ProduceStagedPages(Pages(), new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None);
+        using var staged = PdfDocumentWriter.ProduceStagedPagesAsync(Pages(), new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         using var output = new MemoryStream();
-        PdfDocumentWriter.EmitStaged(output, staged, CancellationToken.None);
+        PdfDocumentWriter.EmitStagedAsync(output, staged, CancellationToken.None).GetAwaiter().GetResult();
         TestAssert.Equal(1, Count(Encoding.ASCII.GetString(output.ToArray()), "/PatternType 2"));
     }
 
@@ -656,7 +656,7 @@ internal static class PdfTransparencyGroupTests
     private static byte[] Write(IReadOnlyList<PdfPage> pages)
     {
         using var output = new MemoryStream();
-        PdfDocumentWriter.WriteStaged(output, pages, new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
+        PdfDocumentWriter.WriteStagedAsync(output, pages, new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         return output.ToArray();
     }
     private static int Count(string text, string value) => (text.Length - text.Replace(value, string.Empty, StringComparison.Ordinal).Length) / value.Length;

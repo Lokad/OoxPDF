@@ -328,7 +328,7 @@ internal static partial class DocxMathFractionTests
             TestAssert.True(!DocxMathLayout.TryMeasure(equation with { Content=new([invalid]) },_=>text,CancellationToken.None,out var rejected,out _,
                 resolveControlFont:_=>parent) && rejected is null,"Unsupported properties, shapes and deeper argument roles retain complete fallback.");
         var graphics=new PdfGraphicsBuilder();DocxMathBoxPainter.Paint(measured,graphics,20d,50d,CancellationToken.None);
-        using var output=new MemoryStream();PdfDocumentWriter.WriteStaged(output,[new PdfPage(200d,150d,graphics.ToString(),[parent,text])], new OoxConversionLimits(), diagnosticSink: null,CancellationToken.None);
+        using var output=new MemoryStream();PdfDocumentWriter.WriteStagedAsync(output,[new PdfPage(200d,150d,graphics.ToString(),[parent,text])], new OoxConversionLimits(), diagnosticSink: null,CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         TestAssert.True(output.Length>0,"Delimiter resources and encoding remain valid native PDF content.");
     }
 
@@ -442,7 +442,7 @@ internal static partial class DocxMathFractionTests
         TestAssert.True(measured.Rules.Count==2 && measured.Rules[0].Color==default(Lokad.OoxPdf.Pptx.RgbColor) && measured.Rules[1].Color?.Red==255,
             "The root overbar and child fraction rule retain their independently authored color owners.");
         var graphics=new PdfGraphicsBuilder();DocxMathBoxPainter.Paint(measured,graphics,20d,50d,CancellationToken.None);
-        using var output=new MemoryStream();PdfDocumentWriter.WriteStaged(output,[new PdfPage(200d,150d,graphics.ToString(),[parent,text])], new OoxConversionLimits(), diagnosticSink: null,CancellationToken.None);
+        using var output=new MemoryStream();PdfDocumentWriter.WriteStagedAsync(output,[new PdfPage(200d,150d,graphics.ToString(),[parent,text])], new OoxConversionLimits(), diagnosticSink: null,CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         TestAssert.True(output.Length>0,"The composed resources and nested rules remain valid PDF content.");
     }
 
@@ -638,7 +638,7 @@ internal static partial class DocxMathFractionTests
             "Inherited black control color cannot adopt the child's authored red text.");
         var graphics=new PdfGraphicsBuilder();DocxMathBoxPainter.Paint(measured,graphics,20d,50d,CancellationToken.None);
         using var output=new MemoryStream();
-        PdfDocumentWriter.WriteStaged(output,[new PdfPage(200d,150d,graphics.ToString(),[parent,text])], new OoxConversionLimits(), diagnosticSink: null,CancellationToken.None);
+        PdfDocumentWriter.WriteStagedAsync(output,[new PdfPage(200d,150d,graphics.ToString(),[parent,text])], new OoxConversionLimits(), diagnosticSink: null,CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         TestAssert.True(output.Length>0,"Both ownership lanes retain valid glyph encodings and resources.");
     }
 
@@ -665,7 +665,7 @@ internal static partial class DocxMathFractionTests
                 "An explicit parent owns one leading term even when child math glyphs are larger.");
             var graphics=new PdfGraphicsBuilder();DocxMathBoxPainter.Paint(measured,graphics,20d,50d,CancellationToken.None);
             using var output=new MemoryStream();
-            PdfDocumentWriter.WriteStaged(output,[new PdfPage(200d,150d,graphics.ToString(),[resource])], new OoxConversionLimits(), diagnosticSink: null,CancellationToken.None);
+            PdfDocumentWriter.WriteStagedAsync(output,[new PdfPage(200d,150d,graphics.ToString(),[resource])], new OoxConversionLimits(), diagnosticSink: null,CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
             TestAssert.True(output.Length>0,"Root variants and the bar retain valid glyph/encoding/resource ownership.");
         }
     }
@@ -777,7 +777,7 @@ internal static partial class DocxMathFractionTests
         var graphics = new PdfGraphicsBuilder();
         DocxMathBoxPainter.Paint(measured, graphics, 20d, 50d, CancellationToken.None);
         using var output = new MemoryStream();
-        PdfDocumentWriter.WriteStaged(output, [new PdfPage(300d, 150d, graphics.ToString(), [resource])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
+        PdfDocumentWriter.WriteStagedAsync(output, [new PdfPage(300d, 150d, graphics.ToString(), [resource])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         TestAssert.True(output.Length > 0, "All composed glyphs/rules retain valid owned PDF resources.");
     }
 
@@ -850,7 +850,7 @@ internal static partial class DocxMathFractionTests
             var graphics = new PdfGraphicsBuilder();
             DocxMathBoxPainter.Paint(measured, graphics, 20d, 50d, CancellationToken.None);
             using var output = new MemoryStream();
-            PdfDocumentWriter.WriteStaged(output, [new PdfPage(200d, 150d, graphics.ToString(), [resource])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
+            PdfDocumentWriter.WriteStagedAsync(output, [new PdfPage(200d, 150d, graphics.ToString(), [resource])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
             TestAssert.True(output.Length > 0, "The composed row retains valid source encodings/resources.");
         }
     }
@@ -893,7 +893,7 @@ internal static partial class DocxMathFractionTests
         var graphics = new PdfGraphicsBuilder();
         DocxMathBoxPainter.Paint(measured, graphics, 20d, 50d, CancellationToken.None);
         using var output = new MemoryStream();
-        PdfDocumentWriter.WriteStaged(output, [new PdfPage(200d, 150d, graphics.ToString(), [resource])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
+        PdfDocumentWriter.WriteStagedAsync(output, [new PdfPage(200d, 150d, graphics.ToString(), [resource])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         TestAssert.True(output.Length > 0, "Shared row encodings/resources must remain valid.");
     }
 
@@ -936,7 +936,7 @@ internal static partial class DocxMathFractionTests
             var graphics = new PdfGraphicsBuilder();
             DocxMathBoxPainter.Paint(measured, graphics, 20d, 50d, CancellationToken.None);
             using var output = new MemoryStream();
-            PdfDocumentWriter.WriteStaged(output, [new PdfPage(200d, 150d, graphics.ToString(), [resource])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
+            PdfDocumentWriter.WriteStagedAsync(output, [new PdfPage(200d, 150d, graphics.ToString(), [resource])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
             TestAssert.True(output.Length > 0, "Nested glyphs and rules must retain valid owned resources/encodings.");
         }
     }
@@ -986,7 +986,7 @@ internal static partial class DocxMathFractionTests
         DocxMathBoxPainter.Paint(measured, graphics, 20d, 50d, CancellationToken.None);
         TestAssert.True(!graphics.ToString().Contains(" re f", StringComparison.Ordinal), "A stack must not acquire a visible fraction bar.");
         using var output = new MemoryStream();
-        PdfDocumentWriter.WriteStaged(output, [new PdfPage(200d, 150d, graphics.ToString(), [resource])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
+        PdfDocumentWriter.WriteStagedAsync(output, [new PdfPage(200d, 150d, graphics.ToString(), [resource])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         TestAssert.True(output.Length > 0, "Owned source encodings/resources must form a valid PDF.");
         void Set(OpenTypeMathConstant field, short value) => BinaryPrimitives.WriteInt16BigEndian(constants.AsSpan(18 + (int)field * 4), value);
     }
@@ -1071,7 +1071,7 @@ internal static partial class DocxMathFractionTests
         TestAssert.Contains(" re f", graphics.ToString());
         TestAssert.True(graphics.UsedFontResourceNames.SetEquals(new[] { "Math1" }), "Fraction painting must use the measured font resource.");
         using var output = new MemoryStream();
-        PdfDocumentWriter.WriteStaged(output, [new PdfPage(200d, 150d, graphics.ToString(), [resource])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
+        PdfDocumentWriter.WriteStagedAsync(output, [new PdfPage(200d, 150d, graphics.ToString(), [resource])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         TestAssert.True(output.Length > 0, "Stored fraction geometry must produce a validated PDF.");
     }
 

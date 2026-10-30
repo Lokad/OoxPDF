@@ -873,6 +873,13 @@ internal static partial class PublicApiTests
 
     private sealed class CancelOnFirstWriteStream(CancellationTokenSource cancellation) : MemoryStream
     {
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Write(bytes.Span);
+            return ValueTask.CompletedTask;
+        }
+
         public override void Write(ReadOnlySpan<byte> buffer)
         {
             base.Write(buffer);

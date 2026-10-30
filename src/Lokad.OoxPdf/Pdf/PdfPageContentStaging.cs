@@ -2,44 +2,25 @@ using Lokad.OoxPdf.Diagnostics;
 
 namespace Lokad.OoxPdf.Pdf;
 
-// R06.3: page/group content spill store for staged emission. The historical
-// page methods address stream entries; RV07-E6 maps both pages and isolated SVG
-// groups into this one resident window. Content bytes stay in
-// memory while they fit the resident window; past the window they escalate to a
-// length-prefixed temp file (8-byte little-endian lengths) and memory is released.
-// Page order is preserved in both modes, so emission stays byte-identical.
-// The temp file uses delete-on-close plus handle disposal, so no registry or
-// awkward lifetime plumbing is needed: crashing or cancelling releases the file.
-//
-// Page/group output bounds apply upstream. Shared memory admission separately
-// funds this store's resident bytes, one encoding/readback buffer and spill-file
-// buffering before acquisition. A refusal never selects file backing: only the
-// independently configured resident window does that. Spilled pages are never
-// fully re-read: reads address explicit (page, offset, count) ranges. Memory mode
-// retains at most the window in page segments; file mode retains only the running
-// page being appended.
-internal sealed class PdfPageContentStaging : IDisposable
+// One resident window and one admitted encoding/readback buffer. Beyond the window,
+// an explicit provider owns temporary backing. Reads stay bounded, records preserve
+// page/group order, and every I/O borrow completes before disposal or refund.
+internal sealed class PdfPageContentStaging : IDisposable, IAsyncDisposable
 {
-    // One store-owned buffer serves chunked encoding and later readback.
     internal const int ChunkByteCount = 65536;
-    private const int FileBufferByteCount = 4096;
-
     private static readonly byte[] LengthPlaceholder = new byte[8];
-
     private readonly List<MemoryPage> memory = new();
-    private readonly List<long> fileOffsets = new();
+    private readonly List<long> spillOffsets = new();
     private readonly long windowBytes;
     private readonly Action<OoxPdfDiagnostic>? diagnosticSink;
+    private readonly IOoxPdfTemporaryStorage? temporaryStorage;
     private readonly IMemoryReservation? storage;
     private byte[]? scratch;
-    private long residentBytes;
-    private long bufferedBytes;
-    private FileStream? spillFile;
-    private bool spillNotified;
+    private long residentBytes, bufferedBytes;
+    private Stream? spillStream;
     private bool disposed;
     private MemoryPage? pendingPage;
-    private long pendingLength;
-    private long pendingFileOffset = -1;
+    private long pendingLength, pendingOffset = -1;
     private bool pendingRecordStarted;
 
     private sealed class MemoryPage
@@ -48,15 +29,13 @@ internal sealed class PdfPageContentStaging : IDisposable
         public int Length;
     }
 
-    public PdfPageContentStaging(long windowBytes, Action<OoxPdfDiagnostic>? diagnosticSink)
+    public PdfPageContentStaging(long windowBytes, Action<OoxPdfDiagnostic>? diagnosticSink,
+        IOoxPdfTemporaryStorage? temporaryStorage = null)
     {
-        if (windowBytes < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(windowBytes));
-        }
-
+        ArgumentOutOfRangeException.ThrowIfNegative(windowBytes);
         this.windowBytes = windowBytes;
         this.diagnosticSink = diagnosticSink;
+        this.temporaryStorage = temporaryStorage;
         storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, 0);
     }
 
@@ -67,77 +46,52 @@ internal sealed class PdfPageContentStaging : IDisposable
             ObjectDisposedException.ThrowIf(disposed, this);
             if (scratch is null)
             {
-                OoxMemory.Resize(storage, checked(residentBytes + ChunkByteCount + (spillFile is null ? 0 : FileBufferByteCount)));
+                OoxMemory.Resize(storage, checked(residentBytes + ChunkByteCount));
                 scratch = new byte[ChunkByteCount];
             }
             return scratch;
         }
     }
 
-    public int Count => memory.Count + fileOffsets.Count;
-
+    public int Count => memory.Count + spillOffsets.Count;
     public long SpilledBytes { get; private set; }
+    public bool UsesTemporaryStorage => spillStream is not null;
 
-    public bool IsFileBacked => spillFile is not null;
-
-    // RV11-P1: chunked page production. A page is opened, fed arbitrary-sized
-    // chunks, then closed; closing commits it to the current backing mode and
-    // makes it visible to reads. Calls must pair exactly: appending or closing
-    // without an open page, or opening twice, fails loudly.
     public void BeginPage(CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         cancellationToken.ThrowIfCancellationRequested();
-        if (pendingPage is not null)
-        {
-            throw new InvalidOperationException("A staged page is already open.");
-        }
-
+        if (pendingPage is not null) throw new InvalidOperationException("A staged page is already open.");
         pendingPage = new MemoryPage();
         pendingLength = 0;
-        pendingFileOffset = -1;
+        pendingOffset = -1;
         pendingRecordStarted = false;
     }
 
-    public void AppendPageBytes(byte[] chunk, int offset, int count, CancellationToken cancellationToken)
+    public async ValueTask AppendPageBytesAsync(byte[] chunk, int offset, int count, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         ArgumentNullException.ThrowIfNull(chunk);
         ArgumentOutOfRangeException.ThrowIfNegative(offset);
         ArgumentOutOfRangeException.ThrowIfNegative(count);
-        if (offset > chunk.Length - count)
-        {
-            throw new ArgumentOutOfRangeException(nameof(count));
-        }
-
+        if (offset > chunk.Length - count) throw new ArgumentOutOfRangeException(nameof(count));
         cancellationToken.ThrowIfCancellationRequested();
-        if (pendingPage is null)
-        {
-            throw new InvalidOperationException("No staged page is open.");
-        }
-
-        if (count == 0)
-        {
-            return;
-        }
-
-        if (spillFile is null && bufferedBytes + pendingLength + count > windowBytes)
-        {
-            Escalate(cancellationToken);
-        }
-
-        if (spillFile is { } file)
+        if (pendingPage is null) throw new InvalidOperationException("No staged page is open.");
+        if (count == 0) return;
+        if (spillStream is null && bufferedBytes + pendingLength + count > windowBytes)
+            await EscalateAsync(cancellationToken).ConfigureAwait(false);
+        if (spillStream is { } stream)
         {
             if (!pendingRecordStarted)
             {
-                pendingFileOffset = file.Position;
-                file.Write(LengthPlaceholder, 0, LengthPlaceholder.Length);
+                pendingOffset = stream.Position;
+                await stream.WriteAsync(LengthPlaceholder, cancellationToken).ConfigureAwait(false);
                 pendingRecordStarted = true;
             }
-
-            file.Write(chunk, offset, count);
+            await stream.WriteAsync(chunk.AsMemory(offset, count), cancellationToken).ConfigureAwait(false);
             pendingLength += count;
             SpilledBytes += count;
+            cancellationToken.ThrowIfCancellationRequested();
         }
         else
         {
@@ -150,31 +104,24 @@ internal sealed class PdfPageContentStaging : IDisposable
         }
     }
 
-    public void EndPage(CancellationToken cancellationToken)
+    public async ValueTask EndPageAsync(CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         cancellationToken.ThrowIfCancellationRequested();
-        if (pendingPage is null)
-        {
-            throw new InvalidOperationException("No staged page is open.");
-        }
-
-        if (spillFile is { } file)
+        if (pendingPage is null) throw new InvalidOperationException("No staged page is open.");
+        if (spillStream is { } stream)
         {
             if (!pendingRecordStarted)
             {
-                // A file-backed page fed no bytes still needs its record so
-                // page indexes stay aligned across modes.
-                pendingFileOffset = file.Position;
-                file.Write(LengthPlaceholder, 0, LengthPlaceholder.Length);
-                pendingRecordStarted = true;
+                pendingOffset = stream.Position;
+                await stream.WriteAsync(LengthPlaceholder, cancellationToken).ConfigureAwait(false);
             }
-
-            fileOffsets.Add(pendingFileOffset);
-            long end = file.Position;
-            file.Seek(pendingFileOffset, SeekOrigin.Begin);
-            file.Write(BitConverter.GetBytes(pendingLength));
-            file.Seek(end, SeekOrigin.Begin);
+            long end = stream.Position;
+            stream.Seek(pendingOffset, SeekOrigin.Begin);
+            await stream.WriteAsync(BitConverter.GetBytes(pendingLength), cancellationToken).ConfigureAwait(false);
+            stream.Seek(end, SeekOrigin.Begin);
+            cancellationToken.ThrowIfCancellationRequested();
+            spillOffsets.Add(pendingOffset);
         }
         else
         {
@@ -182,97 +129,53 @@ internal sealed class PdfPageContentStaging : IDisposable
             memory.Add(pendingPage);
             bufferedBytes += pendingLength;
         }
-
         pendingPage = null;
         pendingLength = 0;
-        pendingFileOffset = -1;
+        pendingOffset = -1;
         pendingRecordStarted = false;
     }
 
-    public int GetPageLength(int pageIndex, CancellationToken cancellationToken)
+    public async ValueTask<int> GetPageLengthAsync(int pageIndex, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         cancellationToken.ThrowIfCancellationRequested();
-        if (pendingPage is not null)
-        {
-            throw new InvalidOperationException("Page production is still open.");
-        }
-
-        if (spillFile is { } file)
-        {
-            return ReadRecordLength(file, pageIndex);
-        }
-
-        return memory[pageIndex].Length;
+        if (pendingPage is not null) throw new InvalidOperationException("Page production is still open.");
+        return spillStream is { } stream
+            ? await ReadRecordLengthAsync(stream, pageIndex, cancellationToken).ConfigureAwait(false)
+            : memory[pageIndex].Length;
     }
 
-    // RV11-P1: bounded partial read. Copies at most count bytes at sourceOffset
-    // into destination, returning the bytes copied (0 past the end). Emission
-    // re-reads spilled pages through this in fixed chunks, so a tiny window
-    // never triggers a whole-page allocation.
-    public int ReadPageBytes(int pageIndex, byte[] destination, int destinationOffset, int sourceOffset, int count, CancellationToken cancellationToken)
+    public async ValueTask<int> ReadPageBytesAsync(int pageIndex, byte[] destination, int destinationOffset,
+        int sourceOffset, int count, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         ArgumentNullException.ThrowIfNull(destination);
         ArgumentOutOfRangeException.ThrowIfNegative(destinationOffset);
         ArgumentOutOfRangeException.ThrowIfNegative(sourceOffset);
         ArgumentOutOfRangeException.ThrowIfNegative(count);
-        if (destinationOffset > destination.Length - count)
-        {
-            throw new ArgumentOutOfRangeException(nameof(count));
-        }
-
+        if (destinationOffset > destination.Length - count) throw new ArgumentOutOfRangeException(nameof(count));
         cancellationToken.ThrowIfCancellationRequested();
-        if (pendingPage is not null)
+        if (pendingPage is not null) throw new InvalidOperationException("Page production is still open.");
+        if (count == 0) return 0;
+        if (spillStream is { } stream)
         {
-            throw new InvalidOperationException("Page production is still open.");
-        }
-
-        if (count == 0)
-        {
-            return 0;
-        }
-
-        if (spillFile is { } file)
-        {
-            int length = ReadRecordLength(file, pageIndex, cancellationToken);
-            if (sourceOffset >= length)
-            {
-                return 0;
-            }
-
-            int toRead = Math.Min(count, Math.Min(destination.Length - destinationOffset, length - sourceOffset));
-            if (toRead <= 0)
-            {
-                return 0;
-            }
-
-            file.Seek(fileOffsets[pageIndex] + 8 + sourceOffset, SeekOrigin.Begin);
+            int length = await ReadRecordLengthAsync(stream, pageIndex, cancellationToken).ConfigureAwait(false);
+            if (sourceOffset >= length) return 0;
+            int toRead = Math.Min(count, length - sourceOffset);
+            stream.Seek(spillOffsets[pageIndex] + 8 + sourceOffset, SeekOrigin.Begin);
             int total = 0;
             while (total < toRead)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                int read = file.Read(destination, destinationOffset + total, toRead - total);
-                if (read == 0)
-                {
-                    throw new InvalidDataException("Page content spill file ended unexpectedly.");
-                }
-
+                int read = await stream.ReadAsync(destination.AsMemory(destinationOffset + total, toRead - total), cancellationToken).ConfigureAwait(false);
+                if (read == 0) throw new InvalidDataException("Temporary page content ended unexpectedly.");
                 total += read;
+                cancellationToken.ThrowIfCancellationRequested();
             }
-
             return total;
         }
-
         MemoryPage page = memory[pageIndex];
-        if (sourceOffset >= page.Length)
-        {
-            return 0;
-        }
-
-        int remaining = Math.Min(count, Math.Min(destination.Length - destinationOffset, page.Length - sourceOffset));
-        int copied = 0;
-        int segmentOffset = 0;
+        if (sourceOffset >= page.Length) return 0;
+        int remaining = Math.Min(count, page.Length - sourceOffset), copied = 0, segmentOffset = 0;
         foreach (byte[] segment in page.Segments)
         {
             int segmentEnd = segmentOffset + segment.Length;
@@ -283,104 +186,99 @@ internal sealed class PdfPageContentStaging : IDisposable
                 Buffer.BlockCopy(segment, fromSegment, destination, destinationOffset + copied, take);
                 copied += take;
             }
-
             segmentOffset = segmentEnd;
         }
-
         return copied;
     }
 
-    private int ReadRecordLength(FileStream file, int pageIndex, CancellationToken cancellationToken = default)
+    private async ValueTask<int> ReadRecordLengthAsync(Stream stream, int pageIndex, CancellationToken token)
     {
-        file.Seek(fileOffsets[pageIndex], SeekOrigin.Begin);
-        Span<byte> prefix = stackalloc byte[8];
-        ReadExactly(file, prefix, cancellationToken);
-        return checked((int)BitConverter.ToInt64(prefix));
+        stream.Seek(spillOffsets[pageIndex], SeekOrigin.Begin);
+        byte[] prefix = new byte[8];
+        int read = 0;
+        while (read < prefix.Length)
+        {
+            int count = await stream.ReadAsync(prefix.AsMemory(read), token).ConfigureAwait(false);
+            if (count == 0) throw new InvalidDataException("Temporary page content ended unexpectedly.");
+            read += count;
+            token.ThrowIfCancellationRequested();
+        }
+        long length = BitConverter.ToInt64(prefix);
+        if (length < 0 || length > int.MaxValue) throw new InvalidDataException("Temporary page content length is invalid.");
+        return (int)length;
     }
 
-    private void Escalate(CancellationToken cancellationToken)
+    private async ValueTask EscalateAsync(CancellationToken token)
     {
-        OoxMemory.Resize(storage, checked(residentBytes + (scratch?.Length ?? 0) + FileBufferByteCount));
-        cancellationToken.ThrowIfCancellationRequested();
-        string path = Path.Combine(Path.GetTempPath(), "OoxPdfPages-" + Guid.NewGuid().ToString("N") + ".tmp");
-        FileStream file = new(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, FileBufferByteCount, FileOptions.SequentialScan | FileOptions.DeleteOnClose);
-        spillFile = file;
+        if (temporaryStorage is null)
+            throw new OoxPdfLimitExceededException("PDF content exceeded its resident window without a temporary-storage provider.");
+        token.ThrowIfCancellationRequested();
+        Stream created = await temporaryStorage.CreateAsync(OoxConversionBudget.Current?.Memory, token).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("The temporary-storage provider returned no stream.");
+        try
+        {
+            if (!created.CanRead || !created.CanWrite || !created.CanSeek || created.Length != 0 || created.Position != 0)
+                throw new InvalidOperationException("Temporary storage must be an empty readable/writable/seekable stream positioned at zero.");
+            token.ThrowIfCancellationRequested();
+        }
+        catch
+        {
+            await created.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+        spillStream = created;
         foreach (MemoryPage buffered in memory)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            fileOffsets.Add(file.Position);
-            file.Write(BitConverter.GetBytes((long)buffered.Length));
+            token.ThrowIfCancellationRequested();
+            spillOffsets.Add(created.Position);
+            await created.WriteAsync(BitConverter.GetBytes((long)buffered.Length), token).ConfigureAwait(false);
             foreach (byte[] segment in buffered.Segments)
-            {
-                file.Write(segment, 0, segment.Length);
-            }
-
+                await created.WriteAsync(segment, token).ConfigureAwait(false);
             SpilledBytes += buffered.Length;
             buffered.Segments.Clear();
+            residentBytes -= buffered.Length;
+            OoxMemory.Resize(storage, checked(residentBytes + (scratch?.Length ?? 0)));
         }
-
         memory.Clear();
         bufferedBytes = 0;
-        if (pendingPage is not null && pendingPage.Segments.Count > 0)
+        if (pendingPage is { Segments.Count: > 0 })
         {
-            // A page open across escalation keeps one record: flush its
-            // buffered segments, then keep appending to the file.
-            pendingFileOffset = file.Position;
-            file.Write(LengthPlaceholder, 0, LengthPlaceholder.Length);
+            pendingOffset = created.Position;
+            await created.WriteAsync(LengthPlaceholder, token).ConfigureAwait(false);
             foreach (byte[] segment in pendingPage.Segments)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                file.Write(segment, 0, segment.Length);
+                token.ThrowIfCancellationRequested();
+                await created.WriteAsync(segment, token).ConfigureAwait(false);
                 SpilledBytes += segment.Length;
             }
-
             pendingPage.Segments.Clear();
+            residentBytes -= pendingLength;
             pendingRecordStarted = true;
         }
-        residentBytes = 0;
-        OoxMemory.Resize(storage, (scratch?.Length ?? 0) + FileBufferByteCount);
-        if (!spillNotified)
-        {
-            spillNotified = true;
-            diagnosticSink?.Invoke(new OoxPdfDiagnostic("PDF_PAGE_CONTENT_SPILLED", OoxPdfSeverity.Info, "Page content exceeded the resident window and spilled to a temp file.", PartName: null, SlideIndex: null, PageIndex: null, Feature: "page-content-spill", Fallback: "temp-file"));
-        }
+        OoxMemory.Resize(storage, checked(residentBytes + (scratch?.Length ?? 0)));
+        token.ThrowIfCancellationRequested();
+        diagnosticSink?.Invoke(new OoxPdfDiagnostic("PDF_PAGE_CONTENT_SPILLED", OoxPdfSeverity.Info,
+            "Page content exceeded the resident window and moved to temporary storage.", PartName: null, SlideIndex: null,
+            PageIndex: null, Feature: "page-content-spill", Fallback: "temporary-storage"));
     }
 
-    private static void ReadExactly(Stream stream, Span<byte> destination, CancellationToken cancellationToken = default)
+    public void Dispose() => DisposeAsync().GetAwaiter().GetResult();
+
+    public async ValueTask DisposeAsync()
     {
-        int totalRead = 0;
-        while (totalRead < destination.Length)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            int read = stream.Read(destination.Slice(totalRead));
-            if (read == 0)
-            {
-                throw new InvalidDataException("Page content spill file ended unexpectedly.");
-            }
-
-            totalRead += read;
-        }
-    }
-
-    public void Dispose()
-    {
-        if (disposed)
-        {
-            return;
-        }
-
+        if (disposed) return;
         disposed = true;
         memory.Clear();
-        pendingPage?.Segments.Clear();
-        pendingPage = null;
-        fileOffsets.Clear();
-        bufferedBytes = 0;
-        residentBytes = 0;
+        pendingPage?.Segments.Clear(); pendingPage = null;
+        spillOffsets.Clear(); bufferedBytes = residentBytes = 0;
         scratch = null;
-        try { spillFile?.Dispose(); }
+        try
+        {
+            if (spillStream is { } stream) await stream.DisposeAsync().ConfigureAwait(false);
+        }
         finally
         {
-            spillFile = null;
+            spillStream = null;
             storage?.Dispose();
         }
     }

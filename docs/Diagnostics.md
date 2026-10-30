@@ -181,8 +181,10 @@ Null budget leaves memory ungoverned. No private allowance or complete heap
 accounting is introduced; allow headroom for incidental storage and GC lag.
 Caller streams remain open and are not charged again as library storage.
 
-Page/group content beyond the resident window spills into a delete-on-close
-file. Informational `PDF_PAGE_CONTENT_SPILLED` is emitted once on escalation.
+Page/group content beyond the resident window uses explicit `TemporaryStorage`.
+Stream conversion without a provider fails at the window; file/CLI convenience
+selects delete-on-close files. Informational `PDF_PAGE_CONTENT_SPILLED` is emitted
+once on escalation, with fallback `temporary-storage`.
 With `ReportResourceUsage`, `CONVERSION_RESOURCE_SUMMARY` reports `pages`,
 `pdfPages`, `pdfContentBytes`, `pdfOutputBytes`, `pdfFontBytes`, `pdfImageBytes`
 and `pageContentSpilledBytes`. These combine physical PDF output bytes with

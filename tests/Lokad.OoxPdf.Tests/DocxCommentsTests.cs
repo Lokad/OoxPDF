@@ -3610,7 +3610,7 @@ internal static partial class DocxCommentsTests
             byte[] Serialize(DocxDocument input)
             {
                 using var output = new MemoryStream();
-                PdfDocumentWriter.WriteStaged(output, renderer.RenderBlankPages(input, null, CancellationToken.None).ToArray(), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
+                PdfDocumentWriter.WriteStagedAsync(output, renderer.RenderBlankPages(input, null, CancellationToken.None).ToArray(), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
                 return output.ToArray();
             }
             TestAssert.True(Serialize(document).SequenceEqual(Serialize(document with { RelatedStories = [formerStory] })),
@@ -3783,7 +3783,7 @@ internal static partial class DocxCommentsTests
                     byte[] Serialize(DocxDocument input)
                     {
                         using var output = new MemoryStream();
-                        PdfDocumentWriter.WriteStaged(output, renderer.RenderBlankPages(input, null, CancellationToken.None).ToArray(), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None);
+                        PdfDocumentWriter.WriteStagedAsync(output, renderer.RenderBlankPages(input, null, CancellationToken.None).ToArray(), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
                         return output.ToArray();
                     }
                     TestAssert.True(Serialize(guarded with { RelatedStories = [retainedStory] }).SequenceEqual(Serialize(guarded with { RelatedStories = [formerStory] })),

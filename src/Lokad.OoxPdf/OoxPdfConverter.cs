@@ -14,8 +14,8 @@ namespace Lokad.OoxPdf;
 /// <para>Operational contracts for hosting services:</para>
 /// <list type="bullet">
 /// <item>Synchronous and asynchronous overloads perform the same conversion. The Async
-/// variants await bounded package input I/O. Font acquisition, CPU rendering and
-/// staging/output writes currently remain synchronous. Synchronous convenience
+/// variants await bounded package input, staged/output I/O and owned storage disposal.
+/// Font acquisition and CPU rendering currently remain synchronous. Synchronous convenience
 /// methods block on the same pipeline; matching inputs produce identical PDFs.</item>
 /// <item>File paths are resolved against the working directory at invocation,
 /// before asynchronous reads or host callbacks can change that directory.</item>
@@ -155,21 +155,27 @@ public static class OoxPdfConverter
         // A failure at any point leaves a pre-existing destination untouched and removes
         // only the temporary file owned by this conversion.
         string stagingPath = Path.Combine(outputDirectory!, Path.GetFileName(outputPath) + ".tmp-" + Guid.NewGuid().ToString("N"));
+        IOoxPdfTemporaryStorage temporaryStorage = options.TemporaryStorage ?? new OoxPdfFileTemporaryStorage(Path.GetTempPath());
         try
         {
             using (OoxConversionBudget.Scope scope = OoxConversionBudget.BeginScope(options.ConversionLimits, options.MemoryBudget))
             {
                 var input = new FileStream(inputPath, new FileStreamOptions {
                     Mode = FileMode.Open, Access = FileAccess.Read, Share = FileShare.Read,
-                    Options = FileOptions.Asynchronous | FileOptions.SequentialScan });
+                    BufferSize = 1, Options = FileOptions.Asynchronous | FileOptions.SequentialScan });
                 await using (input.ConfigureAwait(false))
                 {
                     using OoxPackage package = await OoxPackage.OpenAsync(input, cancellationToken).ConfigureAwait(false);
                     // The package owns source bytes borrowed by page resources. Keep it
                     // funded until the writer has emitted every resource and page.
-                    using (FileStream output = File.Create(stagingPath))
+                    var output = new FileStream(stagingPath, new FileStreamOptions {
+                        Mode = FileMode.Create, Access = FileAccess.Write, Share = FileShare.None,
+                        BufferSize = 1, Options = FileOptions.Asynchronous | FileOptions.SequentialScan });
+                    await using (output.ConfigureAwait(false))
                     {
-                        PdfDocumentWriter.WriteStaged(output, RenderPages(package, inputKind, options, diagnosticSink, cancellationToken), options.ConversionLimits ?? new OoxConversionLimits(), diagnosticSink, cancellationToken, options.FixedCreationDate);
+                        await PdfDocumentWriter.WriteStagedAsync(output, RenderPages(package, inputKind, options, diagnosticSink, cancellationToken),
+                            options.ConversionLimits ?? new OoxConversionLimits(), diagnosticSink, cancellationToken,
+                            options.FixedCreationDate, temporaryStorage).ConfigureAwait(false);
                     }
                 }
                 totals = scope.Budget.Totals;
@@ -255,13 +261,16 @@ public static class OoxPdfConverter
                 // R06.3: produce (drain, spill, blank) first so the totals snapshot and the
                 // observer report still precede serialization, preserving the stream rules;
                 // emission follows from staging.
-                using (PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPages(RenderPages(package, inputKind, options, diagnosticSink, cancellationToken), options.ConversionLimits ?? new OoxConversionLimits(), diagnosticSink, cancellationToken))
+                PdfStagedDocument staged = await PdfDocumentWriter.ProduceStagedPagesAsync(RenderPages(package, inputKind, options, diagnosticSink, cancellationToken),
+                    options.ConversionLimits ?? new OoxConversionLimits(), diagnosticSink, cancellationToken, options.TemporaryStorage).ConfigureAwait(false);
+                await using (staged.ConfigureAwait(false))
                 {
                     totals = scope.Budget.Totals;
                     cancellationToken.ThrowIfCancellationRequested();
                     ReportResourceUsage(options, diagnosticSink, totals, checked((int)scope.Budget.PdfPages));
-                    PdfDocumentWriter.EmitStaged(output, staged, cancellationToken, options.FixedCreationDate);
+                    await PdfDocumentWriter.EmitStagedAsync(output, staged, cancellationToken, options.FixedCreationDate).ConfigureAwait(false);
                 }
+                cancellationToken.ThrowIfCancellationRequested();
             }
         }
         catch (DiagnosticObserverException ex)

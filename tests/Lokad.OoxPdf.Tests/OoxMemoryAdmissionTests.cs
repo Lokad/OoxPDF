@@ -80,7 +80,7 @@ internal static partial class OoxMemoryAdmissionTests
             var resolver = new ObservedResolver(Observe);
             using var source = File.OpenRead(input);
             using var destination = new ObservedOutput(() => TestAssert.True(pool.Reserved > 0, "Package source bytes remain funded while consumers read them."));
-            OoxPdfConverter.Convert(source, destination, new OoxPdfOptions {
+            OoxPdfConverter.Convert(source, destination, new OoxPdfOptions { TemporaryStorage = new OoxPdfFileTemporaryStorage(Path.GetTempPath()),
                 InputKind = kind, FontResolver = resolver, MemoryBudget = pool,
                 ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 },
                 DiagnosticSink = _ => TestAssert.True(pool.Reserved > 0, "Package source bytes remain funded while consumers read them."), ReportResourceUsage = true });
@@ -94,7 +94,7 @@ internal static partial class OoxMemoryAdmissionTests
             observe = false;
             using var ungovernedInput = File.OpenRead(input);
             using var ungovernedOutput = new MemoryStream();
-            OoxPdfConverter.Convert(ungovernedInput, ungovernedOutput, new OoxPdfOptions {
+            OoxPdfConverter.Convert(ungovernedInput, ungovernedOutput, new OoxPdfOptions { TemporaryStorage = new OoxPdfFileTemporaryStorage(Path.GetTempPath()),
                 InputKind = kind, FontResolver = resolver,
                 ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 } });
             TestAssert.True(destination.ToArray().SequenceEqual(ungovernedOutput.ToArray()),
@@ -324,17 +324,17 @@ internal static partial class OoxMemoryAdmissionTests
     public static void StagedDocumentAndContentStoreReleaseOwnedReferencesOnDispose()
     {
         var page = new PdfPage(100d, 100d, "q\nQ\n");
-        var staged = PdfDocumentWriter.ProduceStagedPages([page], new(), null, default);
+        var staged = PdfDocumentWriter.ProduceStagedPagesAsync([page], new(), null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         var storage = staged.Staging;
         TestAssert.Equal(1, staged.Pages.Count);
         staged.Dispose();
         staged.Dispose();
         TestAssert.Throws<ObjectDisposedException>(() => _ = staged.Pages);
-        TestAssert.Throws<ObjectDisposedException>(() => storage.GetPageLength(0, default));
+        TestAssert.Throws<ObjectDisposedException>(() => storage.GetPageLengthAsync(0, default).GetAwaiter().GetResult());
         TestAssert.Throws<ObjectDisposedException>(() => storage.BeginPage(default));
-        TestAssert.Throws<ObjectDisposedException>(() => storage.AppendPageBytes([1], 0, 1, default));
-        TestAssert.Throws<ObjectDisposedException>(() => storage.EndPage(default));
-        TestAssert.Throws<ObjectDisposedException>(() => storage.ReadPageBytes(0, new byte[1], 0, 0, 1, default));
+        TestAssert.Throws<ObjectDisposedException>(() => storage.AppendPageBytesAsync([1], 0, 1, default).GetAwaiter().GetResult());
+        TestAssert.Throws<ObjectDisposedException>(() => storage.EndPageAsync(default).GetAwaiter().GetResult());
+        TestAssert.Throws<ObjectDisposedException>(() => storage.ReadPageBytesAsync(0, new byte[1], 0, 0, 1, default).GetAwaiter().GetResult());
         TestAssert.Throws<ObjectDisposedException>(() => _ = storage.Scratch);
     }
 
@@ -350,6 +350,15 @@ internal static partial class OoxMemoryAdmissionTests
 
     private sealed class ObservedOutput(Action observe) : MemoryStream
     {
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Writes++; observe();
+            byte[] copy = bytes.ToArray();
+            base.Write(copy, 0, copy.Length);
+            return ValueTask.CompletedTask;
+        }
+
         public int Writes;
         public override void Write(byte[] buffer, int offset, int count) { Writes++; observe(); base.Write(buffer, offset, count); }
         public override void Write(ReadOnlySpan<byte> buffer) { Writes++; observe(); base.Write(buffer); }

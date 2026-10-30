@@ -11,7 +11,7 @@ internal static partial class PdfWriterTests
     internal static string ReadToUnicodeCMap(PdfEmbeddedFont font)
     {
         using var output = new MemoryStream();
-        font.WriteToUnicodeCMap(new PdfObjectWriter(output, default), default);
+        font.WriteToUnicodeCMapAsync(new PdfObjectWriter(output, default, new byte[4096]), default).GetAwaiter().GetResult();
         return Encoding.ASCII.GetString(output.ToArray());
     }
 
@@ -37,12 +37,12 @@ internal static partial class PdfWriterTests
                 TestAssert.True(bytes.AsSpan().SequenceEqual(Convert.FromBase64String(row.GetProperty("Base64").GetString()!)),
                     "The live encoder must preserve the frozen pre-streaming CMap bytes: " + row.GetProperty("Id").GetString());
                 TestAssert.Equal(row.GetProperty("Sha256").GetString(), Convert.ToHexString(SHA256.HashData(bytes)));
-                TestAssert.Equal(bytes.Length, embedded.MeasureToUnicodeCMap(default));
+                TestAssert.Equal(bytes.Length, embedded.MeasureToUnicodeCMap(new byte[4096], default));
                 using var output = new MemoryStream();
-                var writer = new PdfObjectWriter(output, default);
-                writer.WriteStreamObjectHeader(1, string.Empty, bytes.Length);
-                embedded.WriteToUnicodeCMap(writer, default);
-                writer.WriteStreamObjectTrailer();
+                var writer = new PdfObjectWriter(output, default, new byte[4096]);
+                writer.WriteStreamObjectHeaderAsync(1, string.Empty, bytes.Length).GetAwaiter().GetResult();
+                embedded.WriteToUnicodeCMapAsync(writer, default).GetAwaiter().GetResult();
+                writer.WriteStreamObjectTrailerAsync().GetAwaiter().GetResult();
                 string framed = Encoding.ASCII.GetString(output.ToArray());
                 TestAssert.True(framed.EndsWith("\nendstream\nendobj\n", StringComparison.Ordinal), "Resource framing retains its established trailing separator.");
                 TestAssert.Equal(output.Length, writer.Position);
@@ -52,9 +52,9 @@ internal static partial class PdfWriterTests
         finally { CultureInfo.CurrentCulture = previous; }
         var empty = PdfEmbeddedFont.Create(font, [], default);
         var cancelled = new CancellationToken(canceled: true);
-        TestAssert.Throws<OperationCanceledException>(() => empty.MeasureToUnicodeCMap(cancelled));
+        TestAssert.Throws<OperationCanceledException>(() => empty.MeasureToUnicodeCMap(new byte[4096], cancelled));
         using var untouched = new MemoryStream();
-        TestAssert.Throws<OperationCanceledException>(() => empty.WriteToUnicodeCMap(new PdfObjectWriter(untouched, cancelled), cancelled));
+        TestAssert.Throws<OperationCanceledException>(() => empty.WriteToUnicodeCMapAsync(new PdfObjectWriter(untouched, cancelled, new byte[4096]), cancelled).GetAwaiter().GetResult());
         TestAssert.Equal(0L, untouched.Length);
     }
 
@@ -84,7 +84,7 @@ internal static partial class PdfWriterTests
             });
             using (var conversion = OoxConversionBudget.BeginScope(null, pool))
             {
-                void Write() => PdfDocumentWriter.WriteStaged(output, [page], new OoxConversionLimits(), null, cancellation.Token);
+                void Write() => PdfDocumentWriter.WriteStagedAsync(output, [page], new OoxConversionLimits(), null, cancellation.Token, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
                 if (mode == "cancel")
                     TestAssert.Equal(cancellation.Token, TestAssert.Throws<OperationCanceledException>(Write).CancellationToken);
                 else if (mode == "io")
@@ -109,7 +109,7 @@ internal static partial class PdfWriterTests
         var exactFont = new OoxConversionLimits { MaxPdfFontBytesPerConversion = rawBytes };
         using (var scope = OoxConversionBudget.BeginScope(exactFont))
         {
-            PdfDocumentWriter.WriteStaged(baseline, [page], exactFont, null, default, DateTimeOffset.UnixEpoch);
+            PdfDocumentWriter.WriteStagedAsync(baseline, [page], exactFont, null, default, DateTimeOffset.UnixEpoch, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
             TestAssert.Equal(rawBytes, scope.Budget.PdfFontBytes);
             TestAssert.Equal(baseline.Length, scope.Budget.PdfOutputBytes);
         }
@@ -117,7 +117,7 @@ internal static partial class PdfWriterTests
         var shortFont = new OoxConversionLimits { MaxPdfFontBytesPerConversion = rawBytes - 1 };
         using (var scope = OoxConversionBudget.BeginScope(shortFont))
         {
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStaged(refused, [page], shortFont, null, default));
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStagedAsync(refused, [page], shortFont, null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
             TestAssert.DoesNotContain("/Filter /FlateDecode /Length1", Encoding.ASCII.GetString(refused.ToArray()));
             TestAssert.Equal(0L, scope.Budget.PdfFontBytes);
         }
@@ -127,10 +127,10 @@ internal static partial class PdfWriterTests
             var limits = new OoxConversionLimits { MaxPdfFontBytesPerConversion = rawBytes, MaxOutputBytesPerConversion = allowance };
             using var scope = OoxConversionBudget.BeginScope(limits);
             if (allowance < baseline.Length)
-                TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStaged(output, [page], limits, null, default, DateTimeOffset.UnixEpoch));
+                TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStagedAsync(output, [page], limits, null, default, DateTimeOffset.UnixEpoch, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
             else
             {
-                PdfDocumentWriter.WriteStaged(output, [page], limits, null, default, DateTimeOffset.UnixEpoch);
+                PdfDocumentWriter.WriteStagedAsync(output, [page], limits, null, default, DateTimeOffset.UnixEpoch, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
                 TestAssert.True(output.ToArray().AsSpan().SequenceEqual(baseline.ToArray()), "An exact output bound preserves the complete PDF.");
             }
             TestAssert.True(output.Length <= allowance && scope.Budget.PdfOutputBytes <= allowance,
@@ -141,6 +141,13 @@ internal static partial class PdfWriterTests
     private delegate void ToUnicodeWriteObserver(ReadOnlySpan<byte> bytes);
     private sealed class ToUnicodeObservedOutput(ToUnicodeWriteObserver observe) : MemoryStream
     {
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Write(bytes.Span);
+            return ValueTask.CompletedTask;
+        }
+
         public override void Write(ReadOnlySpan<byte> bytes)
         {
             observe(bytes);

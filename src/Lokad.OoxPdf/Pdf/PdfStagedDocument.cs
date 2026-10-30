@@ -4,7 +4,7 @@ namespace Lokad.OoxPdf.Pdf;
 // content store travel as one value so emission cannot pair pages with the
 // wrong store, and disposed documents fail loudly instead of reading a
 // disposed store. Only ProduceStagedPages creates instances.
-internal sealed class PdfStagedDocument : IDisposable
+internal sealed class PdfStagedDocument : IDisposable, IAsyncDisposable
 {
     private readonly PdfPageContentStaging staging;
 
@@ -42,7 +42,9 @@ internal sealed class PdfStagedDocument : IDisposable
         ObjectDisposedException.ThrowIf(disposed, this);
     }
 
-    public void Dispose()
+    public void Dispose() => DisposeAsync().GetAwaiter().GetResult();
+
+    public async ValueTask DisposeAsync()
     {
         if (disposed)
         {
@@ -53,6 +55,6 @@ internal sealed class PdfStagedDocument : IDisposable
         pages = [];
         PageEntries = [];
         GroupEntries = new Dictionary<PdfTransparencyGroup, int>();
-        staging.Dispose();
+        await staging.DisposeAsync().ConfigureAwait(false);
     }
 }

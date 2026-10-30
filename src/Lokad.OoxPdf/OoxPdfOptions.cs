@@ -50,6 +50,14 @@ public sealed class OoxPdfOptions
     public IMemoryBudget? MemoryBudget { get; init; }
 
     /// <summary>
+    /// Optional owned temporary backing for content beyond the resident staging window.
+    /// Stream conversions without a provider stay in admitted memory or fail at that
+    /// window. File conversions default to explicitly selected filesystem backing.
+    /// The provider borrows the conversion budget and returns independently owned streams.
+    /// </summary>
+    public IOoxPdfTemporaryStorage? TemporaryStorage { get; init; }
+
+    /// <summary>
     /// Emits an informational CONVERSION_RESOURCE_SUMMARY with page/content,
     /// serialized PDF output, font/image payload and spilled-content byte totals.
     /// Font totals count uncompressed embedded programs and ToUnicode data before

@@ -2,13 +2,24 @@
 
 ## 0.3.0
 
-`ConvertAsync` now awaits bounded package-input reads, ZIP preflight and entry
-extraction instead of unconditionally queuing the synchronous converter with
-`Task.Run`. Synchronous entry points block on the same pipeline. CPU rendering,
-font acquisition and staging/output writes remain synchronous during the ongoing
-embedding migration; this is not yet end-to-end asynchronous conversion. Caller
-streams remain open, and cancellation waits for an outstanding read before
-refunding its borrowed storage. Input-read failures escape without preflight retry.
+`ConvertAsync` awaits bounded package input, ZIP extraction, page staging and PDF
+output, including owned storage disposal. Synchronous entry points block on the
+same pipeline. CPU rendering and font acquisition remain synchronous during the
+embedding migration. Caller streams stay open; cancellation waits for outstanding
+I/O before refunding borrowed storage. Input failures escape without preflight retry.
+
+Set `TemporaryStorage` when embedded stream conversions may exceed
+`MaxResidentPageContentBytesPerConversion`. Without it, exceeding that existing
+window fails explicitly and creates no process-temp files. File/CLI convenience
+conversions select filesystem backing. To choose a directory, use
+`new OoxPdfFileTemporaryStorage(directory)`. Custom `IOoxPdfTemporaryStorage`
+providers return fresh empty readable/writable/seekable streams. The library owns
+and asynchronously disposes each stream. Providers borrow the supplied nullable
+budget, fund significant private storage/buffers and refund after their last user;
+they must not dispose or retain that budget after storage closes.
+
+`PDF_PAGE_CONTENT_SPILLED` keeps its ID and informational severity; its fallback
+is now `temporary-storage`, covering host-selected backing as well as files.
 
 An explicit `FontResolver` now defines the entire allowed font universe for PPTX
 as well as DOCX. Custom resolvers without a built-in catalog no longer gain
@@ -35,7 +46,8 @@ finish. Refusal never triggers eviction, spilling or reduced output.
 
 Producer admission covers package intake, extracted parts and copy buffers,
 including nested chart workbooks, plus staged PDF content and its fixed encoding/
-readback and spill buffers. Package bytes and resident staged content remain funded
+readback buffers. Providers own their private backing/buffer admission; the built-in
+file provider adds no duplicate managed file buffer. Package bytes and resident staged content remain funded
 through emission; temporary intake buffers and transferred resident bytes refund
 after their users finish. Private copied/extracted SFNTs and subset program buffers
 are also admitted before construction, held through emission, and refunded after
@@ -54,8 +66,8 @@ Models, font sources/caches and parsed maps, and other PDF resources still need
 their producer migration.
 This partial coverage is not a complete conversion-memory limit. Null budget
 means ungoverned memory; input/output bounds and cancellation remain independent.
-Async I/O, explicit temporary storage and font borrow lifetimes remain separate
-work. The removed estimated lease is not retained as a second memory model.
+Asynchronous font acquisition/borrow lifetimes and remaining producer coverage
+are still open. The removed estimated lease is not a second memory model.
 
 The package provides .NET 10 and .NET 11 assets. Common Strict DOCX content now
 renders through the existing pipeline. `OOXML_STRICT_DIALECT` remains a warning,

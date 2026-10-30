@@ -141,10 +141,13 @@ if (!string.Equals(expectedLibrarySha256, loadedLibrarySha256, StringComparison.
 }
 Console.WriteLine("Loaded packed library SHA-256 " + loadedLibrarySha256 + ".");
 var admission = new SmokeBudget();
+string temporaryDirectory = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(output))!, "staging");
+IOoxPdfTemporaryStorage temporaryStorage = new OoxPdfFileTemporaryStorage(temporaryDirectory);
 var options = new OoxPdfOptions
 {
     FontResolver = args[4].Length != 0 ? new SmokeFontResolver(args[4]) : null,
-    MemoryBudget = admission
+    MemoryBudget = admission, TemporaryStorage = temporaryStorage,
+    ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 1 }
 };
 OoxPdfConverter.Convert(input, output, options);
 if (admission.Requests != 1 || admission.Releases != 1 || admission.Reserved != 0) { throw new InvalidOperationException("Packed admission ownership is unbalanced."); }
@@ -173,6 +176,21 @@ if (!pptxPdf.StartsWith("%PDF-", StringComparison.Ordinal) || !pptxPdf.Contains(
     throw new InvalidDataException("Packed PPTX conversion must produce a PDF with embedded text.");
 if (admission.Requests != 2 || admission.Releases != 2 || admission.Reserved != 0)
     throw new InvalidOperationException("Packed DOCX/PPTX admission ownership is unbalanced.");
+
+var asyncAdmission = new SmokeBudget();
+using (var streamInput = File.OpenRead(input))
+using (var streamOutput = new AsyncOnlySmokeOutput())
+{
+    await OoxPdfConverter.ConvertAsync(streamInput, streamOutput, new OoxPdfOptions {
+        InputKind = OoxPdfInputKind.Docx, FontResolver = options.FontResolver,
+        MemoryBudget = asyncAdmission, TemporaryStorage = temporaryStorage, ConversionLimits = options.ConversionLimits });
+    if (!streamOutput.ToArray().AsSpan().SequenceEqual(File.ReadAllBytes(output)))
+        throw new InvalidDataException("Packed async output/storage changed the PDF.");
+    if (!streamInput.CanRead || !streamOutput.CanWrite || asyncAdmission.Reserved != 0 || asyncAdmission.Requests != 1 || asyncAdmission.Releases != 1)
+        throw new InvalidOperationException("Packed async caller-stream/budget ownership is unbalanced.");
+}
+if (Directory.GetFiles(temporaryDirectory).Length != 0)
+    throw new InvalidDataException("Packed temporary storage did not remove owned files.");
 
 string protectedOutput = Path.ChangeExtension(output, ".protected.pdf");
 const string retained = "Retain the existing destination after failure.";
@@ -214,6 +232,18 @@ sealed class RefusingBudget : IMemoryBudget
         public IMemoryScope CreateScope() => new RefusingScope(owner);
         public bool TryReserve(long bytes, out IMemoryReservation? reservation) => owner.TryReserve(bytes, out reservation);
         public void Dispose() { }
+    }
+}
+
+sealed class AsyncOnlySmokeOutput : MemoryStream
+{
+    public override void Write(byte[] bytes, int offset, int count) => throw new InvalidOperationException("Synchronous package output write.");
+    public override void Write(ReadOnlySpan<byte> bytes) => throw new InvalidOperationException("Synchronous package output write.");
+    public override ValueTask WriteAsync(ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        byte[] copy = bytes.ToArray(); base.Write(copy, 0, copy.Length);
+        return ValueTask.CompletedTask;
     }
 }
 

@@ -274,21 +274,22 @@ internal sealed class PdfEmbeddedFont
     private static readonly string ToUnicodeSuffix = string.Join(Environment.NewLine,
         "endcmap", "CMapName currentdict /CMap defineresource pop", "end", "end", "");
 
-    public int MeasureToUnicodeCMap(CancellationToken cancellationToken) => EncodeToUnicodeCMap(null, cancellationToken);
+    public int MeasureToUnicodeCMap(Memory<byte> scratch, CancellationToken cancellationToken) =>
+        EncodeToUnicodeCMapAsync(null, scratch, cancellationToken).GetAwaiter().GetResult();
 
-    public void WriteToUnicodeCMap(PdfObjectWriter writer, CancellationToken cancellationToken) =>
-        EncodeToUnicodeCMap(writer, cancellationToken);
+    public async ValueTask WriteToUnicodeCMapAsync(PdfObjectWriter writer, CancellationToken cancellationToken) =>
+        _ = await EncodeToUnicodeCMapAsync(writer, writer.Scratch, cancellationToken).ConfigureAwait(false);
 
-    private int EncodeToUnicodeCMap(PdfObjectWriter? writer, CancellationToken cancellationToken)
+    private async ValueTask<int> EncodeToUnicodeCMapAsync(PdfObjectWriter? writer, Memory<byte> scratch, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        writer?.WriteAscii(ToUnicodePrefix);
+        if (writer is not null) await writer.WriteAsciiAsync(ToUnicodePrefix).ConfigureAwait(false);
         int length = ToUnicodePrefix.Length + ToUnicodeSuffix.Length;
         // One bounded encoder measures and emits the same immutable map. Each
         // block contains at most 100 mappings; even full int hex values fit 4KB.
         // Keep the established platform newlines and LF-only block declaration.
-        Span<byte> block = stackalloc byte[4096];
-        ReadOnlySpan<byte> newline = Environment.NewLine == "\r\n" ? "\r\n"u8 : "\n"u8;
+        Memory<byte> block = scratch[..4096];
+        string newline = Environment.NewLine;
         int remaining = UnicodeByCid.Count, inBlock = 0, used = 0, blockCount = 0;
         foreach ((ushort cid, int codePoint) in UnicodeByCid)
         {
@@ -296,50 +297,50 @@ internal sealed class PdfEmbeddedFont
             if (inBlock == 0)
             {
                 blockCount = Math.Min(100, remaining);
-                _ = blockCount.TryFormat(block, out used, provider: CultureInfo.InvariantCulture);
-                " beginbfchar\n"u8.CopyTo(block[used..]);
+                _ = blockCount.TryFormat(block.Span, out used, provider: CultureInfo.InvariantCulture);
+                " beginbfchar\n"u8.CopyTo(block.Span[used..]);
                 used += " beginbfchar\n"u8.Length;
             }
-            block[used++] = (byte)'<';
-            _ = cid.TryFormat(block[used..], out int written, "X4", CultureInfo.InvariantCulture);
+            block.Span[used++] = (byte)'<';
+            _ = cid.TryFormat(block.Span[used..], out int written, "X4", CultureInfo.InvariantCulture);
             used += written;
-            "> <"u8.CopyTo(block[used..]); used += 3;
+            "> <"u8.CopyTo(block.Span[used..]); used += 3;
             if (codePoint <= 0xFFFF)
             {
-                _ = codePoint.TryFormat(block[used..], out written, "X4", CultureInfo.InvariantCulture);
+                _ = codePoint.TryFormat(block.Span[used..], out written, "X4", CultureInfo.InvariantCulture);
                 used += written;
             }
             else
             {
                 int scalar = codePoint - 0x10000;
                 int high = 0xD800 + (scalar >> 10), low = 0xDC00 + (scalar & 0x3FF);
-                _ = high.TryFormat(block[used..], out written, "X4", CultureInfo.InvariantCulture);
+                _ = high.TryFormat(block.Span[used..], out written, "X4", CultureInfo.InvariantCulture);
                 used += written;
-                _ = low.TryFormat(block[used..], out written, "X4", CultureInfo.InvariantCulture);
+                _ = low.TryFormat(block.Span[used..], out written, "X4", CultureInfo.InvariantCulture);
                 used += written;
             }
-            block[used++] = (byte)'>';
-            newline.CopyTo(block[used..]); used += newline.Length;
+            block.Span[used++] = (byte)'>';
+            foreach (char ch in newline) block.Span[used++] = (byte)ch;
             if (++inBlock == blockCount)
             {
-                "endbfchar"u8.CopyTo(block[used..]); used += "endbfchar"u8.Length;
-                newline.CopyTo(block[used..]); used += newline.Length;
+                "endbfchar"u8.CopyTo(block.Span[used..]); used += "endbfchar"u8.Length;
+                foreach (char ch in newline) block.Span[used++] = (byte)ch;
                 length = checked(length + used);
-                writer?.WriteContentStreamBytes(block[..used]);
+                if (writer is not null) await writer.WriteRawBytesAsync(block[..used]).ConfigureAwait(false);
                 remaining -= blockCount;
                 inBlock = 0;
             }
         }
-        writer?.WriteAscii(ToUnicodeSuffix);
+        if (writer is not null) await writer.WriteAsciiAsync(ToUnicodeSuffix).ConfigureAwait(false);
         return length;
     }
 
-    public void WriteWidthArray(PdfObjectWriter writer, CancellationToken cancellationToken)
+    public async ValueTask WriteWidthArrayAsync(PdfObjectWriter writer, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        Span<byte> block = stackalloc byte[512];
+        Memory<byte> block = writer.Scratch[..512];
         int used = 1;
-        block[0] = (byte)'[';
+        block.Span[0] = (byte)'[';
         bool first = true;
         // Source glyphs and the subset's complete glyph closure are sorted.
         // Subset CIDs therefore preserve source order; whole-font CIDs are identity.
@@ -353,24 +354,24 @@ internal sealed class PdfEmbeddedFont
 
             if (block.Length - used < 32)
             {
-                writer.WriteRawBytes(block[..used]);
+                await writer.WriteRawBytesAsync(block[..used]).ConfigureAwait(false);
                 used = 0;
             }
             if (!first)
             {
-                block[used++] = (byte)' ';
+                block.Span[used++] = (byte)' ';
             }
             first = false;
             int width = (int)Math.Round(Font.GetAdvanceWidth(originalGlyph) * 1000d / Font.UnitsPerEm);
-            _ = cid.TryFormat(block[used..], out int written, provider: CultureInfo.InvariantCulture);
+            _ = cid.TryFormat(block.Span[used..], out int written, provider: CultureInfo.InvariantCulture);
             used += written;
-            " ["u8.CopyTo(block[used..]); used += 2;
-            _ = width.TryFormat(block[used..], out written, provider: CultureInfo.InvariantCulture);
+            " ["u8.CopyTo(block.Span[used..]); used += 2;
+            _ = width.TryFormat(block.Span[used..], out written, provider: CultureInfo.InvariantCulture);
             used += written;
-            block[used++] = (byte)']';
+            block.Span[used++] = (byte)']';
         }
-        block[used++] = (byte)']';
-        writer.WriteRawBytes(block[..used]);
+        block.Span[used++] = (byte)']';
+        await writer.WriteRawBytesAsync(block[..used]).ConfigureAwait(false);
     }
 
     public string EncodeGlyphHex(string text)

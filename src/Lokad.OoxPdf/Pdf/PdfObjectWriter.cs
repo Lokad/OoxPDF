@@ -7,113 +7,93 @@ internal sealed class PdfObjectWriter
     private readonly Stream stream;
     private readonly CancellationToken cancellationToken;
     private readonly List<long> offsets = [];
+    private readonly byte[] scratch;
     private long position;
 
-    public PdfObjectWriter(Stream stream, CancellationToken cancellationToken)
+    // The staged document owns/admitted this buffer. Every write completes before
+    // formatting or readback reuses it; the writer never owns the caller's stream.
+    public PdfObjectWriter(Stream stream, CancellationToken cancellationToken, byte[] scratch)
     {
         ArgumentNullException.ThrowIfNull(stream);
-        if (!stream.CanWrite)
-        {
-            throw new ArgumentException("Output stream must be writable.", nameof(stream));
-        }
-
+        ArgumentNullException.ThrowIfNull(scratch);
+        if (!stream.CanWrite) throw new ArgumentException("Output stream must be writable.", nameof(stream));
+        if (scratch.Length < 4096) throw new ArgumentException("Formatting scratch must contain at least 4096 bytes.", nameof(scratch));
         this.stream = stream;
         this.cancellationToken = cancellationToken;
+        this.scratch = scratch;
     }
 
     public IReadOnlyList<long> Offsets => offsets;
-
     public long Position => position;
+    internal Memory<byte> Scratch => scratch;
 
-    public void WriteHeader()
+    public ValueTask WriteHeaderAsync() => WriteAsciiAsync("%PDF-1.7\n");
+
+    public async ValueTask WriteObjectAsync(int objectNumber, string body)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        WriteAscii("%PDF-1.7\n");
+        await WriteObjectHeaderAsync(objectNumber).ConfigureAwait(false);
+        await WriteAsciiAsync(body).ConfigureAwait(false);
+        if (!body.EndsWith('\n')) await WriteAsciiAsync("\n").ConfigureAwait(false);
+        await WriteObjectTrailerAsync().ConfigureAwait(false);
     }
 
-    public void WriteObject(int objectNumber, string body)
-    {
-        WriteObjectHeader(objectNumber);
-        WriteAscii(body);
-        if (!body.EndsWith('\n'))
-        {
-            WriteAscii("\n");
-        }
-
-        WriteObjectTrailer();
-    }
-
-    public void WriteObjectHeader(int objectNumber)
+    public async ValueTask WriteObjectHeaderAsync(int objectNumber)
     {
         cancellationToken.ThrowIfCancellationRequested();
         offsets.Add(position);
-        WriteAscii(FormattableString.Invariant($"{objectNumber} 0 obj\n"));
+        await WriteAsciiAsync(FormattableString.Invariant($"{objectNumber} 0 obj\n")).ConfigureAwait(false);
     }
 
-    public void WriteObjectTrailer()
+    public ValueTask WriteObjectTrailerAsync() => WriteAsciiAsync("endobj\n");
+
+    public async ValueTask WriteContentStreamHeaderAsync(int objectNumber, int contentLength, string dictionaryEntries = "")
     {
-        WriteAscii("endobj\n");
+        await WriteObjectHeaderAsync(objectNumber).ConfigureAwait(false);
+        await WriteAsciiAsync(FormattableString.Invariant($"<<{(dictionaryEntries.Length == 0 ? string.Empty : " " + dictionaryEntries)} /Length {contentLength} >>\nstream\n")).ConfigureAwait(false);
     }
 
-    // RV11-P1: chunked content-stream emission. The header carries the known
-    // total length; callers stream the payload in bounded chunks, so spilled
-    // pages are never fully resident during emission.
-    public void WriteContentStreamHeader(int objectNumber, int contentLength, string dictionaryEntries = "")
+    public ValueTask WriteContentStreamTrailerAsync() => WriteAsciiAsync("endstream\nendobj\n");
+
+    public async ValueTask WriteStreamObjectAsync(int objectNumber, string dictionaryEntries, ReadOnlyMemory<byte> bytes)
     {
-        WriteObjectHeader(objectNumber);
-        WriteAscii(FormattableString.Invariant($"<<{(dictionaryEntries.Length == 0 ? string.Empty : " " + dictionaryEntries)} /Length {contentLength} >>\nstream\n"));
+        await WriteStreamObjectHeaderAsync(objectNumber, dictionaryEntries, bytes.Length).ConfigureAwait(false);
+        await WriteRawBytesAsync(bytes).ConfigureAwait(false);
+        await WriteStreamObjectTrailerAsync().ConfigureAwait(false);
     }
 
-    public void WriteContentStreamBytes(ReadOnlySpan<byte> chunk)
+    public async ValueTask WriteStreamObjectHeaderAsync(int objectNumber, string dictionaryEntries, int length)
     {
-        WriteRawBytes(chunk);
+        // Resource framing keeps its established trailing separator; staged page
+        // content retains the distinct newline placement in its methods above.
+        await WriteObjectHeaderAsync(objectNumber).ConfigureAwait(false);
+        await WriteAsciiAsync(FormattableString.Invariant($"<< {dictionaryEntries} /Length {length} >>\nstream\n")).ConfigureAwait(false);
     }
 
-    public void WriteContentStreamTrailer()
-    {
-        WriteAscii("endstream\nendobj\n");
-    }
+    public ValueTask WriteStreamObjectTrailerAsync() => WriteAsciiAsync("\nendstream\nendobj\n");
 
-    public void WriteStreamObject(int objectNumber, string dictionaryEntries, ReadOnlySpan<byte> streamBytes)
-    {
-        WriteStreamObjectHeader(objectNumber, dictionaryEntries, streamBytes.Length);
-        WriteContentStreamBytes(streamBytes);
-        WriteStreamObjectTrailer();
-    }
-
-    public void WriteStreamObjectHeader(int objectNumber, string dictionaryEntries, int length)
-    {
-        // Buffered and generated resources share their established framing;
-        // page-content staging retains its own newline placement above.
-        WriteObjectHeader(objectNumber);
-        WriteAscii(FormattableString.Invariant($"<< {dictionaryEntries} /Length {length} >>\nstream\n"));
-    }
-
-    public void WriteStreamObjectTrailer()
-    {
-        WriteAscii("\nendstream\nendobj\n");
-    }
-
-    public void WriteAscii(string text)
+    public async ValueTask WriteAsciiAsync(string text)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        byte[] bytes = Encoding.ASCII.GetBytes(text);
-        WriteRawBytes(bytes);
+        for (int offset = 0; offset < text.Length;)
+        {
+            int count = Math.Min(scratch.Length, text.Length - offset);
+            if (offset + count < text.Length && char.IsHighSurrogate(text[offset + count - 1]) && char.IsLowSurrogate(text[offset + count]))
+                count--; // Keep ASCII's scalar fallback identical across chunk boundaries.
+            int bytes = Encoding.ASCII.GetBytes(text, offset, count, scratch, 0);
+            await WriteRawBytesAsync(scratch.AsMemory(0, bytes)).ConfigureAwait(false);
+            offset += count;
+        }
     }
 
-    // R06.1: every PDF byte crosses this single boundary. The output budget is
-    // admitted before the destination sees the chunk, so a zero budget writes
-    // nothing and an exact budget trips only when a further byte is attempted.
-    // On success the admitted total equals Position. When the destination throws
-    // mid-write, the budget holds admitted bytes, which may exceed the prefix the
-    // destination actually kept; no exact recoverable count is invented. No
-    // output-sized buffer is introduced here: ASCII payloads are encoded once by
-    // WriteAscii and raw spans charge their length directly.
-    public void WriteRawBytes(ReadOnlySpan<byte> bytes)
+    // All output crosses one admission boundary before the caller sees it.
+    // A failed destination may retain a prefix; admitted bytes need not equal its
+    // physical byte count. Cancellation never abandons an outstanding buffer borrow.
+    public async ValueTask WriteRawBytesAsync(ReadOnlyMemory<byte> bytes)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxConversionBudget.Current?.ChargePdfOutputBytes(bytes.Length);
-        stream.Write(bytes);
+        await stream.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
         position += bytes.Length;
+        cancellationToken.ThrowIfCancellationRequested();
     }
 }

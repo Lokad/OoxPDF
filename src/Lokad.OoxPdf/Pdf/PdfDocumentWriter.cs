@@ -42,34 +42,41 @@ internal sealed class PdfDocumentWriter
     // to one spill store, and only blanked descriptors are retained. Planning, numbering, and
     // emission then run over descriptors with content re-read in order, so output
     // stays byte-identical while stageable payload retention follows the window.
-    public static long WriteStaged(
+    public static async ValueTask<long> WriteStagedAsync(
         Stream stream,
         IEnumerable<PdfPage> pages,
         OoxConversionLimits limits,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         CancellationToken cancellationToken,
-        DateTimeOffset? creationDate = null)
+        DateTimeOffset? creationDate = null,
+        IOoxPdfTemporaryStorage? temporaryStorage = null)
     {
         ArgumentNullException.ThrowIfNull(stream);
-        using (PdfStagedDocument staged = ProduceStagedPages(pages, limits, diagnosticSink, cancellationToken))
+        PdfStagedDocument staged = await ProduceStagedPagesAsync(pages, limits, diagnosticSink,
+            cancellationToken, temporaryStorage).ConfigureAwait(false);
+        long result;
+        await using (staged.ConfigureAwait(false))
         {
-            return EmitStaged(stream, staged, cancellationToken, creationDate);
+            result = await EmitStagedAsync(stream, staged, cancellationToken, creationDate).ConfigureAwait(false);
         }
+        cancellationToken.ThrowIfCancellationRequested();
+        return result;
     }
 
     // R06.3: drains the producer once (validate, encode, spill, blank) and hands
     // a staged document (descriptors plus store) to the caller, so the stream path can snapshot and report
     // between production and emission. The caller must dispose the document.
-    public static PdfStagedDocument ProduceStagedPages(
+    public static async ValueTask<PdfStagedDocument> ProduceStagedPagesAsync(
         IEnumerable<PdfPage> pages,
         OoxConversionLimits limits,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IOoxPdfTemporaryStorage? temporaryStorage = null)
     {
         ArgumentNullException.ThrowIfNull(pages);
         ArgumentNullException.ThrowIfNull(limits);
         // Ownership transfers to the caller; dispose on the drain-failure path below.
-        var staging = new PdfPageContentStaging(limits.MaxResidentPageContentBytesPerConversion, diagnosticSink);
+        var staging = new PdfPageContentStaging(limits.MaxResidentPageContentBytesPerConversion, diagnosticSink, temporaryStorage);
         try
         {
             var blanked = new List<PdfPage>();
@@ -78,16 +85,22 @@ internal sealed class PdfDocumentWriter
             // staged descriptor without retaining previous pages' payload strings.
             var stagedGroups = new ConditionalWeakTable<PdfTransparencyGroup, PdfTransparencyGroup>();
             var groupEntries = new Dictionary<PdfTransparencyGroup, int>();
-            PdfTransparencyGroup StageGroup(PdfTransparencyGroup group)
+            async ValueTask<PdfTransparencyGroupResource[]> StageGroupsAsync(IReadOnlyList<PdfTransparencyGroupResource> groups)
+            {
+                var result = new PdfTransparencyGroupResource[groups.Count];
+                for (int index = 0; index < groups.Count; index++)
+                    result[index] = new(groups[index].ResourceName, await StageGroupAsync(groups[index].Group).ConfigureAwait(false));
+                return result;
+            }
+            async ValueTask<PdfTransparencyGroup> StageGroupAsync(PdfTransparencyGroup group)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (stagedGroups.TryGetValue(group, out PdfTransparencyGroup? existing)) { return existing; }
-                PdfTransparencyGroupResource[] children = group.Groups
-                    .Select(child => new PdfTransparencyGroupResource(child.ResourceName, StageGroup(child.Group))).ToArray();
+                if (stagedGroups.TryGetValue(group, out PdfTransparencyGroup? existing)) return existing;
+                var children = await StageGroupsAsync(group.Groups).ConfigureAwait(false);
                 int entry = staging.Count;
                 staging.BeginPage(cancellationToken);
-                AppendEncodedPageContent(staging, group.Content, cancellationToken);
-                staging.EndPage(cancellationToken);
+                await AppendEncodedPageContentAsync(staging, group.Content, cancellationToken).ConfigureAwait(false);
+                await staging.EndPageAsync(cancellationToken).ConfigureAwait(false);
                 var descriptor = new PdfTransparencyGroup(group.Bounds, string.Empty, group.ExtGStates, group.Shadings, children, group.ShadingPatterns);
                 stagedGroups.Add(group, descriptor);
                 groupEntries.Add(descriptor, entry);
@@ -105,10 +118,9 @@ internal sealed class PdfDocumentWriter
                 PdfContentValidator.ValidatePage(page, pageIndex, cancellationToken);
                 pageEntries.Add(staging.Count);
                 staging.BeginPage(cancellationToken);
-                AppendEncodedPageContent(staging, page.Content, cancellationToken);
-                staging.EndPage(cancellationToken);
-                PdfTransparencyGroupResource[] groups = page.Groups
-                    .Select(group => new PdfTransparencyGroupResource(group.ResourceName, StageGroup(group.Group))).ToArray();
+                await AppendEncodedPageContentAsync(staging, page.Content, cancellationToken).ConfigureAwait(false);
+                await staging.EndPageAsync(cancellationToken).ConfigureAwait(false);
+                var groups = await StageGroupsAsync(page.Groups).ConfigureAwait(false);
                 blanked.Add(page with { Content = string.Empty, Groups = groups });
                 pageIndex++;
             }
@@ -127,7 +139,7 @@ internal sealed class PdfDocumentWriter
         }
         catch
         {
-            staging.Dispose();
+            await staging.DisposeAsync().ConfigureAwait(false);
             throw;
         }
     }
@@ -136,7 +148,7 @@ internal sealed class PdfDocumentWriter
     // exactly one byte (non-ASCII becomes ?), so any char-boundary chunking is
     // byte-identical to whole-string encoding. The store owns and admits the
     // single scratch chunk, reused for emission. Validation rejects non-ASCII.
-    private static void AppendEncodedPageContent(PdfPageContentStaging staging, string content, CancellationToken cancellationToken)
+    private static async ValueTask AppendEncodedPageContentAsync(PdfPageContentStaging staging, string content, CancellationToken cancellationToken)
     {
         byte[] scratch = staging.Scratch;
         int offset = 0;
@@ -145,13 +157,13 @@ internal sealed class PdfDocumentWriter
             cancellationToken.ThrowIfCancellationRequested();
             int chars = Math.Min(scratch.Length, content.Length - offset);
             int bytes = Encoding.ASCII.GetBytes(content, offset, chars, scratch, 0);
-            staging.AppendPageBytes(scratch, 0, bytes, cancellationToken);
+            await staging.AppendPageBytesAsync(scratch, 0, bytes, cancellationToken).ConfigureAwait(false);
             offset += chars;
         }
     }
 
     // R06.3: emits already-produced descriptors with content re-read in order.
-    public static long EmitStaged(
+    public static async ValueTask<long> EmitStagedAsync(
         Stream stream,
         PdfStagedDocument staged,
         CancellationToken cancellationToken,
@@ -167,20 +179,20 @@ internal sealed class PdfDocumentWriter
             throw new InvalidDataException("Staged content entry count mismatch.");
         }
 
-        return WriteCore(stream, pages, staging, staged.PageEntries, staged.GroupEntries, cancellationToken, creationDate);
+        return await WriteCoreAsync(stream, pages, staging, staged.PageEntries, staged.GroupEntries, cancellationToken, creationDate).ConfigureAwait(false);
     }
 
-    private static long WriteCore(Stream stream, IReadOnlyList<PdfPage> pages, PdfPageContentStaging staging, IReadOnlyList<int> pageEntries, IReadOnlyDictionary<PdfTransparencyGroup, int> groupEntries, CancellationToken cancellationToken, DateTimeOffset? creationDate = null)
+    private static async ValueTask<long> WriteCoreAsync(Stream stream, IReadOnlyList<PdfPage> pages, PdfPageContentStaging staging, IReadOnlyList<int> pageEntries, IReadOnlyDictionary<PdfTransparencyGroup, int> groupEntries, CancellationToken cancellationToken, DateTimeOffset? creationDate = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var writer = new PdfObjectWriter(stream, cancellationToken);
-        writer.WriteHeader();
+        var writer = new PdfObjectWriter(stream, cancellationToken, staging.Scratch);
+        await writer.WriteHeaderAsync().ConfigureAwait(false);
 
         PdfDocumentPlan plan = BuildDocumentPlan(pages, cancellationToken);
         PdfDocumentNumbers numbers = AssignDocumentNumbers(plan, pages, creationDate, cancellationToken);
 
-        writer.WriteObject(1, "<< /Type /Catalog /Pages 2 0 R >>\n");
-        writer.WriteObject(2, BuildPagesObject());
+        await writer.WriteObjectAsync(1, "<< /Type /Catalog /Pages 2 0 R >>\n").ConfigureAwait(false);
+        await writer.WriteObjectAsync(2, BuildPagesObject()).ConfigureAwait(false);
 
         for (int i = 0; i < pages.Count; i++)
         {
@@ -189,51 +201,51 @@ internal sealed class PdfDocumentWriter
             int contentObjectNumber = pageObjectNumber + 1;
             PdfPage page = pages[i];
 
-            writer.WriteObject(pageObjectNumber, FormattableString.Invariant(
-                $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page)}{BuildPageAnnotations(numbers.AnnotationObjectsByPage[i])} >>\n"));
-            int contentLength = staging.GetPageLength(pageEntries[i], cancellationToken);
-            writer.WriteContentStreamHeader(contentObjectNumber, contentLength);
-            CopyStagedContent(writer, staging, pageEntries[i], contentLength, cancellationToken);
+            await writer.WriteObjectAsync(pageObjectNumber, FormattableString.Invariant(
+                $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page)}{BuildPageAnnotations(numbers.AnnotationObjectsByPage[i])} >>\n")).ConfigureAwait(false);
+            int contentLength = await staging.GetPageLengthAsync(pageEntries[i], cancellationToken).ConfigureAwait(false);
+            await writer.WriteContentStreamHeaderAsync(contentObjectNumber, contentLength).ConfigureAwait(false);
+            await CopyStagedContentAsync(writer, staging, pageEntries[i], contentLength, cancellationToken).ConfigureAwait(false);
 
-            writer.WriteContentStreamTrailer();
+            await writer.WriteContentStreamTrailerAsync().ConfigureAwait(false);
         }
 
         foreach (PdfEmbeddedFont font in plan.Fonts)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            WriteFontObjects(writer, font, numbers.FontObjects[font.ResourceKey], cancellationToken);
+            await WriteFontObjectsAsync(writer, font, numbers.FontObjects[font.ResourceKey], cancellationToken).ConfigureAwait(false);
         }
 
         foreach (PdfFallbackFont font in plan.FallbackFonts)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            WriteFallbackFontObjects(writer, font, numbers.FallbackFontObjects[font.ResourceKey], cancellationToken);
+            await WriteFallbackFontObjectsAsync(writer, font, numbers.FallbackFontObjects[font.ResourceKey], cancellationToken).ConfigureAwait(false);
         }
 
         foreach (PdfImageXObject image in plan.Images)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            WriteImageObjects(writer, image, numbers.ImageObjects[image.ResourceKey]);
+            await WriteImageObjectsAsync(writer, image, numbers.ImageObjects[image.ResourceKey]).ConfigureAwait(false);
         }
 
         foreach (PdfShading shading in plan.Shadings)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            WriteShadingObject(writer, shading, numbers.ShadingObjects[shading.ResourceKey]);
+            await WriteShadingObjectAsync(writer, shading, numbers.ShadingObjects[shading.ResourceKey]).ConfigureAwait(false);
         }
 
         foreach (PdfTilingPattern pattern in plan.Patterns)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            WriteTilingPatternObject(writer, pattern, numbers.PatternObjects[pattern.ResourceKey], numbers.ImageObjects);
+            await WriteTilingPatternObjectAsync(writer, pattern, numbers.PatternObjects[pattern.ResourceKey], numbers.ImageObjects).ConfigureAwait(false);
         }
 
         foreach (PdfShadingPattern pattern in plan.ShadingPatterns)
         {
             cancellationToken.ThrowIfCancellationRequested();
             PdfPatternMatrix m = pattern.Matrix;
-            writer.WriteObject(numbers.ShadingPatternObjects[pattern.ResourceKey], FormattableString.Invariant(
-                $"<< /Type /Pattern /PatternType 2 /Shading {numbers.ShadingObjects[pattern.Shading.ResourceKey]} 0 R /Matrix [{FormatNumber(m.A)} {FormatNumber(m.B)} {FormatNumber(m.C)} {FormatNumber(m.D)} {FormatNumber(m.E)} {FormatNumber(m.F)}] >>\n"));
+            await writer.WriteObjectAsync(numbers.ShadingPatternObjects[pattern.ResourceKey], FormattableString.Invariant(
+                $"<< /Type /Pattern /PatternType 2 /Shading {numbers.ShadingObjects[pattern.Shading.ResourceKey]} 0 R /Matrix [{FormatNumber(m.A)} {FormatNumber(m.B)} {FormatNumber(m.C)} {FormatNumber(m.D)} {FormatNumber(m.E)} {FormatNumber(m.F)}] >>\n")).ConfigureAwait(false);
         }
 
         foreach (PdfTransparencyGroup group in plan.Groups)
@@ -242,10 +254,11 @@ internal sealed class PdfDocumentWriter
             int entry = groupEntries[group];
             PdfRectangle bounds = group.Bounds;
             string resources = BuildResourceDictionary([], [], [], group.ExtGStates, group.Shadings, [], group.Groups, group.ShadingPatterns);
-            writer.WriteContentStreamHeader(numbers.GroupObjects[group], staging.GetPageLength(entry, cancellationToken),
-                $"/Type /XObject /Subtype /Form /BBox [{FormatNumber(bounds.X)} {FormatNumber(bounds.Y)} {FormatNumber(bounds.X + bounds.Width)} {FormatNumber(bounds.Y + bounds.Height)}] /Group << /S /Transparency /CS /DeviceRGB /I true /K false >> /Resources {resources}");
-            CopyStagedContent(writer, staging, entry, staging.GetPageLength(entry, cancellationToken), cancellationToken);
-            writer.WriteContentStreamTrailer();
+            int contentLength = await staging.GetPageLengthAsync(entry, cancellationToken).ConfigureAwait(false);
+            await writer.WriteContentStreamHeaderAsync(numbers.GroupObjects[group], contentLength,
+                $"/Type /XObject /Subtype /Form /BBox [{FormatNumber(bounds.X)} {FormatNumber(bounds.Y)} {FormatNumber(bounds.X + bounds.Width)} {FormatNumber(bounds.Y + bounds.Height)}] /Group << /S /Transparency /CS /DeviceRGB /I true /K false >> /Resources {resources}").ConfigureAwait(false);
+            await CopyStagedContentAsync(writer, staging, entry, contentLength, cancellationToken).ConfigureAwait(false);
+            await writer.WriteContentStreamTrailerAsync().ConfigureAwait(false);
         }
 
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
@@ -256,13 +269,13 @@ internal sealed class PdfDocumentWriter
             for (int annotationIndex = 0; annotationIndex < annotations.Count; annotationIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                WriteLinkAnnotationObject(writer, annotations[annotationIndex], annotationObjects[annotationIndex], pages.Count);
+                await WriteLinkAnnotationObjectAsync(writer, annotations[annotationIndex], annotationObjects[annotationIndex], pages.Count).ConfigureAwait(false);
             }
         }
 
         if (numbers.InfoObjectNumber is not null && creationDate is not null)
         {
-            writer.WriteObject(numbers.InfoObjectNumber.Value, BuildInfoObject(creationDate.Value));
+            await writer.WriteObjectAsync(numbers.InfoObjectNumber.Value, BuildInfoObject(creationDate.Value)).ConfigureAwait(false);
         }
 
         if (writer.Offsets.Count != numbers.ObjectCount)
@@ -271,16 +284,16 @@ internal sealed class PdfDocumentWriter
         }
 
         long xrefOffset = writer.Position;
-        writer.WriteAscii(FormattableString.Invariant($"xref\n0 {numbers.ObjectCount + 1}\n"));
-        writer.WriteAscii("0000000000 65535 f \n");
+        await writer.WriteAsciiAsync(FormattableString.Invariant($"xref\n0 {numbers.ObjectCount + 1}\n")).ConfigureAwait(false);
+        await writer.WriteAsciiAsync("0000000000 65535 f \n").ConfigureAwait(false);
         foreach (long offset in writer.Offsets)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            writer.WriteAscii(FormattableString.Invariant($"{offset:0000000000} 00000 n \n"));
+            await writer.WriteAsciiAsync(FormattableString.Invariant($"{offset:0000000000} 00000 n \n")).ConfigureAwait(false);
         }
 
-        writer.WriteAscii(FormattableString.Invariant(
-            $"trailer\n<< /Size {numbers.ObjectCount + 1} /Root 1 0 R{(numbers.InfoObjectNumber is null ? string.Empty : FormattableString.Invariant($" /Info {numbers.InfoObjectNumber.Value} 0 R"))} >>\nstartxref\n{xrefOffset}\n%%EOF\n"));
+        await writer.WriteAsciiAsync(FormattableString.Invariant(
+            $"trailer\n<< /Size {numbers.ObjectCount + 1} /Root 1 0 R{(numbers.InfoObjectNumber is null ? string.Empty : FormattableString.Invariant($" /Info {numbers.InfoObjectNumber.Value} 0 R"))} >>\nstartxref\n{xrefOffset}\n%%EOF\n")).ConfigureAwait(false);
 
         return writer.Position;
 
@@ -432,60 +445,62 @@ internal sealed class PdfDocumentWriter
         }
     }
 
-    private static void CopyStagedContent(PdfObjectWriter writer, PdfPageContentStaging staging, int entry, int length, CancellationToken cancellationToken)
+    private static async ValueTask CopyStagedContentAsync(PdfObjectWriter writer, PdfPageContentStaging staging, int entry, int length, CancellationToken cancellationToken)
     {
         byte[] copy = staging.Scratch;
         int offset = 0;
         while (offset < length)
         {
-            int read = staging.ReadPageBytes(entry, copy, 0, offset, Math.Min(copy.Length, length - offset), cancellationToken);
+            int read = await staging.ReadPageBytesAsync(entry, copy, 0, offset, Math.Min(copy.Length, length - offset), cancellationToken).ConfigureAwait(false);
             if (read == 0) { throw new InvalidDataException("Content spill store ended unexpectedly."); }
-            writer.WriteContentStreamBytes(copy.AsSpan(0, read));
+            await writer.WriteRawBytesAsync(copy.AsMemory(0, read)).ConfigureAwait(false);
             offset += read;
         }
     }
 
-    private static void WriteFontObjects(PdfObjectWriter writer, PdfEmbeddedFont font, FontObjectNumbers objects, CancellationToken cancellationToken)
+    private static async ValueTask WriteFontObjectsAsync(PdfObjectWriter writer, PdfEmbeddedFont font, FontObjectNumbers objects, CancellationToken cancellationToken)
     {
         string baseFont = PdfEmbeddedFont.SanitizeName(font.BaseFontName);
-        writer.WriteObject(objects.Type0, FormattableString.Invariant(
-            $"<< /Type /Font /Subtype /Type0 /BaseFont /{baseFont} /Encoding /Identity-H /DescendantFonts [{objects.CidFont} 0 R] /ToUnicode {objects.ToUnicode} 0 R >>\n"));
+        await writer.WriteObjectAsync(objects.Type0, FormattableString.Invariant(
+            $"<< /Type /Font /Subtype /Type0 /BaseFont /{baseFont} /Encoding /Identity-H /DescendantFonts [{objects.CidFont} 0 R] /ToUnicode {objects.ToUnicode} 0 R >>\n")).ConfigureAwait(false);
 
-        writer.WriteObjectHeader(objects.CidFont);
-        writer.WriteAscii(FormattableString.Invariant(
-            $"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /{baseFont} /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor {objects.Descriptor} 0 R /CIDToGIDMap /Identity /W "));
-        font.WriteWidthArray(writer, cancellationToken);
-        writer.WriteAscii(" >>\n");
-        writer.WriteObjectTrailer();
+        await writer.WriteObjectHeaderAsync(objects.CidFont).ConfigureAwait(false);
+        await writer.WriteAsciiAsync(FormattableString.Invariant(
+            $"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /{baseFont} /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor {objects.Descriptor} 0 R /CIDToGIDMap /Identity /W ")).ConfigureAwait(false);
+        await font.WriteWidthArrayAsync(writer, cancellationToken).ConfigureAwait(false);
+        await writer.WriteAsciiAsync(" >>\n").ConfigureAwait(false);
+        await writer.WriteObjectTrailerAsync().ConfigureAwait(false);
 
         OpenTypeFontMetrics metrics = OpenTypeFontMetrics.From(font.Font);
-        writer.WriteObject(objects.Descriptor, FormattableString.Invariant(
-            $"<< /Type /FontDescriptor /FontName /{baseFont} /Flags {metrics.Flags} /FontBBox [{metrics.XMin} {metrics.YMin} {metrics.XMax} {metrics.YMax}] /ItalicAngle {FormatNumber(metrics.ItalicAngle)} /Ascent {metrics.Ascent} /Descent {metrics.Descent} /CapHeight {metrics.CapHeight} /StemV 80 /FontFile2 {objects.FontFile} 0 R >>\n"));
+        await writer.WriteObjectAsync(objects.Descriptor, FormattableString.Invariant(
+            $"<< /Type /FontDescriptor /FontName /{baseFont} /Flags {metrics.Flags} /FontBBox [{metrics.XMin} {metrics.YMin} {metrics.XMax} {metrics.YMax}] /ItalicAngle {FormatNumber(metrics.ItalicAngle)} /Ascent {metrics.Ascent} /Descent {metrics.Descent} /CapHeight {metrics.CapHeight} /StemV 80 /FontFile2 {objects.FontFile} 0 R >>\n")).ConfigureAwait(false);
 
         ReadOnlyMemory<byte> fontProgram = font.FontProgramBytes;
-        int toUnicodeLength = font.MeasureToUnicodeCMap(cancellationToken);
+        int toUnicodeLength = font.MeasureToUnicodeCMap(writer.Scratch, cancellationToken);
         using (IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, 0))
         {
             byte[] compressedFontProgram = PdfStreamCompression.Compress(fontProgram.Span, storage, 0, cancellationToken);
             // Count uncompressed font/ToUnicode payloads, separately from
             // dictionaries/output and from the compression buffer's admission.
             OoxConversionBudget.Current?.ChargePdfFontBytes(checked((long)fontProgram.Length + toUnicodeLength));
-            writer.WriteStreamObject(objects.FontFile, FormattableString.Invariant($"/Filter /FlateDecode /Length1 {fontProgram.Length}"), compressedFontProgram);
+            await writer.WriteStreamObjectAsync(objects.FontFile, FormattableString.Invariant($"/Filter /FlateDecode /Length1 {fontProgram.Length}"), compressedFontProgram).ConfigureAwait(false);
         }
-        writer.WriteStreamObjectHeader(objects.ToUnicode, string.Empty, toUnicodeLength);
-        font.WriteToUnicodeCMap(writer, cancellationToken);
-        writer.WriteStreamObjectTrailer();
+        await writer.WriteStreamObjectHeaderAsync(objects.ToUnicode, string.Empty, toUnicodeLength).ConfigureAwait(false);
+        await font.WriteToUnicodeCMapAsync(writer, cancellationToken).ConfigureAwait(false);
+        await writer.WriteStreamObjectTrailerAsync().ConfigureAwait(false);
     }
 
     // Standard-14 faces have no embedded font program. Their dictionaries and
     // static WinAnsi ToUnicode map count toward output, not the font-payload total.
-    private static void WriteFallbackFontObjects(PdfObjectWriter writer, PdfFallbackFont font, FallbackFontObjectNumbers objects, CancellationToken cancellationToken)
+    private static async ValueTask WriteFallbackFontObjectsAsync(PdfObjectWriter writer, PdfFallbackFont font, FallbackFontObjectNumbers objects, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        writer.WriteObject(objects.Font, FormattableString.Invariant($"<< /Type /Font /Subtype /Type1 /BaseFont /{font.FaceName} /Encoding /WinAnsiEncoding /ToUnicode {objects.ToUnicode} 0 R >>\n"));
+        await writer.WriteObjectAsync(objects.Font, FormattableString.Invariant($"<< /Type /Font /Subtype /Type1 /BaseFont /{font.FaceName} /Encoding /WinAnsiEncoding /ToUnicode {objects.ToUnicode} 0 R >>\n")).ConfigureAwait(false);
 
-        byte[] toUnicode = Encoding.ASCII.GetBytes(PdfFallbackFont.WinAnsiToUnicodeCMap);
-        writer.WriteStreamObject(objects.ToUnicode, string.Empty, toUnicode);
+        string toUnicode = PdfFallbackFont.WinAnsiToUnicodeCMap;
+        await writer.WriteStreamObjectHeaderAsync(objects.ToUnicode, string.Empty, Encoding.ASCII.GetByteCount(toUnicode)).ConfigureAwait(false);
+        await writer.WriteAsciiAsync(toUnicode).ConfigureAwait(false);
+        await writer.WriteStreamObjectTrailerAsync().ConfigureAwait(false);
     }
 
     private static string BuildInfoObject(DateTimeOffset creationDate)
@@ -495,23 +510,23 @@ internal sealed class PdfDocumentWriter
         return FormattableString.Invariant($"<< /Producer ({producer}) /CreationDate ({date}) /ModDate ({date}) >>\n");
     }
 
-    private static void WriteImageObjects(PdfObjectWriter writer, PdfImageXObject image, ImageObjectNumbers objects)
+    private static async ValueTask WriteImageObjectsAsync(PdfObjectWriter writer, PdfImageXObject image, ImageObjectNumbers objects)
     {
         // R06: retained image resources accumulate across embedded images (soft masks
         // ride the same path); charge encoded bytes as they serialize.
         OoxConversionBudget.Current?.ChargePdfImageBytes(checked((long)image.Bytes.Length + (image.Alpha?.Length ?? 0)));
         string smask = objects.SoftMask is null ? string.Empty : FormattableString.Invariant($" /SMask {objects.SoftMask.Value} 0 R");
         string decode = image.InvertedCmyk ? " /Decode [1 0 1 0 1 0 1 0]" : string.Empty;
-        writer.WriteStreamObject(objects.Image, FormattableString.Invariant(
-            $"/Type /XObject /Subtype /Image /Width {image.Width} /Height {image.Height} /ColorSpace {image.ColorSpace} /BitsPerComponent {image.BitsPerComponent} /Filter {image.Filter}{decode}{smask}"), image.Bytes);
+        await writer.WriteStreamObjectAsync(objects.Image, FormattableString.Invariant(
+            $"/Type /XObject /Subtype /Image /Width {image.Width} /Height {image.Height} /ColorSpace {image.ColorSpace} /BitsPerComponent {image.BitsPerComponent} /Filter {image.Filter}{decode}{smask}"), image.Bytes).ConfigureAwait(false);
         if (image.Alpha is not null && objects.SoftMask is not null)
         {
-            writer.WriteStreamObject(objects.SoftMask.Value, FormattableString.Invariant(
-                $"/Type /XObject /Subtype /Image /Width {image.Width} /Height {image.Height} /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode"), image.Alpha);
+            await writer.WriteStreamObjectAsync(objects.SoftMask.Value, FormattableString.Invariant(
+                $"/Type /XObject /Subtype /Image /Width {image.Width} /Height {image.Height} /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode"), image.Alpha).ConfigureAwait(false);
         }
     }
 
-    private static void WriteShadingObject(PdfObjectWriter writer, PdfShading shading, int objectNumber)
+    private static async ValueTask WriteShadingObjectAsync(PdfObjectWriter writer, PdfShading shading, int objectNumber)
     {
         (int type, string coordinates) = shading switch
         {
@@ -541,8 +556,8 @@ internal sealed class PdfDocumentWriter
             }
             function = repeated.Append("] >>").ToString();
         }
-        writer.WriteObject(objectNumber, FormattableString.Invariant(
-            $"<< /ShadingType {type} /ColorSpace /DeviceRGB /Coords [{coordinates}] /Function {function} /Extend [true true] >>\n"));
+        await writer.WriteObjectAsync(objectNumber, FormattableString.Invariant(
+            $"<< /ShadingType {type} /ColorSpace /DeviceRGB /Coords [{coordinates}] /Function {function} /Extend [true true] >>\n")).ConfigureAwait(false);
 
         string BuildShadingFunction(IReadOnlyList<PdfShadingStop> stops)
         {
@@ -585,21 +600,21 @@ internal sealed class PdfDocumentWriter
         }
     }
 
-    private static void WriteTilingPatternObject(
+    private static async ValueTask WriteTilingPatternObjectAsync(
         PdfObjectWriter writer,
         PdfTilingPattern pattern,
         int objectNumber,
         IReadOnlyDictionary<string, ImageObjectNumbers> imageObjects)
     {
-        byte[] contentBytes = Encoding.ASCII.GetBytes(pattern.Content);
+        int contentLength = Encoding.ASCII.GetByteCount(pattern.Content);
         string matrix = pattern.Matrix is { } m
             ? FormattableString.Invariant($" /Matrix [{FormatNumber(m.A)} {FormatNumber(m.B)} {FormatNumber(m.C)} {FormatNumber(m.D)} {FormatNumber(m.E)} {FormatNumber(m.F)}]")
             : string.Empty;
         string resources = pattern.Images.Count == 0
             ? "<< >>"
             : BuildPatternResources();
-        writer.WriteObject(objectNumber, FormattableString.Invariant(
-            $"<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType {pattern.TilingType} /BBox [0 0 {FormatNumber(pattern.Width)} {FormatNumber(pattern.Height)}]{matrix} /XStep {FormatNumber(pattern.XStep)} /YStep {FormatNumber(pattern.YStep)} /Resources {resources} /Length {contentBytes.Length} >>\nstream\n{pattern.Content}endstream\n"));
+        await writer.WriteObjectAsync(objectNumber, FormattableString.Invariant(
+            $"<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType {pattern.TilingType} /BBox [0 0 {FormatNumber(pattern.Width)} {FormatNumber(pattern.Height)}]{matrix} /XStep {FormatNumber(pattern.XStep)} /YStep {FormatNumber(pattern.YStep)} /Resources {resources} /Length {contentLength} >>\nstream\n{pattern.Content}endstream\n")).ConfigureAwait(false);
 
         string BuildPatternResources()
         {
@@ -616,7 +631,7 @@ internal sealed class PdfDocumentWriter
         }
     }
 
-    private static void WriteLinkAnnotationObject(
+    private static async ValueTask WriteLinkAnnotationObjectAsync(
         PdfObjectWriter writer,
         PdfLinkAnnotation annotation,
         int objectNumber,
@@ -626,8 +641,8 @@ internal sealed class PdfDocumentWriter
         double y1 = annotation.Y;
         double x2 = annotation.X + annotation.Width;
         double y2 = annotation.Y + annotation.Height;
-        writer.WriteObject(objectNumber, FormattableString.Invariant(
-            $"<< /Type /Annot /Subtype /Link /Rect [{FormatNumber(x1)} {FormatNumber(y1)} {FormatNumber(x2)} {FormatNumber(y2)}] /Border [0 0 0]{BuildLinkTarget()} >>\n"));
+        await writer.WriteObjectAsync(objectNumber, FormattableString.Invariant(
+            $"<< /Type /Annot /Subtype /Link /Rect [{FormatNumber(x1)} {FormatNumber(y1)} {FormatNumber(x2)} {FormatNumber(y2)}] /Border [0 0 0]{BuildLinkTarget()} >>\n")).ConfigureAwait(false);
 
         string BuildLinkTarget()
         {

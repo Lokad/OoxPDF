@@ -105,7 +105,7 @@ internal static partial class OoxMemoryAdmissionTests
             using var output = new ObservedOutput(() => TestAssert.True(pool.Reserved >= retained,
                 "Owned subset bytes remain funded through actual resource writes."));
             var page = new PdfPage(100, 100, "BT /F1 12 Tf <0001> Tj ET\n", [new PdfFontResource("F1", subset)]);
-            PdfDocumentWriter.WriteStaged(output, [page], new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, default);
+            PdfDocumentWriter.WriteStagedAsync(output, [page], new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
             TestAssert.True(output.Writes > 0, "Exercise real PDF resource emission.");
             TestAssert.Equal(retained, pool.Reserved);
             PdfEmbeddedFont whole = PdfEmbeddedFont.Create(font, [], default);

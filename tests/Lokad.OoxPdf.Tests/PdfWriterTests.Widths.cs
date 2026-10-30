@@ -13,7 +13,7 @@ internal static partial class PdfWriterTests
     internal static string ReadWidthArray(PdfEmbeddedFont font)
     {
         using var output = new MemoryStream();
-        font.WriteWidthArray(new PdfObjectWriter(output, default), default);
+        font.WriteWidthArrayAsync(new PdfObjectWriter(output, default, new byte[4096]), default).GetAwaiter().GetResult();
         return Encoding.ASCII.GetString(output.ToArray());
     }
 
@@ -52,7 +52,7 @@ internal static partial class PdfWriterTests
                 TestAssert.Equal(sample.GetProperty("Sha256").GetString(), Convert.ToHexString(SHA256.HashData(actual)));
                 using var untouched = new MemoryStream();
                 var cancelled = new CancellationToken(canceled: true);
-                TestAssert.Throws<OperationCanceledException>(() => embedded.WriteWidthArray(new PdfObjectWriter(untouched, default), cancelled));
+                TestAssert.Throws<OperationCanceledException>(() => embedded.WriteWidthArrayAsync(new PdfObjectWriter(untouched, default, new byte[4096]), cancelled).GetAwaiter().GetResult());
                 TestAssert.Equal(0L, untouched.Length);
             }
         }
@@ -84,7 +84,7 @@ internal static partial class PdfWriterTests
             });
             using (var conversion = OoxConversionBudget.BeginScope(null, pool))
             {
-                void Write() => PdfDocumentWriter.WriteStaged(output, [page], new OoxConversionLimits(), null, cancellation.Token, DateTimeOffset.UnixEpoch);
+                void Write() => PdfDocumentWriter.WriteStagedAsync(output, [page], new OoxConversionLimits(), null, cancellation.Token, DateTimeOffset.UnixEpoch, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
                 if (mode == "cancel") TestAssert.Equal(cancellation.Token, TestAssert.Throws<OperationCanceledException>(Write).CancellationToken);
                 else if (mode == "io") TestAssert.True(ReferenceEquals(io, TestAssert.Throws<IOException>(Write)), "The original destination failure must escape without retry.");
                 else Write();
@@ -102,13 +102,13 @@ internal static partial class PdfWriterTests
         var font = PdfEmbeddedFont.Create(TestFontBuilder.LoadTestFont(), TestFontBuilder.AllCodePoints(), default);
         var page = new PdfPage(100, 100, "BT /F1 12 Tf <0001> Tj ET\n", [new PdfFontResource("F1", font)]);
         using var complete = new MemoryStream();
-        PdfDocumentWriter.WriteStaged(complete, [page], new OoxConversionLimits(), null, default, DateTimeOffset.UnixEpoch);
+        PdfDocumentWriter.WriteStagedAsync(complete, [page], new OoxConversionLimits(), null, default, DateTimeOffset.UnixEpoch, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         long allowance = Encoding.ASCII.GetString(complete.ToArray()).IndexOf("/W [", StringComparison.Ordinal) + 100;
         TestAssert.True(allowance > 100 && allowance < complete.Length, "The selected allowance must cut the real width array.");
         using var refused = new MemoryStream();
         var limits = new OoxConversionLimits { MaxOutputBytesPerConversion = allowance };
         using var scope = OoxConversionBudget.BeginScope(limits);
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStaged(refused, [page], limits, null, default));
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStagedAsync(refused, [page], limits, null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
         TestAssert.True(refused.Length <= allowance && scope.Budget.PdfOutputBytes <= allowance,
             "Each width chunk is admitted before reaching the caller's destination.");
         TestAssert.DoesNotContain("endobj\n", Encoding.ASCII.GetString(refused.ToArray()).Split("/CIDFontType2", StringSplitOptions.None)[1]);
