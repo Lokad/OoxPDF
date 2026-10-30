@@ -1,6 +1,6 @@
 namespace Lokad.OoxPdf.Imaging;
 
-internal sealed class JpegImage
+internal static class JpegImage
 {
     private static readonly int[] ZigZag =
     [
@@ -30,24 +30,10 @@ internal sealed class JpegImage
         public byte[] Samples = [];
     }
 
-    private JpegImage(int width, int height, byte[] rgb)
-    {
-        Width = width;
-        Height = height;
-        Rgb = rgb;
-    }
-
-    public int Width { get; }
-
-    public int Height { get; }
-
-    public byte[] Rgb { get; }
-
     public static DecodedPixels ReadOwned(byte[] bytes, CancellationToken cancellationToken = default)
     {
-        var decoder = new Decoder(bytes, cancellationToken);
-        JpegImage image = decoder.Decode();
-        return new DecodedPixels(image.Width, image.Height, image.Rgb, null);
+        cancellationToken.ThrowIfCancellationRequested();
+        return new Decoder(bytes, cancellationToken).Decode();
     }
 
     private sealed class Decoder
@@ -69,7 +55,29 @@ internal sealed class JpegImage
             this.cancellationToken = cancellationToken;
         }
 
-        public JpegImage Decode()
+        public DecodedPixels Decode()
+        {
+            IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, 0);
+            try
+            {
+                byte[] rgb;
+                try { rgb = DecodeRgb(storage); }
+                finally
+                {
+                    // Component samples have no users after RGB construction,
+                    // including failed/canceled entropy decoding.
+                    foreach (Component component in components) component.Samples = [];
+                }
+                cancellationToken.ThrowIfCancellationRequested();
+                OoxMemory.Resize(storage, rgb.Length);
+                var result = new DecodedPixels(width, height, rgb, null, storage);
+                storage = null;
+                return result;
+            }
+            finally { storage?.Dispose(); }
+        }
+
+        private byte[] DecodeRgb(IMemoryReservation? storage)
         {
             if (bytes.Length < 4 || bytes[0] != 0xFF || bytes[1] != 0xD8)
             {
@@ -85,7 +93,7 @@ internal sealed class JpegImage
                 }
                 if (marker == 0xDA)
                 {
-                    DecodeScan(ref offset);
+                    DecodeScan(ref offset, storage);
                     break;
                 }
                 int length = ReadSegmentLength(offset);
@@ -104,12 +112,13 @@ internal sealed class JpegImage
                 }
                 offset += length;
             }
-            if (width <= 0 || height <= 0 || components.Count is not (1 or 3))
+            if (width <= 0 || height <= 0 || components.Count is not (1 or 3) ||
+                components.Any(component => component.Samples.Length == 0))
             {
                 throw new InvalidDataException("JPEG frame metadata is incomplete.");
             }
             ImagePixelBudget.Check(width, height, "JPEG");
-            return new JpegImage(width, height, BuildRgb());
+            return BuildRgb();
         }
 
         private byte ReadMarker(ref int offset)
@@ -268,7 +277,7 @@ internal sealed class JpegImage
             }
         }
 
-        private void DecodeScan(ref int offset)
+        private void DecodeScan(ref int offset, IMemoryReservation? storage)
         {
             int length = ReadSegmentLength(offset);
             ReadOnlySpan<byte> segment = bytes.AsSpan(offset + 2, length - 2);
@@ -298,6 +307,12 @@ internal sealed class JpegImage
             }
             ImagePixelBudget.Check(width, height, "JPEG");
             InitializeComponentDimensions();
+            // One construction reservation covers padded component planes and
+            // their overlap with RGB output; caller-owned encoded bytes stay borrowed.
+            long constructionBytes = checked((long)width * height * 3 +
+                components.Sum(component => (long)component.SampleWidth * component.SampleHeight));
+            OoxMemory.Resize(storage, constructionBytes);
+            cancellationToken.ThrowIfCancellationRequested();
             AllocateComponentBuffers();
             var reader = new EntropyReader(bytes, offset);
             int mcuColumns = (width + maxHorizontal * 8 - 1) / (maxHorizontal * 8);

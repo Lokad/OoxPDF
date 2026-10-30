@@ -166,10 +166,11 @@ failures retain `DocumentBound`. Current producer coverage is package byte
 storage/intake and PDF content staging, including encoding/readback scratch and
 spill buffers, plus private SFNT and subset program buffers. Copied programs stay
 funded through emission; failed preparation refunds its storage immediately.
-PNG/BMP planes and PNG IDAT/scanline overlap are admitted before decoding.
+PNG/BMP planes, PNG IDAT/scanline overlap, and baseline JPEG component/RGB-plane
+overlap are admitted before decoding. JPEG passthrough borrows encoded bytes.
 Successful planes refund when their existing disposable owner finishes; failures
 and cancellation refund immediately. Models, font sources/caches and parsed maps,
-JPEG decode, image transforms/compression and other PDF resources remain pending.
+Image transforms/compression and other PDF resources remain pending.
 Null budget leaves memory ungoverned. No private allowance or complete heap
 accounting is introduced; allow headroom for incidental storage and GC lag.
 Caller streams remain open and are not charged again as library storage.

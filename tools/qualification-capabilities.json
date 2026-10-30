@@ -1,4 +1,12 @@
 {
+  "jpeg-decode-storage": [
+    "MemoryBudgetJpeg",
+    "Jpeg",
+    "SharedDecoder",
+    "MemoryBudgetImagePlanesFollowDecodedOwnerAndCompressionBorrow",
+    "MemoryBudgetImageRefusalAndCancellationReleaseConstruction",
+    "PortableRenderingPptx"
+  ],
   "image-decode-storage": [
     "MemoryBudgetImage",
     "MemoryBudgetPng",
