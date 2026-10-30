@@ -76,7 +76,7 @@ internal sealed class OoxConversionBudget
         {
             if (disposed) { return; }
             disposed = true;
-            try { budget.Memory?.Dispose(); }
+            try { Budget.Memory?.Dispose(); }
             finally { Storage.Value = prior; }
         }
     }
