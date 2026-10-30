@@ -1592,21 +1592,29 @@ internal static class FontTests
         File.WriteAllBytes(path, bytes);
         try
         {
-            var source = new FileFontProgramSource(path);
+            using var source = new FileFontProgramSource(path);
             using var start = new ManualResetEventSlim();
-            Task<ReadOnlyMemory<byte>>[] reads = Enumerable.Range(0, 16)
+            Task<IOoxPdfFontProgramLease>[] reads = Enumerable.Range(0, 16)
                 .Select(_ => Task.Run(() =>
                 {
                     start.Wait();
-                    return TestFontPrograms.CopyAsync(source, CancellationToken.None).GetAwaiter().GetResult();
+                    return source.AcquireAsync(null, CancellationToken.None).GetAwaiter().GetResult();
                 }))
                 .ToArray();
             start.Set();
-            Task.WaitAll(reads);
-            foreach (Task<ReadOnlyMemory<byte>> read in reads)
+            try
             {
-                TestAssert.True(read.Result.Span.SequenceEqual(bytes), "Concurrent first-reads must all observe the same bytes.");
-                TestAssert.True(read.Result.Equals(reads[0].Result), "Concurrent first-reads must share the loaded array.");
+                Task.WaitAll(reads);
+                foreach (Task<IOoxPdfFontProgramLease> read in reads)
+                {
+                    TestAssert.True(read.Result.Bytes.Span.SequenceEqual(bytes), "Concurrent first-reads must all observe the same bytes.");
+                    TestAssert.True(read.Result.Bytes.Equals(reads[0].Result.Bytes), "Concurrent first-reads must share the loaded array.");
+                }
+            }
+            finally
+            {
+                foreach (var read in reads)
+                    if (read.IsCompletedSuccessfully) read.Result.Dispose();
             }
         }
         finally
@@ -1622,10 +1630,10 @@ internal static class FontTests
         File.WriteAllBytes(path, bytes);
         try
         {
-            var source = new FileFontProgramSource(path);
+            using var source = new FileFontProgramSource(path);
             using var cts = new CancellationTokenSource();
             cts.Cancel();
-            TestAssert.Throws<OperationCanceledException>(() => TestFontPrograms.CopyAsync(source, cts.Token).AsTask().GetAwaiter().GetResult());
+            TestAssert.Throws<OperationCanceledException>(() => source.AcquireAsync(null, cts.Token).GetAwaiter().GetResult());
         }
         finally
         {
