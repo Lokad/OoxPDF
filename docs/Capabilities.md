@@ -147,7 +147,12 @@ Supported within the following constraints:
   non-custom Normal Table name supplies built-in padding and ignores authored
   children; custom styles and descendant/direct overrides retain their formatting.
   Other built-in style defaults remain approximate.
-  Word's coalescing of adjacent tables remains approximate.
+  Adjacent tables with the same resolved style share logical row membership in
+  body, cell and static stories; paragraph/style boundaries and positioned tables
+  keep them separate. Fragment row looks, margins and borders retain their owners;
+  joined grids map spans and leading omitted columns while the first table owns
+  the frame and preferred width. Fixed-grid controls match Word; differing autofit
+  layouts and positioned-table placement remain approximate.
   Complex implicit borders,
   vertical merges and nested/fragmented layout retain qualified restrictions.
 - Inline raster/SVG pictures in qualified body/cell/header/footer containers,
