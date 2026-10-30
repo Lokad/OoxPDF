@@ -169,8 +169,12 @@ funded through emission; failed preparation refunds its storage immediately.
 PNG/BMP planes, PNG IDAT/scanline overlap, and baseline JPEG component/RGB-plane
 overlap are admitted before decoding. JPEG passthrough borrows encoded bytes.
 Successful planes refund when their existing disposable owner finishes; failures
-and cancellation refund immediately. Models, font sources/caches and parsed maps,
-Image transforms/compression and other PDF resources remain pending.
+and cancellation refund immediately. Image/font compression admits actual output
+capacity, replacement overlap and final copying. Retained image payloads remain
+funded through emission; font buffers refund after their stream is written.
+Failed preparation refunds immediately, including a prepared RGB payload when
+alpha compression fails. Models, font sources/caches and parsed maps, image
+transforms and other PDF resources remain pending.
 Null budget leaves memory ungoverned. No private allowance or complete heap
 accounting is introduced; allow headroom for incidental storage and GC lag.
 Caller streams remain open and are not charged again as library storage.

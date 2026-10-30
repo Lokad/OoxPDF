@@ -11,11 +11,14 @@ File conversion publishes atomically after staging. Caller-owned streams stay
 open and may retain an incomplete prefix after a failure; discard that output.
 `MemoryBudget` admits package buffers/parts, PDF content staging, private SFNT/
 subset programs and decoded raster planes with PNG IDAT/scanline and baseline
-JPEG component/RGB construction overlap before allocation. Storage refunds after
+JPEG component/RGB construction overlap before allocation. Image/font compression
+also admits actual output capacity, growth overlap and final copying. Image payloads
+remain funded through emission; font-compression storage refunds after its stream
+is written. Storage refunds after
 its users finish, including failure/cancellation.
 Its scopes share the caller's root; they create no private allowance. Caller-owned
 buffers are not charged twice. Models, font source/cache and parsed maps,
-image transforms/compression and other PDF resources remain pending, so
+image transforms and other PDF resources remain pending, so
 this is partial coverage. Null budget is ungoverned. Use
 representative measurements to size incidental-storage and concurrency headroom.
 

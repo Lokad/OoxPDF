@@ -459,12 +459,16 @@ internal sealed class PdfDocumentWriter
             $"<< /Type /FontDescriptor /FontName /{baseFont} /Flags {metrics.Flags} /FontBBox [{metrics.XMin} {metrics.YMin} {metrics.XMax} {metrics.YMax}] /ItalicAngle {FormatNumber(metrics.ItalicAngle)} /Ascent {metrics.Ascent} /Descent {metrics.Descent} /CapHeight {metrics.CapHeight} /StemV 80 /FontFile2 {objects.FontFile} 0 R >>\n"));
 
         ReadOnlyMemory<byte> fontProgram = font.FontProgramBytes;
-        byte[] compressedFontProgram = Compress(fontProgram.Span, cancellationToken);
-        byte[] toUnicode = Encoding.ASCII.GetBytes(font.BuildToUnicodeCMap(cancellationToken));
-        // Count uncompressed font/ToUnicode payloads before PDF stream compression;
-        // dictionaries count toward total output, separately from host admission.
-        OoxConversionBudget.Current?.ChargePdfFontBytes(checked((long)fontProgram.Length + toUnicode.Length));
-        writer.WriteStreamObject(objects.FontFile, FormattableString.Invariant($"/Filter /FlateDecode /Length1 {fontProgram.Length}"), compressedFontProgram);
+        byte[] toUnicode;
+        using (IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, 0))
+        {
+            byte[] compressedFontProgram = PdfStreamCompression.Compress(fontProgram.Span, storage, 0, cancellationToken);
+            toUnicode = Encoding.ASCII.GetBytes(font.BuildToUnicodeCMap(cancellationToken));
+            // Count uncompressed font/ToUnicode payloads, separately from
+            // dictionaries/output and from the compression buffer's admission.
+            OoxConversionBudget.Current?.ChargePdfFontBytes(checked((long)fontProgram.Length + toUnicode.Length));
+            writer.WriteStreamObject(objects.FontFile, FormattableString.Invariant($"/Filter /FlateDecode /Length1 {fontProgram.Length}"), compressedFontProgram);
+        }
         writer.WriteStreamObject(objects.ToUnicode, string.Empty, toUnicode);
     }
 
@@ -651,20 +655,6 @@ internal sealed class PdfDocumentWriter
     {
         return FormattableString.Invariant(
             $"<< /FunctionType 2 /Domain [0 1] /C0 [{FormatColor(start.Red)} {FormatColor(start.Green)} {FormatColor(start.Blue)}] /C1 [{FormatColor(end.Red)} {FormatColor(end.Green)} {FormatColor(end.Blue)}] /N 1 >>");
-    }
-
-    private static byte[] Compress(ReadOnlySpan<byte> bytes, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        using var output = new MemoryStream();
-        using (var zlib = new System.IO.Compression.ZLibStream(output, System.IO.Compression.CompressionLevel.SmallestSize, leaveOpen: true))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            zlib.Write(bytes);
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        return output.ToArray();
     }
 
     internal static string FormatNumber(double value)

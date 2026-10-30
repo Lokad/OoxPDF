@@ -49,20 +49,22 @@ internal sealed class PdfImageXObject
         return new PdfImageXObject(width, height, bytes, "/DCTDecode", colorSpace, bitsPerComponent, null, invertedCmyk);
     }
 
-    public static PdfImageXObject RgbPng(int width, int height, byte[] rgb, byte[]? alpha)
+    public static PdfImageXObject RgbPng(int width, int height, byte[] rgb, byte[]? alpha,
+        CancellationToken cancellationToken = default)
     {
-        return new PdfImageXObject(width, height, Compress(rgb), "/FlateDecode", "/DeviceRGB", 8, alpha is null ? null : Compress(alpha));
-    }
-
-    private static byte[] Compress(byte[] bytes)
-    {
-        using var output = new MemoryStream();
-        using (var zlib = new System.IO.Compression.ZLibStream(output, System.IO.Compression.CompressionLevel.SmallestSize, leaveOpen: true))
+        cancellationToken.ThrowIfCancellationRequested();
+        IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, 0);
+        try
         {
-            zlib.Write(bytes);
+            byte[] encodedRgb = PdfStreamCompression.Compress(rgb, storage, 0, cancellationToken);
+            byte[]? encodedAlpha = alpha is null ? null :
+                PdfStreamCompression.Compress(alpha, storage, encodedRgb.Length, cancellationToken);
+            var result = new PdfImageXObject(width, height, encodedRgb, "/FlateDecode", "/DeviceRGB", 8, encodedAlpha);
+            // The conversion scope owns retained image payloads through emission.
+            storage = null;
+            return result;
         }
-
-        return output.ToArray();
+        finally { storage?.Dispose(); }
     }
 
     public bool HasIdenticalContent(PdfImageXObject? other)

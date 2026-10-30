@@ -36,7 +36,7 @@ internal static class OoxImageDecoder
         }
 
         using DecodedPixels decoded = DecodePixelsOwned(contentType, bytes, cancellationToken);
-        return PdfImageXObject.RgbPng(decoded.Width, decoded.Height, recolorRgb(decoded.Rgb), decoded.Alpha);
+        return PdfImageXObject.RgbPng(decoded.Width, decoded.Height, recolorRgb(decoded.Rgb), decoded.Alpha, cancellationToken);
     }
 
     public static DecodedPixels DecodePixelsOwned(string contentType, byte[] bytes, CancellationToken cancellationToken = default)

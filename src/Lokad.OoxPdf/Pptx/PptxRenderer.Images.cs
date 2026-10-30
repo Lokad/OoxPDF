@@ -457,7 +457,7 @@ internal sealed partial class PptxRenderer
                     {
                         using DecodedPixels recolorSource = OoxImageDecoder.DecodePixelsOwned(contentType, bytes, cancellationToken);
                         byte[] rgb = ApplyImageRecolor(recolorSource.Rgb, recolor, cancellationToken);
-                        return PdfImageXObject.RgbPng(recolorSource.Width, recolorSource.Height, rgb, alpha: null);
+                        return PdfImageXObject.RgbPng(recolorSource.Width, recolorSource.Height, rgb, alpha: null, cancellationToken);
                     }
                     catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or IndexOutOfRangeException)
                     {
@@ -482,7 +482,7 @@ internal sealed partial class PptxRenderer
             // emit, so the catch below reports byte-identical diagnostics.
             using DecodedPixels decoded = OoxImageDecoder.DecodePixelsOwned(contentType, bytes, cancellationToken);
             byte[] recoloredRgb = ApplyImageRecolor(decoded.Rgb, recolor, cancellationToken);
-            return PdfImageXObject.RgbPng(decoded.Width, decoded.Height, recoloredRgb, decoded.Alpha);
+            return PdfImageXObject.RgbPng(decoded.Width, decoded.Height, recoloredRgb, decoded.Alpha, cancellationToken);
         }
         catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
         {
@@ -552,10 +552,10 @@ internal sealed partial class PptxRenderer
         }
         if (IsNoImageRecolor(recolor))
         {
-            return PdfImageXObject.RgbPng(croppedWidth, croppedHeight, croppedRgb, croppedAlpha);
+            return PdfImageXObject.RgbPng(croppedWidth, croppedHeight, croppedRgb, croppedAlpha, cancellationToken);
         }
         byte[] recoloredRgb = ApplyImageRecolor(croppedRgb, recolor, cancellationToken);
-        return PdfImageXObject.RgbPng(croppedWidth, croppedHeight, recoloredRgb, croppedAlpha);
+        return PdfImageXObject.RgbPng(croppedWidth, croppedHeight, recoloredRgb, croppedAlpha, cancellationToken);
     }
 
     private static byte[] ApplyImageRecolor(byte[] rgb, PptxSceneImageRecolor recolor, CancellationToken cancellationToken)

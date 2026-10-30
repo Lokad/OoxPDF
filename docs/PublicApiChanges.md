@@ -37,8 +37,11 @@ temporary storage refunds after decode and planes after transformation/compressi
 users finish. PNG palette/transparency slices borrow their source instead of
 copying it. Baseline JPEG decoding also funds padded component/RGB-plane overlap;
 only RGB storage escapes with its pixel owner. Ordinary JPEG passthrough borrows
-encoded bytes. Models, font sources/caches and parsed maps, image transforms/
-compression and other PDF resources still need their producer migration.
+encoded bytes. Image/font compression admits growing-output capacity, replacement
+overlap and final copying without source-sized preallocation. Image payloads stay
+funded through emission; font-compression buffers refund after their stream is
+written. Models, font sources/caches and parsed maps, image transforms and other
+PDF resources still need their producer migration.
 This partial coverage is not a complete conversion-memory limit. Null budget
 means ungoverned memory; input/output bounds and cancellation remain independent.
 Async I/O, explicit temporary storage and font borrow lifetimes remain separate

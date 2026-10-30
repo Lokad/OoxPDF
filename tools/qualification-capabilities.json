@@ -1,4 +1,24 @@
 {
+  "pdf-resource-compression": [
+    "MemoryBudgetCompression",
+    "MemoryBudgetImagePlanesFollowDecodedOwnerAndCompressionBorrow",
+    "MemoryBudgetFontSubsetFundsConstructionAndRetainsOnlyTheResult",
+    "MemoryBudgetJpegRefusalRemainsTerminalForRecolorAndCrop",
+    "WritesFontFile2WithDecodedLength",
+    "WritesDistinctImageObjectsForDifferentSoftMasks",
+    "WritesImageBackedTilingPatternResources",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders",
+    "ImageIdentityUsesFullDigests",
+    "ImageContentEqualityIsExact",
+    "DeduplicateImages",
+    "SharedDecoder",
+    "PortableRendering",
+    "PptxSyntheticBaselineJpegPictureAppliesDuotoneRecolor",
+    "PptxSyntheticPngPicture",
+    "PptxSyntheticRgbaPngPicturePreservesSoftMask",
+    "PptxSyntheticShapeRectGlowUsesRasterSoftMask"
+  ],
   "jpeg-decode-storage": [
     "MemoryBudgetJpeg",
     "Jpeg",

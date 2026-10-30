@@ -123,7 +123,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        var image = PdfImageXObject.RgbPng(pixelWidth, pixelHeight, rgb, alpha);
+        var image = PdfImageXObject.RgbPng(pixelWidth, pixelHeight, rgb, alpha, cancellationToken);
         // RV10: admit retained bytes at creation like ordinary image producers.
         string name = "Im" + imageIndex++;
         graphics.SaveState();

@@ -37,8 +37,9 @@ internal static partial class OoxMemoryAdmissionTests
                     return rgb;
                 });
                 TestAssert.True(observed && image.Bytes.Length > 0, "Real compression borrows admitted decoded planes.");
-                TestAssert.Equal(0L, pool.Reserved);
+                TestAssert.Equal((long)image.Bytes.Length + (image.Alpha?.Length ?? 0), pool.Reserved);
             }
+            TestAssert.Equal(0L, pool.Reserved);
             TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);
             TestAssert.Equal(0, pool.CallerDisposals);
             TestAssert.True(source.Bytes.SequenceEqual(original), "Input/metadata remain borrowed and unchanged.");
