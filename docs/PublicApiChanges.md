@@ -32,8 +32,11 @@ through emission; temporary intake buffers and transferred resident bytes refund
 after their users finish. Private copied/extracted SFNTs and subset program buffers
 are also admitted before construction, held through emission, and refunded after
 failed preparation. Only the selected collection face is copied and charged.
-Models, font sources/caches and parsed maps, image planes and other PDF resources
-still need their producer migration.
+PNG/BMP decoded planes are admitted with PNG IDAT/scanline construction overlap;
+temporary storage refunds after decode and planes after transformation/compression
+users finish. PNG palette/transparency slices borrow their source instead of
+copying it. Models, font sources/caches and parsed maps, JPEG decode, image
+transforms/compression and other PDF resources still need their producer migration.
 This partial coverage is not a complete conversion-memory limit. Null budget
 means ungoverned memory; input/output bounds and cancellation remain independent.
 Async I/O, explicit temporary storage and font borrow lifetimes remain separate

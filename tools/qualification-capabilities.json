@@ -1,4 +1,15 @@
 {
+  "image-decode-storage": [
+    "MemoryBudgetImage",
+    "MemoryBudgetPng",
+    "Png",
+    "Bmp",
+    "SharedDecoder",
+    "DecodedPixels",
+    "PortableRenderingDocx",
+    "PortableRenderingPptx",
+    "LimitExceededEscapesNodeRecovery"
+  ],
   "host-refusal-categories": [
     "MemoryAdmission",
     "MemoryBudget",
