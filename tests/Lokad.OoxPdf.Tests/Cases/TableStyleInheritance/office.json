@@ -112,6 +112,102 @@
         ],
         "Pages": 1
       }
+    },
+    {
+      "Id": "table-properties-only",
+      "Input": "table-properties-only.docx",
+      "InputSha256": "4194F12462A278EFACD313CE64230A6F0ED5457D2C042A79C2802E5118879570",
+      "LeftPadding": 0,
+      "TextColor": "000000",
+      "HasInheritedBorders": false,
+      "OfficeFinal": {
+        "PdfSha256": "1A34F934F209F173851613B9B61548E8E45F4AF9D78380B5B517E28089C6D1A0",
+        "FirstOrigin": [
+          72.02400207519531,
+          82.46002197265625
+        ],
+        "Pages": 1
+      }
+    },
+    {
+      "Id": "one-region-only",
+      "Input": "one-region-only.docx",
+      "InputSha256": "5DD3805600B34C5FA6F119848A57F059DC95FE90A4CAF3A749B70EBF8DFEB52F",
+      "LeftPadding": 0,
+      "TextColor": "000000",
+      "HasInheritedBorders": false,
+      "OfficeFinal": {
+        "PdfSha256": "8E3D819B00243E36772F4B1D0509A0036F4ADEF880374A2032846E79EAB06EB4",
+        "FirstOrigin": [
+          72.02400207519531,
+          82.46002197265625
+        ],
+        "Pages": 1
+      }
+    },
+    {
+      "Id": "run-properties-only",
+      "Input": "run-properties-only.docx",
+      "InputSha256": "9F7FF00859D9931118F5DEE3F292F53C0A19F65B33A2033F125FCAD1ACA1B1A5",
+      "LeftPadding": 5.4,
+      "TextColor": "2030C0",
+      "HasInheritedBorders": true,
+      "OfficeFinal": {
+        "PdfSha256": "C4335A2EB27039CA852A550AFD57264D25B277C7B849A33AACE6149CE36E2D4B",
+        "FirstOrigin": [
+          77.42400360107422,
+          84.5
+        ],
+        "Pages": 1
+      }
+    },
+    {
+      "Id": "empty-properties-only",
+      "Input": "empty-properties-only.docx",
+      "InputSha256": "2E347B196FBA496077E00FC18A382345051D432625D309D0E20F0CC03C64F90C",
+      "LeftPadding": 5.4,
+      "TextColor": "2030C0",
+      "HasInheritedBorders": true,
+      "OfficeFinal": {
+        "PdfSha256": "01B728EA63A06FBDAD25F7D8720B78780535A7B123137D6F6D14F540DAE56632",
+        "FirstOrigin": [
+          77.42400360107422,
+          84.5
+        ],
+        "Pages": 1
+      }
+    },
+    {
+      "Id": "cell-properties-only",
+      "Input": "cell-properties-only.docx",
+      "InputSha256": "E1824760948BBA5E664465834B8949BF0D4D50D31FC68C828C0143844587E209",
+      "LeftPadding": 0,
+      "TextColor": "000000",
+      "HasInheritedBorders": false,
+      "OfficeFinal": {
+        "PdfSha256": "EDE2D6E5CEF9E64EC1FC240470D3675F23352862129AAD19DA5B06C4C640331C",
+        "FirstOrigin": [
+          72.02400207519531,
+          82.46002197265625
+        ],
+        "Pages": 1
+      }
+    },
+    {
+      "Id": "paragraph-properties-only",
+      "Input": "paragraph-properties-only.docx",
+      "InputSha256": "C7848F75275FEF663C484188816E141BBB64762DB54DD80ABFDE984B9FC6DAF3",
+      "LeftPadding": 5.4,
+      "TextColor": "2030C0",
+      "HasInheritedBorders": true,
+      "OfficeFinal": {
+        "PdfSha256": "8C530583C1BB980C076E8DB67A7D0659764B1D8AB769EFE88F0E23604144E497",
+        "FirstOrigin": [
+          77.42400360107422,
+          84.5
+        ],
+        "Pages": 1
+      }
     }
   ]
 }

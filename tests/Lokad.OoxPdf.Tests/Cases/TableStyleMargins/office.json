@@ -1,5 +1,5 @@
 {
-  "Oracle": "Independent Word 16 PDF origins and unchanged full-page visual thresholds. Complete custom styles anchor the grid; conditional styles inherit earlier parent declarations, while plain styles retain forward parents. TableNormal keeps its qualified anchor.",
+  "Oracle": "Independent Word 16 PDF origins and unchanged full-page visual thresholds. Complete custom styles anchor the grid; table/cell formatting inherits earlier parents, while empty and text-only styles retain forward references. TableNormal keeps its qualified anchor.",
   "Controls": [
     {
       "Id": "bare",

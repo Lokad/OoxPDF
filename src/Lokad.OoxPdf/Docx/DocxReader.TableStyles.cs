@@ -20,6 +20,7 @@ internal sealed partial class DocxReader
         public static DocxTableStyle Empty { get; } = new(null, DocxTableStyleProperties.Empty, DocxTableCellStyle.Empty, [], new Dictionary<string, DocxTableCellStyle>());
         public bool UsesTableNormal { get; init; }
         public bool HasCompleteInheritance { get; init; }
+        public bool HasDeclaredTableProperties { get; init; }
 
         public DocxTableStyle Merge(DocxTableStyle other)
         {
@@ -137,7 +138,12 @@ internal sealed partial class DocxReader
                 Margins = ResolveTableNormalCellMargins(style, tableProperties)
             },
             ReadTableBorders(tableProperties),
-            conditional) { UsesTableNormal = string.Equals((string?)style.Attribute(WordprocessingNamespace + "styleId"), "TableNormal", StringComparison.Ordinal) };
+            conditional)
+        {
+            UsesTableNormal = string.Equals((string?)style.Attribute(WordprocessingNamespace + "styleId"), "TableNormal", StringComparison.Ordinal),
+            HasDeclaredTableProperties = tableProperties?.HasElements == true ||
+                style.Element(WordprocessingNamespace + "tcPr")?.HasElements == true || conditional.Count != 0
+        };
     }
 
     // Office A/B (m1 ladder mutant, Word-COM rendered plus PdfInspect): a present
@@ -215,12 +221,12 @@ internal sealed partial class DocxReader
         while (chain.Count != 0)
         {
             var (id, style) = chain.Pop();
-            // Independent Word controls: conditional table styles inherit only
-            // earlier parent declarations. Apply this at every source link, so
+            // Independent Word controls: table/cell formatting declarations
+            // inherit only earlier parents. Apply this at every source link, so
             // ordinary descendants retain that parent's effective properties.
-            // Plain styles still resolve forward references. Invalid chains
+            // Empty and text-only styles retain forward references. Invalid chains
             // retain their existing missing/cyclic inheritance fallback.
-            if (complete && style.ConditionalRegions.Count != 0 && style.BasedOnStyleId is { } parent &&
+            if (complete && style.HasDeclaredTableProperties && style.BasedOnStyleId is { } parent &&
                 sourceOrder[parent] > sourceOrder[id])
             {
                 resolved = DocxTableStyle.Empty;

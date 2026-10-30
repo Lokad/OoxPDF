@@ -79,9 +79,10 @@ note-table checks share the same focused capability selection.
 `docx-table-style-margins` owns resolved padding and grid origins across body,
 header, inheritance, explicit indentation and direct overrides. It retains the
 one-point independent Word origin gate, bare/TableNormal/incomplete-chain
-fallbacks and the existing style-color oracle. Seven `TableStyleInheritance`
-controls distinguish plain forward inheritance from conditional declarations,
-including inherited color/borders, an ordinary descendant and TableNormal.
+fallbacks and the existing style-color oracle. Thirteen `TableStyleInheritance`
+controls distinguish empty/text-only forward inheritance from table/cell formatting,
+including individual property groups, a single conditional region, inherited
+color/borders, an ordinary descendant and TableNormal.
 The former forward-only origin exception is removed; all margin controls use
 the same independent Word origin assertion.
 

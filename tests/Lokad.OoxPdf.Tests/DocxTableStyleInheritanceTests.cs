@@ -6,7 +6,7 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableStyleInheritanceTests
 {
-    public static void DocxConditionalInheritanceMatchesIndependentWordProperties()
+    public static void DocxTableInheritanceMatchesIndependentWordProperties()
     {
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
             "..", "..", "..", "Cases", "TableStyleInheritance"));
