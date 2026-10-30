@@ -4396,7 +4396,8 @@ internal static class DocxTableCellsTests
             .ToArray();
         var first = new DocxTableRow([new DocxTableCell("First", [firstParagraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 60d);
         var split = new DocxTableRow([new DocxTableCell("Split", splitParagraphs, null, null, null, null, borders, DocxTableCellMargins.Empty)], 80d);
-        var table = new DocxTable(null, [60d], [first, split]);
+        // Border coordinates below describe this authored 60pt frame.
+        var table = new DocxTable("fixed", [60d], [first, split]);
         var document = new DocxDocument(
             100d,
             100d,

@@ -88,6 +88,11 @@
   "docx-natural-table-width": [
     "DocxTableLayoutStageNaturalAutoWidth",
     "DocxTableLayoutStageLineFitIgnoresRoundoffAndKeepsActualOverflow",
+    "DocxTableCellFirstLine",
+    "DocxTableCellMidlineImageBottomSitsAtBaseline",
+    "DocxTableCellBreakSpillStaysLeftAlignedInCenteredCells",
+    "DocxTableRendererDoesNotDrawRowEdgeBordersAtSplitFragmentBoundaries",
+    "DocxInlineCompositionNestedBorderPitch",
     "DocxSyntheticTable",
     "DocxTableNormal",
     "PortableRenderingDocx"

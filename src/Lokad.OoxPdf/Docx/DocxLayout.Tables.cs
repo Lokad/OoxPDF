@@ -1250,11 +1250,13 @@ internal sealed partial class DocxLayoutEngine
         double[] contentInsets = new double[columnCount];
         double[] columnMaxima = new double[columnCount];
         bool hasDeletedContent = false;
+        bool hasUnmeasuredBlocks = false;
         foreach (DocxTableRow row in table.Rows)
         {
             for (int cellIndex = 0; cellIndex < row.Cells.Count && cellIndex < columnCount; cellIndex++)
             {
                 DocxTableCell cell = row.Cells[cellIndex];
+                hasUnmeasuredBlocks |= GetTableCellLayoutBodyElements(cell).Any(element => element is DocxTableElement);
                 double cellVisibleMax = MeasureTableCellMaxContentWidth(cell, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, fixedScale, commentMarkerLabels, mathEquations, cancellationToken);
                 double cellDeletedTotal = MeasureTableCellDeletedTextWidth(cell, textMeasurer);
                 hasDeletedContent |= cellDeletedTotal > 0d;
@@ -1282,7 +1284,9 @@ internal sealed partial class DocxLayoutEngine
 
         double totalPad = pads.Sum();
         double totalContentInset = contentInsets.Sum();
-        if (table.PreferredWidthKind == DocxTableWidthKind.Auto && table.PreferredWidthPoints is not > 0d)
+        // Nested blocks do not yet expose intrinsic width here. Preserve their
+        // existing width floor rather than shrinking around unmeasured content.
+        if (!hasUnmeasuredBlocks && table.PreferredWidthKind == DocxTableWidthKind.Auto && table.PreferredWidthPoints is not > 0d)
         {
             if (totalContent + totalContentInset <= availableTableWidth)
             {
@@ -1490,6 +1494,9 @@ internal sealed partial class DocxLayoutEngine
                         ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale),
                         defaultTabStopPoints * fixedScale, pageNumber)
                     : 0d;
+                // Affined pictures consume width beside text, just as in the
+                // live cell wrapper; separate block pictures keep the maximum.
+                textWidth += ResolveInlineImageWrapWidths(paragraph, textSpans, fixedScale).Sum(image => image.Width);
                 maxWidth = Math.Max(maxWidth, markerWidth + textWidth);
             }
 

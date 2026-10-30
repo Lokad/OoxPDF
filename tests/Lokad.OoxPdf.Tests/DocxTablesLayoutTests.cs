@@ -1378,7 +1378,8 @@ internal static class DocxTablesLayoutTests
                 new DocxParagraphElement(after)
             ]
         };
-        DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
+        // Alignment needs spare width; this test owns an explicit 90pt frame.
+        DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]) { LayoutValue = "fixed" };
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableCellLayout laidCell = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
