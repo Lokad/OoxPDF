@@ -1,0 +1,243 @@
+{
+  "Oracle": "Independent Word 16 cell fills. MS-OI29500 documents the zero band-size default; zero disables bands and overrides inherited positive size.",
+  "Controls": [
+    {
+      "Id": "off-unset",
+      "Input": "off-unset.docx",
+      "InputSha256": "383A5D6C06EC2BDC1D80A56AB3DFC281929012291DF877DC4CF79EE1FBCCC47F",
+      "Fills": {
+        "edges-00": null,
+        "edges-01": null,
+        "edges-02": null,
+        "edges-10": null,
+        "edges-11": null,
+        "edges-12": null,
+        "edges-20": null,
+        "edges-21": null,
+        "edges-22": null
+      },
+      "OfficeFinalPdfSha256": "6A3D38D23FBF2E720C0D11B125F86803F3B82DE9E846EBA50B5A69D822526201"
+    },
+    {
+      "Id": "off-one",
+      "Input": "off-one.docx",
+      "InputSha256": "0D9BED86A27DE1A703EC6AB01DDC8768D0D28B1E4846D52B0C6BCAD1F35DA5C2",
+      "Fills": {
+        "edges-00": "E8C8A8",
+        "edges-01": "E8C8A8",
+        "edges-02": "E8C8A8",
+        "edges-10": null,
+        "edges-11": null,
+        "edges-12": null,
+        "edges-20": "E8C8A8",
+        "edges-21": "E8C8A8",
+        "edges-22": "E8C8A8"
+      },
+      "OfficeFinalPdfSha256": "48CE5888AE780485E36AD3C7D9B29967D8E122CF6AE873CBE783438F15AE2A7B"
+    },
+    {
+      "Id": "off-two",
+      "Input": "off-two.docx",
+      "InputSha256": "D55AAF092357EE0F74D9DA21C9E62CB2B833C46077E42EF9D0929666699C81B6",
+      "Fills": {
+        "edges-00": "E8C8A8",
+        "edges-01": "E8C8A8",
+        "edges-02": "E8C8A8",
+        "edges-10": "E8C8A8",
+        "edges-11": "E8C8A8",
+        "edges-12": "E8C8A8",
+        "edges-20": null,
+        "edges-21": null,
+        "edges-22": null
+      },
+      "OfficeFinalPdfSha256": "8FD77D25C08531E291D3A90F734F46431DB662F326EDBB205ADE8082F4E5879A"
+    },
+    {
+      "Id": "on-unset",
+      "Input": "on-unset.docx",
+      "InputSha256": "32D6083706D94ABDBD2A12827A348DB32FACA141B5EBBE9518D91A39C2003BFF",
+      "Fills": {
+        "edges-00": null,
+        "edges-01": null,
+        "edges-02": null,
+        "edges-10": null,
+        "edges-11": null,
+        "edges-12": null,
+        "edges-20": null,
+        "edges-21": null,
+        "edges-22": null
+      },
+      "OfficeFinalPdfSha256": "321217AA09361914215CA861C5CE713D2B8E50E1F1A93A2A2A0A59D3EFDEA80E"
+    },
+    {
+      "Id": "on-one",
+      "Input": "on-one.docx",
+      "InputSha256": "C7ADF52F61158496ED383D074A285D15E910DB29188C4F94F5951C0C7EEED107",
+      "Fills": {
+        "edges-00": "E8C8A8",
+        "edges-01": "E8C8A8",
+        "edges-02": "E8C8A8",
+        "edges-10": null,
+        "edges-11": null,
+        "edges-12": null,
+        "edges-20": "E8C8A8",
+        "edges-21": "E8C8A8",
+        "edges-22": "E8C8A8"
+      },
+      "OfficeFinalPdfSha256": "875734A59EB3024A9376B702275EA3E359FABC270D0A17E5511051C8C0D812E7"
+    },
+    {
+      "Id": "edge-unset",
+      "Input": "edge-unset.docx",
+      "InputSha256": "A92D610AFF471C7E3CE838E2C3E168601EC338D45ADDF4C67FA96F5523097AB0",
+      "Fills": {
+        "edges-00": "E8C8A8",
+        "edges-01": "E8C8A8",
+        "edges-02": "E8C8A8",
+        "edges-10": null,
+        "edges-11": null,
+        "edges-12": null,
+        "edges-20": null,
+        "edges-21": null,
+        "edges-22": null
+      },
+      "OfficeFinalPdfSha256": "943C5E1CE82F61B6F3F3FA47F6140733ACBFFE06C8BADD4736476AC23D719F35"
+    },
+    {
+      "Id": "inherited-one",
+      "Input": "inherited-one.docx",
+      "InputSha256": "32F7944A6E1B3260C1CAA6A058549ACB7C8183AA2095D7D43038443D7C2E7D0D",
+      "Fills": {
+        "edges-00": "E8C8A8",
+        "edges-01": "E8C8A8",
+        "edges-02": "E8C8A8",
+        "edges-10": null,
+        "edges-11": null,
+        "edges-12": null,
+        "edges-20": "E8C8A8",
+        "edges-21": "E8C8A8",
+        "edges-22": "E8C8A8"
+      },
+      "OfficeFinalPdfSha256": "60B7906050E0D9BCFD46273678B1521EA1949D5816F7555BE5652E7968FAD93D"
+    },
+    {
+      "Id": "explicit-unset",
+      "Input": "explicit-unset.docx",
+      "InputSha256": "719009CF019D7183DB9A4942E7A38F8D681C1116051C2ED602877F6552392C2B",
+      "Fills": {
+        "edges-00": null,
+        "edges-01": null,
+        "edges-02": null,
+        "edges-10": null,
+        "edges-11": null,
+        "edges-12": null,
+        "edges-20": null,
+        "edges-21": null,
+        "edges-22": null
+      },
+      "OfficeFinalPdfSha256": "A7AB3E35C6B7046344D567B8AB02E49B8ECFED2066AD6ADA924377EFD70D65CB"
+    },
+    {
+      "Id": "vertical-unset",
+      "Input": "vertical-unset.docx",
+      "InputSha256": "980F6FDAAD4BC6BAE8D7FBDDD71E82CFADC6EC60BF64B395BF8B70643B9FC470",
+      "Fills": {
+        "edges-00": null,
+        "edges-01": null,
+        "edges-02": null,
+        "edges-10": null,
+        "edges-11": null,
+        "edges-12": null,
+        "edges-20": null,
+        "edges-21": null,
+        "edges-22": null
+      },
+      "OfficeFinalPdfSha256": "C1D2FA4E974ED259A1A1A0E282E75D6D41192220732FC8EC245132DE999637EF"
+    },
+    {
+      "Id": "vertical-one",
+      "Input": "vertical-one.docx",
+      "InputSha256": "E269BB56E4D552E900D48CBA98785C3F1CAD405857262CFE05F0F9A72569C1E2",
+      "Fills": {
+        "edges-00": "E8C8A8",
+        "edges-01": null,
+        "edges-02": "E8C8A8",
+        "edges-10": "E8C8A8",
+        "edges-11": null,
+        "edges-12": "E8C8A8",
+        "edges-20": "E8C8A8",
+        "edges-21": null,
+        "edges-22": "E8C8A8"
+      },
+      "OfficeFinalPdfSha256": "DD143502656F476CC2EB13F174CD70D843C342EE3A43AF06F1724C84C7771D27"
+    },
+    {
+      "Id": "pair-unset",
+      "Input": "pair-unset.docx",
+      "InputSha256": "FB36B51EE502377A49B619257E377EFCD12F6AADB6F268BF2B3E9933B3A4F3CD",
+      "Fills": {
+        "edges-00": null,
+        "edges-01": null,
+        "edges-02": null,
+        "edges-10": null,
+        "edges-11": null,
+        "edges-12": null,
+        "edges-20": null,
+        "edges-21": null,
+        "edges-22": null
+      },
+      "OfficeFinalPdfSha256": "3B4C8C06D6496356AA31121B93365B1029406ABEC0CA76513095E7C897A87528"
+    },
+    {
+      "Id": "normal-unset",
+      "Input": "normal-unset.docx",
+      "InputSha256": "D018029A373B7385B4E580EB0750AE536151F0AA871258C6E889DAD777E1ED23",
+      "Fills": {
+        "edges-00": null,
+        "edges-01": null,
+        "edges-02": null,
+        "edges-10": null,
+        "edges-11": null,
+        "edges-12": null,
+        "edges-20": null,
+        "edges-21": null,
+        "edges-22": null
+      },
+      "OfficeFinalPdfSha256": "1BE95E3C6DEF8022C1798B796FB85349550ABCD0F46DE797A09E6FB235B12ED5"
+    },
+    {
+      "Id": "inherited-zero",
+      "Input": "inherited-zero.docx",
+      "InputSha256": "6DC194E37C5BE730E396D041AC9232860EFD3DC0ACD9B2198DBE7E05D1FBC453",
+      "Fills": {
+        "edges-00": null,
+        "edges-01": null,
+        "edges-02": null,
+        "edges-10": null,
+        "edges-11": null,
+        "edges-12": null,
+        "edges-20": null,
+        "edges-21": null,
+        "edges-22": null
+      },
+      "OfficeFinalPdfSha256": "6DD5C946095D98739E5AA5CCB34BD741BDF571608FC80F473B05049A62E945E7"
+    },
+    {
+      "Id": "inherited-column-zero",
+      "Input": "inherited-column-zero.docx",
+      "InputSha256": "00D90C70EF78156A712F203FF22F2D28E902226FFC191A0F9E2A837CE0D4CE01",
+      "Fills": {
+        "edges-00": null,
+        "edges-01": null,
+        "edges-02": null,
+        "edges-10": null,
+        "edges-11": null,
+        "edges-12": null,
+        "edges-20": null,
+        "edges-21": null,
+        "edges-22": null
+      },
+      "OfficeFinalPdfSha256": "85CD7B3E6662BC6F51549F9B8A6D98BC18B1A2A159D47E19288CBBAC4B0F77FA"
+    }
+  ]
+}

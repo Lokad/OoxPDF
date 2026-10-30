@@ -86,7 +86,10 @@ color/borders, an ordinary descendant and TableNormal.
 The former forward-only origin exception is removed; all margin controls use
 the same independent Word origin assertion.
 For inheritance changes, select this capability together with
-`docx-conditional-table-styles`; their union is 34 exact methods in one invocation.
+`docx-conditional-table-styles`; the runner coalesces their exact method sets.
+`TableBandSizes` pins Word fills for absent/positive/zero sizes, both axes,
+look flags, explicit membership and inheritance; band availability is separate
+from the existing edge/region precedence assertions.
 
 `docx-conditional-table-styles` covers the shared table-style cascade, direct
 formatting, inheritance, false flags, margins and borders. Four pinned public

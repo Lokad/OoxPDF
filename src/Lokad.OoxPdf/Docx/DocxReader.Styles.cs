@@ -518,11 +518,11 @@ internal sealed partial class DocxReader
             !lineRule.Equals("atLeast", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static int? ReadPositiveIntAttribute(XElement? element, XName name)
+    private static int? ReadNonNegativeIntAttribute(XElement? element, XName name)
     {
         if (element?.Attribute(name) is not { } value ||
             !int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) ||
-            parsed <= 0)
+            parsed < 0)
         {
             return null;
         }

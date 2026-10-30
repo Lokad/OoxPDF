@@ -22,7 +22,8 @@
   bookmarks, links and following endnotes independent of page-one font sizes.
 - DOCX: resolves table bands, edge styles and corner styles in one precedence
   order for both explicit conditional flags and positional styling, including
-  merged edges and single-row/column tables.
+  merged edges and single-row/column tables. Unset or zero band sizes suppress
+  band formatting, including zero overrides of an inherited positive size.
 - DOCX: continues note lists in document reference order; unused notes and
   reordered notes XML no longer change visible list labels.
 - DOCX: places resolved custom-style padding inside the table grid, preserving

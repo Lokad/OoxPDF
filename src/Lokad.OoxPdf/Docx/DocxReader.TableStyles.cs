@@ -187,8 +187,8 @@ internal sealed partial class DocxReader
             ReadDxaWidth(tableCellSpacing),
             (string?)tableCellSpacing?.Attribute(WordprocessingNamespace + "w"),
             (string?)tableCellSpacing?.Attribute(WordprocessingNamespace + "type"),
-            ReadPositiveIntAttribute(tableProperties?.Element(WordprocessingNamespace + "tblStyleRowBandSize"), WordprocessingNamespace + "val"),
-            ReadPositiveIntAttribute(tableProperties?.Element(WordprocessingNamespace + "tblStyleColBandSize"), WordprocessingNamespace + "val"));
+            ReadNonNegativeIntAttribute(tableProperties?.Element(WordprocessingNamespace + "tblStyleRowBandSize"), WordprocessingNamespace + "val"),
+            ReadNonNegativeIntAttribute(tableProperties?.Element(WordprocessingNamespace + "tblStyleColBandSize"), WordprocessingNamespace + "val"));
     }
 
     private static IReadOnlyDictionary<string, DocxTableStyle> ResolveTableStyles(IReadOnlyDictionary<string, DocxTableStyle> tableStyles)
@@ -296,6 +296,13 @@ internal sealed partial class DocxReader
             : EnumerateTableStyleRegions(tableLook, tableStyle.Table.RowBandSize, tableStyle.Table.ColumnBandSize, rowIndex, cellIndex, rowCount, cellCount, tableStyle.ConditionalRegions.ContainsKey("firstRow"), tableStyle.ConditionalRegions.ContainsKey("firstCol"), tableStyle.ConditionalRegions.ContainsKey("lastRow"), tableStyle.ConditionalRegions.ContainsKey("lastCol"));
         foreach (string region in regions)
         {
+            // Word activates bands only with a resolved positive size. Cell
+            // membership alone does not supply one; edge regions remain active.
+            if ((region is "band1Horz" or "band2Horz") && tableStyle.Table.RowBandSize is not > 0 ||
+                (region is "band1Vert" or "band2Vert") && tableStyle.Table.ColumnBandSize is not > 0)
+            {
+                continue;
+            }
             if (tableStyle.ConditionalRegions.TryGetValue(region, out DocxTableCellStyle? style))
             {
                 resolved = resolved.Merge(style);
