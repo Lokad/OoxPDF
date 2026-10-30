@@ -239,10 +239,15 @@ internal static partial class OoxMemoryAdmissionTests
             TestAssert.Equal(0L, secondOutput.Length);
             TestAssert.Equal(held, pool.Reserved);
         }
-        finally { resume.Set(); }
+        finally
+        {
+            // Restore headroom before the first conversion resumes acquisition.
+            // Its staged content is now funded as well as its package bytes.
+            pool.Capacity = 128L * 1024 * 1024;
+            resume.Set();
+        }
         first.GetAwaiter().GetResult();
         TestAssert.Equal(0L, pool.Reserved);
-        pool.Capacity = 128L * 1024 * 1024;
         using var retryInput = new MemoryStream(bytes);
         using var retryOutput = new MemoryStream();
         OoxPdfConverter.Convert(retryInput, retryOutput, options);
