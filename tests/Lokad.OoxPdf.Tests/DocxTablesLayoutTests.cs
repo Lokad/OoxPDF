@@ -14,6 +14,22 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTablesLayoutTests
 {
+    public static void DocxTableLayoutStageLineFitIgnoresRoundoffAndKeepsActualOverflow()
+    {
+        foreach (string text in new[] { "Alpha Beta", "Alphabeta", "Alpha-Beta" })
+        foreach (double excess in new[] { 0.000000000001d, 0.001d })
+        {
+            var paragraph = DocxTests.CreateDocxLayoutParagraph(text, 10d, 12d);
+            var table = new DocxTable("fixed", [text.Length * 5d + 0.96d - excess], [new DocxTableRow([
+                new DocxTableCell(text, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)
+            ], null)]);
+            var document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+            var row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default).Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            TestAssert.Equal(excess < 0.0000001d ? 1 : 2, row.Cells[0].TextLines.Count);
+        }
+    }
+
     public static void DocxTableLayoutStageNaturalAutoWidthMatchesIndependentWordInputVariants()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

@@ -10,6 +10,10 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
+    // Insets and scaled advances can reach the same boundary through different
+    // floating-point sums. Ignore arithmetic roundoff, not visible overflow.
+    private static bool FitsLineWidth(double measured, double available) => measured <= available + 0.0000001d;
+
     // RV05: image-driven breaking. Character offset of an affined image in the concatenated
     // paragraph text, shared by wrapping and mid-line placement.
     private static int ResolveInlineImageCharOffset(
@@ -234,7 +238,7 @@ internal sealed partial class DocxLayoutEngine
             int candidateLength = token.Start + token.Length - lineStart;
             if ((lineLength > 0 && lineHasNonWhitespace || lineLength == 0 && imageOffsets.Length != 0) &&
                 !token.IsBreakableWhitespace &&
-                MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, lineStart, candidateLength, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts) + ImageWidthInRange(imageWrapIndex, lineStart, lineStart + candidateLength) > maxWidth(lineIndex))
+                !FitsLineWidth(MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, lineStart, candidateLength, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts) + ImageWidthInRange(imageWrapIndex, lineStart, lineStart + candidateLength), maxWidth(lineIndex)))
             {
                 // RV05: image-driven breaking. A line-owning image that overflows the remainder
                 // breaks onto the next line at its own offset (words stay whole); overwide images
@@ -258,7 +262,7 @@ internal sealed partial class DocxLayoutEngine
 
                     double overflowingImageWidth = imagePrefixSums[imageBreakIndex + 1] - imagePrefixSums[imageBreakIndex];
                     double beforeImageWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, lineStart, imageOffset - lineStart, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts) + ImageWidthInRange(imageWrapIndex, lineStart, imageOffset);
-                    if (beforeImageWidth <= maxWidth(lineIndex) && beforeImageWidth + overflowingImageWidth > maxWidth(lineIndex) && overflowingImageWidth <= maxWidth(lineIndex + 1))
+                    if (FitsLineWidth(beforeImageWidth, maxWidth(lineIndex)) && !FitsLineWidth(beforeImageWidth + overflowingImageWidth, maxWidth(lineIndex)) && FitsLineWidth(overflowingImageWidth, maxWidth(lineIndex + 1)))
                     {
                         imageBreakOffset = imageOffset;
                         break;
@@ -393,7 +397,7 @@ internal sealed partial class DocxLayoutEngine
         {
             double tokenWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, token.Length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts);
             RecordChainAverageWidth(chainAverages, token, tokenWidth);
-            if (tokenWidth <= maxWidth)
+            if (FitsLineWidth(tokenWidth, maxWidth))
             {
                 breakLength = 0;
                 return false;
@@ -430,7 +434,7 @@ internal sealed partial class DocxLayoutEngine
 
         bool candidatePreserveTerminalSoftHyphen = text[token.Start + candidate - 1] == '\u00AD';
         double candidateWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, candidate, fontSize, textMeasurer, tabStops, defaultTabStopPoints, candidatePreserveTerminalSoftHyphen, dynamicFieldPageNumber, spanStarts);
-        if (candidateWidth <= maxWidth)
+        if (FitsLineWidth(candidateWidth, maxWidth))
         {
             int best = candidate;
             int next = candidate + 1;
@@ -445,7 +449,7 @@ internal sealed partial class DocxLayoutEngine
 
                 bool nextPreserveTerminalSoftHyphen = text[token.Start + next - 1] == '\u00AD';
                 double nextWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, next, fontSize, textMeasurer, tabStops, defaultTabStopPoints, nextPreserveTerminalSoftHyphen, dynamicFieldPageNumber, spanStarts);
-                if (nextWidth <= maxWidth)
+                if (FitsLineWidth(nextWidth, maxWidth))
                 {
                     best = next;
                     next++;
@@ -464,7 +468,7 @@ internal sealed partial class DocxLayoutEngine
             if (next >= token.Length)
             {
                 double fullWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, token.Length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts);
-                if (fullWidth <= maxWidth)
+                if (FitsLineWidth(fullWidth, maxWidth))
                 {
                     breakLength = 0;
                     return false;
@@ -488,7 +492,7 @@ internal sealed partial class DocxLayoutEngine
 
                 bool currentPreserveTerminalSoftHyphen = text[token.Start + current - 1] == '\u00AD';
                 double currentWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, current, fontSize, textMeasurer, tabStops, defaultTabStopPoints, currentPreserveTerminalSoftHyphen, dynamicFieldPageNumber, spanStarts);
-                if (currentWidth <= maxWidth)
+                if (FitsLineWidth(currentWidth, maxWidth))
                 {
                     breakLength = current;
                     return true;
@@ -618,7 +622,7 @@ internal sealed partial class DocxLayoutEngine
         {
             double tokenWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, token.Length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts);
             RecordChainAverageWidth(chainAverages, token, tokenWidth);
-            if (tokenWidth <= maxWidth)
+            if (FitsLineWidth(tokenWidth, maxWidth))
             {
                 return false;
             }
@@ -655,7 +659,7 @@ internal sealed partial class DocxLayoutEngine
 
         bool preferredCandidatePreserve = text[token.Start + preferredCandidate - 1] == '\u00AD';
         double preferredCandidateWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, preferredCandidate, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preferredCandidatePreserve, dynamicFieldPageNumber, spanStarts);
-        if (preferredCandidateWidth <= maxWidth)
+        if (FitsLineWidth(preferredCandidateWidth, maxWidth))
         {
             int bestPreferred = preferredCandidate;
             int nextPreferred = preferredCandidate + 1;
@@ -670,7 +674,7 @@ internal sealed partial class DocxLayoutEngine
 
                 bool nextPreferredPreserve = text[token.Start + nextPreferred - 1] == '\u00AD';
                 double nextPreferredWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, nextPreferred, fontSize, textMeasurer, tabStops, defaultTabStopPoints, nextPreferredPreserve, dynamicFieldPageNumber, spanStarts);
-                if (nextPreferredWidth <= maxWidth)
+                if (FitsLineWidth(nextPreferredWidth, maxWidth))
                 {
                     bestPreferred = nextPreferred;
                     nextPreferred++;
@@ -686,7 +690,7 @@ internal sealed partial class DocxLayoutEngine
             if (nextPreferred >= token.Length)
             {
                 double fullPreferredWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, token.Length, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts);
-                if (fullPreferredWidth <= maxWidth)
+                if (FitsLineWidth(fullPreferredWidth, maxWidth))
                 {
                     breakLength = 0;
                     return false;
@@ -711,7 +715,7 @@ internal sealed partial class DocxLayoutEngine
                 bool currentPreferredPreserve = text[token.Start + currentPreferred - 1] == '\u00AD';
 
                 double currentPreferredWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, token.Start, currentPreferred, fontSize, textMeasurer, tabStops, defaultTabStopPoints, currentPreferredPreserve, dynamicFieldPageNumber, spanStarts);
-                if (currentPreferredWidth <= maxWidth)
+                if (FitsLineWidth(currentPreferredWidth, maxWidth))
                 {
                     breakLength = currentPreferred;
                     return true;
