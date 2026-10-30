@@ -1,6 +1,8 @@
 using System.Globalization;
+using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
@@ -12,6 +14,59 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTablesLayoutTests
 {
+    public static void DocxTableLayoutStageNaturalAutoWidthMatchesIndependentWordInputVariants()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial)) TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
+        string original = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "AdjacentTables", "adjacent.docx"));
+        Dictionary<string, byte[]> parts;
+        using (var archive = ZipFile.OpenRead(original))
+        {
+            parts = archive.Entries.ToDictionary(entry => entry.FullName, entry => {
+                using var input = entry.Open();
+                using var output = new MemoryStream();
+                input.CopyTo(output);
+                return output.ToArray();
+            });
+        }
+        XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        var font = PdfEmbeddedFont.Create(OpenTypeFont.Load(File.ReadAllBytes(arial)),
+            "join-A00 join-A01 join-A10 join-A11 join-B00 join-B01 join-B10 join-B11".EnumerateRunes().Select(rune => rune.Value), default);
+        foreach (int gridWidth in new[] { 1920, 3840 })
+        foreach (bool explicitAuto in new[] { false, true })
+        {
+            var xml = XDocument.Parse(Encoding.UTF8.GetString(parts["word/document.xml"]));
+            foreach (var table in xml.Descendants(w + "tbl"))
+            {
+                var properties = table.Element(w + "tblPr")!;
+                properties.Elements(w + "tblW").Remove();
+                properties.Elements(w + "tblLayout").Remove();
+                properties.Add(new XElement(w + "tblLayout", new XAttribute(w + "type", "autofit")));
+                if (explicitAuto) properties.Add(new XElement(w + "tblW", new XAttribute(w + "type", "auto"), new XAttribute(w + "w", 0)));
+                foreach (var column in table.Element(w + "tblGrid")!.Elements()) column.SetAttributeValue(w + "w", gridWidth);
+                table.Descendants(w + "tcW").Remove();
+            }
+            var copy = new Dictionary<string, byte[]>(parts) { ["word/document.xml"] = Encoding.UTF8.GetBytes(xml.ToString(SaveOptions.DisableFormatting)) };
+            string path = TestFixtures.WriteTempPackage(".docx", copy);
+            foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+            {
+                var document = DocxTests.ReadDocx(path, mode);
+                var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+                var rows = new DocxLayoutEngine(geometry).Create(document, font, default).Pages.SelectMany(page => page.Items).OfType<DocxTableRowLayout>().ToArray();
+                TestAssert.Equal(4, rows.Length);
+                // Word 16 PDF controls narrow-auto/wide-auto/explicit-auto:
+                // adjacent text origins advance 36.72pt on either grid and mode.
+                // C96813D6... (Final narrow-auto) pins the independent reference.
+                foreach (var row in rows)
+                {
+                    TestAssert.True(Math.Abs(row.Cells[1].X - row.Cells[0].X - 36.72d) <= 0.1d,
+                        "Missing/auto preferred width must follow Word's natural content width, independently of the grid.");
+                    TestAssert.True(row.Cells.All(cell => cell.TextLines.Count == 1), "The content must remain on one line.");
+                }
+            }
+        }
+    }
+
     public static void DocxTableLayoutStageNaturalAutoWidthUsesLayoutInsetsAndIgnoresGrid()
     {
         foreach (double hint in new[] { 100d, 200d })
