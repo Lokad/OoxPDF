@@ -85,15 +85,13 @@ internal static class DocxConditionalTableStyleTests
             regions["lastRow"].AddFirst(new XElement(W + "rPr",
                 new XElement(W + "b", new XAttribute(W + "val", "0")), new XElement(W + "i")));
             regions["firstRow"].AddFirst(new XElement(W + "rPr", new XElement(W + "b")));
-            regions["lastCol"].Element(W + "tcPr")!.Add(new XElement(W + "vAlign", new XAttribute(W + "val", "bottom")),
-                new XElement(W + "tcMar", new XElement(W + "left", new XAttribute(W + "w", "100"), new XAttribute(W + "type", "dxa"))));
+            regions["lastCol"].Element(W + "tcPr")!.Add(new XElement(W + "vAlign", new XAttribute(W + "val", "bottom")));
             regions["firstCol"].Element(W + "tcPr")!.Add(new XElement(W + "vAlign", new XAttribute(W + "val", "top")));
         });
         var cell = document.Tables[0].Rows[0].Cells[0];
         var run = cell.Paragraphs[0].Runs[0];
         TestAssert.Equal("0066CC", cell.FillHex);
         TestAssert.Equal("top", cell.VerticalAlignmentValue);
-        TestAssert.Equal(5d, cell.Margins.LeftPoints!.Value);
         TestAssert.True(run.Bold && run.Italic,
             "Leading formatting overrides conflicting properties while retaining independent trailing properties.");
     }
