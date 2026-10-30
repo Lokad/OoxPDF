@@ -717,7 +717,7 @@ internal static partial class OoxLimitsTests
         using var source = new MemoryStream(new byte[20]);
         try
         {
-            copy.Invoke(null, [source, 10L, "probe", new byte[81920], CancellationToken.None]);
+            copy.Invoke(null, [source, 10L, "probe", new byte[81920], null, null, CancellationToken.None]);
         }
         catch (TargetInvocationException ex) when (ex.InnerException is IOException)
         {
@@ -733,7 +733,7 @@ internal static partial class OoxLimitsTests
         using var source = new NonSeekableReadStream(new byte[20]);
         try
         {
-            stage.Invoke(null, [source, 10L, new byte[81920], CancellationToken.None]);
+            stage.Invoke(null, [source, 10L, new byte[81920], null, CancellationToken.None]);
         }
         catch (TargetInvocationException ex) when (ex.InnerException is IOException)
         {
