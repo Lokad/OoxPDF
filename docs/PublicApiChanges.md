@@ -33,8 +33,9 @@ output, including owned storage disposal. Synchronous entry points block on the
 same pipeline. DOCX awaits font-program acquisition during preparation; measurement
 and painting then use prepared fonts. Default local discovery awaits font-file
 metadata reads before either renderer starts; directory enumeration remains a
-synchronous platform operation. PPTX program acquisition remains synchronous
-during the embedding migration. Caller streams
+synchronous platform operation. PPTX awaits declared shape/table paragraph
+fonts and their glyph fallback candidates before measurement. Generated bullets
+and chart text still need their remaining acquisition migration. Caller streams
 stay open; cancellation waits for outstanding
 I/O before refunding borrowed storage. Input failures escape without preflight retry.
 
@@ -50,6 +51,10 @@ they must not dispose or retain that budget after storage closes.
 
 `PDF_PAGE_CONTENT_SPILLED` keeps its ID and informational severity; its fallback
 is now `temporary-storage`, covering host-selected backing as well as files.
+
+PPTX table minimum-row sizing now uses the supplied font resolver and cancellation
+token, matching cell layout and painting. Explicit custom fonts can therefore
+change minimum row heights that previously depended on ambient system fonts.
 
 An explicit `FontResolver` now defines the entire allowed font universe for PPTX
 as well as DOCX. Custom resolvers without a built-in catalog no longer gain

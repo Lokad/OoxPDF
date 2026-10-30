@@ -41,7 +41,7 @@ internal static class PptxVisibilityTests
             });
             OoxPackage package = OoxPackage.Open(input, default);
             PptxDocument document = new PptxReader().Read(package, default);
-            PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPages(document, package, null, default).Single();
+            PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
             TestAssert.Equal(visible ? 1 : 0, page.Annotations.Count);
             TestAssert.Equal(visible && kind == "picture" ? 1 : 0, page.Images.Count);
             TestAssert.Equal(visible && kind != "picture", page.Fonts.Count > 0);
@@ -231,7 +231,7 @@ internal static class PptxVisibilityTests
         {
             OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
             PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-            pages = new PptxRenderer(null).RenderPages(document, package, diagnostics.Add, CancellationToken.None).Count();
+            pages = new PptxRenderer(null).RenderPagesAsync(document, package, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Count();
         }
 
         TestAssert.Equal(1, pages);

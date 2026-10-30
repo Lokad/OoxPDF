@@ -1957,7 +1957,7 @@ internal static partial class OoxLimitsTests
         PptxSceneSlide slide = new PptxSceneBuilder().Build(document, package, CancellationToken.None).Slides[0];
         PptxSceneNode node = slide.SlideNodes.First(candidate => candidate.Kind == PptxSceneNodeKind.Shape && candidate.TextBody is not null);
         MethodInfo read = typeof(PptxRenderer).GetMethod(
-            "ReadTextSpansForSceneNode",
+            "ReadTextSpansForSceneNodeAsync",
             BindingFlags.NonPublic | BindingFlags.Static,
             null,
             [typeof(PptxSceneNode), typeof(PptxRenderContext), typeof(PptxColorMap), typeof(bool)],
@@ -1966,7 +1966,7 @@ internal static partial class OoxLimitsTests
         {
             try
             {
-                return read.Invoke(null, [node, context, map, includePlaceholders]);
+                return ((ValueTask<IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>>)read.Invoke(null, [node, context, map, includePlaceholders])!).GetAwaiter().GetResult();
             }
             catch (TargetInvocationException ex)
             {
@@ -1992,13 +1992,16 @@ internal static partial class OoxLimitsTests
         MethodInfo toBounds = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
             .First(method => method.Name == "ToShapeBounds");
         MethodInfo getOrBuild = typeof(PptxRenderer).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
-            .First(method => method.Name == "GetOrBuildTableFrameLayout");
+            .First(method => method.Name == "GetOrBuildTableFrameLayoutAsync");
         object? bounds = toBounds.Invoke(null, [node.Bounds ?? throw new InvalidOperationException("Expected table bounds.")]);
         object? Invoke()
         {
             try
             {
-                return getOrBuild.Invoke(null, [context, bounds, node, context.SlideColorMap]);
+                object pending = getOrBuild.Invoke(null, [context, bounds, node, context.SlideColorMap])!;
+                var task = (Task)pending.GetType().GetMethod("AsTask")!.Invoke(pending, null)!;
+                task.GetAwaiter().GetResult();
+                return task.GetType().GetProperty("Result")!.GetValue(task);
             }
             catch (TargetInvocationException ex)
             {
@@ -2106,14 +2109,14 @@ internal static partial class OoxLimitsTests
     private static object ReadSceneShapeTextSpansReflect(PptxRenderContext context, bool includeMasterNodes)
     {
         MethodInfo read = typeof(PptxRenderer).GetMethod(
-            "ReadSceneShapeTextSpans",
+            "ReadSceneShapeTextSpansAsync",
             BindingFlags.NonPublic | BindingFlags.Static,
             null,
             [typeof(PptxRenderContext), typeof(bool)],
             null) ?? throw new InvalidOperationException("Expected shape span preflight.");
         try
         {
-            return read.Invoke(null, [context, includeMasterNodes])!;
+            return ((ValueTask<IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>>)read.Invoke(null, [context, includeMasterNodes])!).GetAwaiter().GetResult();
         }
         catch (TargetInvocationException ex)
         {

@@ -504,7 +504,7 @@ static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSh
         {
             PptxDocument renderDocument = new PptxReader().Read(renderPackage, CancellationToken.None);
             renderScope = "INCLUSIVE: PptxRenderer.RenderPages rebuilds the scene internally; package and document prerequisites are prebuilt";
-            (pages, renderMetrics) = MeasureStep(() => new PptxRenderer(fontResolver: probeFont).RenderPages(renderDocument, renderPackage, diagnosticSink: null, CancellationToken.None).ToList(), renderScope);
+            (pages, renderMetrics) = MeasureStep(() => new PptxRenderer(fontResolver: probeFont).RenderPagesAsync(renderDocument, renderPackage, diagnosticSink: null, CancellationToken.None).ToBlockingEnumerable().ToList(), renderScope);
         }
     }
 

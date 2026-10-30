@@ -338,7 +338,7 @@ internal static class PptxNumberingTests
             PptxSceneNode node = scene.Slides[0].SlideNodes[0];
             var resolver = new PresentationFontResolver(new NumberingFontResolver());
             var xml = PptxSceneTextAgreementTests.ReadXmlSpans(node, document, scene, resolver: resolver);
-            var fed = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, false, [], resolver, CancellationToken.None);
+            var fed = PptxRenderer.BuildSceneFedTextSpansAsync(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, false, [], resolver, CancellationToken.None).GetAwaiter().GetResult();
             TestAssert.Equal(xml.Count, fed.Count);
             for (int i = 0; i < xml.Count; i++)
             {

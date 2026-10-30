@@ -20,8 +20,8 @@ internal sealed partial class PptxRenderer
         }
 
         return context.InheritedSources
-            .SelectMany(source => BuildTextFrameModels(context, source, includePlaceholders: false, placeholderSources: []))
-            .Concat(BuildTextFrameModels(context, context.SlideSource, includePlaceholders: true, context.InheritedXml))
+            .SelectMany(source => (BuildTextFrameModelsAsync(context, source, includePlaceholders: false, placeholderSources: []).GetAwaiter().GetResult()))
+            .Concat((BuildTextFrameModelsAsync(context, context.SlideSource, includePlaceholders: true, context.InheritedXml).GetAwaiter().GetResult()))
             .Select(ToSnapshot)
             .ToArray();
     }
@@ -34,8 +34,8 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        return ReadSceneTableTextFrames(context)
-            .Select(tableFrame => BuildTextFrameModel(tableFrame, document, context.Theme, context.DisplayedSlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken))
+        return (ReadSceneTableTextFramesAsync(context).GetAwaiter().GetResult())
+            .Select(tableFrame => (BuildTextFrameModelAsync(tableFrame, document, context.Theme, context.DisplayedSlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken).GetAwaiter().GetResult()))
             .Select(ToSnapshot)
             .ToArray();
     }
@@ -186,16 +186,16 @@ internal sealed partial class PptxRenderer
             run.Style.Highlight);
     }
 
-    private static IReadOnlyList<PptxTextFrameModel> BuildTextFrameModels(
+    private static async ValueTask<IReadOnlyList<PptxTextFrameModel>> BuildTextFrameModelsAsync(
         PptxRenderContext context,
         PptxRenderSource source,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return BuildTextFrameModels(source.Xml, context.Document, context.Theme, source.ColorMap, context.DisplayedSlideNumber, includePlaceholders, placeholderSources, context.FontResolver, context.CancellationToken);
+        return (await BuildTextFrameModelsAsync(source.Xml, context.Document, context.Theme, source.ColorMap, context.DisplayedSlideNumber, includePlaceholders, placeholderSources, context.FontResolver, context.CancellationToken).ConfigureAwait(false));
     }
 
-    private static IReadOnlyList<PptxTextFrameModel> BuildTextFrameModels(
+    private static async ValueTask<IReadOnlyList<PptxTextFrameModel>> BuildTextFrameModelsAsync(
         XDocument slideXml,
         PptxDocument document,
         PptxTheme theme,
@@ -209,7 +209,7 @@ internal sealed partial class PptxRenderer
         var frames = new List<PptxTextFrameModel>();
         foreach (XElement shape in slideXml.Descendants(PresentationNamespace + "sp"))
         {
-            PptxTextFrameModel? frame = BuildTextFrameModel(shape, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken);
+            PptxTextFrameModel? frame = (await BuildTextFrameModelAsync(shape, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken).ConfigureAwait(false));
             if (frame is not null)
             {
                 frames.Add(frame);
@@ -219,7 +219,7 @@ internal sealed partial class PptxRenderer
         return frames;
     }
 
-    private static PptxTextFrameModel? BuildTextFrameModel(
+    private static async ValueTask<PptxTextFrameModel?> BuildTextFrameModelAsync(
         XElement shape,
         PptxDocument document,
         PptxTheme theme,
@@ -351,6 +351,8 @@ internal sealed partial class PptxRenderer
             compatibleDefaultLineSpacingFactor,
             shapeFontColor, default,
             disableZeroKerning: UsesNoWrapZeroKerning(bodyProperties, textRotationDegrees));
+        fontResolver ??= new PresentationFontResolver(null);
+        await PrepareParagraphFontsAsync(paragraphs, fontResolver, cancellationToken).ConfigureAwait(false);
         // Vertical middle/bottom anchors resolve from laid-out actuals below (the estimate
         // uses the wrong axis and advance); other orientations keep estimated offsets.
         TextVerticalAnchor anchorForEstimate = orientation == PptxTextOrientation.Vertical ? TextVerticalAnchor.Top : bodyProperties.VerticalAnchor;
@@ -439,7 +441,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static PptxTextFrameModel BuildTextFrameModel(
+    private static async ValueTask<PptxTextFrameModel> BuildTextFrameModelAsync(
         PptxTableCellTextFrame tableFrame,
         PptxDocument document,
         PptxTheme theme,
@@ -537,6 +539,8 @@ internal sealed partial class PptxRenderer
             compatibleDefaultLineSpacingFactor,
             shapeFontColor: null,
             tableFrame.TextStyle);
+        fontResolver ??= new PresentationFontResolver(null);
+        await PrepareParagraphFontsAsync(paragraphs, fontResolver, cancellationToken).ConfigureAwait(false);
         double verticalOffset = bodyProperties.VerticalAnchor switch
         {
             TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken)) / 2d),
@@ -585,6 +589,33 @@ internal sealed partial class PptxRenderer
             orientation,
             ShapeFontColor: null,
             paragraphs);
+    }
+
+    private static async ValueTask PrepareParagraphFontsAsync(IReadOnlyList<PptxTextParagraphModel> paragraphs,
+        PresentationFontResolver fontResolver, CancellationToken cancellationToken)
+    {
+        var estimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
+        foreach (PptxTextParagraphModel paragraph in paragraphs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!paragraph.HasVisibleContent)
+            {
+                if (paragraph.HasLayoutContent)
+                    await estimator.PrepareAsync(paragraph.EndParagraphStyle.Typeface, paragraph.EndParagraphStyle.Bold,
+                        paragraph.EndParagraphStyle.Italic, string.Empty).ConfigureAwait(false);
+                continue;
+            }
+            foreach (PptxTextRunModel run in paragraph.Runs)
+            {
+                // Use the same caps transform as flow. Tabs occupy spaces; break
+                // markers select metrics but never require a newline glyph.
+                if (run.Kind == PptxTextRunKind.Break)
+                    await estimator.PrepareAsync(run.Style.Typeface, run.Style.Bold, run.Style.Italic, string.Empty).ConfigureAwait(false);
+                else
+                    foreach (TextCapsFragment fragment in ApplyTextCaps(run.Text.Replace('\t', ' '), run.Properties, paragraph.Style.DefaultRunProperties))
+                        await estimator.PrepareAsync(run.Style.Typeface, run.Style.Bold, run.Style.Italic, fragment.Text).ConfigureAwait(false);
+            }
+        }
     }
 
     private static bool UsesNoWrapZeroKerning(PptxTextBodyProperties bodyProperties, double textRotationDegrees)
@@ -871,7 +902,7 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    internal static IReadOnlyList<PptxPositionedTextSpan> BuildSceneFedTextSpans(
+    internal static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> BuildSceneFedTextSpansAsync(
         PptxSceneNode node,
         PptxDocument document,
         PptxTheme theme,
@@ -907,7 +938,7 @@ internal sealed partial class PptxRenderer
             new XElement(PresentationNamespace + "sld",
                 new XElement(PresentationNamespace + "cSld",
                     new XElement(PresentationNamespace + "spTree", current))));
-        PptxTextLayoutModel xmlLayout = BuildTextLayoutModel(slide, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken);
+        PptxTextLayoutModel xmlLayout = (await BuildTextLayoutModelAsync(slide, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken).ConfigureAwait(false));
         // Layout skips shapes it cannot place (unsupported orientation); the XML path
         // then yields no spans either.
         PptxTextFrameLayout? xmlFrame = xmlLayout.Frames.SingleOrDefault();
@@ -917,6 +948,8 @@ internal sealed partial class PptxRenderer
         }
         PptxTextFrameModel frameModel = xmlFrame.Model;
         IReadOnlyList<PptxTextParagraphModel> fedParagraphs = BuildSceneFedParagraphModels(textBody.Paragraphs, frameModel, theme, colorMap, slideNumber, frameModel.ShapeFontColor, default);
+        fontResolver ??= new PresentationFontResolver(null);
+        await PrepareParagraphFontsAsync(fedParagraphs, fontResolver, cancellationToken).ConfigureAwait(false);
         var fedFrame = frameModel with { Paragraphs = fedParagraphs };
         var estimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
         PptxTextFlowFrame fedFlow = BuildTextFlowFrame(fedFrame, document, estimator);

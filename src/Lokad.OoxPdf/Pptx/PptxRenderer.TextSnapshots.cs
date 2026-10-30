@@ -44,8 +44,8 @@ internal sealed partial class PptxRenderer
                 }
                 if (node.Kind != (shapes ? PptxSceneNodeKind.Shape : PptxSceneNodeKind.Table)) continue;
                 var frame = new List<PptxPositionedTextSpan>();
-                if (shapes) AddSceneShapeTextSpans([node], context, frame, colorMap, placeholders);
-                else AddSceneTableTextSpans([node], context, frame, transform, colorMap);
+                if (shapes) AddSceneShapeTextSpansAsync([node], context, frame, colorMap, placeholders).GetAwaiter().GetResult();
+                else AddSceneTableTextSpansAsync([node], context, frame, transform, colorMap).GetAwaiter().GetResult();
                 int frameCount = 0;
                 foreach (PptxPositionedTextSpan span in frame)
                 {
@@ -66,7 +66,7 @@ internal sealed partial class PptxRenderer
         }
 
         PptxTextLayoutModel inheritedLayout = BuildTextLayoutModelForSources(context.InheritedSources, context);
-        PptxTextLayoutModel slideLayout = BuildTextLayoutModel(context, context.SlideSource, includePlaceholders: true, context.InheritedXml);
+        PptxTextLayoutModel slideLayout = (BuildTextLayoutModelAsync(context, context.SlideSource, includePlaceholders: true, context.InheritedXml).GetAwaiter().GetResult());
         return ToSnapshot(new PptxTextLayoutModel(inheritedLayout.Frames.Concat(slideLayout.Frames).ToArray()));
 
         PptxTextLayoutModel BuildTextLayoutModelForSources(IReadOnlyList<PptxRenderSource> sources, PptxRenderContext context)
@@ -74,7 +74,7 @@ internal sealed partial class PptxRenderer
             var frames = new List<PptxTextFrameLayout>();
             foreach (PptxRenderSource source in sources)
             {
-                frames.AddRange(BuildTextLayoutModel(context, source, includePlaceholders: false, placeholderSources: []).Frames);
+                frames.AddRange((BuildTextLayoutModelAsync(context, source, includePlaceholders: false, placeholderSources: []).GetAwaiter().GetResult()).Frames);
             }
 
             return new PptxTextLayoutModel(frames);

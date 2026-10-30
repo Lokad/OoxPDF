@@ -125,7 +125,7 @@ internal static class PptxInheritanceTests
         TestAssert.Equal(1, page.Content.Split('\n').Count(line => line.TrimEnd('\r') == rectangle));
     }
     private static PdfPage[] Render(PptxDocument document, OoxPackage package, List<OoxPdfDiagnostic>? diagnostics = null) =>
-        new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPages(document, package, diagnostics is null ? null : diagnostics.Add, default).ToArray();
+        new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(document, package, diagnostics is null ? null : diagnostics.Add, default).ToBlockingEnumerable().ToArray();
     private static Dictionary<string, byte[]> Parts(string id)
     {
         using var gold = JsonDocument.Parse(File.ReadAllText(Case("pptx-inheritance-office.json")));

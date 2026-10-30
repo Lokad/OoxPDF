@@ -24,7 +24,7 @@ internal static class PptxTableMergeTests
             string input = Case(control.GetProperty("Input").GetString()!);
             TestAssert.Equal(control.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
             var (document, package) = Read(input);
-            PdfPage page = new PptxRenderer(new TestFaceFontResolver()).RenderPages(document, package, null, default).Single();
+            PdfPage page = new PptxRenderer(new TestFaceFontResolver()).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
             string painted = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text));
             foreach (JsonElement cell in control.GetProperty("Cells").EnumerateArray())
                 TestAssert.Contains(cell.GetProperty("Text").GetString()!, painted);
@@ -53,7 +53,7 @@ internal static class PptxTableMergeTests
                 TailCell(xml).Descendants(A + "rPr").First().Add(new XElement(A + "hlinkClick", new XAttribute(R + "id", "rIdMergeLink")));
             }, path => {
                 var source = Read(path);
-                PdfPage page = new PptxRenderer(new TestFaceFontResolver()).RenderPages(source.Document, source.Package, null, default).Single();
+                PdfPage page = new PptxRenderer(new TestFaceFontResolver()).RenderPagesAsync(source.Document, source.Package, null, default).ToBlockingEnumerable().Single();
                 PdfLinkAnnotation link = page.Annotations.Single();
                 TestAssert.Equal("https://example.invalid/merged-cell", link.Uri);
                 TestAssert.True(link.Width > 0 && link.X >= 360 && link.X + link.Width <= 504,
@@ -111,7 +111,7 @@ internal static class PptxTableMergeTests
             string input = Case(control.GetProperty("Input").GetString()!);
             TestAssert.Equal(control.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
             var source = Read(input);
-            PdfPage page = new PptxRenderer(fonts).RenderPages(source.Document, source.Package, null, default).Single();
+            PdfPage page = new PptxRenderer(fonts).RenderPagesAsync(source.Document, source.Package, null, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
             foreach (JsonElement cell in control.GetProperty("Cells").EnumerateArray())
             {

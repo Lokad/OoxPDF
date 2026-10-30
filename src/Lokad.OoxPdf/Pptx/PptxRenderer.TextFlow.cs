@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneShapeTextSpans(PptxRenderContext context, bool includeMasterNodes = true)
+    private static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> ReadSceneShapeTextSpansAsync(PptxRenderContext context, bool includeMasterNodes = true)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
         // font preflight traversed master nodes even when the slide suppresses
@@ -19,14 +19,14 @@ internal sealed partial class PptxRenderer
         // visibility consistently with painting.
         if (includeMasterNodes)
         {
-            AddSceneShapeTextSpans(context.SceneSlide.MasterNodes, context, textSpans, context.MasterColorMap, renderPlaceholders: false);
+            await AddSceneShapeTextSpansAsync(context.SceneSlide.MasterNodes, context, textSpans, context.MasterColorMap, renderPlaceholders: false).ConfigureAwait(false);
         }
-        AddSceneShapeTextSpans(context.SceneSlide.LayoutNodes, context, textSpans, context.LayoutColorMap, renderPlaceholders: false);
-        AddSceneShapeTextSpans(context.SceneSlide.SlideNodes, context, textSpans, context.SlideColorMap, renderPlaceholders: true);
+        await AddSceneShapeTextSpansAsync(context.SceneSlide.LayoutNodes, context, textSpans, context.LayoutColorMap, renderPlaceholders: false).ConfigureAwait(false);
+        await AddSceneShapeTextSpansAsync(context.SceneSlide.SlideNodes, context, textSpans, context.SlideColorMap, renderPlaceholders: true).ConfigureAwait(false);
         return textSpans;
     }
 
-    private static void AddSceneShapeTextSpans(
+    private static async ValueTask AddSceneShapeTextSpansAsync(
         IReadOnlyList<PptxSceneNode> nodes,
         PptxRenderContext context,
         List<PptxPositionedTextSpan> textSpans,
@@ -39,7 +39,7 @@ internal sealed partial class PptxRenderer
             {
                 if (ShouldRenderSceneNode(node, renderPlaceholders))
                 {
-                    textSpans.AddRange(ReadTextSpansForSceneNode(node, context, colorMap, renderPlaceholders));
+                    textSpans.AddRange((await ReadTextSpansForSceneNodeAsync(node, context, colorMap, renderPlaceholders).ConfigureAwait(false)));
                 }
 
                 continue;
@@ -47,21 +47,21 @@ internal sealed partial class PptxRenderer
 
             if (node.Kind == PptxSceneNodeKind.Group)
             {
-                AddSceneShapeTextSpans(node.Children, context, textSpans, colorMap, renderPlaceholders);
+                await AddSceneShapeTextSpansAsync(node.Children, context, textSpans, colorMap, renderPlaceholders).ConfigureAwait(false);
             }
         }
     }
 
-    private static PptxTextLayoutModel BuildTextLayoutModel(
+    private static async ValueTask<PptxTextLayoutModel> BuildTextLayoutModelAsync(
         PptxRenderContext context,
         PptxRenderSource source,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return BuildTextLayoutModel(source.Xml, context.Document, context.Theme, source.ColorMap, context.DisplayedSlideNumber, includePlaceholders, placeholderSources, context.FontResolver, context.CancellationToken);
+        return (await BuildTextLayoutModelAsync(source.Xml, context.Document, context.Theme, source.ColorMap, context.DisplayedSlideNumber, includePlaceholders, placeholderSources, context.FontResolver, context.CancellationToken).ConfigureAwait(false));
     }
 
-    private static PptxTextLayoutModel BuildTextLayoutModel(
+    private static async ValueTask<PptxTextLayoutModel> BuildTextLayoutModelAsync(
         XDocument slideXml,
         PptxDocument document,
         PptxTheme theme,
@@ -75,7 +75,7 @@ internal sealed partial class PptxRenderer
         cancellationToken.ThrowIfCancellationRequested();
         var advanceEstimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
         var frames = new List<PptxTextFrameLayout>();
-        IReadOnlyList<PptxTextFrameModel> frameModels = BuildTextFrameModels(slideXml, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken);
+        IReadOnlyList<PptxTextFrameModel> frameModels = (await BuildTextFrameModelsAsync(slideXml, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken).ConfigureAwait(false));
         foreach (PptxTextFrameModel frameModel in frameModels)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -178,7 +178,7 @@ internal sealed partial class PptxRenderer
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return BuildTextFlowModel(BuildTextFrameModels(slideXml, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources), document);
+        return BuildTextFlowModel((BuildTextFrameModelsAsync(slideXml, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources).GetAwaiter().GetResult()), document);
     }
 
     private static PptxTextFlowModel BuildTextFlowModel(IReadOnlyList<PptxTextFrameModel> frames, PptxDocument document)

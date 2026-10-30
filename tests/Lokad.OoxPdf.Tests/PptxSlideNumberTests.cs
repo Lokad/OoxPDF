@@ -39,7 +39,7 @@ internal static class PptxSlideNumberTests
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
-                .RenderPages(document, package, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, package, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
             TestAssert.Equal(1, pages[0].Annotations.Single(annotation => annotation.IsDestination).Destination!.Value.PageIndex);
             var warning = diagnostics.Single(item => item.Id == "PPTX_UNSUPPORTED_CALLOUT");

@@ -133,7 +133,7 @@ internal static partial class PptxImagesTests
                 TestAssert.Equal(variant is "outline" or "shadow" or "blur", hasEllipse);
                 using var canceled = new CancellationTokenSource(); canceled.Cancel();
                 using var stream = File.OpenRead(path); var package = OoxPackage.Open(stream, default); var document = new PptxReader().Read(package, default);
-                TestAssert.Throws<OperationCanceledException>(() => new PptxRenderer(null).RenderPages(document, package, null, canceled.Token).ToArray());
+                TestAssert.Throws<OperationCanceledException>(() => new PptxRenderer(null).RenderPagesAsync(document, package, null, canceled.Token).ToBlockingEnumerable().ToArray());
             }
             finally { File.Delete(path); }
         }
@@ -250,7 +250,7 @@ internal static partial class PptxImagesTests
         using var stream = File.OpenRead(path);
         var package = OoxPackage.Open(stream, default);
         var document = new PptxReader().Read(package, default);
-        return new PptxRenderer(null).RenderPages(document, package, diagnostics.Add, default).Take(count).ToArray();
+        return new PptxRenderer(null).RenderPagesAsync(document, package, diagnostics.Add, default).ToBlockingEnumerable().Take(count).ToArray();
     }
 
     private static string NormalizeGeometryContent(string content) => Regex.Replace(content, @"\s+", " ").Trim();

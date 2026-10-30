@@ -21,7 +21,7 @@ internal sealed partial class PptxRenderer
 
     // R06.3: yields pages progressively so the writer can spill content and retain
     // only descriptors; callers must drain inside the conversion budget scope.
-    public IEnumerable<PdfPage> RenderPages(PptxDocument document, OoxPackage package, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)
+    public async IAsyncEnumerable<PdfPage> RenderPagesAsync(PptxDocument document, OoxPackage package, Action<OoxPdfDiagnostic>? diagnosticSink, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         PptxScene scene = new PptxSceneBuilder().Build(document, package, cancellationToken);
@@ -65,9 +65,9 @@ internal sealed partial class PptxRenderer
             var reportedHyperlinkIds = new HashSet<string>(StringComparer.Ordinal);
             var orderedChartFonts = new List<PdfFontResource>();
             int imageIndex = 1;
-            IReadOnlyList<PptxPositionedTextSpan> shapeTextSpans = ReadSceneShapeTextSpans(context, includeMasterNodes: context.SceneSlide.ShowMasterShapes);
+            IReadOnlyList<PptxPositionedTextSpan> shapeTextSpans = (await ReadSceneShapeTextSpansAsync(context, includeMasterNodes: context.SceneSlide.ShowMasterShapes).ConfigureAwait(false));
             cancellationToken.ThrowIfCancellationRequested();
-            IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = ReadSceneTableTextSpans(context, includeMasterNodes: context.SceneSlide.ShowMasterShapes);
+            IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = (await ReadSceneTableTextSpansAsync(context, includeMasterNodes: context.SceneSlide.ShowMasterShapes).ConfigureAwait(false));
             cancellationToken.ThrowIfCancellationRequested();
             // RV01: emission looks up split-run families, so cover families that only appear after the glyph-typeface split.
             RenderedFonts renderedFonts = CreateRenderedFonts(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray(), fontResolver, "F", cancellationToken, diagnosticSink, includeFallbackFaces: false);

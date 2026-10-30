@@ -32,7 +32,7 @@ internal static partial class OoxMemoryAdmissionTests
                 using (var conversion = OoxConversionBudget.BeginScope(null, pool))
                 {
                     var diagnostics = new List<OoxPdfDiagnostic>();
-                    PdfPage page = renderer.RenderPages(document, package, diagnostics.Add, default).First();
+                    PdfPage page = renderer.RenderPagesAsync(document, package, diagnostics.Add, default).ToBlockingEnumerable().First();
                     TestAssert.Equal(0, diagnostics.Count);
                     TestAssert.Equal(0, page.Fonts.Count);
                     PdfImageXObject image = page.Images.Single().Image;
@@ -85,10 +85,10 @@ internal static partial class OoxMemoryAdmissionTests
             {
                 var renderer = new PptxRenderer(new ProgramResolver(new MemoryFontProgramSource("transform-font", TestFontBuilder.CreateTestFont())));
                 if (cancel)
-                    TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPages(document, package, diagnostics.Add, cancellation.Token).First());
+                    TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(document, package, diagnostics.Add, cancellation.Token).ToBlockingEnumerable().First());
                 else
                 {
-                    var failure = TestAssert.Throws<OoxPdfLimitExceededException>(() => renderer.RenderPages(document, package, diagnostics.Add, default).First());
+                    var failure = TestAssert.Throws<OoxPdfLimitExceededException>(() => renderer.RenderPagesAsync(document, package, diagnostics.Add, default).ToBlockingEnumerable().First());
                     TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, failure.Kind);
                     TestAssert.Equal(OoxPdfLimitScope.Conversion, failure.Scope);
                 }

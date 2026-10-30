@@ -170,7 +170,7 @@ internal static class PptxFrameHyperlinksTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
         var diagnostics = new List<OoxPdfDiagnostic>();
-        List<PdfPage> pages = new PptxRenderer(new LinkTestFontResolver()).RenderPages(document, package, diagnostics.Add, CancellationToken.None).ToList();
+        List<PdfPage> pages = new PptxRenderer(new LinkTestFontResolver()).RenderPagesAsync(document, package, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().ToList();
         return (pages, diagnostics);
     }
 }

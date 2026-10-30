@@ -89,7 +89,7 @@ internal static class PptxDiagnosticAdmissionTests
             TestAssert.True(spans.Sum(span => span.Run.Width) > 0, "No-fill text still occupies its declared layout advance.");
             var snapshot = PptxRenderer.InspectTextFrameModels(document, package, 0).Single().Paragraphs.Single().Runs.Single();
             TestAssert.Equal("RunNoFill", snapshot.ColorSource);
-            var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPages(document, package, null, default).Single();
+            var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
             TestAssert.DoesNotContain("BT" + Environment.NewLine, page.Content);
             TestAssert.Equal(before, node.Source.ToString(SaveOptions.DisableFormatting));
         });

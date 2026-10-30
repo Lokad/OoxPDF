@@ -51,7 +51,7 @@ internal static class PptxTextLayoutTests
             });
             OoxPackage package = OoxPackage.Open(input, default);
             PptxDocument document = new PptxReader().Read(package, default);
-            PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPages(document, package, null, default).Single();
+            PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
             bool hasHorizontalClip = page.Content.Contains("72 0 40 540 re W* n", StringComparison.Ordinal);
             if (tableCell)
             {

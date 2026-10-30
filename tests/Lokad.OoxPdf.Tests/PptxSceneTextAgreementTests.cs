@@ -115,7 +115,7 @@ internal static class PptxSceneTextAgreementTests
 
         IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadXmlSpans(node, document, scene);
         var resolver = CreateCannedPresentationResolver("memory:r14-scene-fed");
-        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None);
+        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpansAsync(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None).GetAwaiter().GetResult();
         TestAssert.Equal(xmlSpans.Count, fedSpans.Count);
         for (int index = 0; index < xmlSpans.Count; index++)
         {
@@ -155,7 +155,7 @@ internal static class PptxSceneTextAgreementTests
                     continue;
                 }
                 IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadXmlSpans(node, document, scene, true);
-                IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, true, InheritedSources(scene), resolver, CancellationToken.None);
+                IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpansAsync(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, true, InheritedSources(scene), resolver, CancellationToken.None).GetAwaiter().GetResult();
                 TestAssert.Equal(xmlSpans.Count, fedSpans.Count);
                 comparedSpans += xmlSpans.Count;
                 for (int index = 0; index < xmlSpans.Count; index++)
@@ -222,7 +222,7 @@ internal static class PptxSceneTextAgreementTests
             }
 
             IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadXmlSpans(node, document, scene);
-            IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None);
+            IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpansAsync(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None).GetAwaiter().GetResult();
             comparedSpans += xmlSpans.Count;
             TestAssert.Equal(xmlSpans.Count, fedSpans.Count);
             for (int index = 0; index < xmlSpans.Count; index++)
@@ -280,7 +280,7 @@ internal static class PptxSceneTextAgreementTests
 
         IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> xmlSpans = ReadXmlSpans(node, document, scene);
         var resolver = CreateCannedPresentationResolver("memory:r14-scene-fed-grouped");
-        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpans(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None);
+        IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> fedSpans = PptxRenderer.BuildSceneFedTextSpansAsync(node, document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, false, InheritedSources(scene), resolver, CancellationToken.None).GetAwaiter().GetResult();
         TestAssert.Equal(xmlSpans.Count, fedSpans.Count);
         TestAssert.True(xmlSpans.Count > 0, "Expected the grouped shape to exercise fed-path spans.");
         for (int index = 0; index < xmlSpans.Count; index++)
@@ -352,7 +352,7 @@ internal static class PptxSceneTextAgreementTests
                     continue;
                 }
 
-                IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> spans = PptxRenderer.BuildSceneFedTableCellTextSpans(tableFrame, portableContext);
+                IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> spans = PptxRenderer.BuildSceneFedTableCellTextSpansAsync(tableFrame, portableContext).GetAwaiter().GetResult();
                 string sourceText = string.Concat(tableFrame.TextBody.Descendants(DrawingNamespace + "t").Select(text => text.Value));
                 TestAssert.Equal(sourceText, string.Concat(spans.Select(span => span.Run.Text)));
                 comparedSpans += spans.Count;
@@ -1157,10 +1157,10 @@ internal static class PptxSceneTextAgreementTests
             new Dictionary<string, PdfImageXObject?>(),
             null,
             CancellationToken.None);
-        MethodInfo readTableSpans = typeof(PptxRenderer).GetMethod("ReadTableFrameTextSpans", BindingFlags.NonPublic | BindingFlags.Static)
+        MethodInfo readTableSpans = typeof(PptxRenderer).GetMethod("ReadTableFrameTextSpansAsync", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Expected table span reader.");
         object? tableSpans;
-        try { tableSpans = readTableSpans.Invoke(null, [context, tableNode, PptxRenderer.GroupTransform.Identity, scene.Slides[0].SlideColorMap]); }
+        try { tableSpans = ((ValueTask<IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>>)readTableSpans.Invoke(null, [context, tableNode, PptxRenderer.GroupTransform.Identity, scene.Slides[0].SlideColorMap])!).GetAwaiter().GetResult(); }
         catch (TargetInvocationException ex) { throw ex.InnerException ?? ex; }
         PptxRenderer.PptxTextRunModel[] cellRuns = ((System.Collections.IList)tableSpans!)
             .Cast<PptxRenderer.PptxPositionedTextSpan>()
@@ -1323,10 +1323,10 @@ internal static class PptxSceneTextAgreementTests
             new Dictionary<string, PdfImageXObject?>(),
             null,
             CancellationToken.None);
-        MethodInfo readTableSpans = typeof(PptxRenderer).GetMethod("ReadTableFrameTextSpans", BindingFlags.NonPublic | BindingFlags.Static)
+        MethodInfo readTableSpans = typeof(PptxRenderer).GetMethod("ReadTableFrameTextSpansAsync", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Expected table span reader.");
         object? tableSpans;
-        try { tableSpans = readTableSpans.Invoke(null, [context, tableNode, PptxRenderer.GroupTransform.Identity, scene.Slides[0].SlideColorMap]); }
+        try { tableSpans = ((ValueTask<IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>>)readTableSpans.Invoke(null, [context, tableNode, PptxRenderer.GroupTransform.Identity, scene.Slides[0].SlideColorMap])!).GetAwaiter().GetResult(); }
         catch (TargetInvocationException ex) { throw ex.InnerException ?? ex; }
         PptxRenderer.PptxTextRunModel[] cellRuns = ((System.Collections.IList)tableSpans!)
             .Cast<PptxRenderer.PptxPositionedTextSpan>()
@@ -1440,8 +1440,11 @@ internal static class PptxSceneTextAgreementTests
             // Exercise the live independent XML layout on the original fixture;
             // do not retain the obsolete shape-cloning production wrapper.
             MethodInfo build = typeof(PptxRenderer).GetMethods(flags)
-                .Single(method => method.Name == "BuildTextLayoutModel" && method.GetParameters().Length == 9);
-            object layout = build.Invoke(null, [TestAssert.NotNull(node.Source.Document), document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, includePlaceholders, InheritedSources(scene), resolver, CancellationToken.None])!;
+                .Single(method => method.Name == "BuildTextLayoutModelAsync" && method.GetParameters().Length == 9);
+            object pending = build.Invoke(null, [TestAssert.NotNull(node.Source.Document), document, scene.Slides[0].Theme, scene.Slides[0].SlideColorMap, 1, includePlaceholders, InheritedSources(scene), resolver, CancellationToken.None])!;
+            var task = (Task)pending.GetType().GetMethod("AsTask")!.Invoke(pending, null)!;
+            task.GetAwaiter().GetResult();
+            object layout = task.GetType().GetProperty("Result")!.GetValue(task)!;
             var frames = (System.Collections.IEnumerable)layout.GetType().GetProperty("Frames")!.GetValue(layout)!;
             TestAssert.True(frames.Cast<object>().All(frame =>
             {

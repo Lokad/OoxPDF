@@ -45,12 +45,12 @@ internal static class PptxTableDefaultTests
         XDocument xml = package.LoadXml(package.GetPart(document.Slides[0].PartName)!, default);
         string before = xml.ToString(SaveOptions.DisableFormatting);
         var renderer = new PptxRenderer(new PortableRenderingTests.PinnedResolver());
-        string first = renderer.RenderPages(document, package, null, default).Single().Content;
-        string second = renderer.RenderPages(document, package, null, default).Single().Content;
+        string first = renderer.RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single().Content;
+        string second = renderer.RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single().Content;
         TestAssert.Equal(first, second);
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
-        TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPages(document, package, null, cancelled.Token).ToArray());
+        TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(document, package, null, cancelled.Token).ToBlockingEnumerable().ToArray());
         TestAssert.Equal(before, xml.ToString(SaveOptions.DisableFormatting));
     }
 
@@ -59,7 +59,7 @@ internal static class PptxTableDefaultTests
         using var input = File.OpenRead(path);
         OoxPackage package = OoxPackage.Open(input, default);
         PptxDocument document = new PptxReader().Read(package, default);
-        PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPages(document, package, null, default).Single();
+        PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
         // The first text object paints the header; the body has its own bold
         // inherited formatting. The pinned face paints requested bold with stroke.
         int start = page.Content.IndexOf("BT" + Environment.NewLine, StringComparison.Ordinal);

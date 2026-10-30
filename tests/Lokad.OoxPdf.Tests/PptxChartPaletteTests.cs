@@ -129,7 +129,7 @@ internal static class PptxChartPaletteTests
         };
         var (document, package) = PptxTests.BuildSingleChartPackage(chart, parts);
         var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
-            .RenderPages(document, package, null, default).Single();
+            .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
         return page;
     }
 

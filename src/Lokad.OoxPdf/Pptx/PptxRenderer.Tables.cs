@@ -64,31 +64,31 @@ internal sealed partial class PptxRenderer
         bool[,] SkippedVerticalSegments,
         bool[,] SkippedHorizontalSegments);
 
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneTableTextSpans(PptxRenderContext context, bool includeMasterNodes = true)
+    private static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> ReadSceneTableTextSpansAsync(PptxRenderContext context, bool includeMasterNodes = true)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
-        // same visibility rule as shape preflight (see ReadSceneShapeTextSpans).
+        // same visibility rule as shape preflight (see ReadSceneShapeTextSpansAsync).
         if (includeMasterNodes)
         {
-            AddSceneTableTextSpans(context.SceneSlide.MasterNodes, context, textSpans, GroupTransform.Identity, context.MasterColorMap);
+            await AddSceneTableTextSpansAsync(context.SceneSlide.MasterNodes, context, textSpans, GroupTransform.Identity, context.MasterColorMap).ConfigureAwait(false);
         }
-        AddSceneTableTextSpans(context.SceneSlide.LayoutNodes, context, textSpans, GroupTransform.Identity, context.LayoutColorMap);
-        AddSceneTableTextSpans(context.SceneSlide.SlideNodes, context, textSpans, GroupTransform.Identity, context.SlideColorMap);
+        await AddSceneTableTextSpansAsync(context.SceneSlide.LayoutNodes, context, textSpans, GroupTransform.Identity, context.LayoutColorMap).ConfigureAwait(false);
+        await AddSceneTableTextSpansAsync(context.SceneSlide.SlideNodes, context, textSpans, GroupTransform.Identity, context.SlideColorMap).ConfigureAwait(false);
 
         return textSpans;
     }
 
-    private static IReadOnlyList<PptxTableCellTextFrame> ReadSceneTableTextFrames(PptxRenderContext context)
+    private static async ValueTask<IReadOnlyList<PptxTableCellTextFrame>> ReadSceneTableTextFramesAsync(PptxRenderContext context)
     {
         var textFrames = new List<PptxTableCellTextFrame>();
-        AddSceneTableTextFrames(context.SceneSlide.MasterNodes, context, textFrames, GroupTransform.Identity, context.MasterColorMap);
-        AddSceneTableTextFrames(context.SceneSlide.LayoutNodes, context, textFrames, GroupTransform.Identity, context.LayoutColorMap);
-        AddSceneTableTextFrames(context.SceneSlide.SlideNodes, context, textFrames, GroupTransform.Identity, context.SlideColorMap);
+        await AddSceneTableTextFramesAsync(context.SceneSlide.MasterNodes, context, textFrames, GroupTransform.Identity, context.MasterColorMap).ConfigureAwait(false);
+        await AddSceneTableTextFramesAsync(context.SceneSlide.LayoutNodes, context, textFrames, GroupTransform.Identity, context.LayoutColorMap).ConfigureAwait(false);
+        await AddSceneTableTextFramesAsync(context.SceneSlide.SlideNodes, context, textFrames, GroupTransform.Identity, context.SlideColorMap).ConfigureAwait(false);
 
         return textFrames;
     }
 
-    private static void AddSceneTableTextSpans(
+    private static async ValueTask AddSceneTableTextSpansAsync(
         IReadOnlyList<PptxSceneNode> nodes,
         PptxRenderContext context,
         List<PptxPositionedTextSpan> textSpans,
@@ -99,18 +99,18 @@ internal sealed partial class PptxRenderer
         {
             if (node.Kind == PptxSceneNodeKind.Table)
             {
-                textSpans.AddRange(ReadTableFrameTextSpans(context, node, transform, colorMap));
+                textSpans.AddRange((await ReadTableFrameTextSpansAsync(context, node, transform, colorMap).ConfigureAwait(false)));
                 continue;
             }
 
             if (node.Kind == PptxSceneNodeKind.Group)
             {
-                AddSceneTableTextSpans(node.Children, context, textSpans, transform.Combine(ToGroupTransform(node.GroupTransform)), colorMap);
+                await AddSceneTableTextSpansAsync(node.Children, context, textSpans, transform.Combine(ToGroupTransform(node.GroupTransform)), colorMap).ConfigureAwait(false);
             }
         }
     }
 
-    private static void AddSceneTableTextFrames(
+    private static async ValueTask AddSceneTableTextFramesAsync(
         IReadOnlyList<PptxSceneNode> nodes,
         PptxRenderContext context,
         List<PptxTableCellTextFrame> textFrames,
@@ -124,31 +124,31 @@ internal sealed partial class PptxRenderer
                 ShapeBounds? bounds = node.Bounds is { } rawBounds
                     ? transform.Apply(ToShapeBounds(rawBounds))
                     : null;
-                IReadOnlyList<PptxTableCellTextFrame> tableTextFrames = GetOrBuildTableFrameLayout(context, bounds, node, colorMap)?.TextFrames ?? [];
+                IReadOnlyList<PptxTableCellTextFrame> tableTextFrames = (await GetOrBuildTableFrameLayoutAsync(context, bounds, node, colorMap).ConfigureAwait(false))?.TextFrames ?? [];
                 textFrames.AddRange(tableTextFrames);
                 continue;
             }
 
             if (node.Kind == PptxSceneNodeKind.Group)
             {
-                AddSceneTableTextFrames(node.Children, context, textFrames, transform.Combine(ToGroupTransform(node.GroupTransform)), colorMap);
+                await AddSceneTableTextFramesAsync(node.Children, context, textFrames, transform.Combine(ToGroupTransform(node.GroupTransform)), colorMap).ConfigureAwait(false);
             }
         }
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadTableFrameTextSpans(PptxRenderContext context, PptxSceneNode node, GroupTransform transform, PptxColorMap colorMap)
+    private static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> ReadTableFrameTextSpansAsync(PptxRenderContext context, PptxSceneNode node, GroupTransform transform, PptxColorMap colorMap)
     {
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        return GetOrBuildTableFrameLayout(context, bounds, node, colorMap)?.TextSpans ?? [];
+        return (await GetOrBuildTableFrameLayoutAsync(context, bounds, node, colorMap).ConfigureAwait(false))?.TextSpans ?? [];
     }
 
     // font collection rebuilt fills, borders, row metrics, frames, and spans
     // that painting rebuilds again. The layout is a pure function of (node, bounds,
     // color map) within a slide render; the style diagnostic rides separately so its
     // paint-order emission count is preserved exactly.
-    private static TableFrameLayout? GetOrBuildTableFrameLayout(
+    private static async ValueTask<TableFrameLayout?> GetOrBuildTableFrameLayoutAsync(
         PptxRenderContext context,
         ShapeBounds? bounds,
         PptxSceneNode node,
@@ -156,7 +156,7 @@ internal sealed partial class PptxRenderer
     {
         if (context.TableFrameMemo is null || node.Table is null)
         {
-            return BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false, colorMap);
+            return (await BuildTableFrameLayoutAsync(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false, colorMap).ConfigureAwait(false));
         }
 
         var key = new PptxTableFrameMemoKey(node, bounds, colorMap);
@@ -165,7 +165,7 @@ internal sealed partial class PptxRenderer
             return cached;
         }
 
-        TableFrameLayout? layout = BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false, colorMap);
+        TableFrameLayout? layout = (await BuildTableFrameLayoutAsync(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false, colorMap).ConfigureAwait(false));
         context.TableFrameMemo[key] = layout;
         return layout;
     }
@@ -199,7 +199,10 @@ internal sealed partial class PptxRenderer
             EmitUnsupportedTableStyleDiagnostic(context, node.Table);
         }
 
-        TableFrameLayout? layout = GetOrBuildTableFrameLayout(context, bounds, node, colorMap);
+        if (bounds is null || node.Table is null) return [];
+        var key = new PptxTableFrameMemoKey(node, bounds, colorMap);
+        if (context.TableFrameMemo is null || !context.TableFrameMemo.TryGetValue(key, out TableFrameLayout? layout))
+            throw new InvalidOperationException("Table layout must be prepared before painting.");
         if (layout is null)
         {
             return [];
@@ -209,7 +212,7 @@ internal sealed partial class PptxRenderer
         return layout.TextSpans;
     }
 
-    private static TableFrameLayout? BuildTableFrameLayout(PptxRenderContext context, ShapeBounds? bounds, PptxSceneTable? sceneTable, bool emitUnsupportedStyleDiagnostic, PptxColorMap colorMap)
+    private static async ValueTask<TableFrameLayout?> BuildTableFrameLayoutAsync(PptxRenderContext context, ShapeBounds? bounds, PptxSceneTable? sceneTable, bool emitUnsupportedStyleDiagnostic, PptxColorMap colorMap)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
         var textFrames = new List<PptxTableCellTextFrame>();
@@ -248,7 +251,7 @@ internal sealed partial class PptxRenderer
 
         double declaredTableHeight = rawRowHeights.Sum() * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch;
         double tableHeightSlackFactor = frameHeight / Math.Max(PptxTextMetricRules.TextStateTolerance, declaredTableHeight);
-        double[] rowHeights = ResolveTableRowHeights(context, table, rawColumnWidths, rawRowHeights, columnScale, frameHeight, colorMap);
+        double[] rowHeights = (await ResolveTableRowHeightsAsync(context, table, rawColumnWidths, rawRowHeights, columnScale, frameHeight, colorMap).ConfigureAwait(false));
 
         // bound row/column products before allocating dense border grids.
         // Declared grid columns and rows can both be numerous while actual cells
@@ -346,7 +349,7 @@ internal sealed partial class PptxRenderer
                     .Skip(rowIndex)
                     .Take(rowSpan)
                     .Sum() * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch;
-                AddTableCellTextSpans(context, sceneCell, rowIndex, columnIndex, rowSpan, columnSpan, declaredRowHeight, declaredRowSpanHeight, declaredTableHeight, tableHeightSlackFactor, cellX, cellBottom, columnWidth, cellHeight, textSpans, textFrames, colorMap, sceneCell.StyleText);
+                await AddTableCellTextSpansAsync(context, sceneCell, rowIndex, columnIndex, rowSpan, columnSpan, declaredRowHeight, declaredRowSpanHeight, declaredTableHeight, tableHeightSlackFactor, cellX, cellBottom, columnWidth, cellHeight, textSpans, textFrames, colorMap, sceneCell.StyleText).ConfigureAwait(false);
                 cellX += columnWidth;
                 nextColumn = columnIndex + columnSpan;
             }
@@ -382,7 +385,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static double[] ResolveTableRowHeights(
+    private static async ValueTask<double[]> ResolveTableRowHeightsAsync(
         PptxRenderContext context,
         PptxSceneTable sceneTable,
         IReadOnlyList<double> rawColumnWidths,
@@ -437,7 +440,7 @@ internal sealed partial class PptxRenderer
                     .Skip(columnIndex)
                     .Take(columnSpan)
                     .Sum() * columnScale;
-                double minimumHeight = EstimateTableCellMinimumHeight(sceneCell, columnWidth, sceneCell.StyleText);
+                double minimumHeight = (await EstimateTableCellMinimumHeightAsync(sceneCell, columnWidth, sceneCell.StyleText).ConfigureAwait(false));
                 if (minimumHeight > PptxTextMetricRules.TextStateTolerance)
                 {
                     if (rowSpan <= 1)
@@ -489,7 +492,7 @@ internal sealed partial class PptxRenderer
 
         return rowHeights;
 
-        double EstimateTableCellMinimumHeight(PptxSceneTableCell sceneCell, double width, PptxSceneTableCellTextStyle tableStyleTextStyle)
+        async ValueTask<double> EstimateTableCellMinimumHeightAsync(PptxSceneTableCell sceneCell, double width, PptxSceneTableCellTextStyle tableStyleTextStyle)
         {
             PptxTableCellTextFrame? tableTextFrame = BuildTableCellTextFrame(sceneCell, -1, -1, 1, 1, 1d, 1d, 1d, 1d, 0d, 0d, width, 1d, colorMap, tableStyleTextStyle);
             if (tableTextFrame is null)
@@ -497,8 +500,8 @@ internal sealed partial class PptxRenderer
                 return 0d;
             }
 
-            PptxTextFrameModel frame = BuildTextFrameModel(tableTextFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken);
-            double textHeight = EstimateTextHeight(frame.Paragraphs, frame.TextWrapWidth, frame.BodyProperties);
+            PptxTextFrameModel frame = (await BuildTextFrameModelAsync(tableTextFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken).ConfigureAwait(false));
+            double textHeight = EstimateTextHeight(frame.Paragraphs, frame.TextWrapWidth, frame.BodyProperties, context.FontResolver, context.CancellationToken);
             if (textHeight <= PptxTextMetricRules.TextStateTolerance)
             {
                 return 0d;
@@ -621,7 +624,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void AddTableCellTextSpans(
+    private static async ValueTask AddTableCellTextSpansAsync(
         PptxRenderContext context,
         PptxSceneTableCell sceneCell,
         int rowIndex,
@@ -648,7 +651,7 @@ internal sealed partial class PptxRenderer
         }
 
         textFrames.Add(tableTextFrame);
-        spans.AddRange(BuildSceneFedTableCellTextSpans(tableTextFrame, context));
+        spans.AddRange((await BuildSceneFedTableCellTextSpansAsync(tableTextFrame, context).ConfigureAwait(false)));
     }
 
     private static PptxTableCellTextFrame? BuildTableCellTextFrame(PptxSceneTableCell sceneCell, int rowIndex, int columnIndex, int rowSpan, int columnSpan, double declaredRowHeight, double declaredRowSpanHeight, double declaredTableHeight, double tableHeightSlackFactor, double x, double y, double width, double height, PptxColorMap colorMap, PptxSceneTableCellTextStyle tableStyleTextStyle)

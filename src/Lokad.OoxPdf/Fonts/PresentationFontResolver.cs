@@ -47,6 +47,9 @@ internal sealed class PresentationFontResolver
         string.Equals(primaryResolution.Source.StableId, catalogResolution.Source.StableId, StringComparison.Ordinal);
 
     internal OpenTypeFont? GetOrLoadOpenTypeFont(FontFaceResolution resolution, CancellationToken cancellationToken)
+        => GetOrLoadOpenTypeFontAsync(resolution, cancellationToken).GetAwaiter().GetResult();
+
+    internal async ValueTask<OpenTypeFont?> GetOrLoadOpenTypeFontAsync(FontFaceResolution resolution, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var key = (resolution.Source.StableId, resolution.FontFaceIndex);
@@ -55,7 +58,7 @@ internal sealed class PresentationFontResolver
             return cached;
         }
 
-        cached = FontProgramLoader.Load(resolution, cancellationToken);
+        cached = await FontProgramLoader.LoadAsync(resolution, cancellationToken).ConfigureAwait(false);
         openTypeFonts[key] = cached;
         return cached;
     }

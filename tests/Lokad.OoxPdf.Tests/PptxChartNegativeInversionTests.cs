@@ -103,7 +103,7 @@ internal static class PptxChartNegativeInversionTests
     {
         var (document, package) = PptxTests.BuildSingleChartPackage(chart);
         return new PptxRenderer(new PortableRenderingTests.PinnedResolver())
-            .RenderPages(document, package, null, default).Single();
+            .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
     }
 
     // Assert painted source color, independent of rectangle/path grouping and IDs.

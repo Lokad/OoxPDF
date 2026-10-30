@@ -337,6 +337,9 @@ internal sealed partial class PptxRenderer
         }
 
         public ResolvedGlyphFont? ResolveGlyphFont(string? familyName, bool bold, bool italic, int codePoint)
+            => ResolveGlyphFontAsync(familyName, bold, italic, codePoint).GetAwaiter().GetResult();
+
+        public async ValueTask<ResolvedGlyphFont?> ResolveGlyphFontAsync(string? familyName, bool bold, bool italic, int codePoint)
         {
             cancellationToken.ThrowIfCancellationRequested();
             string requestedFamily = PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName);
@@ -347,7 +350,7 @@ internal sealed partial class PptxRenderer
             }
 
             FontFaceResolution? primaryResolution = ResolveFontResolution(requestedFamily, bold, italic);
-            OpenTypeFont? primaryFont = LoadFont(primaryResolution);
+            OpenTypeFont? primaryFont = await LoadFontAsync(primaryResolution).ConfigureAwait(false);
             if (primaryResolution is not null && primaryFont is not null && primaryFont.MapCodePoint(codePoint) != 0)
             {
                 cached = new ResolvedGlyphFont(requestedFamily, requestedFamily, PptxGlyphTypefaceResolutionSource.Primary, primaryFont, bold && !primaryResolution.Bold);
@@ -370,7 +373,7 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                OpenTypeFont? font = LoadFont(resolution);
+                OpenTypeFont? font = await LoadFontAsync(resolution).ConfigureAwait(false);
                 if (font is not null && font.MapCodePoint(codePoint) != 0)
                 {
                     cached = new ResolvedGlyphFont(requestedFamily, resolution.FamilyName, PptxGlyphTypefaceResolutionSource.Fallback, font, bold && !resolution.Bold);
@@ -386,6 +389,15 @@ internal sealed partial class PptxRenderer
         public OpenTypeFont? ResolveOpenTypeFont(string? familyName, bool bold, bool italic)
         {
             return ResolveFont(PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName), bold, italic);
+        }
+
+        public async ValueTask PrepareAsync(string? familyName, bool bold, bool italic, string text)
+        {
+            // Baselines and empty paragraphs need the selected face even when
+            // there are no drawable glyphs. Fallback candidates stay demand-driven.
+            await LoadFontAsync(ResolveFontResolution(PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName), bold, italic)).ConfigureAwait(false);
+            foreach (Rune rune in text.EnumerateRunes())
+                await ResolveGlyphFontAsync(familyName, bold, italic, rune.Value).ConfigureAwait(false);
         }
 
         public bool RequestedStyleRequiresSyntheticBold(string? familyName, bool bold, bool italic)
@@ -439,6 +451,9 @@ internal sealed partial class PptxRenderer
         }
 
         private OpenTypeFont? LoadFont(FontFaceResolution? resolution)
+            => LoadFontAsync(resolution).GetAwaiter().GetResult();
+
+        private async ValueTask<OpenTypeFont?> LoadFontAsync(FontFaceResolution? resolution)
         {
             if (resolution is null)
             {
@@ -447,7 +462,7 @@ internal sealed partial class PptxRenderer
 
             // Share the owning resolver's program cache so per-frame estimators
             // do not reload already-loaded faces (G04).
-            OpenTypeFont? cached = resolver.GetOrLoadOpenTypeFont(resolution, cancellationToken);
+            OpenTypeFont? cached = await resolver.GetOrLoadOpenTypeFontAsync(resolution, cancellationToken).ConfigureAwait(false);
             if (cached is not null && !cached.HasTrueTypeOutlines)
             {
                 // CFF/OpenType-CFF fonts have valid metrics but no TrueType outlines,

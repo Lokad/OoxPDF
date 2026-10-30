@@ -573,9 +573,9 @@ internal static partial class PublicApiTests
         finally { Directory.Delete(directory, recursive: true); }
     }
 
-    private static byte[] ReadMinimalPptxBytes()
+    private static byte[] ReadMinimalPptxBytes(string? text = null, bool table = false)
     {
-        string path = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        var parts = new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
@@ -589,7 +589,30 @@ internal static partial class PublicApiTests
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>
                 """,
-        });
+        };
+        if (text is not null)
+        {
+            string body = "<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz=\"1200\"/><a:t>" +
+                System.Security.SecurityElement.Escape(text) + "</a:t></a:r></a:p></p:txBody>";
+            parts["ppt/slides/slide1.xml"] = parts["ppt/slides/slide1.xml"].Replace("</p:sp>", body + "</p:sp>", StringComparison.Ordinal);
+        }
+        if (table)
+        {
+            parts["ppt/slides/slide1.xml"] = $$"""
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:graphicFrame>
+                    <p:nvGraphicFramePr><p:cNvPr id="2" name="Table"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+                    <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+                    <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl>
+                      <a:tblPr/><a:tblGrid><a:gridCol w="1828800"/></a:tblGrid><a:tr h="914400"><a:tc>
+                        <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1200"/><a:t>{{System.Security.SecurityElement.Escape(text ?? string.Empty)}}</a:t></a:r></a:p></a:txBody><a:tcPr/>
+                      </a:tc></a:tr>
+                    </a:tbl></a:graphicData></a:graphic>
+                  </p:graphicFrame></p:spTree></p:cSld>
+                </p:sld>
+                """;
+        }
+        string path = TestFixtures.WriteTempPackage(".pptx", parts);
         return File.ReadAllBytes(path);
     }
 

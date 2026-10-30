@@ -1676,7 +1676,7 @@ internal static class PortableRenderingTests
         var package = OoxPackage.Open(Case("pptx-ladder-11-composite-chart-port.pptx"), default);
         var document = new PptxReader().Read(package, default);
         var diagnostics = new List<OoxPdfDiagnostic>();
-        var pages = new PptxRenderer(new PinnedResolver()).RenderPages(document, package, diagnostics.Add, default).ToArray();
+        var pages = new PptxRenderer(new PinnedResolver()).RenderPagesAsync(document, package, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
         TestAssert.Equal(1, pages.Length);
         string text = DocxPageFootnoteNumberingTests.DecodeText(pages.Single());
         TestAssert.Contains("Sales Overview", text);
@@ -1694,7 +1694,7 @@ internal static class PortableRenderingTests
         var document = new PptxReader().Read(package, default);
         var runs = PptxRenderer.InspectTextGlyphRuns(document, package, 0,
             inspectionFonts: new PresentationFontResolver(resolver));
-        var pages = new PptxRenderer(resolver).RenderPages(document, package, null, default).ToArray();
+        var pages = new PptxRenderer(resolver).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().ToArray();
         TestAssert.True(runs.Count > 0 && runs.All(run => run.ResolvedFontFamily == "DejaVu Sans"),
             "Inspection must use the supplied face for measurement and font preparation.");
         string inspected = string.Concat(runs.Select(run => run.Text));

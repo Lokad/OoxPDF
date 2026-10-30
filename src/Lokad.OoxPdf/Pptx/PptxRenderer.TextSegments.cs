@@ -341,7 +341,7 @@ internal sealed partial class PptxRenderer
         return transform;
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForSceneNode(PptxSceneNode node, PptxRenderContext context, PptxColorMap colorMap, bool includePlaceholders)
+    private static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> ReadTextSpansForSceneNodeAsync(PptxSceneNode node, PptxRenderContext context, PptxColorMap colorMap, bool includePlaceholders)
     {
         if (node.TextBody is null)
         {
@@ -354,7 +354,7 @@ internal sealed partial class PptxRenderer
         Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>? memo = context.TextSpanMemo;
         if (memo is null)
         {
-            return ComputeTextSpansForSceneNode(node, context, colorMap, includePlaceholders);
+            return (await ComputeTextSpansForSceneNodeAsync(node, context, colorMap, includePlaceholders).ConfigureAwait(false));
         }
 
         var key = new PptxTextSpanMemoKey(node, colorMap, includePlaceholders);
@@ -363,20 +363,20 @@ internal sealed partial class PptxRenderer
             return cached;
         }
 
-        IReadOnlyList<PptxPositionedTextSpan> spans = ComputeTextSpansForSceneNode(node, context, colorMap, includePlaceholders);
+        IReadOnlyList<PptxPositionedTextSpan> spans = (await ComputeTextSpansForSceneNodeAsync(node, context, colorMap, includePlaceholders).ConfigureAwait(false));
         memo[key] = spans;
         return spans;
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> ComputeTextSpansForSceneNode(PptxSceneNode node, PptxRenderContext context, PptxColorMap colorMap, bool includePlaceholders)
+    private static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> ComputeTextSpansForSceneNodeAsync(PptxSceneNode node, PptxRenderContext context, PptxColorMap colorMap, bool includePlaceholders)
     {
-        return BuildSceneFedTextSpans(node, context.Document, context.Theme, colorMap, context.DisplayedSlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver, context.CancellationToken);
+        return (await BuildSceneFedTextSpansAsync(node, context.Document, context.Theme, colorMap, context.DisplayedSlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver, context.CancellationToken).ConfigureAwait(false));
     }
 
     // Mongolian vertical Latin runs as a horizontal left-to-right row of clockwise-spun glyphs
     // (Office emits per-run 0 -1 1 0 text matrices). The layout engine stacks vertical text downward
     // under a shared pivot, so remap those spans to per-run clockwise matrices here. Tables never
-    // reach this path (table cells use BuildSceneFedTableCellTextSpans below).
+    // reach this path (table cells use BuildSceneFedTableCellTextSpansAsync below).
     // Single-sample calibration on pptx-ladder-04-vertical-text-port: row starts at shape X plus
     // 6.15pt with a self-calibrating pitch (median nonzero run-Y step, 28.8pt on the fixture).
     private const double MongolianVerticalRowStartInset = 6.15d;
@@ -467,11 +467,12 @@ internal sealed partial class PptxRenderer
 
     // R14-deeper: table cells resolve paragraphs through the shared scene readers;
     // the frame geometry and downstream layout stay on the existing path.
-    internal static IReadOnlyList<PptxPositionedTextSpan> BuildSceneFedTableCellTextSpans(PptxTableCellTextFrame tableFrame, PptxRenderContext context)
+    internal static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> BuildSceneFedTableCellTextSpansAsync(PptxTableCellTextFrame tableFrame, PptxRenderContext context)
     {
-        PptxTextFrameModel frameModel = BuildTextFrameModel(tableFrame, context.Document, context.Theme, context.DisplayedSlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken);
+        PptxTextFrameModel frameModel = (await BuildTextFrameModelAsync(tableFrame, context.Document, context.Theme, context.DisplayedSlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken).ConfigureAwait(false));
         IReadOnlyList<PptxSceneTextParagraph> cellParagraphs = PptxSceneBuilder.ReadTableCellParagraphs(tableFrame.TextBody, context.InheritedXml);
         IReadOnlyList<PptxTextParagraphModel> fedParagraphs = BuildSceneFedParagraphModels(cellParagraphs, frameModel, context.Theme, tableFrame.ColorMap, context.DisplayedSlideNumber, shapeFontColor: null, tableFrame.TextStyle);
+        await PrepareParagraphFontsAsync(fedParagraphs, context.FontResolver, context.CancellationToken).ConfigureAwait(false);
         var fedFrame = frameModel with { Paragraphs = fedParagraphs };
         PptxTextFrameLayout layout = BuildTextFrameLayout(fedFrame, context.Document, new TextAdvanceEstimator(context.FontResolver, context.CancellationToken));
         return FlattenTextLayoutToSpans(new PptxTextLayoutModel(new[] { layout }), context.FontResolver);

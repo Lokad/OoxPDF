@@ -22,7 +22,7 @@ internal static class PptxMasterThemeTests
             TestAssert.Equal(expected.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
             WithDeck(Parts(path), (document, package) =>
             {
-                var pages = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPages(document, package, null, default).ToArray();
+                var pages = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().ToArray();
                 TestAssert.Equal(2, pages.Length);
                 // Exercise paint before scene metadata, so the preceding runtime
                 // also fails this regression on the demonstrated wrong color.
@@ -60,7 +60,7 @@ internal static class PptxMasterThemeTests
             TestAssert.Equal(new RgbColor(0, 0, 255), scene.Slides[1].MasterBackground.Color);
             for (int index = 0; index < 2; index++)
                 TestAssert.Equal(index == 0 ? "Arial" : "Courier New", PptxRenderer.InspectTextFrameModels(document, package, index).First().Paragraphs.Single().Runs.Single().Typeface);
-            var pages = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPages(document, package, null, default).ToArray();
+            var pages = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Contains("1 0 0 rg", pages[0].Content);
             TestAssert.Contains("0 0 1 rg", pages[1].Content);
         });

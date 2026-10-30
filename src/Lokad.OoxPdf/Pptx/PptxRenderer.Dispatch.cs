@@ -372,7 +372,10 @@ internal sealed partial class PptxRenderer
         }
 
         var hyperlinkScope = new PptxTextHyperlinkScope(context, sourcePartName, linkAnnotations, reportedHyperlinkIds);
-        DrawTextSpansWithFonts(ReadTextSpansForSceneNode(node, context, sourceColorMap, renderPlaceholders), graphics, fonts, hyperlinkScope);
+        var key = new PptxTextSpanMemoKey(node, sourceColorMap, renderPlaceholders);
+        if (context.TextSpanMemo is null || !context.TextSpanMemo.TryGetValue(key, out var spans))
+            throw new InvalidOperationException("Shape text must be prepared before painting.");
+        DrawTextSpansWithFonts(spans, graphics, fonts, hyperlinkScope);
     }
 
     private static void RenderUnsupportedGraphicFrame(PptxSceneNode node, PptxRenderContext context, string? sourcePartName)
