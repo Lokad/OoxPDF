@@ -2,6 +2,13 @@
 
 ## 0.3.0
 
+An explicit `FontResolver` now defines the entire allowed font universe for PPTX
+as well as DOCX. Custom resolvers without a built-in catalog no longer gain
+implicit Windows fallback fonts. Provide all required glyph coverage through
+the resolver or a font pack; missing glyphs retain the diagnosed visible
+replacement. Null still selects local Windows discovery. This can change PPTX
+output that previously depended on ambient fonts despite supplying a custom resolver.
+
 `OoxPdfLimitExceededException` now exposes `Kind` and `Scope`. Host admission
 refusal reports `MemoryAdmission` / `Conversion`; the existing constructors retain
 `DocumentBound` / `Conversion`. Custom shared-resource providers can use the new

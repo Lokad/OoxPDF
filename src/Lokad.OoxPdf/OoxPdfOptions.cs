@@ -23,6 +23,10 @@ public sealed class OoxPdfOptions
     /// </summary>
     public DateTimeOffset? FixedCreationDate { get; init; }
 
+    /// <summary>
+    /// Complete allowed font source. A custom resolver does not acquire additional
+    /// system fonts implicitly. Null selects the local Windows font resolver.
+    /// </summary>
     public IFontResolver? FontResolver { get; init; }
 
     public Action<OoxPdfDiagnostic>? DiagnosticSink { get; init; }

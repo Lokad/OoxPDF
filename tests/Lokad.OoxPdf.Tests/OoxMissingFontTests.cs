@@ -94,7 +94,7 @@ internal static class OoxMissingFontTests
                   <p:cSld><p:spTree><p:sp>
                     <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="7315200" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody><a:bodyPr/><a:lstStyle/>
-                      <a:p><a:r><a:rPr sz="2400"><a:latin typeface="FaceA"/></a:rPr><a:t>A中B</a:t></a:r></a:p>
+                      <a:p><a:r><a:rPr sz="2400"><a:latin typeface="FaceA"/></a:rPr><a:t>AĀ中B</a:t></a:r></a:p>
                     </p:txBody>
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>
@@ -106,21 +106,17 @@ internal static class OoxMissingFontTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, FontResolver = resolver, DiagnosticSink = diagnostics.Add });
         string pdf = File.ReadAllText(output, Encoding.Latin1);
         string extracted = ExtractCidMappedText(pdf);
-        TestAssert.Contains("A?B", extracted);
+        TestAssert.Contains("A??B", extracted);
         OoxPdfDiagnostic missing = diagnostics.Single(d => d.Id == "FONT_MISSING_GLYPHS");
+        TestAssert.Contains("U+0100", missing.Message);
         TestAssert.Contains("U+4E2D", missing.Message);
     }
 
-    private sealed class SingleFamilyResolver(string family, byte[] bytes) : IFontResolver, IFontCatalog
+    private sealed class SingleFamilyResolver(string family, byte[] bytes) : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request)
         {
             return new FontFaceResolution(request.FamilyName, family, new FontStyleKey(request.Bold, request.Italic, 400, 0, false), new MemoryFontProgramSource("test:" + family, bytes), IsFallback: false);
-        }
-
-        public IReadOnlyList<FontFaceResolution> GetDiscoveredFonts()
-        {
-            return [Resolve(new FontRequest(family))];
         }
     }
 

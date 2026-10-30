@@ -66,6 +66,11 @@ Without resolved font programs, conversion may still produce a PDF, but typograp
 
 Custom resolvers return a `FontFaceResolution` containing the requested and
 resolved families, style, collection face index and an `IFontProgramSource`.
+An explicit resolver defines the complete allowed font universe: the library
+does not add system fonts when a custom resolver lacks a catalog. Built-in font
+packs retain fallback among their supplied faces. Missing glyphs use the existing
+diagnosed replacement; supply the necessary coverage for faithful typography.
+Omitting `FontResolver` selects local Windows discovery.
 Use `MemoryFontProgramSource` for programs held in memory or implement the source
 interface for other storage. Different font programs need different stable IDs;
 published bytes must stay immutable and byte-identical for each ID. Resolvers

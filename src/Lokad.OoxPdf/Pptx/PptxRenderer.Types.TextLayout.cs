@@ -370,7 +370,7 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                OpenTypeFont? font = LoadFont(resolution, fromCatalog: true);
+                OpenTypeFont? font = LoadFont(resolution);
                 if (font is not null && font.MapCodePoint(codePoint) != 0)
                 {
                     cached = new ResolvedGlyphFont(requestedFamily, resolution.FamilyName, PptxGlyphTypefaceResolutionSource.Fallback, font, bold && !resolution.Bold);
@@ -438,7 +438,7 @@ internal sealed partial class PptxRenderer
             return cached;
         }
 
-        private OpenTypeFont? LoadFont(FontFaceResolution? resolution, bool fromCatalog = false)
+        private OpenTypeFont? LoadFont(FontFaceResolution? resolution)
         {
             if (resolution is null)
             {
@@ -447,7 +447,7 @@ internal sealed partial class PptxRenderer
 
             // Share the owning resolver's program cache so per-frame estimators
             // do not reload already-loaded faces (G04).
-            OpenTypeFont? cached = resolver.GetOrLoadOpenTypeFont(resolution, cancellationToken, fromCatalog);
+            OpenTypeFont? cached = resolver.GetOrLoadOpenTypeFont(resolution, cancellationToken);
             if (cached is not null && !cached.HasTrueTypeOutlines)
             {
                 // CFF/OpenType-CFF fonts have valid metrics but no TrueType outlines,

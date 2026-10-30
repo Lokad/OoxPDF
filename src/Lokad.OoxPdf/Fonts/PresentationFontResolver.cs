@@ -5,10 +5,9 @@ namespace Lokad.OoxPdf.Fonts;
 internal sealed class PresentationFontResolver
 {
     private readonly IFontResolver primary;
-    private readonly IFontCatalog fontCatalog;
-    // IDs are ordinal and scoped to their resolver. A separate discovery catalog
-    // must not alias the primary resolver; a primary catalog shares its cache.
-    private readonly Dictionary<(bool SeparateCatalog, string StableId, int FaceIndex), OpenTypeFont?> openTypeFonts = new();
+    private readonly IFontCatalog? fontCatalog;
+    // IDs are ordinal and scoped to the supplied resolver's font universe.
+    private readonly Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> openTypeFonts = new();
     private readonly Dictionary<(OpenTypeFont Font, ulong CodePointsHash), SubsetEntry> subsets = new();
 
     // RV01: per-conversion record of diagnosed missing-font families and glyph sets,
@@ -22,7 +21,7 @@ internal sealed class PresentationFontResolver
     public PresentationFontResolver(IFontResolver? primary)
     {
         this.primary = primary ?? new WindowsFontResolver();
-        fontCatalog = this.primary as IFontCatalog ?? new WindowsFontResolver();
+        fontCatalog = this.primary as IFontCatalog;
     }
 
     public FontFaceResolution Resolve(FontRequest request)
@@ -40,18 +39,17 @@ internal sealed class PresentationFontResolver
 
     public IReadOnlyList<FontFaceResolution> GetDiscoveredFonts()
     {
-        return fontCatalog.GetDiscoveredFonts();
+        return fontCatalog?.GetDiscoveredFonts() ?? [];
     }
 
     internal bool IsPrimaryProgram(FontFaceResolution primaryResolution, FontFaceResolution catalogResolution) =>
-        ReferenceEquals(primary, fontCatalog) &&
         primaryResolution.FontFaceIndex == catalogResolution.FontFaceIndex &&
         string.Equals(primaryResolution.Source.StableId, catalogResolution.Source.StableId, StringComparison.Ordinal);
 
-    internal OpenTypeFont? GetOrLoadOpenTypeFont(FontFaceResolution resolution, CancellationToken cancellationToken, bool fromCatalog = false)
+    internal OpenTypeFont? GetOrLoadOpenTypeFont(FontFaceResolution resolution, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var key = (fromCatalog && !ReferenceEquals(primary, fontCatalog), resolution.Source.StableId, resolution.FontFaceIndex);
+        var key = (resolution.Source.StableId, resolution.FontFaceIndex);
         if (openTypeFonts.TryGetValue(key, out OpenTypeFont? cached))
         {
             return cached;
