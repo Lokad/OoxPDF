@@ -1191,8 +1191,8 @@ internal sealed partial class DocxLayoutEngine
     // permutation renders, Word-COM rendered): tables without a fixed layout distribute
     // width by each column's widest cell instead of the grid, so skewed content
     // yields skewed columns even when the maxima occur in different rows.
-    // Fixed layout, explicit per-column preferred widths and spans keep the
-    // legacy path; content measurement mirrors cell layout inputs (single source with
+    // Fixed layout and explicit per-column preferred widths keep the legacy
+    // path; content measurement mirrors cell layout inputs (single source with
     // LayoutTableCellTextLines for text, design extents for drawings).
     private static IReadOnlyList<double>? TryResolveAutoLayoutContentColumns(
         DocxTable table,
@@ -1218,26 +1218,6 @@ internal sealed partial class DocxLayoutEngine
             return null;
         }
 
-        foreach (DocxTableRow row in table.Rows)
-        {
-            foreach (DocxTableCell cell in row.Cells)
-            {
-                if (Math.Max(1, cell.GridSpan) != 1)
-                {
-                    return null;
-                }
-
-                if (HasPreferredCellWidth(cell))
-                {
-                    return null;
-                }
-            }
-        }
-
-        // RV06: Office autofit ignores the grid (even a differentiated one) and sizes
-        // by content, so grid uniformity never selects the legacy path here. Fixed layout
-        // keeps grid widths through the LayoutValue guard above.
-
         int columnCount = table.ColumnWidthsPoints.Count != 0
             ? table.ColumnWidthsPoints.Count
             : GetMaxGridColumnCount(table);
@@ -1246,33 +1226,138 @@ internal sealed partial class DocxLayoutEngine
             return null;
         }
 
-        double[] pads = new double[columnCount];
-        double[] contentInsets = new double[columnCount];
-        double[] columnMaxima = new double[columnCount];
+        // The placement grid can contain subdivisions introduced by intersecting
+        // cell spans. Measure the smallest independently occupied intervals:
+        // a partially intersected interval is owned by its own cell, not twice
+        // by a neighboring span. Word's declared/joined and asymmetric controls
+        // agree, including removal of an unoccupied subdivision.
+        int[] shortestEnds = Enumerable.Repeat(columnCount + 1, columnCount).ToArray();
+        foreach (DocxTableRow row in table.Rows)
+        {
+            if (row.GridBefore != 0) return null; // Authored leading gaps retain their width policy.
+            int start = 0;
+            foreach (DocxTableCell cell in row.Cells)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int end = start + Math.Max(1, cell.GridSpan);
+                if (end > columnCount || HasPreferredCellWidth(cell)) return null;
+                shortestEnds[start] = Math.Min(shortestEnds[start], end);
+                start = end;
+            }
+        }
+        var intervals = new List<(int Start, int End)>();
+        int nextEnd = columnCount + 1;
+        for (int start = columnCount - 1; start >= 0; start--)
+        {
+            int end = shortestEnds[start];
+            if (end < nextEnd) intervals.Add((start, end));
+            nextEnd = Math.Min(nextEnd, end);
+        }
+        intervals.Reverse();
+        if (intervals.Count == 0) return null;
+        for (int index = 1; index < intervals.Count; index++)
+            if (intervals[index - 1].End > intervals[index].Start)
+                return null; // No independent partition for these crossing spans yet.
+        int[] starts = intervals.Select(interval => interval.Start).ToArray();
+        int[] ends = intervals.Select(interval => interval.End).ToArray();
+        int contentColumnCount = intervals.Count;
+
+        (int First, int Count, bool SinglesOnly) ContentColumns(int start, int end)
+        {
+            int first = Array.BinarySearch(starts, start);
+            if (first < 0) first = ~first;
+            int last = Array.BinarySearch(ends, end);
+            if (last < 0) last = ~last - 1;
+            int singles = 0, singleIndex = first;
+            for (int index = first; index <= last; index++)
+                if (ends[index] == starts[index] + 1) { singles++; singleIndex = index; }
+            // Word's single-grid columns own ordinary min/max constraints. A
+            // full-width cell enlarges those first, leaving a spanned interior
+            // interval's independently measured width in place (bridge control).
+            return singles == 1 ? (singleIndex, 1, false) : (first, last - first + 1, singles > 1);
+        }
+
+        double[] ProjectColumns(IReadOnlyList<double> widths)
+        {
+            var result = new double[columnCount];
+            for (int index = 0; index < intervals.Count; index++)
+            {
+                var (start, end) = intervals[index];
+                if (end == start + 1) { result[start] = widths[index]; continue; }
+                double hint = 0d;
+                for (int column = start; column < end; column++) hint += column < table.ColumnWidthsPoints.Count ? table.ColumnWidthsPoints[column] : 1d;
+                for (int column = start; column < end; column++)
+                    result[column] = hint > 0d ? widths[index] * (column < table.ColumnWidthsPoints.Count ? table.ColumnWidthsPoints[column] : 1d) / hint : widths[index] / (end - start);
+            }
+            return result;
+        }
+
+        // Natural columns use content rather than the grid hints. Only the
+        // placement of a subdivision within a measured interval uses its ratio.
+        double[] pads = new double[contentColumnCount];
+        double[] contentInsets = new double[contentColumnCount];
+        double[] columnMaxima = new double[contentColumnCount];
+        var spanningMaxima = new List<(int First, int Count, bool SinglesOnly, double Width, double Inset)>();
+
         bool hasDeletedContent = false;
         bool hasUnmeasuredBlocks = false;
         foreach (DocxTableRow row in table.Rows)
         {
-            for (int cellIndex = 0; cellIndex < row.Cells.Count && cellIndex < columnCount; cellIndex++)
+            int start = 0;
+            foreach (DocxTableCell cell in row.Cells)
             {
-                DocxTableCell cell = row.Cells[cellIndex];
+                int end = start + Math.Max(1, cell.GridSpan);
+                var (first, count, singlesOnly) = ContentColumns(start, end);
+                if (count <= 0) return null;
+                start = end;
                 hasUnmeasuredBlocks |= GetTableCellLayoutBodyElements(cell).Any(element => element is DocxTableElement);
                 double cellVisibleMax = MeasureTableCellMaxContentWidth(cell, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, fixedScale, commentMarkerLabels, mathEquations, cancellationToken);
                 double cellDeletedTotal = MeasureTableCellDeletedTextWidth(cell, textMeasurer);
                 hasDeletedContent |= cellDeletedTotal > 0d;
-                columnMaxima[cellIndex] = Math.Max(columnMaxima[cellIndex], cellVisibleMax + cellDeletedTotal);
 
                 double cellPad = ResolveTableCellHorizontalPadding(cell.Margins.LeftPoints, fixedScale) +
                     ResolveTableCellHorizontalPadding(cell.Margins.RightPoints, fixedScale) +
                     ResolveTableCellBorderContentInset(cell, "left", fixedScale) +
                     ResolveTableCellBorderContentInset(cell, "right", fixedScale);
-                if (cellPad > pads[cellIndex])
-                {
-                    pads[cellIndex] = cellPad;
-                }
-                contentInsets[cellIndex] = Math.Max(contentInsets[cellIndex],
+                double inset =
                     ResolveTableCellHorizontalEdgeInset(cell, "left", cell.Margins.LeftPoints, fixedScale) +
-                    ResolveTableCellHorizontalEdgeInset(cell, "right", cell.Margins.RightPoints, fixedScale));
+                    ResolveTableCellHorizontalEdgeInset(cell, "right", cell.Margins.RightPoints, fixedScale);
+                if (count == 1)
+                {
+                    columnMaxima[first] = Math.Max(columnMaxima[first], cellVisibleMax + cellDeletedTotal);
+                    pads[first] = Math.Max(pads[first], cellPad);
+                    contentInsets[first] = Math.Max(contentInsets[first], inset);
+                }
+                else spanningMaxima.Add((first, count, singlesOnly, cellVisibleMax + cellDeletedTotal, inset));
+            }
+        }
+        if (hasUnmeasuredBlocks && table.Rows.Any(row => row.Cells.Any(cell => cell.GridSpan > 1))) return null;
+        ExtendSpans(columnMaxima, spanningMaxima);
+
+        void ExtendSpans(double[] widths, List<(int First, int Count, bool SinglesOnly, double Width, double Inset)> spans)
+        {
+            // Smaller constraints first, independent of row order. A merged cell
+            // pays its own edge insets once, not one inset per underlying column.
+            spans.Sort((a, b) => a.Count != b.Count ? a.Count.CompareTo(b.Count) :
+                a.First != b.First ? a.First.CompareTo(b.First) :
+                a.Width != b.Width ? a.Width.CompareTo(b.Width) : a.Inset.CompareTo(b.Inset));
+            foreach (var span in spans)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                double current = 0d, insets = 0d;
+                int included = 0;
+                for (int index = span.First; index < span.First + span.Count; index++)
+                {
+                    if (span.SinglesOnly && ends[index] != starts[index] + 1) continue;
+                    current += widths[index]; insets += contentInsets[index]; included++;
+                }
+                double extra = span.Width + span.Inset - current - insets;
+                if (extra <= 0d) continue;
+                for (int index = span.First; index < span.First + span.Count; index++)
+                {
+                    if (span.SinglesOnly && ends[index] != starts[index] + 1) continue;
+                    widths[index] += extra * (current > 0d ? widths[index] / current : 1d / included);
+                }
             }
         }
 
@@ -1292,7 +1377,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 // Natural width must fund each column's actual layout insets;
                 // proportional expansion can leave a short column under-sized.
-                return columnMaxima.Select((maximum, index) => maximum + contentInsets[index]).ToArray();
+                return ProjectColumns(columnMaxima.Select((maximum, index) => maximum + contentInsets[index]).ToArray());
             }
             targetTableWidth = availableTableWidth;
         }
@@ -1308,40 +1393,50 @@ internal sealed partial class DocxLayoutEngine
         // Reuse the actual layout insets, including unset cell margins.
         if (!hasDeletedContent && compressedContentTarget < totalContent)
         {
-            double[] columnMinima = new double[columnCount];
+            double[] columnMinima = new double[contentColumnCount];
+            var spanningMinima = new List<(int First, int Count, bool SinglesOnly, double Width, double Inset)>();
             bool qualified = true;
             foreach (DocxTableRow row in table.Rows)
             {
-                for (int cellIndex = 0; cellIndex < row.Cells.Count && cellIndex < columnCount; cellIndex++)
+                int start = 0;
+                foreach (DocxTableCell cell in row.Cells)
                 {
-                    double? minimum = MeasureTableCellMinContentWidth(row.Cells[cellIndex], textMeasurer, pageNumber, pageCount, fixedScale, commentMarkerLabels, mathEquations, cancellationToken);
-                    if (minimum is null || minimum.Value > columnMaxima[cellIndex] + 0.000001d)
+                    int end = start + Math.Max(1, cell.GridSpan);
+                    var (first, count, singlesOnly) = ContentColumns(start, end);
+                    start = end;
+                    double? minimum = MeasureTableCellMinContentWidth(cell, textMeasurer, pageNumber, pageCount, fixedScale, commentMarkerLabels, mathEquations, cancellationToken);
+                    if (minimum is null || count == 1 && minimum.Value > columnMaxima[first] + 0.000001d)
                     {
                         qualified = false;
                         break;
                     }
-                    columnMinima[cellIndex] = Math.Max(columnMinima[cellIndex], minimum.Value);
+                    if (count == 1) columnMinima[first] = Math.Max(columnMinima[first], minimum.Value);
+                    else spanningMinima.Add((first, count, singlesOnly, minimum.Value,
+                        ResolveTableCellHorizontalEdgeInset(cell, "left", cell.Margins.LeftPoints, fixedScale) +
+                        ResolveTableCellHorizontalEdgeInset(cell, "right", cell.Margins.RightPoints, fixedScale)));
                 }
                 if (!qualified)
                 {
                     break;
                 }
             }
+            ExtendSpans(columnMinima, spanningMinima);
+            qualified &= columnMinima.Zip(columnMaxima).All(pair => pair.First <= pair.Second + 0.000001d);
             double totalMinimum = columnMinima.Sum();
             if (qualified && totalMinimum + totalContentInset <= availableTableWidth)
             {
                 double expansion = totalContent > totalMinimum
                     ? Math.Max(0d, compressedContentTarget - totalMinimum) / (totalContent - totalMinimum)
                     : 0d;
-                return columnMaxima
+                return ProjectColumns(columnMaxima
                     .Select((maximum, index) => contentInsets[index] + columnMinima[index] + expansion * (maximum - columnMinima[index]))
-                    .ToArray();
+                    .ToArray());
             }
         }
 
-        return columnMaxima
+        return ProjectColumns(columnMaxima
             .Select((columnMaximum, index) => pads[index] + contentTarget * columnMaximum / totalContent)
-            .ToArray();
+            .ToArray());
     }
 
     private static bool HasPreferredCellWidth(DocxTableCell cell)

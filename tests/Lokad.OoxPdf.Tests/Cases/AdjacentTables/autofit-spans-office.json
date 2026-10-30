@@ -1,0 +1,176 @@
+{
+  "PositionTolerancePoints": 1,
+  "Scope": "Cell width/wrapping witness only; native text-color and full-page gates remain separate",
+  "Controls": [
+    {
+      "Input": "autofit-partitions.docx",
+      "InputSha256": "427FAEA87BE5F75B3FC943522FD7E0F0D22655F1FD0DC80DFC4AD3B496E79699",
+      "ReferencePdfSha256": "E641E9198068AABBACF80A904D44A8A3BC6AB970C08340E369691B67F3F4F867",
+      "ReferenceKind": "OfficePdf bootstrap; application-view calibration pending",
+      "Text": [
+        "join-A00",
+        "join-A01",
+        "join-A10",
+        "join-A11",
+        "join-B00",
+        "join-B01",
+        "join-B02",
+        "join-B10",
+        "join-B11",
+        "join-B12"
+      ],
+      "CellWidths": [
+        [
+          55.080002,
+          55.079994
+        ],
+        [
+          55.080002,
+          55.079994
+        ],
+        [
+          36.720001,
+          36.719994,
+          36.599991
+        ],
+        [
+          36.720001,
+          36.719994,
+          36.599991
+        ]
+      ]
+    },
+    {
+      "Input": "autofit-partitions-asymmetric.docx",
+      "InputSha256": "9AB4891A7706EB2E7DD2DDC8F2F935717A3361F601BC1018A46265FE08827285",
+      "ReferencePdfSha256": "69242EE594BCB516EE88D11B7063DCF8E3831EC326352A5605FE32644F8C8ABA",
+      "ReferenceKind": "OfficePdf bootstrap; application-view calibration pending",
+      "Text": [
+        "join-A00",
+        "join-A01",
+        "join-A10",
+        "join-A11",
+        "join-B00",
+        "join-B01",
+        "join-B02",
+        "join-B10",
+        "join-B11",
+        "join-B12"
+      ],
+      "CellWidths": [
+        [
+          36.720001,
+          73.32
+        ],
+        [
+          36.720001,
+          73.32
+        ],
+        [
+          36.720001,
+          36.719994,
+          36.599991
+        ],
+        [
+          36.720001,
+          36.719994,
+          36.599991
+        ]
+      ]
+    },
+    {
+      "Input": "autofit-span-long-start.docx",
+      "InputSha256": "9F9A62B012BB77531CD2DE2DC31C979D6618A65D354D7C530FA27950A507EE2B",
+      "ReferencePdfSha256": "26EA35CB18BA6EA75F3B0F3CE01E45ACBB7F6C6D3253A17CC63F3C34646D93D5",
+      "ReferenceKind": "OfficePdf bootstrap; application-view calibration pending",
+      "Text": [
+        "join-AAAAAAAAAAAAA00",
+        "join-A01",
+        "join-A10",
+        "join-A11",
+        "join-B00",
+        "join-B01",
+        "join-B02",
+        "join-B10",
+        "join-B11",
+        "join-B12"
+      ],
+      "CellWidths": [
+        [
+          135.139999,
+          55.080002
+        ],
+        [
+          135.139999,
+          55.080002
+        ],
+        [
+          116.759995,
+          36.744003,
+          36.720001
+        ],
+        [
+          116.759995,
+          36.744003,
+          36.720001
+        ]
+      ]
+    },
+    {
+      "Input": "autofit-merged-long.docx",
+      "InputSha256": "499CDF0A3E83546A8420FFDF1D3430E2D1299D7CEAF46B829CC422E578B9B2EC",
+      "ReferencePdfSha256": "A37A0A0DBD4BCCEECB321AB423A860B0270E8733C1ED09C7EAF8728096D67692",
+      "ReferenceKind": "OfficePdf bootstrap; application-view calibration pending",
+      "Text": [
+        "join-AAAAAAAAAAAAA00",
+        "join-A10",
+        "join-A11"
+      ],
+      "CellWidths": [
+        [
+          116.759995
+        ],
+        [
+          58.800003,
+          57.959991
+        ]
+      ]
+    },
+    {
+      "Input": "autofit-span-bridge.docx",
+      "InputSha256": "59CA20326915D0C984B1F578725547CEAFD591C2D811691306DFF10CAF31B6FF",
+      "ReferencePdfSha256": "F372B0BBAAC35DC62C7B34C071F458A9EEBC67500698A9E3163C917395354BFE",
+      "ReferenceKind": "OfficePdf bootstrap; application-view calibration pending",
+      "Text": [
+        "join-AAAAAAAAAAAAA00",
+        "join-A10",
+        "join-A11",
+        "join-B00",
+        "join-B01",
+        "join-B02",
+        "join-B10",
+        "join-B11",
+        "join-B12"
+      ],
+      "CellWidths": [
+        [
+          153.5
+        ],
+        [
+          76.800003,
+          76.70401
+        ],
+        [
+          58.440002,
+          36.599991,
+          58.343994
+        ],
+        [
+          58.440002,
+          36.599991,
+          58.343994
+        ]
+      ]
+    }
+  ]
+}
