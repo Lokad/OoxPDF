@@ -36,7 +36,6 @@ if (Test-Path -LiteralPath $output) {
 }
 $casePrefix = 'tests/Lokad.OoxPdf.Tests/Cases/'
 $inputNames = @(Get-Content -LiteralPath $InputManifest -Raw | ConvertFrom-Json)
-if (!$inputNames.Count) { throw 'Select explicit public parent-test inputs' }
 $jobs = @()
 foreach ($name in @('Lokad.OoxPdf.Tests.dll','Lokad.OoxPdf.Tests.pdb','Lokad.OoxPdf.Tests.deps.json','Lokad.OoxPdf.Tests.runtimeconfig.json')) {
     $relative = "tests/Lokad.OoxPdf.Tests/bin/Release/$framework/" + $name
