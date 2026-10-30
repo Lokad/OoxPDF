@@ -30,7 +30,7 @@ internal static class FontFormatTests
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, TestFontBuilder.AllCodePoints(), CancellationToken.None);
         TestAssert.True(embedded.TryGetEncodedCid(combining, out ushort cid), "Combining mark must have an encoded CID.");
         TestAssert.True(
-            embedded.BuildWidthArray(CancellationToken.None).Contains(cid.ToString() + " [0]", StringComparison.Ordinal),
+            PdfWriterTests.ReadWidthArray(embedded).Contains(cid.ToString() + " [0]", StringComparison.Ordinal),
             "Zero-advance glyphs must emit an explicit zero width.");
     }
 

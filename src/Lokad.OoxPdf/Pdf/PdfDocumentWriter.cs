@@ -451,8 +451,12 @@ internal sealed class PdfDocumentWriter
         writer.WriteObject(objects.Type0, FormattableString.Invariant(
             $"<< /Type /Font /Subtype /Type0 /BaseFont /{baseFont} /Encoding /Identity-H /DescendantFonts [{objects.CidFont} 0 R] /ToUnicode {objects.ToUnicode} 0 R >>\n"));
 
-        writer.WriteObject(objects.CidFont, FormattableString.Invariant(
-            $"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /{baseFont} /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor {objects.Descriptor} 0 R /CIDToGIDMap /Identity /W {font.BuildWidthArray(cancellationToken)} >>\n"));
+        writer.WriteObjectHeader(objects.CidFont);
+        writer.WriteAscii(FormattableString.Invariant(
+            $"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /{baseFont} /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor {objects.Descriptor} 0 R /CIDToGIDMap /Identity /W "));
+        font.WriteWidthArray(writer, cancellationToken);
+        writer.WriteAscii(" >>\n");
+        writer.WriteObjectTrailer();
 
         OpenTypeFontMetrics metrics = OpenTypeFontMetrics.From(font.Font);
         writer.WriteObject(objects.Descriptor, FormattableString.Invariant(

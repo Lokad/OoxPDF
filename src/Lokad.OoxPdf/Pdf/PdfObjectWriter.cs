@@ -33,15 +33,25 @@ internal sealed class PdfObjectWriter
 
     public void WriteObject(int objectNumber, string body)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        offsets.Add(position);
-        WriteAscii(FormattableString.Invariant($"{objectNumber} 0 obj\n"));
+        WriteObjectHeader(objectNumber);
         WriteAscii(body);
         if (!body.EndsWith('\n'))
         {
             WriteAscii("\n");
         }
 
+        WriteObjectTrailer();
+    }
+
+    public void WriteObjectHeader(int objectNumber)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        offsets.Add(position);
+        WriteAscii(FormattableString.Invariant($"{objectNumber} 0 obj\n"));
+    }
+
+    public void WriteObjectTrailer()
+    {
         WriteAscii("endobj\n");
     }
 
@@ -50,15 +60,12 @@ internal sealed class PdfObjectWriter
     // pages are never fully resident during emission.
     public void WriteContentStreamHeader(int objectNumber, int contentLength, string dictionaryEntries = "")
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        offsets.Add(position);
-        WriteAscii(FormattableString.Invariant($"{objectNumber} 0 obj\n"));
+        WriteObjectHeader(objectNumber);
         WriteAscii(FormattableString.Invariant($"<<{(dictionaryEntries.Length == 0 ? string.Empty : " " + dictionaryEntries)} /Length {contentLength} >>\nstream\n"));
     }
 
     public void WriteContentStreamBytes(ReadOnlySpan<byte> chunk)
     {
-        cancellationToken.ThrowIfCancellationRequested();
         WriteRawBytes(chunk);
     }
 
@@ -78,9 +85,7 @@ internal sealed class PdfObjectWriter
     {
         // Buffered and generated resources share their established framing;
         // page-content staging retains its own newline placement above.
-        cancellationToken.ThrowIfCancellationRequested();
-        offsets.Add(position);
-        WriteAscii(FormattableString.Invariant($"{objectNumber} 0 obj\n"));
+        WriteObjectHeader(objectNumber);
         WriteAscii(FormattableString.Invariant($"<< {dictionaryEntries} /Length {length} >>\nstream\n"));
     }
 
@@ -104,8 +109,9 @@ internal sealed class PdfObjectWriter
     // destination actually kept; no exact recoverable count is invented. No
     // output-sized buffer is introduced here: ASCII payloads are encoded once by
     // WriteAscii and raw spans charge their length directly.
-    private void WriteRawBytes(ReadOnlySpan<byte> bytes)
+    public void WriteRawBytes(ReadOnlySpan<byte> bytes)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         OoxConversionBudget.Current?.ChargePdfOutputBytes(bytes.Length);
         stream.Write(bytes);
         position += bytes.Length;

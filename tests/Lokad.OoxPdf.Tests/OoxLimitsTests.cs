@@ -892,7 +892,7 @@ internal static partial class OoxLimitsTests
         PdfEmbeddedFont merged = PdfEmbeddedFont.Merge([first, second], CancellationToken.None);
         TestAssert.Equal(first.ResourceKey, merged.ResourceKey);
         TestAssert.Equal(first.EncodeGlyphHex("ABCDEF"), merged.EncodeGlyphHex("ABCDEF"));
-        TestAssert.Equal(first.BuildWidthArray(CancellationToken.None), merged.BuildWidthArray(CancellationToken.None));
+        TestAssert.Equal(PdfWriterTests.ReadWidthArray(first), PdfWriterTests.ReadWidthArray(merged));
     }
 
     private static void AssertDiscoveryHeadersEqual(OpenTypeFont.FontDiscoveryHeaders expected, OpenTypeFont.FontDiscoveryHeaders actual)

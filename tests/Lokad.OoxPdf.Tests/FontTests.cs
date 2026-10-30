@@ -846,7 +846,7 @@ internal static class FontTests
 
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "The scale".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
         string positioning = TestAssert.NotNull(embedded.EncodeGlyphPositioningArray("The scale", 0d, 18d, forcePositioningArray: true, kerningEnabled: true));
-        string widths = embedded.BuildWidthArray(CancellationToken.None);
+        string widths = PdfWriterTests.ReadWidthArray(embedded);
         string encodedGlyph = embedded.EncodeGlyphHex("h");
         TestAssert.True(encodedGlyph.Length == 4, "Expected a single encoded CID for 'h'.");
         int cid = int.Parse(encodedGlyph, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
@@ -871,8 +871,8 @@ internal static class FontTests
         TestAssert.True(embedded.FontProgramBytes.Length < font.Bytes.Length / 4, "Expected a tiny two-glyph subset compared to the source font.");
         TestAssert.Equal("0001", embedded.EncodeGlyphHex("A"));
         TestAssert.Equal("0002", embedded.EncodeGlyphHex("z"));
-        TestAssert.Contains("1 [", embedded.BuildWidthArray(CancellationToken.None));
-        TestAssert.Contains("2 [", embedded.BuildWidthArray(CancellationToken.None));
+        TestAssert.Contains("1 [", PdfWriterTests.ReadWidthArray(embedded));
+        TestAssert.Contains("2 [", PdfWriterTests.ReadWidthArray(embedded));
 
         OpenTypeFont subset = OpenTypeFont.Load(embedded.FontProgramBytes.ToArray());
         TestAssert.True(subset.GlyphCount < font.GlyphCount, "Expected the subset font to expose fewer glyphs than the source font.");
@@ -1264,7 +1264,7 @@ internal static class FontTests
         PdfEmbeddedFont merged = PdfEmbeddedFont.Merge([first, second], CancellationToken.None);
         TestAssert.Equal(first.ResourceKey, merged.ResourceKey);
         TestAssert.Equal(first.EncodeGlyphHex("ABCDEF"), merged.EncodeGlyphHex("ABCDEF"));
-        TestAssert.Equal(first.BuildWidthArray(CancellationToken.None), merged.BuildWidthArray(CancellationToken.None));
+        TestAssert.Equal(PdfWriterTests.ReadWidthArray(first), PdfWriterTests.ReadWidthArray(merged));
     }
     public static void PdfEmbeddedFontMapsSharedSpaceGlyphToPlainSpace()
     {
@@ -1451,7 +1451,7 @@ internal static class FontTests
 
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, new[] { 65, 0x0301 }, CancellationToken.None);
         TestAssert.True(embedded.TryGetEncodedCid(combining, out ushort cid), "Expected combining mark to have an encoded CID.");
-        string widths = embedded.BuildWidthArray(CancellationToken.None);
+        string widths = PdfWriterTests.ReadWidthArray(embedded);
         TestAssert.True(widths.Contains(cid.ToString(CultureInfo.InvariantCulture) + " [0]", StringComparison.Ordinal), "Zero-advance glyphs must emit an explicit zero width, got: " + widths);
         TestAssert.True(widths != "[]", "Width array must not be empty when glyphs are encoded.");
     }

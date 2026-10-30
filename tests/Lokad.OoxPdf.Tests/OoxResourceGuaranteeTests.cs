@@ -316,6 +316,9 @@ internal static class OoxResourceGuaranteeTests
         Attempt(writer => writer.WriteStreamObjectHeader(4, string.Empty, payload.Length));
         Attempt(writer => writer.WriteStreamObjectTrailer());
         Attempt(writer => writer.WriteAscii("trailer\n"));
+        Attempt(writer => writer.WriteObjectHeader(5));
+        Attempt(writer => writer.WriteRawBytes(payload));
+        Attempt(writer => writer.WriteObjectTrailer());
 
         // Cancellation still precedes admission and writing.
         using var cancelledInner = new MemoryStream();
@@ -324,6 +327,9 @@ internal static class OoxResourceGuaranteeTests
         {
             var writer = new PdfObjectWriter(cancelledCounting, new CancellationToken(canceled: true));
             TestAssert.Throws<OperationCanceledException>(() => writer.WriteAscii("x"));
+            TestAssert.Throws<OperationCanceledException>(() => writer.WriteObjectHeader(5));
+            TestAssert.Throws<OperationCanceledException>(() => writer.WriteRawBytes(payload));
+            TestAssert.Throws<OperationCanceledException>(() => writer.WriteObjectTrailer());
             TestAssert.Throws<OperationCanceledException>(() => writer.WriteStreamObjectHeader(4, string.Empty, payload.Length));
             TestAssert.Throws<OperationCanceledException>(() => writer.WriteStreamObjectTrailer());
             TestAssert.Equal(0L, scope.Budget.PdfOutputBytes);

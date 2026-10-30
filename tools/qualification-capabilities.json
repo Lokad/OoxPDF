@@ -1,4 +1,27 @@
 {
+  "pdf-width-streaming": [
+    "PdfWidthStreaming",
+    "PdfToUnicodeStreaming",
+    "SyntheticZeroAdvanceGlyphIsPreserved",
+    "SyntheticSubsetRoundTripKeepsCmapAndWidths",
+    "PdfEmbeddedFontWidthsCoverEncodedGlyphs",
+    "PdfEmbeddedFontBuildsLoadableSubsetFontProgram",
+    "PdfEmbeddedFontSubsetsWithSameCodepointsShareResourceKey",
+    "PdfEmbeddedFontPreservesZeroWidthMetrics",
+    "MergeEqualDistinctSubsetsKeepsRemap",
+    "PdfObjectWriterAdmitsEveryWriteMethodBeforeWriting",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders",
+    "PdfOutput",
+    "PdfFontsRespectFontByteBudget",
+    "MemoryBudgetCompressionFontRefundsAfterItsActualStreamWrite",
+    "ConvertPreservesExistingDestinationWhenWriterRejectsPage",
+    "ConvertStreamCancellationDuringEmissionLeavesCallerOwnedPrefix",
+    "ConvertStreamOutputLimitDuringEmissionLeavesCallerOwnedPrefix",
+    "PortableRenderingDocxFinalPreservesMixedContent",
+    "PortableRenderingDocxAllMarkupPreservesMixedContent",
+    "PortableRenderingPptxPreservesCompositeChartAndText"
+  ],
   "docx-automatic-color": [
     "DocxAutomaticColor",
     "MathFontAutomaticColors",

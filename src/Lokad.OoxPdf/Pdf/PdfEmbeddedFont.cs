@@ -334,16 +334,15 @@ internal sealed class PdfEmbeddedFont
         return length;
     }
 
-    public string BuildWidthArray(CancellationToken cancellationToken)
+    public void WriteWidthArray(PdfObjectWriter writer, CancellationToken cancellationToken)
     {
-        if (UnicodeByOriginalGlyph.Count == 0)
-        {
-            return "[]";
-        }
-
-        var builder = new StringBuilder("[");
+        cancellationToken.ThrowIfCancellationRequested();
+        Span<byte> block = stackalloc byte[512];
+        int used = 1;
+        block[0] = (byte)'[';
         bool first = true;
-        var widthsByCid = new SortedDictionary<ushort, int>();
+        // Source glyphs and the subset's complete glyph closure are sorted.
+        // Subset CIDs therefore preserve source order; whole-font CIDs are identity.
         foreach (ushort originalGlyph in UnicodeByOriginalGlyph.Keys)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -352,24 +351,26 @@ internal sealed class PdfEmbeddedFont
                 continue;
             }
 
-            ushort advance = Font.GetAdvanceWidth(originalGlyph);
-            widthsByCid[cid] = (int)Math.Round(advance * 1000d / Font.UnitsPerEm);
-        }
-
-        foreach ((ushort cid, int width) in widthsByCid)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
+            if (block.Length - used < 32)
+            {
+                writer.WriteRawBytes(block[..used]);
+                used = 0;
+            }
             if (!first)
             {
-                builder.Append(' ');
+                block[used++] = (byte)' ';
             }
-
             first = false;
-            builder.Append(CultureInfo.InvariantCulture, $"{cid} [{width}]");
+            int width = (int)Math.Round(Font.GetAdvanceWidth(originalGlyph) * 1000d / Font.UnitsPerEm);
+            _ = cid.TryFormat(block[used..], out int written, provider: CultureInfo.InvariantCulture);
+            used += written;
+            " ["u8.CopyTo(block[used..]); used += 2;
+            _ = width.TryFormat(block[used..], out written, provider: CultureInfo.InvariantCulture);
+            used += written;
+            block[used++] = (byte)']';
         }
-
-        builder.Append(']');
-        return builder.ToString();
+        block[used++] = (byte)']';
+        writer.WriteRawBytes(block[..used]);
     }
 
     public string EncodeGlyphHex(string text)
