@@ -12,6 +12,41 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTablesLayoutTests
 {
+    public static void DocxTableLayoutStageNaturalAutoWidthUsesLayoutInsetsAndIgnoresGrid()
+    {
+        foreach (double hint in new[] { 100d, 200d })
+        foreach (bool authoredMargins in new[] { false, true })
+        {
+            var margins = authoredMargins
+                ? DocxTableCellMargins.Empty with { LeftPoints = 2d, RightPoints = 3d }
+                : DocxTableCellMargins.Empty;
+            var table = new DocxTable(null, [hint, hint], [new DocxTableRow([
+                new DocxTableCell("AA", [DocxTests.CreateDocxLayoutParagraph("AA", 10d, 12d)], null, null, null, null, [], margins),
+                new DocxTableCell("AAAAAAAA", [DocxTests.CreateDocxLayoutParagraph("AAAAAAAA", 10d, 12d)], null, null, null, null, [], margins)
+            ], null)]);
+            var document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+            var row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default).Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            double inset = authoredMargins ? 5d : 0.96d;
+            TestAssert.True(Math.Abs(row.Cells[0].Width - (10d + inset)) < 0.000001d, "Each natural column funds its own layout insets.");
+            TestAssert.True(Math.Abs(row.Cells[1].Width - (40d + inset)) < 0.000001d, "Doubling the grid cannot change unconstrained content width.");
+            TestAssert.True(row.Cells.All(cell => cell.TextLines.Count == 1), "Intrinsic sizing cannot introduce a wrap by omitting implicit padding.");
+        }
+    }
+
+    public static void DocxTableLayoutStageNaturalAutoWidthIgnoresEmptyParagraphMarks()
+    {
+        var paragraph = DocxTests.CreateDocxLayoutParagraph(string.Empty, 10d, 12d);
+        var table = new DocxTable(null, [80d], [new DocxTableRow([
+            new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)
+        ], null)]);
+        var document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        var row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default).Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+        TestAssert.Equal(80d, row.Cells[0].Width);
+        TestAssert.Equal(1, row.Cells[0].TextLines.Count);
+    }
+
     public static void DocxTablePageContentTracksRowsAfterMovingToAFreshFrame()
     {
         foreach ((double rowHeight, int pages) in new[] { (48d, 2), (50d, 3) })
@@ -1813,7 +1848,7 @@ internal static class DocxTablesLayoutTests
             DocxParagraphKeepRules.Empty,
             null);
         var cell = new DocxTableCell("Alpha Beta", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
-        var table = new DocxTable(null, [30d], [new DocxTableRow([cell], null)]);
+        var table = new DocxTable("fixed", [30d], [new DocxTableRow([cell], null)]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -2085,7 +2120,7 @@ internal static class DocxTablesLayoutTests
             DocxParagraphKeepRules.Empty,
             null);
         var cell = new DocxTableCell("First Second", [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
-        var table = new DocxTable(null, [34d], [new DocxTableRow([cell], 10d)]);
+        var table = new DocxTable("fixed", [34d], [new DocxTableRow([cell], 10d)]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(File.ReadAllBytes(arial)), "First Second".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
