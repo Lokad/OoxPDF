@@ -1,5 +1,5 @@
 {
-  "Oracle": "Independent Word 16 PDF exports; resolved cell fills sampled 10pt inside each text origin, away from shared edges. No visible-view calibration or full-page parity claim.",
+  "Oracle": "Independent Word 16 PDF exports; cell fills sampled at word centers, away from shared edges. No visible-view calibration or full-page parity claim.",
   "Precedence": "Horizontal bands, vertical bands, first/last columns, first/last rows, corners. Explicit flags and positional membership use the same cascade.",
   "Controls": [
     {
@@ -38,8 +38,8 @@
     },
     {
       "Input": "explicit.docx",
-      "InputSha256": "078B117F8FD02E9B706CB704732ABEA8977061A46B477EED4F3D8D2CFD44CE50",
-      "OfficePdfSha256": "925E8A6AF330EF689799E659635E6FFB1E6525D6D86518C2AB3A5332C0036339",
+      "InputSha256": "81D7E9D58094CFE4CF403902C7467461B185B114BA621BE8AA2293124134553A",
+      "OfficePdfSha256": "BEB736985712CA75FD7CC022762CA46F3E6547D59E283C492451CC0F3608DDD8",
       "Fills": {
         "edges-00": "0066CC",
         "edges-01": "0066CC",
@@ -106,8 +106,8 @@
     },
     {
       "Input": "explicit-compat15.docx",
-      "InputSha256": "7DC6B9400FEEA51AD72AA22F56E606C4FF59D6A2B7D99145D3A6E3EAB46D0971",
-      "OfficePdfSha256": "7B5530105432C593FC28BEDF8B44335C3C08EEB112018AE8DBB20CC1DF43EFC4",
+      "InputSha256": "25F0115F4BB45D01E1FDB5EB604E69F66BE7E617BE1CE164EA63B32A34155D01",
+      "OfficePdfSha256": "D8554736CE84357F782285D63881AF5174183A3E9F550322D3F486E208E6F96B",
       "Fills": {
         "edges-00": "0066CC",
         "edges-01": "0066CC",
@@ -138,5 +138,6 @@
         "bands-22": "A8C8E8"
       }
     }
-  ]
+  ],
+  "ExplicitMembership": "Explicit edge controls encode the same band membership as positional header/last-edge exclusions. Earlier stale parity flags are retained in ignored probe evidence; Word recomputes those flags."
 }

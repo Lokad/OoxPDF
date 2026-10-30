@@ -2284,7 +2284,9 @@ internal static class DocxTablesTests
         TestAssert.Equal("FF0000", document.Tables[4].Rows[1].Cells[0].FillHex ?? string.Empty);
         TestAssert.Equal("00FF00", document.Tables[4].Rows[1].Cells[1].FillHex ?? string.Empty);
         TestAssert.Equal("FF0000", document.Tables[4].Rows[2].Cells[0].FillHex ?? string.Empty);
-        TestAssert.Equal("0000FF", document.Tables[4].Rows[2].Cells[1].FillHex ?? string.Empty);
+        // The shared cascade gives column bands precedence over row bands.
+        // Distinct-color Office controls live in DocxConditionalTableStyleTests.
+        TestAssert.Equal("00FF00", document.Tables[4].Rows[2].Cells[1].FillHex ?? string.Empty);
         TestAssert.Equal("00FF00", document.Tables[5].Rows[0].Cells[0].FillHex ?? string.Empty);
         TestAssert.Equal("FF0000", document.Tables[5].Rows[0].Cells[1].FillHex ?? string.Empty);
         TestAssert.Equal("FF0000", document.Tables[5].Rows[1].Cells[0].FillHex ?? string.Empty);
