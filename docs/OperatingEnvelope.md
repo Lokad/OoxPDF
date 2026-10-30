@@ -17,6 +17,8 @@ remain funded through emission; font-compression storage refunds after its strea
 is written. Storage refunds after
 its users finish, including failure/cancellation. Crop and generated shadow/glow
 planes are admitted for their invocation; recolor reuses privately owned pixels.
+Embedded-font ToUnicode streams are measured and emitted with one fixed 4 KB
+formatting span, without a copied mapping list or a full text/encoded payload.
 Its scopes share the caller's root; they create no private allowance. Caller-owned
 buffers are not charged twice. Models, font source/cache and parsed maps,
 other PDF resources remain pending, so

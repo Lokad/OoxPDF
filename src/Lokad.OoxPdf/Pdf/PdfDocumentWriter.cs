@@ -459,17 +459,18 @@ internal sealed class PdfDocumentWriter
             $"<< /Type /FontDescriptor /FontName /{baseFont} /Flags {metrics.Flags} /FontBBox [{metrics.XMin} {metrics.YMin} {metrics.XMax} {metrics.YMax}] /ItalicAngle {FormatNumber(metrics.ItalicAngle)} /Ascent {metrics.Ascent} /Descent {metrics.Descent} /CapHeight {metrics.CapHeight} /StemV 80 /FontFile2 {objects.FontFile} 0 R >>\n"));
 
         ReadOnlyMemory<byte> fontProgram = font.FontProgramBytes;
-        byte[] toUnicode;
+        int toUnicodeLength = font.MeasureToUnicodeCMap(cancellationToken);
         using (IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, 0))
         {
             byte[] compressedFontProgram = PdfStreamCompression.Compress(fontProgram.Span, storage, 0, cancellationToken);
-            toUnicode = Encoding.ASCII.GetBytes(font.BuildToUnicodeCMap(cancellationToken));
             // Count uncompressed font/ToUnicode payloads, separately from
             // dictionaries/output and from the compression buffer's admission.
-            OoxConversionBudget.Current?.ChargePdfFontBytes(checked((long)fontProgram.Length + toUnicode.Length));
+            OoxConversionBudget.Current?.ChargePdfFontBytes(checked((long)fontProgram.Length + toUnicodeLength));
             writer.WriteStreamObject(objects.FontFile, FormattableString.Invariant($"/Filter /FlateDecode /Length1 {fontProgram.Length}"), compressedFontProgram);
         }
-        writer.WriteStreamObject(objects.ToUnicode, string.Empty, toUnicode);
+        writer.WriteStreamObjectHeader(objects.ToUnicode, string.Empty, toUnicodeLength);
+        font.WriteToUnicodeCMap(writer, cancellationToken);
+        writer.WriteStreamObjectTrailer();
     }
 
     // Standard-14 faces have no embedded font program. Their dictionaries and

@@ -5,7 +5,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PdfWriterTests
+internal static partial class PdfWriterTests
 {
     public static void PdfActualTextKeepsScalarEncodingAndBalancedTransactionalOwnership()
     {
@@ -536,7 +536,7 @@ internal static class PdfWriterTests
         var page = new PdfPage(200, 200, string.Empty, [new PdfFontResource("F1", embedded)]);
 
         string pdf = WritePdfText(new[] { page });
-        string cmap = embedded.BuildToUnicodeCMap(CancellationToken.None);
+        string cmap = ReadToUnicodeCMap(embedded);
         TestAssert.True(embedded.UnicodeByCid.Count > 100, "Expected large probe to exceed one CMap block.");
         foreach (string line in cmap.Split('\n'))
         {

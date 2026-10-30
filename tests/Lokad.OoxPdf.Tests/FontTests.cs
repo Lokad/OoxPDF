@@ -1276,7 +1276,7 @@ internal static class FontTests
         }
         OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(calibri));
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, new[] { 65, 32, 160, 66 }, CancellationToken.None);
-        string cmap = embedded.BuildToUnicodeCMap(CancellationToken.None);
+        string cmap = PdfWriterTests.ReadToUnicodeCMap(embedded);
         TestAssert.Contains("<0020>", cmap);
         TestAssert.DoesNotContain("<00A0>", cmap);
         TestAssert.True(embedded.EncodeGlyphHex(" \u00A0").Length > 0, "Both space variants must still encode (shared subset glyph).");
@@ -1370,7 +1370,7 @@ internal static class FontTests
         static void CheckCMapBatching(OpenTypeFont font, int[] codePoints)
         {
             PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, codePoints, CancellationToken.None);
-            string cmap = embedded.BuildToUnicodeCMap(CancellationToken.None);
+            string cmap = PdfWriterTests.ReadToUnicodeCMap(embedded);
             int total = embedded.UnicodeByCid.Count;
             if (total == 0)
             {
@@ -1425,7 +1425,7 @@ internal static class FontTests
             }
 
             PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, new[] { 65, codePoint }, CancellationToken.None);
-            string cmap = embedded.BuildToUnicodeCMap(CancellationToken.None);
+            string cmap = PdfWriterTests.ReadToUnicodeCMap(embedded);
             int scalar = codePoint - 0x10000;
             string expected = ((0xD800 + (scalar >> 10)).ToString("X4", CultureInfo.InvariantCulture) + (0xDC00 + (scalar & 0x3FF)).ToString("X4", CultureInfo.InvariantCulture));
             TestAssert.Contains(expected, cmap);

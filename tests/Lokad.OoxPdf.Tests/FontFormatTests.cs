@@ -41,7 +41,7 @@ internal static class FontFormatTests
 
         TestAssert.True(embedded.UsesSubsetFontProgram, "Synthetic font must subset.");
         TestAssert.True(embedded.UnicodeByCid.Count > 100, "Synthetic probe must exceed one CMap block.");
-        string cmap = embedded.BuildToUnicodeCMap(CancellationToken.None);
+        string cmap = PdfWriterTests.ReadToUnicodeCMap(embedded);
         foreach (string line in cmap.Split((char)10))
         {
             string trimmed = line.Trim();

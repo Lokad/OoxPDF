@@ -69,12 +69,23 @@ internal sealed class PdfObjectWriter
 
     public void WriteStreamObject(int objectNumber, string dictionaryEntries, ReadOnlySpan<byte> streamBytes)
     {
+        WriteStreamObjectHeader(objectNumber, dictionaryEntries, streamBytes.Length);
+        WriteContentStreamBytes(streamBytes);
+        WriteStreamObjectTrailer();
+    }
+
+    public void WriteStreamObjectHeader(int objectNumber, string dictionaryEntries, int length)
+    {
+        // Buffered and generated resources share their established framing;
+        // page-content staging retains its own newline placement above.
         cancellationToken.ThrowIfCancellationRequested();
         offsets.Add(position);
         WriteAscii(FormattableString.Invariant($"{objectNumber} 0 obj\n"));
-        WriteAscii(FormattableString.Invariant($"<< {dictionaryEntries} /Length {streamBytes.Length} >>\nstream\n"));
-        cancellationToken.ThrowIfCancellationRequested();
-        WriteRawBytes(streamBytes);
+        WriteAscii(FormattableString.Invariant($"<< {dictionaryEntries} /Length {length} >>\nstream\n"));
+    }
+
+    public void WriteStreamObjectTrailer()
+    {
         WriteAscii("\nendstream\nendobj\n");
     }
 

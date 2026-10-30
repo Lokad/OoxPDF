@@ -266,58 +266,72 @@ internal sealed class PdfEmbeddedFont
         return builder.ToString();
     }
 
-    public string BuildToUnicodeCMap(CancellationToken cancellationToken)
+    private static readonly string ToUnicodePrefix = string.Join(Environment.NewLine,
+        "/CIDInit /ProcSet findresource begin", "12 dict begin", "begincmap",
+        "/CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> def",
+        "/CMapName /Adobe-Identity-UCS def", "/CMapType 2 def", "1 begincodespacerange",
+        "<0000> <FFFF>", "endcodespacerange", "");
+    private static readonly string ToUnicodeSuffix = string.Join(Environment.NewLine,
+        "endcmap", "CMapName currentdict /CMap defineresource pop", "end", "end", "");
+
+    public int MeasureToUnicodeCMap(CancellationToken cancellationToken) => EncodeToUnicodeCMap(null, cancellationToken);
+
+    public void WriteToUnicodeCMap(PdfObjectWriter writer, CancellationToken cancellationToken) =>
+        EncodeToUnicodeCMap(writer, cancellationToken);
+
+    private int EncodeToUnicodeCMap(PdfObjectWriter? writer, CancellationToken cancellationToken)
     {
-        var builder = new StringBuilder();
-        builder.AppendLine("/CIDInit /ProcSet findresource begin");
-        builder.AppendLine("12 dict begin");
-        builder.AppendLine("begincmap");
-        builder.AppendLine("/CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> def");
-        builder.AppendLine("/CMapName /Adobe-Identity-UCS def");
-        builder.AppendLine("/CMapType 2 def");
-        builder.AppendLine("1 begincodespacerange");
-        builder.AppendLine("<0000> <FFFF>");
-        builder.AppendLine("endcodespacerange");
-        // ISO 32000 / Adobe CMap spec limits a single beginbfchar/endbfchar block to 100 mappings.
-        // Batch larger mappings so every block stays within the format limit.
-        if (UnicodeByCid.Count != 0)
+        cancellationToken.ThrowIfCancellationRequested();
+        writer?.WriteAscii(ToUnicodePrefix);
+        int length = ToUnicodePrefix.Length + ToUnicodeSuffix.Length;
+        // One bounded encoder measures and emits the same immutable map. Each
+        // block contains at most 100 mappings; even full int hex values fit 4KB.
+        // Keep the established platform newlines and LF-only block declaration.
+        Span<byte> block = stackalloc byte[4096];
+        ReadOnlySpan<byte> newline = Environment.NewLine == "\r\n" ? "\r\n"u8 : "\n"u8;
+        int remaining = UnicodeByCid.Count, inBlock = 0, used = 0, blockCount = 0;
+        foreach ((ushort cid, int codePoint) in UnicodeByCid)
         {
-            List<KeyValuePair<ushort, int>> cmapEntries = new(UnicodeByCid);
-            for (int cmapStart = 0; cmapStart < cmapEntries.Count; cmapStart += 100)
+            cancellationToken.ThrowIfCancellationRequested();
+            if (inBlock == 0)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                int cmapCount = Math.Min(100, cmapEntries.Count - cmapStart);
-                builder.Append(CultureInfo.InvariantCulture, $"{cmapCount} beginbfchar\n");
-                for (int cmapIndex = 0; cmapIndex < cmapCount; cmapIndex++)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    ushort cid = cmapEntries[cmapStart + cmapIndex].Key;
-                    int codePoint = cmapEntries[cmapStart + cmapIndex].Value;
-                    builder.Append("<").Append(cid.ToString("X4", CultureInfo.InvariantCulture)).Append("> <");
-                    if (codePoint <= 0xFFFF)
-                    {
-                        builder.Append(codePoint.ToString("X4", CultureInfo.InvariantCulture));
-                    }
-                    else
-                    {
-                        int scalar = codePoint - 0x10000;
-                        int high = 0xD800 + (scalar >> 10);
-                        int low = 0xDC00 + (scalar & 0x3FF);
-                        builder.Append(high.ToString("X4", CultureInfo.InvariantCulture));
-                        builder.Append(low.ToString("X4", CultureInfo.InvariantCulture));
-                    }
-
-                    builder.AppendLine(">");
-                }
-
-                builder.AppendLine("endbfchar");
+                blockCount = Math.Min(100, remaining);
+                _ = blockCount.TryFormat(block, out used, provider: CultureInfo.InvariantCulture);
+                " beginbfchar\n"u8.CopyTo(block[used..]);
+                used += " beginbfchar\n"u8.Length;
+            }
+            block[used++] = (byte)'<';
+            _ = cid.TryFormat(block[used..], out int written, "X4", CultureInfo.InvariantCulture);
+            used += written;
+            "> <"u8.CopyTo(block[used..]); used += 3;
+            if (codePoint <= 0xFFFF)
+            {
+                _ = codePoint.TryFormat(block[used..], out written, "X4", CultureInfo.InvariantCulture);
+                used += written;
+            }
+            else
+            {
+                int scalar = codePoint - 0x10000;
+                int high = 0xD800 + (scalar >> 10), low = 0xDC00 + (scalar & 0x3FF);
+                _ = high.TryFormat(block[used..], out written, "X4", CultureInfo.InvariantCulture);
+                used += written;
+                _ = low.TryFormat(block[used..], out written, "X4", CultureInfo.InvariantCulture);
+                used += written;
+            }
+            block[used++] = (byte)'>';
+            newline.CopyTo(block[used..]); used += newline.Length;
+            if (++inBlock == blockCount)
+            {
+                "endbfchar"u8.CopyTo(block[used..]); used += "endbfchar"u8.Length;
+                newline.CopyTo(block[used..]); used += newline.Length;
+                length = checked(length + used);
+                writer?.WriteContentStreamBytes(block[..used]);
+                remaining -= blockCount;
+                inBlock = 0;
             }
         }
-        builder.AppendLine("endcmap");
-        builder.AppendLine("CMapName currentdict /CMap defineresource pop");
-        builder.AppendLine("end");
-        builder.AppendLine("end");
-        return builder.ToString();
+        writer?.WriteAscii(ToUnicodeSuffix);
+        return length;
     }
 
     public string BuildWidthArray(CancellationToken cancellationToken)

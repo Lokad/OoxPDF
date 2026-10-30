@@ -1,4 +1,27 @@
 {
+  "pdf-to-unicode-streaming": [
+    "PdfToUnicodeStreaming",
+    "SyntheticSubsetRoundTripKeepsCmapAndWidths",
+    "PdfEmbeddedFontMapsSharedSpaceGlyphToPlainSpace",
+    "PdfEmbeddedFontToUnicode",
+    "WritesCMapBatchesWithinOneHundredMappings",
+    "WritesFontFile2WithDecodedLength",
+    "MemoryBudgetCompressionFontRefundsAfterItsActualStreamWrite",
+    "MemoryBudgetCompressionPublicRefusalPreservesDestinationsAndCallerStreams",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders",
+    "PdfObjectWriterAdmitsEveryWriteMethodBeforeWriting",
+    "PdfFontsRespectFontByteBudget",
+    "PdfOutput",
+    "StreamMidWriteFailureKeepsAllowedPrefix",
+    "ConvertPreservesExistingDestinationWhenWriterRejectsPage",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "ConvertStreamCancellationDuringEmissionLeavesCallerOwnedPrefix",
+    "ConvertStreamOutputLimitDuringEmissionLeavesCallerOwnedPrefix",
+    "PortableRenderingDocxFinalPreservesMixedContent",
+    "PortableRenderingDocxAllMarkupPreservesMixedContent",
+    "PortableRenderingPptxPreservesCompositeChartAndText"
+  ],
   "docx-autofit-spans": [
     "DocxAutofitSpans",
     "DocxAutofitTable",

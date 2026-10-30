@@ -268,6 +268,9 @@ internal static class OoxResourceGuaranteeTests
             writer.WriteContentStreamBytes(content);
             writer.WriteContentStreamTrailer();
             writer.WriteStreamObject(3, "/Filter /FlateDecode", payload);
+            writer.WriteStreamObjectHeader(4, string.Empty, payload.Length);
+            writer.WriteContentStreamBytes(payload);
+            writer.WriteStreamObjectTrailer();
             writer.WriteAscii("trailer\n");
             TestAssert.Equal(ampleCounting.TotalWritten, scope.Budget.PdfOutputBytes);
         }
@@ -283,6 +286,9 @@ internal static class OoxResourceGuaranteeTests
             writer.WriteContentStreamBytes(content);
             writer.WriteContentStreamTrailer();
             writer.WriteStreamObject(3, "/Filter /FlateDecode", payload);
+            writer.WriteStreamObjectHeader(4, string.Empty, payload.Length);
+            writer.WriteContentStreamBytes(payload);
+            writer.WriteStreamObjectTrailer();
             writer.WriteAscii("trailer\n");
             TestAssert.True(plain.ToArray().SequenceEqual(admitted), "Admission must not alter emitted bytes.");
         }
@@ -307,6 +313,8 @@ internal static class OoxResourceGuaranteeTests
         Attempt(writer => writer.WriteContentStreamBytes(content));
         Attempt(writer => writer.WriteContentStreamTrailer());
         Attempt(writer => writer.WriteStreamObject(3, "/Filter /FlateDecode", payload));
+        Attempt(writer => writer.WriteStreamObjectHeader(4, string.Empty, payload.Length));
+        Attempt(writer => writer.WriteStreamObjectTrailer());
         Attempt(writer => writer.WriteAscii("trailer\n"));
 
         // Cancellation still precedes admission and writing.
@@ -316,6 +324,8 @@ internal static class OoxResourceGuaranteeTests
         {
             var writer = new PdfObjectWriter(cancelledCounting, new CancellationToken(canceled: true));
             TestAssert.Throws<OperationCanceledException>(() => writer.WriteAscii("x"));
+            TestAssert.Throws<OperationCanceledException>(() => writer.WriteStreamObjectHeader(4, string.Empty, payload.Length));
+            TestAssert.Throws<OperationCanceledException>(() => writer.WriteStreamObjectTrailer());
             TestAssert.Equal(0L, scope.Budget.PdfOutputBytes);
         }
 
