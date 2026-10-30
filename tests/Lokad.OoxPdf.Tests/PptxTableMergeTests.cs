@@ -13,6 +13,7 @@ namespace Lokad.OoxPdf.Tests;
 internal static class PptxTableMergeTests
 {
     private static readonly XNamespace A = "http://schemas.openxmlformats.org/drawingml/2006/main";
+    private static readonly XNamespace P = "http://schemas.openxmlformats.org/presentationml/2006/main";
     private static readonly XNamespace R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
     public static void PptxMergedTableNeighborsKeepAllSourceContent()
@@ -74,6 +75,9 @@ internal static class PptxTableMergeTests
         foreach (bool compact in new[] { false, true })
             WithSlide("merged", xml => {
                 if (compact) xml.Descendants(A + "tr").First().Elements(A + "tc").ElementAt(1).Remove();
+                // Exercise the existing content-minimum path; a tightly declared
+                // frame deliberately retains its fixed rows instead of expanding.
+                xml.Descendants(P + "xfrm").Single().Element(A + "ext")!.SetAttributeValue("cy", 3048000);
                 XElement paragraph = TailCell(xml).Descendants(A + "p").First();
                 XElement runProperties = new(paragraph.Descendants(A + "rPr").First());
                 paragraph.RemoveNodes();
