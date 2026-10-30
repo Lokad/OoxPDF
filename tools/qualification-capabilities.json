@@ -318,6 +318,15 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+      "PptxInferredTitleDefaultsMatchIndependentOfficeSizes",
+      "PptxInferredTitleSizeFollowsSourcePrecedence",
+      "DocxCustomTableMarginsMatchIndependentWordContentOrigins",
+      "DocxCustomTableMarginsKeepIncompleteInheritanceFallbacks",
+      "DocxNoteListLabelsFollowIndependentWordReferenceOrder",
+      "DocxNoteListOrderKeepsCachedXmlAndSourceStoryOrder",
+      "DocxStoryOwnershipDiagnosesDrawingFallbacksWithLocalProvenance",
+      "DocxStoryOwnershipKeepsDrawingRelationshipIdsLocal",
+      "DocxStoryOwnershipDrawingDiagnosticsObserveCancellation",
     "PptxMergedTableNeighborsKeepAllSourceContent",
       "DocxExactContinuationPrintOriginKeepsItsAuthoredSlot",
       "DocxMinimumLeadingUsesLocalSlotsAcrossNeighborsAndSlotGrowth",

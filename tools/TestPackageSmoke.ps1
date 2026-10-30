@@ -1,5 +1,6 @@
-# Package smoke test (T08): packs the library, or reuses -PackagePath, then converts a
-# document through the packed package only: no project references, no tools,
+# Package smoke test (T08): packs the library, or reuses -PackagePath, then checks
+# DOCX/PPTX conversion and failure contracts through the packed package only:
+# no project references, no tools,
 # no Office/COM, and no reference cache. Each run has its own package feed,
 # restore cache, and consumer directory so older packages cannot satisfy the test.
 # On hosts without Windows fonts,
@@ -85,6 +86,7 @@ if ($ExpectedLibrarySha256 -and $librarySha256 -ne $ExpectedLibrarySha256) {
 }
 
 Copy-Item -LiteralPath (Join-Path $repoRoot "tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-01-plain-paragraph.docx") -Destination (Join-Path $scratch "input.docx")
+Copy-Item -LiteralPath (Join-Path $repoRoot "tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-10-composite-table-port.pptx") -Destination (Join-Path $scratch "input.pptx")
 
 $escapedFeedPath = [Security.SecurityElement]::Escape($packDirectory)
 Set-Content -LiteralPath (Join-Path $scratch "NuGet.config") -Encoding UTF8 -Value @"
@@ -141,7 +143,7 @@ Console.WriteLine("Loaded packed library SHA-256 " + loadedLibrarySha256 + ".");
 var admission = new SmokeAdmission();
 var options = new OoxPdfOptions
 {
-    FontResolver = args.Length > 4 ? new SmokeFontResolver(args[4]) : null,
+    FontResolver = args[4].Length != 0 ? new SmokeFontResolver(args[4]) : null,
     MemoryAdmission = admission
 };
 OoxPdfConverter.Convert(input, output, options);
@@ -163,6 +165,46 @@ string pdf = Encoding.ASCII.GetString(File.ReadAllBytes(output));
 if (!pdf.Contains("/FontFile2", StringComparison.Ordinal) || !pdf.Contains("/ToUnicode", StringComparison.Ordinal))
 {
     throw new InvalidDataException("Smoke output must embed a TrueType font and its Unicode map.");
+}
+string pptxOutput = Path.ChangeExtension(output, ".pptx.pdf");
+OoxPdfConverter.Convert(args[5], pptxOutput, options);
+string pptxPdf = Encoding.ASCII.GetString(File.ReadAllBytes(pptxOutput));
+if (!pptxPdf.StartsWith("%PDF-", StringComparison.Ordinal) || !pptxPdf.Contains("/FontFile2", StringComparison.Ordinal))
+    throw new InvalidDataException("Packed PPTX conversion must produce a PDF with embedded text.");
+if (admission.Requests != 2 || admission.Releases != 2)
+    throw new InvalidOperationException("Packed DOCX/PPTX admission ownership is unbalanced.");
+
+string protectedOutput = Path.ChangeExtension(output, ".protected.pdf");
+const string retained = "Retain the existing destination after failure.";
+File.WriteAllText(protectedOutput, retained);
+using (var cancellation = new CancellationTokenSource())
+{
+    cancellation.Cancel();
+    var error = ExpectFailure<OperationCanceledException>(() => OoxPdfConverter.Convert(input, protectedOutput, options, cancellation.Token));
+    if (error.CancellationToken != cancellation.Token)
+        throw new InvalidOperationException("Packed cancellation must retain the caller token.");
+}
+string malformed = Path.ChangeExtension(input, ".malformed.docx");
+File.WriteAllText(malformed, "This is not an OOXML ZIP package.");
+ExpectFailure<InvalidDataException>(() => OoxPdfConverter.Convert(malformed, protectedOutput, options));
+var refusal = new RefusingAdmission();
+ExpectFailure<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(args[5], protectedOutput,
+    new OoxPdfOptions { FontResolver = options.FontResolver, MemoryAdmission = refusal }));
+if (refusal.Requests != 1 || admission.Requests != admission.Releases || File.ReadAllText(protectedOutput) != retained)
+    throw new InvalidOperationException("Packed failure must balance ownership and preserve the destination.");
+Console.WriteLine("Packed PPTX conversion, cancellation, malformed-input recovery, admission refusal and destination preservation passed.");
+
+static T ExpectFailure<T>(Action action) where T : Exception
+{
+    try { action(); }
+    catch (T error) { return error; }
+    throw new InvalidOperationException("Expected packed failure: " + typeof(T).Name);
+}
+
+sealed class RefusingAdmission : IOoxPdfMemoryAdmission
+{
+    public int Requests;
+    public IDisposable? TryAcquire(CancellationToken token) { token.ThrowIfCancellationRequested(); Requests++; return null; }
 }
 
 sealed class SmokeAdmission : IOoxPdfMemoryAdmission, IDisposable
@@ -189,8 +231,7 @@ Set-Content -LiteralPath (Join-Path $scratch "Program.cs") -Encoding UTF8 -Value
 
 $input = Join-Path $scratch "input.docx"
 $output = Join-Path $scratch "output.pdf"
-$smokeArguments = @($input, $output, $librarySha256, $version)
-if (-not [string]::IsNullOrWhiteSpace($FontPath)) { $smokeArguments += $FontPath }
+$smokeArguments = @($input, $output, $librarySha256, $version, $FontPath, (Join-Path $scratch 'input.pptx'))
 $smokeProject = Join-Path $scratch "smoke.csproj"
 & dotnet restore $smokeProject --packages (Join-Path $scratch "packages") --configfile (Join-Path $scratch "NuGet.config") --nologo
 if ($LASTEXITCODE -ne 0) {
@@ -212,6 +253,11 @@ Write-Host "Package smoke test passed through the packed library."
     ReusedPackage = [bool]$PackagePath
     ExpectedLibrarySha256 = $ExpectedLibrarySha256
     MemoryAdmissionChecked = $true
+    PptxConversionChecked = $true
+    CancellationChecked = $true
+    MalformedInputChecked = $true
+    AdmissionRefusalChecked = $true
+    FailurePreservesDestinationChecked = $true
     VersionMetadataChecked = $true
     CallerDocumentationChecked = $true
     LocalDocumentationLinksChecked = $localDocumentationLinks
@@ -221,6 +267,7 @@ Write-Host "Package smoke test passed through the packed library."
     LibrarySha256 = $librarySha256
     OutputSha256 = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash
     OutputBytes = (Get-Item -LiteralPath $output).Length
+    PptxOutputSha256 = (Get-FileHash -LiteralPath ([IO.Path]::ChangeExtension($output, '.pptx.pdf')) -Algorithm SHA256).Hash
     RestorePackages = Join-Path $scratch "packages"
 } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $scratch "summary.json") -Encoding UTF8
 Write-Host ("Evidence: {0}" -f (Join-Path $scratch "summary.json"))

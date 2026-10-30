@@ -59,7 +59,9 @@ and face on both paths. `pptx-font-identity` includes the five checks for Ubuntu
 
 Use `framework-compatibility` in `tools/qualification-capabilities.json` for the
 small .NET 10 lane: public conversion, streams, cancellation, atomic publication,
-fonts, CLI and three composed-document controls. Extensive suites use .NET 11.
+fonts, CLI and composed-document controls. The forty-method checkpoint also
+covers inferred chart titles, table padding, note-list order and related-story
+drawing diagnostics. Extensive suites use .NET 11.
 Do not run all portable rendering tests again merely to check framework transfer.
 Reuse one frozen artifact per TFM and retain each report's actual runtime identity.
 
