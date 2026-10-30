@@ -67,7 +67,7 @@ internal static partial class OoxMemoryAdmissionTests
                 TestAssert.Throws<OperationCanceledException>(() => JpegImage.ReadOwned(source.Bytes, cancellation.Token));
                 TestAssert.Equal(requests, canceled.Requests);
             }
-            int scan = source.Bytes.AsSpan().IndexOf([0xFF, 0xDA]);
+            int scan = source.Bytes.AsSpan().IndexOf((ReadOnlySpan<byte>)[0xFF, 0xDA]);
             TestAssert.True(scan > 0, "The fixture contains a baseline scan.");
             int entropy = scan + 2 + BinaryPrimitives.ReadUInt16BigEndian(source.Bytes.AsSpan(scan + 2));
             byte[] truncated = source.Bytes[..entropy];
