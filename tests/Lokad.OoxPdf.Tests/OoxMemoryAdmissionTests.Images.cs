@@ -170,6 +170,7 @@ internal static partial class OoxMemoryAdmissionTests
                     }};
                     var diagnostics = new List<OoxPdfDiagnostic>();
                     var options = new OoxPdfOptions { MemoryBudget=pool, DiagnosticSink=diagnostics.Add,
+                        InputKind=relative.EndsWith(".docx", StringComparison.Ordinal) ? OoxPdfInputKind.Docx : OoxPdfInputKind.Pptx,
                         FontResolver=new PortableRenderingTests.PinnedResolver(mathFont: true) };
                     OoxPdfLimitExceededException failure;
                     if (file)
