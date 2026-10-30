@@ -13,7 +13,7 @@ internal static class DocxAutofitSpanTests
         text, [DocxTests.CreateDocxLayoutParagraph(text, 10d, 12d)], null, null, null,
         null, [], DocxTableCellMargins.Empty) { GridSpan = span };
 
-    private static DocxTableRow[] Layout(DocxTable table)
+    private static DocxTableRowLayout[] Layout(DocxTable table)
     {
         var document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -39,10 +39,10 @@ internal static class DocxAutofitSpanTests
             double unit = 30d + .96d, left = (longFirst ? 100d : 30d) + .96d;
             TestAssert.True(Math.Abs(second.Cells[0].Width - left) < .000001d,
                 "A partially overlapping cell measures the independent column it contains.");
-            TestAssert.True(Math.Abs(second.Cells[1].Width - unit) < .000001d);
+            TestAssert.True(Math.Abs(second.Cells[1].Width - unit) < .000001d, "The middle interval keeps its measured width.");
             TestAssert.True(Math.Abs(first.Cells[0].Width - left - unit / 2d) < .000001d,
                 "Placement retains the shared subdivision without charging the neighboring content twice.");
-            TestAssert.True(rows.All(row => row.Cells.All(cell => cell.TextLines.Count == 1)));
+            TestAssert.True(rows.All(row => row.Cells.All(cell => cell.TextLines.Count == 1)), "All source text retains its measured line.");
         }
 
         var asymmetric = new DocxTable(null, [48d, 16d, 64d, 64d], [
@@ -51,7 +51,7 @@ internal static class DocxAutofitSpanTests
         var actual = Layout(asymmetric);
         TestAssert.True(Math.Abs(actual[0].Cells[0].Width - actual[1].Cells[0].Width) < .000001d,
             "An unoccupied subdivision collapses rather than shifting the next content column.");
-        TestAssert.True(Math.Abs(actual[0].Cells[0].Width - 30.96d) < .000001d);
+        TestAssert.True(Math.Abs(actual[0].Cells[0].Width - 30.96d) < .000001d, "The first column follows content rather than its old grid hint.");
 
         var bridge = new DocxTable(null, [64d, 32d, 32d, 64d], [
             new DocxTableRow([Cell(new string('A', 20), 4)], null),
@@ -77,12 +77,12 @@ internal static class DocxAutofitSpanTests
             double expected = 100d + (authoredMargins ? 5d : .96d);
             TestAssert.True(Math.Abs(rows[0].Cells[0].Width - expected) < .000001d,
                 "A fully merged constraint pays its own insets once across measured columns.");
-            TestAssert.True(Math.Abs(rows[1].Cells.Sum(cell => cell.Width) - expected) < .000001d);
+            TestAssert.True(Math.Abs(rows[1].Cells.Sum(cell => cell.Width) - expected) < .000001d, "Merged and ordinary rows share the same width.");
             TestAssert.True(rows.All(row => row.Cells.All(cell => cell.TextLines.Count == 1)),
                 "Natural sizing and wrapping must agree at the merged cell's exact content width.");
             TestAssert.Equal(160d, Layout(table with { LayoutValue = "fixed" })[0].Cells[0].Width);
             TestAssert.True(Math.Abs(Layout(table with {
-                PreferredWidthType = "dxa", PreferredWidthPoints = 140d })[0].Cells[0].Width - 140d) < .000001d);
+                PreferredWidthType = "dxa", PreferredWidthPoints = 140d })[0].Cells[0].Width - 140d) < .000001d, "An authored preferred table width retains its floor.");
         }
 
         // Neither of these crossing middle intervals owns an independent partition.
