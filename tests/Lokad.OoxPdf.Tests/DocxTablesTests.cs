@@ -1734,6 +1734,8 @@ internal static class DocxTablesTests
                       <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
                       <w:tr><w:tc><w:p><w:r><w:t>Inherited</w:t></w:r></w:p></w:tc></w:tr>
                     </w:tbl>
+                    <!-- Keep these independently formatted tables separate in Word. -->
+                    <w:p/>
                     <w:tbl>
                       <w:tblPr>
                         <w:tblStyle w:val="IndentedTable"/>

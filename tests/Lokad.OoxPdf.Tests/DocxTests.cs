@@ -1013,6 +1013,8 @@ internal static class DocxTests
                         <w:tr><w:tc><w:p><w:r><w:t>Inserted body table</w:t></w:r></w:p></w:tc></w:tr>
                       </w:tbl>
                     </w:ins>
+                    <!-- This probe checks distinct block revision owners. -->
+                    <w:p/>
                     <w:del w:id="104" w:author="D" w:date="2026-06-10T00:00:00Z">
                       <w:tbl>
                         <w:tr><w:tc><w:p><w:r><w:delText>Deleted body table</w:delText></w:r></w:p></w:tc></w:tr>

@@ -27,7 +27,8 @@ internal static class DocxAdjacentTableTests
                 IEnumerable<DocxBodyElement> elements = control.GetProperty("Container").GetString() switch
                 {
                     "header" => document.HeaderBodyElementsByType["default"],
-                    "cell" => document.Tables.Single().Rows.Single().Cells.Single().BodyElements,
+                    "cell" => document.BodyElements.OfType<DocxTableElement>().Single()
+                        .Table.Rows.Single().Cells.Single().BodyElements,
                     _ => document.BodyElements
                 };
                 var tables = elements.OfType<DocxTableElement>().Select(element => element.Table).ToArray();
