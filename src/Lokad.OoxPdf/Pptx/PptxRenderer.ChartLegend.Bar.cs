@@ -29,12 +29,13 @@ internal sealed partial class PptxRenderer
 
     // Measure once, reserve automatic plot space, then give painting the same rows.
     // Manual frames and overlay legends retain their authored placement contract.
-    private static (ChartLayout Layout, ChartLegendBox Box) LayoutBarCategoryLegend(
+    private static async ValueTask<(ChartLayout Layout, ChartLegendBox Box)> LayoutBarCategoryLegendAsync(
         ChartLayout layout, IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style,
         PresentationFontResolver resolver, PptxRenderContext context)
     {
         if (!layout.Legend.Visible || entries.Count == 0) { return (layout, default); }
         var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
+        await measure.PrepareAsync(entries.Select(entry => entry.Name), style).ConfigureAwait(false);
         ChartLegendBox box = ResolveChartLegendBox(layout.Frame, layout.PlotBox, entries,
             layout.Legend, style, measure, ChartLegendPlacement.Default);
         if (!box.Horizontal) { return (layout, box); }

@@ -1634,11 +1634,11 @@ internal static class PptxChartLegendsTests
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart frame box.");
         object frame = Activator.CreateInstance(frameType, [0d, 0d, 600d, 400d]) ?? throw new InvalidOperationException("Expected chart frame.");
         System.Reflection.MethodInfo getPlotBox = typeof(PptxRenderer).GetMethod(
-            "GetCartesianNoTitleRightLegendPlotBox",
+            "GetCartesianNoTitleRightLegendPlotBoxAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected right-legend plot-box resolver.");
 
-        object smallPlotBox = getPlotBox.Invoke(null, [frame, PptxTheme.Empty, smallLegendChart, null, null, true, null, smallLegendStyle]) ?? throw new InvalidOperationException("Expected small legend plot box.");
-        object largePlotBox = getPlotBox.Invoke(null, [frame, PptxTheme.Empty, largeLegendChart, null, null, true, null, largeLegendStyle]) ?? throw new InvalidOperationException("Expected large legend plot box.");
+        object smallPlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, smallLegendChart, null, null, true, null, smallLegendStyle])!) ?? throw new InvalidOperationException("Expected small legend plot box.");
+        object largePlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, largeLegendChart, null, null, true, null, largeLegendStyle])!) ?? throw new InvalidOperationException("Expected large legend plot box.");
         double smallWidth = (double)(smallPlotBox.GetType().GetProperty("Width")?.GetValue(smallPlotBox) ?? 0d);
         double largeWidth = (double)(largePlotBox.GetType().GetProperty("Width")?.GetValue(largePlotBox) ?? 0d);
 
@@ -1679,9 +1679,9 @@ internal static class PptxChartLegendsTests
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart frame box.");
         object frame = Activator.CreateInstance(frameType, [72d, 36d, 720d, 432d]) ?? throw new InvalidOperationException("Expected chart frame.");
         System.Reflection.MethodInfo getPlotBox = typeof(PptxRenderer).GetMethod(
-            "GetCartesianNoTitleRightLegendPlotBox",
+            "GetCartesianNoTitleRightLegendPlotBoxAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected right-legend plot-box resolver.");
-        object plotBox = getPlotBox.Invoke(null, [frame, PptxTheme.Empty, chartXml, null, null, true, null, legendStyle]) ?? throw new InvalidOperationException("Expected plot box.");
+        object plotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, chartXml, null, null, true, null, legendStyle])!) ?? throw new InvalidOperationException("Expected plot box.");
         double y = (double)(plotBox.GetType().GetProperty("Y")?.GetValue(plotBox) ?? 0d);
         double height = (double)(plotBox.GetType().GetProperty("Height")?.GetValue(plotBox) ?? 0d);
         TestAssert.True(Math.Abs(y - 75.90d) < 0.05d, "Plot bottom should sit 39.9pt below the frame top, on the Office category-axis line. Got " + y);
@@ -1726,15 +1726,22 @@ internal static class PptxChartLegendsTests
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart frame box.");
         object frame = Activator.CreateInstance(frameType, [0d, 0d, 600d, 400d]) ?? throw new InvalidOperationException("Expected chart frame.");
         System.Reflection.MethodInfo getPlotBox = typeof(PptxRenderer).GetMethod(
-            "GetCartesianNoTitleRightLegendPlotBox",
+            "GetCartesianNoTitleRightLegendPlotBoxAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected right-legend plot-box resolver.");
 
-        object smallPlotBox = getPlotBox.Invoke(null, [frame, PptxTheme.Empty, smallAxisChart, null, null, true, null, legendStyle]) ?? throw new InvalidOperationException("Expected small axis plot box.");
-        object largePlotBox = getPlotBox.Invoke(null, [frame, PptxTheme.Empty, largeAxisChart, null, null, true, null, legendStyle]) ?? throw new InvalidOperationException("Expected large axis plot box.");
+        object smallPlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, smallAxisChart, null, null, true, null, legendStyle])!) ?? throw new InvalidOperationException("Expected small axis plot box.");
+        object largePlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, largeAxisChart, null, null, true, null, legendStyle])!) ?? throw new InvalidOperationException("Expected large axis plot box.");
         double smallX = (double)(smallPlotBox.GetType().GetProperty("X")?.GetValue(smallPlotBox) ?? 0d);
         double largeX = (double)(largePlotBox.GetType().GetProperty("X")?.GetValue(largePlotBox) ?? 0d);
 
         TestAssert.True(largeX > smallX, "Expected larger value-axis text style to reserve more left-side plot space.");
+    }
+
+    private static object? AwaitPrivatePlotBox(object pending)
+    {
+        var task = (Task)pending.GetType().GetMethod("AsTask")!.Invoke(pending, null)!;
+        task.GetAwaiter().GetResult();
+        return task.GetType().GetProperty("Result")!.GetValue(task);
     }
 
     public static void PptxChartHorizontalLegendEntryWidthIncludesOfficePadding()
@@ -1748,7 +1755,7 @@ internal static class PptxChartLegendsTests
         object style = Activator.CreateInstance(textStyleType, ["Arial", 9d, 0d, new RgbColor(0, 0, 0), 1d, false, false, false, false, null, null]) ?? throw new InvalidOperationException("Expected chart text style.");
         object textMeasurer = Activator.CreateInstance(textMeasurerType, [null]) ?? throw new InvalidOperationException("Expected chart text measurer.");
         System.Reflection.MethodInfo measure = textMeasurerType.GetMethod(
-            "Measure",
+            "MeasureAsync",
             System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance,
             binder: null,
             [typeof(string), textStyleType],
@@ -1759,7 +1766,7 @@ internal static class PptxChartLegendsTests
 
         string label = "Series";
         double markerSize = 4.95d;
-        double measuredText = (double)(measure.Invoke(textMeasurer, [label, style]) ?? 0d);
+        double measuredText = ((ValueTask<double>)measure.Invoke(textMeasurer, [label, style])!).GetAwaiter().GetResult();
         // Caller-supplied gaps compose additively (office values now resolve per size/content upstream).
         double markerTextGap = 3d;
         double officePackedLegendEntryPadding = 8d;
@@ -1802,6 +1809,9 @@ internal static class PptxChartLegendsTests
         System.Reflection.MethodInfo resolveFrame = typeof(PptxRenderer).GetMethod(
             "ResolveRadarValueAxisLabelFrame",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected radar value-axis label frame resolver.");
+
+        var prepare = textMeasurerType.GetMethod("PrepareAsync", [typeof(IEnumerable<string>), textStyleType])!;
+        ((ValueTask)prepare.Invoke(textMeasurer, [new[] { "1", "1000000" }, style])!).GetAwaiter().GetResult();
 
         object shortFrame = resolveFrame.Invoke(null, [layout, "1", style, textMeasurer, 0.5d]) ?? throw new InvalidOperationException("Expected short radar frame.");
         object longFrame = resolveFrame.Invoke(null, [layout, "1000000", style, textMeasurer, 0.5d]) ?? throw new InvalidOperationException("Expected long radar frame.");

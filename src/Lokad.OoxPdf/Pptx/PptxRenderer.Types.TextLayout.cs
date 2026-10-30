@@ -337,27 +337,44 @@ internal sealed partial class PptxRenderer
         }
 
         public ResolvedGlyphFont? ResolveGlyphFont(string? familyName, bool bold, bool italic, int codePoint)
-            => ResolveGlyphFontAsync(familyName, bold, italic, codePoint).GetAwaiter().GetResult();
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string requestedFamily = PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName);
+            string key = GlyphCacheKey(requestedFamily, bold, italic, codePoint);
+            if (glyphFonts.TryGetValue(key, out ResolvedGlyphFont? cached)) return cached;
+            foreach (var candidate in GlyphCandidates(requestedFamily, bold, italic))
+            {
+                cached = MatchGlyph(requestedFamily, bold, codePoint, candidate, LoadFont(candidate.Resolution));
+                if (cached is not null) return glyphFonts[key] = cached;
+            }
+            return glyphFonts[key] = null;
+        }
 
         public async ValueTask<ResolvedGlyphFont?> ResolveGlyphFontAsync(string? familyName, bool bold, bool italic, int codePoint)
         {
             cancellationToken.ThrowIfCancellationRequested();
             string requestedFamily = PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName);
-            string key = requestedFamily + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + italic.ToString(CultureInfo.InvariantCulture) + "\u001f" + codePoint.ToString(CultureInfo.InvariantCulture);
-            if (glyphFonts.TryGetValue(key, out ResolvedGlyphFont? cached))
+            string key = GlyphCacheKey(requestedFamily, bold, italic, codePoint);
+            if (glyphFonts.TryGetValue(key, out ResolvedGlyphFont? cached)) return cached;
+            foreach (var candidate in GlyphCandidates(requestedFamily, bold, italic))
             {
-                return cached;
+                OpenTypeFont? font = await LoadFontAsync(candidate.Resolution).ConfigureAwait(false);
+                cached = MatchGlyph(requestedFamily, bold, codePoint, candidate, font);
+                if (cached is not null) return glyphFonts[key] = cached;
             }
+            return glyphFonts[key] = null;
+        }
 
-            FontFaceResolution? primaryResolution = ResolveFontResolution(requestedFamily, bold, italic);
-            OpenTypeFont? primaryFont = await LoadFontAsync(primaryResolution).ConfigureAwait(false);
-            if (primaryResolution is not null && primaryFont is not null && primaryFont.MapCodePoint(codePoint) != 0)
-            {
-                cached = new ResolvedGlyphFont(requestedFamily, requestedFamily, PptxGlyphTypefaceResolutionSource.Primary, primaryFont, bold && !primaryResolution.Bold);
-                glyphFonts[key] = cached;
-                return cached;
-            }
+        private static string GlyphCacheKey(string requestedFamily, bool bold, bool italic, int codePoint) =>
+            requestedFamily + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" +
+            italic.ToString(CultureInfo.InvariantCulture) + "\u001f" + codePoint.ToString(CultureInfo.InvariantCulture);
 
+        // Both acquisition and CPU lookup share the candidate ordering and glyph
+        // acceptance rule. Only the acquisition path may read a program source.
+        private IEnumerable<(FontFaceResolution Resolution, bool Primary)> GlyphCandidates(string requestedFamily, bool bold, bool italic)
+        {
+            FontFaceResolution? primary = ResolveFontResolution(requestedFamily, bold, italic);
+            if (primary is not null) yield return (primary, true);
             foreach (FontFaceResolution resolution in resolver.GetDiscoveredFonts()
                          .Where(f => !f.HasMathTable)
                          .OrderBy(f => f.Bold == bold ? 0 : 1000)
@@ -368,23 +385,18 @@ internal sealed partial class PptxRenderer
                          .ThenBy(f => f.FontFaceIndex))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (primaryResolution is not null && resolver.IsPrimaryProgram(primaryResolution, resolution))
-                {
-                    continue;
-                }
-
-                OpenTypeFont? font = await LoadFontAsync(resolution).ConfigureAwait(false);
-                if (font is not null && font.MapCodePoint(codePoint) != 0)
-                {
-                    cached = new ResolvedGlyphFont(requestedFamily, resolution.FamilyName, PptxGlyphTypefaceResolutionSource.Fallback, font, bold && !resolution.Bold);
-                    glyphFonts[key] = cached;
-                    return cached;
-                }
+                if (primary is null || !resolver.IsPrimaryProgram(primary, resolution))
+                    yield return (resolution, false);
             }
-
-            glyphFonts[key] = null;
-            return null;
         }
+
+        private static ResolvedGlyphFont? MatchGlyph(string requestedFamily, bool bold, int codePoint,
+            (FontFaceResolution Resolution, bool Primary) candidate, OpenTypeFont? font) =>
+            font is not null && font.MapCodePoint(codePoint) != 0
+                ? new ResolvedGlyphFont(requestedFamily, candidate.Primary ? requestedFamily : candidate.Resolution.FamilyName,
+                    candidate.Primary ? PptxGlyphTypefaceResolutionSource.Primary : PptxGlyphTypefaceResolutionSource.Fallback,
+                    font, bold && !candidate.Resolution.Bold)
+                : null;
 
         public OpenTypeFont? ResolveOpenTypeFont(string? familyName, bool bold, bool italic)
         {
@@ -451,7 +463,10 @@ internal sealed partial class PptxRenderer
         }
 
         private OpenTypeFont? LoadFont(FontFaceResolution? resolution)
-            => LoadFontAsync(resolution).GetAwaiter().GetResult();
+        {
+            OpenTypeFont? font = resolution is null ? null : resolver.GetPreparedOpenTypeFont(resolution, cancellationToken);
+            return font is { HasTrueTypeOutlines: true } ? font : null;
+        }
 
         private async ValueTask<OpenTypeFont?> LoadFontAsync(FontFaceResolution? resolution)
         {

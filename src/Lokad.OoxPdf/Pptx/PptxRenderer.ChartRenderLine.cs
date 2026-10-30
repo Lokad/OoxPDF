@@ -394,7 +394,7 @@ internal sealed partial class PptxRenderer
         return Math.Min(presetRight, frameRight - reserveWidth);
     }
 
-    private static ChartLayout GetLineChartLayout(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart sceneChart, PptxColorMap colorMap, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
+    private static async ValueTask<ChartLayout> GetLineChartLayoutAsync(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart sceneChart, PptxColorMap colorMap, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = sceneChart.Title.Text;
@@ -404,21 +404,21 @@ internal sealed partial class PptxRenderer
         double? categoryLabelOffsetAdjustment = null;
         ChartCategoryAxisPlacement? categoryAxisPlacement = null;
         ChartValueExtents? measuredLineExtents = null;
-        ChartPlotLayout plotLayout = GetLineChartPlotLayout();
+        ChartPlotLayout plotLayout = (await GetLineChartPlotLayoutAsync().ConfigureAwait(false));
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend, categoryLabelOffsetAdjustment, categoryAxisPlacement);
 
-        ChartPlotLayout GetLineChartPlotLayout()
+        async ValueTask<ChartPlotLayout> GetLineChartPlotLayoutAsync()
         {
             bool hasTitle = !string.IsNullOrWhiteSpace(title);
             bool hasRightLegend = legend.Visible && !legend.Overlay && legend.PositionKind == PptxSceneChartLegendPosition.Right;
             bool hasLineChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line) is not null;
             ChartPlotBox defaultPlotBox = !hasTitle && hasRightLegend
-                ? GetCartesianNoTitleRightLegendPlotBox(frame, theme, chartXml, sceneChart, workbook, plotVisibleOnly, fontResolver, legendTextStyle)
+                ? (await GetCartesianNoTitleRightLegendPlotBoxAsync(frame, theme, chartXml, sceneChart, workbook, plotVisibleOnly, fontResolver, legendTextStyle).ConfigureAwait(false))
                 : hasTitle && hasRightLegend && hasLineChart
-                    ? GetLineTitleRightLegendPlotBox()
+                    ? (await GetLineTitleRightLegendPlotBoxAsync().ConfigureAwait(false))
                     : GetDefaultChartPlotBox(frame);
             if (!hasTitle && !legend.Visible && hasLineChart &&
-                TryGetLegendlessLineAutomaticPlotBox(defaultPlotBox, out ChartPlotBox measuredPlotBox))
+                (await TryGetLegendlessLineAutomaticPlotBoxAsync(defaultPlotBox).ConfigureAwait(false)) is { } measuredPlotBox)
             {
                 defaultPlotBox = measuredPlotBox;
             }
@@ -426,58 +426,58 @@ internal sealed partial class PptxRenderer
                 ? manualPlotLayout
                 : ChartPlotLayout.FromPlotBox(defaultPlotBox);
 
-            bool TryGetLegendlessLineAutomaticPlotBox(ChartPlotBox defaultBox, out ChartPlotBox plotBox)
+            async ValueTask<ChartPlotBox?> TryGetLegendlessLineAutomaticPlotBoxAsync(ChartPlotBox defaultBox)
             {
-                plotBox = defaultBox;
+                ChartPlotBox plotBox = defaultBox;
                 // A manual layout owns its source geometry; composed plots and
                 // extra value-axis strips retain their existing layout fallback.
                 if (sceneChart is null || sceneChart.PlotAreaLayout.HasGeometryValues || sceneChart.Plots.Count != 1)
                 {
-                    return false;
+                    return null;
                 }
 
                 PptxSceneChartPlot? plot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, 0);
                 XElement? plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line);
                 if (plotElement is null)
                 {
-                    return false;
+                    return null;
                 }
 
                 IReadOnlyList<ChartAxisSource> valueAxes = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, plotElement);
                 if (valueAxes.Count != 1 || valueAxes[0].SceneAxis is not { PositionKind: PptxSceneChartAxisPosition.Left } valueAxis ||
                     !IsSceneOrXmlChartAxisLabelVisible(valueAxis, valueAxes[0].XmlAxis))
                 {
-                    return false;
+                    return null;
                 }
 
                 ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, plot, chartXml, plotElement);
                 if (categoryAxis.SceneAxis is not { PositionKind: PptxSceneChartAxisPosition.Bottom } ||
                     !IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
-                    return false;
+                    return null;
                 }
 
-                double maxLabelWidth = MeasureLineChartValueLabelWidth(out ChartTextStyle tickStyle);
+                var (maxLabelWidth, tickStyle) = await MeasureLineChartValueLabelWidthAsync().ConfigureAwait(false);
                 if (maxLabelWidth <= 0d)
                 {
-                    return false;
+                    return null;
                 }
 
                 double leftReserve = ComputeCartesianValueAxisLeftReserve(maxLabelWidth, tickStyle.FontSize);
                 double width = frame.Width - leftReserve - PptxChartMetricRules.ColumnPlotRightReserve;
                 if (width < 1d)
                 {
-                    return false;
+                    return null;
                 }
 
                 ChartTextStyle categoryStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis,
                     fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
                 var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
-                double topReserve = PptxChartMetricRules.AutomaticCartesianTopPadding + textMeasurer.MeasureNormalLineHeight(tickStyle) / 2d;
+                double topReserve = PptxChartMetricRules.AutomaticCartesianTopPadding + (await textMeasurer.MeasureNormalLineHeightAsync(tickStyle).ConfigureAwait(false)) / 2d;
                 double bottomReserve = ComputeCartesianLabelStripBottomReserve(categoryStyle.FontSize);
                 double labelOffsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
                 double? measuredOffsetAdjustment = null;
-                if (labelOffsetScale != 1d && textMeasurer.TryMeasureNormalLineHeight(categoryStyle, out double categoryLineHeight))
+                if (labelOffsetScale != 1d && (await textMeasurer.TryMeasureNormalLineHeightAsync(categoryStyle).ConfigureAwait(false)) is { } categoryLineHeight)
                 {
                     measuredOffsetAdjustment = categoryLineHeight * PptxChartMetricRules.CategoryAxisLabelOffsetNormalLineHeightRatio * (labelOffsetScale - 1d);
                     bottomReserve += measuredOffsetAdjustment.Value;
@@ -486,7 +486,7 @@ internal sealed partial class PptxRenderer
                 double height = frame.Height - topReserve - bottomReserve;
                 if (height < 1d)
                 {
-                    return false;
+                    return null;
                 }
 
                 // The category axis owns its crossing on the value scale. Its
@@ -496,7 +496,7 @@ internal sealed partial class PptxRenderer
                 // existing layout/emission fallback.
                 if (!valueAxis.HasLogarithmicScale && measuredLineExtents is { } extents &&
                     textMeasurer.TryMeasureNormalLineHeight(tickStyle, out _) &&
-                    textMeasurer.TryMeasureNormalLineHeight(categoryStyle, out _) &&
+                    (await textMeasurer.TryMeasureNormalLineHeightAsync(categoryStyle).ConfigureAwait(false)) is not null &&
                     ReadSceneOrXmlValueAxisCrossingValue(categoryAxis.SceneAxis, categoryAxis.XmlAxis, extents) is { } crossing &&
                     double.IsFinite(crossing))
                 {
@@ -526,20 +526,20 @@ internal sealed partial class PptxRenderer
                     height = frame.Height - topReserve - bottomReserve;
                     if (height < 1d)
                     {
-                        return false;
+                        return null;
                     }
                     categoryAxisPlacement = new ChartCategoryAxisPlacement(crossing, labelRatio, topSide, reversed);
                 }
 
                 categoryLabelOffsetAdjustment = measuredOffsetAdjustment;
                 plotBox = new ChartPlotBox(frame.X + leftReserve, frame.Y + bottomReserve, width, height);
-                return true;
+                return plotBox;
             }
 
-            ChartPlotBox GetLineTitleRightLegendPlotBox()
+            async ValueTask<ChartPlotBox> GetLineTitleRightLegendPlotBoxAsync()
             {
                 ChartPlotBox presetBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.LineTitleRightLegend);
-                double maxValueLabelWidth = MeasureLineChartValueLabelWidth(out _);
+                double maxValueLabelWidth = (await MeasureLineChartValueLabelWidthAsync().ConfigureAwait(false)).Width;
                 if (maxValueLabelWidth <= 0d)
                 {
                     return presetBox;
@@ -553,16 +553,16 @@ internal sealed partial class PptxRenderer
                 {
                     PptxSceneChartPlot? titleLegendPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, 0);
                     IReadOnlyList<ChartSeriesNameRecord> titleLegendSeriesNames = ReadSharedChartSeriesNames(titleLegendPlot, titleLegendPlotElement, workbook);
-                    double titleLegendWidth = ResolveRightLegendWidth(titleLegendSeriesNames, legendTextStyle, includeAreaReserve: false, fontResolver, lastCategoryLabelWidth: 0d);
+                    double titleLegendWidth = (await ResolveRightLegendWidthAsync(titleLegendSeriesNames, legendTextStyle, includeAreaReserve: false, fontResolver, lastCategoryLabelWidth: 0d).ConfigureAwait(false));
                     right = ResolveTitledRightLegendPlotRight(presetRight, frame.X + frame.Width, titleLegendWidth);
                 }
                 double width = Math.Max(1d, right - x);
                 return new ChartPlotBox(x, presetBox.Y, width, presetBox.Height);
             }
 
-            double MeasureLineChartValueLabelWidth(out ChartTextStyle tickStyle)
+            async ValueTask<(double Width, ChartTextStyle Style)> MeasureLineChartValueLabelWidthAsync()
             {
-                tickStyle = default;
+                ChartTextStyle tickStyle = default;
                 XElement? plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line);
                 PptxSceneChartPlotKind plotKind = PptxSceneChartPlotKind.Line;
                 if (plotElement is null)
@@ -573,7 +573,7 @@ internal sealed partial class PptxRenderer
 
                 if (plotElement is null)
                 {
-                    return 0d;
+                    return (0d, tickStyle);
                 }
 
                 PptxSceneChartPlot? plot = ReadSceneChartPlot(sceneChart, plotKind, 0);
@@ -583,7 +583,7 @@ internal sealed partial class PptxRenderer
                     IReadOnlyList<ScatterSeries> series = ReadSceneOrXmlScatterSeries(plot, plotElement, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly);
                     if (series.Count == 0)
                     {
-                        return 0d;
+                        return (0d, tickStyle);
                     }
 
                     IReadOnlyList<ChartAxisSource> valueAxes = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, plotElement);
@@ -602,9 +602,10 @@ internal sealed partial class PptxRenderer
                     string[] tickLabels = tickValues
                         .Select(value => FormatSceneOrXmlChartAxisLabel(value, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultNumberFormat: null))
                         .ToArray();
-                    return tickLabels.Length == 0
+                    await textMeasurer.PrepareAsync(tickLabels, valueAxisTextStyle).ConfigureAwait(false);
+                    return (tickLabels.Length == 0
                         ? 0d
-                        : tickLabels.Max(label => textMeasurer.Measure(label, valueAxisTextStyle));
+                        : tickLabels.Max(label => textMeasurer.Measure(label, valueAxisTextStyle)), tickStyle);
                 }
 
                 PptxSceneChartGrouping grouping = ReadSceneOrXmlCartesianRightLegendGrouping(sceneChart, plot, chartXml, plotElement, plotKind);
@@ -613,7 +614,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSharedChartSeriesVectors(plot, plotElement, workbook, plotVisibleOnly);
                 if (CountRenderableSeries(seriesVectors) == 0)
                 {
-                    return 0d;
+                    return (0d, tickStyle);
                 }
 
                 ChartAxisSource lineValueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, plotElement).FirstOrDefault();
@@ -627,9 +628,10 @@ internal sealed partial class PptxRenderer
                 string[] lineTickLabels = lineTickValues
                     .Select(value => FormatSceneOrXmlChartAxisLabel(value, lineValueAxis.SceneAxis, valueAxisForScale, percentStacked ? "0%" : null))
                     .ToArray();
-                return lineTickLabels.Length == 0
+                await textMeasurer.PrepareAsync(lineTickLabels, lineValueAxisTextStyle).ConfigureAwait(false);
+                return (lineTickLabels.Length == 0
                     ? 0d
-                    : lineTickLabels.Max(label => textMeasurer.Measure(label, lineValueAxisTextStyle));
+                    : lineTickLabels.Max(label => textMeasurer.Measure(label, lineValueAxisTextStyle)), tickStyle);
             }
         }
     }
@@ -651,7 +653,7 @@ internal sealed partial class PptxRenderer
                 frameWidth * PptxChartMetricRules.LineRightLegendValueAxisFrameWidthPaddingRatio);
     }
 
-    private static ChartPlotBox GetCartesianNoTitleRightLegendPlotBox(ChartFrameBox frame, PptxTheme theme, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, ChartTextStyle legendTextStyle)
+    private static async ValueTask<ChartPlotBox> GetCartesianNoTitleRightLegendPlotBoxAsync(ChartFrameBox frame, PptxTheme theme, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, ChartTextStyle legendTextStyle)
     {
         XElement? plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line);
         PptxSceneChartPlotKind plotKind = PptxSceneChartPlotKind.Line;
@@ -674,18 +676,18 @@ internal sealed partial class PptxRenderer
         PptxSceneChartPlot? plot = ReadSceneChartPlot(sceneChart, plotKind, 0);
         IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSharedChartSeriesNames(plot, plotElement, workbook);
         double lastCategoryLabelWidth = plotKind == PptxSceneChartPlotKind.Area
-            ? MeasureLastCategoryLabelWidth(theme, sceneChart, chartXml, plot, plotElement, workbook, plotVisibleOnly, fontResolver)
+            ? (await MeasureLastCategoryLabelWidthAsync(theme, sceneChart, chartXml, plot, plotElement, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false))
             : 0d;
         double lastXLabelWidth = plotKind == PptxSceneChartPlotKind.Scatter
-            ? MeasureScatterLastXLabelWidth(theme, sceneChart, chartXml, plot, plotElement, workbook, plotVisibleOnly, fontResolver)
+            ? (await MeasureScatterLastXLabelWidthAsync(theme, sceneChart, chartXml, plot, plotElement, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false))
             : 0d;
-        double rightLegendWidth = ResolveRightLegendWidth(
+        double rightLegendWidth = (await ResolveRightLegendWidthAsync(
             seriesNames,
             legendTextStyle,
             includeAreaReserve: plotKind == PptxSceneChartPlotKind.Area,
             fontResolver: fontResolver,
             lastCategoryLabelWidth: lastCategoryLabelWidth,
-            lastXLabelWidth: lastXLabelWidth);
+            lastXLabelWidth: lastXLabelWidth).ConfigureAwait(false));
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
 
         double maxValueLabelWidth = 0d;
@@ -711,6 +713,7 @@ internal sealed partial class PptxRenderer
                 string[] tickLabels = tickValues
                     .Select(value => FormatSceneOrXmlChartAxisLabel(value, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultNumberFormat: null))
                     .ToArray();
+                await textMeasurer.PrepareAsync(tickLabels, valueAxisTextStyle).ConfigureAwait(false);
                 maxValueLabelWidth = tickLabels.Length == 0
                     ? 0d
                     : tickLabels.Max(label => textMeasurer.Measure(label, valueAxisTextStyle));
@@ -734,6 +737,7 @@ internal sealed partial class PptxRenderer
                 string[] tickLabels = tickValues
                     .Select(value => FormatSceneOrXmlChartAxisLabel(value, valueAxis.SceneAxis, valueAxisForScale, percentStacked ? "0%" : null))
                     .ToArray();
+                await textMeasurer.PrepareAsync(tickLabels, valueAxisTextStyle).ConfigureAwait(false);
                 maxValueLabelWidth = tickLabels.Length == 0
                     ? 0d
                     : tickLabels.Max(label => textMeasurer.Measure(label, valueAxisTextStyle));
@@ -846,7 +850,7 @@ internal sealed partial class PptxRenderer
     // Width of the last visible category label for the area right-legend reserve: the
     // legend swatch clears the end of that edge label by a fixed lead, so the reserve
     // grows with half of it. A blank or missing last label contributes nothing.
-    private static double MeasureLastCategoryLabelWidth(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, PptxSceneChartPlot? plot, XElement plotElement, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
+    private static async ValueTask<double> MeasureLastCategoryLabelWidthAsync(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, PptxSceneChartPlot? plot, XElement plotElement, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
     {
         ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, plot, chartXml, plotElement);
         ChartTextStyle categoryStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
@@ -867,7 +871,7 @@ internal sealed partial class PptxRenderer
             return 0d;
         }
 
-        return new ChartTextMeasurer(fontResolver, kerningEnabled: false).Measure(label.Text, categoryStyle);
+        return (await new ChartTextMeasurer(fontResolver, kerningEnabled: false).MeasureAsync(label.Text, categoryStyle).ConfigureAwait(false));
     }
 
     // Full width of the last visible X tick label for the scatter right-legend reserve
@@ -876,7 +880,7 @@ internal sealed partial class PptxRenderer
     // formatting exactly so both callers observe identical doubles. Returns zero when X
     // labels are hidden or empty, and when any series hides its line (marker-only keys
     // keep the legacy luck-matched layout).
-    private static double MeasureScatterLastXLabelWidth(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, PptxSceneChartPlot? plot, XElement plotElement, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
+    private static async ValueTask<double> MeasureScatterLastXLabelWidthAsync(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, PptxSceneChartPlot? plot, XElement plotElement, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
     {
         IReadOnlyList<ChartAxisSource> valueAxes = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, plotElement);
         ChartAxisSource xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : default;
@@ -905,15 +909,16 @@ internal sealed partial class PptxRenderer
             return 0d;
         }
 
-        return new ChartTextMeasurer(fontResolver, kerningEnabled: false).Measure(lastLabel, style);
+        return (await new ChartTextMeasurer(fontResolver, kerningEnabled: false).MeasureAsync(lastLabel, style).ConfigureAwait(false));
     }
 
-    private static double ResolveRightLegendWidth(IReadOnlyList<ChartSeriesNameRecord> seriesNames, ChartTextStyle legendTextStyle, bool includeAreaReserve, PresentationFontResolver? fontResolver, double lastCategoryLabelWidth, double lastXLabelWidth = 0d)
+    private static async ValueTask<double> ResolveRightLegendWidthAsync(IReadOnlyList<ChartSeriesNameRecord> seriesNames, ChartTextStyle legendTextStyle, bool includeAreaReserve, PresentationFontResolver? fontResolver, double lastCategoryLabelWidth, double lastXLabelWidth = 0d)
     {
         double legendFontSize = legendTextStyle.FontSize;
         // Legend layout measures unkerned advances like the emission (Office legend advances
         // equal natural widths; the kerned default under-reads kern-heavy names and narrows reserves).
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
+        await textMeasurer.PrepareAsync(seriesNames.Select(name => name.ActiveName), legendTextStyle).ConfigureAwait(false);
         double maxLegendTextWidth = seriesNames.Count == 0
             ? 0d
             : seriesNames.Max(name => textMeasurer.Measure(name.ActiveName, legendTextStyle));

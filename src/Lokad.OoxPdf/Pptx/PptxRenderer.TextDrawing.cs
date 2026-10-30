@@ -16,7 +16,7 @@ internal sealed partial class PptxRenderer
     // one page-level list, so per-call numbering would collide (duplicate /Font
     // keys, last wins). Callers pass that shared list for page-unique sequencing;
     // the appended slice is already in the list, so callers must not re-add it.
-    private static RenderedFonts RenderChartTextRuns(
+    private static async ValueTask<RenderedFonts> RenderChartTextRunsAsync(
         List<TextRun> runs,
         PdfGraphicsBuilder graphics,
         List<PdfFontResource> chartFonts,
@@ -28,9 +28,14 @@ internal sealed partial class PptxRenderer
         {
             return new RenderedFonts(new Dictionary<FontRequest, RenderedFont>(FontRequestKeyComparer.OrdinalIgnoreCaseFamily), []);
         }
-        runs = SplitRunsByResolvedTypeface(runs, fontResolver ?? new PresentationFontResolver(null), diagnosticSink, CancellationToken.None);
+        fontResolver ??= new PresentationFontResolver(null);
+        CancellationToken cancellationToken = fontResolver.CancellationToken;
+        var estimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
+        foreach (TextRun run in runs)
+            await estimator.PrepareAsync(run.FontFamily, run.Bold, run.Italic, run.Text).ConfigureAwait(false);
+        runs = SplitRunsByResolvedTypeface(runs, fontResolver, diagnosticSink, cancellationToken);
 
-        RenderedFonts renderedFonts = CreateRenderedFonts(runs, fontResolver ?? new PresentationFontResolver(null), resourcePrefix, CancellationToken.None, diagnosticSink, chartFonts);
+        RenderedFonts renderedFonts = CreateRenderedFonts(runs, fontResolver, resourcePrefix, cancellationToken, diagnosticSink, chartFonts);
         DrawTextRunsWithFonts(runs, graphics, renderedFonts.Fonts);
         chartFonts.AddRange(renderedFonts.Resources);
         return renderedFonts;

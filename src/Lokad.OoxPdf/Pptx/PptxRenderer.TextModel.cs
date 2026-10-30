@@ -351,7 +351,7 @@ internal sealed partial class PptxRenderer
             compatibleDefaultLineSpacingFactor,
             shapeFontColor, default,
             disableZeroKerning: UsesNoWrapZeroKerning(bodyProperties, textRotationDegrees));
-        fontResolver ??= new PresentationFontResolver(null);
+        fontResolver ??= new PresentationFontResolver(await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
         await PrepareParagraphFontsAsync(paragraphs, fontResolver, cancellationToken).ConfigureAwait(false);
         // Vertical middle/bottom anchors resolve from laid-out actuals below (the estimate
         // uses the wrong axis and advance); other orientations keep estimated offsets.
@@ -539,7 +539,7 @@ internal sealed partial class PptxRenderer
             compatibleDefaultLineSpacingFactor,
             shapeFontColor: null,
             tableFrame.TextStyle);
-        fontResolver ??= new PresentationFontResolver(null);
+        fontResolver ??= new PresentationFontResolver(await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
         await PrepareParagraphFontsAsync(paragraphs, fontResolver, cancellationToken).ConfigureAwait(false);
         double verticalOffset = bodyProperties.VerticalAnchor switch
         {
@@ -920,6 +920,7 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
+        fontResolver ??= new PresentationFontResolver(await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
         XElement current = new(node.Source);
         foreach (XElement group in node.Source.Ancestors(PresentationNamespace + "grpSp"))
         {
@@ -948,12 +949,11 @@ internal sealed partial class PptxRenderer
         }
         PptxTextFrameModel frameModel = xmlFrame.Model;
         IReadOnlyList<PptxTextParagraphModel> fedParagraphs = BuildSceneFedParagraphModels(textBody.Paragraphs, frameModel, theme, colorMap, slideNumber, frameModel.ShapeFontColor, default);
-        fontResolver ??= new PresentationFontResolver(null);
         await PrepareParagraphFontsAsync(fedParagraphs, fontResolver, cancellationToken).ConfigureAwait(false);
         var fedFrame = frameModel with { Paragraphs = fedParagraphs };
         var estimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
         PptxTextFlowFrame fedFlow = BuildTextFlowFrame(fedFrame, document, estimator);
-        PptxTextFrameLayout fedLayout = BuildTextFrameLayout(fedFlow, document, estimator, allowWrapping: true);
+        PptxTextFrameLayout fedLayout = (await BuildTextFrameLayoutAsync(fedFlow, document, estimator, allowWrapping: true).ConfigureAwait(false));
         return RemapMongolianVerticalSpans(FlattenTextLayoutToSpans(new PptxTextLayoutModel(new[] { fedLayout }), fontResolver), node.Source);
     }
     private static PptxParagraphBulletModel BuildParagraphBulletModel(XElement? paragraphProperties, PptxTheme theme, PptxColorMap colorMap)

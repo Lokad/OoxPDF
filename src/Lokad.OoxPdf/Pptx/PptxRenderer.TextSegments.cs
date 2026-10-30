@@ -474,7 +474,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxTextParagraphModel> fedParagraphs = BuildSceneFedParagraphModels(cellParagraphs, frameModel, context.Theme, tableFrame.ColorMap, context.DisplayedSlideNumber, shapeFontColor: null, tableFrame.TextStyle);
         await PrepareParagraphFontsAsync(fedParagraphs, context.FontResolver, context.CancellationToken).ConfigureAwait(false);
         var fedFrame = frameModel with { Paragraphs = fedParagraphs };
-        PptxTextFrameLayout layout = BuildTextFrameLayout(fedFrame, context.Document, new TextAdvanceEstimator(context.FontResolver, context.CancellationToken));
+        PptxTextFrameLayout layout = (await BuildTextFrameLayoutAsync(fedFrame, context.Document, new TextAdvanceEstimator(context.FontResolver, context.CancellationToken)).ConfigureAwait(false));
         return FlattenTextLayoutToSpans(new PptxTextLayoutModel(new[] { layout }), context.FontResolver);
     }
 

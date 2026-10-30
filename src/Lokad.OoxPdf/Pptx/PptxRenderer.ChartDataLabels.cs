@@ -258,7 +258,7 @@ internal sealed partial class PptxRenderer
         return CreateChartTextRun(text, x, y, width, height, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, style, alignment, kerningEnabled);
     }
 
-    private static void AddChartLabelRuns(List<TextRun> runs, string text, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver, List<ChartTextRunLink>? labelLinks)
+    private static async ValueTask AddChartLabelRunsAsync(List<TextRun> runs, string text, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver, List<ChartTextRunLink>? labelLinks)
     {
         ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, options, x, y, width, height);
         if (options.CustomTextRuns.Count == 0)
@@ -267,7 +267,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        AddChartRichTextRuns(runs, options.CustomTextRuns, text, x, y, width, height, clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, style, alignment, fontResolver, labelLinks);
+        await AddChartRichTextRunsAsync(runs, options.CustomTextRuns, text, x, y, width, height, clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, style, alignment, fontResolver, labelLinks).ConfigureAwait(false);
     }
 
     private static ChartLayoutBox ResolveDataLabelTextClipBox(ChartPlotBox plotBox, ChartDataLabelOptions options, double x, double y, double width, double height)
@@ -284,7 +284,7 @@ internal sealed partial class PptxRenderer
         return new ChartLayoutBox(left, top, Math.Max(1d, right - left), Math.Max(1d, bottom - top));
     }
 
-    private static void AddChartRichTextRuns(List<TextRun> runs, IReadOnlyList<ChartTextRunOverride> richTextRuns, string fallbackText, double x, double y, double width, double height, double clipX, double clipY, double clipWidth, double clipHeight, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver, List<ChartTextRunLink>? links = null)
+    private static async ValueTask AddChartRichTextRunsAsync(List<TextRun> runs, IReadOnlyList<ChartTextRunOverride> richTextRuns, string fallbackText, double x, double y, double width, double height, double clipX, double clipY, double clipWidth, double clipHeight, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver, List<ChartTextRunLink>? links = null)
     {
         if (richTextRuns.Count == 0)
         {
@@ -293,15 +293,17 @@ internal sealed partial class PptxRenderer
         }
 
         var textMeasurer = new ChartTextMeasurer(fontResolver);
-        ChartTextRunLayout[] richRuns = richTextRuns
-            .Where(run => !string.IsNullOrEmpty(run.Text))
-            .Select(run =>
-            {
-                ChartTextStyle runStyle = style.Merge(run.TextStyle);
-                return new ChartTextRunLayout(run.Text, runStyle, Math.Max(0d, textMeasurer.Measure(run.Text, runStyle)), HyperlinkClickId: run.HyperlinkClickId, HyperlinkClickAction: run.HyperlinkClickAction);
-            })
-            .Where(run => run.Width > 0d)
-            .ToArray();
+        var measuredRuns = new List<ChartTextRunLayout>();
+        foreach (ChartTextRunOverride run in richTextRuns)
+        {
+            if (string.IsNullOrEmpty(run.Text)) continue;
+            ChartTextStyle runStyle = style.Merge(run.TextStyle);
+            double runWidth = Math.Max(0d, await textMeasurer.MeasureAsync(run.Text, runStyle).ConfigureAwait(false));
+            if (runWidth > 0d)
+                measuredRuns.Add(new ChartTextRunLayout(run.Text, runStyle, runWidth,
+                    HyperlinkClickId: run.HyperlinkClickId, HyperlinkClickAction: run.HyperlinkClickAction));
+        }
+        ChartTextRunLayout[] richRuns = measuredRuns.ToArray();
         if (richRuns.Length == 0)
         {
             runs.Add(CreateChartTextRun(fallbackText, x, y, width, height, clipX, clipY, clipWidth, clipHeight, style, alignment));

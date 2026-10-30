@@ -18,6 +18,10 @@ internal static class PptxFontCacheTests
         object second = System.Activator.CreateInstance(estimatorType, resolver, CancellationToken.None) ?? throw new InvalidOperationException("Expected estimator instance.");
         System.Reflection.MethodInfo resolve = estimatorType.GetMethod("ResolveOpenTypeFont") ?? throw new InvalidOperationException("Expected program resolution bridge.");
 
+        System.Reflection.MethodInfo prepare = estimatorType.GetMethod("PrepareAsync")!;
+        ((ValueTask)prepare.Invoke(first, ["TestFont", false, false, "ABC"])!).GetAwaiter().GetResult();
+        ((ValueTask)prepare.Invoke(second, ["TestFont", false, false, "ABC"])!).GetAwaiter().GetResult();
+
         object? firstFont = resolve.Invoke(first, ["TestFont", false, false]);
         object? secondFont = resolve.Invoke(second, ["TestFont", false, false]);
 
@@ -110,6 +114,7 @@ internal static class PptxFontCacheTests
     {
         var program = new MemoryFontProgramSource("cache-test", TestFontBuilder.CreateTestFont());
         var resolver = new PresentationFontResolver(new SingleProgramResolver(program));
+        resolver.GetOrLoadOpenTypeFontAsync(resolver.Resolve(new FontRequest("TestFont", false, false)), CancellationToken.None).GetAwaiter().GetResult();
         var resolved = resolver.ResolvePresentationOpenTypeFont(new FontRequest("TestFont", false, false), CancellationToken.None) ?? throw new InvalidOperationException("Expected test program resolution.");
 
         PdfEmbeddedFont first = resolver.GetOrCreateSubset(resolved.Font, [65, 66, 65], CancellationToken.None);
@@ -128,12 +133,12 @@ internal static class PptxFontCacheTests
         var upper = new MemoryFontProgramSource("Case:Font", fontBytes);
         var lower = new MemoryFontProgramSource("case:font", fontBytes);
         var resolver = new PresentationFontResolver(null);
-        OpenTypeFont? first = resolver.GetOrLoadOpenTypeFont(
+        OpenTypeFont? first = resolver.GetOrLoadOpenTypeFontAsync(
             new FontFaceResolution("TestFont", "TestFont", new FontStyleKey(false, false, 400, 0, false), upper, IsFallback: false),
-            CancellationToken.None);
-        OpenTypeFont? second = resolver.GetOrLoadOpenTypeFont(
+            CancellationToken.None).GetAwaiter().GetResult();
+        OpenTypeFont? second = resolver.GetOrLoadOpenTypeFontAsync(
             new FontFaceResolution("TestFont", "TestFont", new FontStyleKey(false, false, 400, 0, false), lower, IsFallback: false),
-            CancellationToken.None);
+            CancellationToken.None).GetAwaiter().GetResult();
 
         TestAssert.NotNull(first);
         TestAssert.NotNull(second);
@@ -148,19 +153,19 @@ internal static class PptxFontCacheTests
         TestAssert.Equal(2, OpenTypeFont.GetCollectionFontCount(collection));
         var source = new MemoryFontProgramSource("collection:test", collection);
         var resolver = new PresentationFontResolver(null);
-        OpenTypeFont? first = resolver.GetOrLoadOpenTypeFont(
+        OpenTypeFont? first = resolver.GetOrLoadOpenTypeFontAsync(
             new FontFaceResolution("TestFont", "TestFont", new FontStyleKey(false, false, 400, 0, false), source, IsFallback: false),
-            CancellationToken.None);
-        OpenTypeFont? second = resolver.GetOrLoadOpenTypeFont(
+            CancellationToken.None).GetAwaiter().GetResult();
+        OpenTypeFont? second = resolver.GetOrLoadOpenTypeFontAsync(
             new FontFaceResolution("TestFont", "TestFont", new FontStyleKey(false, false, 400, 1, false), source, IsFallback: false),
-            CancellationToken.None);
+            CancellationToken.None).GetAwaiter().GetResult();
 
         TestAssert.NotNull(first);
         TestAssert.NotNull(second);
         TestAssert.True(!ReferenceEquals(first, second), "Distinct collection faces must keep distinct cache entries.");
-        TestAssert.True(ReferenceEquals(first, resolver.GetOrLoadOpenTypeFont(
+        TestAssert.True(ReferenceEquals(first, resolver.GetOrLoadOpenTypeFontAsync(
             new FontFaceResolution("TestFont", "TestFont", new FontStyleKey(false, false, 400, 0, false), source, IsFallback: false),
-            CancellationToken.None)), "Repeated face lookups must reuse the cached program.");
+            CancellationToken.None).GetAwaiter().GetResult()), "Repeated face lookups must reuse the cached program.");
     }
 
     public static void StyleVariantsShareProgramAndSubsetConsistently()
@@ -169,6 +174,8 @@ internal static class PptxFontCacheTests
         // share one program and one subset per (program, codepoint set).
         var program = new MemoryFontProgramSource("style-test", TestFontBuilder.CreateTestFont());
         var resolver = new PresentationFontResolver(new SingleProgramResolver(program));
+        resolver.GetOrLoadOpenTypeFontAsync(resolver.Resolve(new FontRequest("TestFont", false, false)), CancellationToken.None).GetAwaiter().GetResult();
+        resolver.GetOrLoadOpenTypeFontAsync(resolver.Resolve(new FontRequest("TestFont", true, false)), CancellationToken.None).GetAwaiter().GetResult();
         var plain = resolver.ResolvePresentationOpenTypeFont(new FontRequest("TestFont", false, false), CancellationToken.None)
             ?? throw new InvalidOperationException("Expected test program resolution.");
         var bold = resolver.ResolvePresentationOpenTypeFont(new FontRequest("TestFont", true, false), CancellationToken.None)
@@ -188,6 +195,7 @@ internal static class PptxFontCacheTests
         var resolver = new PresentationFontResolver(new CatalogResolver(primary, fallback));
         Type estimatorType = typeof(PptxRenderer).GetNestedType("TextAdvanceEstimator", System.Reflection.BindingFlags.NonPublic)!;
         object estimator = Activator.CreateInstance(estimatorType, resolver, CancellationToken.None)!;
+        ((ValueTask)estimatorType.GetMethod("PrepareAsync")!.Invoke(estimator, ["Primary", false, false, "\u0100"])!).GetAwaiter().GetResult();
         object? glyph = estimatorType.GetMethod("ResolveGlyphFont")!.Invoke(estimator, ["Primary", false, false, 0x100]);
         TestAssert.NotNull(glyph);
         TestAssert.Equal("Fallback", (string)glyph!.GetType().GetProperty("Typeface")!.GetValue(glyph)!);
@@ -200,18 +208,18 @@ internal static class PptxFontCacheTests
         FontFaceResolution fallback = FontFace("Fallback", "same-id", CreateDifferentCoverageFont());
         var resolver = new PresentationFontResolver(new SingleProgramResolver((MemoryFontProgramSource)primary.Source));
         var otherResolver = new PresentationFontResolver(new SingleProgramResolver((MemoryFontProgramSource)fallback.Source));
-        OpenTypeFont first = resolver.GetOrLoadOpenTypeFont(primary, CancellationToken.None)!;
-        OpenTypeFont second = otherResolver.GetOrLoadOpenTypeFont(fallback, CancellationToken.None)!;
+        OpenTypeFont first = resolver.GetOrLoadOpenTypeFontAsync(primary, CancellationToken.None).GetAwaiter().GetResult()!;
+        OpenTypeFont second = otherResolver.GetOrLoadOpenTypeFontAsync(fallback, CancellationToken.None).GetAwaiter().GetResult()!;
         TestAssert.Equal((ushort)0, first.MapCodePoint(0x100));
         TestAssert.True(second.MapCodePoint(0x100) != 0, "An independent resolver must load its own program despite an equal ID.");
-        TestAssert.True(ReferenceEquals(second, otherResolver.GetOrLoadOpenTypeFont(fallback, CancellationToken.None)), "Repeats must reuse their own resolver's parsed program.");
+        TestAssert.True(ReferenceEquals(second, otherResolver.GetOrLoadOpenTypeFontAsync(fallback, CancellationToken.None).GetAwaiter().GetResult()), "Repeats must reuse their own resolver's parsed program.");
         PdfEmbeddedFont firstSubset = resolver.GetOrCreateSubset(first, [0x100], CancellationToken.None);
         PdfEmbeddedFont secondSubset = otherResolver.GetOrCreateSubset(second, [0x100], CancellationToken.None);
         TestAssert.True(!ReferenceEquals(firstSubset, secondSubset), "Different programs must not share a subset through an equal source ID.");
         TestAssert.True(ReferenceEquals(secondSubset, otherResolver.GetOrCreateSubset(second, [0x100, 0x100], CancellationToken.None)), "Repeated sets on one program must reuse the subset.");
         using var canceled = new CancellationTokenSource();
         canceled.Cancel();
-        TestAssert.Throws<OperationCanceledException>(() => otherResolver.GetOrLoadOpenTypeFont(fallback, canceled.Token));
+        TestAssert.Throws<OperationCanceledException>(() => otherResolver.GetOrLoadOpenTypeFontAsync(fallback, canceled.Token).GetAwaiter().GetResult());
         TestAssert.Throws<OperationCanceledException>(() => otherResolver.GetOrCreateSubset(second, [0x100], canceled.Token));
     }
 
@@ -219,9 +227,9 @@ internal static class PptxFontCacheTests
     {
         FontFaceResolution primary = FontFace("Primary", "shared", TestFontBuilder.CreateTestFont());
         var resolver = new PresentationFontResolver(new CatalogResolver(primary, primary));
-        OpenTypeFont? first = resolver.GetOrLoadOpenTypeFont(primary, CancellationToken.None);
+        OpenTypeFont? first = resolver.GetOrLoadOpenTypeFontAsync(primary, CancellationToken.None).GetAwaiter().GetResult();
         TestAssert.NotNull(first);
-        TestAssert.True(ReferenceEquals(first, resolver.GetOrLoadOpenTypeFont(resolver.GetDiscoveredFonts()[0], CancellationToken.None)), "A primary catalog has one ownership namespace.");
+        TestAssert.True(ReferenceEquals(first, resolver.GetOrLoadOpenTypeFontAsync(resolver.GetDiscoveredFonts()[0], CancellationToken.None).GetAwaiter().GetResult()), "A primary catalog has one ownership namespace.");
         TestAssert.True(resolver.IsPrimaryProgram(primary, primary), "The same primary/catalog program is excluded from redundant fallback work.");
     }
 
@@ -232,6 +240,7 @@ internal static class PptxFontCacheTests
         TestAssert.Equal(0, resolver.GetDiscoveredFonts().Count);
         Type estimatorType = typeof(PptxRenderer).GetNestedType("TextAdvanceEstimator", System.Reflection.BindingFlags.NonPublic)!;
         object estimator = Activator.CreateInstance(estimatorType, resolver, CancellationToken.None)!;
+        ((ValueTask)estimatorType.GetMethod("PrepareAsync")!.Invoke(estimator, ["TestFont", false, false, "A\u0100"])!).GetAwaiter().GetResult();
         var resolve = estimatorType.GetMethod("ResolveGlyphFont")!;
         TestAssert.NotNull(resolve.Invoke(estimator, ["TestFont", false, false, 65]));
         TestAssert.True(resolve.Invoke(estimator, ["TestFont", false, false, 0x100]) is null,

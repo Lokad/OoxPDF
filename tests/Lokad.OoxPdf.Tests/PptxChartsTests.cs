@@ -1883,14 +1883,14 @@ internal static class PptxChartsTests
         System.Reflection.MethodInfo? measure = null;
         foreach (var candidate in measurerType!.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
         {
-            if (candidate.Name == "Measure" && candidate.GetParameters().Length == 6)
+            if (candidate.Name == "MeasureAsync" && candidate.GetParameters().Length == 6)
             {
                 measure = candidate;
                 break;
             }
         }
-        double kernedWidth = (double)measure!.Invoke(kerned, ["Marketing", 18d, "Calibri", false, false, 0d])!;
-        double plainWidth = (double)measure.Invoke(plain, ["Marketing", 18d, "Calibri", false, false, 0d])!;
+        double kernedWidth = ((ValueTask<double>)measure!.Invoke(kerned, ["Marketing", 18d, "Calibri", false, false, 0d])!).GetAwaiter().GetResult();
+        double plainWidth = ((ValueTask<double>)measure.Invoke(plain, ["Marketing", 18d, "Calibri", false, false, 0d])!).GetAwaiter().GetResult();
         TestAssert.True(Math.Abs(plainWidth - 75.55d) < 0.5d, "Unkerned Marketing should match the Office advance (75.55). Got " + plainWidth);
         TestAssert.True(Math.Abs((plainWidth - kernedWidth) - 0.68d) < 0.15d, "Legacy pair kerning should tighten Marketing by 0.68 (ke plus et); axis labels must not carry it. Got " + (plainWidth - kernedWidth));
     }

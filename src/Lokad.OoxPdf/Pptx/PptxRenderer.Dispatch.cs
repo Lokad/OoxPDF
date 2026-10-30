@@ -118,7 +118,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderOrderedSceneNodes(
+    private static async ValueTask<int> RenderOrderedSceneNodesAsync(
         IReadOnlyList<PptxSceneNode> nodes,
         PptxRenderContext context,
         PdfGraphicsBuilder graphics,
@@ -129,7 +129,7 @@ internal sealed partial class PptxRenderer
         HashSet<string> reportedHyperlinkIds,
         string? sourcePartName,
         PptxColorMap sourceColorMap,
-        ref int imageIndex,
+        int imageIndex,
         GroupTransform transform,
         bool renderPlaceholders,
         CancellationToken cancellationToken)
@@ -141,21 +141,52 @@ internal sealed partial class PptxRenderer
             int annotationCount = linkAnnotations.Count;
             try
             {
-                RenderOrderedSceneNode(
-                    node,
-                    context,
-                    graphics,
-                    fonts,
-                    images,
-                    chartFonts,
-                    linkAnnotations,
-                    reportedHyperlinkIds,
-                    sourcePartName,
-                    sourceColorMap,
-                    ref imageIndex,
-                    transform,
-                    renderPlaceholders,
-                    cancellationToken);
+                if (node.Kind == PptxSceneNodeKind.Chart)
+                {
+                    BeginSlideNodeClip(context, graphics);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    // Node-level links go first so chart run links sit above them.
+                    AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds);
+                    await RenderChartFrameAsync(context, graphics, chartFonts, node, transform, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
+                    EndSlideNodeClip(graphics);
+                }
+                else if (node.Kind == PptxSceneNodeKind.Group)
+                {
+                    AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds);
+                    imageIndex = await RenderOrderedSceneNodesAsync(
+                        node.Children,
+                        context,
+                        graphics,
+                        fonts,
+                        images,
+                        chartFonts,
+                        linkAnnotations,
+                        reportedHyperlinkIds,
+                        sourcePartName,
+                        sourceColorMap,
+                        imageIndex,
+                        transform.Combine(ToGroupTransform(node.GroupTransform)),
+                        renderPlaceholders,
+                        cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    RenderOrderedLeafNode(
+                        node,
+                        context,
+                        graphics,
+                        fonts,
+                        images,
+                        chartFonts,
+                        linkAnnotations,
+                        reportedHyperlinkIds,
+                        sourcePartName,
+                        sourceColorMap,
+                        ref imageIndex,
+                        transform,
+                        renderPlaceholders,
+                        cancellationToken);
+                }
             }
             catch (Exception ex) when (IsRecoverableNodeRenderException(ex))
             {
@@ -164,6 +195,8 @@ internal sealed partial class PptxRenderer
                 EmitNodeRenderFailureDiagnostic(node, ex);
             }
         }
+
+        return imageIndex;
 
         // Q02: preserve the failure category (exception type only, never the message,
         // which can carry document text) so repeated failures stay triageable without
@@ -193,7 +226,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderOrderedSceneNode(
+    private static void RenderOrderedLeafNode(
         PptxSceneNode node,
         PptxRenderContext context,
         PdfGraphicsBuilder graphics,
@@ -285,36 +318,11 @@ internal sealed partial class PptxRenderer
                 DrawTextSpansWithFonts(tableTextSpans, graphics, fonts, tableHyperlinkScope);
                 EndSlideNodeClip(graphics);
                 break;
-            case PptxSceneNodeKind.Chart:
-                BeginSlideNodeClip(context, graphics);
-                cancellationToken.ThrowIfCancellationRequested();
-                // Node-level links go first so chart run links sit above them.
-                AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds);
-                RenderChartFrame(context, graphics, chartFonts, node, transform, linkAnnotations, reportedHyperlinkIds);
-                EndSlideNodeClip(graphics);
-                break;
             case PptxSceneNodeKind.UnknownGraphicFrame:
                 AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds);
                 RenderUnsupportedGraphicFrame(node, context, sourcePartName);
                 break;
-            case PptxSceneNodeKind.Group:
-                AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds);
-                RenderOrderedSceneNodes(
-                    node.Children,
-                    context,
-                    graphics,
-                    fonts,
-                    images,
-                    chartFonts,
-                    linkAnnotations,
-                    reportedHyperlinkIds,
-                    sourcePartName,
-                    sourceColorMap,
-                    ref imageIndex,
-                    transform.Combine(ToGroupTransform(node.GroupTransform)),
-                    renderPlaceholders,
-                    cancellationToken);
-                break;
+
         }
 
         bool HasDrawableShape()

@@ -24,6 +24,10 @@ synchronously prepares the same shared snapshot. Resolution afterwards performs
 no file reads; font programs are acquired lazily. Conversions with no explicit
 resolver await this metadata preparation automatically. Directory enumeration
 remains synchronous.
+Selected DOCX and PPTX font programs are acquired asynchronously before
+measurement and painting, including generated bullets and chart labels.
+Preparation shares one conversion-scoped parsed-program cache across slides.
+CPU layout and drawing remain synchronous.
 
 For deterministic Linux operation, `OoxPdfFontPackResolver` can load a packaged
 font manifest over HTTP(S) and lazily download only the font programs that

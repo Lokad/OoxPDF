@@ -25,56 +25,56 @@ internal sealed partial class PptxRenderer
     // through ChartMarkerOutlineStroke, which only applies when no explicit line exists.
     private const double ChartMarkerInheritedStrokeWidth = 1d;
 
-    private static bool TryRenderChart(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, PptxSceneChart sceneChart, ChartWorkbookData? workbook, List<PdfFontResource> fonts, PresentationFontResolver fontResolver,
+    private static async ValueTask<bool> TryRenderChartAsync(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, PptxSceneChart sceneChart, ChartWorkbookData? workbook, List<PdfFontResource> fonts, PresentationFontResolver fontResolver,
         PptxRenderContext context,
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
         bool plotVisibleOnly = ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, chartXml);
-        if (TryRenderBarChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds))
+        if ((await TryRenderBarChartKindAsync(
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }
 
-        if (TryRenderLineChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds))
+        if ((await TryRenderLineChartKindAsync(
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }
 
-        if (TryRenderAreaChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds))
+        if ((await TryRenderAreaChartKindAsync(
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }
 
-        if (TryRenderScatterChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds))
+        if ((await TryRenderScatterChartKindAsync(
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }
 
-        if (TryRenderBubbleChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds))
+        if ((await TryRenderBubbleChartKindAsync(
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }
 
-        if (TryRenderRadarChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly))
+        if ((await TryRenderRadarChartKindAsync(
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly).ConfigureAwait(false)))
         {
             return true;
         }
 
-        if (TryRenderPieChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds))
+        if ((await TryRenderPieChartKindAsync(
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }
 
-        if (TryRenderDoughnutChartKind(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds))
+        if ((await TryRenderDoughnutChartKindAsync(
+            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }

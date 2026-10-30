@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderLineDataLabels(
+    private static async ValueTask RenderLineDataLabelsAsync(
         PptxTheme theme,
         PptxColorMap colorMap,
         PdfGraphicsBuilder graphics,
@@ -92,7 +92,7 @@ internal sealed partial class PptxRenderer
                         ? GetStrokeMarkerDataLabelLegendKeyWidth(fontSize, ChartMarker(seriesIndex, markerStyles))
                         : 0d;
                     double effectiveLabelWidth = effectiveOptions.ShowLegendKey
-                        ? Math.Max(labelWidth, textMeasurer.Measure(label, style) + legendKeyWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor)
+                        ? Math.Max(labelWidth, (await textMeasurer.MeasureAsync(label, style).ConfigureAwait(false)) + legendKeyWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor)
                         : labelWidth;
                     (double labelX, double labelY, TextAlignment alignment) = ResolveLineDataLabelPosition(
                         effectiveOptions.PositionKind,
@@ -116,7 +116,7 @@ internal sealed partial class PptxRenderer
 
                     if (!string.IsNullOrEmpty(label))
                     {
-                        AddChartLabelRuns(
+                        await AddChartLabelRunsAsync(
                             runs,
                             label,
                             effectiveOptions,
@@ -127,13 +127,13 @@ internal sealed partial class PptxRenderer
                             plotBox,
                             style,
                             alignment,
-                            fontResolver, labelLinks);
+                            fontResolver, labelLinks).ConfigureAwait(false);
                     }
                 }
             }
         }
 
-        RenderedFonts labelFonts = RenderChartTextRuns(runs, graphics, chartFonts, "CLD", fontResolver, diagnosticSink);
+        RenderedFonts labelFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CLD", fontResolver, diagnosticSink).ConfigureAwait(false));
         AddChartTextRunHyperlinkAnnotations(labelLinks, chartRelationships, context, labelFonts, linkAnnotations, reportedHyperlinkIds);
 
         double GetStrokeMarkerDataLabelLegendKeyWidth(double fontSize, ChartMarkerStyle marker)

@@ -48,7 +48,7 @@ internal sealed partial class PptxRenderer
         return baselineY + fontSize * PptxChartMetricRules.BarLegendKeySwatchCenterOffsetFactor - swatchSize / 2d;
     }
 
-    private static void RenderBarDataLabels(
+    private static async ValueTask RenderBarDataLabelsAsync(
         PptxTheme theme,
         PptxColorMap colorMap,
         PdfGraphicsBuilder graphics,
@@ -168,7 +168,7 @@ internal sealed partial class PptxRenderer
 
                         if (!string.IsNullOrEmpty(label))
                         {
-                            AddChartLabelRuns(runs, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, plotBox, style, TextAlignment.Left, fontResolver, labelLinks);
+                            await AddChartLabelRunsAsync(runs, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, plotBox, style, TextAlignment.Left, fontResolver, labelLinks).ConfigureAwait(false);
                         }
                     }
                 }
@@ -243,7 +243,7 @@ internal sealed partial class PptxRenderer
                         {
                             // Office centers the swatch+text unit on the bar middle (other
                             // groupings and plain labels keep the legacy slot math, unobserved).
-                            double barLegendKeyTextWidth = string.IsNullOrEmpty(label) ? 0d : Math.Max(0d, new ChartTextMeasurer(fontResolver).Measure(label, style));
+                            double barLegendKeyTextWidth = string.IsNullOrEmpty(label) ? 0d : Math.Max(0d, (await new ChartTextMeasurer(fontResolver).MeasureAsync(label, style).ConfigureAwait(false)));
                             double barLegendKeyCategoryWidth = plotBox.Width / categoryCount;
                             double barLegendKeyBarWidth = GetClusteredBarWidth(barLegendKeyCategoryWidth, denseValueSeries.Count, barOptions.GapWidth, barOptions.Overlap);
                             double barLegendKeyStep = GetClusteredBarStep(barLegendKeyBarWidth, barOptions.Overlap);
@@ -282,14 +282,14 @@ internal sealed partial class PptxRenderer
 
                         if (!string.IsNullOrEmpty(label))
                         {
-                            AddChartLabelRuns(runs, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, plotBox, style, alignment, fontResolver, labelLinks);
+                            await AddChartLabelRunsAsync(runs, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, plotBox, style, alignment, fontResolver, labelLinks).ConfigureAwait(false);
                         }
                     }
                 }
             }
         }
 
-        RenderedFonts labelFonts = RenderChartTextRuns(runs, graphics, chartFonts, "CBD", fontResolver, diagnosticSink);
+        RenderedFonts labelFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CBD", fontResolver, diagnosticSink).ConfigureAwait(false));
         AddChartTextRunHyperlinkAnnotations(labelLinks, chartRelationships, context, labelFonts, linkAnnotations, reportedHyperlinkIds);
     }
 }

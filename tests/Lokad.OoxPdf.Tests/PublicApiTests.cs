@@ -573,7 +573,7 @@ internal static partial class PublicApiTests
         finally { Directory.Delete(directory, recursive: true); }
     }
 
-    private static byte[] ReadMinimalPptxBytes(string? text = null, bool table = false)
+    private static byte[] ReadMinimalPptxBytes(string? text = null, bool table = false, string? paragraphProperties = null)
     {
         var parts = new Dictionary<string, string>
         {
@@ -592,7 +592,7 @@ internal static partial class PublicApiTests
         };
         if (text is not null)
         {
-            string body = "<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz=\"1200\"/><a:t>" +
+            string body = "<p:txBody><a:bodyPr/><a:lstStyle/><a:p>" + paragraphProperties + "<a:r><a:rPr sz=\"1200\"/><a:t>" +
                 System.Security.SecurityElement.Escape(text) + "</a:t></a:r></a:p></p:txBody>";
             parts["ppt/slides/slide1.xml"] = parts["ppt/slides/slide1.xml"].Replace("</p:sp>", body + "</p:sp>", StringComparison.Ordinal);
         }

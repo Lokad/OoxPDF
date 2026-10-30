@@ -33,7 +33,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderChartFrame(
+    private static async ValueTask RenderChartFrameAsync(
         PptxRenderContext context,
         PdfGraphicsBuilder graphics,
         List<PdfFontResource> fonts,
@@ -46,10 +46,10 @@ internal sealed partial class PptxRenderer
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        RenderChartFrame(context, graphics, fonts, bounds, node.Chart, linkAnnotations, reportedHyperlinkIds);
+        await RenderChartFrameAsync(context, graphics, fonts, bounds, node.Chart, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
     }
 
-    private static void RenderChartFrame(
+    private static async ValueTask RenderChartFrameAsync(
         PptxRenderContext context,
         PdfGraphicsBuilder graphics,
         List<PdfFontResource> fonts,
@@ -58,7 +58,7 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        RenderChartFrame(
+        await RenderChartFrameAsync(
             context,
             graphics,
             fonts,
@@ -68,10 +68,10 @@ internal sealed partial class PptxRenderer
             chart?.PaletteColors,
             chart,
             linkAnnotations,
-            reportedHyperlinkIds);
+            reportedHyperlinkIds).ConfigureAwait(false);
     }
 
-    private static void RenderChartFrame(
+    private static async ValueTask RenderChartFrameAsync(
         PptxRenderContext context,
         PdfGraphicsBuilder graphics,
         List<PdfFontResource> fonts,
@@ -116,7 +116,7 @@ internal sealed partial class PptxRenderer
 
         try
         {
-            RenderChartFrameWithWorkbook(context, graphics, fonts, bounds.Value, chartPartName, resolvedChartXml, resolvedChartPalette, sceneChart, chartWorkbook, linkAnnotations, reportedHyperlinkIds);
+            await RenderChartFrameWithWorkbookAsync(context, graphics, fonts, bounds.Value, chartPartName, resolvedChartXml, resolvedChartPalette, sceneChart, chartWorkbook, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
         }
         finally
         {
@@ -153,7 +153,7 @@ internal sealed partial class PptxRenderer
         return model;
     }
 
-    private static void RenderChartFrameWithWorkbook(
+    private static async ValueTask RenderChartFrameWithWorkbookAsync(
         PptxRenderContext context,
         PdfGraphicsBuilder graphics,
         List<PdfFontResource> fonts,
@@ -168,13 +168,13 @@ internal sealed partial class PptxRenderer
     {
         PptxColorMap chartColorMap = sceneChart.ColorMap;
 
-        if (TryRenderChart(graphics, context.Document, context.Theme, chartColorMap, resolvedChartPalette, bounds, resolvedChartXml, sceneChart, chartWorkbook, fonts, context.FontResolver, context, linkAnnotations, reportedHyperlinkIds))
+        if ((await TryRenderChartAsync(graphics, context.Document, context.Theme, chartColorMap, resolvedChartPalette, bounds, resolvedChartXml, sceneChart, chartWorkbook, fonts, context.FontResolver, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             EmitUnrenderedDefaultChartAxisTitleDiagnostics(sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
             EmitUnsupportedChartNumberFormatDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
             EmitUnsupportedChartTrendlineDiagnostics(resolvedChartXml, context.DiagnosticSink, chartPartName, context.SlideNumber);
-            RenderManualChartAxisTitles(context.Document, context.Theme, graphics, bounds, sceneChart, context.FontResolver, context.DiagnosticSink, fonts, context, linkAnnotations, reportedHyperlinkIds);
-            RenderChartTitle(context.Document, context.Theme, chartColorMap, graphics, bounds, resolvedChartXml, sceneChart, chartWorkbook, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds, context.DiagnosticSink);
+            await RenderManualChartAxisTitlesAsync(context.Document, context.Theme, graphics, bounds, sceneChart, context.FontResolver, context.DiagnosticSink, fonts, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
+            await RenderChartTitleAsync(context.Document, context.Theme, chartColorMap, graphics, bounds, resolvedChartXml, sceneChart, chartWorkbook, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds, context.DiagnosticSink).ConfigureAwait(false);
             return;
         }
 

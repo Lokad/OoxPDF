@@ -25,7 +25,7 @@ internal sealed partial class PptxRenderer
         return startAngleRadians - sliceValue / total * Math.PI;
     }
 
-    private static void RenderPieDataLabels(PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, IReadOnlyList<RgbColor>? chartPalette, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle, string? valueFormatCode, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, PptxRenderContext context, IReadOnlyDictionary<string, OoxRelationship>? chartRelationships, List<PdfLinkAnnotation> linkAnnotations, HashSet<string> reportedHyperlinkIds, Action<OoxPdfDiagnostic>? diagnosticSink = null)
+    private static async ValueTask RenderPieDataLabelsAsync(PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, IReadOnlyList<RgbColor>? chartPalette, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle, string? valueFormatCode, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, PptxRenderContext context, IReadOnlyDictionary<string, OoxRelationship>? chartRelationships, List<PdfLinkAnnotation> linkAnnotations, HashSet<string> reportedHyperlinkIds, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         if (!labelOptions.HasVisibleContent || slices.Count == 0)
         {
@@ -87,7 +87,7 @@ internal sealed partial class PptxRenderer
                     var pieWrapTexts = new List<string>(labelParts.Count);
                     var pieWrapWidths = new List<double>(labelParts.Count);
                     var pieWrapSeps = new List<double>(labelParts.Count);
-                    double pieWrapSepWidth = pieWrapMeasurer.Measure(pieWrapSeparator, style);
+                    double pieWrapSepWidth = (await pieWrapMeasurer.MeasureAsync(pieWrapSeparator, style).ConfigureAwait(false));
                     double pieWrapCapWidth = plotBox.Width * PptxChartMetricRules.PieDataLabelWrapWidthFactor;
                     foreach (string part in labelParts)
                     {
@@ -99,14 +99,14 @@ internal sealed partial class PptxRenderer
                         // single words (G2 spaced name wraps [w][w][w][17%], never mid-word).
                         foreach (string pieToken in part.Split(' ', StringSplitOptions.RemoveEmptyEntries))
                         {
-                            double tokenWidth = Math.Max(0d, pieWrapMeasurer.Measure(pieToken, style));
+                            double tokenWidth = Math.Max(0d, (await pieWrapMeasurer.MeasureAsync(pieToken, style).ConfigureAwait(false)));
                             if (tokenWidth <= 0d)
                             {
                                 continue;
                             }
                             if (tokenWidth > pieWrapCapWidth && pieToken.Length > 1)
                             {
-                                List<int> pieChunks = SplitPieLabelLongWord(MeasurePieLabelChars(pieToken, style, pieWrapMeasurer), ComputePieLongWordSplitWidth(pieWrapCapWidth, pieWrapSepWidth));
+                                List<int> pieChunks = SplitPieLabelLongWord((await MeasurePieLabelCharsAsync(pieToken, style, pieWrapMeasurer).ConfigureAwait(false)), ComputePieLongWordSplitWidth(pieWrapCapWidth, pieWrapSepWidth));
                                 int pieOffset = 0;
                                 foreach (int pieChunkLength in pieChunks)
                                 {
@@ -133,7 +133,7 @@ internal sealed partial class PptxRenderer
                     {
                         if (pieWrapWidths[pieMeasureIndex] <= 0d)
                         {
-                            pieWrapWidths[pieMeasureIndex] = Math.Max(0d, pieWrapMeasurer.Measure(pieWrapTexts[pieMeasureIndex], style));
+                            pieWrapWidths[pieMeasureIndex] = Math.Max(0d, (await pieWrapMeasurer.MeasureAsync(pieWrapTexts[pieMeasureIndex], style).ConfigureAwait(false)));
                         }
                     }
                     List<int[]> pieSplitLines = SplitPieLabelWordLines(pieWrapWidths, pieWrapSeps, pieWrapCapWidth);
@@ -166,7 +166,7 @@ internal sealed partial class PptxRenderer
                     double pieCircleGap = geometry.Radius * PptxChartMetricRules.PieManualLabelCircleGapRadiusFactor;
                     double pieCircleX = geometry.CenterX + Math.Cos(mid) * (geometry.Radius + explosion + pieCircleGap);
                     double pieCircleY = geometry.CenterY + Math.Sin(mid) * (geometry.Radius + explosion + pieCircleGap);
-                    pieUnwrappedWidth = MeasurePieLabelPartsWidth(labelParts, pieWrapSeparator, style, fontResolver);
+                    pieUnwrappedWidth = (await MeasurePieLabelPartsWidthAsync(labelParts, pieWrapSeparator, style, fontResolver).ConfigureAwait(false));
                     double pieContentWidth = (pieWrapLines is not null && pieWrapLines.Count > 1 && pieWrapLongest > 0d)
                         ? pieWrapLongest
                         : pieUnwrappedWidth;
@@ -220,12 +220,12 @@ internal sealed partial class PptxRenderer
                 {
                     pieManualTextX = textX + PptxChartMetricRules.PieManualLabelBoxSidePad;
                 }
-                    AddPolarChartLabelRuns(labelParts, label, effectiveOptions, pieManualTextX, labelBox.Y, textWidth, labelBox.Height, style, alignment, pieWrapLines, pieWrapLongest, pieManualBottomAnchor);
+                    await AddPolarChartLabelRunsAsync(labelParts, label, effectiveOptions, pieManualTextX, labelBox.Y, textWidth, labelBox.Height, style, alignment, pieWrapLines, pieWrapLongest, pieManualBottomAnchor).ConfigureAwait(false);
                 }
             }
             angle += sweep;
         }
-        RenderedFonts labelFonts = RenderChartTextRuns(runs, graphics, chartFonts, "CP", fontResolver, diagnosticSink);
+        RenderedFonts labelFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CP", fontResolver, diagnosticSink).ConfigureAwait(false));
         AddChartTextRunHyperlinkAnnotations(labelLinks, chartRelationships, context, labelFonts, linkAnnotations, reportedHyperlinkIds);
 
         IReadOnlyList<string> FormatPieDataLabelParts(double value, int categoryIndex, ChartIndexedNumberPoint? workbookPoint, ChartDataLabelOptions options)
@@ -267,7 +267,7 @@ internal sealed partial class PptxRenderer
             return parts;
         }
 
-        void AddPolarChartLabelRuns(IReadOnlyList<string> parts, string fallbackText, ChartDataLabelOptions options, double x, double y, double width, double height, ChartTextStyle style, TextAlignment alignment, List<ChartTextRunLayout[]>? wrapLines, double wrapLongest, bool bottomAnchor = false)
+        async ValueTask AddPolarChartLabelRunsAsync(IReadOnlyList<string> parts, string fallbackText, ChartDataLabelOptions options, double x, double y, double width, double height, ChartTextStyle style, TextAlignment alignment, List<ChartTextRunLayout[]>? wrapLines, double wrapLongest, bool bottomAnchor = false)
         {
             var textMeasurer = new ChartTextMeasurer(fontResolver);
             ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, options, x, y, width, height);
@@ -289,10 +289,11 @@ internal sealed partial class PptxRenderer
 
             if (parts.Count <= 1 || options.CustomTextRuns.Count > 0 || !ShouldSplitPolarDataLabelParts())
             {
-                AddChartLabelRuns(runs, fallbackText, options, x, y, width, height, plotBox, style, alignment, fontResolver, labelLinks);
+                await AddChartLabelRunsAsync(runs, fallbackText, options, x, y, width, height, plotBox, style, alignment, fontResolver, labelLinks).ConfigureAwait(false);
                 return;
             }
 
+            await textMeasurer.PrepareAsync(parts.Where(part => !string.IsNullOrWhiteSpace(part)), style).ConfigureAwait(false);
             ChartTextRunLayout[] labelRuns = parts
                 .Where(part => !string.IsNullOrWhiteSpace(part))
                 .Select(part => new ChartTextRunLayout(part, style, Math.Max(0d, textMeasurer.Measure(part, style))))
@@ -300,11 +301,11 @@ internal sealed partial class PptxRenderer
                 .ToArray();
             if (labelRuns.Length <= 1)
             {
-                AddChartLabelRuns(runs, fallbackText, options, x, y, width, height, plotBox, style, alignment, fontResolver, labelLinks);
+                await AddChartLabelRunsAsync(runs, fallbackText, options, x, y, width, height, plotBox, style, alignment, fontResolver, labelLinks).ConfigureAwait(false);
                 return;
             }
 
-            double separatorWidth = textMeasurer.Measure(GetChartDataLabelSeparator(options), style);
+            double separatorWidth = (await textMeasurer.MeasureAsync(GetChartDataLabelSeparator(options), style).ConfigureAwait(false));
             double totalWidth = labelRuns.Sum(run => run.Width) + separatorWidth * Math.Max(0, labelRuns.Length - 1);
             clipBox = ExpandPieLabelClipToText(clipBox, x, width, totalWidth);
             if (wrapLines is not null && wrapLines.Count > 1)
@@ -428,12 +429,12 @@ internal sealed partial class PptxRenderer
         return chunks;
     }
 
-    private static List<double> MeasurePieLabelChars(string text, ChartTextStyle style, ChartTextMeasurer measurer)
+    private static async ValueTask<List<double>> MeasurePieLabelCharsAsync(string text, ChartTextStyle style, ChartTextMeasurer measurer)
     {
         var widths = new List<double>(text.Length);
         for (int i = 0; i < text.Length; i++)
         {
-            widths.Add(Math.Max(0d, measurer.Measure(text.Substring(i, 1), style)));
+            widths.Add(Math.Max(0d, (await measurer.MeasureAsync(text.Substring(i, 1), style).ConfigureAwait(false))));
         }
         return widths;
     }
@@ -534,10 +535,10 @@ internal sealed partial class PptxRenderer
     }
     // Rendered width of pie label parts joined by the separator (wrap-block skip
     // rules: blank and zero-width parts contribute nothing).
-    private static double MeasurePieLabelPartsWidth(IReadOnlyList<string> parts, string separator, ChartTextStyle style, PresentationFontResolver? fontResolver)
+    private static async ValueTask<double> MeasurePieLabelPartsWidthAsync(IReadOnlyList<string> parts, string separator, ChartTextStyle style, PresentationFontResolver? fontResolver)
     {
         var measurer = new ChartTextMeasurer(fontResolver);
-        double separatorWidth = measurer.Measure(separator, style);
+        double separatorWidth = (await measurer.MeasureAsync(separator, style).ConfigureAwait(false));
         double total = 0d;
         bool first = true;
         foreach (string part in parts)
@@ -546,7 +547,7 @@ internal sealed partial class PptxRenderer
             {
                 continue;
             }
-            double partWidth = Math.Max(0d, measurer.Measure(part, style));
+            double partWidth = Math.Max(0d, (await measurer.MeasureAsync(part, style).ConfigureAwait(false)));
             if (partWidth <= 0d)
             {
                 continue;

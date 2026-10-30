@@ -18,10 +18,13 @@ internal sealed class PresentationFontResolver
     // parts share this resolver), so pages register them without threading lists.
     public HashSet<PdfFallbackFont> UsedFallbackFaces { get; } = new();
 
-    public PresentationFontResolver(IFontResolver? primary)
+    public CancellationToken CancellationToken { get; }
+
+    public PresentationFontResolver(IFontResolver? primary, CancellationToken cancellationToken = default)
     {
         this.primary = primary ?? new WindowsFontResolver();
         fontCatalog = this.primary as IFontCatalog;
+        CancellationToken = cancellationToken;
     }
 
     public FontFaceResolution Resolve(FontRequest request)
@@ -33,7 +36,7 @@ internal sealed class PresentationFontResolver
     {
         cancellationToken.ThrowIfCancellationRequested();
         FontFaceResolution resolution = Resolve(request);
-        OpenTypeFont? font = GetOrLoadOpenTypeFont(resolution, cancellationToken);
+        OpenTypeFont? font = GetPreparedOpenTypeFont(resolution, cancellationToken);
         return font is null ? null : (resolution, font);
     }
 
@@ -46,8 +49,13 @@ internal sealed class PresentationFontResolver
         primaryResolution.FontFaceIndex == catalogResolution.FontFaceIndex &&
         string.Equals(primaryResolution.Source.StableId, catalogResolution.Source.StableId, StringComparison.Ordinal);
 
-    internal OpenTypeFont? GetOrLoadOpenTypeFont(FontFaceResolution resolution, CancellationToken cancellationToken)
-        => GetOrLoadOpenTypeFontAsync(resolution, cancellationToken).GetAwaiter().GetResult();
+    internal OpenTypeFont? GetPreparedOpenTypeFont(FontFaceResolution resolution, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!openTypeFonts.TryGetValue((resolution.Source.StableId, resolution.FontFaceIndex), out OpenTypeFont? font))
+            throw new InvalidOperationException("PPTX font program must be prepared before measurement or painting.");
+        return font;
+    }
 
     internal async ValueTask<OpenTypeFont?> GetOrLoadOpenTypeFontAsync(FontFaceResolution resolution, CancellationToken cancellationToken)
     {

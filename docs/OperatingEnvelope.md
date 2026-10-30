@@ -12,7 +12,8 @@ open and may retain an incomplete prefix after a failure; discard that output.
 Stream conversion exceeding its resident content window requires `TemporaryStorage`;
 without a provider it fails instead of creating process-temp files. File conversion
 selects explicit filesystem backing. Package, staged/output I/O and owned storage
-disposal are awaited; CPU rendering and font acquisition remain synchronous.
+disposal and selected DOCX/PPTX font acquisition are awaited; CPU layout and
+drawing remain synchronous.
 `MemoryBudget` admits package buffers/parts, PDF content staging, private SFNT/
 subset programs and decoded raster planes with PNG IDAT/scanline and baseline
 JPEG component/RGB construction overlap before allocation. Image/font compression

@@ -11,16 +11,16 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFlowFrame flowFrame, PptxDocument document, TextAdvanceEstimator advanceEstimator, bool allowWrapping)
+    private static async ValueTask<PptxTextFrameLayout> BuildTextFrameLayoutAsync(PptxTextFlowFrame flowFrame, PptxDocument document, TextAdvanceEstimator advanceEstimator, bool allowWrapping)
     {
-        PptxTextFrameLayout layout = BuildTextFrameLayout(flowFrame, document, advanceEstimator, allowWrapping, PptxTextColumnBreakMode.StrictFit, 0, 0);
+        PptxTextFrameLayout layout = (await BuildTextFrameLayoutAsync(flowFrame, document, advanceEstimator, allowWrapping, PptxTextColumnBreakMode.StrictFit, 0, 0).ConfigureAwait(false));
         if (TryResolveOfficeOverflowColumnLineBalance(layout, out int lineBalanceTarget, out int lineBalanceStartColumn))
         {
-            return BuildTextFrameLayout(flowFrame, document, advanceEstimator, allowWrapping, PptxTextColumnBreakMode.LineCountBalance, lineBalanceTarget, lineBalanceStartColumn);
+            return (await BuildTextFrameLayoutAsync(flowFrame, document, advanceEstimator, allowWrapping, PptxTextColumnBreakMode.LineCountBalance, lineBalanceTarget, lineBalanceStartColumn).ConfigureAwait(false));
         }
 
         return ShouldUseOfficeOverflowColumnBalance(layout)
-            ? BuildTextFrameLayout(flowFrame, document, advanceEstimator, allowWrapping, PptxTextColumnBreakMode.OverflowBalance, 0, 0)
+            ? (await BuildTextFrameLayoutAsync(flowFrame, document, advanceEstimator, allowWrapping, PptxTextColumnBreakMode.OverflowBalance, 0, 0).ConfigureAwait(false))
             : layout;
     }
 
@@ -150,7 +150,7 @@ internal sealed partial class PptxRenderer
         return tails;
     }
 
-    private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFlowFrame flowFrame, PptxDocument document, TextAdvanceEstimator advanceEstimator, bool allowWrapping, PptxTextColumnBreakMode columnBreakMode, int lineBalanceTarget, int lineBalanceStartColumn)
+    private static async ValueTask<PptxTextFrameLayout> BuildTextFrameLayoutAsync(PptxTextFlowFrame flowFrame, PptxDocument document, TextAdvanceEstimator advanceEstimator, bool allowWrapping, PptxTextColumnBreakMode columnBreakMode, int lineBalanceTarget, int lineBalanceStartColumn)
     {
         PptxTextFrameModel frame = flowFrame.Model;
         allowWrapping &= TextBodyAllowsWrapping(frame.BodyProperties);
@@ -303,6 +303,8 @@ internal sealed partial class PptxRenderer
                         Math.Abs(frame.TextRotationDegrees) <= PptxTextMetricRules.CoordinateTolerance &&
                         frame.ColumnCount == 1 && !frame.TableRowIndex.HasValue &&
                         frame.BodyProperties.AutofitMode != PptxTextAutofitMode.Normal;
+                    if (useNumberingLabelLayout)
+                        await advanceEstimator.PrepareAsync(runStyle.Typeface, runStyle.Bold, runStyle.Italic, bulletText).ConfigureAwait(false);
                     double numberingEndX = useNumberingLabelLayout
                         ? bulletX + advanceEstimator.Measure(bulletText, bulletStyle.FontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, false) + runStyle.CharacterSpacing
                         : 0d;
@@ -339,6 +341,9 @@ internal sealed partial class PptxRenderer
                             runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
                         useNumberingWordWrap &= Math.Max(cursorX, numberingEndX) + fragmentWidth <= columnStartX + effectiveTextWidth;
                     }
+                    // The authored bullet face can be overridden by numbering
+                    // placement. Acquire only after that existing choice is final.
+                    await advanceEstimator.PrepareAsync(bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, bulletText).ConfigureAwait(false);
                     double bulletEndX = useNumberingLabelLayout ? numberingEndX : bulletX + advanceEstimator.Measure(bulletText, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, true);
                     TextRun bulletRun = new(bulletText, bulletX, cursorY, bulletWidth, frame.TextHeight, columnClipX, frame.TextClipY, columnClipWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, useNumberingLabelLayout ? false : runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, PreventCoalesce: false, Outline: null, StrictClip: strictClip);
                     line.Add(modelRun, bulletRun, bulletEndX, BuildTextAtoms(bulletRun, advanceEstimator, PptxTextAtomKind.Word), BuildGlyphSpan(bulletRun, advanceEstimator, 0d));

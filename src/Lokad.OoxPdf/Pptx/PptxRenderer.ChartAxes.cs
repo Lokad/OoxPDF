@@ -275,15 +275,38 @@ internal sealed partial class PptxRenderer
 
         public ChartTextMeasurer(PresentationFontResolver? fontResolver, bool kerningEnabled)
         {
-            estimator = new TextAdvanceEstimator(fontResolver, CancellationToken.None);
+            estimator = new TextAdvanceEstimator(fontResolver, fontResolver?.CancellationToken ?? default);
             this.kerningEnabled = kerningEnabled;
         }
 
-        public double MeasureNormalLineHeight(ChartTextStyle style)
+        public ValueTask PrepareAsync(string text, ChartTextStyle style) =>
+            estimator.PrepareAsync(style.FontFamily, style.Bold, style.Italic, text);
+
+        public async ValueTask PrepareAsync(IEnumerable<string> texts, ChartTextStyle style)
         {
-            return TryMeasureNormalLineHeight(style, out double height)
-                ? height
-                : style.FontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
+            foreach (string text in texts)
+                await PrepareAsync(text, style).ConfigureAwait(false);
+        }
+
+        public ValueTask<double> MeasureAsync(string text, ChartTextStyle style) =>
+            MeasureAsync(text, style.FontSize, style.FontFamily, style.Bold, style.Italic, style.CharacterSpacing);
+
+        public async ValueTask<double> MeasureAsync(string text, double fontSize, string? fontFamily, bool bold, bool italic, double characterSpacing)
+        {
+            await estimator.PrepareAsync(fontFamily, bold, italic, text).ConfigureAwait(false);
+            return Measure(text, fontSize, fontFamily, bold, italic, characterSpacing);
+        }
+
+        public async ValueTask<double> MeasureNormalLineHeightAsync(ChartTextStyle style)
+        {
+            return await TryMeasureNormalLineHeightAsync(style).ConfigureAwait(false)
+                ?? style.FontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
+        }
+
+        public async ValueTask<double?> TryMeasureNormalLineHeightAsync(ChartTextStyle style)
+        {
+            await PrepareAsync(string.Empty, style).ConfigureAwait(false);
+            return TryMeasureNormalLineHeight(style, out double height) ? height : null;
         }
 
         public bool TryMeasureNormalLineHeight(ChartTextStyle style, out double height)

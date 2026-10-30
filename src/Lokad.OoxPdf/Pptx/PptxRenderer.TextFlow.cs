@@ -73,23 +73,24 @@ internal sealed partial class PptxRenderer
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        fontResolver ??= new PresentationFontResolver(await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
         var advanceEstimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
         var frames = new List<PptxTextFrameLayout>();
         IReadOnlyList<PptxTextFrameModel> frameModels = (await BuildTextFrameModelsAsync(slideXml, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken).ConfigureAwait(false));
         foreach (PptxTextFrameModel frameModel in frameModels)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            frames.Add(BuildTextFrameLayout(frameModel, document, advanceEstimator));
+            frames.Add((await BuildTextFrameLayoutAsync(frameModel, document, advanceEstimator).ConfigureAwait(false)));
         }
 
         return new PptxTextLayoutModel(frames);
     }
 
-    private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFrameModel frameModel, PptxDocument document, TextAdvanceEstimator advanceEstimator)
+    private static async ValueTask<PptxTextFrameLayout> BuildTextFrameLayoutAsync(PptxTextFrameModel frameModel, PptxDocument document, TextAdvanceEstimator advanceEstimator)
     {
         frameModel = ResetEstimatedVerticalAnchorOffset(frameModel);
         PptxTextFlowFrame flowFrame = BuildTextFlowFrame(frameModel, document, advanceEstimator);
-        PptxTextFrameLayout layout = BuildTextFrameLayout(flowFrame, document, advanceEstimator, true);
+        PptxTextFrameLayout layout = (await BuildTextFrameLayoutAsync(flowFrame, document, advanceEstimator, true).ConfigureAwait(false));
         if (HasShapeAutoFit(frameModel.BodyProperties) && UsesRotatedFrameAutoFit(frameModel.Orientation))
         {
             // spAutoFit grows the shape around overflowing text, so under the non-clipping
@@ -101,36 +102,36 @@ internal sealed partial class PptxRenderer
             if (frameModel.Orientation == PptxTextOrientation.Vertical &&
                 !ClipsTextVerticalOverflow(frameModel.BodyProperties.VerticalOverflow))
             {
-                return ApplyActualVerticalAnchorOffsetIfNeeded(layout, document, advanceEstimator, allowWrapping: true);
+                return (await ApplyActualVerticalAnchorOffsetIfNeededAsync(layout, document, advanceEstimator, allowWrapping: true).ConfigureAwait(false));
             }
 
-            PptxTextFrameLayout unwrappedLayout = BuildTextFrameLayout(flowFrame, document, advanceEstimator, allowWrapping: false);
+            PptxTextFrameLayout unwrappedLayout = (await BuildTextFrameLayoutAsync(flowFrame, document, advanceEstimator, allowWrapping: false).ConfigureAwait(false));
             if (TextLayoutOverflows(unwrappedLayout, flowFrame.Box))
             {
-                PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator, allowWrapping: false);
-                return ApplyActualVerticalAnchorOffsetIfNeeded(
-                    BuildTextFrameLayout(BuildTextFlowFrame(fitted, document, advanceEstimator), document, advanceEstimator, allowWrapping: false),
+                PptxTextFrameModel fitted = (await FitShapeAutoFitFrameAsync(frameModel, document, advanceEstimator, allowWrapping: false).ConfigureAwait(false));
+                return (await ApplyActualVerticalAnchorOffsetIfNeededAsync(
+                    (await BuildTextFrameLayoutAsync(BuildTextFlowFrame(fitted, document, advanceEstimator), document, advanceEstimator, allowWrapping: false).ConfigureAwait(false)),
                     document,
                     advanceEstimator,
-                    allowWrapping: false);
+                    allowWrapping: false).ConfigureAwait(false));
             }
 
-            return ApplyActualVerticalAnchorOffsetIfNeeded(unwrappedLayout, document, advanceEstimator, allowWrapping: false);
+            return (await ApplyActualVerticalAnchorOffsetIfNeededAsync(unwrappedLayout, document, advanceEstimator, allowWrapping: false).ConfigureAwait(false));
         }
 
         if (HasShapeAutoFit(frameModel.BodyProperties) &&
             frameModel.Orientation == PptxTextOrientation.Horizontal &&
             TextLayoutOverflowsHorizontally(layout, flowFrame.Box, PptxTextMetricRules.ShapeAutoFitWrapTolerance(ResolveLayoutMaxFontSize(layout), flowFrame.Box.TextWidth)))
         {
-            PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator, allowWrapping: true);
-            return ApplyActualVerticalAnchorOffsetIfNeeded(
-                BuildTextFrameLayout(BuildTextFlowFrame(fitted, document, advanceEstimator), document, advanceEstimator, true),
+            PptxTextFrameModel fitted = (await FitShapeAutoFitFrameAsync(frameModel, document, advanceEstimator, allowWrapping: true).ConfigureAwait(false));
+            return (await ApplyActualVerticalAnchorOffsetIfNeededAsync(
+                (await BuildTextFrameLayoutAsync(BuildTextFlowFrame(fitted, document, advanceEstimator), document, advanceEstimator, true).ConfigureAwait(false)),
                 document,
                 advanceEstimator,
-                allowWrapping: true);
+                allowWrapping: true).ConfigureAwait(false));
         }
 
-        return ApplyActualVerticalAnchorOffsetIfNeeded(layout, document, advanceEstimator, allowWrapping: true);
+        return (await ApplyActualVerticalAnchorOffsetIfNeededAsync(layout, document, advanceEstimator, allowWrapping: true).ConfigureAwait(false));
     }
 
     private static PptxTextFrameModel ResetEstimatedVerticalAnchorOffset(PptxTextFrameModel frame)
@@ -160,31 +161,16 @@ internal sealed partial class PptxRenderer
             frame.Paragraphs.Any(paragraph => paragraph.HasManualLineBreak && HasExplicitParagraphSpacing(paragraph.Properties));
     }
 
-    private static PptxTextFlowModel BuildTextFlowModel(
+    private static async ValueTask<PptxTextFlowModel> BuildTextFlowModelAsync(
         PptxRenderContext context,
         PptxRenderSource source,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return BuildTextFlowModel(source.Xml, context.Document, context.Theme, source.ColorMap, context.DisplayedSlideNumber, includePlaceholders, placeholderSources);
-    }
-
-    private static PptxTextFlowModel BuildTextFlowModel(
-        XDocument slideXml,
-        PptxDocument document,
-        PptxTheme theme,
-        PptxColorMap colorMap,
-        long slideNumber,
-        bool includePlaceholders,
-        IReadOnlyList<XDocument> placeholderSources)
-    {
-        return BuildTextFlowModel((BuildTextFrameModelsAsync(slideXml, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources).GetAwaiter().GetResult()), document);
-    }
-
-    private static PptxTextFlowModel BuildTextFlowModel(IReadOnlyList<PptxTextFrameModel> frames, PptxDocument document)
-    {
-        var advanceEstimator = new TextAdvanceEstimator(null, CancellationToken.None);
-        return new PptxTextFlowModel(frames.Select(frame => BuildTextFlowFrame(frame, document, advanceEstimator)).ToArray());
+        IReadOnlyList<PptxTextFrameModel> frames = await BuildTextFrameModelsAsync(context, source,
+            includePlaceholders, placeholderSources).ConfigureAwait(false);
+        var advanceEstimator = new TextAdvanceEstimator(context.FontResolver, context.CancellationToken);
+        return new PptxTextFlowModel(frames.Select(frame => BuildTextFlowFrame(frame, context.Document, advanceEstimator)).ToArray());
     }
 
     private static PptxTextFlowFrame BuildTextFlowFrame(PptxTextFrameModel frame, PptxDocument document, TextAdvanceEstimator advanceEstimator)
@@ -289,7 +275,7 @@ internal sealed partial class PptxRenderer
             TextBodyAllowsWrapping(frame.BodyProperties);
     }
 
-    private static PptxTextFrameModel FitShapeAutoFitFrame(
+    private static async ValueTask<PptxTextFrameModel> FitShapeAutoFitFrameAsync(
         PptxTextFrameModel frame,
         PptxDocument document,
         TextAdvanceEstimator advanceEstimator,
@@ -303,7 +289,7 @@ internal sealed partial class PptxRenderer
             double candidateScale = (low + high) / 2d;
             PptxTextFrameModel candidate = ScaleTextFrameModel(frame, candidateScale);
             PptxTextFlowFrame candidateFlow = BuildTextFlowFrame(candidate, document, advanceEstimator);
-            PptxTextFrameLayout candidateLayout = BuildTextFrameLayout(candidateFlow, document, advanceEstimator, allowWrapping);
+            PptxTextFrameLayout candidateLayout = (await BuildTextFrameLayoutAsync(candidateFlow, document, advanceEstimator, allowWrapping).ConfigureAwait(false));
             if (TextLayoutOverflows(candidateLayout, candidateFlow.Box))
             {
                 high = candidateScale;
@@ -337,7 +323,7 @@ internal sealed partial class PptxRenderer
             .Any(line => line.EndX > right + Math.Max(PptxTextMetricRules.TextStateTolerance, tolerance));
     }
 
-    private static PptxTextFrameLayout ApplyActualVerticalAnchorOffsetIfNeeded(
+    private static async ValueTask<PptxTextFrameLayout> ApplyActualVerticalAnchorOffsetIfNeededAsync(
         PptxTextFrameLayout layout,
         PptxDocument document,
         TextAdvanceEstimator advanceEstimator,
@@ -350,7 +336,7 @@ internal sealed partial class PptxRenderer
         }
 
         PptxTextFrameModel anchored = layout.Model with { VerticalOffset = verticalOffset };
-        return BuildTextFrameLayout(BuildTextFlowFrame(anchored, document, advanceEstimator), document, advanceEstimator, allowWrapping);
+        return (await BuildTextFrameLayoutAsync(BuildTextFlowFrame(anchored, document, advanceEstimator), document, advanceEstimator, allowWrapping).ConfigureAwait(false));
     }
 
     private static bool TryResolveActualVerticalAnchorOffset(PptxTextFrameLayout layout, out double verticalOffset)

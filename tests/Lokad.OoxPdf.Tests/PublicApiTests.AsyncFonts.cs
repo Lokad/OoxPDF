@@ -9,8 +9,8 @@ internal static partial class PublicApiTests
     public static void ConvertAsyncDocxReturnsWhileFontAcquisitionIsPending() => CheckReturnsWhileFontAcquisitionIsPending(OoxPdfInputKind.Docx);
     public static void ConvertAsyncPptxReturnsWhileFontAcquisitionIsPending() => CheckReturnsWhileFontAcquisitionIsPending(OoxPdfInputKind.Pptx);
 
-    public static void ConvertAsyncPptxTableReturnsWhileFontAcquisitionIsPending() => CheckReturnsWhileFontAcquisitionIsPending(OoxPdfInputKind.Pptx, table: true);
-    public static void ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending() => CheckReturnsWhileFontAcquisitionIsPending(OoxPdfInputKind.Pptx, fallback: true);
+    public static void ConvertAsyncPptxTableReturnsWhileFontAcquisitionIsPending() => CheckReturnsWhileFontAcquisitionIsPending(OoxPdfInputKind.Pptx, FontAcquisitionScenario.Table);
+    public static void ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending() => CheckReturnsWhileFontAcquisitionIsPending(OoxPdfInputKind.Pptx, FontAcquisitionScenario.Fallback);
 
     public static void PptxTableMinimumHeightUsesTheSuppliedFontAdvances()
     {
@@ -45,9 +45,15 @@ internal static partial class PublicApiTests
         }
     }
 
-    private static void CheckReturnsWhileFontAcquisitionIsPending(OoxPdfInputKind kind, bool table = false, bool fallback = false)
+    public static void ConvertAsyncPptxBulletReturnsWhileFontAcquisitionIsPending() => CheckReturnsWhileFontAcquisitionIsPending(OoxPdfInputKind.Pptx, FontAcquisitionScenario.Bullet);
+    public static void ConvertAsyncPptxNumberedBulletAwaitsItsColdGlyphFallback() => CheckReturnsWhileFontAcquisitionIsPending(OoxPdfInputKind.Pptx, FontAcquisitionScenario.NumberedBullet);
+    public static void ConvertAsyncPptxChartReturnsWhileFontAcquisitionIsPending() => CheckReturnsWhileFontAcquisitionIsPending(OoxPdfInputKind.Pptx, FontAcquisitionScenario.Chart);
+
+    private enum FontAcquisitionScenario { Default, Table, Fallback, Bullet, NumberedBullet, Chart }
+
+    private static void CheckReturnsWhileFontAcquisitionIsPending(OoxPdfInputKind kind, FontAcquisitionScenario scenario = FontAcquisitionScenario.Default)
     {
-        byte[] inputBytes = AwaitedFontInput(kind, table);
+        byte[] inputBytes = AwaitedFontInput(kind, scenario);
         var pool = new TestMemoryBudget(); using var source = new AwaitedFontSource();
         using var cancellation = new CancellationTokenSource();
         using var input = new MemoryStream(inputBytes); using var output = new AsyncEmissionStream();
@@ -62,7 +68,7 @@ internal static partial class PublicApiTests
         Task? conversion = null;
         try
         {
-            conversion = OoxPdfConverter.ConvertAsync(input, output, AwaitedFontOptions(source, pool, kind, fallback), cancellation.Token);
+            conversion = OoxPdfConverter.ConvertAsync(input, output, AwaitedFontOptions(source, pool, kind, scenario), cancellation.Token);
             returned.Set(); watchdog.GetAwaiter().GetResult();
             TestAssert.True(!blocked, "ConvertAsync blocked while its selected font acquisition was pending.");
             TestAssert.True(!conversion.IsCompleted && pool.Reserved > 0 && output.Length == 0,
@@ -70,7 +76,7 @@ internal static partial class PublicApiTests
             TestAssert.Equal(cancellation.Token, source.ObservedToken);
             source.Release.TrySetResult(); conversion.GetAwaiter().GetResult();
             using var baselineInput = new MemoryStream(inputBytes); using var baseline = new MemoryStream();
-            OoxPdfConverter.Convert(baselineInput, baseline, AwaitedFontOptions(new MemoryFontProgramSource(source.StableId, source.Template), null, kind, fallback));
+            OoxPdfConverter.Convert(baselineInput, baseline, AwaitedFontOptions(new MemoryFontProgramSource(source.StableId, source.Template), null, kind, scenario));
             TestAssert.True(output.Bytes().AsSpan().SequenceEqual(baseline.ToArray()), "Awaited font acquisition preserves PDF bytes.");
             TestAssert.Equal(1, source.Calls); TestAssert.Equal(1, source.LeasesDisposed);
             TestAssert.Equal(0L, pool.Reserved); TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);
@@ -88,12 +94,15 @@ internal static partial class PublicApiTests
     public static void ConvertAsyncDocxFontCancellationWaitsForTheAcquisitionBorrow() => CheckFontCancellationWaitsForTheAcquisitionBorrow(OoxPdfInputKind.Docx);
     public static void ConvertAsyncPptxFontCancellationWaitsForTheAcquisitionBorrow() => CheckFontCancellationWaitsForTheAcquisitionBorrow(OoxPdfInputKind.Pptx);
 
-    private static void CheckFontCancellationWaitsForTheAcquisitionBorrow(OoxPdfInputKind kind)
+    public static void ConvertAsyncPptxBulletCancellationWaitsForTheAcquisitionBorrow() => CheckFontCancellationWaitsForTheAcquisitionBorrow(OoxPdfInputKind.Pptx, FontAcquisitionScenario.Bullet);
+    public static void ConvertAsyncPptxChartCancellationWaitsForTheAcquisitionBorrow() => CheckFontCancellationWaitsForTheAcquisitionBorrow(OoxPdfInputKind.Pptx, FontAcquisitionScenario.Chart);
+
+    private static void CheckFontCancellationWaitsForTheAcquisitionBorrow(OoxPdfInputKind kind, FontAcquisitionScenario scenario = FontAcquisitionScenario.Default)
     {
         var pool = new TestMemoryBudget(); using var source = new AwaitedFontSource();
-        using var input = new MemoryStream(AwaitedFontInput(kind));
+        using var input = new MemoryStream(AwaitedFontInput(kind, scenario));
         using var output = new MemoryStream(); using var cancellation = new CancellationTokenSource();
-        Task conversion = OoxPdfConverter.ConvertAsync(input, output, AwaitedFontOptions(source, pool, kind), cancellation.Token);
+        Task conversion = OoxPdfConverter.ConvertAsync(input, output, AwaitedFontOptions(source, pool, kind, scenario), cancellation.Token);
         try
         {
             source.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
@@ -113,11 +122,14 @@ internal static partial class PublicApiTests
     public static void ConvertAsyncDocxFontCopyRefusalReleasesLeaseAndPreservesPublication() => CheckFontCopyRefusalReleasesLeaseAndPreservesPublication(OoxPdfInputKind.Docx);
     public static void ConvertAsyncPptxFontCopyRefusalReleasesLeaseAndPreservesPublication() => CheckFontCopyRefusalReleasesLeaseAndPreservesPublication(OoxPdfInputKind.Pptx);
 
-    private static void CheckFontCopyRefusalReleasesLeaseAndPreservesPublication(OoxPdfInputKind kind)
+    public static void ConvertAsyncPptxBulletCopyRefusalPreservesPublication() => CheckFontCopyRefusalReleasesLeaseAndPreservesPublication(OoxPdfInputKind.Pptx, FontAcquisitionScenario.Bullet);
+    public static void ConvertAsyncPptxChartCopyRefusalPreservesPublication() => CheckFontCopyRefusalReleasesLeaseAndPreservesPublication(OoxPdfInputKind.Pptx, FontAcquisitionScenario.Chart);
+
+    private static void CheckFontCopyRefusalReleasesLeaseAndPreservesPublication(OoxPdfInputKind kind, FontAcquisitionScenario scenario = FontAcquisitionScenario.Default)
     {
         string directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ooxpdf-font-publication-" + Guid.NewGuid().ToString("N"))).FullName;
         string inputPath = Path.Combine(directory, kind == OoxPdfInputKind.Docx ? "input.docx" : "input.pptx"), outputPath = Path.Combine(directory, "output.pdf");
-        File.WriteAllBytes(inputPath, AwaitedFontInput(kind));
+        File.WriteAllBytes(inputPath, AwaitedFontInput(kind, scenario));
         File.WriteAllText(outputPath, "previous result");
         try
         {
@@ -127,8 +139,8 @@ internal static partial class PublicApiTests
                 using var source = new AwaitedFontSource(() => pool.RefuseChange = (_, bytes) => bytes > 0);
                 using var input = File.OpenRead(inputPath); using var output = new MemoryStream();
                 Task conversion = file
-                    ? OoxPdfConverter.ConvertAsync(inputPath, outputPath, AwaitedFontOptions(source, pool, kind))
-                    : OoxPdfConverter.ConvertAsync(input, output, AwaitedFontOptions(source, pool, kind));
+                    ? OoxPdfConverter.ConvertAsync(inputPath, outputPath, AwaitedFontOptions(source, pool, kind, scenario))
+                    : OoxPdfConverter.ConvertAsync(input, output, AwaitedFontOptions(source, pool, kind, scenario));
                 source.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
                 source.Release.TrySetResult();
                 var failure = TestAssert.Throws<OoxPdfLimitExceededException>(() => conversion.GetAwaiter().GetResult());
@@ -143,16 +155,51 @@ internal static partial class PublicApiTests
         finally { Directory.Delete(directory, recursive: true); }
     }
 
-    private static byte[] AwaitedFontInput(OoxPdfInputKind kind, bool table = false) => kind == OoxPdfInputKind.Docx
-        ? ReadMinimalDocxBytes("<w:p><w:r><w:t>ABC</w:t></w:r></w:p>") : ReadMinimalPptxBytes("ABC", table);
+    private static byte[] AwaitedFontInput(OoxPdfInputKind kind, FontAcquisitionScenario scenario) => kind == OoxPdfInputKind.Docx
+        ? ReadMinimalDocxBytes("<w:p><w:r><w:t>ABC</w:t></w:r></w:p>")
+        : scenario == FontAcquisitionScenario.Chart ? AwaitedChartInput()
+        : ReadMinimalPptxBytes("ABC", table: scenario == FontAcquisitionScenario.Table,
+            paragraphProperties: scenario switch {
+                FontAcquisitionScenario.Bullet => "<a:pPr><a:buFont typeface=\"Bullet Face\"/><a:buChar char=\"*\"/></a:pPr>",
+                FontAcquisitionScenario.NumberedBullet => "<a:pPr><a:buAutoNum type=\"arabicPeriod\"/></a:pPr>",
+                _ => null });
 
-    private static OoxPdfOptions AwaitedFontOptions(IFontProgramSource source, IMemoryBudget? pool, OoxPdfInputKind kind, bool fallback = false) => new() {
-        InputKind = kind, FontResolver = fallback ? new AwaitedFallbackFontResolver(source) : new AwaitedFontResolver(source),
+    private static byte[] AwaitedChartInput()
+    {
+        using MemoryStream stream = PptxTests.CreateSingleChartPackageStream("""
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:barChart><c:barDir val="col"/><c:grouping val="clustered"/>
+                <c:ser><c:idx val="0"/><c:order val="0"/><c:tx><c:v>Series</c:v></c:tx>
+                  <c:cat><c:strLit><c:ptCount val="2"/><c:pt idx="0"><c:v>One</c:v></c:pt><c:pt idx="1"><c:v>Two</c:v></c:pt></c:strLit></c:cat>
+                  <c:val><c:numLit><c:formatCode>General</c:formatCode><c:ptCount val="2"/><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                </c:ser><c:axId val="1"/><c:axId val="2"/>
+              </c:barChart>
+              <c:catAx><c:axId val="1"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:crossAx val="2"/></c:catAx>
+              <c:valAx><c:axId val="2"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:crossAx val="1"/></c:valAx>
+              </c:plotArea><c:legend><c:legendPos val="b"/></c:legend></c:chart>
+            </c:chartSpace>
+            """);
+        return stream.ToArray();
+    }
+
+    private static OoxPdfOptions AwaitedFontOptions(IFontProgramSource source, IMemoryBudget? pool, OoxPdfInputKind kind, FontAcquisitionScenario scenario) => new() {
+        InputKind = kind, FontResolver = scenario switch {
+            FontAcquisitionScenario.Fallback => new AwaitedFallbackFontResolver(source),
+            FontAcquisitionScenario.Bullet => new AwaitedBulletFontResolver(source),
+            FontAcquisitionScenario.NumberedBullet => new AwaitedNumberedBulletFontResolver(source),
+            _ => new AwaitedFontResolver(source) },
         MemoryBudget = pool, FixedCreationDate = DateTimeOffset.UnixEpoch };
 
     private sealed class AwaitedFontResolver(IFontProgramSource source) : IFontResolver
     {
         public FontFaceResolution Resolve(FontRequest request) => new(request.FamilyName, "TestFont", new FontStyleKey(), source, false);
+    }
+
+    private sealed class AwaitedBulletFontResolver(IFontProgramSource bulletSource) : IFontResolver
+    {
+        private readonly IFontProgramSource body = new MemoryFontProgramSource("fixed-body", TestFontBuilder.CreateTestFont());
+        public FontFaceResolution Resolve(FontRequest request) => new(request.FamilyName, request.FamilyName,
+            new FontStyleKey(), request.FamilyName == "Bullet Face" ? bulletSource : body, false);
     }
 
     private sealed class AwaitedFallbackFontResolver(IFontProgramSource fallbackSource) : IFontResolver, IFontCatalog
@@ -162,6 +209,29 @@ internal static partial class PublicApiTests
             ? new(request.FamilyName, "TestFont", new FontStyleKey(), fallbackSource, false)
             : new(request.FamilyName, "CffPrimary", new FontStyleKey(), primary, false);
         public IReadOnlyList<FontFaceResolution> GetDiscoveredFonts() => [new("TestFont", "TestFont", new FontStyleKey(), fallbackSource, false)];
+    }
+
+    private sealed class AwaitedNumberedBulletFontResolver(IFontProgramSource fallbackSource) : IFontResolver, IFontCatalog
+    {
+        private readonly IFontProgramSource primary = new MemoryFontProgramSource("letters-only", CreateLettersOnlyFont());
+        public FontFaceResolution Resolve(FontRequest request) => request.FamilyName == "NumberFont"
+            ? new(request.FamilyName, "NumberFont", new FontStyleKey(), fallbackSource, false)
+            : new(request.FamilyName, "LetterFont", new FontStyleKey(), primary, false);
+        public IReadOnlyList<FontFaceResolution> GetDiscoveredFonts() => [new("NumberFont", "NumberFont", new FontStyleKey(), fallbackSource, false)];
+
+        private static byte[] CreateLettersOnlyFont()
+        {
+            byte[] bytes = TestFontBuilder.CreateTestFont();
+            (int cmap, _) = TestFontBuilder.GetTableRange(bytes, "cmap");
+            int format12 = cmap + (int)System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(cmap + 16, 4));
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(format12 + 16, 4), 'A');
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(format12 + 20, 4), 'Z');
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(format12 + 24, 4), 'A' - 0x20 + 1);
+            OpenTypeFont font = OpenTypeFont.Load(bytes);
+            TestAssert.True(font.MapCodePoint('A') != 0 && font.MapCodePoint('1') == 0 && font.MapCodePoint('.') == 0,
+                "Only the generated numeric marker needs the cold fallback program.");
+            return bytes;
+        }
     }
 
     private sealed class AwaitedFontSource(Action? afterAcquisition = null) : IFontProgramSource, IDisposable

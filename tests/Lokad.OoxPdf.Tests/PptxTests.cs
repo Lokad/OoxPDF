@@ -166,6 +166,15 @@ internal static class PptxTests
         string chartXml,
         IReadOnlyDictionary<string, byte[]>? additionalParts = null)
     {
+        using MemoryStream stream = CreateSingleChartPackageStream(chartXml, additionalParts);
+        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        return (document, package);
+    }
+
+    internal static MemoryStream CreateSingleChartPackageStream(string chartXml,
+        IReadOnlyDictionary<string, byte[]>? additionalParts = null)
+    {
         var parts = new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes()),
@@ -202,10 +211,7 @@ internal static class PptxTests
             }
         }
 
-        using MemoryStream stream = TestFixtures.CreateZipPackage(parts);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        return (document, package);
+        return TestFixtures.CreateZipPackage(parts);
     }
 
     internal static bool ChartBooleanOptionValue(object option)

@@ -256,7 +256,7 @@ internal sealed partial class PptxRenderer
         return style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartLegendTextStyleOverride(sceneChart)));
     }
 
-    private static void RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver, ChartLegendPlacement placement, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false, double doughnutRingCenterY = 0d, bool scatterLegend = false, ChartLegendBox? preparedBox = null)
+    private static async ValueTask RenderChartLegendAsync(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver, ChartLegendPlacement placement, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false, double doughnutRingCenterY = 0d, bool scatterLegend = false, ChartLegendBox? preparedBox = null)
     {
         if (!layout.Visible || entries.Count == 0)
         {
@@ -265,6 +265,7 @@ internal sealed partial class PptxRenderer
 
         // Legend boxes measure unkerned advances like the emission (see reserve note).
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
+        await textMeasurer.PrepareAsync(entries.Select(entry => entry.Name), style).ConfigureAwait(false);
         ChartLegendBox legendBox = preparedBox ?? ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer, placement, legendLeadExtra, doughnutRightLegend, doughnutLeftLegend, doughnutRingCenterY, scatterLegend);
 
         RenderChartShapeStyle(graphics, legendBox.X, legendBox.ClipY, legendBox.Width, legendBox.ClipHeight, layout.ShapeStyle);
@@ -393,7 +394,7 @@ internal sealed partial class PptxRenderer
                 FlipVertical: false, PreventCoalesce: false, Outline: null, StrictClip: false));
         }
 
-        RenderChartTextRuns(runs, graphics, chartFonts, "CL", fontResolver, diagnosticSink);
+        await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CL", fontResolver, diagnosticSink).ConfigureAwait(false);
     }
 
     // Fill-swatch side keys share the 4.66pt Office entry text gap: area right legends

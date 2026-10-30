@@ -176,7 +176,9 @@ Failed preparation refunds immediately, including a prepared RGB payload when
 alpha compression fails. Crop and generated shadow/glow planes are admitted before
 allocation and refund after their compression/paint users finish. Recolor mutates
 only private decoded/cropped pixels, leaving encoded source/cache bytes unchanged.
-Models, font sources/caches and parsed maps, and other PDF resources remain pending.
+Font-source leases and longer-lived caches keep admission through their final
+reader, including eviction and shutdown. Models, discovery metadata, parsed maps
+and other PDF resources remain pending.
 Null budget leaves memory ungoverned. No private allowance or complete heap
 accounting is introduced; allow headroom for incidental storage and GC lag.
 Caller streams remain open and are not charged again as library storage.

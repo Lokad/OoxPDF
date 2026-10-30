@@ -409,7 +409,7 @@ internal sealed partial class PptxRenderer
         return Math.PI / 2d - index * Math.PI * 2d / pointCount;
     }
 
-    private static void RenderRadarCategoryLabels(
+    private static async ValueTask RenderRadarCategoryLabelsAsync(
         PptxTheme theme,
         PdfGraphicsBuilder graphics,
         ChartRadarLayout layout,
@@ -440,11 +440,12 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
+            await textMeasurer.PrepareAsync(label, style).ConfigureAwait(false);
             ChartRadarLabelFrame frame = ResolveRadarCategoryLabelFrame(layout, label, style, textMeasurer, i, pointCount);
             runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment, kerningEnabled: false));
         }
 
-        RenderChartTextRuns(runs, graphics, chartFonts, "RCA", fontResolver, diagnosticSink);
+        await RenderChartTextRunsAsync(runs, graphics, chartFonts, "RCA", fontResolver, diagnosticSink).ConfigureAwait(false);
     }
 
     private static ChartRadarLabelFrame ResolveRadarCategoryLabelFrame(ChartRadarLayout layout, string label, ChartTextStyle style, ChartTextMeasurer textMeasurer, int index, int pointCount)
@@ -487,7 +488,7 @@ internal sealed partial class PptxRenderer
         return anchorY + labelHeight * baselineFactor;
     }
 
-    private static void RenderRadarValueAxisLabels(
+    private static async ValueTask RenderRadarValueAxisLabelsAsync(
         PptxTheme theme,
         PdfGraphicsBuilder graphics,
         ChartRadarLayout layout,
@@ -509,11 +510,12 @@ internal sealed partial class PptxRenderer
         {
             double ratio = GetChartValuePlotRatio(extents, tickValue, false);
             string label = FormatSceneOrXmlChartAxisLabel(tickValue, sceneAxis, valueAxis, null);
+            await textMeasurer.PrepareAsync(label, style).ConfigureAwait(false);
             ChartRadarLabelFrame frame = ResolveRadarValueAxisLabelFrame(layout, label, style, textMeasurer, ratio);
             runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment, kerningEnabled: false));
         }
 
-        RenderChartTextRuns(runs, graphics, chartFonts, "RVA", fontResolver, diagnosticSink);
+        await RenderChartTextRunsAsync(runs, graphics, chartFonts, "RVA", fontResolver, diagnosticSink).ConfigureAwait(false);
     }
 
     private static ChartRadarLabelFrame ResolveRadarValueAxisLabelFrame(ChartRadarLayout layout, string label, ChartTextStyle style, ChartTextMeasurer textMeasurer, double ratio)

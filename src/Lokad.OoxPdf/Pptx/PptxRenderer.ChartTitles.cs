@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderChartTitle(PptxDocument document, PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, ShapeBounds bounds, XDocument chartXml, PptxSceneChart sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver fontResolver, List<PdfFontResource> chartFonts, PptxRenderContext context, List<PdfLinkAnnotation> linkAnnotations, HashSet<string> reportedHyperlinkIds, Action<OoxPdfDiagnostic>? diagnosticSink = null)
+    private static async ValueTask RenderChartTitleAsync(PptxDocument document, PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, ShapeBounds bounds, XDocument chartXml, PptxSceneChart sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver fontResolver, List<PdfFontResource> chartFonts, PptxRenderContext context, List<PdfLinkAnnotation> linkAnnotations, HashSet<string> reportedHyperlinkIds, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         string? title = sceneChart.Title.Text;
         if (string.IsNullOrWhiteSpace(title))
@@ -49,14 +49,14 @@ internal sealed partial class PptxRenderer
             : y + height * titleBaselineRatio;
         double baselineY = titleManualLayoutApplied
             ? fallbackBaselineY
-            : ResolveChartTitleBaselineY(document, theme, colorMap, bounds, chartXml, sceneChart, workbook, plotVisibleOnly, fallbackBaselineY, fontSize, fontResolver);
+            : (await ResolveChartTitleBaselineYAsync(document, theme, colorMap, bounds, chartXml, sceneChart, workbook, plotVisibleOnly, fallbackBaselineY, fontSize, fontResolver).ConfigureAwait(false));
         RenderChartShapeStyle(graphics, x, y, width, height, ToChartShapeStyle(sceneChart.Title.ShapeStyle));
         double titleX = x + width * PptxChartMetricRules.TitleXInsetRatio;
         double titleWidth = width * PptxChartMetricRules.TitleWidthRatio;
         double titleHeight = fontSize * PptxChartMetricRules.TitleHeightFactor;
         var runs = new List<TextRun>();
         List<ChartTextRunLink>? titleLinks = sceneChart.Relationships is null ? null : new List<ChartTextRunLink>();
-        AddChartRichTextRuns(
+        await AddChartRichTextRunsAsync(
             runs,
             ReadChartTitleTextRuns(sceneChart),
             title.Trim(),
@@ -71,8 +71,8 @@ internal sealed partial class PptxRenderer
             style,
             TextAlignment.Center,
             fontResolver,
-            titleLinks);
-        RenderedFonts titleFonts = RenderChartTextRuns(runs, graphics, chartFonts, "CT", fontResolver, diagnosticSink);
+            titleLinks).ConfigureAwait(false);
+        RenderedFonts titleFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CT", fontResolver, diagnosticSink).ConfigureAwait(false));
         if (titleLinks is not null && sceneChart.Relationships is not null)
         {
             foreach (ChartTextRunLink titleLink in titleLinks)
@@ -82,7 +82,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderManualChartAxisTitles(
+    private static async ValueTask RenderManualChartAxisTitlesAsync(
         PptxDocument document,
         PptxTheme theme,
         PdfGraphicsBuilder graphics,
@@ -103,7 +103,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            RenderManualChartAxisTitle(
+            await RenderManualChartAxisTitleAsync(
                 theme,
                 graphics,
                 frame,
@@ -114,11 +114,11 @@ internal sealed partial class PptxRenderer
                 ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, axis.Title.TextStyle, GetChartAxisStyleRole(axis.AxisKind))),
                 ChartTextStyleOverride.Empty,
                 ChartTextStyleOverride.Empty,
-                fontResolver, chartFonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, diagnosticSink);
+                fontResolver, chartFonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, diagnosticSink).ConfigureAwait(false);
         }
     }
 
-    private static void RenderDefaultChartAxisTitles(
+    private static async ValueTask RenderDefaultChartAxisTitlesAsync(
         PptxTheme theme,
         PdfGraphicsBuilder graphics,
         ChartLayout layout,
@@ -139,7 +139,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            RenderDefaultChartAxisTitle(
+            await RenderDefaultChartAxisTitleAsync(
                 theme,
                 graphics,
                 layout,
@@ -151,7 +151,7 @@ internal sealed partial class PptxRenderer
                 ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, axis.Title.TextStyle, GetChartAxisStyleRole(axis.AxisKind))),
                 ChartTextStyleOverride.Empty,
                 ToChartTextStyleOverride(axis.Title.TextStyle),
-                fontResolver, chartFonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, diagnosticSink);
+                fontResolver, chartFonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, diagnosticSink).ConfigureAwait(false);
         }
     }
 
@@ -180,7 +180,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderDefaultChartAxisTitle(
+    private static async ValueTask RenderDefaultChartAxisTitleAsync(
         PptxTheme theme,
         PdfGraphicsBuilder graphics,
         ChartLayout layout,
@@ -221,7 +221,7 @@ internal sealed partial class PptxRenderer
         string trimmed = text.Trim();
         double titleHeight = style.FontSize * PptxChartMetricRules.TitleHeightFactor;
         var textMeasurer = new ChartTextMeasurer(fontResolver);
-        double textWidth = Math.Max(style.FontSize, textMeasurer.Measure(trimmed, style));
+        double textWidth = Math.Max(style.FontSize, (await textMeasurer.MeasureAsync(trimmed, style).ConfigureAwait(false)));
         if (!IsRenderableDefaultChartAxisTitle(axisKind, positionKind))
         {
             return;
@@ -229,11 +229,11 @@ internal sealed partial class PptxRenderer
 
         if (positionKind is PptxSceneChartAxisPosition.Bottom or PptxSceneChartAxisPosition.Top)
         {
-            RenderDefaultHorizontalChartAxisTitle(graphics, layout, trimmed, textRuns, style, shapeStyle, titleHeight, textWidth, positionKind, fontResolver, chartFonts, context, chartRelationships, linkAnnotations, reportedHyperlinkIds, diagnosticSink);
+            await RenderDefaultHorizontalChartAxisTitleAsync(graphics, layout, trimmed, textRuns, style, shapeStyle, titleHeight, textWidth, positionKind, fontResolver, chartFonts, context, chartRelationships, linkAnnotations, reportedHyperlinkIds, diagnosticSink).ConfigureAwait(false);
         }
         else if (positionKind is PptxSceneChartAxisPosition.Left or PptxSceneChartAxisPosition.Right)
         {
-            RenderDefaultVerticalChartAxisTitle(graphics, layout, trimmed, textRuns, style, shapeStyle, titleHeight, textWidth, positionKind, fontResolver, chartFonts, context, chartRelationships, linkAnnotations, reportedHyperlinkIds, diagnosticSink);
+            await RenderDefaultVerticalChartAxisTitleAsync(graphics, layout, trimmed, textRuns, style, shapeStyle, titleHeight, textWidth, positionKind, fontResolver, chartFonts, context, chartRelationships, linkAnnotations, reportedHyperlinkIds, diagnosticSink).ConfigureAwait(false);
         }
     }
 
@@ -267,7 +267,7 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static void RenderDefaultHorizontalChartAxisTitle(
+    private static async ValueTask RenderDefaultHorizontalChartAxisTitleAsync(
         PdfGraphicsBuilder graphics,
         ChartLayout layout,
         string text,
@@ -307,7 +307,7 @@ internal sealed partial class PptxRenderer
         RenderChartShapeStyle(graphics, boxX, boxY, boxWidth, titleHeight, shapeStyle);
         var runs = new List<TextRun>();
         List<ChartTextRunLink>? axisLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
-        AddChartRichTextRuns(
+        await AddChartRichTextRunsAsync(
             runs,
             textRuns,
             text,
@@ -322,12 +322,12 @@ internal sealed partial class PptxRenderer
             style,
             TextAlignment.Center,
             fontResolver,
-            axisLinks);
-        RenderedFonts axisFonts = RenderChartTextRuns(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink);
+            axisLinks).ConfigureAwait(false);
+        RenderedFonts axisFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink).ConfigureAwait(false));
         AddChartTextRunHyperlinkAnnotations(axisLinks, chartRelationships, context, axisFonts, linkAnnotations, reportedHyperlinkIds);
     }
 
-    private static void RenderDefaultVerticalChartAxisTitle(
+    private static async ValueTask RenderDefaultVerticalChartAxisTitleAsync(
         PdfGraphicsBuilder graphics,
         ChartLayout layout,
         string text,
@@ -370,7 +370,7 @@ internal sealed partial class PptxRenderer
             {
                 if (!string.IsNullOrEmpty(titleRun.Text))
                 {
-                    emittedTitleWidth += Math.Max(0d, titleMeasurer.Measure(titleRun.Text, style.Merge(titleRun.TextStyle)));
+                    emittedTitleWidth += Math.Max(0d, (await titleMeasurer.MeasureAsync(titleRun.Text, style.Merge(titleRun.TextStyle)).ConfigureAwait(false)));
                 }
             }
         }
@@ -382,7 +382,7 @@ internal sealed partial class PptxRenderer
         RenderChartShapeStyle(graphics, boxX, boxY, titleHeight, textWidth, shapeStyle);
         var runs = new List<TextRun>();
         List<ChartTextRunLink>? axisLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
-        AddChartRichTextRuns(
+        await AddChartRichTextRunsAsync(
             runs,
             textRuns,
             text,
@@ -397,7 +397,7 @@ internal sealed partial class PptxRenderer
             style,
             TextAlignment.Left,
             fontResolver,
-            axisLinks);
+            axisLinks).ConfigureAwait(false);
         double rotation = -90d;
         for (int i = 0; i < runs.Count; i++)
         {
@@ -428,11 +428,11 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        RenderedFonts axisFonts = RenderChartTextRuns(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink);
+        RenderedFonts axisFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink).ConfigureAwait(false));
         AddChartTextRunHyperlinkAnnotations(axisLinks, chartRelationships, context, axisFonts, linkAnnotations, reportedHyperlinkIds);
     }
 
-    private static void RenderManualChartAxisTitle(
+    private static async ValueTask RenderManualChartAxisTitleAsync(
         PptxTheme theme,
         PdfGraphicsBuilder graphics,
         ChartFrameBox frame,
@@ -466,7 +466,7 @@ internal sealed partial class PptxRenderer
         double baselineY = titleBox.Y + titleBox.Height * PptxChartMetricRules.TitleBaselineYRatio;
         var runs = new List<TextRun>();
         List<ChartTextRunLink>? axisLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
-        AddChartRichTextRuns(
+        await AddChartRichTextRunsAsync(
             runs,
             textRuns,
             text.Trim(),
@@ -481,8 +481,8 @@ internal sealed partial class PptxRenderer
             style,
             TextAlignment.Center,
             fontResolver,
-            axisLinks);
-        RenderedFonts axisFonts = RenderChartTextRuns(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink);
+            axisLinks).ConfigureAwait(false);
+        RenderedFonts axisFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink).ConfigureAwait(false));
         AddChartTextRunHyperlinkAnnotations(axisLinks, chartRelationships, context, axisFonts, linkAnnotations, reportedHyperlinkIds);
     }
 
@@ -513,7 +513,7 @@ internal sealed partial class PptxRenderer
                 PptxSceneChartPlotKind.Radar);
     }
 
-    private static double ResolveChartTitleBaselineY(PptxDocument document, PptxTheme theme, PptxColorMap colorMap, ShapeBounds bounds, XDocument chartXml, PptxSceneChart sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, double fallbackBaselineY, double fontSize, PresentationFontResolver? fontResolver)
+    private static async ValueTask<double> ResolveChartTitleBaselineYAsync(PptxDocument document, PptxTheme theme, PptxColorMap colorMap, ShapeBounds bounds, XDocument chartXml, PptxSceneChart sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, double fallbackBaselineY, double fontSize, PresentationFontResolver? fontResolver)
     {
         XElement? barChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Bar);
         if (barChart is null)
@@ -538,20 +538,20 @@ internal sealed partial class PptxRenderer
                 return fallbackBaselineY;
             }
 
-            ChartLayout lineLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart, colorMap, workbook, plotVisibleOnly, fontResolver);
+            ChartLayout lineLayout = (await GetLineChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false));
             return lineLayout.PlotBox.Y + lineLayout.PlotBox.Height + fontSize * PptxChartMetricRules.AutoBarTitleAbovePlotBaselineOffsetFactor;
         }
 
         PptxSceneChartPlot? barPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar, 0);
         ChartBarPlotOptions barOptions = ReadSceneOrXmlChartBarOptions(barPlot, barChart, PptxSceneChartGrouping.Clustered);
         bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
-        ChartLayout layout = GetBarChartLayout(document, theme, bounds, chartXml, sceneChart, colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver);
+        ChartLayout layout = (await GetBarChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false));
         ChartPlotBox titleAnchorBox = layout.PlotBox;
         if (horizontalBars && layout.ManualPlotLayoutApplied && sceneChart.Title.IsAutoGenerated)
         {
             ChartFrameBox frame = GetChartFrameBox(document, bounds);
             ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, colorMap, sceneChart, chartXml);
-            titleAnchorBox = GetBarChartPlotLayout(
+            titleAnchorBox = (await GetBarChartPlotLayoutAsync(
                 theme,
                 colorMap,
                 frame,
@@ -565,7 +565,7 @@ internal sealed partial class PptxRenderer
                 workbook,
                 plotVisibleOnly,
                 ignoreManualPlotLayout: true,
-                fontResolver: fontResolver).PlotBox;
+                fontResolver: fontResolver).ConfigureAwait(false)).PlotBox;
         }
 
         double offsetFactor = !horizontalBars && sceneChart.Title.IsAutoGenerated

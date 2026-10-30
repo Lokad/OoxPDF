@@ -12,11 +12,11 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private readonly PresentationFontResolver fontResolver;
+    private readonly IFontResolver? primaryFonts;
 
     public PptxRenderer(IFontResolver? fontResolver)
     {
-        this.fontResolver = new PresentationFontResolver(fontResolver);
+        primaryFonts = fontResolver;
     }
 
     // R06.3: yields pages progressively so the writer can spill content and retain
@@ -24,6 +24,8 @@ internal sealed partial class PptxRenderer
     public async IAsyncEnumerable<PdfPage> RenderPagesAsync(PptxDocument document, OoxPackage package, Action<OoxPdfDiagnostic>? diagnosticSink, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        var fontResolver = new PresentationFontResolver(primaryFonts ??
+            await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
         PptxScene scene = new PptxSceneBuilder().Build(document, package, cancellationToken);
         var imageCache = new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase);
         // one bounded workbook model per embedded part, shared by every chart
@@ -79,10 +81,10 @@ internal sealed partial class PptxRenderer
             // Hidden master shapes stay unpainted when the slide opts out (S01).
             if (context.SceneSlide.ShowMasterShapes)
             {
-                RenderOrderedSceneNodes(context.SceneSlide.MasterNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.MasterPartName, context.MasterColorMap, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken);
+                imageIndex = await RenderOrderedSceneNodesAsync(context.SceneSlide.MasterNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.MasterPartName, context.MasterColorMap, imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken).ConfigureAwait(false);
             }
-            RenderOrderedSceneNodes(context.SceneSlide.LayoutNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.LayoutPartName, context.LayoutColorMap, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken);
-            RenderOrderedSceneNodes(context.SceneSlide.SlideNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.SlidePartName, context.SlideColorMap, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true, cancellationToken: cancellationToken);
+            imageIndex = await RenderOrderedSceneNodesAsync(context.SceneSlide.LayoutNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.LayoutPartName, context.LayoutColorMap, imageIndex, GroupTransform.Identity, renderPlaceholders: false, cancellationToken: cancellationToken).ConfigureAwait(false);
+            imageIndex = await RenderOrderedSceneNodesAsync(context.SceneSlide.SlideNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, linkAnnotations, reportedHyperlinkIds, context.SlidePartName, context.SlideColorMap, imageIndex, GroupTransform.Identity, renderPlaceholders: true, cancellationToken: cancellationToken).ConfigureAwait(false);
             // Q02: drop orphan image/chart-font registrations left by rewound nodes so
             // failed nodes cannot accumulate uncharged serialized resources. Surviving
             // references are name-based, so pruning unreferenced names keeps them valid.

@@ -90,7 +90,7 @@ internal sealed partial class PptxRenderer
         }
 
         PptxTextFlowModel inheritedFlow = BuildTextFlowModelForSources(context.InheritedSources, context);
-        PptxTextFlowModel slideFlow = BuildTextFlowModel(context, context.SlideSource, includePlaceholders: true, context.InheritedXml);
+        PptxTextFlowModel slideFlow = (BuildTextFlowModelAsync(context, context.SlideSource, includePlaceholders: true, context.InheritedXml).GetAwaiter().GetResult());
         return ToSnapshot(new PptxTextFlowModel(inheritedFlow.Frames.Concat(slideFlow.Frames).ToArray()));
 
         PptxTextFlowModel BuildTextFlowModelForSources(IReadOnlyList<PptxRenderSource> sources, PptxRenderContext context)
@@ -98,7 +98,7 @@ internal sealed partial class PptxRenderer
             var frames = new List<PptxTextFlowFrame>();
             foreach (PptxRenderSource source in sources)
             {
-                frames.AddRange(BuildTextFlowModel(context, source, includePlaceholders: false, placeholderSources: []).Frames);
+                frames.AddRange((BuildTextFlowModelAsync(context, source, includePlaceholders: false, placeholderSources: []).GetAwaiter().GetResult()).Frames);
             }
 
             return new PptxTextFlowModel(frames);
