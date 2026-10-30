@@ -472,10 +472,9 @@ internal sealed partial class PptxRenderer
         PptxTextFrameModel frameModel = (await BuildTextFrameModelAsync(tableFrame, context.Document, context.Theme, context.DisplayedSlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken).ConfigureAwait(false));
         IReadOnlyList<PptxSceneTextParagraph> cellParagraphs = PptxSceneBuilder.ReadTableCellParagraphs(tableFrame.TextBody, context.InheritedXml);
         IReadOnlyList<PptxTextParagraphModel> fedParagraphs = BuildSceneFedParagraphModels(cellParagraphs, frameModel, context.Theme, tableFrame.ColorMap, context.DisplayedSlideNumber, shapeFontColor: null, tableFrame.TextStyle);
-        await PrepareParagraphFontsAsync(fedParagraphs, context.FontResolver, context.CancellationToken).ConfigureAwait(false);
         var fedFrame = frameModel with { Paragraphs = fedParagraphs };
         PptxTextFrameLayout layout = (await BuildTextFrameLayoutAsync(fedFrame, context.Document, new TextAdvanceEstimator(context.FontResolver, context.CancellationToken)).ConfigureAwait(false));
-        return FlattenTextLayoutToSpans(new PptxTextLayoutModel(new[] { layout }), context.FontResolver);
+        return await FlattenTextLayoutToSpansAsync(new PptxTextLayoutModel(new[] { layout }), context.FontResolver).ConfigureAwait(false);
     }
 
     private static IReadOnlyList<XElement> FindInheritedPlaceholderShapes(XElement shape, IReadOnlyList<XDocument> placeholderSources)

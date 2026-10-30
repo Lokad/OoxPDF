@@ -89,7 +89,7 @@ internal sealed partial class PptxRenderer
     private static async ValueTask<PptxTextFrameLayout> BuildTextFrameLayoutAsync(PptxTextFrameModel frameModel, PptxDocument document, TextAdvanceEstimator advanceEstimator)
     {
         frameModel = ResetEstimatedVerticalAnchorOffset(frameModel);
-        PptxTextFlowFrame flowFrame = BuildTextFlowFrame(frameModel, document, advanceEstimator);
+        PptxTextFlowFrame flowFrame = (await BuildTextFlowFrameAsync(frameModel, document, advanceEstimator).ConfigureAwait(false));
         PptxTextFrameLayout layout = (await BuildTextFrameLayoutAsync(flowFrame, document, advanceEstimator, true).ConfigureAwait(false));
         if (HasShapeAutoFit(frameModel.BodyProperties) && UsesRotatedFrameAutoFit(frameModel.Orientation))
         {
@@ -110,7 +110,7 @@ internal sealed partial class PptxRenderer
             {
                 PptxTextFrameModel fitted = (await FitShapeAutoFitFrameAsync(frameModel, document, advanceEstimator, allowWrapping: false).ConfigureAwait(false));
                 return (await ApplyActualVerticalAnchorOffsetIfNeededAsync(
-                    (await BuildTextFrameLayoutAsync(BuildTextFlowFrame(fitted, document, advanceEstimator), document, advanceEstimator, allowWrapping: false).ConfigureAwait(false)),
+                    (await BuildTextFrameLayoutAsync((await BuildTextFlowFrameAsync(fitted, document, advanceEstimator).ConfigureAwait(false)), document, advanceEstimator, allowWrapping: false).ConfigureAwait(false)),
                     document,
                     advanceEstimator,
                     allowWrapping: false).ConfigureAwait(false));
@@ -125,7 +125,7 @@ internal sealed partial class PptxRenderer
         {
             PptxTextFrameModel fitted = (await FitShapeAutoFitFrameAsync(frameModel, document, advanceEstimator, allowWrapping: true).ConfigureAwait(false));
             return (await ApplyActualVerticalAnchorOffsetIfNeededAsync(
-                (await BuildTextFrameLayoutAsync(BuildTextFlowFrame(fitted, document, advanceEstimator), document, advanceEstimator, true).ConfigureAwait(false)),
+                (await BuildTextFrameLayoutAsync((await BuildTextFlowFrameAsync(fitted, document, advanceEstimator).ConfigureAwait(false)), document, advanceEstimator, true).ConfigureAwait(false)),
                 document,
                 advanceEstimator,
                 allowWrapping: true).ConfigureAwait(false));
@@ -170,11 +170,15 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxTextFrameModel> frames = await BuildTextFrameModelsAsync(context, source,
             includePlaceholders, placeholderSources).ConfigureAwait(false);
         var advanceEstimator = new TextAdvanceEstimator(context.FontResolver, context.CancellationToken);
-        return new PptxTextFlowModel(frames.Select(frame => BuildTextFlowFrame(frame, context.Document, advanceEstimator)).ToArray());
+        var flowFrames = new List<PptxTextFlowFrame>(frames.Count);
+        foreach (PptxTextFrameModel frame in frames)
+            flowFrames.Add(await BuildTextFlowFrameAsync(frame, context.Document, advanceEstimator).ConfigureAwait(false));
+        return new PptxTextFlowModel(flowFrames.ToArray());
     }
 
-    private static PptxTextFlowFrame BuildTextFlowFrame(PptxTextFrameModel frame, PptxDocument document, TextAdvanceEstimator advanceEstimator)
+    private static async ValueTask<PptxTextFlowFrame> BuildTextFlowFrameAsync(PptxTextFrameModel frame, PptxDocument document, TextAdvanceEstimator advanceEstimator)
     {
+        await PrepareParagraphFontsAsync(frame.Paragraphs, advanceEstimator, advanceEstimator.CancellationToken).ConfigureAwait(false);
         // For vertical text the flow stacking axis maps onto the shape horizontal axis with
         // the first line at the shape-right side, so the stack origin consumes the right
         // inset, not the top one. Three asymmetric-inset Office probes prove it (ignored
@@ -288,7 +292,7 @@ internal sealed partial class PptxRenderer
         {
             double candidateScale = (low + high) / 2d;
             PptxTextFrameModel candidate = ScaleTextFrameModel(frame, candidateScale);
-            PptxTextFlowFrame candidateFlow = BuildTextFlowFrame(candidate, document, advanceEstimator);
+            PptxTextFlowFrame candidateFlow = (await BuildTextFlowFrameAsync(candidate, document, advanceEstimator).ConfigureAwait(false));
             PptxTextFrameLayout candidateLayout = (await BuildTextFrameLayoutAsync(candidateFlow, document, advanceEstimator, allowWrapping).ConfigureAwait(false));
             if (TextLayoutOverflows(candidateLayout, candidateFlow.Box))
             {
@@ -336,7 +340,7 @@ internal sealed partial class PptxRenderer
         }
 
         PptxTextFrameModel anchored = layout.Model with { VerticalOffset = verticalOffset };
-        return (await BuildTextFrameLayoutAsync(BuildTextFlowFrame(anchored, document, advanceEstimator), document, advanceEstimator, allowWrapping).ConfigureAwait(false));
+        return (await BuildTextFrameLayoutAsync((await BuildTextFlowFrameAsync(anchored, document, advanceEstimator).ConfigureAwait(false)), document, advanceEstimator, allowWrapping).ConfigureAwait(false));
     }
 
     private static bool TryResolveActualVerticalAnchorOffset(PptxTextFrameLayout layout, out double verticalOffset)
@@ -659,7 +663,7 @@ internal sealed partial class PptxRenderer
         return segments.Any(static segment => segment.Draw && segment.Kind == PptxTextFlowSegmentKind.Text && segment.Text.Length != 0);
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> FlattenTextLayoutToSpans(PptxTextLayoutModel layout, PresentationFontResolver? fontResolver)
+    private static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> FlattenTextLayoutToSpansAsync(PptxTextLayoutModel layout, PresentationFontResolver fontResolver)
     {
         PptxPositionedTextSpan[] spans = layout.Frames
             .SelectMany((frame, frameIndex) => frame.Paragraphs.Select((paragraph, paragraphIndex) => new
@@ -727,9 +731,9 @@ internal sealed partial class PptxRenderer
                 span.GlyphSpan,
                 PdfCharacterSpacingOverride: null)))
             .ToArray();
-        return AddEllipsisOverflowMarkers();
+        return await AddEllipsisOverflowMarkersAsync().ConfigureAwait(false);
 
-        IReadOnlyList<PptxPositionedTextSpan> AddEllipsisOverflowMarkers()
+        async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> AddEllipsisOverflowMarkersAsync()
         {
             if (spans.Length == 0)
             {
@@ -737,7 +741,7 @@ internal sealed partial class PptxRenderer
             }
 
             var result = new List<PptxPositionedTextSpan>(spans.Length);
-            var advanceEstimator = new TextAdvanceEstimator(fontResolver, CancellationToken.None);
+            var advanceEstimator = new TextAdvanceEstimator(fontResolver, fontResolver.CancellationToken);
             foreach (IGrouping<int, PptxPositionedTextSpan> frameSpans in spans.GroupBy(span => span.FrameIndex))
             {
                 PptxPositionedTextSpan[] frame = frameSpans.ToArray();
@@ -756,11 +760,11 @@ internal sealed partial class PptxRenderer
                 if (strictVisible.Length != 0 && strictVisible.Length != frame.Length)
                 {
                     result.AddRange(strictVisible);
-                    result.Add(CreateEllipsisOverflowMarker(strictVisible
+                    result.Add(await CreateEllipsisOverflowMarkerAsync(strictVisible
                         .OrderBy(span => span.ParagraphIndex)
                         .ThenBy(span => span.LineIndex)
                         .ThenBy(span => span.SpanIndex)
-                        .Last()));
+                        .Last()).ConfigureAwait(false));
                     continue;
                 }
 
@@ -779,7 +783,7 @@ internal sealed partial class PptxRenderer
                     .ThenBy(span => span.LineIndex)
                     .ThenBy(span => span.SpanIndex)
                     .Last();
-                result.Add(CreateEllipsisOverflowMarker(last));
+                result.Add(await CreateEllipsisOverflowMarkerAsync(last).ConfigureAwait(false));
             }
 
             return result
@@ -789,9 +793,10 @@ internal sealed partial class PptxRenderer
                 .ThenBy(span => span.SpanIndex)
                 .ToArray();
 
-            PptxPositionedTextSpan CreateEllipsisOverflowMarker(PptxPositionedTextSpan anchor)
+            async ValueTask<PptxPositionedTextSpan> CreateEllipsisOverflowMarkerAsync(PptxPositionedTextSpan anchor)
             {
                 const string ellipsis = "…";
+                await advanceEstimator.PrepareAsync(anchor.Run.FontFamily, anchor.Run.Bold, anchor.Run.Italic, ellipsis).ConfigureAwait(false);
                 double width = PptxTextMetricRules.MinimumWidth(
                     advanceEstimator.Measure(ellipsis, anchor.Run.FontSize, anchor.Run.FontFamily, anchor.Run.Bold, anchor.Run.Italic, anchor.Run.CharacterSpacing, anchor.Run.KerningEnabled));
                 TextRun run = anchor.Run with

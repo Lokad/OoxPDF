@@ -72,10 +72,10 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = (await ReadSceneTableTextSpansAsync(context, includeMasterNodes: context.SceneSlide.ShowMasterShapes).ConfigureAwait(false));
             cancellationToken.ThrowIfCancellationRequested();
             // RV01: emission looks up split-run families, so cover families that only appear after the glyph-typeface split.
-            RenderedFonts renderedFonts = CreateRenderedFonts(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray(), fontResolver, "F", cancellationToken, diagnosticSink, includeFallbackFaces: false);
+            RenderedFonts renderedFonts = await CreateRenderedFontsAsync(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray(), fontResolver, "F", cancellationToken, diagnosticSink, includeFallbackFaces: false).ConfigureAwait(false);
             Dictionary<FontRequest, RenderedFont> slideFonts = new(renderedFonts.Fonts, FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
             var slideResources = new List<PdfFontResource>(renderedFonts.Resources);
-            AddSplitFallbackFaces(slideFonts, shapeTextSpans.Concat(tableTextSpans), fontResolver, diagnosticSink, cancellationToken, slideResources, "F");
+            await AddSplitFallbackFacesAsync(slideFonts, shapeTextSpans.Concat(tableTextSpans), fontResolver, diagnosticSink, cancellationToken, slideResources, "F").ConfigureAwait(false);
             renderedFonts = new RenderedFonts(slideFonts, slideResources);
 
             // Hidden master shapes stay unpainted when the slide opts out (S01).

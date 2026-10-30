@@ -33,9 +33,9 @@ internal sealed partial class PptxRenderer
         var estimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
         foreach (TextRun run in runs)
             await estimator.PrepareAsync(run.FontFamily, run.Bold, run.Italic, run.Text).ConfigureAwait(false);
-        runs = SplitRunsByResolvedTypeface(runs, fontResolver, diagnosticSink, cancellationToken);
+        runs = await SplitRunsByResolvedTypefaceAsync(runs, fontResolver, diagnosticSink, cancellationToken).ConfigureAwait(false);
 
-        RenderedFonts renderedFonts = CreateRenderedFonts(runs, fontResolver, resourcePrefix, cancellationToken, diagnosticSink, chartFonts);
+        RenderedFonts renderedFonts = await CreateRenderedFontsAsync(runs, fontResolver, resourcePrefix, cancellationToken, diagnosticSink, chartFonts).ConfigureAwait(false);
         DrawTextRunsWithFonts(runs, graphics, renderedFonts.Fonts);
         chartFonts.AddRange(renderedFonts.Resources);
         return renderedFonts;
@@ -47,7 +47,7 @@ internal sealed partial class PptxRenderer
     // per-glyph fallback the estimator measured with (F03). Families resolving to
     // embeddable-or-missing fonts keep legacy behavior exactly (missing fonts stay
     // invisible, as before).
-    private static List<TextRun> SplitRunsByResolvedTypeface(
+    private static async ValueTask<List<TextRun>> SplitRunsByResolvedTypefaceAsync(
         IReadOnlyList<TextRun> runs,
         PresentationFontResolver fontResolver,
         Action<OoxPdfDiagnostic>? diagnosticSink,
@@ -67,7 +67,7 @@ internal sealed partial class PptxRenderer
             FontRequest familyKey = new(requestedFamily, run.Bold, run.Italic);
             if (!verdicts.TryGetValue(familyKey, out OpenTypeFont? primary))
             {
-                primary = fontResolver.ResolvePresentationOpenTypeFont(new FontRequest(requestedFamily, run.Bold, run.Italic), cancellationToken)?.Font;
+                primary = (await fontResolver.ResolvePresentationOpenTypeFontAsync(new FontRequest(requestedFamily, run.Bold, run.Italic), cancellationToken).ConfigureAwait(false))?.Font;
                 verdicts[familyKey] = primary;
             }
 
@@ -78,6 +78,7 @@ internal sealed partial class PptxRenderer
             }
 
             estimator ??= new TextAdvanceEstimator(fontResolver, cancellationToken);
+            await estimator.PrepareAsync(run.FontFamily, run.Bold, run.Italic, run.Text).ConfigureAwait(false);
             List<(string? Typeface, string Text)> segments = SplitRunByFallbackTypeface(run, estimator, cancellationToken);
             if (segments.Count == 1)
             {
@@ -191,7 +192,7 @@ internal sealed partial class PptxRenderer
         return count;
     }
 
-    private static RenderedFonts CreateRenderedFonts(
+    private static async ValueTask<RenderedFonts> CreateRenderedFontsAsync(
         IReadOnlyList<PptxPositionedTextSpan> textSpans,
         IReadOnlyList<TextRun> legacyTextRuns,
         PresentationFontResolver fontResolver,
@@ -217,11 +218,11 @@ internal sealed partial class PptxRenderer
             uses.Add(new TextFontUse(familyName, run.Bold, run.Italic, run.Text.EnumerateRunes().Select(rune => rune.Value).ToArray()));
         }
 
-        return CreateRenderedFonts(uses, fontResolver, resourcePrefix, cancellationToken);
+        return await CreateRenderedFontsAsync(uses, fontResolver, resourcePrefix, cancellationToken).ConfigureAwait(false);
     }
 
 
-    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextRun> textRuns, PresentationFontResolver fontResolver, string resourcePrefix, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, List<PdfFontResource>? nameScope = null, bool includeFallbackFaces = true)
+    private static async ValueTask<RenderedFonts> CreateRenderedFontsAsync(IReadOnlyList<TextRun> textRuns, PresentationFontResolver fontResolver, string resourcePrefix, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, List<PdfFontResource>? nameScope = null, bool includeFallbackFaces = true)
     {
         if (textRuns.Count == 0)
         {
@@ -230,13 +231,13 @@ internal sealed partial class PptxRenderer
 
         textRuns = CoalesceAdjacentTextRuns(textRuns, compareHighlight: false);
         textRuns = CoalesceUnderlineRuns(textRuns);
-        return CreateRenderedFonts(textRuns
+        return await CreateRenderedFontsAsync(textRuns
             .Select(run => new TextFontUse(
                 PptxFontFallbackRules.ResolveDefaultLatinTypeface(run.FontFamily),
                 run.Bold,
                 run.Italic,
                 run.Text.EnumerateRunes().Select(rune => rune.Value).ToArray()))
-            .ToArray(), fontResolver, resourcePrefix, cancellationToken, diagnosticSink, nameScope, includeFallbackFaces);
+            .ToArray(), fontResolver, resourcePrefix, cancellationToken, diagnosticSink, nameScope, includeFallbackFaces).ConfigureAwait(false);
     }
 
     // RV02: complex-script runs render without shaping; report each behavior family
@@ -277,7 +278,7 @@ internal sealed partial class PptxRenderer
     // RV01: slide preparation passes includeFallbackFaces: false and covers split-run
     // families separately (emission looks those up); chart preparation keeps the
     // inline behavior for its run families.
-    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextFontUse> uses, PresentationFontResolver fontResolver, string resourcePrefix, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, List<PdfFontResource>? nameScope = null, bool includeFallbackFaces = true)
+    private static async ValueTask<RenderedFonts> CreateRenderedFontsAsync(IReadOnlyList<TextFontUse> uses, PresentationFontResolver fontResolver, string resourcePrefix, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, List<PdfFontResource>? nameScope = null, bool includeFallbackFaces = true)
     {
         if (uses.Count == 0)
         {
@@ -286,7 +287,7 @@ internal sealed partial class PptxRenderer
 
         ReportComplexScriptApproximation(uses, fontResolver, diagnosticSink, cancellationToken);
 
-        uses = SubstituteUnembeddableFontUses(uses, fontResolver, diagnosticSink, cancellationToken);
+        uses = await SubstituteUnembeddableFontUsesAsync(uses, fontResolver, diagnosticSink, cancellationToken).ConfigureAwait(false);
 
         var fonts = new Dictionary<FontRequest, RenderedFont>(FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
         var resources = new List<PdfFontResource>();
@@ -294,7 +295,7 @@ internal sealed partial class PptxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             TextFontUse first = group.First();
-            (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = fontResolver.ResolvePresentationOpenTypeFont(new FontRequest(first.FamilyName, first.Bold, first.Italic), cancellationToken);
+            (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = await fontResolver.ResolvePresentationOpenTypeFontAsync(new FontRequest(first.FamilyName, first.Bold, first.Italic), cancellationToken).ConfigureAwait(false);
             if (resolved is null || !resolved.Value.Font.HasTrueTypeOutlines)
             {
                 if (!includeFallbackFaces)
@@ -419,7 +420,7 @@ internal sealed partial class PptxRenderer
     // split runs need coverage when preparation skipped them: unresolvable families
     // take the diagnosed built-in fallback, while resolvable families gain embedded
     // subsets so their glyphs do not vanish at the emission lookup.
-    private static void AddSplitFallbackFaces(
+    private static async ValueTask AddSplitFallbackFacesAsync(
         Dictionary<FontRequest, RenderedFont> fonts,
         IEnumerable<PptxPositionedTextSpan> spans,
         PresentationFontResolver fontResolver,
@@ -454,7 +455,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = fontResolver.ResolvePresentationOpenTypeFont(key, cancellationToken);
+            (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = await fontResolver.ResolvePresentationOpenTypeFontAsync(key, cancellationToken).ConfigureAwait(false);
             if (resolved is not null && resolved.Value.Font.HasTrueTypeOutlines)
             {
                 // RV01 residual follow-up: resolvable split families that were never prepared
@@ -473,7 +474,7 @@ internal sealed partial class PptxRenderer
 
         if (embeddableUses.Count != 0)
         {
-            RenderedFonts embeddedSplitFonts = CreateRenderedFonts(embeddableUses, fontResolver, resourcePrefix, cancellationToken, diagnosticSink, resources, includeFallbackFaces: true);
+            RenderedFonts embeddedSplitFonts = await CreateRenderedFontsAsync(embeddableUses, fontResolver, resourcePrefix, cancellationToken, diagnosticSink, resources, includeFallbackFaces: true).ConfigureAwait(false);
             foreach (KeyValuePair<FontRequest, RenderedFont> entry in embeddedSplitFonts.Fonts)
             {
                 fonts[entry.Key] = entry.Value;
@@ -487,7 +488,7 @@ internal sealed partial class PptxRenderer
     // PDF subsetter cannot embed them. Rewrite affected uses to the fallback faces
     // the measurement estimator resolves for the same code points, so measured and
     // emitted glyphs use the same face (F03); report each substituted group once.
-    private static IReadOnlyList<TextFontUse> SubstituteUnembeddableFontUses(
+    private static async ValueTask<IReadOnlyList<TextFontUse>> SubstituteUnembeddableFontUsesAsync(
         IReadOnlyList<TextFontUse> uses,
         PresentationFontResolver fontResolver,
         Action<OoxPdfDiagnostic>? diagnosticSink,
@@ -499,7 +500,7 @@ internal sealed partial class PptxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             TextFontUse first = group.First();
-            OpenTypeFont? font = fontResolver.ResolvePresentationOpenTypeFont(new FontRequest(first.FamilyName, first.Bold, first.Italic), cancellationToken)?.Font;
+            OpenTypeFont? font = (await fontResolver.ResolvePresentationOpenTypeFontAsync(new FontRequest(first.FamilyName, first.Bold, first.Italic), cancellationToken).ConfigureAwait(false))?.Font;
             groupFonts[group.Key] = font;
             if (font is not null && !font.HasTrueTypeOutlines)
             {
@@ -523,9 +524,13 @@ internal sealed partial class PptxRenderer
                 substituted.Add(use);
                 continue;
             }
-            (int CodePoint, string? Typeface)[] resolvedCodepoints = use.CodePoints
-                .Select(codePoint => (CodePoint: codePoint, Typeface: estimator.ResolveGlyphFont(use.FamilyName, use.Bold, use.Italic, codePoint)?.Typeface))
-                .ToArray();
+            var resolvedCodepoints = new (int CodePoint, string? Typeface)[use.CodePoints.Count];
+            for (int index = 0; index < use.CodePoints.Count; index++)
+            {
+                int codePoint = use.CodePoints[index];
+                ResolvedGlyphFont? glyph = await estimator.ResolveGlyphFontAsync(use.FamilyName, use.Bold, use.Italic, codePoint).ConfigureAwait(false);
+                resolvedCodepoints[index] = (codePoint, glyph?.Typeface);
+            }
             List<int>? droppedCodepoints = null;
             foreach ((int CodePoint, string? Typeface) resolved in resolvedCodepoints)
             {

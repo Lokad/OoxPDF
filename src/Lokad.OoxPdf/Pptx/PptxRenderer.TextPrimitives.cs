@@ -574,7 +574,7 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static double EstimateTextHeight(
+    private static async ValueTask<double> EstimateTextHeightAsync(
         IReadOnlyList<PptxTextParagraphModel> paragraphs,
         double textWidth,
         PptxTextBodyProperties bodyProperties,
@@ -582,7 +582,9 @@ internal sealed partial class PptxRenderer
         CancellationToken cancellationToken = default)
     {
         double height = 0d;
+        fontResolver ??= new PresentationFontResolver(await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
         var advanceEstimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
+        await PrepareParagraphFontsAsync(paragraphs, advanceEstimator, cancellationToken).ConfigureAwait(false);
         bool allowWrapping = TextBodyAllowsWrapping(bodyProperties);
         bool attachSpacesToFollowingWord = HasNoAutoFit(bodyProperties);
         bool useWindowsFontBoxForDefaultLineSpacing = !IsTableCellVerticalAnchorSource(bodyProperties.VerticalAnchorSource);

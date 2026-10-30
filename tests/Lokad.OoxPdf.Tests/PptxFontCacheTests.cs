@@ -114,8 +114,7 @@ internal static class PptxFontCacheTests
     {
         var program = new MemoryFontProgramSource("cache-test", TestFontBuilder.CreateTestFont());
         var resolver = new PresentationFontResolver(new SingleProgramResolver(program));
-        resolver.GetOrLoadOpenTypeFontAsync(resolver.Resolve(new FontRequest("TestFont", false, false)), CancellationToken.None).GetAwaiter().GetResult();
-        var resolved = resolver.ResolvePresentationOpenTypeFont(new FontRequest("TestFont", false, false), CancellationToken.None) ?? throw new InvalidOperationException("Expected test program resolution.");
+        var resolved = resolver.ResolvePresentationOpenTypeFontAsync(new FontRequest("TestFont", false, false), CancellationToken.None).GetAwaiter().GetResult() ?? throw new InvalidOperationException("Expected test program resolution.");
 
         PdfEmbeddedFont first = resolver.GetOrCreateSubset(resolved.Font, [65, 66, 65], CancellationToken.None);
         PdfEmbeddedFont same = resolver.GetOrCreateSubset(resolved.Font, [66, 65], CancellationToken.None);
@@ -174,11 +173,9 @@ internal static class PptxFontCacheTests
         // share one program and one subset per (program, codepoint set).
         var program = new MemoryFontProgramSource("style-test", TestFontBuilder.CreateTestFont());
         var resolver = new PresentationFontResolver(new SingleProgramResolver(program));
-        resolver.GetOrLoadOpenTypeFontAsync(resolver.Resolve(new FontRequest("TestFont", false, false)), CancellationToken.None).GetAwaiter().GetResult();
-        resolver.GetOrLoadOpenTypeFontAsync(resolver.Resolve(new FontRequest("TestFont", true, false)), CancellationToken.None).GetAwaiter().GetResult();
-        var plain = resolver.ResolvePresentationOpenTypeFont(new FontRequest("TestFont", false, false), CancellationToken.None)
+        var plain = resolver.ResolvePresentationOpenTypeFontAsync(new FontRequest("TestFont", false, false), CancellationToken.None).GetAwaiter().GetResult()
             ?? throw new InvalidOperationException("Expected test program resolution.");
-        var bold = resolver.ResolvePresentationOpenTypeFont(new FontRequest("TestFont", true, false), CancellationToken.None)
+        var bold = resolver.ResolvePresentationOpenTypeFontAsync(new FontRequest("TestFont", true, false), CancellationToken.None).GetAwaiter().GetResult()
             ?? throw new InvalidOperationException("Expected test program resolution.");
 
         TestAssert.True(ReferenceEquals(plain.Font, bold.Font), "Style variants of one program must load once.");

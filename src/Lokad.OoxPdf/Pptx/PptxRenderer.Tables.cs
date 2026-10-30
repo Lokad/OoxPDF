@@ -501,7 +501,7 @@ internal sealed partial class PptxRenderer
             }
 
             PptxTextFrameModel frame = (await BuildTextFrameModelAsync(tableTextFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken).ConfigureAwait(false));
-            double textHeight = EstimateTextHeight(frame.Paragraphs, frame.TextWrapWidth, frame.BodyProperties, context.FontResolver, context.CancellationToken);
+            double textHeight = await EstimateTextHeightAsync(frame.Paragraphs, frame.TextWrapWidth, frame.BodyProperties, context.FontResolver, context.CancellationToken).ConfigureAwait(false);
             if (textHeight <= PptxTextMetricRules.TextStateTolerance)
             {
                 return 0d;

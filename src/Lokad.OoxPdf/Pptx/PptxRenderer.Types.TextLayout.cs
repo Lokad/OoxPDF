@@ -264,6 +264,8 @@ internal sealed partial class PptxRenderer
             this.cancellationToken = cancellationToken;
         }
 
+        public CancellationToken CancellationToken => cancellationToken;
+
         public double Measure(string text, double fontSize, string? familyName, bool bold, bool italic, double characterSpacing, bool kerningEnabled)
         {
             if (fontSize <= 0d)

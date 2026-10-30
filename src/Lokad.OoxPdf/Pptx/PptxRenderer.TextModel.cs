@@ -352,14 +352,13 @@ internal sealed partial class PptxRenderer
             shapeFontColor, default,
             disableZeroKerning: UsesNoWrapZeroKerning(bodyProperties, textRotationDegrees));
         fontResolver ??= new PresentationFontResolver(await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
-        await PrepareParagraphFontsAsync(paragraphs, fontResolver, cancellationToken).ConfigureAwait(false);
         // Vertical middle/bottom anchors resolve from laid-out actuals below (the estimate
         // uses the wrong axis and advance); other orientations keep estimated offsets.
         TextVerticalAnchor anchorForEstimate = orientation == PptxTextOrientation.Vertical ? TextVerticalAnchor.Top : bodyProperties.VerticalAnchor;
         double verticalOffset = anchorForEstimate switch
         {
-            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken)) / 2d),
-            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken)),
+            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - (await EstimateTextHeightAsync(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken).ConfigureAwait(false))) / 2d),
+            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - (await EstimateTextHeightAsync(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken).ConfigureAwait(false))),
             _ => 0d
         };
 
@@ -540,11 +539,10 @@ internal sealed partial class PptxRenderer
             shapeFontColor: null,
             tableFrame.TextStyle);
         fontResolver ??= new PresentationFontResolver(await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
-        await PrepareParagraphFontsAsync(paragraphs, fontResolver, cancellationToken).ConfigureAwait(false);
         double verticalOffset = bodyProperties.VerticalAnchor switch
         {
-            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken)) / 2d),
-            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken)),
+            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - (await EstimateTextHeightAsync(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken).ConfigureAwait(false))) / 2d),
+            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - (await EstimateTextHeightAsync(paragraphs, textWrapWidth, bodyProperties, fontResolver, cancellationToken).ConfigureAwait(false))),
             _ => 0d
         };
 
@@ -592,9 +590,8 @@ internal sealed partial class PptxRenderer
     }
 
     private static async ValueTask PrepareParagraphFontsAsync(IReadOnlyList<PptxTextParagraphModel> paragraphs,
-        PresentationFontResolver fontResolver, CancellationToken cancellationToken)
+        TextAdvanceEstimator estimator, CancellationToken cancellationToken)
     {
-        var estimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
         foreach (PptxTextParagraphModel paragraph in paragraphs)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -949,12 +946,11 @@ internal sealed partial class PptxRenderer
         }
         PptxTextFrameModel frameModel = xmlFrame.Model;
         IReadOnlyList<PptxTextParagraphModel> fedParagraphs = BuildSceneFedParagraphModels(textBody.Paragraphs, frameModel, theme, colorMap, slideNumber, frameModel.ShapeFontColor, default);
-        await PrepareParagraphFontsAsync(fedParagraphs, fontResolver, cancellationToken).ConfigureAwait(false);
         var fedFrame = frameModel with { Paragraphs = fedParagraphs };
         var estimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
-        PptxTextFlowFrame fedFlow = BuildTextFlowFrame(fedFrame, document, estimator);
+        PptxTextFlowFrame fedFlow = await BuildTextFlowFrameAsync(fedFrame, document, estimator).ConfigureAwait(false);
         PptxTextFrameLayout fedLayout = (await BuildTextFrameLayoutAsync(fedFlow, document, estimator, allowWrapping: true).ConfigureAwait(false));
-        return RemapMongolianVerticalSpans(FlattenTextLayoutToSpans(new PptxTextLayoutModel(new[] { fedLayout }), fontResolver), node.Source);
+        return RemapMongolianVerticalSpans(await FlattenTextLayoutToSpansAsync(new PptxTextLayoutModel(new[] { fedLayout }), fontResolver).ConfigureAwait(false), node.Source);
     }
     private static PptxParagraphBulletModel BuildParagraphBulletModel(XElement? paragraphProperties, PptxTheme theme, PptxColorMap colorMap)
     {

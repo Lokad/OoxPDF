@@ -118,7 +118,7 @@ internal static class FontTests
             IsFallback: false);
 
         var resolver = new PresentationFontResolver(new SingleFontResolver(resolution));
-        (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = resolver.ResolvePresentationOpenTypeFont(new FontRequest(font.FamilyName), CancellationToken.None);
+        (FontFaceResolution Resolution, OpenTypeFont Font)? resolved = resolver.ResolvePresentationOpenTypeFontAsync(new FontRequest(font.FamilyName), CancellationToken.None).GetAwaiter().GetResult();
 
         if (resolved is null)
         {

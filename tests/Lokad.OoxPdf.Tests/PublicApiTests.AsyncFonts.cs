@@ -47,9 +47,10 @@ internal static partial class PublicApiTests
 
     public static void ConvertAsyncPptxBulletReturnsWhileFontAcquisitionIsPending() => CheckReturnsWhileFontAcquisitionIsPending(OoxPdfInputKind.Pptx, FontAcquisitionScenario.Bullet);
     public static void ConvertAsyncPptxNumberedBulletAwaitsItsColdGlyphFallback() => CheckReturnsWhileFontAcquisitionIsPending(OoxPdfInputKind.Pptx, FontAcquisitionScenario.NumberedBullet);
+    public static void ConvertAsyncPptxFontRecoveryAwaitsTheUsableProgram() => CheckReturnsWhileFontAcquisitionIsPending(OoxPdfInputKind.Pptx, FontAcquisitionScenario.Recovery);
     public static void ConvertAsyncPptxChartReturnsWhileFontAcquisitionIsPending() => CheckReturnsWhileFontAcquisitionIsPending(OoxPdfInputKind.Pptx, FontAcquisitionScenario.Chart);
 
-    private enum FontAcquisitionScenario { Default, Table, Fallback, Bullet, NumberedBullet, Chart }
+    private enum FontAcquisitionScenario { Default, Table, Fallback, Bullet, NumberedBullet, Chart, Recovery }
 
     private static void CheckReturnsWhileFontAcquisitionIsPending(OoxPdfInputKind kind, FontAcquisitionScenario scenario = FontAcquisitionScenario.Default)
     {
@@ -187,6 +188,7 @@ internal static partial class PublicApiTests
             FontAcquisitionScenario.Fallback => new AwaitedFallbackFontResolver(source),
             FontAcquisitionScenario.Bullet => new AwaitedBulletFontResolver(source),
             FontAcquisitionScenario.NumberedBullet => new AwaitedNumberedBulletFontResolver(source),
+            FontAcquisitionScenario.Recovery => new AwaitedRecoveryFontResolver(source),
             _ => new AwaitedFontResolver(source) },
         MemoryBudget = pool, FixedCreationDate = DateTimeOffset.UnixEpoch };
 
@@ -200,6 +202,16 @@ internal static partial class PublicApiTests
         private readonly IFontProgramSource body = new MemoryFontProgramSource("fixed-body", TestFontBuilder.CreateTestFont());
         public FontFaceResolution Resolve(FontRequest request) => new(request.FamilyName, request.FamilyName,
             new FontStyleKey(), request.FamilyName == "Bullet Face" ? bulletSource : body, false);
+    }
+
+    private sealed class AwaitedRecoveryFontResolver(IFontProgramSource source) : IFontResolver
+    {
+        private bool failed;
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            if (!failed) { failed = true; throw new IOException("font temporarily unavailable"); }
+            return new(request.FamilyName, "TestFont", new FontStyleKey(), source, false);
+        }
     }
 
     private sealed class AwaitedFallbackFontResolver(IFontProgramSource fallbackSource) : IFontResolver, IFontCatalog

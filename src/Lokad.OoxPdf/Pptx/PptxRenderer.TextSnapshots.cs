@@ -293,7 +293,7 @@ internal sealed partial class PptxRenderer
     {
         inspectionFonts ??= new PresentationFontResolver(null);
         IReadOnlyList<PptxPositionedTextSpan> textSpans = ReadSlideTextSpansForInspection(document, package, slideIndex, sharedScene, inspectionFonts);
-        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans, [], inspectionFonts, "F", CancellationToken.None);
+        RenderedFonts renderedFonts = CreateRenderedFontsAsync(textSpans, [], inspectionFonts, "F", CancellationToken.None).GetAwaiter().GetResult();
         textSpans = SplitLeadingSpacesAtHighlightBoundaries(textSpans);
         textSpans = CoalesceAdjacentTextSpans(textSpans, compareHighlight: true);
         textSpans = CoalesceUnderlineSpans(textSpans);

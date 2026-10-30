@@ -32,11 +32,11 @@ internal sealed class PresentationFontResolver
         return primary.Resolve(request);
     }
 
-    public (FontFaceResolution Resolution, OpenTypeFont Font)? ResolvePresentationOpenTypeFont(FontRequest request, CancellationToken cancellationToken)
+    public async ValueTask<(FontFaceResolution Resolution, OpenTypeFont Font)?> ResolvePresentationOpenTypeFontAsync(FontRequest request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         FontFaceResolution resolution = Resolve(request);
-        OpenTypeFont? font = GetPreparedOpenTypeFont(resolution, cancellationToken);
+        OpenTypeFont? font = await GetOrLoadOpenTypeFontAsync(resolution, cancellationToken).ConfigureAwait(false);
         return font is null ? null : (resolution, font);
     }
 
