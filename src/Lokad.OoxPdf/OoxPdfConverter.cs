@@ -281,7 +281,8 @@ public static class OoxPdfConverter
         if (options.MemoryAdmission is not { } admission) { return null; }
         cancellationToken.ThrowIfCancellationRequested();
         IDisposable lease = admission.TryAcquire(cancellationToken)
-            ?? throw new OoxPdfLimitExceededException("Host refused shared-memory admission for the conversion.");
+            ?? throw new OoxPdfLimitExceededException("Host refused shared-memory admission for the conversion.",
+                OoxPdfLimitKind.MemoryAdmission, OoxPdfLimitScope.Conversion);
         try
         {
             cancellationToken.ThrowIfCancellationRequested();

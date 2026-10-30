@@ -46,15 +46,19 @@ internal static class OoxMemoryAdmissionTests
             File.WriteAllBytes(input, [1, 2, 3]); // Refusal must precede ZIP parsing.
             string output = Path.ChangeExtension(input, ".pdf");
             File.WriteAllBytes(output, [7, 8, 9]);
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output,
+            var fileFailure = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output,
                 new OoxPdfOptions { MemoryAdmission = admission }));
+            TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, fileFailure.Kind);
+            TestAssert.Equal(OoxPdfLimitScope.Conversion, fileFailure.Scope);
             TestAssert.True(File.ReadAllBytes(output).SequenceEqual(new byte[] { 7, 8, 9 }), "Refusal preserves the destination.");
             TestAssert.Equal(0, Directory.GetFiles(Path.GetDirectoryName(output)!, Path.GetFileName(output) + ".tmp-*").Length);
 
             using var source = new MemoryStream([1, 2, 3]);
             using var destination = new MemoryStream();
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(source, destination,
+            var streamFailure = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(source, destination,
                 new OoxPdfOptions { InputKind = extension == ".docx" ? OoxPdfInputKind.Docx : OoxPdfInputKind.Pptx, MemoryAdmission = admission }));
+            TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, streamFailure.Kind);
+            TestAssert.Equal(OoxPdfLimitScope.Conversion, streamFailure.Scope);
             TestAssert.Equal(0L, source.Position);
             TestAssert.Equal(0L, destination.Length);
         }

@@ -8,13 +8,28 @@ namespace Lokad.OoxPdf;
 /// </summary>
 public sealed class OoxPdfLimitExceededException : IOException
 {
+    /// <summary>The document bound or shared memory admission category.</summary>
+    public OoxPdfLimitKind Kind { get; }
+
+    /// <summary>The conversion or shared resource owning the refused capacity.</summary>
+    public OoxPdfLimitScope Scope { get; }
+
     public OoxPdfLimitExceededException(string message)
-        : base(message)
+        : this(message, OoxPdfLimitKind.DocumentBound, OoxPdfLimitScope.Conversion)
     {
     }
 
     public OoxPdfLimitExceededException(string message, Exception? innerException)
+        : this(message, OoxPdfLimitKind.DocumentBound, OoxPdfLimitScope.Conversion, innerException)
+    {
+    }
+
+    /// <summary>Creates a structured refusal without changing fatal conversion handling.</summary>
+    public OoxPdfLimitExceededException(string message, OoxPdfLimitKind kind,
+        OoxPdfLimitScope scope, Exception? innerException = null)
         : base(message, innerException)
     {
+        Kind = kind;
+        Scope = scope;
     }
 }

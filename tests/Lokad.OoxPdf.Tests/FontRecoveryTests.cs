@@ -11,7 +11,8 @@ internal static class FontRecoveryTests
     {
         foreach (OoxPdfInputKind kind in new[] { OoxPdfInputKind.Pptx, OoxPdfInputKind.Docx })
             WithInput(kind, (input, directory) => {
-                var expected = new OoxPdfLimitExceededException("font admission refused");
+                var expected = new OoxPdfLimitExceededException("font admission refused",
+                    OoxPdfLimitKind.MemoryAdmission, OoxPdfLimitScope.SharedResource);
                 var resolver = new OneFailureResolver(expected);
                 string output = Path.Combine(directory, "result.pdf");
                 File.WriteAllText(output, "previous");
@@ -30,7 +31,8 @@ internal static class FontRecoveryTests
     {
         foreach (OoxPdfInputKind kind in new[] { OoxPdfInputKind.Pptx, OoxPdfInputKind.Docx })
             WithInput(kind, (path, _) => {
-                var expected = new OoxPdfLimitExceededException("font admission refused");
+                var expected = new OoxPdfLimitExceededException("font admission refused",
+                    OoxPdfLimitKind.MemoryAdmission, OoxPdfLimitScope.SharedResource);
                 var resolver = new OneFailureResolver(expected);
                 using FileStream input = File.OpenRead(path);
                 using var output = new MemoryStream();

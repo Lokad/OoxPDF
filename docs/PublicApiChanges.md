@@ -2,6 +2,14 @@
 
 ## 0.3.0
 
+`OoxPdfLimitExceededException` now exposes `Kind` and `Scope`. Host admission
+refusal reports `MemoryAdmission` / `Conversion`; the existing constructors retain
+`DocumentBound` / `Conversion`. Custom shared-resource providers can use the new
+constructor with `SharedResource`. Existing exception catches still work. Refusal
+remains terminal and preserves file publication and caller-stream ownership.
+This classification does not provide producer memory accounting or true async I/O;
+those embedding contracts are being revised separately.
+
 The package provides .NET 10 and .NET 11 assets. Common Strict DOCX content now
 renders through the existing pipeline. `OOXML_STRICT_DIALECT` remains a warning,
 with DOCX `Fallback` changed to `Partial`; callers must still inspect other

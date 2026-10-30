@@ -1,4 +1,11 @@
 {
+  "host-refusal-categories": [
+    "MemoryAdmission",
+    "FontResolutionLimits",
+    "FontResolutionKeepsOrdinaryPptxIoRecovery",
+    "FontResolutionCancellationStillPropagates",
+    "LimitExceededEscapesNodeRecovery"
+  ],
   "docx-adjacent-tables": [
     "DocxAdjacentTables",
     "DocxBodyElementsRetainRevisionProvenance",

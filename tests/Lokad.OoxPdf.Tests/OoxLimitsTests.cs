@@ -246,6 +246,9 @@ internal static partial class OoxLimitsTests
         }
         catch (IOException ex) when (ex is OoxPdfLimitExceededException)
         {
+            var limit = (OoxPdfLimitExceededException)ex;
+            TestAssert.Equal(OoxPdfLimitKind.DocumentBound, limit.Kind);
+            TestAssert.Equal(OoxPdfLimitScope.Conversion, limit.Scope);
             TestAssert.True(!sawNodeWarning, "Limit failure must not be swallowed as node recovery.");
             return;
         }
