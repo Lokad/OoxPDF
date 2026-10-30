@@ -153,8 +153,12 @@ Supported within the following constraints:
   joined grids map spans and leading omitted columns while the first table owns
   the frame and preferred width. Unconstrained automatic tables use measured
   content and cell insets rather than the authored grid as a fixed width.
-  Explicit preferred widths and fixed layout retain their sizing rules. Automatic
-  widths with spanning cells and positioned-table placement remain approximate.
+  Supported intersecting spans share measured content columns and project their
+  subdivisions onto one placement grid; merged cells can enlarge ordinary columns.
+  Explicit preferred widths and fixed layout retain their sizing rules. Leading
+  gaps, unmeasured nested blocks and crossing spans without an independent content
+  partition retain existing width fallbacks. Arbitrary spanning-cell autofit and
+  positioned-table placement remain approximate.
   Complex implicit borders,
   vertical merges and nested/fragmented layout retain qualified restrictions.
 - Inline raster/SVG pictures in qualified body/cell/header/footer containers,
