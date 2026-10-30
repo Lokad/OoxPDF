@@ -39,7 +39,17 @@ internal sealed partial class DocxReader
         // Word keeps positioned tables distinct even without a paragraph boundary.
         if (firstProperties?.Element(WordprocessingNamespace + "tblpPr") is not null ||
             secondProperties?.Element(WordprocessingNamespace + "tblpPr") is not null) return false;
-        return string.Equals(StyleId(firstProperties), StyleId(secondProperties), StringComparison.Ordinal);
+        string? styleId = StyleId(firstProperties);
+        if (!string.Equals(styleId, StyleId(secondProperties), StringComparison.Ordinal)) return false;
+        DocxTableStyle? style = styleId is not null && styles.TableStyles.TryGetValue(styleId, out var selected)
+            ? selected : styles.DefaultTableStyle;
+        // Word keeps fixed and autofit tables separate. Matching modes join,
+        // including differing widths and nested content (independent controls).
+        return IsFixed(firstProperties) == IsFixed(secondProperties);
+
+        bool IsFixed(XElement? properties) => string.Equals(
+            (string?)properties?.Element(WordprocessingNamespace + "tblLayout")?.Attribute(WordprocessingNamespace + "type")
+                ?? style?.Table.LayoutValue, "fixed", StringComparison.OrdinalIgnoreCase);
 
         string? StyleId(XElement? properties)
         {

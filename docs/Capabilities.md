@@ -148,8 +148,8 @@ Supported within the following constraints:
   children; custom styles and descendant/direct overrides retain their formatting.
   Other built-in style defaults remain approximate.
   Adjacent tables with the same resolved style share logical row membership in
-  body, cell and static stories; paragraph/style boundaries and positioned tables
-  keep them separate. Fragment row looks, margins and borders retain their owners;
+  body, cell and static stories; paragraph/style boundaries, different fixed/autofit
+  modes and positioned tables keep them separate. Fragment row looks, margins and borders retain their owners;
   joined grids map spans and leading omitted columns while the first table owns
   the frame and preferred width. Fixed-grid controls match Word; differing autofit
   layouts and positioned-table placement remain approximate.

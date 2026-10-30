@@ -13,6 +13,25 @@ internal static class DocxAdjacentTableTests
         "..", "..", "..", "Cases", "AdjacentTables"));
     private static readonly XNamespace W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 
+    public static void DocxAdjacentTablesKeepIndependentWordLayoutModeBoundaries()
+    {
+        using var oracle = JsonDocument.Parse(File.ReadAllText(Path.Combine(Cases, "boundaries-office.json")));
+        foreach (var control in oracle.RootElement.GetProperty("Controls").EnumerateArray())
+        {
+            string path = Path.Combine(Cases, control.GetProperty("Input").GetString()!);
+            TestAssert.Equal(control.GetProperty("InputSha256").GetString(),
+                Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
+            foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+            {
+                var tables = DocxTests.ReadDocx(path, mode).BodyElements.OfType<DocxTableElement>().ToArray();
+                var rows = control.GetProperty("Rows").EnumerateArray().Select(value => value.GetInt32()).ToArray();
+                TestAssert.Equal(rows.Length, tables.Length);
+                for (int index = 0; index < rows.Length; index++)
+                    TestAssert.Equal(rows[index], tables[index].Table.Rows.Count);
+            }
+        }
+    }
+
     public static void DocxAdjacentTablesMatchIndependentWordTopologyAndProperties()
     {
         using var oracle = JsonDocument.Parse(File.ReadAllText(Path.Combine(Cases, "office.json")));

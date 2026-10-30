@@ -1,0 +1,81 @@
+{
+  "Oracle": "Independent owned Word 16 object counts and normalized rows; fixed/autofit changes, matching modes and nested-content counterexamples. Numeric geometry gates remain unchanged.",
+  "Controls": [
+    {
+      "Id": "frame-both-fixed",
+      "Input": "boundary-frame-both-fixed.docx",
+      "InputSha256": "30023F5F777C6FBEBC450C073A859AFE5C0E2B5521C4159C4F66D274FCA264E5",
+      "Rows": [
+        3
+      ],
+      "NormalizedSha256": "5FA649058E59F45271ACCF3EA0EECE3E950CC0218A6A147F9E38D9416B217D08"
+    },
+    {
+      "Id": "frame-both-auto",
+      "Input": "boundary-frame-both-auto.docx",
+      "InputSha256": "4E7E13C0DC5A980351D765AE3A07119C50BEE863B28C08E822FAC747AD867C07",
+      "Rows": [
+        3
+      ],
+      "NormalizedSha256": "368623E535B77E4F928EF703619DC1FAEA2D60212C6C74961DF3A620AE2963F9"
+    },
+    {
+      "Id": "frame-no-nested",
+      "Input": "boundary-frame-no-nested.docx",
+      "InputSha256": "87C72E795D91DD3CD6971ABA1EDE43087F117452A097F7E4C36DDCC07C2CCEA4",
+      "Rows": [
+        2,
+        1
+      ],
+      "NormalizedSha256": "AAD2ECC7E1E123283B6C77AD8A70AF015DC7AE2AC0C0B72FA65BDB7622AA2E96"
+    },
+    {
+      "Id": "frame-no-nested-auto",
+      "Input": "boundary-frame-no-nested-auto.docx",
+      "InputSha256": "31E04F3BD91D4B1D53696C19AE65DA548088821369E570EBEEBBDBA7CB9DFE21",
+      "Rows": [
+        3
+      ],
+      "NormalizedSha256": "3422D4FE45A44D48319087425AEC069D4937DB768D2CE77579123E9A7239CFE0"
+    },
+    {
+      "Id": "edge-auto-fixed",
+      "Input": "boundary-edge-auto-fixed.docx",
+      "InputSha256": "FDDBC86F2554A9BD947939267774098ABC2225A06A89F76385BD4A1686F00D2C",
+      "Rows": [
+        2,
+        2
+      ],
+      "NormalizedSha256": "BF4D73D6389474F41063DB79BC8ED3F6CC0518A8BC31E2D82A8816B5E4953CFE"
+    },
+    {
+      "Id": "edge-fixed-auto",
+      "Input": "boundary-edge-fixed-auto.docx",
+      "InputSha256": "82ACD3F1C674CA9CB0C2D4C9FB28C28B444795287C74179903B3A88BBE0D6A32",
+      "Rows": [
+        2,
+        2
+      ],
+      "NormalizedSha256": "DF560C98A1F4784105C8695DEDC9ED045BE61681C9828475510AF21CF8B2B13D"
+    },
+    {
+      "Id": "edge-nested-paragraph",
+      "Input": "boundary-edge-nested-paragraph.docx",
+      "InputSha256": "BF2D26FE11EC1D1F20EA60CF82396D786D4F68ACE0129FB0677120A1F1CC0351",
+      "Rows": [
+        4
+      ],
+      "NormalizedSha256": "91E2AF397228E51AD5CEAD2A3A03ACF431940D8E06ED8EF1AAAEA378993B8555"
+    },
+    {
+      "Id": "table-frame-chain-direct",
+      "Input": "../CompositionProbes/table-frame-chain-direct.docx",
+      "InputSha256": "52DD3B0B7B4F44279F05F499FC5814311F550BFADC4BEF55B6AB3C4011ABD53F",
+      "Rows": [
+        2,
+        1
+      ],
+      "NormalizedSha256": "C2E3387DB882F72105F2F1323BB0DD3F7710539ECE73CCA2FF00FBE20FB4E51C"
+    }
+  ]
+}
