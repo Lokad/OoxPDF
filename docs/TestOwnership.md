@@ -70,6 +70,12 @@ layout assertions alone cannot establish visual correctness; image comparisons
 alone cannot establish searchable text, annotations or links. Historical failures
 and unavailable checks retain their explicit classifications.
 
+`DocxNormalTableStyleTests` checks sixteen source-pinned Word controls for the
+intrinsic style's name/custom metadata, padding and paint, including direct and
+descendant overrides. `docx-table-style-margins` includes the existing built-in
+padding controls; its union with `docx-conditional-table-styles` covers inheritance
+and banding once per method. Full-page gates retain their original thresholds.
+
 `docx-note-list-order` checks lists in footnote/endnote tables against pinned Word
 labels, including unused stories and reordered XML. Portable painting retains
 both fractions, the picture and the visible list sequence in Final and Review;

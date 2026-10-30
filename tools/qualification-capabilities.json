@@ -8,6 +8,8 @@
     "DiagnosticCancellationPreservesCallerToken"
   ],
   "docx-table-style-margins": [
+    "DocxNormalTableIdentityAndOverridesMatchIndependentWord",
+    "DocxTableNormal",
     "DocxTableInheritanceMatchesIndependentWordProperties",
     "DocxCustomTableMargins",
     "DocxStyleMarginsPinTextAtMarginWithoutCompat",

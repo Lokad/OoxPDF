@@ -140,8 +140,10 @@ Supported within the following constraints:
   axis, following [Word's band-size default](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/77519f5b-08b3-4547-9f5d-0c4d87854220).
   Custom-style padding stays inside the grid; explicit indentation and TableNormal
   keep their own anchors. Table/cell formatting inherits earlier parent
-  declarations; empty and text-only styles retain forward references. Built-in style paint
-  defaults remain approximate.
+  declarations; empty and text-only styles retain forward references. The intrinsic
+  non-custom Normal Table name supplies built-in padding and ignores authored
+  children; custom styles and descendant/direct overrides retain their formatting.
+  Other built-in style defaults remain approximate.
   Complex implicit borders,
   vertical merges and nested/fragmented layout retain qualified restrictions.
 - Inline raster/SVG pictures in qualified body/cell/header/footer containers,

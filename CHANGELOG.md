@@ -29,6 +29,9 @@
 - DOCX: places resolved custom-style padding inside the table grid, preserving
   explicit indentation and the existing TableNormal anchor. Table/cell formatting
   inherits earlier parents; empty and text-only styles retain forward references.
+- DOCX: recognizes intrinsic Normal Table styles by name and custom-style metadata,
+  applying their built-in padding without authored paint or inheritance. Custom
+  styles, descendant formatting and direct overrides keep their own properties.
 - PPTX: retains readable advances and run/chart hyperlinks when standard PDF
   fonts replace unavailable fonts, including cell text and transformed links.
 - Preserves authored chart titles when automatic-title deletion is enabled;

@@ -1,0 +1,741 @@
+{
+  "Oracle": "Independent Word 16 Final native property/origin controls; authored normal-style children are ignored only for the intrinsic, non-custom primary name. Office application-view calibration remains pending.",
+  "Controls": [
+    {
+      "Id": "canonical",
+      "Input": "canonical.docx",
+      "InputSha256": "BDF12EAFD05D137007CA58A367E955CE27ABAF9C7DA2FD09A7FBF25091FDF172",
+      "Padding": 5.4,
+      "HasBorders": false,
+      "Cells": {
+        "edges-00": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-01": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-02": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-10": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-11": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-12": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-20": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-21": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-22": {
+          "TextColor": "000000",
+          "Fill": null
+        }
+      },
+      "OfficeFinalPdfSha256": "47652EE1880CD3969D093B9AAE1CBD5D01A2A4BA0AEA0A4B6DAE658D3CEBCE16"
+    },
+    {
+      "Id": "id-only",
+      "Input": "id-only.docx",
+      "InputSha256": "D3D09E8079EF1FB728798377115361DD216A84E88DBA8A2946988CFA805295F3",
+      "Padding": 10.8,
+      "HasBorders": true,
+      "Cells": {
+        "edges-00": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-01": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-02": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-10": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-11": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-12": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-20": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-21": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-22": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        }
+      },
+      "OfficeFinalPdfSha256": "A60C1FCDEDAE13C9904A3A4F0474AAB04E68D951B90873DDA3C4BE748E235012"
+    },
+    {
+      "Id": "name-only",
+      "Input": "name-only.docx",
+      "InputSha256": "E3C05B9D3DB357084AEB78F76C51CCDD81C875241760C69C81DAF2E431BD157E",
+      "Padding": 5.4,
+      "HasBorders": false,
+      "Cells": {
+        "edges-00": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-01": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-02": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-10": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-11": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-12": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-20": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-21": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-22": {
+          "TextColor": "000000",
+          "Fill": null
+        }
+      },
+      "OfficeFinalPdfSha256": "A9003845C6DDF07787CBE15E946EDCABB2185FEE95CFF2801AC2010184F75C2E"
+    },
+    {
+      "Id": "custom",
+      "Input": "custom.docx",
+      "InputSha256": "597F92D2E8CD68924410D89774D13D66E429374E42E47C1E029343A6F14EADF3",
+      "Padding": 10.8,
+      "HasBorders": true,
+      "Cells": {
+        "edges-00": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-01": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-02": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-10": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-11": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-12": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-20": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-21": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-22": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        }
+      },
+      "OfficeFinalPdfSha256": "198ED11DBC7711FC68C1B4EF41A795A891CAA565F7E8BBF3CE6F44D79E2D768D"
+    },
+    {
+      "Id": "canonical-custom",
+      "Input": "canonical-custom.docx",
+      "InputSha256": "C4BA1A3F4AD3790B1428799C4B215C1D658BC60B96BBF9CEB399AD3AEBDF6553",
+      "Padding": 10.8,
+      "HasBorders": true,
+      "Cells": {
+        "edges-00": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-01": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-02": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-10": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-11": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-12": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-20": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-21": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-22": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        }
+      },
+      "OfficeFinalPdfSha256": "BAF10ADCFB5CDEB6F776763ED9673C0B885493EFCCFAA8BDA5601D53B7097C28"
+    },
+    {
+      "Id": "canonical-default",
+      "Input": "canonical-default.docx",
+      "InputSha256": "DAE3915738C4A90927BF85BA96AB0C17EF6795340E4AEEC714F0A7546DB3918F",
+      "Padding": 5.4,
+      "HasBorders": false,
+      "Cells": {
+        "edges-00": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-01": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-02": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-10": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-11": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-12": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-20": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-21": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-22": {
+          "TextColor": "000000",
+          "Fill": null
+        }
+      },
+      "OfficeFinalPdfSha256": "18F6ED23AF6E2B69C3BFA4720C556A14F2630707FE2DE8C5ACFBDB4D78A10663"
+    },
+    {
+      "Id": "custom-default",
+      "Input": "custom-default.docx",
+      "InputSha256": "406C6FB38F5305B4475498B0C9DE9E44B337E434DFEF976807E118D7B3D396B8",
+      "Padding": 10.8,
+      "HasBorders": true,
+      "Cells": {
+        "edges-00": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-01": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-02": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-10": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-11": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-12": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-20": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-21": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-22": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        }
+      },
+      "OfficeFinalPdfSha256": "76362D99C2ED92FD69FFDF3198E486122A40466AF61DAD206624D4F179ECE93C"
+    },
+    {
+      "Id": "name-case",
+      "Input": "name-case.docx",
+      "InputSha256": "D2658C46508A343E9D6AD8569D9D713DC18CA0C21308C4B35F0E1847CCFB1B96",
+      "Padding": 5.4,
+      "HasBorders": false,
+      "Cells": {
+        "edges-00": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-01": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-02": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-10": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-11": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-12": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-20": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-21": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-22": {
+          "TextColor": "000000",
+          "Fill": null
+        }
+      },
+      "OfficeFinalPdfSha256": "1DED4DE75FB9FDC0951BEF813F6D8ABD0B7A06094E00C51D702D62BF19B94290"
+    },
+    {
+      "Id": "name-whitespace",
+      "Input": "name-whitespace.docx",
+      "InputSha256": "7FF6CCBE38C44BC40E15F8711549AA49195C826A73124441D069BC63B9554DB3",
+      "Padding": 5.4,
+      "HasBorders": false,
+      "Cells": {
+        "edges-00": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-01": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-02": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-10": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-11": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-12": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-20": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-21": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-22": {
+          "TextColor": "000000",
+          "Fill": null
+        }
+      },
+      "OfficeFinalPdfSha256": "6C7979854853B367DA5F9D3BE5A2968BB46B9F6B0F260AB9B6B842C3D238822A"
+    },
+    {
+      "Id": "custom-false",
+      "Input": "custom-false.docx",
+      "InputSha256": "6B50FCC6F46A7EAEABB5AF6E13EA74BF393919A703383BA4070F7CA75CDA93BA",
+      "Padding": 5.4,
+      "HasBorders": false,
+      "Cells": {
+        "edges-00": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-01": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-02": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-10": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-11": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-12": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-20": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-21": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-22": {
+          "TextColor": "000000",
+          "Fill": null
+        }
+      },
+      "OfficeFinalPdfSha256": "B620730F3C258D907AE28A406C001DFCD34E2DAD26FECE91938E5BF4746D08A8"
+    },
+    {
+      "Id": "id-no-name",
+      "Input": "id-no-name.docx",
+      "InputSha256": "E5285831FC0526E63F828A1ED942789348243119AB4D70EC729EA9BA1033E9C2",
+      "Padding": 10.8,
+      "HasBorders": true,
+      "Cells": {
+        "edges-00": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-01": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-02": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-10": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-11": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-12": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-20": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-21": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-22": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        }
+      },
+      "OfficeFinalPdfSha256": "8A9C038023AEEAD136B2676A6FD203C54FE5947D8F199EDD5951F310316B21CB"
+    },
+    {
+      "Id": "direct-style",
+      "Input": "direct-style.docx",
+      "InputSha256": "C6F3F53F4A24961E7808518F6A7868C74EA61ED6A4A6505A682A4EC37AF54827",
+      "Padding": 5.4,
+      "HasBorders": false,
+      "Cells": {
+        "edges-00": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-01": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-02": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-10": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-11": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-12": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-20": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-21": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-22": {
+          "TextColor": "000000",
+          "Fill": null
+        }
+      },
+      "OfficeFinalPdfSha256": "6C8435011D417CC5528A72180AF440894642A9CCD32F93A457587558473BC99C"
+    },
+    {
+      "Id": "child-paint",
+      "Input": "child-paint.docx",
+      "InputSha256": "40B92E5872C24E5CE5BB1ABA6F8A9732160216743C8E8765845F8CB0E5C61967",
+      "Padding": 10.8,
+      "HasBorders": true,
+      "Cells": {
+        "edges-00": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-01": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-02": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-10": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-11": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-12": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-20": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-21": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-22": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        }
+      },
+      "OfficeFinalPdfSha256": "F1884E359F8F62363E8B30D479179266A11E8C2712B7CE4DAB7C98E0D82F9393"
+    },
+    {
+      "Id": "direct-override",
+      "Input": "direct-override.docx",
+      "InputSha256": "D8246F60DC21C199840FD5BD440BD0E0D3C5593FA3C548E9F2C60BC1AD675399",
+      "Padding": 10.8,
+      "HasBorders": true,
+      "Cells": {
+        "edges-00": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-01": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-02": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-10": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-11": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-12": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-20": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-21": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        },
+        "edges-22": {
+          "TextColor": "2030C0",
+          "Fill": "99CC88"
+        }
+      },
+      "OfficeFinalPdfSha256": "28622815300112B38E34382361D7C11C356D35F49CE781B7A5927022C3F54010"
+    },
+    {
+      "Id": "intrinsic-bands",
+      "Input": "intrinsic-bands.docx",
+      "InputSha256": "1372A9E6047500CA0127725F1CCD3FEE7DC3F049AEB0CF4A3769F77666850E1D",
+      "Padding": 5.4,
+      "HasBorders": false,
+      "Cells": {
+        "edges-00": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-01": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-02": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-10": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-11": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-12": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-20": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-21": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-22": {
+          "TextColor": "000000",
+          "Fill": null
+        }
+      },
+      "OfficeFinalPdfSha256": "ABBD3D97F9B0BDAF1A99474BCA4A4141B1F953816097E37D179CC83096715651"
+    },
+    {
+      "Id": "intrinsic-parent",
+      "Input": "intrinsic-parent.docx",
+      "InputSha256": "9DF6EC43B1000D9FCA4E3923EB1859D6F5FEA29F2A78A4010B039384724A16D6",
+      "Padding": 5.4,
+      "HasBorders": false,
+      "Cells": {
+        "edges-00": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-01": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-02": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-10": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-11": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-12": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-20": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-21": {
+          "TextColor": "000000",
+          "Fill": null
+        },
+        "edges-22": {
+          "TextColor": "000000",
+          "Fill": null
+        }
+      },
+      "OfficeFinalPdfSha256": "7DCA33CFF0495BD636649132E0FA81B9DE5F04FEEBE1117F5F914C6D92FF268B"
+    }
+  ]
+}
