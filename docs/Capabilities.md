@@ -136,6 +136,8 @@ Supported within the following constraints:
   nil/none suppression, repeated headers, split rows and cell content. Actual page
   occupancy controls following-prose admission. Conditional bands, columns, rows
   and corners share one style cascade; direct formatting remains above styles.
+  Custom-style padding stays inside the grid; explicit indentation and TableNormal
+  keep their own anchors. Forward custom-style parents can differ from Office.
   Complex implicit borders,
   vertical merges and nested/fragmented layout retain qualified restrictions.
 - Inline raster/SVG pictures in qualified body/cell/header/footer containers,

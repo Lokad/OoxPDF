@@ -1,0 +1,491 @@
+{
+  "Oracle": "Independent Word 16 PDF origins and unchanged full-page visual thresholds. A complete custom-style hierarchy anchors the grid; TableNormal preserves its prior text anchor. Forward custom definitions are retained as an unresolved Office difference.",
+  "Controls": [
+    {
+      "Id": "bare",
+      "Input": "bare.docx",
+      "InputSha256": "31EAE6169DDB1BF42BEA0CC37CA2046414313FFFD468A3B224543290E0EFE895",
+      "LeftMargin": null,
+      "RightMargin": null,
+      "ApproximateForwardParent": false,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 72.50399780273438,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "728145D436CFA6A6D0E3AAC1883F5789F28C75AB8BE13D3285E8DE62DC03475C"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 72.50399780273438,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "EB4AE5D73E6CD4985CB25B41AEF689C5A70A68DF587D8643579E01C37305E461"
+        }
+      ]
+    },
+    {
+      "Id": "unknown",
+      "Input": "unknown.docx",
+      "InputSha256": "C2F356F7DE27F36691A139FFA99CA7AC704DEAF1CAB9707E60F955F9693E6947",
+      "LeftMargin": null,
+      "RightMargin": null,
+      "ApproximateForwardParent": false,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 72.50399780273438,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "E231CA71696B17CB79498C195F0EE355FE7D773B55E87C5564C634802FBBEEB5"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 72.50399780273438,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "9FCDCB764CF671D6E031AE38A38A8575AF466013463AEC9214F615FA55CA3F1B"
+        }
+      ]
+    },
+    {
+      "Id": "named",
+      "Input": "named.docx",
+      "InputSha256": "C0E6DC8A9C1C0AB423156BD44EB3C817785918F355F9D7BEA52C00D85AA465D4",
+      "LeftMargin": 0,
+      "RightMargin": 0,
+      "ApproximateForwardParent": false,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 72.02400207519531,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "581C440DE73263B3ECD82B5188113C58114F825B6CFA236192414D291335F995"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 72.02400207519531,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "C2034B98FF808C6C74B67D62E9F07CEA67EFAEC120A81BA07F8A74050B62DC9D"
+        }
+      ]
+    },
+    {
+      "Id": "named-zero",
+      "Input": "named-zero.docx",
+      "InputSha256": "74BBACFBC3464D6E3A522A67382C209BFADFB08F10B3E74D952150266DFF3E4E",
+      "LeftMargin": 0,
+      "RightMargin": 0,
+      "ApproximateForwardParent": false,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 72.02400207519531,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "4A465F47866325C59C6AE06677A45C6EA80E3A5908F6A3EC2EC2FA63F7645084"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 72.02400207519531,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "FAB9706D61A7FFBA72E2DFFF05A2D6DC1C4DCAF6B45D38F212DA9843F78DAEAA"
+        }
+      ]
+    },
+    {
+      "Id": "named-wide",
+      "Input": "named-wide.docx",
+      "InputSha256": "B912EE2F502CD8099E98B704F8CE705F65C06A57E168EFF094CEC3479F9EA12D",
+      "LeftMargin": 5.4,
+      "RightMargin": 5.4,
+      "ApproximateForwardParent": false,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 77.42400360107422,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "97916C7812E180146699126F5E249604DB8368152F3CD879AB36077A2DC5CFFF"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 77.42400360107422,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "9A2ABA7ECFA5C2241B644780C02021A5EA8779DC4C9D09D55AA1853C9547C1BA"
+        }
+      ]
+    },
+    {
+      "Id": "named-default-wide",
+      "Input": "named-default-wide.docx",
+      "InputSha256": "4F36BF69203E52A29804F32A62A3C9C206F092348554F905A220D58C46825B5C",
+      "LeftMargin": 5.4,
+      "RightMargin": 5.4,
+      "ApproximateForwardParent": false,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 77.42400360107422,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "5449979BC542F2024E2EACDBF4A68FAB453A89FBE9E84C85440789BB9A8276F4"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 77.42400360107422,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "97C367EF4F4709AD38D977E0E701CDA55AA8025A1FA883357296AC3697CC44B0"
+        }
+      ]
+    },
+    {
+      "Id": "named-wide-after",
+      "Input": "named-wide-after.docx",
+      "InputSha256": "7716E47CD82B499E7516D6E1BB20A216BDAD12785C4DA567AFBE7DE6C37DA7D8",
+      "LeftMargin": 5.4,
+      "RightMargin": 5.4,
+      "ApproximateForwardParent": false,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 77.42400360107422,
+          "FirstY": 98.05999755859375,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "E7982249A0CAC73F23D9B3D532E6AE00ACEF5C127D3165DB83B6D923B64AD013"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 77.42400360107422,
+          "FirstY": 98.05999755859375,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "BF086E27D9A9A7D322212B435F24650E9C74B433ADDC7EA1FD2E9D926919C959"
+        }
+      ]
+    },
+    {
+      "Id": "named-header-wide",
+      "Input": "named-header-wide.docx",
+      "InputSha256": "F5CCFB6969C6518ABB6907E0AE06030EC346CEFFBB7DB4A44EA57F2553D066D9",
+      "LeftMargin": 5.4,
+      "RightMargin": 5.4,
+      "ApproximateForwardParent": false,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 77.42400360107422,
+          "FirstY": 46.44000244140625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "DE7299E492FD980C01B05DE9381C6EE9CB24C7F4FF9547ED1FC6CDECEBE8E164"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 77.42400360107422,
+          "FirstY": 46.44000244140625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "6D95D2C7FDA4ADB25D28D122C75E844B16737783E3DCB1D6091BC7579A4E845B"
+        }
+      ]
+    },
+    {
+      "Id": "based-normal-name-order",
+      "Input": "based-normal-name-order.docx",
+      "InputSha256": "5BDECCA3EAAE4CB20866999255E88204BDA354D381C5E87DD22AF43FDFFB4F52",
+      "LeftMargin": 5.4,
+      "RightMargin": 5.4,
+      "ApproximateForwardParent": false,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 72.02400207519531,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "D420A4F344E4461835759E8C12706BA1CE83D2E410F3AA980D7C359938237671"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 72.02400207519531,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "80719EA4A7B16520FC03BD44EF084F2BFE144FCD19675D213F75E522258A808F"
+        }
+      ]
+    },
+    {
+      "Id": "based-custom-before",
+      "Input": "based-custom-before.docx",
+      "InputSha256": "0C32C84C4F24692A497CFAE6939EA4CC1A457CD2EC21159B260527F6BA87DD7B",
+      "LeftMargin": 5.4,
+      "RightMargin": 5.4,
+      "ApproximateForwardParent": false,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 77.42400360107422,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "3FBFDDE44BD1F4D5072DA82CE9E9C5BBFCC8D7D81E6C4F00A09C6B21B75F3CDE"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 77.42400360107422,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "8A83EB9E839F6C217B8EA130DEDAE589475CE678198932E006D62BE2F3EAC36D"
+        }
+      ]
+    },
+    {
+      "Id": "named-border-zero-canonical",
+      "Input": "named-border-zero-canonical.docx",
+      "InputSha256": "EF185613EEBC1DBB6B878DFE6B88090CF40798B8AC09E80A33F2B7EF489E4A3C",
+      "LeftMargin": 0,
+      "RightMargin": 0,
+      "ApproximateForwardParent": false,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 72.98400115966797,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "F6F29D72222CB2A10B01BBCA8EAD1012C9E6E4139F41407A491193C95FBC5E52"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 72.98400115966797,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "A0328272B287BFFFD01307373BCDEE00CD155963B111F05EDABA7A3EC2637DFA"
+        }
+      ]
+    },
+    {
+      "Id": "named-direct-zero-canonical",
+      "Input": "named-direct-zero-canonical.docx",
+      "InputSha256": "4DB81B58AD9008AEB154D5EA507848DEC57600A04C1A817CA6C7B3233657F1F9",
+      "LeftMargin": 0,
+      "RightMargin": 0,
+      "ApproximateForwardParent": false,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 72.02400207519531,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "6EEC2A1D0B3E83920956843AAAFEC304E4FA14805E97485ADCC36159ACBB5C71"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 72.02400207519531,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "DCAC9224BCEF2C4B81698B93127364C129B9D2D66D1FDE29D3B06D98C092944B"
+        }
+      ]
+    },
+    {
+      "Id": "named-indent-positive",
+      "Input": "named-indent-positive.docx",
+      "InputSha256": "BCC40ECC07B15189220CCE0C18C85EC7D831887857D1EAA62DE9F4499422856F",
+      "LeftMargin": 5.4,
+      "RightMargin": 5.4,
+      "ApproximateForwardParent": false,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 90.02400207519531,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "00E3727A723891BB78C803BB60C9A2C9B64454D4E49A2BB7549B40DF2CECB584"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 90.02400207519531,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "229C4CE4BD62B739D5FA954D499ABD4A67B944EA9A23A3B0C5CC8B82039F14EB"
+        }
+      ]
+    },
+    {
+      "Id": "named-indent-negative",
+      "Input": "named-indent-negative.docx",
+      "InputSha256": "C37E1BC7994E7D41C43627A15AF463F552963949BB1DF58370EA0E0C0873DC2E",
+      "LeftMargin": 5.4,
+      "RightMargin": 5.4,
+      "ApproximateForwardParent": false,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 54.0,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "770B91B34F7CC898B61FCDCA6881E41BEC76098B47DA2610BD2A3899639ABED5"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 54.0,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "A21331A4AC778BBE01AAE2C636D98E14344208C66F635BDE05AFDA195C546EDD"
+        }
+      ]
+    },
+    {
+      "Id": "named-asymmetric-right",
+      "Input": "named-asymmetric-right.docx",
+      "InputSha256": "169A8FC66D680BFBAE67A75A3B368452BC119E6DC0F74D8E3215A0A1166476AB",
+      "LeftMargin": 5.4,
+      "RightMargin": 10,
+      "ApproximateForwardParent": false,
+      "RightAligned": true,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 117.37999725341797,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "FB73B552A1E7D9C943A270CD244F888D2600933BDF2BEFAC44EC80E0644A031F"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 117.37999725341797,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "E4827C98AFDE944A6660DD795AC7A271796FAB45C0DC367BF192BCD614449535"
+        }
+      ]
+    },
+    {
+      "Id": "named-compat15",
+      "Input": "named-compat15.docx",
+      "InputSha256": "4D6A5051DD7CC0D6891B0DFFFE70D249CA949911FA33C46C8C00680DE2B26D95",
+      "LeftMargin": 0,
+      "RightMargin": 0,
+      "ApproximateForwardParent": false,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 72.02400207519531,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "DE07F9CE922C86943286B4123244344E61A3902E8474F050A5EB3E1B5BF067C9"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 72.02400207519531,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "D1544D5D929A2A61D7F654CBFAA1CD6C9B8D6BC543C5B720CE0862B8E356D900"
+        }
+      ]
+    },
+    {
+      "Id": "forward-custom",
+      "Input": "forward-custom.docx",
+      "InputSha256": "652535E509EA8D709F1D65684D85D357C455D7FF40DBDDC66829322EE0DBAA24",
+      "LeftMargin": 5.4,
+      "RightMargin": 5.4,
+      "ApproximateForwardParent": true,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 72.02400207519531,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "E3FD5514639C08820D68E9700DD411866A66E41FCE2CBEB2095ED4F72B2FD650"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 72.02400207519531,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "021845CD5818A3F2DB3F34559D1EEC87BC99AFFD39B75FC636B1D795238E7E0F"
+        }
+      ]
+    },
+    {
+      "Id": "named-indent-zero",
+      "Input": "named-indent-zero.docx",
+      "InputSha256": "5CD868B97284C81D6C1E2F12D6BC9EED9F3B1E9021A584BDB98ACD1673CC1983",
+      "LeftMargin": 5.4,
+      "RightMargin": 5.4,
+      "ApproximateForwardParent": false,
+      "RightAligned": false,
+      "Rows": [
+        {
+          "Mode": "final-preserve",
+          "FirstX": 72.02400207519531,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "9B6D4F7B8619C186AC872905B52A88A5D9534EDF0E0835E405896DEC47BD3F49"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "FirstX": 72.02400207519531,
+          "FirstY": 82.46002197265625,
+          "FontSize": 11.039999961853027,
+          "Pages": 1,
+          "PdfSha256": "221E5D6438298A19B041E85019D58F7122B65583A62532B58B830948D742134C"
+        }
+      ]
+    }
+  ]
+}

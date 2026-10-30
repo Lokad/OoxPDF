@@ -1023,13 +1023,13 @@ internal sealed partial class DocxLayoutEngine
                 DocxTableCellBorder? outerLeft = DocxTableBorderGeometry.Find(firstCell.Borders, "left") ?? DocxTableBorderGeometry.Find(firstCell.Borders, "start");
                 gridX = tableX + DocxTableBorderGeometry.ResolveVisibleWidth(outerLeft) / 2d * fixedScale;
             }
+            else if (firstCell.GridAnchorMargins?.LeftPoints is { } gridAnchor)
+            {
+                gridX = tableX - gridAnchor * fixedScale;
+            }
             else if (indentPoints != 0d)
             {
                 gridX = tableX - ResolveTableCellHorizontalEdgeInset(firstCell, "left", firstCell.Margins.LeftPoints, fixedScale);
-            }
-            else if ((firstCell.StyleMargins?.LeftPoints ?? 0d) > 0d)
-            {
-                gridX = tableX - (firstCell.StyleMargins?.LeftPoints ?? 0d) * fixedScale;
             }
             else if (anchorAuthoredCellText && (table.IndentPoints is not null || firstCell.Margins.LeftPoints is not null))
             {

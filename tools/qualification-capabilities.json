@@ -1,4 +1,19 @@
 {
+  "docx-table-style-margins": [
+    "DocxCustomTableMargins",
+    "DocxStyleMarginsPinTextAtMarginWithoutCompat",
+    "DocxDirectMarginsReplaceStyleMarginsForTextOffset",
+    "DocxIndentedTablePinsTextAtIndentOrigin",
+    "DocxCompatGridAlignsOuterBorderAtMargin",
+    "DocxCompatIndentAlignsOuterBorderAtIndentedMargin",
+    "DocxAuthoredTableMarginPresenceKeepsUnsetAndStaticGridFallbacks",
+    "DocxStaticTableAuthoredMarginsKeepContainerGrid",
+    "DocxStaticTableOriginKeepsIndentStyleAndCompatibilityFallbacks",
+    "DocxInlineCompositionSignedTableIndentsKeepContainerWidthAndOneGrid",
+    "DocxConditionalTableStylesMatchIndependentOfficeFills",
+    "DocxReaderTableStyleCascadesBasedOnProperties",
+    "DocxReaderDirectTableCellMarginsOverrideDefaultTableStyle"
+  ],
   "docx-note-list-order": [
     "DocxNoteList",
     "PortableRenderingNoteListsFollowReferenceOrder",

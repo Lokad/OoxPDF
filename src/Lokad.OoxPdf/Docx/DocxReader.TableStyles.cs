@@ -18,6 +18,8 @@ internal sealed partial class DocxReader
         IReadOnlyDictionary<string, DocxTableCellStyle> ConditionalRegions)
     {
         public static DocxTableStyle Empty { get; } = new(null, DocxTableStyleProperties.Empty, DocxTableCellStyle.Empty, [], new Dictionary<string, DocxTableCellStyle>());
+        public bool UsesTableNormal { get; init; }
+        public bool HasCompleteInheritance { get; init; }
 
         public DocxTableStyle Merge(DocxTableStyle other)
         {
@@ -34,7 +36,7 @@ internal sealed partial class DocxReader
                 Table.Merge(other.Table),
                 Cell.Merge(other.Cell),
                 other.TableBorders.Count == 0 ? TableBorders : other.TableBorders,
-                conditional);
+                conditional) { UsesTableNormal = UsesTableNormal || other.UsesTableNormal };
         }
     }
 
@@ -135,14 +137,14 @@ internal sealed partial class DocxReader
                 Margins = ResolveTableNormalCellMargins(style, tableProperties)
             },
             ReadTableBorders(tableProperties),
-            conditional);
+            conditional) { UsesTableNormal = string.Equals((string?)style.Attribute(WordprocessingNamespace + "styleId"), "TableNormal", StringComparison.Ordinal) };
     }
 
     // Office A/B (m1 ladder mutant, Word-COM rendered plus PdfInspect): a present
     // TableNormal style without stored cell margins still contributes the built-in
     // 108dxa (5.4pt) left/right margins with 0 top/bottom; removing the whole style
-    // element instead drops to the default floor. Other style ids without stored
-    // margins contribute none (unprobed, assumed).
+        // element instead drops to the default floor. Independent custom styles
+        // resolve their empty horizontal margins after inheritance is complete.
     private static DocxTableCellMargins ResolveTableNormalCellMargins(XElement style, XElement? tableProperties)
     {
         DocxTableCellMargins stored = ReadTableStyleCellMargins(tableProperties);
@@ -211,11 +213,23 @@ internal sealed partial class DocxReader
             resolved = resolved.Merge(chain.Pop());
         }
 
+        bool complete = currentStyleId is null;
+        if (complete && !resolved.UsesTableNormal)
+        {
+            // A resolved custom style has zero implicit horizontal padding.
+            // Bare/missing styles and incomplete chains retain their fallback.
+            resolved = resolved with { Cell = resolved.Cell with { Margins = resolved.Cell.Margins with {
+                LeftPoints = resolved.Cell.Margins.LeftPoints ?? 0d,
+                RightPoints = resolved.Cell.Margins.RightPoints ?? 0d
+            } } };
+        }
+
         return resolved with
         {
             BasedOnStyleId = tableStyles.TryGetValue(styleId, out DocxTableStyle? source)
                 ? source.BasedOnStyleId
-                : null
+                : null,
+            HasCompleteInheritance = complete
         };
     }
 

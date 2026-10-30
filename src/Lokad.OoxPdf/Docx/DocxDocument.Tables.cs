@@ -135,7 +135,9 @@ internal sealed record DocxTableCell(
     bool FitText,
     string? FitTextValue,
     string? TextDirectionValue,
-    DocxTableCellMargins? StyleMargins = null,
+    // Resolved style origin: zero anchors the grid; null retains the existing
+    // unstyled/direct-margin policy. Positive values retain TableNormal anchoring.
+    DocxTableCellMargins? GridAnchorMargins = null,
     bool PinTextToMargin = false)
 {
 

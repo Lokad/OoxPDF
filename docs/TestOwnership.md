@@ -74,6 +74,12 @@ both fractions, the picture and the visible list sequence in Final and Review;
 source order and cached XML remain unchanged. Numbering/restart/ID and existing
 note-table checks share the same focused capability selection.
 
+`docx-table-style-margins` owns resolved padding and grid origins across body,
+header, inheritance, explicit indentation and direct overrides. It retains the
+one-point independent Word origin gate, bare/TableNormal/incomplete-chain
+fallbacks and the existing style-color oracle. Forward custom parents remain an
+explicit Office mismatch, separate from the passing geometry controls.
+
 `docx-conditional-table-styles` covers the shared table-style cascade, direct
 formatting, inheritance, false flags, margins and borders. Four pinned public
 controls and nine edge/span controls retain 201 independent Word cell-fill expectations.

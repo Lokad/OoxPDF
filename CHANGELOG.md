@@ -23,6 +23,8 @@
   merged edges and single-row/column tables.
 - DOCX: continues note lists in document reference order; unused notes and
   reordered notes XML no longer change visible list labels.
+- DOCX: places resolved custom-style padding inside the table grid, preserving
+  explicit indentation and the existing TableNormal anchor.
 - PPTX: retains readable advances and run/chart hyperlinks when standard PDF
   fonts replace unavailable fonts, including cell text and transformed links.
 - Preserves authored chart titles when automatic-title deletion is enabled;

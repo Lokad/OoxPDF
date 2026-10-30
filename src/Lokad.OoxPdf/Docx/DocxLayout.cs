@@ -2333,8 +2333,8 @@ internal sealed partial class DocxLayoutEngine
         // Office A/B (w72/m12 pin probes): pinned text clears the style margin box
         // (borders swallowed); direct margins still apply by cascade (w74).
         double style = string.Equals(edge, "left", StringComparison.OrdinalIgnoreCase)
-            ? cell.StyleMargins?.LeftPoints ?? 0d
-            : cell.StyleMargins?.RightPoints ?? 0d;
+            ? cell.GridAnchorMargins?.LeftPoints ?? 0d
+            : cell.GridAnchorMargins?.RightPoints ?? 0d;
         return Math.Max(style, margin) * fixedScale;
     }
 

@@ -42,9 +42,12 @@ internal sealed partial class DocxReader
         AddRevisions(tableRevisions, ReadPropertyChangeRevisions(tableProperties));
         DocxTableLook tableLook = ReadTableLook(tableProperties);
         IReadOnlyList<DocxTableCellBorder> tableBorders = ReadTableBorders(tableProperties);
-        DocxTableStyle tableStyle = tableStyleId is not null && styles.TableStyles.TryGetValue(tableStyleId, out DocxTableStyle? parsedTableStyle)
+        DocxTableStyle? resolvedStyle = tableStyleId is not null && styles.TableStyles.TryGetValue(tableStyleId, out DocxTableStyle? parsedTableStyle)
             ? parsedTableStyle
-            : styles.DefaultTableStyle ?? DocxTableStyle.Empty;
+            : styles.DefaultTableStyle;
+        DocxTableStyle tableStyle = resolvedStyle ?? DocxTableStyle.Empty;
+        bool isCustomStyle = resolvedStyle is { HasCompleteInheritance: true, UsesTableNormal: false };
+        bool anchorsStyleGrid = isCustomStyle && tableIndent is null && tableStyle.Table.IndentValue is null;
         DocxTableCellMargins tableCellMargins = ReadTableStyleCellMargins(tableProperties);
         // Office A/B (m13/ladder compat15 probes): a present compatibilityMode pins the
         // table grid at margin/indent plus the outer border half (legacy outer-edge
@@ -145,7 +148,10 @@ internal sealed partial class DocxReader
                 // Office A/B (w72/m12 pin probes): without compat, table-style margins pin
                 // cell text at the margin instead of maxing with the border half. Direct
                 // margins still cascade-replace style margins for the text offset (w74).
-                bool pinTextToMargin = !useLegacyTableGrid && (resolvedTableIndentPoints ?? 0d) == 0d && (styleMargins.LeftPoints ?? 0d) > 0d;
+                bool pinTextToMargin = !isCustomStyle && !useLegacyTableGrid && (resolvedTableIndentPoints ?? 0d) == 0d && (styleMargins.LeftPoints ?? 0d) > 0d;
+                DocxTableCellMargins? gridAnchorMargins = anchorsStyleGrid
+                    ? DocxTableCellMargins.Empty with { LeftPoints = 0d, RightPoints = 0d }
+                    : pinTextToMargin ? styleMargins : null;
                 cells.Add(new DocxTableCell(
                     text,
                     paragraphs,
@@ -170,7 +176,7 @@ internal sealed partial class DocxReader
                     resolvedFitText,
                     resolvedFitTextValue,
                     textDirectionValue,
-                    styleMargins,
+                    gridAnchorMargins,
                     pinTextToMargin)
                 {
                     BodyElements = cellBodyElements,

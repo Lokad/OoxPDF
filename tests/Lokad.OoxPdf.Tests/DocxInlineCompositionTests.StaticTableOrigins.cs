@@ -37,7 +37,7 @@ internal static partial class DocxInlineCompositionTests
             basis with { IndentPoints = -18d },
             basis with { UseLegacyTableGrid = true },
             basis with { Rows = [new DocxTableRow([cell with
-                { StyleMargins = DocxTableCellMargins.Empty with { LeftPoints = 12d } }], null)] }
+                { GridAnchorMargins = DocxTableCellMargins.Empty with { LeftPoints = 12d } }], null)] }
         })
         {
             var page = LayoutSharedTable(table);
