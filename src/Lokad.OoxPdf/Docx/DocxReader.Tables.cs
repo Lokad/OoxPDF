@@ -510,7 +510,7 @@ internal sealed partial class DocxReader
             return DocxTableLook.Empty;
         }
 
-        return new DocxTableLook(
+        var parsed = new DocxTableLook(
             (string?)look.Attribute(WordprocessingNamespace + "val"),
             OoxBoolean.ParseOptionalAttribute(look, WordprocessingNamespace + "firstRow"),
             (string?)look.Attribute(WordprocessingNamespace + "firstRow"),
@@ -524,6 +524,38 @@ internal sealed partial class DocxReader
             (string?)look.Attribute(WordprocessingNamespace + "noHBand"),
             OoxBoolean.ParseOptionalAttribute(look, WordprocessingNamespace + "noVBand"),
             (string?)look.Attribute(WordprocessingNamespace + "noVBand"));
+
+        // Word ignores the bitmask when any explicit flag is present. Missing
+        // flags in that declaration are false, rather than absent-look defaults.
+        if (parsed.FirstRow is not null || parsed.LastRow is not null ||
+            parsed.FirstColumn is not null || parsed.LastColumn is not null ||
+            parsed.NoHorizontalBand is not null || parsed.NoVerticalBand is not null)
+        {
+            return parsed with
+            {
+                FirstRow = parsed.FirstRow ?? false,
+                LastRow = parsed.LastRow ?? false,
+                FirstColumn = parsed.FirstColumn ?? false,
+                LastColumn = parsed.LastColumn ?? false,
+                NoHorizontalBand = parsed.NoHorizontalBand ?? false,
+                NoVerticalBand = parsed.NoVerticalBand ?? false
+            };
+        }
+        if (ushort.TryParse(parsed.Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort mask))
+        {
+            return parsed with
+            {
+                FirstRow = (mask & 0x0020) != 0,
+                LastRow = (mask & 0x0040) != 0,
+                FirstColumn = (mask & 0x0080) != 0,
+                LastColumn = (mask & 0x0100) != 0,
+                NoHorizontalBand = (mask & 0x0200) != 0,
+                NoVerticalBand = (mask & 0x0400) != 0
+            };
+        }
+
+        // Empty or malformed declarations retain the existing absent-look fallback.
+        return parsed;
     }
 
     private static DocxTableCellConditionalFormat? ReadTableCellConditionalFormat(XElement? cellProperties)

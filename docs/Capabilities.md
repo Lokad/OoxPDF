@@ -136,6 +136,9 @@ Supported within the following constraints:
   nil/none suppression, repeated headers, split rows and cell content. Actual page
   occupancy controls following-prose admission. Conditional bands, columns, rows
   and corners share one style cascade; direct formatting remains above styles.
+  Table-look bitmasks apply when no explicit flags are present; an explicit
+  declaration supplies false for omitted flags. Absent/empty declarations keep
+  Word's default look, with raw source tokens retained for inspection.
   Bands require a positive resolved size; zero or an omitted size disables the
   axis, following [Word's band-size default](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/77519f5b-08b3-4547-9f5d-0c4d87854220).
   Custom-style padding stays inside the grid; explicit indentation and TableNormal

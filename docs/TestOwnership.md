@@ -70,6 +70,12 @@ layout assertions alone cannot establish visual correctness; image comparisons
 alone cannot establish searchable text, annotations or links. Historical failures
 and unavailable checks retain their explicit classifications.
 
+`DocxTableLookTests` pins independent Word fills for bitmask, explicit, partial and
+absent/default declarations, preserving raw source tokens in both DOCX modes.
+Select it with `docx-conditional-table-styles`; table-margin and banding neighbors
+belong to the same affected union. Native geometry and full-page image gates
+remain independent of the reader assertions.
+
 `DocxNormalTableStyleTests` checks twenty-two source-pinned Word controls for the
 intrinsic style's name/custom metadata, padding and paint, including direct and
 descendant overrides and table/row/cell padding origins. `docx-table-style-margins` includes the existing built-in
