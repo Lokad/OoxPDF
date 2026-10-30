@@ -58,8 +58,8 @@ internal static partial class DocxMathLayout
         var glyphs = new List<DocxMathGlyphPlacement>(numerator.Glyphs.Count + denominator.Glyphs.Count + 1);
         Append(numerator, 0d, numeratorY);
         Append(denominator, denominatorX, denominatorY);
-        RgbColor color = numerator.Glyphs[0].Color;
-        if (fraction.ControlText is { } control) { color = default; RgbColor.TryParse(control.ColorHex, out color); }
+        RgbColor? color = numerator.Glyphs[0].Color;
+        if (fraction.ControlText is { } control) { color = DocxTextColor.Read(control.ColorHex); }
         glyphs.Add(new(0x2044, 0x2044, resource, cid.ToString("X4", CultureInfo.InvariantCulture), glyphSize,
             slashX, slashY, slashAdvance, color) { OriginalGlyph = variant.Glyph, ControlOwner = fraction });
         box = new(width, above, below, glyphs)

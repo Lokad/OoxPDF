@@ -83,8 +83,8 @@ internal static partial class DocxMathLayout
             2d * Math.Max(child.AboveBaseline - axis, child.BelowBaseline + axis));
         if (!double.IsFinite(height) || height <= 0d)
         { fallback = "InvalidMathDelimiterExtent"; return false; }
-        RgbColor color = children.SelectMany(child => child.Glyphs).FirstOrDefault()?.Color ?? default;
-        if (delimiter.ControlText is { } control) { color = default; RgbColor.TryParse(control.ColorHex, out color); }
+        RgbColor? color = children.SelectMany(child => child.Glyphs).FirstOrDefault()?.Color;
+        if (delimiter.ControlText is { } control) { color = DocxTextColor.Read(control.ColorHex); }
         var glyphs = new List<DocxMathGlyphPlacement>();
         var rules = new List<DocxMathRulePlacement>();
         double advance = 0d, width = 0d, delimiterHeight = 0d;

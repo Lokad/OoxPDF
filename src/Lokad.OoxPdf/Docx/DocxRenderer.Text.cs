@@ -235,7 +235,8 @@ internal sealed partial class DocxRenderer
         double baselineOffsetY,
         double xOffset,
         bool useWordCompatibleTextProfile,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        RgbColor? background = null)
     {
         IReadOnlyList<DocxTextSegmentLayout> segments = line.Segments.Count == 0
             ? [new DocxTextSegmentLayout(line.Text, line.StyleRun, line.X, line.Width, null, 0d, 0d, DocxTextStateCharacterSpacingSource.None, true, -1, 0, DocxTextSegmentRole.Text)]
@@ -268,7 +269,7 @@ internal sealed partial class DocxRenderer
                 RgbColor textColor = ResolveTextEmissionColor(
                     segment.StyleRun,
                     useWordCompatibleTextProfile,
-                    ReadColor(emissionEffective.ColorHex), segment.Role);
+                    ResolveRunTextColor(emissionEffective, background), segment.Role);
                 string emittedText = ResolveStaticFieldPlaceholders(segment.StyleRun, part.Text, pageNumber, pageCount);
                 double emittedWidth = ResolveSubstitutedFieldEmissionWidth(part.Text, emittedText, segment.StyleRun, fontSize, fontResources.TextMeasurer, part.Width);
                 AddEmissionSegmentWithFontFallback(emissionSegments, new DocxTextEmissionSegment(
@@ -324,7 +325,7 @@ internal sealed partial class DocxRenderer
                 " ",
                 segment.StyleRun,
                 resource,
-                ReadColor(effective.ColorHex),
+                ResolveRunTextColor(effective, background),
                 ResolveTerminalLineSpaceX(segments, line, fontResources, fontScale, xOffset, useWordCompatibleTextProfile, cancellationToken),
                 baselineY,
                 0d,
@@ -371,7 +372,7 @@ internal sealed partial class DocxRenderer
             RgbColor color = ResolveTextEmissionColor(
                 segment.StyleRun,
                 useWordCompatibleTextProfile,
-                ReadColor(effective.ColorHex), segment.Role);
+                ResolveRunTextColor(effective, background), segment.Role);
             emissionSegments.Add(new DocxTextEmissionSegment(
                 " ",
                 segment.StyleRun,
@@ -643,11 +644,12 @@ internal sealed partial class DocxRenderer
         DocxMarkupContext markupContext,
         int pageNumber,
         int pageCount,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        RgbColor? background = null)
     {
         if (line.Math is { } math && !line.IsInlineMath)
         {
-            PaintMath(math, line.X, line.BaselineY, line.MathScale, graphics, markupContext, cancellationToken);
+            PaintMath(math, line.X, line.BaselineY, line.MathScale, graphics, markupContext, cancellationToken, background);
             return;
         }
         RenderMarkupIndicators(line, graphics, fontResources, markupContext);
@@ -659,19 +661,19 @@ internal sealed partial class DocxRenderer
             ResolveTextEmissionFontScale(markupContext),
             ResolveTextEmissionBaselineOffset(markupContext),
             ResolveTextEmissionXOffset(markupContext),
-            UsesWordCompatibleAllMarkupTextProfile(markupContext), cancellationToken))
+            UsesWordCompatibleAllMarkupTextProfile(markupContext), cancellationToken, background))
         {
             cancellationToken.ThrowIfCancellationRequested();
             RenderTextEmissionSegment(segment, graphics, markupContext);
         }
         if (line.IsInlineMath && line.Math is { } inlineMath)
             PaintMath(inlineMath, line.X + line.InlineMathOffsetX, line.BaselineY, line.MathScale,
-                graphics, markupContext, cancellationToken);
+                graphics, markupContext, cancellationToken, background);
         foreach (var placement in line.InlineMath)
         {
             cancellationToken.ThrowIfCancellationRequested();
             PaintMath(placement.Math, line.X + placement.OffsetX, line.BaselineY, line.MathScale,
-                graphics, markupContext, cancellationToken);
+                graphics, markupContext, cancellationToken, background);
         }
     }
 

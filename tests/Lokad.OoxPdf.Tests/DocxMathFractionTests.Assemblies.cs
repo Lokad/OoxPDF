@@ -30,7 +30,7 @@ internal static partial class DocxMathFractionTests
         TestAssert.Equal(2, box.Glyphs.Count);
         var root = box.Glyphs[0];
         TestAssert.True(root.SourceCodePoint == 0x221A && root.AssemblyParts.Count >= 3 &&
-            ReferenceEquals(root.ControlOwner, radical) && root.FontSize == 12d && root.Color.Red == 255,
+            ReferenceEquals(root.ControlOwner, radical) && root.FontSize == 12d && root.Color?.Red == 255,
             "One logical root retains its authored structural control and its physical pieces.");
         foreach (var part in root.AssemblyParts)
         {

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -103,6 +103,14 @@ internal sealed partial class DocxRenderer
 
         RenderShadingFill(effective.ShadingFillHex, effective.ShadingValue, effective.ShadingColor, graphics, x, fillY, width, fillHeight);
     }
+
+    private static RgbColor? ResolveShadingBackground(string? fillHex, string? value,
+        string? foregroundHex, RgbColor? containingBackground) =>
+        TryResolveShadingColor(fillHex, value, foregroundHex, out var color) ? color : containingBackground;
+
+    private static RgbColor ResolveRunTextColor(DocxEffectiveRunProperties run, RgbColor? background) =>
+        DocxTextColor.Read(run.ColorHex) ?? DocxTextColor.Automatic(
+            ResolveShadingBackground(run.ShadingFillHex, run.ShadingValue, run.ShadingColor, background));
 
     private static bool TryResolveShadingColor(string? fillHex, string? value, string? foregroundHex, out RgbColor color)
     {

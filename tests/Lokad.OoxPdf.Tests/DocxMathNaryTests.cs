@@ -28,7 +28,7 @@ internal static partial class DocxMathNaryTests
             Math.Abs(ops[1].X - firstBody.X - firstBody.Advance - 2d) < 1e-9,
             "Ordinary-to-operator and adjacent-group boundaries each consume one thin math space.");
         TestAssert.True(Math.Abs(relation.X - secondBody.X - secondBody.Advance - 10d / 3d) < 1e-9 &&
-            ops[0].Color.Red == 255 && ops[1].Color.Green == 128,
+            ops[0].Color?.Red == 255 && ops[1].Color?.Green == 128,
             "The body's final atom owns outgoing relation glue while each control retains its own color.");
         TestAssert.True(!DocxMathLayout.TryMeasure(equation with { Content = new([Row("B"), first, second with { Body = Row("D") }]) },
             _ => resource, CancellationToken.None, out var absent, out _) && absent is null,
@@ -112,7 +112,7 @@ internal static partial class DocxMathNaryTests
                 measured.Glyphs.Skip(1).All(g => ReferenceEquals(g.Font, text)) && measured.Glyphs[2].BaselineY > 0 &&
                 measured.Glyphs[3].BaselineY < 0 && measured.ParentMetrics?.Size == 12d,
                 "Selected operator variants and independently encoded children share one bounded occupied frame.");
-            TestAssert.True(measured.Glyphs[0].Color.Red == 255 && measured.Glyphs.Skip(1).All(g => g.Color.Blue == 255),
+            TestAssert.True(measured.Glyphs[0].Color?.Red == 255 && measured.Glyphs.Skip(1).All(g => g.Color?.Blue == 255),
                 "Control color and child colors retain independent source ownership.");
             var missing = new PdfFontResource("Missing", PdfEmbeddedFont.CreateForGlyphMappings(font,
                 new[] { ((ushort)130, point) }, CancellationToken.None));
@@ -287,8 +287,8 @@ internal static partial class DocxMathNaryTests
             TestAssert.Equal(kind == "script" ? "\u2211BCBCB" : "\u2211BCCB",
                 string.Concat(measured.Glyphs.Select(g => char.ConvertFromUtf32(g.SourceCodePoint))));
             TestAssert.Equal(kind == "bar" ? 1 : 0, measured.Rules.Count);
-            TestAssert.True(measured.Glyphs[0].Color.Red == 255 && measured.Glyphs.Skip(1).All(g => g.Color.Blue == 255) &&
-                measured.Rules.All(r => r.Color.Blue == 255 && r.X > measured.Glyphs[0].X),
+            TestAssert.True(measured.Glyphs[0].Color?.Red == 255 && measured.Glyphs.Skip(1).All(g => g.Color?.Blue == 255) &&
+                measured.Rules.All(r => r.Color?.Blue == 255 && r.X > measured.Glyphs[0].X),
                 "Inner fraction rules and child colors remain independent of operator color and placement.");
             var missing = nary with { Body = new([new DocxMathFraction(Row("D"), Row("C"), "bar")]) };
             TestAssert.True(!DocxMathLayout.TryMeasure(equation with { Content = new([missing]) }, _ => resource,

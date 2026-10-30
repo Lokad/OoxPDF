@@ -256,8 +256,8 @@ internal static partial class DocxMathLayout
         if (sources.Any(source => source.Run.Text.Text.Length != 0 && !source.Run.NormalText &&
                 !ReferenceEquals(resolveFont(source.Run)?.Font.Font, metricOwner)))
         { fallback = "MixedMathFractionMetrics"; return false; }
-        var ruleColor = first?.Color ?? default;
-        if (hasEmptyArgument || metricOnly) RgbColor.TryParse(fraction.ControlText!.ColorHex, out ruleColor);
+        RgbColor? ruleColor = first?.Color;
+        if (hasEmptyArgument || metricOnly) ruleColor = DocxTextColor.Read(fraction.ControlText!.ColorHex);
         // An authored control owns fraction geometry; argument runs retain
         // their own script sizes and spacing. An unowned control keeps the
         // existing parent/child metric inheritance.
@@ -287,7 +287,7 @@ internal static partial class DocxMathLayout
 
     private static bool TryComposeFraction(DocxEquation equation, DocxMathFraction fraction, OpenTypeFont metricOwner,
         OpenTypeMathConstants constants, double parentSize, DocxMathBox numerator, DocxMathBox denominator,
-        RgbColor ruleColor, bool useParentMetrics, CancellationToken token, out DocxMathBox? box, out string? fallback)
+        RgbColor? ruleColor, bool useParentMetrics, CancellationToken token, out DocxMathBox? box, out string? fallback)
     {
         box = null;
         double scale = parentSize / metricOwner.UnitsPerEm;

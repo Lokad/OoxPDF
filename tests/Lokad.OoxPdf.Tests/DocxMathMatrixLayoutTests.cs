@@ -99,7 +99,7 @@ internal static class DocxMathMatrixLayoutTests
             resolveControlMetrics: control => { innerResolved |= ReferenceEquals(control, matrix); return ReferenceEquals(control, matrix) ? innerFont : null; }),
             reason ?? "Expected bounded fenced grid.");
         var fenced = TestAssert.NotNull(box);
-        TestAssert.True(innerResolved && fenced.Glyphs.Count == 6 && fenced.Glyphs[0].Color.Red == 255 &&
+        TestAssert.True(innerResolved && fenced.Glyphs.Count == 6 && fenced.Glyphs[0].Color?.Red == 255 &&
             ReferenceEquals(fenced.Glyphs[0].Font, marks) && ReferenceEquals(fenced.Glyphs[^1].Font, marks) &&
             fenced.Glyphs.Skip(1).Take(4).All(g => ReferenceEquals(g.Font, painted)),
             "Separate control metrics and painted font resources survive the same bounded argument box.");
@@ -398,8 +398,8 @@ internal static class DocxMathMatrixLayoutTests
             TestAssert.True(Math.Abs((frameTop + frameBottom) / 2d - size / 4d) < 1e-9,
                 "The whole grid frame centers on the metric font's mathematical axis.");
             TestAssert.True(measured.ParentMetrics is { IncludeTypographicFrame: false } owner && ReferenceEquals(owner.Font, metric) && owner.Size == size &&
-                ReferenceEquals(measured.Glyphs[0].Font, first) && measured.Glyphs[0].Color.Blue == 255 &&
-                measured.Glyphs.Skip(3).Take(3).All(g => ReferenceEquals(g.Font, rest) && g.Color.Green == 128) && measured.Rules.Count == 0,
+                ReferenceEquals(measured.Glyphs[0].Font, first) && measured.Glyphs[0].Color?.Blue == 255 &&
+                measured.Glyphs.Skip(3).Take(3).All(g => ReferenceEquals(g.Font, rest) && g.Color?.Green == 128) && measured.Rules.Count == 0,
                 "Internal control frames, source paint and occupied outer ink retain distinct ownership, without implicit delimiters.");
             var graphics = new PdfGraphicsBuilder(); DocxMathBoxPainter.Paint(measured, graphics, 20d, 80d, CancellationToken.None);
             using var output = new MemoryStream();

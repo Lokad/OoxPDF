@@ -89,29 +89,30 @@ internal sealed partial class DocxRenderer
     }
 
     private static void PaintMath(DocxPreparedMathParagraph math, double x, double baseline, double scale,
-        PdfGraphicsBuilder graphics, DocxMarkupContext context, CancellationToken token)
+        PdfGraphicsBuilder graphics, DocxMarkupContext context, CancellationToken token, RgbColor? background = null)
     {
         token.ThrowIfCancellationRequested();
         graphics.SaveState();
         graphics.Transform(scale, 0d, 0d, scale, x + ResolveTextEmissionXOffset(context),
             baseline - ResolveTextEmissionBaselineOffset(context));
+        RgbColor automaticColor = DocxTextColor.Automatic(background);
         Func<DocxMathGlyphPlacement, (RgbColor Color, bool Strike)>? revisionInk = null;
         if (UsesWordCompatibleAllMarkupTextProfile(context) &&
             (math.Equation.Revision is not null || math.Box.Glyphs.Any(glyph => glyph.Revision is not null)))
-            revisionInk = CreateMathRevisionInk(math.Equation.Revision, context);
-        DocxMathBoxPainter.Paint(math.Box, graphics, 0d, 0d, token, revisionInk);
+            revisionInk = CreateMathRevisionInk(math.Equation.Revision, context, automaticColor);
+        DocxMathBoxPainter.Paint(math.Box, graphics, 0d, 0d, token, revisionInk, automaticColor);
         graphics.RestoreState();
     }
 
     // Allocate the review resolver only for actual revised boxes. Ordinary math
     // keeps its existing paint path without a captured per-box delegate.
     private static Func<DocxMathGlyphPlacement, (RgbColor Color, bool Strike)> CreateMathRevisionInk(
-        DocxRevisionInfo? equationOwner, DocxMarkupContext context) => glyph =>
+        DocxRevisionInfo? equationOwner, DocxMarkupContext context, RgbColor automaticColor) => glyph =>
     {
-        if (glyph.ControlOwner is not null) return (glyph.Color, false);
+        if (glyph.ControlOwner is not null) return (glyph.Color ?? automaticColor, false);
         var revision = glyph.Revision ?? equationOwner;
         return revision is not null && TryResolveReviewAuthorColor(revision, context, out var color)
-            ? (color, revision.Kind == DocxRevisionKind.Deletion) : (glyph.Color, false);
+            ? (color, revision.Kind == DocxRevisionKind.Deletion) : (glyph.Color ?? automaticColor, false);
     };
 
     private static IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph> PrepareMathEquations(

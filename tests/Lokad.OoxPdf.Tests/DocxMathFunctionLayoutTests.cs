@@ -101,7 +101,7 @@ internal static class DocxMathFunctionLayoutTests
             var nameLast = measured.Glyphs[nameLength]; var argument = measured.Glyphs[nameLength + 1];
             TestAssert.True(Math.Abs(argument.X - nameLast.X - nameLast.Advance - parentSize / 6d) < 1e-9,
                 "Application spacing uses the same parent context while painted name glyphs keep their authored size.");
-            TestAssert.True(measured.Glyphs.Where(g => g.SourceCodePoint == 'Z').All(g => g.Color.Green == 128),
+            TestAssert.True(measured.Glyphs.Where(g => g.SourceCodePoint == 'Z').All(g => g.Color?.Green == 128),
                 "Per-node argument paint remains independent of the row frame.");
             var missing = Resource("MissingLateArgument", font, "BcustomCsin=");
             TestAssert.True(!DocxMathLayout.TryMeasure(equation, r => ReferenceEquals(r, lastArgument) ? missing : resource,
@@ -128,8 +128,8 @@ internal static class DocxMathFunctionLayoutTests
             CancellationToken.None, out var box, out var reason, resolveControlMetrics: _ => metric), reason ?? "Expected metric-only function control.");
         var measured = TestAssert.NotNull(box); double nameAdvance = measured.Glyphs.Take(6).Sum(g => g.Advance);
         TestAssert.True(Math.Abs(measured.Glyphs[^1].X - nameAdvance - 20d / 6d) < 1e-9 &&
-            measured.Glyphs.Take(6).All(g => ReferenceEquals(g.Font, names) && g.Color.Blue == 255) &&
-            ReferenceEquals(measured.Glyphs[^1].Font, arguments) && measured.Glyphs[^1].Color.Green == 128,
+            measured.Glyphs.Take(6).All(g => ReferenceEquals(g.Font, names) && g.Color?.Blue == 255) &&
+            ReferenceEquals(measured.Glyphs[^1].Font, arguments) && measured.Glyphs[^1].Color?.Green == 128,
             "Arbitrary literal names, argument fonts/colors and control-owned spacing remain independent.");
         TestAssert.True(measured.ParentMetrics is { IncludeTypographicFrame: true } owner && ReferenceEquals(owner.Font, metric),
             "The unpainted control explicitly owns its ordinary typographic frame.");

@@ -26,7 +26,8 @@ internal sealed partial class DocxRenderer
         int pageCount,
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
-        ref int imageIndex)
+        ref int imageIndex,
+        RgbColor? background = null)
     {
         // Office A/B (comment-table and w6-celltuckborders probes, Word-COM rendered):
         // the first-pin emission shift moves text but table geometry was painted raw, so
@@ -98,6 +99,8 @@ internal sealed partial class DocxRenderer
                 continue;
             }
 
+            var cell = cellLayout.VisualCell;
+            RgbColor? cellBackground = ResolveShadingBackground(cell.FillHex, cell.ShadingValue, cell.ShadingColor, background);
             if (cellLayout.TextLines.Count != 0 || cellLayout.InlineImages.Count != 0 || cellLayout.InlineTextBoxes.Count != 0 || cellLayout.NestedRows.Count != 0)
             {
                 DocxTableCellLayout geometryCell = geometryRow.Cells[cellIndex];
@@ -107,7 +110,7 @@ internal sealed partial class DocxRenderer
                 foreach (DocxTextLineLayout line in cellLayout.TextLines)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    RenderTextLine(line, graphics, fontResources, markupContext, pageNumber, pageCount, cancellationToken);
+                    RenderTextLine(line, graphics, fontResources, markupContext, pageNumber, pageCount, cancellationToken, cellBackground);
                 }
 
                 foreach (DocxInlineImageLayout image in cellLayout.InlineImages)
@@ -127,7 +130,7 @@ internal sealed partial class DocxRenderer
                 foreach (DocxInlineTextBoxLayout textBox in cellLayout.InlineTextBoxes)
                 {
                     RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex,
-                        separateBoxClip ? clip : null);
+                        separateBoxClip ? clip : null, cellBackground);
                 }
                 if (separateBoxClip)
                 {
@@ -152,7 +155,7 @@ internal sealed partial class DocxRenderer
                         pageNumber,
                         pageCount,
                         cancellationToken,
-                        imageCache, ref imageIndex);
+                        imageCache, ref imageIndex, cellBackground);
                 }
 
                 graphics.RestoreState();

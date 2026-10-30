@@ -327,7 +327,8 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex,
-        DocxTableCellClipSnapshot? cellClip = null)
+        DocxTableCellClipSnapshot? cellClip = null,
+        RgbColor? background = null)
     {
         if (box.TextLines.Count == 0 &&
             box.InlineImages.Count == 0 &&
@@ -387,7 +388,7 @@ internal sealed partial class DocxRenderer
                 item = AdjustStaticTextLine(line, markupContext);
             DocxTableRowLayout? previousRow = itemIndex > 0 ? items[itemIndex - 1] as DocxTableRowLayout : null;
             DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
-            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex);
+            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, background);
         }
 
         graphics.RestoreState();

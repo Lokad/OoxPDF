@@ -130,9 +130,9 @@ internal static partial class DocxMathFractionTests
                 reason ?? "Expected bounded fixed composite arguments.");
             var measured = TestAssert.NotNull(box);
             TestAssert.Equal("(BC|B)", string.Concat(measured.Glyphs.Select(g => char.ConvertFromUtf32(g.SourceCodePoint))));
-            TestAssert.True(measured.Rules.Count == (stack ? 0 : 1) && measured.Rules.All(r => r.X >= measured.Glyphs[0].Advance && r.Color.Blue == 255),
+            TestAssert.True(measured.Rules.Count == (stack ? 0 : 1) && measured.Rules.All(r => r.X >= measured.Glyphs[0].Advance && r.Color?.Blue == 255),
                 "An inner bar translates with its fraction and retains child paint independently of the delimiter control.");
-            TestAssert.True(measured.Glyphs.Where(g => g.SourceCodePoint is '(' or ')' or '|').All(g => g.Color.Green == 128),
+            TestAssert.True(measured.Glyphs.Where(g => g.SourceCodePoint is '(' or ')' or '|').All(g => g.Color?.Green == 128),
                 "Both outer marks and the separator retain their control color.");
             var missing = new PdfFontResource("MissingEnd", PdfEmbeddedFont.CreateForGlyphMappings(font, mappings.Where(m => m.Item1 != 10), CancellationToken.None));
             TestAssert.True(!DocxMathLayout.TryMeasure(equation, _ => missing, CancellationToken.None, out var absent, out _) && absent is null,
@@ -166,7 +166,7 @@ internal static partial class DocxMathFractionTests
         var measured = TestAssert.NotNull(box);
         TestAssert.Equal("B+(B)+(C)=C", string.Concat(measured.Glyphs.Select(g => char.ConvertFromUtf32(g.SourceCodePoint))));
         var openings = measured.Glyphs.Where(g => g.SourceCodePoint == '(').ToArray();
-        TestAssert.True(openings.Length == 2 && openings[0].OriginalGlyph == 128 && openings[1].OriginalGlyph == 9 && openings.All(g => g.Color.Green == 128),
+        TestAssert.True(openings.Length == 2 && openings[0].OriginalGlyph == 128 && openings[1].OriginalGlyph == 9 && openings.All(g => g.Color?.Green == 128),
             "Growing and fixed controls retain distinct selected glyphs and shared control color within a row.");
         TestAssert.True(measured.Glyphs.Count(g => Math.Abs(g.FontSize - 20.04d) < 1e-9) == 2 && measured.ParentMetrics?.Size == 12d,
             "Larger child glyphs keep independent size while controls own the parent line frame.");
@@ -199,7 +199,7 @@ internal static partial class DocxMathFractionTests
             var measured=TestAssert.NotNull(box);
             TestAssert.Equal(empty?"(BC)":"(B|C)",string.Concat(measured.Glyphs.Select(g=>char.ConvertFromUtf32(g.SourceCodePoint))));
             var first=measured.Glyphs.Single(g=>g.SourceCodePoint=='B');var second=measured.Glyphs.Single(g=>g.SourceCodePoint=='C');
-            TestAssert.True(first.FontSize==12d && Math.Abs(second.FontSize-20.04d)<1e-9 && first.Color.Red==255 && second.Color.Blue==255,
+            TestAssert.True(first.FontSize==12d && Math.Abs(second.FontSize-20.04d)<1e-9 && first.Color?.Red==255 && second.Color?.Blue==255,
                 "Argument font sizes and colors retain independent ownership.");
             TestAssert.True(measured.Glyphs[0].OriginalGlyph==(fixedSize?9:128) && measured.Glyphs[^1].OriginalGlyph==(fixedSize?10:127),
                 "Both outer characters use the common argument height or their authored fixed glyphs.");
@@ -315,8 +315,8 @@ internal static partial class DocxMathFractionTests
         var measured=TestAssert.NotNull(box);
         TestAssert.Equal("(B+C)",string.Concat(measured.Glyphs.Select(g=>char.ConvertFromUtf32(g.SourceCodePoint))));
         TestAssert.True(measured.Glyphs[0].Font==parent && measured.Glyphs[^1].Font==parent &&
-            measured.Glyphs.Skip(1).Take(3).All(g=>g.Font==text && g.Color.Red==255),"Child faces and colors remain independently owned.");
-        TestAssert.True(measured.Glyphs[0].Color.Green==128 && measured.Rules.Count==0,"Delimiter control color does not add a root/fraction rule.");
+            measured.Glyphs.Skip(1).Take(3).All(g=>g.Font==text && g.Color?.Red==255),"Child faces and colors remain independently owned.");
+        TestAssert.True(measured.Glyphs[0].Color?.Green==128 && measured.Rules.Count==0,"Delimiter control color does not add a root/fraction rule.");
         var oneSided=delimiter with { EndCharacterValue="" };
         TestAssert.True(DocxMathLayout.TryMeasure(equation with { Content=new([oneSided]) },_=>text,CancellationToken.None,out var one,out _,
             resolveControlFont:_=>parent) && TestAssert.NotNull(one).Glyphs.Count==4,"An explicitly empty side emits no placeholder glyph or extra advance.");
@@ -439,7 +439,7 @@ internal static partial class DocxMathFractionTests
         var measured=TestAssert.NotNull(box);
         TestAssert.True(measured.Glyphs[0].Font==parent && measured.Glyphs.Skip(1).All(g=>g.Font==text),
             "Normal fraction children retain their independently encoded physical face.");
-        TestAssert.True(measured.Rules.Count==2 && measured.Rules[0].Color==default && measured.Rules[1].Color.Red==255,
+        TestAssert.True(measured.Rules.Count==2 && measured.Rules[0].Color==default(Lokad.OoxPdf.Pptx.RgbColor) && measured.Rules[1].Color?.Red==255,
             "The root overbar and child fraction rule retain their independently authored color owners.");
         var graphics=new PdfGraphicsBuilder();DocxMathBoxPainter.Paint(measured,graphics,20d,50d,CancellationToken.None);
         using var output=new MemoryStream();PdfDocumentWriter.WriteStaged(output,[new PdfPage(200d,150d,graphics.ToString(),[parent,text])], new OoxConversionLimits(), diagnosticSink: null,CancellationToken.None);
@@ -633,8 +633,8 @@ internal static partial class DocxMathFractionTests
         DocxMathBox measured=TestAssert.NotNull(box);
         TestAssert.True(measured.Glyphs[0].Font==parent && measured.Glyphs.Skip(1).All(g=>g.Font==text),
             "Root and radicand retain their independently prepared physical font resources.");
-        TestAssert.True(measured.Glyphs[0].Color==default && measured.Rules[0].Color==default &&
-            measured.Glyphs.Skip(1).All(g=>g.Color.Red==255 && g.Color.Green==0 && g.Color.Blue==0),
+        TestAssert.True(measured.Glyphs[0].Color==default(Lokad.OoxPdf.Pptx.RgbColor) && measured.Rules[0].Color==default(Lokad.OoxPdf.Pptx.RgbColor) &&
+            measured.Glyphs.Skip(1).All(g=>g.Color?.Red==255 && g.Color?.Green==0 && g.Color?.Blue==0),
             "Inherited black control color cannot adopt the child's authored red text.");
         var graphics=new PdfGraphicsBuilder();DocxMathBoxPainter.Paint(measured,graphics,20d,50d,CancellationToken.None);
         using var output=new MemoryStream();

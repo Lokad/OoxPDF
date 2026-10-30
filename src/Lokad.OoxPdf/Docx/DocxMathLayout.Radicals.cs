@@ -77,9 +77,9 @@ internal static partial class DocxMathLayout
             !double.IsFinite(baseline) || width <= 0d || above < 0d || below < 0d)
         { fallback = "InvalidMathRadicalExtent"; return false; }
         var glyphs = new List<DocxMathGlyphPlacement>(child.Glyphs.Count + 1 + (degree?.Glyphs.Count ?? 0));
-        Lokad.OoxPdf.Pptx.RgbColor color = child.Glyphs.Count == 0 ? default : child.Glyphs[0].Color;
+        Lokad.OoxPdf.Pptx.RgbColor? color = child.Glyphs.Count == 0 ? default : child.Glyphs[0].Color;
         if (radical.ControlText is { } control)
-        { color = default; Lokad.OoxPdf.Pptx.RgbColor.TryParse(control.ColorHex, out color); }
+        { color = DocxTextColor.Read(control.ColorHex); }
         glyphs.Add(new(0x221A, 0x221A, resource, shape.EncodedGlyph, glyphSize, rootX, baseline,
             childX - rootX, color) { OriginalGlyph = shape.Glyph, ControlOwner = radical, AssemblyParts = shape.Parts });
         foreach (var glyph in child.Glyphs) { token.ThrowIfCancellationRequested(); glyphs.Add(glyph with { X = glyph.X + childX }); }

@@ -1,4 +1,26 @@
 {
+  "docx-automatic-color": [
+    "DocxAutomaticColor",
+    "MathFontAutomaticColors",
+    "MathFontMixed",
+    "MathFontRadicalNormalChildren",
+    "MathFontStructuredSequences",
+    "MathFontEmpty",
+    "MathFontFraction",
+    "MathFontDelimiter",
+    "MathFontNary",
+    "MathFontFunction",
+    "MathFontMatrix",
+    "DocxReviewRevisionInk",
+    "DocxReaderTableCellPreservesShadingTokens",
+    "DocxSyntheticTableCellPatternShading",
+    "DocxTableRendererBlendsPercentageCellShading",
+    "PortableRenderingDocxFinalPreservesMixedContent",
+    "PortableRenderingDocxAllMarkupPreservesMixedContent",
+    "PortableRenderingStaticPictureLinksRetainComposedFrames",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pdf-to-unicode-streaming": [
     "PdfToUnicodeStreaming",
     "SyntheticSubsetRoundTripKeepsCmapAndWidths",

@@ -31,7 +31,7 @@ internal static partial class DocxMathNaryTests
                 resolveControlFont: _ => resource), reason ?? "The complete display group must use both font minima.");
             var box = TestAssert.NotNull(measured);
             var op = box.Glyphs[0]; var upper = box.Glyphs.Skip(2).Take(4).ToArray(); var lower = box.Glyphs.Skip(6).Take(5).ToArray();
-            TestAssert.True(op.OriginalGlyph == 127 && ReferenceEquals(op.ControlOwner, nary) && op.Color.Red == 255,
+            TestAssert.True(op.OriginalGlyph == 127 && ReferenceEquals(op.ControlOwner, nary) && op.Color?.Red == 255,
                 "The selected display variant retains its actual control font and ink.");
             double center = op.X + op.Advance / 2d;
             double UpperCenter() => (upper[0].X + upper[^1].X + upper[^1].Advance) / 2d;

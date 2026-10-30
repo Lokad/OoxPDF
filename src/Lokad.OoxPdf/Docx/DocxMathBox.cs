@@ -7,7 +7,7 @@ internal readonly record struct DocxMathGlyphPartPlacement(ushort OriginalGlyph,
 
 internal sealed record DocxMathGlyphPlacement(
     int SourceCodePoint, int RenderCodePoint, PdfFontResource Font, string EncodedGlyph,
-    double FontSize, double X, double BaselineY, double Advance, RgbColor Color)
+    double FontSize, double X, double BaselineY, double Advance, RgbColor? Color)
 {
     public DocxRevisionInfo? Revision { get; init; }
     // Structural symbols keep authored ink; revision ink belongs to literal text.
@@ -47,17 +47,19 @@ internal sealed record DocxMathMetricOwner(Lokad.OoxPdf.Fonts.OpenTypeFont Font,
     public bool IncludeTypographicFrame { get; init; }
 }
 
-internal sealed record DocxMathRulePlacement(double X, double Y, double Width, double Thickness, RgbColor Color);
+internal sealed record DocxMathRulePlacement(double X, double Y, double Width, double Thickness, RgbColor? Color);
 
 internal static class DocxMathBoxPainter
 {
     public static void Paint(DocxMathBox box, PdfGraphicsBuilder graphics, double x, double baselineY, CancellationToken token,
-        Func<DocxMathGlyphPlacement, (RgbColor Color, bool Strike)>? resolveRevisionInk = null)
+        Func<DocxMathGlyphPlacement, (RgbColor Color, bool Strike)>? resolveRevisionInk = null,
+        RgbColor automaticColor = default)
     {
         foreach (DocxMathRulePlacement rule in box.Rules)
         {
             token.ThrowIfCancellationRequested();
-            graphics.SetFillRgb(rule.Color.Red, rule.Color.Green, rule.Color.Blue);
+            var color = rule.Color ?? automaticColor;
+            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
             graphics.FillRectangle(x + rule.X, baselineY + rule.Y, rule.Width, rule.Thickness);
         }
         foreach (DocxMathGlyphPlacement glyph in box.Glyphs)
@@ -70,7 +72,7 @@ internal static class DocxMathBoxPainter
                 graphics.Transform(1d, 0d, glyph.TextShear, 1d, glyphX, glyphY);
                 glyphX = glyphY = 0d;
             }
-            var ink = resolveRevisionInk is null ? (Color: glyph.Color, Strike: false) : resolveRevisionInk(glyph);
+            var ink = resolveRevisionInk is null ? (Color: glyph.Color ?? automaticColor, Strike: false) : resolveRevisionInk(glyph);
             var color = ink.Color;
             if (glyph.AssemblyParts.Count == 0) Draw(glyph.EncodedGlyph, glyphX, glyphY);
             else

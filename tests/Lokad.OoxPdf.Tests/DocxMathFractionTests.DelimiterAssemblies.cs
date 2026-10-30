@@ -77,7 +77,7 @@ internal static partial class DocxMathFractionTests
             TestAssert.Equal("(A)", string.Concat(box.Glyphs.Select(glyph => char.ConvertFromUtf32(glyph.SourceCodePoint))));
             foreach (var glyph in box.Glyphs.Where(glyph => glyph.SourceCodePoint != 'A'))
             {
-                TestAssert.True(ReferenceEquals(glyph.ControlOwner, delimiter) && glyph.FontSize == 12d && glyph.Color.Red == 255 &&
+                TestAssert.True(ReferenceEquals(glyph.ControlOwner, delimiter) && glyph.FontSize == 12d && glyph.Color?.Red == 255 &&
                     (grow ? glyph.AssemblyParts.Count > 1 : glyph.AssemblyParts.Count == 0),
                     "Growing and fixed delimiters retain the actual control and source size/ink.");
                 foreach (var part in glyph.AssemblyParts)

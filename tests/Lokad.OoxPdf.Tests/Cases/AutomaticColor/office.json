@@ -1,0 +1,1493 @@
+{
+  "Source": "Independent Word 16 PDF exports in artifacts/tcolor/*-office; bootstrap references, application-view calibration pending. Original and held-out RGB palettes and background-ownership controls. Explicit paragraph-shading omissions remain excluded and recorded, not accepted.",
+  "Controls": [
+    {
+      "Input": "cell-colors.docx",
+      "InputSha256": "628CDA1F43AB51CBC08BC9118341CDF2F7A9D557AEC8D0C280C9E3A329A2A86C",
+      "References": [
+        {
+          "Mode": "final-preserve",
+          "PdfSha256": "DD53C42612678F77F3C061FC8CC5EE00B0414567AA4A97E44AB4F6B34B0AFED3"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "PdfSha256": "A7C80A3F02597279682BB4E6A50E16FBCFF6F9F1E97C8FB75718222409D5EA3B"
+        }
+      ],
+      "Colors": [
+        {
+          "Label": "s0n",
+          "Fill": "000000",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s0a",
+          "Fill": "000000",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s0b",
+          "Fill": "000000",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s0w",
+          "Fill": "000000",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s1n",
+          "Fill": "FFFFFF",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s1a",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s1b",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s1w",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s2n",
+          "Fill": "0000FF",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s2a",
+          "Fill": "0000FF",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s2b",
+          "Fill": "0000FF",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s2w",
+          "Fill": "0000FF",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s3n",
+          "Fill": "FF0000",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s3a",
+          "Fill": "FF0000",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s3b",
+          "Fill": "FF0000",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s3w",
+          "Fill": "FF0000",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s4n",
+          "Fill": "00FF00",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s4a",
+          "Fill": "00FF00",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s4b",
+          "Fill": "00FF00",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s4w",
+          "Fill": "00FF00",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s5n",
+          "Fill": "0066CC",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s5a",
+          "Fill": "0066CC",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s5b",
+          "Fill": "0066CC",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s5w",
+          "Fill": "0066CC",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s6n",
+          "Fill": "333333",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s6a",
+          "Fill": "333333",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s6b",
+          "Fill": "333333",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s6w",
+          "Fill": "333333",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s7n",
+          "Fill": "555555",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s7a",
+          "Fill": "555555",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s7b",
+          "Fill": "555555",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s7w",
+          "Fill": "555555",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s8n",
+          "Fill": "777777",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s8a",
+          "Fill": "777777",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s8b",
+          "Fill": "777777",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s8w",
+          "Fill": "777777",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s9n",
+          "Fill": "808080",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s9a",
+          "Fill": "808080",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s9b",
+          "Fill": "808080",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s9w",
+          "Fill": "808080",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s10n",
+          "Fill": "999999",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s10a",
+          "Fill": "999999",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s10b",
+          "Fill": "999999",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s10w",
+          "Fill": "999999",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s11n",
+          "Fill": "FFFF00",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s11a",
+          "Fill": "FFFF00",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s11b",
+          "Fill": "FFFF00",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s11w",
+          "Fill": "FFFF00",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s12n",
+          "Fill": "00FFFF",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s12a",
+          "Fill": "00FFFF",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s12b",
+          "Fill": "00FFFF",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s12w",
+          "Fill": "00FFFF",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s13n",
+          "Fill": "FF00FF",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s13a",
+          "Fill": "FF00FF",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s13b",
+          "Fill": "FF00FF",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s13w",
+          "Fill": "FF00FF",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s14n",
+          "Fill": "000080",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s14a",
+          "Fill": "000080",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s14b",
+          "Fill": "000080",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s14w",
+          "Fill": "000080",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        }
+      ]
+    },
+    {
+      "Input": "hypothesis-colors.docx",
+      "InputSha256": "CBC622894354959DCF1C7DD5793BF77D37146ACF250A5B4A29AF24E4501801D1",
+      "References": [
+        {
+          "Mode": "final-preserve",
+          "PdfSha256": "EF480BDD85EA511C0CF050C1CFF208719A388402F34EDE74205312FDF348D36D"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "PdfSha256": "F5891B4815817FF11182788B09CCDC0BCBB0D89FF04B9591CB4841446E22894D"
+        }
+      ],
+      "Colors": [
+        {
+          "Label": "s0n",
+          "Fill": "005847",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s0a",
+          "Fill": "005847",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s0b",
+          "Fill": "005847",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s0w",
+          "Fill": "005847",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s1n",
+          "Fill": "C20205",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s1a",
+          "Fill": "C20205",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s1b",
+          "Fill": "C20205",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s1w",
+          "Fill": "C20205",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s2n",
+          "Fill": "01479C",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s2a",
+          "Fill": "01479C",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s2b",
+          "Fill": "01479C",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s2w",
+          "Fill": "01479C",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s3n",
+          "Fill": "BB0508",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s3a",
+          "Fill": "BB0508",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s3b",
+          "Fill": "BB0508",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s3w",
+          "Fill": "BB0508",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s4n",
+          "Fill": "014E78",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s4a",
+          "Fill": "014E78",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s4b",
+          "Fill": "014E78",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s4w",
+          "Fill": "014E78",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s5n",
+          "Fill": "BF020D",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s5a",
+          "Fill": "BF020D",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s5b",
+          "Fill": "BF020D",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s5w",
+          "Fill": "BF020D",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s6n",
+          "Fill": "025E23",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s6a",
+          "Fill": "025E23",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s6b",
+          "Fill": "025E23",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s6w",
+          "Fill": "025E23",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s7n",
+          "Fill": "B90703",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s7a",
+          "Fill": "B90703",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s7b",
+          "Fill": "B90703",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s7w",
+          "Fill": "B90703",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s8n",
+          "Fill": "015554",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s8a",
+          "Fill": "015554",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s8b",
+          "Fill": "015554",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s8w",
+          "Fill": "015554",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s9n",
+          "Fill": "B4080B",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s9a",
+          "Fill": "B4080B",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s9b",
+          "Fill": "B4080B",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s9w",
+          "Fill": "B4080B",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s10n",
+          "Fill": "01630C",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s10a",
+          "Fill": "01630C",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s10b",
+          "Fill": "01630C",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s10w",
+          "Fill": "01630C",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s11n",
+          "Fill": "BC0215",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s11a",
+          "Fill": "BC0215",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s11b",
+          "Fill": "BC0215",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s11w",
+          "Fill": "BC0215",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s12n",
+          "Fill": "026019",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s12a",
+          "Fill": "026019",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s12b",
+          "Fill": "026019",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s12w",
+          "Fill": "026019",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s13n",
+          "Fill": "C80000",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s13a",
+          "Fill": "C80000",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s13b",
+          "Fill": "C80000",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s13w",
+          "Fill": "C80000",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s14n",
+          "Fill": "3C3C3C",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s14a",
+          "Fill": "3C3C3C",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s14b",
+          "Fill": "3C3C3C",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": null,
+          "Supported": true
+        },
+        {
+          "Label": "s14w",
+          "Fill": "3C3C3C",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": null,
+          "Supported": true
+        }
+      ]
+    },
+    {
+      "Input": "owner-colors.docx",
+      "InputSha256": "16B237670F42EABD2402504CC4A0DAC4877482F5CF56C658525D2397CF6B6277",
+      "References": [
+        {
+          "Mode": "final-preserve",
+          "PdfSha256": "CF46F29392890F24C79F6424461DCB1E6DBA8AE57B0CB5605CF9753564E6FCCC"
+        },
+        {
+          "Mode": "all-word-compatible",
+          "PdfSha256": "B1C9C3E7072258B1C6B332B563DC81DAA4914FE9E068EF4B27CA880E662E50CA"
+        }
+      ],
+      "Colors": [
+        {
+          "Label": "o0n",
+          "Fill": "000000",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": "cell-black",
+          "Supported": true
+        },
+        {
+          "Label": "o0a",
+          "Fill": "000000",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": "cell-black",
+          "Supported": true
+        },
+        {
+          "Label": "o0b",
+          "Fill": "000000",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": "cell-black",
+          "Supported": true
+        },
+        {
+          "Label": "o0w",
+          "Fill": "000000",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": "cell-black",
+          "Supported": true
+        },
+        {
+          "Label": "o1n",
+          "Fill": "FFFFFF",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": "paragraph-black",
+          "Supported": false
+        },
+        {
+          "Label": "o1a",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": "paragraph-black",
+          "Supported": false
+        },
+        {
+          "Label": "o1b",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": "paragraph-black",
+          "Supported": false
+        },
+        {
+          "Label": "o1w",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": "paragraph-black",
+          "Supported": false
+        },
+        {
+          "Label": "o2n",
+          "Fill": "000000",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": "paragraph-white",
+          "Supported": false
+        },
+        {
+          "Label": "o2a",
+          "Fill": "000000",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": "paragraph-white",
+          "Supported": false
+        },
+        {
+          "Label": "o2b",
+          "Fill": "000000",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": "paragraph-white",
+          "Supported": false
+        },
+        {
+          "Label": "o2w",
+          "Fill": "000000",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": "paragraph-white",
+          "Supported": false
+        },
+        {
+          "Label": "o3n",
+          "Fill": "000000",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": "run-white",
+          "Supported": true
+        },
+        {
+          "Label": "o3a",
+          "Fill": "000000",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": "run-white",
+          "Supported": true
+        },
+        {
+          "Label": "o3b",
+          "Fill": "000000",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": "run-white",
+          "Supported": true
+        },
+        {
+          "Label": "o3w",
+          "Fill": "000000",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": "run-white",
+          "Supported": true
+        },
+        {
+          "Label": "o4n",
+          "Fill": "FFFFFF",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": "run-black",
+          "Supported": true
+        },
+        {
+          "Label": "o4a",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": "run-black",
+          "Supported": true
+        },
+        {
+          "Label": "o4b",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": "run-black",
+          "Supported": true
+        },
+        {
+          "Label": "o4w",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": "run-black",
+          "Supported": true
+        },
+        {
+          "Label": "o5n",
+          "Fill": "FFFFFF",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": "highlight-blue",
+          "Supported": true
+        },
+        {
+          "Label": "o5a",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "auto",
+          "WordColor": "000000",
+          "Case": "highlight-blue",
+          "Supported": true
+        },
+        {
+          "Label": "o5b",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": "highlight-blue",
+          "Supported": true
+        },
+        {
+          "Label": "o5w",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": "highlight-blue",
+          "Supported": true
+        },
+        {
+          "Label": "o6n",
+          "Fill": "000000",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": "highlight-yellow",
+          "Supported": true
+        },
+        {
+          "Label": "o6a",
+          "Fill": "000000",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": "highlight-yellow",
+          "Supported": true
+        },
+        {
+          "Label": "o6b",
+          "Fill": "000000",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": "highlight-yellow",
+          "Supported": true
+        },
+        {
+          "Label": "o6w",
+          "Fill": "000000",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": "highlight-yellow",
+          "Supported": true
+        },
+        {
+          "Label": "o7n",
+          "Fill": "000000",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": "nested-transparent",
+          "Supported": true
+        },
+        {
+          "Label": "o7a",
+          "Fill": "000000",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": "nested-transparent",
+          "Supported": true
+        },
+        {
+          "Label": "o7b",
+          "Fill": "000000",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": "nested-transparent",
+          "Supported": true
+        },
+        {
+          "Label": "o7w",
+          "Fill": "000000",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": "nested-transparent",
+          "Supported": true
+        },
+        {
+          "Label": "o8n",
+          "Fill": "FFFFFF",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": "nested-black",
+          "Supported": true
+        },
+        {
+          "Label": "o8a",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": "nested-black",
+          "Supported": true
+        },
+        {
+          "Label": "o8b",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": "nested-black",
+          "Supported": true
+        },
+        {
+          "Label": "o8w",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": "nested-black",
+          "Supported": true
+        },
+        {
+          "Label": "o9n",
+          "Fill": "000000",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": "header-black",
+          "Supported": true
+        },
+        {
+          "Label": "o9a",
+          "Fill": "000000",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": "header-black",
+          "Supported": true
+        },
+        {
+          "Label": "o9b",
+          "Fill": "000000",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": "header-black",
+          "Supported": true
+        },
+        {
+          "Label": "o9w",
+          "Fill": "000000",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": "header-black",
+          "Supported": true
+        },
+        {
+          "Label": "o10n",
+          "Fill": "FFFFFF",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": "body-paragraph-black",
+          "Supported": false
+        },
+        {
+          "Label": "o10a",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": "body-paragraph-black",
+          "Supported": false
+        },
+        {
+          "Label": "o10b",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": "body-paragraph-black",
+          "Supported": false
+        },
+        {
+          "Label": "o10w",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": "body-paragraph-black",
+          "Supported": false
+        },
+        {
+          "Label": "o11n",
+          "Fill": "000000",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": "footer-black",
+          "Supported": true
+        },
+        {
+          "Label": "o11a",
+          "Fill": "000000",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": "footer-black",
+          "Supported": true
+        },
+        {
+          "Label": "o11b",
+          "Fill": "000000",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": "footer-black",
+          "Supported": true
+        },
+        {
+          "Label": "o11w",
+          "Fill": "000000",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": "footer-black",
+          "Supported": true
+        },
+        {
+          "Label": "o12n",
+          "Fill": "000000",
+          "DeclaredColor": null,
+          "WordColor": "FFFFFF",
+          "Case": "math-black",
+          "Supported": true
+        },
+        {
+          "Label": "o12a",
+          "Fill": "000000",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": "math-black",
+          "Supported": true
+        },
+        {
+          "Label": "o12b",
+          "Fill": "000000",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": "math-black",
+          "Supported": true
+        },
+        {
+          "Label": "o12w",
+          "Fill": "000000",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": "math-black",
+          "Supported": true
+        },
+        {
+          "Label": "o13n",
+          "Fill": "000000",
+          "DeclaredColor": null,
+          "WordColor": "000000",
+          "Case": "character-style-black",
+          "Supported": true
+        },
+        {
+          "Label": "o13a",
+          "Fill": "000000",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": "character-style-black",
+          "Supported": true
+        },
+        {
+          "Label": "o13b",
+          "Fill": "000000",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": "character-style-black",
+          "Supported": true
+        },
+        {
+          "Label": "o13w",
+          "Fill": "000000",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": "character-style-black",
+          "Supported": true
+        },
+        {
+          "Label": "o14n",
+          "Fill": "FFFFFF",
+          "DeclaredColor": null,
+          "WordColor": "C00000",
+          "Case": "paragraph-style-red",
+          "Supported": false
+        },
+        {
+          "Label": "o14a",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "auto",
+          "WordColor": "FFFFFF",
+          "Case": "paragraph-style-red",
+          "Supported": false
+        },
+        {
+          "Label": "o14b",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "000000",
+          "WordColor": "000000",
+          "Case": "paragraph-style-red",
+          "Supported": false
+        },
+        {
+          "Label": "o14w",
+          "Fill": "FFFFFF",
+          "DeclaredColor": "FFFFFF",
+          "WordColor": "FFFFFF",
+          "Case": "paragraph-style-red",
+          "Supported": false
+        }
+      ]
+    }
+  ]
+}

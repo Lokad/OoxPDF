@@ -1744,26 +1744,27 @@ internal sealed partial class DocxRenderer
         int pageCount,
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
-        ref int imageIndex)
+        ref int imageIndex,
+        RgbColor? background = null)
     {
         // emission helpers observe the conversion token so a
         // cancelled conversion fails fast inside large pages, not just between them.
         switch (item)
         {
             case DocxTextLineLayout textLine:
-                RenderTextLine(textLine, graphics, fontResources, markupContext, pageNumber, pageCount, cancellationToken);
+                RenderTextLine(textLine, graphics, fontResources, markupContext, pageNumber, pageCount, cancellationToken, background);
                 break;
             case DocxEquationLayout equation:
-                PaintMath(equation.Math, equation.X, equation.BaselineY, equation.Scale, graphics, markupContext, cancellationToken);
+                PaintMath(equation.Math, equation.X, equation.BaselineY, equation.Scale, graphics, markupContext, cancellationToken, background);
                 break;
             case DocxInlineImageLayout image:
                 RenderInlineImage(PlaceInlineImageForPaint(image, markupContext), graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex, fontResources, markupContext);
                 break;
             case DocxTableRowLayout row:
-                RenderTableRow(row, IsAdjacentTableRow(previousRow, row) ? previousRow : null, IsAdjacentTableRow(row, nextRow) ? nextRow : null, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex);
+                RenderTableRow(row, IsAdjacentTableRow(previousRow, row) ? previousRow : null, IsAdjacentTableRow(row, nextRow) ? nextRow : null, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, background);
                 break;
             case DocxInlineTextBoxLayout textBox:
-                RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex);
+                RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, background: background);
                 break;
         }
     }

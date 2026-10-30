@@ -81,8 +81,7 @@ internal static class DocxMathRowLayout
                 if (!atom.Run.NormalText && kind != AtomKind.Ordinary) { x += previousCorrection; }
                 if (!atom.Run.NormalText && scriptLevel == 0) { x += Glue(previous, kind) * (operatorSpacingFontSize ?? size) / 18d; }
             }
-            RgbColor color = default;
-            RgbColor.TryParse(atom.Run.Text.ColorHex, out color);
+            RgbColor? color = DocxTextColor.Read(atom.Run.Text.ColorHex);
             glyphs.Add(new(atom.Source.Value, atom.Render.Value, resource, cid.ToString("X4", CultureInfo.InvariantCulture),
                 size, x, 0d, advance, color) { Revision = atom.Run.Text.Revision, OriginalGlyph = glyph,
                     TextShear = shear });
