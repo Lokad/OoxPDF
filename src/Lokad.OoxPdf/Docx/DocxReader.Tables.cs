@@ -145,13 +145,13 @@ internal sealed partial class DocxReader
                 DocxTableCellMargins inheritedMargins = rowInheritedMargins.Merge(conditionalStyle.Margins);
                 DocxTableCellMargins margins = ReadTableCellMargins(cellProperties).Merge(inheritedMargins);
                 DocxTableCellMargins styleMargins = tableStyle.Cell.Margins.Merge(conditionalStyle.Margins);
-                // Office A/B (w72/m12 pin probes): without compat, table-style margins pin
-                // cell text at the margin instead of maxing with the border half. Direct
-                // margins still cascade-replace style margins for the text offset (w74).
+                // Without compat, an intrinsic style pins text through the first
+                // cell's effective padding. Table, row and cell declarations replace
+                // style padding for both that grid anchor and the content offset.
                 bool pinTextToMargin = !isCustomStyle && !useLegacyTableGrid && (resolvedTableIndentPoints ?? 0d) == 0d && (styleMargins.LeftPoints ?? 0d) > 0d;
                 DocxTableCellMargins? gridAnchorMargins = anchorsStyleGrid
                     ? DocxTableCellMargins.Empty with { LeftPoints = 0d, RightPoints = 0d }
-                    : pinTextToMargin ? styleMargins : null;
+                    : pinTextToMargin ? margins : null;
                 cells.Add(new DocxTableCell(
                     text,
                     paragraphs,
