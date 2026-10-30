@@ -4,6 +4,7 @@ internal static class BmpImage
 {
     public static DecodedPixels ReadOwned(byte[] bytes, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (bytes.Length < 54 || bytes[0] != (byte)'B' || bytes[1] != (byte)'M')
         {
             throw new InvalidDataException("Data is not a BMP image.");
@@ -44,26 +45,34 @@ internal static class BmpImage
 
         int stride32 = checked((int)stride);
 
-        var rgb = new byte[width * height * 3];
-        for (int y = 0; y < height; y++)
+        IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, (long)width * height * 3);
+        try
         {
-            if ((y & 255) == 0)
+            cancellationToken.ThrowIfCancellationRequested();
+            var rgb = new byte[width * height * 3];
+            for (int y = 0; y < height; y++)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                if ((y & 255) == 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+                int sourceY = topDown ? y : height - 1 - y;
+                int source = pixelOffset + sourceY * stride32;
+                int target = y * width * 3;
+                for (int x = 0; x < width; x++)
+                {
+                    rgb[target++] = bytes[source + 2];
+                    rgb[target++] = bytes[source + 1];
+                    rgb[target++] = bytes[source];
+                    source += bytesPerPixel;
+                }
             }
-            int sourceY = topDown ? y : height - 1 - y;
-            int source = pixelOffset + sourceY * stride32;
-            int target = y * width * 3;
-            for (int x = 0; x < width; x++)
-            {
-                rgb[target++] = bytes[source + 2];
-                rgb[target++] = bytes[source + 1];
-                rgb[target++] = bytes[source];
-                source += bytesPerPixel;
-            }
+            cancellationToken.ThrowIfCancellationRequested();
+            var result = new DecodedPixels(width, height, rgb, alpha: null, storage);
+            storage = null;
+            return result;
         }
-        return new DecodedPixels(width, height, rgb, alpha: null);
-
+        finally { storage?.Dispose(); }
     }
 
     private static ushort U16(byte[] bytes, int offset)

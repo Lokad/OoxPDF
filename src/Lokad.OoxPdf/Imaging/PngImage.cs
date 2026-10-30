@@ -28,6 +28,7 @@ internal sealed class PngImage
 
     public static DecodedPixels ReadOwned(byte[] bytes, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (bytes.Length < Signature.Length || !bytes.AsSpan(0, Signature.Length).SequenceEqual(Signature))
         {
             throw new InvalidDataException("Data is not a PNG image.");
@@ -38,8 +39,8 @@ internal sealed class PngImage
         int bitDepth = 0;
         int colorType = 0;
         int interlace = 0;
-        byte[]? palette = null;
-        byte[]? transparency = null;
+        ReadOnlyMemory<byte>? palette = null;
+        ReadOnlyMemory<byte>? transparency = null;
         var idatRanges = new List<(int Offset, int Length)>();
         int offset = Signature.Length;
         while (offset + 8 <= bytes.Length)
@@ -80,11 +81,11 @@ internal sealed class PngImage
             }
             else if (type == "PLTE")
             {
-                palette = data.ToArray();
+                palette = bytes.AsMemory(offset - 4 - length, length);
             }
             else if (type == "tRNS")
             {
-                transparency = data.ToArray();
+                transparency = bytes.AsMemory(offset - 4 - length, length);
             }
             else if (type == "IDAT")
             {
@@ -102,9 +103,9 @@ internal sealed class PngImage
         }
         if (transparency is not null && !(colorType switch
             {
-                0 => transparency.Length == 2,
-                2 => transparency.Length == 6,
-                3 => palette is not null && transparency.Length <= palette.Length / 3,
+                0 => transparency.Value.Length == 2,
+                2 => transparency.Value.Length == 6,
+                3 => palette is not null && transparency.Value.Length <= palette.Value.Length / 3,
                 _ => false
             }))
         {
@@ -116,26 +117,42 @@ internal sealed class PngImage
         {
             compressedTotal = checked(compressedTotal + range.Length);
         }
-        // Keep the existing exact-sized IDAT staging; scanlines are decoded
-        // directly from the inflater instead of retaining a full inflated image.
-        byte[] compressed = new byte[checked((int)compressedTotal)];
-        int compressedFill = 0;
-        foreach ((int Offset, int Length) range in idatRanges)
+        long planeBytes = (long)width * height *
+            (colorType is 3 or 4 or 6 || colorType is 0 or 2 && transparency is not null ? 4 : 3);
+        int maximumStride = checked((width * GetBitsPerPixel(bitDepth, colorType) + 7) / 8);
+        // One decode reservation covers IDAT, two scanlines and retained planes.
+        // Input/metadata slices are borrowed; no second charge for source bytes.
+        IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory,
+            checked(compressedTotal + 2L * maximumStride + planeBytes));
+        try
         {
-            bytes.AsSpan(range.Offset, range.Length).CopyTo(compressed.AsSpan(compressedFill));
-            compressedFill += range.Length;
+            cancellationToken.ThrowIfCancellationRequested();
+            PngImage decoded;
+            {
+                // Keep exact-sized IDAT staging and streaming scanline decode.
+                byte[] compressed = new byte[checked((int)compressedTotal)];
+                int compressedFill = 0;
+                foreach ((int Offset, int Length) range in idatRanges)
+                {
+                    bytes.AsSpan(range.Offset, range.Length).CopyTo(compressed.AsSpan(compressedFill));
+                    compressedFill += range.Length;
+                }
+                using var input = new MemoryStream(compressed, 0, compressed.Length, writable: false);
+                using var zlib = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress);
+                decoded = Decode(zlib, width, height, bitDepth, colorType, interlace, palette, transparency, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                if (zlib.ReadByte() != -1)
+                {
+                    throw new InvalidDataException("PNG pixel data exceeds the size implied by its dimensions.");
+                }
+            }
+            // Inflater and scanline users have finished; only planes escape.
+            OoxMemory.Resize(storage, planeBytes);
+            var result = new DecodedPixels(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha, storage);
+            storage = null;
+            return result;
         }
-
-        using var input = new MemoryStream(compressed, 0, compressed.Length, writable: false);
-        using var zlib = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress);
-        PngImage decoded = Decode(zlib, width, height, bitDepth, colorType, interlace, palette, transparency, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        if (zlib.ReadByte() != -1)
-        {
-            throw new InvalidDataException("PNG pixel data exceeds the size implied by its dimensions.");
-        }
-        return new DecodedPixels(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha);
-
+        finally { storage?.Dispose(); }
     }
 
     private static bool IsSupportedFormat(int bitDepth, int colorType)
@@ -151,21 +168,23 @@ internal sealed class PngImage
         };
     }
 
-    private static PngImage Decode(Stream decompressed, int width, int height, int bitDepth, int colorType, int interlace, byte[]? palette, byte[]? transparency, CancellationToken cancellationToken)
+    private static int GetBitsPerPixel(int bitDepth, int colorType) => colorType switch
     {
-        if (colorType == 3 && (palette is null || palette.Length % 3 != 0))
+        0 or 3 => bitDepth,
+        2 => 24,
+        4 => 16,
+        6 => 32,
+        _ => throw new NotSupportedException($"Unsupported PNG color type {colorType}.")
+    };
+
+    private static PngImage Decode(Stream decompressed, int width, int height, int bitDepth, int colorType, int interlace, ReadOnlyMemory<byte>? palette, ReadOnlyMemory<byte>? transparency, CancellationToken cancellationToken)
+    {
+        if (colorType == 3 && (palette is null || palette.Value.Length % 3 != 0))
         {
             throw new InvalidDataException("Indexed PNG is missing a valid palette.");
         }
 
-        int bitsPerPixel = colorType switch
-        {
-            0 or 3 => bitDepth,
-            2 => 24,
-            4 => 16,
-            6 => 32,
-            _ => throw new NotSupportedException($"Unsupported PNG color type {colorType}.")
-        };
+        int bitsPerPixel = GetBitsPerPixel(bitDepth, colorType);
         int filterBytesPerPixel = Math.Max(1, (bitsPerPixel + 7) / 8);
         var rgb = new byte[width * height * 3];
         byte[]? alpha = colorType is 3 or 4 or 6 || colorType is 0 or 2 && transparency is not null
@@ -236,7 +255,7 @@ internal sealed class PngImage
         return size <= start ? 0 : (size - start + step - 1) / step;
     }
 
-    private static void WritePixel(int bitDepth, int colorType, byte[] current, int x, int pixelIndex, byte[]? palette, byte[]? transparency, byte[] rgb, byte[]? alpha)
+    private static void WritePixel(int bitDepth, int colorType, byte[] current, int x, int pixelIndex, ReadOnlyMemory<byte>? palette, ReadOnlyMemory<byte>? transparency, byte[] rgb, byte[]? alpha)
     {
         int rgbTarget = pixelIndex * 3;
         int alphaTarget = pixelIndex;
@@ -271,17 +290,17 @@ internal sealed class PngImage
             case 3:
                 int paletteIndex = ReadPackedSample(current, x, bitDepth);
                 int paletteOffset = paletteIndex * 3;
-                if (palette is null || paletteOffset + 2 >= palette.Length)
+                if (palette is null || paletteOffset + 2 >= palette.Value.Length)
                 {
                     throw new InvalidDataException("Indexed PNG pixel references a missing palette entry.");
                 }
 
-                rgb[rgbTarget++] = palette[paletteOffset];
-                rgb[rgbTarget++] = palette[paletteOffset + 1];
-                rgb[rgbTarget++] = palette[paletteOffset + 2];
+                rgb[rgbTarget++] = palette.Value.Span[paletteOffset];
+                rgb[rgbTarget++] = palette.Value.Span[paletteOffset + 1];
+                rgb[rgbTarget++] = palette.Value.Span[paletteOffset + 2];
                 if (alpha is not null)
                 {
-                    alpha[alphaTarget++] = transparency is not null && paletteIndex < transparency.Length ? transparency[paletteIndex] : (byte)255;
+                    alpha[alphaTarget++] = transparency is not null && paletteIndex < transparency.Value.Length ? transparency.Value.Span[paletteIndex] : (byte)255;
                 }
 
                 break;
@@ -327,12 +346,12 @@ internal sealed class PngImage
         return (current[byteIndex] >> shift) & mask;
     }
 
-    private static bool MatchesTransparentSample(int sample, int bitDepth, byte[]? transparency, int offset)
+    private static bool MatchesTransparentSample(int sample, int bitDepth, ReadOnlyMemory<byte>? transparency, int offset)
     {
         // Compare source samples before expanding packed gray values to RGB.
         // tRNS uses a 16-bit field even for smaller depths; only the low bits apply.
         return transparency is not null &&
-            sample == (((transparency[offset] << 8) | transparency[offset + 1]) & ((1 << bitDepth) - 1));
+            sample == (((transparency.Value.Span[offset] << 8) | transparency.Value.Span[offset + 1]) & ((1 << bitDepth) - 1));
     }
 
     private static void Unfilter(byte filter, Span<byte> current, ReadOnlySpan<byte> previous, int bpp)
