@@ -1167,9 +1167,9 @@ internal sealed partial class DocxLayoutEngine
                     cancellationToken);
                 if (autoContentColumns is not null)
                 {
-                    // A preferred autofit width can be smaller than the words it
-                    // contains. The qualified minimum can grow within this frame.
-                    targetTableWidth = Math.Max(targetTableWidth, autoContentColumns.Sum());
+                    // The content calculation owns the resolved width: automatic
+                    // tables can shrink, while authored widths retain their floor.
+                    targetTableWidth = autoContentColumns.Sum();
                     return autoContentColumns;
                 }
             }
@@ -1281,6 +1281,10 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double totalPad = pads.Sum();
+        if (table.PreferredWidthKind == DocxTableWidthKind.Auto && table.PreferredWidthPoints is not > 0d)
+        {
+            targetTableWidth = Math.Min(availableTableWidth, totalContent + totalPad);
+        }
         double contentTarget = targetTableWidth - totalPad;
         if (contentTarget <= 0d)
         {
