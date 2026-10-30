@@ -5,7 +5,6 @@
     "Png",
     "Bmp",
     "SharedDecoder",
-    "DecodedPixels",
     "PortableRenderingDocx",
     "PortableRenderingPptx",
     "LimitExceededEscapesNodeRecovery"

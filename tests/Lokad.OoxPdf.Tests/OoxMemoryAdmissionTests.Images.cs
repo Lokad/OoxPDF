@@ -136,6 +136,7 @@ internal static partial class OoxMemoryAdmissionTests
     {
         byte[] png = TestFixtures.CreateRgbPng(113, 71, new byte[113 * 71 * 3]);
         long decodeRequest = ImageDecodePeak("image/png", png);
+        TestAssert.True(decodeRequest > 0, "The refusal witness must reach real decoded-image admission.");
         string directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ooxpdf-image-admission-" + Guid.NewGuid().ToString("N"))).FullName;
         try
         {
