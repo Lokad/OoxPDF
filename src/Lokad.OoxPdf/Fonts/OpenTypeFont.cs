@@ -90,16 +90,17 @@ internal sealed partial class OpenTypeFont
             OpenTypeFont font;
             if (bytes.StartsWith("ttcf"u8))
             {
-                font = ParseSfnt(ExtractCollectionFont(bytes, fontIndex, cancellationToken, storage), cancellationToken);
+                font = ParseSfnt(ExtractCollectionFont(bytes, fontIndex, cancellationToken, storage), cancellationToken, storage);
             }
             else
             {
                 OoxMemory.Resize(storage, bytes.Length);
                 cancellationToken.ThrowIfCancellationRequested();
-                font = Load(bytes.ToArray(), fontIndex, cancellationToken);
+                font = Load(bytes.ToArray(), fontIndex, cancellationToken, storage);
             }
             // The conversion's existing scope owns successful program storage
-            // through resource emission; the caller still owns the source bytes.
+            // and retained kerning arrays through resource emission; the caller still
+            // owns the source bytes.
             storage = null;
             return font;
         }
@@ -111,7 +112,7 @@ internal sealed partial class OpenTypeFont
     // phases so a cancelled conversion fails fast instead of expanding kerning
     // tables first; OperationCanceledException is not in the malformed-font catch
     // filters below, so it propagates instead of becoming a fallback-font null.
-    public static OpenTypeFont Load(byte[] bytes, int fontIndex, CancellationToken cancellationToken)
+    public static OpenTypeFont Load(byte[] bytes, int fontIndex, CancellationToken cancellationToken, IMemoryReservation? storage = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (bytes.Length < 12)
@@ -128,10 +129,10 @@ internal sealed partial class OpenTypeFont
             throw new InvalidDataException("Font index can only be non-zero for TrueType collections.");
         }
 
-        return ParseSfnt(bytes, cancellationToken);
+        return ParseSfnt(bytes, cancellationToken, storage);
     }
 
-    private static OpenTypeFont ParseSfnt(byte[] bytes, CancellationToken cancellationToken)
+    private static OpenTypeFont ParseSfnt(byte[] bytes, CancellationToken cancellationToken, IMemoryReservation? storage = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         string scalerTag = ReadScalerTag(bytes);
@@ -162,7 +163,7 @@ internal sealed partial class OpenTypeFont
         PostMetrics post = ReadPost(bytes, tables);
         CmapFormat? cmap = ReadCmap(bytes, tables);
         ushort[] advances = ReadAdvances(bytes, tables);
-        IReadOnlyDictionary<uint, short> kerningPairs = ReadKerningPairs(bytes, tables, cancellationToken);
+        IReadOnlyDictionary<uint, short> kerningPairs = ReadKerningPairs(bytes, tables, cancellationToken, storage);
         OpenTypeMathScriptStyles mathScripts = tables.ContainsKey("MATH") && tables.TryGetValue("GSUB", out TableRecord gsub)
             ? OpenTypeMathScriptStyles.Read(bytes.AsMemory(gsub.Offset, gsub.Length), cancellationToken)
             : OpenTypeMathScriptStyles.None;
@@ -1150,12 +1151,12 @@ internal sealed partial class OpenTypeFont
         return advances;
     }
 
-    private static IReadOnlyDictionary<uint, short> ReadKerningPairs(byte[] bytes, Dictionary<string, TableRecord> tables, CancellationToken cancellationToken)
+    private static IReadOnlyDictionary<uint, short> ReadKerningPairs(byte[] bytes, Dictionary<string, TableRecord> tables, CancellationToken cancellationToken, IMemoryReservation? storage)
     {
         // Bound source batches before publishing owned key/value storage.
         // Counts include overwritten keys; stable ordering preserves the
         // original stream's last-wins values without a mutable shared map.
-        var pairs = new KerningPairBuilder(cancellationToken);
+        var pairs = new KerningPairBuilder(cancellationToken, storage);
         ReadLegacyKerningPairs(bytes, tables, pairs);
         cancellationToken.ThrowIfCancellationRequested();
         ReadGposPairAdjustments(bytes, tables, pairs);

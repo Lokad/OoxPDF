@@ -15,21 +15,24 @@ internal static partial class OoxMemoryAdmissionTests
         {
             var resolution = ProgramResolution(new MemoryFontProgramSource("caller-owned-font", bytes), face);
             OpenTypeFont baseline = TestAssert.NotNull(FontProgramLoader.Load(resolution, default));
-            var pool = new TestMemoryBudget(2L * baseline.Bytes.Length);
+            var pool = new TestMemoryBudget();
             using (var conversion = OoxConversionBudget.BeginScope(null, pool))
             {
                 OpenTypeFont first = TestAssert.NotNull(FontProgramLoader.Load(resolution, default));
-                TestAssert.Equal((long)first.Bytes.Length, pool.Reserved);
+                long firstStorage = pool.Reserved;
+                TestAssert.True(firstStorage > first.Bytes.Length, "Retain both the private program and its parsed kerning arrays.");
+                TestAssert.True(pool.Peak > firstStorage, "Sorting scratch overlaps retained storage and refunds after its final reader.");
+                pool.Capacity = firstStorage + pool.Peak;
                 TestAssert.True(first.Bytes.Span.SequenceEqual(baseline.Bytes.Span), "Selected SFNT bytes must remain exact.");
                 TestAssert.True(FontProgramLoader.Load(ProgramResolution(new MemoryFontProgramSource("malformed", new byte[3])), default) is null,
                     "Ordinary malformed-font recovery is retained.");
-                TestAssert.Equal((long)first.Bytes.Length, pool.Reserved);
+                TestAssert.Equal(firstStorage, pool.Reserved);
                 OpenTypeFont second = TestAssert.NotNull(FontProgramLoader.Load(resolution, default));
-                TestAssert.Equal(2L * first.Bytes.Length, pool.Reserved);
+                TestAssert.Equal(2L * firstStorage, pool.Reserved);
                 TestAssert.True(second.Bytes.Span.SequenceEqual(baseline.Bytes.Span), "Independent copies preserve source data.");
                 var failure = TestAssert.Throws<OoxPdfLimitExceededException>(() => FontProgramLoader.Load(resolution, default));
                 TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, failure.Kind);
-                TestAssert.Equal(2L * first.Bytes.Length, pool.Reserved);
+                TestAssert.Equal(2L * firstStorage, pool.Reserved);
             }
             TestAssert.Equal(0L, pool.Reserved);
             TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);

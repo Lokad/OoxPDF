@@ -15,11 +15,13 @@ selects explicit filesystem backing. Package, staged/output I/O and owned storag
 disposal and selected DOCX/PPTX font acquisition are awaited; CPU layout and
 drawing remain synchronous.
 `MemoryBudget` admits package buffers/parts, PDF content staging, private SFNT/
-subset programs and decoded raster planes with PNG IDAT/scanline and baseline
+subset programs, retained kerning-pair arrays and decoded raster planes with PNG IDAT/scanline and baseline
 JPEG component/RGB construction overlap before allocation. Image/font compression
 also admits actual output capacity, growth overlap and final copying. Image payloads
 remain funded through emission; font-compression storage refunds after its stream
-is written. Storage refunds after
+is written. Kerning sort scratch is admitted while retained pair arrays remain
+funded, then refunds after sorting; failed parsing refunds program and pair storage
+together. Storage refunds after
 its users finish, including failure/cancellation. Crop and generated shadow/glow
 planes are admitted for their invocation; recolor reuses privately owned pixels.
 Embedded-font ToUnicode streams are measured and emitted with one fixed 4 KB
@@ -28,7 +30,7 @@ Its scopes share the caller's root; they create no private allowance. Caller-own
 buffers are not charged twice. Font leases fund acquisition and copy overlap;
 explicit longer-lived cache budgets keep storage admitted through eviction or
 shutdown until the final reader releases it. Governed operations without a cache
-budget acquire private programs. Models, local-discovery metadata, parsed maps and
+budget acquire private programs. Models, local-discovery metadata, other parsed maps and
 other PDF resources remain pending, so
 this is partial coverage. Null budget is ungoverned. Use
 representative measurements to size incidental-storage and concurrency headroom.

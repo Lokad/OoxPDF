@@ -47,6 +47,11 @@ internal sealed partial class OpenTypeFont
             // Stability keeps the original last-wins order of equal keys.
             // Small maps use byte buckets to avoid a large fixed histogram.
             int bits = sourceCount < 65536 ? 8 : 16;
+            // Sort scratch overlaps the retained keys/values. Only this call
+            // owns the scratch; finish its readers before returning capacity.
+            using IMemoryReservation? scratch = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory,
+                checked(6L * sourceCount + 4L * (1 << bits)));
+            token.ThrowIfCancellationRequested();
             int[] offsets = new int[1 << bits];
             uint mask = (uint)offsets.Length - 1;
             uint[] scratchKeys = new uint[sourceCount];

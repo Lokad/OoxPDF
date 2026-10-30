@@ -125,7 +125,7 @@ internal sealed partial class OpenTypeFont
     internal const int MaxCoverageGlyphs = 131_072;
     internal const int MaxClassGlyphs = 131_072;
 
-    private sealed class KerningPairBuilder(CancellationToken token)
+    private sealed class KerningPairBuilder(CancellationToken token, IMemoryReservation? storage)
     {
         private readonly List<Action<KerningPairWriter>> batches = new();
         private int sourceCount;
@@ -144,6 +144,11 @@ internal sealed partial class OpenTypeFont
         }
         public IReadOnlyDictionary<uint, short> Build()
         {
+            CheckCancellation();
+            // These arrays become the immutable font map. Its existing program
+            // owner retains their capacity and refunds failed parsing together.
+            if (sourceCount != 0)
+                OoxMemory.Resize(storage, checked((storage?.Bytes ?? 0) + 6L * sourceCount));
             CheckCancellation();
             var writer = new KerningPairWriter(sourceCount, token);
             foreach (var write in batches) { CheckCancellation(); write(writer); }

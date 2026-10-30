@@ -164,8 +164,10 @@ with `Kind=MemoryAdmission`, `Scope=Conversion`; it never becomes node recovery,
 cache eviction, storage spilling or omitted content. Existing format/output
 failures retain `DocumentBound`. Current producer coverage is package byte
 storage/intake and PDF content staging, including encoding/readback scratch and
-spill buffers, plus private SFNT and subset program buffers. Copied programs stay
-funded through emission; failed preparation refunds its storage immediately.
+spill buffers, plus private SFNT/subset programs and retained kerning-pair arrays.
+Copied programs and pair arrays stay funded through emission. Sorting scratch is
+admitted during their construction overlap and refunds after sorting; failed
+preparation refunds the program and its parsed pair arrays together.
 PNG/BMP planes, PNG IDAT/scanline overlap, and baseline JPEG component/RGB-plane
 overlap are admitted before decoding. JPEG passthrough borrows encoded bytes.
 Successful planes refund when their existing disposable owner finishes; failures
@@ -177,7 +179,7 @@ alpha compression fails. Crop and generated shadow/glow planes are admitted befo
 allocation and refund after their compression/paint users finish. Recolor mutates
 only private decoded/cropped pixels, leaving encoded source/cache bytes unchanged.
 Font-source leases and longer-lived caches keep admission through their final
-reader, including eviction and shutdown. Models, discovery metadata, parsed maps
+reader, including eviction and shutdown. Models, discovery metadata, other parsed maps
 and other PDF resources remain pending.
 Null budget leaves memory ungoverned. No private allowance or complete heap
 accounting is introduced; allow headroom for incidental storage and GC lag.

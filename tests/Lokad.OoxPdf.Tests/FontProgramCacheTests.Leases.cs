@@ -176,7 +176,7 @@ internal static partial class FontProgramCacheTests
             TestAssert.Equal(1, source.Releases);
             TestAssert.True(source.LastBytes!.All(value => value == 0), "The source may recycle its bytes only after the lease ends.");
             TestAssert.Equal("TestFont", font.FamilyName); TestAssert.True(font.MapCodePoint(65) != 0, "The parsed font keeps its own valid program.");
-            TestAssert.Equal((long)font.Bytes.Length, pool.Reserved);
+            TestAssert.True(pool.Reserved > font.Bytes.Length, "The owned program and parsed kerning arrays remain funded after source release.");
             TestAssert.True(pool.Peak >= 2L * font.Bytes.Length, "Admit acquisition/copy overlap before parsing.");
         }
         TestAssert.Equal(0L, pool.Reserved); TestAssert.Equal(0, pool.CallerDisposals);
