@@ -134,7 +134,9 @@ Supported within the following constraints:
   incomplete. Deleted/unnumbered marks keep their existing fallbacks.
 - Fixed-grid tables with fills, common collapsed border styles/conflicts,
   nil/none suppression, repeated headers, split rows and cell content. Actual page
-  occupancy controls following-prose admission. Complex implicit borders,
+  occupancy controls following-prose admission. Conditional bands, columns, rows
+  and corners share one style cascade; direct formatting remains above styles.
+  Complex implicit borders,
   vertical merges and nested/fragmented layout retain qualified restrictions.
 - Inline raster/SVG pictures in qualified body/cell/header/footer containers,
   including supported crop/flips/rotation and source frames. Picture-only body
