@@ -45,7 +45,7 @@ internal static class DocxNoteListOrderTests
             }
             using var cancellation = new CancellationTokenSource();
             cancellation.Cancel();
-            TestAssert.Throws<OperationCanceledException>(() => new DocxReader().Read(package, null, cancellation.Token));
+            TestAssert.Throws<OperationCanceledException>(() => new DocxReader().Read(package, null, cancellation.Token, OoxPdfDocxMarkupMode.Final));
         }
     }
 
@@ -68,7 +68,7 @@ internal static class DocxNoteListOrderTests
                 TestAssert.Contains(expected, text);
             TestAssert.True(!text.Contains("Unused list entry", StringComparison.Ordinal), "Unreferenced note content remains unpainted.");
             TestAssert.Equal(1, pages.Sum(page => page.Images.Sum(image =>
-                Regex.Matches(page.Content, "/" + Regex.Escape(image.Name) + " Do").Count)));
+                Regex.Matches(page.Content, "/" + Regex.Escape(image.ResourceName) + @"\s+Do\b").Count)));
         }
     }
 
