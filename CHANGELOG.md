@@ -21,6 +21,8 @@
 - DOCX: resolves table bands, edge styles and corner styles in one precedence
   order for both explicit conditional flags and positional styling, including
   merged edges and single-row/column tables.
+- DOCX: continues note lists in document reference order; unused notes and
+  reordered notes XML no longer change visible list labels.
 - PPTX: retains readable advances and run/chart hyperlinks when standard PDF
   fonts replace unavailable fonts, including cell text and transformed links.
 - Preserves authored chart titles when automatic-title deletion is enabled;

@@ -68,6 +68,12 @@ layout assertions alone cannot establish visual correctness; image comparisons
 alone cannot establish searchable text, annotations or links. Historical failures
 and unavailable checks retain their explicit classifications.
 
+`docx-note-list-order` checks lists in footnote/endnote tables against pinned Word
+labels, including unused stories and reordered XML. Portable painting retains
+both fractions, the picture and the visible list sequence in Final and Review;
+source order and cached XML remain unchanged. Numbering/restart/ID and existing
+note-table checks share the same focused capability selection.
+
 `docx-conditional-table-styles` covers the shared table-style cascade, direct
 formatting, inheritance, false flags, margins and borders. Four pinned public
 controls and nine edge/span controls retain 201 independent Word cell-fill expectations.

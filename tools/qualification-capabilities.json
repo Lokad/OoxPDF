@@ -1,4 +1,17 @@
 {
+  "docx-note-list-order": [
+    "DocxNoteList",
+    "PortableRenderingNoteListsFollowReferenceOrder",
+    "DocxNumericNumberingIdsResolveAliasesAndKeepDistinctSequences",
+    "DocxReaderNumberingStartOverrideRestartsList",
+    "DocxReaderNumberingLevelOverrideReplacesAbstractLevel",
+    "DocxReaderNumberingResolvesMultilevelLabels",
+    "DocxNumericNoteIdsKeepStoriesAndNavigationAcrossAliasSpellings",
+    "DocxSectionNoteNumbersUseDocumentOccurrencesForContinuousStarts",
+    "DocxSectionNoteNumbersKeepIndependentFootnoteAndEndnoteAdmission",
+    "DocxSectionNoteNumbersSurviveTablesRunBreaksAndEmptySections",
+    "PortableRenderingNoteTableCompositionKeepsContentAndDestinations"
+  ],
   "docx-conditional-table-styles": [
     "DocxConditionalTableStyles",
     "DocxReaderTableStyle",

@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingNoteListsFollowReferenceOrder() =>
+        DocxNoteListOrderTests.CheckRendered(new PinnedResolver(mathFont: true));
+
     public static void PortableRenderingStaticSvgFramesPreserveBodyAndVectorPaint() =>
         DocxPassiveStaticBodyTests.CheckBodyBaselines(new PinnedResolver(), compareWord: false, "minimum-static-svg-frames-office.json");
 

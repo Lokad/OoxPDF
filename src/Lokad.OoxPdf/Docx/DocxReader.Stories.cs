@@ -209,22 +209,22 @@ internal sealed partial class DocxReader
         IReadOnlyList<DocxBodyElement>? mainBodyElements = null,
         XDocument? settings = null)
     {
-        var noteLabels = new Dictionary<(DocxRelatedStoryKind Kind, string Id), string>();
+        var noteReferences = new Dictionary<(DocxRelatedStoryKind Kind, string Id), (string? Label, int Order)>();
         foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(mainBodyElements ?? []))
         {
             cancellationToken.ThrowIfCancellationRequested();
             foreach (DocxInlineReference reference in paragraph.InlineReferences)
             {
                 if (reference.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
-                    reference.Id is { } id && !string.IsNullOrEmpty(reference.DisplayText))
+                    reference.Id is { } id)
                 {
-                    noteLabels.TryAdd((reference.Kind, id), reference.DisplayText);
+                    noteReferences.TryAdd((reference.Kind, id), (reference.DisplayText, noteReferences.Count));
                 }
             }
         }
         return ReadCommentStories(package, documentPartName, styles, numbering, markupMode, cancellationToken, diagnosticSink, warnedParts)
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, DocxRelatedStoryKind.Footnote, "footnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteLabels, settings))
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, DocxRelatedStoryKind.Endnote, "endnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteLabels, settings))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, DocxRelatedStoryKind.Footnote, "footnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteReferences, settings))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, DocxRelatedStoryKind.Endnote, "endnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteReferences, settings))
             .ToArray();
     }
 
@@ -269,7 +269,7 @@ internal sealed partial class DocxReader
         IReadOnlyDictionary<string, DocxCommentThreadMetadata>? commentThreadMetadataByParagraphId,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
         HashSet<string>? warnedParts = null,
-        IReadOnlyDictionary<(DocxRelatedStoryKind Kind, string Id), string>? noteLabels = null,
+        IReadOnlyDictionary<(DocxRelatedStoryKind Kind, string Id), (string? Label, int Order)>? noteReferences = null,
         XDocument? settings = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -284,20 +284,40 @@ internal sealed partial class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(part.Name, cancellationToken)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
         var numberingCounters = new DocxNumberingCounters();
-        var stories = new List<DocxRelatedStory>();
+        var parsedStories = new List<(int Index, DocxRelatedStory Story)>();
         HashSet<string> registeredSeparators = (settings?.Root?
             .Element(WordprocessingNamespace + (storyElementName + "Pr"))?
             .Elements(WordprocessingNamespace + storyElementName)
             .Select(reference => NormalizeDecimalId((string?)reference.Attribute(WordprocessingNamespace + "id")))
             .OfType<string>() ?? []).ToHashSet(StringComparer.Ordinal);
-        foreach (XElement sourceStory in partXml.Root?.Elements(WordprocessingNamespace + storyElementName) ?? [])
+        IEnumerable<(XElement Story, int Index)> sourceStories =
+            (partXml.Root?.Elements(WordprocessingNamespace + storyElementName) ?? [])
+                .Select((story, index) => (story, index));
+        if (noteReferences is not null)
+        {
+            // List instances continue across referenced notes in document order.
+            // Unreferenced/special stories remain readable, but cannot advance
+            // counters before visible notes. Sorting leaves cached XML untouched.
+            sourceStories = sourceStories.OrderBy(source =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                XElement story = source.Story;
+                return (string?)story.Attribute(WordprocessingNamespace + "type") is null or "normal" &&
+                    NormalizeDecimalId((string?)story.Attribute(WordprocessingNamespace + "id")) is { } id &&
+                    noteReferences.TryGetValue((kind, id), out var reference)
+                        ? reference.Order : int.MaxValue;
+            });
+        }
+        foreach (var source in sourceStories)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            XElement sourceStory = source.Story;
             XElement storyElement = sourceStory;
             if (kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
                 (string?)storyElement.Attribute(WordprocessingNamespace + "type") is null or "normal" &&
                 NormalizeDecimalId((string?)storyElement.Attribute(WordprocessingNamespace + "id")) is { } id &&
-                noteLabels is not null && noteLabels.TryGetValue((kind, id), out string? label))
+                noteReferences is not null && noteReferences.TryGetValue((kind, id), out var noteReference) &&
+                !string.IsNullOrEmpty(noteReference.Label))
             {
                 // Cached XML stays read-only. Detach this note before replacing explicit
                 // automatic marks, retaining run properties and source child positions.
@@ -306,7 +326,7 @@ internal sealed partial class DocxReader
                 foreach (XElement mark in storyElement.Descendants(WordprocessingNamespace + (storyElementName + "Ref")).ToArray())
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var text = new XElement(WordprocessingNamespace + "t", label);
+                    var text = new XElement(WordprocessingNamespace + "t", noteReference.Label);
                     text.AddAnnotation(AutomaticNoteStoryMarker.Instance);
                     mark.ReplaceWith(text);
                 }
@@ -334,9 +354,15 @@ internal sealed partial class DocxReader
             if (usesDefaultSeparator) story = story with { IsSynthetic = true };
             if (story.BodyElements.Count > 0)
             {
-                stories.Add(story);
+                parsedStories.Add((source.Index, story));
             }
         }
+
+        // Restore the part's source order for inspection and font/resource
+        // discovery; only list-counter evaluation follows the references.
+        IEnumerable<(int Index, DocxRelatedStory Story)> sourceOrder = parsedStories;
+        if (noteReferences is not null) sourceOrder = sourceOrder.OrderBy(source => source.Index);
+        var stories = sourceOrder.Select(source => source.Story).ToList();
 
         // RV06 height-model probes (absent-separator endnotes, Word COM reference
         // edge-endsepheight-absent): Word normalizes separator-less endnote parts with

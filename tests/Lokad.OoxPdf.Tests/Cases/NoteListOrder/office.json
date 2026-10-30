@@ -1,0 +1,169 @@
+{
+  "Oracle": "Independent Word 16 Final and AllMarkup/WordCompatible PDF list labels. The same numbering instance continues across referenced notes in document order; unreferenced stories and XML reordering do not change visible labels.",
+  "Controls": [
+    {
+      "Input": "footnote-unused.docx",
+      "InputSha256": "F4F2F23D01D7834FCD4B6CC18C2BF5D954559F29BA9A7E9252B12D0B4B0E25B1",
+      "Kind": "footnote",
+      "Part": "word/footnotes.xml",
+      "SourceNormalIds": [
+        "999",
+        "37",
+        "4",
+        "73",
+        "8"
+      ],
+      "ExpectedLabels": [
+        {
+          "Id": "37",
+          "Labels": [
+            "1."
+          ]
+        }
+      ],
+      "OfficeFinalPdfSha256": "161986D39E0511EBC7B1939C38CDE81BB342C93F2A6AA8CBBF0E41B242EC5EDE",
+      "ExpectedPages": 2,
+      "OfficeReviewPdfSha256": "E75ED55F9012C8361635172181EF3CDE3A37F4F62E42D2181F049BADAEE69F45"
+    },
+    {
+      "Input": "footnote-two.docx",
+      "InputSha256": "9726D336713E7D3A03681912CBF672F2CAC1F7D0D5D9F7A8D400D9D605A84252",
+      "Kind": "footnote",
+      "Part": "word/footnotes.xml",
+      "SourceNormalIds": [
+        "37",
+        "4",
+        "73",
+        "8"
+      ],
+      "ExpectedLabels": [
+        {
+          "Id": "37",
+          "Labels": [
+            "1."
+          ]
+        },
+        {
+          "Id": "8",
+          "Labels": [
+            "2."
+          ]
+        }
+      ],
+      "OfficeFinalPdfSha256": "1FD707AA6A1A58FA2769C2DECD06A6174867802A8F0F98E9F637AF000BC5E10A",
+      "ExpectedPages": 2,
+      "OfficeReviewPdfSha256": "7D4E63E36AC58B5723EC35453CCA26E9BCB74655BD67A24D1939E25F6290066F"
+    },
+    {
+      "Input": "footnote-reordered.docx",
+      "InputSha256": "0E00EBD9CA4A43FB6D5F0CB44070C598C9BA1DC06413B30B2DE3E2D9F226D80F",
+      "Kind": "footnote",
+      "Part": "word/footnotes.xml",
+      "SourceNormalIds": [
+        "8",
+        "37",
+        "4",
+        "73"
+      ],
+      "ExpectedLabels": [
+        {
+          "Id": "37",
+          "Labels": [
+            "1."
+          ]
+        },
+        {
+          "Id": "8",
+          "Labels": [
+            "2."
+          ]
+        }
+      ],
+      "OfficeFinalPdfSha256": "25BA081446E0756A0CA3278616442C6FE8FFB7EF90ACFA8980C33444816CFC87",
+      "ExpectedPages": 2,
+      "OfficeReviewPdfSha256": "E62ACA61461813B16A118D613352F628AC7DAA51C796A81B3476F02DC238D39D"
+    },
+    {
+      "Input": "endnote-unused.docx",
+      "InputSha256": "C9FDC980948F46620CF64F76FFD97A0966C93BA350C1C7AC44FD5DA6F0F92971",
+      "Kind": "endnote",
+      "Part": "word/endnotes.xml",
+      "SourceNormalIds": [
+        "999",
+        "37",
+        "4",
+        "73",
+        "8"
+      ],
+      "ExpectedLabels": [
+        {
+          "Id": "37",
+          "Labels": [
+            "1."
+          ]
+        }
+      ],
+      "OfficeFinalPdfSha256": "5330C2913D8A4B624E3EA0E4210934BA815A74B70F0EFDBDE501BA03FF5DC7B0",
+      "ExpectedPages": 2,
+      "OfficeReviewPdfSha256": "7772EA30E770211A69FD3F3C2F63BD1411F2C136353C870A5DBCC469C85EC557"
+    },
+    {
+      "Input": "endnote-two.docx",
+      "InputSha256": "A27DD48DA53C696B46DDEA04772680F4407A8326A1DF26523DB94CD5DB924341",
+      "Kind": "endnote",
+      "Part": "word/endnotes.xml",
+      "SourceNormalIds": [
+        "37",
+        "4",
+        "73",
+        "8"
+      ],
+      "ExpectedLabels": [
+        {
+          "Id": "37",
+          "Labels": [
+            "1."
+          ]
+        },
+        {
+          "Id": "8",
+          "Labels": [
+            "2."
+          ]
+        }
+      ],
+      "OfficeFinalPdfSha256": "FB59AFBB68C928EBF6F3391540081DF1A45AAF065CDE91AB01EB31B31B7C5D57",
+      "ExpectedPages": 2,
+      "OfficeReviewPdfSha256": "584F9C2136892E6E0F574A54B834E88BC78DED1E2ED3441475F43DFE609F11D2"
+    },
+    {
+      "Input": "endnote-reordered.docx",
+      "InputSha256": "850F3394C631C2466BD00D881EB6949A6A7A6DE08D315BEA85F3C65BD302C362",
+      "Kind": "endnote",
+      "Part": "word/endnotes.xml",
+      "SourceNormalIds": [
+        "8",
+        "37",
+        "4",
+        "73"
+      ],
+      "ExpectedLabels": [
+        {
+          "Id": "37",
+          "Labels": [
+            "1."
+          ]
+        },
+        {
+          "Id": "8",
+          "Labels": [
+            "2."
+          ]
+        }
+      ],
+      "OfficeFinalPdfSha256": "423028B948414D7E707F33FB965E394B2D3EB47C50001DDBB70743A80ABFB18F",
+      "ExpectedPages": 2,
+      "OfficeReviewPdfSha256": "25C27CEB8CDE4B16BC4DE585CA1589CDA4950025BBE89174AEE99D359ED9FDBF"
+    }
+  ]
+}
