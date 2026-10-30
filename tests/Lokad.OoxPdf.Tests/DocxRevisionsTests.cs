@@ -1158,7 +1158,12 @@ internal static class DocxRevisionsTests
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         var diagnostics = new List<OoxPdfDiagnostic>();
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        // Unsupported-payload reporting is independent of installed fonts.
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            FontResolver = new TestFaceFontResolver(),
+            DiagnosticSink = diagnostics.Add
+        });
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
         TestAssert.Contains("DOCX_UNSUPPORTED_COMMENTS", ids);
