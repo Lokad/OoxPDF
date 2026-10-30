@@ -151,8 +151,10 @@ Supported within the following constraints:
   body, cell and static stories; paragraph/style boundaries, different fixed/autofit
   modes and positioned tables keep them separate. Fragment row looks, margins and borders retain their owners;
   joined grids map spans and leading omitted columns while the first table owns
-  the frame and preferred width. Fixed-grid controls match Word; differing autofit
-  layouts and positioned-table placement remain approximate.
+  the frame and preferred width. Unconstrained automatic tables use measured
+  content and cell insets rather than the authored grid as a fixed width.
+  Explicit preferred widths and fixed layout retain their sizing rules. Automatic
+  widths with spanning cells and positioned-table placement remain approximate.
   Complex implicit borders,
   vertical merges and nested/fragmented layout retain qualified restrictions.
 - Inline raster/SVG pictures in qualified body/cell/header/footer containers,

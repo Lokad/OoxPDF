@@ -2,6 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
+- DOCX: sizes unconstrained automatic tables from content and cell insets,
+  preserving fixed/preferred widths. Arithmetic roundoff no longer creates
+  spurious text line breaks at an exactly fitting boundary.
 - DOCX: reports omitted external images, malformed floating drawings and unsupported
   VML in selected headers/footers using the owning story's relationships.
 - Multi-targets .NET 10 and .NET 11. Development uses the pinned .NET 11 RC SDK;
