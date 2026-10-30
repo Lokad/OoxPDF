@@ -81,3 +81,8 @@ preserve emitted spaces and operation order within each page; separate pages wit
 a newline. `TestCompositionMeasurement.ps1` checks punctuation/run splits, missing
 spaces/words, page boundaries and decoded Unicode without builds or conversion.
 This is a content-presence screen; geometry and visual gates remain independent.
+
+`PptxTableMergeTests` pins six Office table controls and checks actual painted
+content, source grid ownership, styles, links and row-height recovery. The three
+portable methods join neighboring table checks through `pptx-table-merges-portable`;
+the separate Office-origin oracle requires the declared installed Aptos faces.

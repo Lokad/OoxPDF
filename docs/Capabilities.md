@@ -49,8 +49,9 @@ Supported within the following constraints:
   paint geometry. Unsupported masks retain diagnosed rectangular frames; bounded
   supported shadows/blur retain their qualified fallbacks.
 - Fixed-grid tables with fills, explicit borders, merged continuations/row spans,
-  text and calibrated built-in styles. Vertical anchoring and typography remain
-  approximate; arbitrary automatic table layout is not promised.
+  text and calibrated built-in styles. Cells following horizontal/rectangular
+  merges retain their source columns, text, styles and links. Vertical anchoring
+  and typography remain approximate; arbitrary automatic table layout is not promised.
 - External URI and internal-slide links on supported shapes, pictures, groups,
   frames, tables, text runs and chart text, using their resulting transformed bounds.
   Unresolved/action-only links are diagnosed and omitted.

@@ -117,6 +117,7 @@ internal static class TestCatalog
         .. FromType("pptx-composition", typeof(PptxCompositionTests)),
         .. FromType("pptx-core", typeof(PptxCoreTests)),
         .. FromType("pptx-tables", typeof(PptxTablesTests)),
+        .. FromType("pptx-tables", typeof(PptxTableMergeTests)),
         .. FromType("pptx-images", typeof(PptxImagesTests)),
         .. FromType("pptx-model", typeof(PptxModelTests)),
         .. FromType("pptx-model", typeof(PptxDiagnosticsTests)),

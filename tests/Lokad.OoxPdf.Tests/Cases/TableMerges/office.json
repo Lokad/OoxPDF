@@ -1,0 +1,344 @@
+{
+  "OfficeBuild": "16.0.20527.20088",
+  "Provenance": "Public synthetic PowerPoint tables. Source-pinned inputs and independent Office secondary PDF text origins. No calibrated application-view or whole-page visual claim.",
+  "OriginTolerancePoints": 1,
+  "FontSizeTolerancePoints": 0.1,
+  "Cases": [
+    {
+      "Id": "unmerged",
+      "Input": "unmerged.pptx",
+      "InputSha256": "A252702D556ED83E970006EF1A1C6884793F24FBDF8FCEEFB740C90ABAD04F74",
+      "OfficePdfSha256": "0F4C3EE57B1EB1EAD4D56607F54BB9ACD1CFAB0763AF58ACB98567C6DFF2AACA",
+      "Cells": [
+        {
+          "Text": "Top left",
+          "Row": 0,
+          "Column": 0,
+          "ColumnSpan": 1,
+          "OfficeX": 79.19999694824219,
+          "OfficeTopBaseline": 86.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Top middle",
+          "Row": 0,
+          "Column": 1,
+          "ColumnSpan": 1,
+          "OfficeX": 223.22000122070312,
+          "OfficeTopBaseline": 86.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Right tail",
+          "Row": 0,
+          "Column": 2,
+          "ColumnSpan": 1,
+          "OfficeX": 367.25,
+          "OfficeTopBaseline": 86.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Below left",
+          "Row": 1,
+          "Column": 0,
+          "ColumnSpan": 1,
+          "OfficeX": 79.19999694824219,
+          "OfficeTopBaseline": 158.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Below middle",
+          "Row": 1,
+          "Column": 1,
+          "ColumnSpan": 1,
+          "OfficeX": 223.22000122070312,
+          "OfficeTopBaseline": 158.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Below right",
+          "Row": 1,
+          "Column": 2,
+          "ColumnSpan": 1,
+          "OfficeX": 367.25,
+          "OfficeTopBaseline": 158.66000366210938,
+          "OfficeFontSize": 12.0
+        }
+      ]
+    },
+    {
+      "Id": "merged",
+      "Input": "merged.pptx",
+      "InputSha256": "C50C63DBB101C21EAEEB29882FDE18F88621D5C9015DB5751B9172D4DDB6AAD4",
+      "OfficePdfSha256": "A23580CBC4E407C91550AE65D22E0E8F13A245005D5F910F646371822D58C834",
+      "Cells": [
+        {
+          "Text": "Top merged",
+          "Row": 0,
+          "Column": 0,
+          "ColumnSpan": 2,
+          "OfficeX": 79.19999694824219,
+          "OfficeTopBaseline": 86.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Right tail",
+          "Row": 0,
+          "Column": 2,
+          "ColumnSpan": 1,
+          "OfficeX": 367.25,
+          "OfficeTopBaseline": 86.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Below left",
+          "Row": 1,
+          "Column": 0,
+          "ColumnSpan": 1,
+          "OfficeX": 79.19999694824219,
+          "OfficeTopBaseline": 158.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Below middle",
+          "Row": 1,
+          "Column": 1,
+          "ColumnSpan": 1,
+          "OfficeX": 223.22000122070312,
+          "OfficeTopBaseline": 158.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Below right",
+          "Row": 1,
+          "Column": 2,
+          "ColumnSpan": 1,
+          "OfficeX": 367.25,
+          "OfficeTopBaseline": 158.66000366210938,
+          "OfficeFontSize": 12.0
+        }
+      ]
+    },
+    {
+      "Id": "vertical",
+      "Input": "vertical.pptx",
+      "InputSha256": "6FC3606310037C0937656ED008CADAEA2C84C149EBDDC79C46E98A91533BEA7E",
+      "OfficePdfSha256": "3564A3FEBBFE3F481A5D5E1168F5BCA1268E2DB45768B3C3EFECE3FC25DC39C8",
+      "Cells": [
+        {
+          "Text": "Tall left",
+          "Row": 0,
+          "Column": 0,
+          "ColumnSpan": 1,
+          "OfficeX": 79.19999694824219,
+          "OfficeTopBaseline": 86.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Top middle",
+          "Row": 0,
+          "Column": 1,
+          "ColumnSpan": 1,
+          "OfficeX": 223.22000122070312,
+          "OfficeTopBaseline": 86.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Right tail",
+          "Row": 0,
+          "Column": 2,
+          "ColumnSpan": 1,
+          "OfficeX": 367.25,
+          "OfficeTopBaseline": 86.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Below middle",
+          "Row": 1,
+          "Column": 1,
+          "ColumnSpan": 1,
+          "OfficeX": 223.22000122070312,
+          "OfficeTopBaseline": 158.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Below right",
+          "Row": 1,
+          "Column": 2,
+          "ColumnSpan": 1,
+          "OfficeX": 367.25,
+          "OfficeTopBaseline": 158.66000366210938,
+          "OfficeFontSize": 12.0
+        }
+      ]
+    },
+    {
+      "Id": "rectangle",
+      "Input": "rectangle.pptx",
+      "InputSha256": "2F79BB334724A6ACDEF7292C6E277024D4E7DF80361CA04E0E005E0E8BCF8C35",
+      "OfficePdfSha256": "B560FEE952BA4FFFCC5D6293865B7DF54FF540C06D3615AD8216878141C8CC24",
+      "Cells": [
+        {
+          "Text": "Merged block",
+          "Row": 0,
+          "Column": 0,
+          "ColumnSpan": 2,
+          "OfficeX": 79.19999694824219,
+          "OfficeTopBaseline": 86.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Right tail",
+          "Row": 0,
+          "Column": 2,
+          "ColumnSpan": 1,
+          "OfficeX": 367.25,
+          "OfficeTopBaseline": 86.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Below right",
+          "Row": 1,
+          "Column": 2,
+          "ColumnSpan": 1,
+          "OfficeX": 367.25,
+          "OfficeTopBaseline": 158.66000366210938,
+          "OfficeFontSize": 12.0
+        }
+      ]
+    },
+    {
+      "Id": "consecutive",
+      "Input": "consecutive.pptx",
+      "InputSha256": "BD7457F9EC8EA802A2CC2E459220190DFDC31EE8DC0E6126AFDC12CB27153A76",
+      "OfficePdfSha256": "5CB9EE02D9BE08DF4ABD71D233CE1175359A76A29F2F7F09CFAA29E28C1E3A07",
+      "Cells": [
+        {
+          "Text": "First pair",
+          "Row": 0,
+          "Column": 0,
+          "ColumnSpan": 2,
+          "OfficeX": 79.19999694824219,
+          "OfficeTopBaseline": 86.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Second pair",
+          "Row": 0,
+          "Column": 2,
+          "ColumnSpan": 2,
+          "OfficeX": 252.02000427246094,
+          "OfficeTopBaseline": 86.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Right tail",
+          "Row": 0,
+          "Column": 4,
+          "ColumnSpan": 1,
+          "OfficeX": 424.8500061035156,
+          "OfficeTopBaseline": 86.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Below one",
+          "Row": 1,
+          "Column": 0,
+          "ColumnSpan": 1,
+          "OfficeX": 79.19999694824219,
+          "OfficeTopBaseline": 158.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Below two",
+          "Row": 1,
+          "Column": 1,
+          "ColumnSpan": 1,
+          "OfficeX": 165.6199951171875,
+          "OfficeTopBaseline": 158.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Below three",
+          "Row": 1,
+          "Column": 2,
+          "ColumnSpan": 1,
+          "OfficeX": 252.02000427246094,
+          "OfficeTopBaseline": 158.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Below four",
+          "Row": 1,
+          "Column": 3,
+          "ColumnSpan": 1,
+          "OfficeX": 338.45001220703125,
+          "OfficeTopBaseline": 158.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Below five",
+          "Row": 1,
+          "Column": 4,
+          "ColumnSpan": 1,
+          "OfficeX": 424.8500061035156,
+          "OfficeTopBaseline": 158.66000366210938,
+          "OfficeFontSize": 12.0
+        }
+      ]
+    },
+    {
+      "Id": "styled-body",
+      "Input": "styled-body.pptx",
+      "InputSha256": "CCB1AB16C8FD4C876CB8172EA1362DE13C99CD80D4A0AA4FB354FE3318D0B0DE",
+      "OfficePdfSha256": "9CCDB2244A8C807AE81310A71E446465C77549A1D295489CFE776614872CD5E0",
+      "Cells": [
+        {
+          "Text": "Top left",
+          "Row": 0,
+          "Column": 0,
+          "ColumnSpan": 1,
+          "OfficeX": 79.19999694824219,
+          "OfficeTopBaseline": 86.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Top middle",
+          "Row": 0,
+          "Column": 1,
+          "ColumnSpan": 1,
+          "OfficeX": 223.22000122070312,
+          "OfficeTopBaseline": 86.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Top right",
+          "Row": 0,
+          "Column": 2,
+          "ColumnSpan": 1,
+          "OfficeX": 367.25,
+          "OfficeTopBaseline": 86.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Body merged",
+          "Row": 1,
+          "Column": 0,
+          "ColumnSpan": 2,
+          "OfficeX": 79.19999694824219,
+          "OfficeTopBaseline": 158.66000366210938,
+          "OfficeFontSize": 12.0
+        },
+        {
+          "Text": "Right tail",
+          "Row": 1,
+          "Column": 2,
+          "ColumnSpan": 1,
+          "OfficeX": 367.25,
+          "OfficeTopBaseline": 158.66000366210938,
+          "OfficeFontSize": 12.0
+        }
+      ]
+    }
+  ]
+}

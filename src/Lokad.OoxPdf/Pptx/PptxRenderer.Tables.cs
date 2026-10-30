@@ -285,20 +285,19 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<PptxSceneTableCell> cells = rows[rowIndex].Cells;
 
             double cellX = frameX;
-            int columnIndex = 0;
-            for (int cellIndex = 0; cellIndex < cells.Count; cellIndex++)
+            int nextColumn = 0;
+            foreach (PptxSceneTableCell sceneCell in cells)
             {
+                if (sceneCell.IsMergedContinuation) { continue; }
+                int columnIndex = sceneCell.ColumnIndex;
                 if (columnIndex >= rawColumnWidths.Count)
                 {
                     break;
                 }
 
-                PptxSceneTableCell sceneCell = cells[cellIndex];
-                if (sceneCell.IsMergedContinuation)
+                while (nextColumn < columnIndex)
                 {
-                    cellX += rawColumnWidths[columnIndex] * columnScale;
-                    columnIndex++;
-                    continue;
+                    cellX += rawColumnWidths[nextColumn++] * columnScale;
                 }
 
                 int columnSpan = Math.Min(sceneCell.ColumnSpan, rawColumnWidths.Count - columnIndex);
@@ -349,7 +348,7 @@ internal sealed partial class PptxRenderer
                     .Sum() * OoxUnits.PointsPerInch / OoxUnits.EmusPerInch;
                 AddTableCellTextSpans(context, sceneCell, rowIndex, columnIndex, rowSpan, columnSpan, declaredRowHeight, declaredRowSpanHeight, declaredTableHeight, tableHeightSlackFactor, cellX, cellBottom, columnWidth, cellHeight, textSpans, textFrames, colorMap, sceneCell.StyleText);
                 cellX += columnWidth;
-                columnIndex += columnSpan;
+                nextColumn = columnIndex + columnSpan;
             }
 
             yTop -= rowHeight;
@@ -426,15 +425,11 @@ internal sealed partial class PptxRenderer
         for (int rowIndex = 0; rowIndex < sceneTable.Rows.Count; rowIndex++)
         {
             IReadOnlyList<PptxSceneTableCell> cells = sceneTable.Rows[rowIndex].Cells;
-            int columnIndex = 0;
-            for (int cellIndex = 0; cellIndex < cells.Count && columnIndex < rawColumnWidths.Count; cellIndex++)
+            foreach (PptxSceneTableCell sceneCell in cells)
             {
-                PptxSceneTableCell sceneCell = cells[cellIndex];
-                if (sceneCell.IsMergedContinuation)
-                {
-                    columnIndex++;
-                    continue;
-                }
+                if (sceneCell.IsMergedContinuation) { continue; }
+                int columnIndex = sceneCell.ColumnIndex;
+                if (columnIndex >= rawColumnWidths.Count) { break; }
 
                 int columnSpan = Math.Min(sceneCell.ColumnSpan, rawColumnWidths.Count - columnIndex);
                 int rowSpan = Math.Min(sceneCell.RowSpan, rowHeights.Length - rowIndex);
@@ -461,8 +456,6 @@ internal sealed partial class PptxRenderer
                         }
                     }
                 }
-
-                columnIndex += columnSpan;
             }
         }
 

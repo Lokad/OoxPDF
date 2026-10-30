@@ -1,4 +1,28 @@
 {
+  "pptx-table-merges": [
+    "PptxMergedTable",
+    "PptxSyntheticTable",
+    "PptxSyntheticCenteredTableCellUsesOfficeWrapSlack",
+    "PptxSyntheticExplicitTableBordersClampAtOuterEdges",
+    "PptxSyntheticUnsupportedTableStyleEmitsDiagnosticUntilCascadeExists",
+    "PptxTableParagraphDefaults",
+    "TableCellSpansPreserveSourceContentAndDeclaredFrame",
+    "TableStyleTextAgreesBetweenSceneAndSpans",
+    "PptxTableCellRunHyperlinkEmitsUriAnnotation",
+    "PptxTableFrameHyperlinkSitsBelowCellRunLinks",
+    "PptxTableGridProduct"
+  ],
+  "pptx-table-merges-portable": [
+    "PptxMergedTableNeighborsKeepAllSourceContent",
+    "PptxMergedTableColumnsKeepStyleAndLinkOwnership",
+    "PptxMergedTableHeightMatchesCompactRecovery",
+    "PptxTableParagraphDefaults",
+    "TableCellSpansPreserveSourceContentAndDeclaredFrame",
+    "TableStyleTextAgreesBetweenSceneAndSpans",
+    "PptxTableCellRunHyperlinkEmitsUriAnnotation",
+    "PptxTableFrameHyperlinkSitsBelowCellRunLinks",
+    "PptxSyntheticExplicitTableBordersClampAtOuterEdges"
+  ],
   "docx-page-print-origins-portable": [
       "DocxExactContinuationPrintOriginKeepsItsAuthoredSlot",
       "DocxWordCompatibleExactKeepChainUsesPrintedPageBoundary",
@@ -246,6 +270,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "PptxMergedTableNeighborsKeepAllSourceContent",
       "DocxExactContinuationPrintOriginKeepsItsAuthoredSlot",
       "DocxMinimumLeadingUsesLocalSlotsAcrossNeighborsAndSlotGrowth",
       "PptxAutomaticChartTitlePlacementKeepsWholeLinkedLine",

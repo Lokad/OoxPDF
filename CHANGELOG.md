@@ -10,6 +10,8 @@
   horizontal charts and theme changes.
 - Restores category legends for varying-color bar charts and reserves space for
   wrapped legend rows; crowded frames report clipped entries.
+- PPTX: preserves cells following horizontal table merges, sharing source grid
+  positions across styles, row-height measurement, text and link placement.
 - DOCX: preserves plain comment paragraph breaks beyond five paragraphs, using
   shared measured rows for balloon height and painting.
 - DOCX: minimum-line placement uses measured local slots across fonts, styles

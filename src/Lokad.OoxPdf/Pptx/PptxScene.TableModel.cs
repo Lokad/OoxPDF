@@ -81,6 +81,7 @@ internal static class PptxBuiltInTableStyles
 internal sealed record PptxSceneTableRow(IReadOnlyList<PptxSceneTableCell> Cells);
 
 internal readonly record struct PptxSceneTableCell(
+    int ColumnIndex,
     int ColumnSpan,
     int RowSpan,
     bool IsMergedContinuation,

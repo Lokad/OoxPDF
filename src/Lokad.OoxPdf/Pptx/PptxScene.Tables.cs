@@ -58,12 +58,22 @@ internal sealed partial class PptxSceneBuilder
         foreach (XElement row in table.Elements(DrawingNamespace + "tr"))
         {
             var cells = new List<PptxSceneTableCell>();
-            int columnIndex = 0;
+            int nextColumn = 0;
+            int continuationColumn = 0;
             foreach (XElement cell in row.Elements(DrawingNamespace + "tc"))
             {
+                // A horizontal continuation occupies an already declared span.
+                // Missing continuation placeholders retain compact-row recovery;
+                // vertical continuations still own their declared grid footprint.
+                bool coveredContinuation = OoxXml.ReadBool(cell, "hMerge") && continuationColumn < nextColumn;
+                int columnIndex = coveredContinuation ? continuationColumn++ : nextColumn;
                 PptxSceneTableCell sceneCell = ReadTableCell(cell, theme, colorMap, tableStyle, rowIndex, columnIndex, rowCount, columnCount);
                 cells.Add(sceneCell);
-                columnIndex += sceneCell.IsMergedContinuation ? 1 : sceneCell.ColumnSpan;
+                if (!coveredContinuation)
+                {
+                    continuationColumn = columnIndex + 1;
+                    nextColumn = columnIndex + Math.Min(sceneCell.ColumnSpan, Math.Max(0, columnCount - columnIndex));
+                }
             }
 
             rows.Add(new PptxSceneTableRow(cells));
@@ -126,6 +136,7 @@ internal sealed partial class PptxSceneBuilder
         XElement? bodyProperties = textBody?.Element(DrawingNamespace + "bodyPr");
         int leadingEmptyParagraphCount = CountLeadingEmptyTableCellTextParagraphs();
         return new PptxSceneTableCell(
+            columnIndex,
             ReadTableCellColumnSpan(cell),
             ReadTableCellRowSpan(cell),
             IsMergedTableCellContinuation(cell),
